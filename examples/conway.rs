@@ -351,6 +351,7 @@ impl ConwayStatic {
     }
 }
 
+// cmk make generic for any size led2d
 /// Conway's Game of Life device that runs in its own spawned task.
 /// Wraps a reference to the static signal for sending pattern change messages.
 struct Conway<'a>(&'a Signal<CriticalSectionRawMutex, ConwayMessage>);

@@ -6,19 +6,19 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::Result;
+use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::led_layout::LedLayout;
 use device_kit::led_strip::Current;
+use device_kit::led_strip::Rgb;
 use device_kit::led_strip::gamma::Gamma;
 use device_kit::led_strips;
 use device_kit::led2d;
-use device_kit::led_strip::Rgb;
 use embassy_executor::Spawner;
-use embassy_futures::select::{select, Either};
+use embassy_futures::select::{Either, select};
 use embassy_rp::init;
-use embassy_sync::signal::Signal;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use panic_probe as _;
 use smart_leds::colors;
@@ -52,9 +52,9 @@ enum ConwayMessage {
 /// Speed modes for the simulation.
 #[derive(Clone, Copy, Debug, defmt::Format, PartialEq, Eq)]
 enum SpeedMode {
-    Slower,  // 10x slower (500ms per generation)
-    Normal,  // 1x normal (50ms per generation)
-    Faster,  // 10x faster (5ms per generation)
+    Slower, // 10x slower (500ms per generation)
+    Normal, // 1x normal (50ms per generation)
+    Faster, // 10x faster (5ms per generation)
 }
 
 #[derive(Clone, Copy, Debug, defmt::Format)]
@@ -63,12 +63,9 @@ enum Pattern {
     Blinker,
     Toad,
     Beacon,
-    Pulsar,
     LWSS,
     Block,
-    Beehive,
-    Loaf,
-    Boat,
+    Wall,
     Random,
 }
 
@@ -77,12 +74,9 @@ const PATTERNS: &[Pattern] = &[
     Pattern::Blinker,
     Pattern::Toad,
     Pattern::Beacon,
-    Pattern::Pulsar,
     Pattern::LWSS,
     Pattern::Block,
-    Pattern::Beehive,
-    Pattern::Loaf,
-    Pattern::Boat,
+    Pattern::Wall,
     Pattern::Random,
 ];
 
@@ -104,20 +98,15 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let conway = Conway::new(&CONWAY_STATIC, led8x12, spawner)?;
 
     // Speed mode cycling state
-    let mut speed_mode = SpeedMode::Normal;
+    let mut speed_mode = SpeedMode::Slower;
 
     // Main loop: detect button presses and long-presses
     loop {
-        button.wait_for_press().await;
-        let press_duration = button.wait_for_press_duration().await;
-        
-        match press_duration {
+        match button.wait_for_press_duration().await {
             PressDuration::Short => {
-                // Short press: next pattern
                 conway.next_pattern();
             }
             PressDuration::Long => {
-                // Long press: cycle speed mode
                 speed_mode = match speed_mode {
                     SpeedMode::Slower => SpeedMode::Normal,
                     SpeedMode::Normal => SpeedMode::Faster,
@@ -137,8 +126,8 @@ async fn conway_task(
 ) {
     let mut board = Board::<{ Led8x12::HEIGHT }, { Led8x12::WIDTH }>::new();
     let mut pattern_index = 0;
-    let mut speed_mode = SpeedMode::Normal;
-    board.init_pattern(PATTERNS[pattern_index]);
+    let mut speed_mode = SpeedMode::Slower;
+    board.add_pattern(PATTERNS[pattern_index]);
 
     loop {
         let frame = board.to_frame(colors::GREEN);
@@ -152,12 +141,7 @@ async fn conway_task(
         };
 
         // Race between timer and incoming message
-        match select(
-            Timer::after(frame_duration),
-            signal.wait(),
-        )
-        .await
-        {
+        match select(Timer::after(frame_duration), signal.wait()).await {
             Either::First(_) => {
                 // Timer fired, advance generation
                 board.step();
@@ -173,7 +157,7 @@ async fn conway_task(
 
                         // Reset board with new pattern
                         board = Board::<{ Led8x12::HEIGHT }, { Led8x12::WIDTH }>::new();
-                        board.init_pattern(pattern);
+                        board.add_pattern(pattern);
                     }
                     ConwayMessage::SetSpeed(new_speed) => {
                         // Speed change requested
@@ -184,7 +168,6 @@ async fn conway_task(
         }
     }
 }
-
 
 /// Conway's Game of Life board with toroidal wrapping.
 struct Board<const H: usize, const W: usize> {
@@ -200,24 +183,21 @@ impl<const H: usize, const W: usize> Board<H, W> {
     }
 
     /// Initialize board with a pattern.
-    fn init_pattern(&mut self, pattern: Pattern) {
+    fn add_pattern(&mut self, pattern: Pattern) {
         match pattern {
-            Pattern::Glider => self.set_glider(4, 2),
-            Pattern::Blinker => self.set_blinker(5, 4),
-            Pattern::Toad => self.set_toad(5, 4),
-            Pattern::Beacon => self.set_beacon(4, 4),
-            Pattern::Pulsar => self.set_pulsar(0, 0),
-            Pattern::LWSS => self.set_lwss(5, 2),
-            Pattern::Block => self.set_block(5, 4),
-            Pattern::Beehive => self.set_beehive(4, 3),
-            Pattern::Loaf => self.set_loaf(4, 3),
-            Pattern::Boat => self.set_boat(5, 4),
-            Pattern::Random => self.set_random(),
+            Pattern::Glider => self.add_glider(4, 2),
+            Pattern::Blinker => self.add_blinker(5, 4),
+            Pattern::Toad => self.add_toad(5, 4),
+            Pattern::Beacon => self.add_beacon(4, 4),
+            Pattern::LWSS => self.add_lwss(5, 2),
+            Pattern::Block => self.add_block(5, 4),
+            Pattern::Wall => self.add_wall(5),
+            Pattern::Random => self.add_random(),
         }
     }
 
     /// Glider pattern (moves diagonally).
-    fn set_glider(&mut self, start_row: usize, start_col: usize) {
+    fn add_glider(&mut self, start_row: usize, start_col: usize) {
         self.cells[start_row][start_col + 1] = true;
         self.cells[start_row + 1][start_col + 2] = true;
         self.cells[start_row + 2][start_col] = true;
@@ -226,14 +206,14 @@ impl<const H: usize, const W: usize> Board<H, W> {
     }
 
     /// Blinker pattern (period 2 oscillator, 3 cells).
-    fn set_blinker(&mut self, row: usize, col: usize) {
+    fn add_blinker(&mut self, row: usize, col: usize) {
         self.cells[row][col] = true;
         self.cells[row][col + 1] = true;
         self.cells[row][col + 2] = true;
     }
 
     /// Toad pattern (period 2 oscillator, 6 cells).
-    fn set_toad(&mut self, row: usize, col: usize) {
+    fn add_toad(&mut self, row: usize, col: usize) {
         self.cells[row][col + 1] = true;
         self.cells[row][col + 2] = true;
         self.cells[row][col + 3] = true;
@@ -243,34 +223,19 @@ impl<const H: usize, const W: usize> Board<H, W> {
     }
 
     /// Beacon pattern (period 2 oscillator, 4 cells in corners).
-    fn set_beacon(&mut self, row: usize, col: usize) {
+    fn add_beacon(&mut self, row: usize, col: usize) {
         self.cells[row][col] = true;
         self.cells[row][col + 1] = true;
         self.cells[row + 1][col] = true;
+        self.cells[row + 1][col + 1] = true;
         self.cells[row + 2][col + 2] = true;
         self.cells[row + 2][col + 3] = true;
+        self.cells[row + 3][col + 2] = true;
         self.cells[row + 3][col + 3] = true;
     }
 
-    /// Pulsar pattern (period 3 oscillator, visually striking, 48 cells).
-    fn set_pulsar(&mut self, row: usize, col: usize) {
-        let r = row;
-        let c = col;
-        // Horizontal and vertical bars
-        for i in 0..5 {
-            self.cells[r + 2][c + i] = true;
-            self.cells[r + 3][c + i] = true;
-            self.cells[r + 4][c + i] = true;
-        }
-        for i in 0..5 {
-            self.cells[r + i][c + 2] = true;
-            self.cells[r + i][c + 3] = true;
-            self.cells[r + i][c + 4] = true;
-        }
-    }
-
     /// Lightweight Spaceship (LWSS) - moves horizontally.
-    fn set_lwss(&mut self, row: usize, col: usize) {
+    fn add_lwss(&mut self, row: usize, col: usize) {
         self.cells[row][col + 1] = true;
         self.cells[row + 1][col] = true;
         self.cells[row + 2][col] = true;
@@ -281,45 +246,22 @@ impl<const H: usize, const W: usize> Board<H, W> {
     }
 
     /// Block pattern (stable 2×2 square).
-    fn set_block(&mut self, row: usize, col: usize) {
+    fn add_block(&mut self, row: usize, col: usize) {
         self.cells[row][col] = true;
         self.cells[row][col + 1] = true;
         self.cells[row + 1][col] = true;
         self.cells[row + 1][col + 1] = true;
     }
 
-    /// Beehive pattern (stable, 6 cells in hexagon).
-    fn set_beehive(&mut self, row: usize, col: usize) {
-        self.cells[row][col + 1] = true;
-        self.cells[row][col + 2] = true;
-        self.cells[row + 1][col] = true;
-        self.cells[row + 1][col + 3] = true;
-        self.cells[row + 2][col + 1] = true;
-        self.cells[row + 2][col + 2] = true;
-    }
-
-    /// Loaf pattern (stable, 7 cells).
-    fn set_loaf(&mut self, row: usize, col: usize) {
-        self.cells[row][col + 1] = true;
-        self.cells[row][col + 2] = true;
-        self.cells[row + 1][col] = true;
-        self.cells[row + 1][col + 2] = true;
-        self.cells[row + 2][col + 1] = true;
-        self.cells[row + 2][col + 3] = true;
-        self.cells[row + 3][col + 2] = true;
-    }
-
-    /// Boat pattern (stable, 5 cells).
-    fn set_boat(&mut self, row: usize, col: usize) {
-        self.cells[row][col] = true;
-        self.cells[row][col + 1] = true;
-        self.cells[row + 1][col] = true;
-        self.cells[row + 1][col + 2] = true;
-        self.cells[row + 2][col + 1] = true;
+    /// Horizontal wall (full-width line).
+    fn add_wall(&mut self, row: usize) {
+        for col_index in 0..W {
+            self.cells[row][col_index] = true;
+        }
     }
 
     /// Random pattern seeded by time.
-    fn set_random(&mut self) {
+    fn add_random(&mut self) {
         let now = embassy_time::Instant::now().as_millis();
         // Simple LCG based on current time
         let mut seed = (now ^ 0x9e37_79b9) as u32;
@@ -394,7 +336,6 @@ impl<const H: usize, const W: usize> Board<H, W> {
         frame
     }
 }
-
 
 /// Static resources for Conway's Game of Life device.
 struct ConwayStatic {

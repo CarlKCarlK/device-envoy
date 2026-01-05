@@ -1287,17 +1287,79 @@ macro_rules! led_strips {
     };
 }
 
-/// Macro to generate an [LedStrip] struct. See [module-level documentation](self) for
-/// complete documentation.
+/// Macro to generate a struct with a `new()` constructor that takes `(pin, pio, dma, spawner)`.
+/// All [`LedStrip`] methods are available via `Deref`.
+///
+/// **Required fields:**
+///
+/// - `pin` — GPIO pin for LED data
+/// - `len` — Number of LEDs
+///
+/// **Optional fields:**
+///
+/// - `pio` — PIO block (default: `PIO0`)
+/// - `dma` — DMA channel (default: `DMA_CH0`)
+/// - `max_current` — Current budget (default: `Current::Milliamps(250)`)
+/// - `gamma` — Color curve (default: `Gamma::Gamma2_2`)
+/// - `max_frames` — Animation buffer size (default: `16`)
+///
+/// # Usage
+///
+/// ```ignore
+/// use device_kit::led_strip::{led_strip, Current, Gamma};
+///
+/// led_strip! {
+///     StatusLedStrip {
+///         pin: PIN_3,
+///         len: 48,
+///         pio: PIO0, // optional
+///         dma: DMA_CH0, // optional
+///         max_current: Current::Milliamps(250), // optional
+///         gamma: Gamma::Gamma2_2, // optional
+///         max_frames: 16, // optional
+///     }
+/// }
+/// ```
+///
+/// # Current Limiting
+///
+/// The `max_current` field automatically scales brightness to stay within your power budget.
+///
+/// Each WS2812 LED is assumed to draw 60 mA at full brightness. If you specify:
+///
+/// ```ignore
+/// max_current: Current::Milliamps(500),
+/// len: 48,  // 48 × 60 = 2880 mA worst case
+/// ```
+///
+/// The generated `MAX_BRIGHTNESS` constant will limit all colors to ~17% of full brightness.
+///
+/// Use `Current::Unlimited` to disable limiting.
+///
+/// # Color Correction (Gamma)
+///
+/// The `gamma` field applies a color response curve to make colors look more natural:
+///
+/// - `Gamma::Linear` — No correction (raw values)
+/// - `Gamma::Gamma2_2` — Standard sRGB curve (default, most natural-looking)
+///
+/// The curve is baked into a compile-time lookup table, so there's zero runtime cost.
 #[macro_export]
 macro_rules! led_strip {
+    ($($tt:tt)*) => { $crate::__led_strip_impl! { $($tt)* } };
+}
+
+/// Implementation macro. Not part of the public API; use [`led_strip!`] instead.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strip_impl {
     // Entry point - name and fields
     (
         $name:ident {
             $($fields:tt)*
         }
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: PIO0,
             name: $name,
@@ -1323,7 +1385,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ pio: $new_pio:ident $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $new_pio,
             name: $name,
@@ -1349,7 +1411,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ pin: $new_pin:ident $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,
@@ -1375,7 +1437,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ dma: $new_dma:ident $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,
@@ -1401,7 +1463,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ len: { $new_len:expr } $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,
@@ -1427,7 +1489,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ len: $new_len:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,
@@ -1453,7 +1515,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ max_current: $new_max_current:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,
@@ -1479,7 +1541,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ gamma: $new_gamma:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,
@@ -1505,7 +1567,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: [ max_frames: $new_max_frames:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,
@@ -1531,7 +1593,7 @@ macro_rules! led_strip {
         max_frames: $max_frames:expr,
         fields: []
     ) => {
-        led_strip! {
+        $crate::__led_strip_impl! {
             @__fill_defaults
             pio: $pio,
             name: $name,

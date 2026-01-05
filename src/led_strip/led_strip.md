@@ -40,66 +40,6 @@ See `examples/led_strip1.rs` for the complete program.
 
 In addition to specifying the GPIO `pin` and `len`, the `led_strip!` macro supports optional fields: `pio`, `dma`, `max_current`, `gamma`, and `max_frames`. See the Configuration section below for details.
 
-## The `led_strip!` Macro
-
-This macro generates a struct with a `new()` constructor that takes `(pin, pio, dma, spawner)`.
-All [`LedStrip`] methods are available via `Deref`.
-
-**Required fields:**
-
-- `pin` — GPIO pin for LED data
-- `len` — Number of LEDs
-
-**Optional fields:**
-
-- `pio` — PIO block (default: `PIO0`)
-- `dma` — DMA channel (default: `DMA_CH0`)
-- `max_current` — Current budget (default: `Current::Milliamps(250)`)
-- `gamma` — Color curve (default: `Gamma::Gamma2_2`)
-- `max_frames` — Animation buffer size (default: `16`)
-
-### Usage
-
-```rust
-use device_kit::led_strip::{led_strip, Current, Gamma};
-
-led_strip! {
-    StatusLedStrip {
-        pin: PIN_3,
-        len: 48,
-        pio: PIO0, // optional
-        dma: DMA_CH0, // optional
-        max_current: Current::Milliamps(250), // optional
-        gamma: Gamma::Gamma2_2, // optional
-        max_frames: 16, // optional
-    }
-}
-```
-
-## Current Limiting
-
-The `max_current` field automatically scales brightness to stay within your power budget.
-
-Each WS2812 LED is assumed to draw 60 mA at full brightness. If you specify:
-
-```rust
-max_current: Current::Milliamps(500),
-len: 48,  // 48 × 60 = 2880 mA worst case
-```
-
-The generated `MAX_BRIGHTNESS` constant will limit all colors to ~17% of full brightness.
-
-Use `Current::Unlimited` to disable limiting.
-
-## Color Correction (Gamma)
-
-The `gamma` field applies a color response curve to make colors look more natural:
-
-- `Gamma::Linear` — No correction (raw values)
-- `Gamma::Gamma2_2` — Standard sRGB curve (default, most natural-looking)
-
-The curve is baked into a compile-time lookup table, so there's zero runtime cost.
-
 ## The `led_strips!` Macro (Advanced)
 
 For **multiple strips sharing one PIO**, use `led_strips!` instead:

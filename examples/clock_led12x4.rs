@@ -101,7 +101,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // cmk pico1 or pico2 button?
 
     // Set up the 12x4 LED display on GPIO3.
-    let led_12x4 = Led12x4::new(p.PIO0, p.DMA_CH1, p.PIN_3, spawner)?;
+    let led_12x4 = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH1, spawner)?;
 
     // cmk sometimes I use "led12x4" and sometimes "led_12x4" which is it?
     // Connect Wi-Fi, using the LED panel for status.

@@ -99,7 +99,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     // Set up the 8x12 LED display on GPIO4.
-    let led_8x12 = Led8x12::new(p.PIO1, p.DMA_CH1, p.PIN_4, spawner)?;
+    let led_8x12 = Led8x12::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
     // Connect Wi-Fi, using the LED panel for status.
     let led_8x12_ref = &led_8x12;

@@ -22,7 +22,7 @@ led_strip! {
 
 /// Verify that led_strip! works with PIO0
 async fn test_pio0_strip(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let _gpio0_led_strip = Gpio0LedStrip::new(p.PIO0, p.DMA_CH0, p.PIN_0, spawner)?;
+    let _gpio0_led_strip = Gpio0LedStrip::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     Ok(())
 }

@@ -28,7 +28,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Create strip - no tuple unpacking needed!
-    let led_strip = LedStrip::new(p.PIO0, p.DMA_CH0, p.PIN_0, spawner)?;
+    let led_strip = LedStrip::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!("LED strip initialized with {} LEDs", LedStrip::LEN);
 

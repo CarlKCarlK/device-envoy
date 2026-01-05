@@ -86,8 +86,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Initialize LED strips (both strips share PIO1)
     let (gpio0_led_strip, gpio14_led_strip) = LedStrips::new(
         p.PIO1,
-        p.DMA_CH1, p.PIN_0,
-        p.DMA_CH4, p.PIN_14,
+        p.PIN_0, p.DMA_CH1,
+        p.PIN_14, p.DMA_CH4,
         spawner,
     )?;
     let mut led_pixels = Frame::<{ Gpio0LedStrip::LEN }>::filled(BLACK);

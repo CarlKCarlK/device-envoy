@@ -157,7 +157,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     // Set up the 12x8 LED display on GPIO4 with gamma 2.2 correction
-    let led_12x8 = Led12x8::new(p.PIO1, p.DMA_CH1, p.PIN_4, spawner)?;
+    let led_12x8 = Led12x8::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
     // Set up button on GPIO13 (wired to ground)
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

@@ -30,7 +30,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
-    let gpio5_led_strip = Gpio5LedStrip::new(p.PIO0, p.DMA_CH0, p.PIN_5, spawner)?;
+    let gpio5_led_strip = Gpio5LedStrip::new(p.PIN_5, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!("Christmas marquee demo starting on GPIO5");
 

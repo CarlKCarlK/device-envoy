@@ -49,7 +49,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("LED 2D API Exploration (12x4 display)");
     let p = init(Default::default());
 
-    let led4x12 = Led4x12::new(p.PIO1, p.DMA_CH0, p.PIN_3, spawner)?;
+    let led4x12 = Led4x12::new(p.PIN_3, p.PIO1, p.DMA_CH0, spawner)?;
 
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 

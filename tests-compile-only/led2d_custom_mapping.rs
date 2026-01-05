@@ -40,7 +40,7 @@ led2d! {
 
 /// Verify Led2x3 construction with custom mapping
 async fn test_led2x3_custom_mapping(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let led2x3 = Led2x3::new(p.PIO0, p.DMA_CH0, p.PIN_3, spawner)?;
+    let led2x3 = Led2x3::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Verify write_frame works
     let mut frame = Led2x3::new_frame();

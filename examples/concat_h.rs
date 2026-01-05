@@ -43,7 +43,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     info!("Starting 24x4 concat-h demo");
     let p = embassy_rp::init(Default::default());
 
-    let led24x4_concat = Led24x4Concat::new(p.PIO1, p.DMA_CH1, p.PIN_4, spawner)?;
+    let led24x4_concat = Led24x4Concat::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
     led24x4_concat
         .write_text("HELLO MOM", &[colors::CYAN, colors::WHITE])

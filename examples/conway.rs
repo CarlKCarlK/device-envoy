@@ -90,7 +90,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("Conway's Game of Life on 8x12 LED board");
     let p = init(Default::default());
 
-    let led8x12 = Led8x12::new(p.PIO0, p.DMA_CH0, p.PIN_4, spawner)?;
+    let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
     // Create Conway device with static resources and spawn background task

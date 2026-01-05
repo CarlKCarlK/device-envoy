@@ -43,7 +43,7 @@
 //! #[embassy_executor::main]
 //! async fn main(spawner: Spawner) {
 //!     let p = init(Default::default());
-//!     let led = Led12x4::new(p.PIO0, p.DMA_CH1, p.PIN_3, spawner).unwrap();
+//!     let led = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH1, spawner).unwrap();
 //!     led.write_text("HI", &[colors::RED]).await.unwrap();
 //! }
 //! ```
@@ -118,7 +118,7 @@
 //!
 //!     // Split PIO and create strip
 //!     let (sm0, _sm1, _sm2, _sm3) = pio_split!(p.PIO1);
-//!     let strip = StripLedStrip::new(sm0, p.DMA_CH0, p.PIN_3, spawner).unwrap();
+//!     let strip = StripLedStrip::new(sm0, p.PIN_3, p.DMA_CH0, spawner).unwrap();
 //!
 //!     // Create Led2d device from strip
 //!     let led_12x4 = Led12x4::from_strip(strip, spawner).unwrap();
@@ -1035,7 +1035,7 @@ pub use led2d_device;
 ///     let p = init(Default::default());
 ///     
 ///     // Single-call initialization
-///     let led = Led12x4::new(p.PIO0, p.DMA_CH1, p.PIN_3, spawner).unwrap();
+///     let led = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH1, spawner).unwrap();
 ///     
 ///     // Display text
 ///     led.write_text("HELLO", &[colors::RED, colors::GREEN, colors::BLUE]).await.unwrap();
@@ -1092,15 +1092,15 @@ macro_rules! led2d {
                 ///
                 /// # Parameters
                 ///
+                /// - `pin`: GPIO pin for LED data signal
                 /// - `pio`: PIO peripheral
                 /// - `dma`: DMA channel for LED data transfer
-                /// - `pin`: GPIO pin for LED data signal
                 /// - `spawner`: Task spawner for background operations
                 #[allow(non_upper_case_globals)]
                 $vis fn new(
+                    pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
                     pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
                     dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
-                    pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<Self> {
                     // Split PIO into state machines (uses SM0 automatically)
@@ -1109,8 +1109,8 @@ macro_rules! led2d {
                     // Create strip (uses interior static)
                     let strip = [<$name:camel LedStrip>]::new(
                         sm0,
-                        dma,
                         pin,
+                        dma,
                         spawner
                     )?;
 
@@ -1169,15 +1169,15 @@ macro_rules! led2d {
                 ///
                 /// # Parameters
                 ///
+                /// - `pin`: GPIO pin for LED data signal
                 /// - `pio`: PIO peripheral
                 /// - `dma`: DMA channel for LED data transfer
-                /// - `pin`: GPIO pin for LED data signal
                 /// - `spawner`: Task spawner for background operations
                 #[allow(non_upper_case_globals)]
                 $vis fn new(
+                    pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
                     pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
                     dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
-                    pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<Self> {
                     // Split PIO into state machines (uses SM0 automatically)
@@ -1186,8 +1186,8 @@ macro_rules! led2d {
                     // Create strip (uses interior static)
                     let led_strip = [<$name:camel LedStrip>]::new(
                         sm0,
-                        dma,
                         pin,
+                        dma,
                         spawner
                     )?;
 
@@ -1259,7 +1259,7 @@ macro_rules! led2d {
 /// # async fn main(spawner: Spawner) {
 /// #     let p = embassy_rp::init(Default::default());
 /// #     let (sm0, _sm1, _sm2, _sm3) = pio_split!(p.PIO1);
-/// #     let strip = StripLedStrip::new(sm0, p.DMA_CH0, p.PIN_3, spawner).unwrap();
+/// #     let strip = StripLedStrip::new(sm0, p.PIN_3, p.DMA_CH0, spawner).unwrap();
 /// #     let led = Led12x4::from_strip(strip, spawner).unwrap();
 /// # }
 /// ```

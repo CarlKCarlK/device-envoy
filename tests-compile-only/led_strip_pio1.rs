@@ -24,7 +24,7 @@ led_strip! {
 
 /// Verify that led_strip! works with PIO1
 async fn test_pio1_strip(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let _gpio16_led_strip = Gpio16LedStrip::new(p.PIO1, p.DMA_CH3, p.PIN_16, spawner)?;
+    let _gpio16_led_strip = Gpio16LedStrip::new(p.PIN_16, p.PIO1, p.DMA_CH3, spawner)?;
 
     Ok(())
 }

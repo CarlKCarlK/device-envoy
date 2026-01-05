@@ -1,6 +1,4 @@
-//! A device abstraction for WS2812-style LED strips.
-//!
-//! See [`LedStrip`], [`led_strip!`] for single strips, and [`led_strips!`] for managing multiple strips on one PIO.
+#![doc = include_str!("led_strip/led_strip.md")]
 
 pub mod gamma;
 
@@ -528,18 +526,21 @@ macro_rules! led_strips {
 
                     pub fn new(
                         state_machine: $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
-                        dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                         pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
+                        dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                         spawner: ::embassy_executor::Spawner,
                     ) -> $crate::Result<&'static Self> {
                         static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> = [<$label:camel LedStrip>]::new_static();
                         static STRIP_CELL: ::static_cell::StaticCell<[<$label:camel LedStrip>]> = ::static_cell::StaticCell::new();
+                        let pin = pin.into();
+                        let dma = dma.into();
+
                         let (bus, sm) = state_machine.into_parts();
                         let token = [<$group:snake _ $label:snake _animation_task>](
                             bus,
                             sm,
-                            dma.into(),
-                            pin.into(),
+                            dma,
+                            pin,
                             STRIP_STATIC.command_signal(),
                             STRIP_STATIC.completion_signal(),
                         )
@@ -608,13 +609,13 @@ macro_rules! led_strips {
 
                         #[cfg(not(feature = "host"))]
                         impl [<$label:camel LedStrip>] {
-                            pub fn new_led2d(
-                                state_machine: $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
-                                dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
-                                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
-                                spawner: ::embassy_executor::Spawner,
-                            ) -> $crate::Result<[<$label:camel LedStripLed2d>]> {
-                                let strip = Self::new(state_machine, dma, pin, spawner)?;
+                        pub fn new_led2d(
+                            state_machine: $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
+                            pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
+                            dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
+                            spawner: ::embassy_executor::Spawner,
+                        ) -> $crate::Result<[<$label:camel LedStripLed2d>]> {
+                            let strip = Self::new(state_machine, pin, dma, spawner)?;
                                 [<$label:camel LedStripLed2d>]::from_strip(strip, spawner)
                             }
                         }
@@ -630,8 +631,8 @@ macro_rules! led_strips {
                 pub fn new(
                     pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>>,
                     $(
-                        [<$label _dma>]: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                         [<$label _pin>]: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
+                        [<$label _dma>]: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                     )+
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<(
@@ -656,8 +657,8 @@ macro_rules! led_strips {
                         $(
                             [<$label:camel LedStrip>]::new(
                                 led_strips!(@__select_sm $sm_index, sm0_wrapped, sm1_wrapped, sm2_wrapped, sm3_wrapped),
-                                [<$label _dma>],
                                 [<$label _pin>],
+                                [<$label _dma>],
                                 spawner
                             )?,
                         )+
@@ -1253,7 +1254,7 @@ macro_rules! led_strips {
 ///     let p = embassy_rp::init(Default::default());
 ///     
 ///     let gpio0_led_strip =
-///         Gpio0LedStrip::new(p.PIO0, p.DMA_CH0, p.PIN_0, spawner).unwrap();
+///         Gpio0LedStrip::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner).unwrap();
 /// }
 ///
 /// ```
@@ -1310,7 +1311,7 @@ macro_rules! led_strips {
 /// #[embassy_executor::main]
 /// async fn main(spawner: Spawner) {
 ///     let p = embassy_rp::init(Default::default());
-///     let strip = LedStrip::new(p.PIO1, p.DMA_CH0, p.PIN_0, spawner).unwrap();
+///     let strip = LedStrip::new(p.PIN_0, p.PIO1, p.DMA_CH0, spawner).unwrap();
 ///     // Use strip directly - no tuple unpacking needed
 /// }
 /// ```
@@ -1631,19 +1632,22 @@ macro_rules! led_strip {
                 ///
                 /// # Parameters
                 ///
+                /// - `pin`: GPIO pin for LED data signal
                 /// - `pio`: PIO peripheral
                 /// - `dma`: DMA channel for LED data transfer
-                /// - `pin`: GPIO pin for LED data signal
                 /// - `spawner`: Task spawner for background operations
                 pub fn new(
+                    pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
                     dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
-                    pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> =
                         $crate::led_strip::LedStrip::new_static();
                     static STRIP_CELL: ::static_cell::StaticCell<$name> = ::static_cell::StaticCell::new();
+
+                    let pin = pin.into();
+                    let dma = dma.into();
 
                     let sm0 = [<$pio:lower _split_sm0>](pio);
                     let (bus, sm) = sm0.into_parts();
@@ -1651,8 +1655,8 @@ macro_rules! led_strip {
                     let token = [<$name:snake _animation_task>](
                         bus,
                         sm,
-                        dma.into(),
-                        pin.into(),
+                        dma,
+                        pin,
                         STRIP_STATIC.command_signal(),
                         STRIP_STATIC.completion_signal(),
                     )

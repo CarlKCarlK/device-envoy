@@ -296,6 +296,7 @@ pub struct LedStripStatic<const N: usize, const MAX_FRAMES: usize> {
 impl<const N: usize, const MAX_FRAMES: usize> LedStripStatic<N, MAX_FRAMES> {
     /// Creates static resources.
     #[must_use]
+    #[doc(hidden)]
     pub const fn new_static() -> Self {
         Self {
             command_signal: Signal::new(),
@@ -304,14 +305,17 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStripStatic<N, MAX_FRAMES> {
         }
     }
 
+    #[doc(hidden)]
     pub fn command_signal(&'static self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
         &self.command_signal
     }
 
+    #[doc(hidden)]
     pub fn completion_signal(&'static self) -> &'static LedStripCompletionSignal {
         &self.completion_signal
     }
 
+    #[doc(hidden)]
     pub fn commands(&'static self) -> &'static LedStripCommands<N> {
         &self.commands
     }
@@ -331,6 +335,7 @@ pub struct LedStrip<const N: usize, const MAX_FRAMES: usize> {
 impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// Creates LED strip resources.
     #[must_use]
+    #[doc(hidden)]
     pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
         LedStripStatic::new_static()
     }
@@ -575,7 +580,7 @@ macro_rules! led_strips {
                         $max_current.max_brightness(Self::WORST_CASE_MA);
 
                     // Combined gamma correction and brightness scaling table
-                    const COMBO_TABLE: [u8; 256] = $crate::led_strip::gamma::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
+                    const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
 
                     pub(crate) const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
                         $crate::led_strip::LedStrip::new_static()
@@ -784,7 +789,7 @@ macro_rules! led_strips {
             dma: __DEFAULT_DMA__,
             len: __MISSING_LEN__,
             max_current: $crate::led_strip::Current::Unlimited,
-            gamma: $crate::led_strip::gamma::Gamma::Linear,
+            gamma: $crate::led_strip::Gamma::Linear,
             max_frames: 32,
             led2d: __NONE__,
             fields: [ $($fields)* ]
@@ -1282,45 +1287,8 @@ macro_rules! led_strips {
     };
 }
 
-/// Used with [`led_strips!`] to split a PIO peripheral into 4 state machines.
-///
-/// cmk000 users don't need to see the name of hidden functions!
-/// Calls the generated `pio0_split`, `pio1_split`, or `pio2_split`
-/// function based on the field name in the expression.
-///
-/// cmk000 want a link not an example
-/// # Example
-/// ```no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// use embassy_executor::Spawner;
-/// use device_kit::led_strip::led_strip;
-/// use device_kit::led_strip::Current;
-///
-/// led_strip! {
-///     Gpio0LedStrip {
-///         pin: PIN_0,
-///         len: 8,
-///         max_current: Current::Milliamps(50),
-///     }
-/// }
-///
-/// #[embassy_executor::main]
-/// async fn main(spawner: Spawner) {
-///     let p = embassy_rp::init(Default::default());
-///     
-///     let gpio0_led_strip =
-///         Gpio0LedStrip::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner).unwrap();
-/// }
-///
-/// ```
-
-/// Macro for defining a single LED strip (use this for most projects).
-///
-/// **See the module docs for full documentation and examples.**
-///
-/// For details on configuration, see the module-level documentation and `examples/led_strip1.rs`.
+/// Macro to generate an [LedStrip] struct. See [module-level documentation](self) for
+/// complete documentation.
 #[macro_export]
 macro_rules! led_strip {
     // Entry point - name and fields
@@ -1337,7 +1305,7 @@ macro_rules! led_strip {
             dma: DMA_CH0,
             len: _UNSET_,
             max_current: _UNSET_,
-            gamma: $crate::led_strip::gamma::Gamma::Gamma2_2,
+            gamma: $crate::led_strip::Gamma::Gamma2_2,
             max_frames: 16,
             fields: [ $($fields)* ]
         }
@@ -1630,7 +1598,7 @@ macro_rules! led_strip {
                     $max_current.max_brightness(Self::WORST_CASE_MA);
 
                 // Combined gamma correction and brightness scaling table
-                const COMBO_TABLE: [u8; 256] = $crate::led_strip::gamma::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
+                const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
 
                 /// Create a new LED strip with automatic PIO setup.
                 ///

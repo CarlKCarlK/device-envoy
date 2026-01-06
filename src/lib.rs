@@ -1,4 +1,30 @@
 //! Device abstractions for peripherals for Pico 1 and 2 (with and without WiFi).
+//!
+//! # Hardware Glossary
+//!
+//! ## PIO (Programmable I/O)
+//!
+//! Specialized hardware blocks that can implement custom digital protocols.
+//! Used for timing-sensitive operations like driving WS2812 LED strips.
+//!
+//! - **Pico 1 (RP2040):** 2 PIO blocks (PIO0, PIO1)
+//! - **Pico 2 (RP2350):** 3 PIO blocks (PIO0, PIO1, PIO2)
+//!
+//! Each PIO has 4 state machines, allowing multiple independent protocols to run simultaneously.
+//! Many modules (LED strips, servos) compete for PIO resources, so plan your hardware allocation carefully.
+//!
+//! See the [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
+//! for detailed information.
+//!
+//! ## DMA (Direct Memory Access)
+//!
+//! A hardware controller that transfers data between memory and peripherals without CPU involvement.
+//! Enables efficient LED animation, audio playback, and other data-intensive operations.
+//!
+//! - **Pico 1 & 2:** 12 DMA channels (DMA_CH0 through DMA_CH11)
+//!
+//! Each device abstraction that uses DMA claims one channel, so availability depends on how many
+//! concurrent operations you need.
 #![cfg_attr(not(feature = "host"), no_std)]
 #![cfg_attr(not(feature = "host"), no_main)]
 #![allow(async_fn_in_trait, reason = "single-threaded embedded")]

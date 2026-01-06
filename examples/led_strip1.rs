@@ -13,7 +13,7 @@ use embassy_executor::Spawner;
 use panic_probe as _;
 
 led_strip! {
-    LedStrip {
+    LedStrip3 {
         pin: PIN_3,
         len: 48,
     }
@@ -28,7 +28,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip = LedStrip::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip3 = LedStrip3::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!("Setting every other LED to blue on GPIO3");
 
@@ -36,7 +36,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     for pixel_index in (0..frame.len()).step_by(2) {
         frame[pixel_index] = colors::BLUE;
     }
-    led_strip.write_frame(frame).await?;
+    led_strip3.write_frame(frame).await?;
 
     Ok(future::pending::<Infallible>().await)
 }

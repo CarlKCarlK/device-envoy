@@ -2,10 +2,14 @@
 
 A device abstraction for NeoPixel-style (WS2812) LED strips.
 
-Use method `write_frame` to set each LED to an individual color. Use method `animate`
-to look through a sequence of frames.
+Control individual LED colors with [`write_frame`](LedStrip::write_frame) or animate a sequence of frames with [`animate`](LedStrip::animate).
 
-## Example
+## Related
+
+- [`led_strips!`] — Define multiple LED strips sharing one [PIO](crate#pio-programmable-io) resource
+- [`Led2d`](crate::led2d::Led2d) — LED strips arranged in 2D grids. Adds text rendering and graphics
+
+## led_strip! Example
 
 Define a 48-LED strip and set every second LED to blue:
 
@@ -14,7 +18,7 @@ use device_kit::{Result, led_strip::{self, Frame, colors}};
 use embassy_executor::Spawner;
 
 led_strip! {
-    LedStrip {
+    LedStrip3 {
         pin: PIN_3,
         len: 48,
     }
@@ -23,54 +27,69 @@ led_strip! {
 async fn example(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip = LedStrip::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip3 = LedStrip3::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
 
     let mut frame = Frame::new();
     for pixel_index in (0..frame.len()).step_by(2) {
         frame[pixel_index] = colors::BLUE;
     }
-    led_strip.write_frame(frame).await?;
+    led_strip3.write_frame(frame).await?;
 
-    Ok(core::future::pending().await) // wait forever
+    Ok(core::future::pending().await) // run forever
 }
 ```
 
-NOTES:
+# How It Works
 
-* wraps struct LedStrip and gives access to all its methods
-* don't name it LedStrip in texample
-* the macro has optional values
-* other version of sharing PIO (whatever that is) and 2D
+The [`led_strip!`] macro generates a wrapper struct that encapsulates the underlying [`LedStrip`] type. This generated struct has a `new()` constructor that takes the actual GPIO pin, PIO block, DMA channel, and async spawner.
 
-This module treats a strip as a 1D line of lights. If your LED strip forms a grid, see [`Led2d`](crate::led2d::Led2d) for text, graphics, and animation.
+In the example above, `led_strip! { LedStrip3 { ... } }` generates a struct named `LedStrip3` with all the methods of [`LedStrip`]. You then construct it with `LedStrip3::new(pin, pio, dma, spawner)`.
 
-## Macro Configuration
+See [`led_strip!`] macro documentation for all configuration options (PIO, DMA channel, current limiting, gamma correction, frame animation size).
 
-In addition to specifying the GPIO `pin` and `len`, the `led_strip!` macro supports optional fields: `pio`, `dma`, `max_current`, `gamma`, and `max_frames`. See the Configuration section below for details.
-
-## The `led_strips!` Macro (Advanced)
-
-For **multiple strips sharing one PIO**, use `led_strips!` instead:
+Here is an example using all optional fields with animation:
 
 ```rust
-led_strips! {
-    pio: PIO0,
-    LedStripGroup {
-        strip1: {
-            pin: PIN_0,
-            len: 8,
-        },
-        strip2: {
-            pin: PIN_1,
-            len: 16,
-        },
+use device_kit::led_strip::{self, Current, Frame, Gamma, colors};
+use embassy_executor::Spawner;
+use embassy_time::Duration;
+
+led_strip! {
+    LedStrip4 {
+        pin: PIN_4,
+        len: 96,
+        pio: PIO1,
+        dma: DMA_CH3,
+        max_current: Current::Milliamps(1000),
+        gamma: Gamma::Linear,
+        max_frames: 3,
     }
 }
 
-// Use the generated group constructor:
-let (strip1, strip2) = LedStripGroup::new(
-    p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_1, p.DMA_CH1, spawner
-)?;
+async fn animate_example(spawner: Spawner) -> Result<Infallible> {
+    let p = embassy_rp::init(Default::default());
+    let led_strip4 = LedStrip4::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;
+
+    let frame_duration = Duration::from_millis(300);
+
+    led_strip4
+        .animate([
+            (Frame::filled(colors::RED), frame_duration),
+            (Frame::filled(colors::GREEN), frame_duration),
+            (Frame::filled(colors::BLUE), frame_duration),
+        ])
+        .await?;
+
+    Ok(core::future::pending().await) // run forever
+}
 ```
+
+cmk LEAVE THIS ALONE
+
+- wraps struct LedStrip and gives access to all its methods
+- don't name it LedStrip in texample
+- the macro has optional values
+- other version of sharing PIO (whatever that is) and 2D
+- animation continues until stoped by a new write_frame or animate
 
 Most projects only need `led_strip!`. Use `led_strips!` only when you have multiple strips on different state machines.

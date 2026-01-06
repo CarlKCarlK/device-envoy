@@ -16,7 +16,7 @@ use defmt_rtt as _;
 use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::clock::{Clock, ClockStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_kit::flash_array::{FlashArray, FlashArrayStatic};
-use device_kit::led_layout::LedLayout;
+use device_kit::led2d::layout::LedLayout;
 use device_kit::led_strip::Current;
 use device_kit::led_strip::colors;
 use device_kit::led_strip::gamma::Gamma;

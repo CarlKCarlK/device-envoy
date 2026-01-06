@@ -9,7 +9,7 @@
 
 use defmt_rtt as _;
 use device_kit::Result;
-use device_kit::led_layout::LedLayout;
+use device_kit::led2d::layout::LedLayout;
 use device_kit::led_strip::led_strip;
 use device_kit::led_strip::{Current, colors};
 use device_kit::led2d::led2d_from_strip;

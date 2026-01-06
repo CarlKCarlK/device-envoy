@@ -1,6 +1,6 @@
 //! Host-level tests for mapping primitives.
 
-use device_kit::led_layout::LedLayout;
+use device_kit::led2d::layout::LedLayout;
 
 #[test]
 fn linear_single_row_matches_expected() {

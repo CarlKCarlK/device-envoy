@@ -128,7 +128,8 @@
 //!         .await
 //!         .unwrap();
 //!
-//!     loop {}
+//!     # use core::future;
+//!     future::pending().await
 //! }
 //! ```
 
@@ -428,8 +429,8 @@ impl Led2dFont {
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// # use device_kit::led2d::Frame;
-/// # use smart_leds::RGB8;
+/// use device_kit::led2d::Frame;
+/// use smart_leds::RGB8;
 /// # fn example() {
 /// let mut frame = Frame::<12, 4>::new();  // 12 columns × 4 rows
 /// frame[0][0] = RGB8::new(255, 0, 0);     // Set top-left pixel to red
@@ -443,8 +444,8 @@ impl Led2dFont {
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// # use device_kit::led2d::{rgb8_to_rgb888, Frame};
-/// # use smart_leds::RGB8;
+/// use device_kit::led2d::{rgb8_to_rgb888, Frame};
+/// use smart_leds::RGB8;
 /// use embedded_graphics::{prelude::*, primitives::{Line, PrimitiveStyle}};
 /// # fn example() {
 /// let mut frame = Frame::<12, 8>::new();

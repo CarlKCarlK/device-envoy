@@ -27,6 +27,7 @@
 //! See [`FlashArray`] for usage examples.
 
 use core::array;
+use core::cell::RefCell;
 use crc32fast::Hasher;
 use defmt::{error, info};
 use embassy_rp::Peri;
@@ -62,7 +63,7 @@ const TOTAL_BLOCKS: u32 = (INTERNAL_FLASH_SIZE / ERASE_SIZE) as u32;
 struct FlashManager {
     flash: Mutex<
         CriticalSectionRawMutex,
-        core::cell::RefCell<EmbassyFlash<'static, FLASH, Blocking, INTERNAL_FLASH_SIZE>>,
+        RefCell<EmbassyFlash<'static, FLASH, Blocking, INTERNAL_FLASH_SIZE>>,
     >,
     next_block: AtomicU32,
 }

@@ -220,9 +220,8 @@ impl Led4<'_> {
     /// # use panic_probe as _;
     /// # use embassy_rp::gpio::{Level, Output};
     /// # use embassy_executor::Spawner;
-    /// # use device_kit::{Result, led4::{AnimationFrame, Led4, Led4Static, OutputArray}};
+    /// use device_kit::{Result, led4::{AnimationFrame, Led4, Led4Static, OutputArray}};
     /// use embassy_time::Duration;
-    ///
     /// async fn demo(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     ///     let cells = OutputArray::new([
     ///         Output::new(p.PIN_1, Level::High),

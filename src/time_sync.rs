@@ -45,6 +45,8 @@ impl UnixSeconds {
 mod wifi_impl {
     use core::convert::Infallible;
     use defmt::*;
+    // Import panic! explicitly from prelude to disambiguate from defmt::*
+    use core::panic;
     use embassy_executor::Spawner;
     use embassy_net::{Stack, dns, udp};
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -162,7 +164,7 @@ mod wifi_impl {
         sync_events: &'static TimeSyncEvents,
     ) -> ! {
         let err = run_time_sync_loop(stack, sync_events).await.unwrap_err();
-        core::panic!("{err}");
+        panic!("{err}");
     }
 
     async fn run_time_sync_loop(

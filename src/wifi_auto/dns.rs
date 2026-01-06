@@ -5,6 +5,8 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use defmt::*;
+// Import panic! explicitly from prelude to disambiguate from defmt::*
+use core::panic;
 use embassy_net::{
     Ipv4Address, Stack,
     udp::{self, UdpSocket},
@@ -30,7 +32,7 @@ pub async fn dns_server_task(stack: &'static Stack<'static>, answer_ip: Ipv4Addr
 
     if let Err(err) = socket.bind(DNS_SERVER_PORT) {
         error!("DNS server failed to bind: {:?}", err);
-        core::panic!("Unable to bind DNS port");
+        panic!("Unable to bind DNS port");
     }
 
     info!("DNS server started - responding with {}", answer_ip);

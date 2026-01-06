@@ -31,7 +31,7 @@
 /// Compile-time validation catches configuration errors:
 ///
 /// ```compile_fail
-/// # use device_kit::led_layout::LedLayout;
+/// use device_kit::led_layout::LedLayout;
 /// // Duplicate coordinate (0,0) - caught at compile time
 /// const INVALID: LedLayout<3, 2, 2> = LedLayout::new([(0, 0), (0, 0), (1, 1)]);
 /// ```

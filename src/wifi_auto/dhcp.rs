@@ -5,6 +5,8 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use defmt::*;
+// Import panic! explicitly from prelude to disambiguate from defmt::*
+use core::panic;
 use embassy_net::{
     Ipv4Address, Stack,
     udp::{self, UdpSocket},
@@ -290,7 +292,7 @@ pub async fn dhcp_server_task(
 
     if let Err(err) = socket.bind(DHCP_SERVER_PORT) {
         error!("DHCP server failed to bind: {:?}", err);
-        core::panic!("Unable to bind DHCP port");
+        panic!("Unable to bind DHCP port");
     }
 
     let broadcast_ip = Ipv4Address::new(

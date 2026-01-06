@@ -5,27 +5,25 @@
 //!
 //! ## Related
 //!
-//! cmk0000 change grid and matrix to panel? (done - updated user-facing docs to use "panel" for physical hardware)
-//!
 //! - [`led_strips!`] — Define multiple LED strips that sharing one [PIO](crate#pio-programmable-io) resource.
 //! - [`Led2d`](crate::led2d::Led2d) — A device abstraction for LED strips arranged as a panel. Supports text, graphics, and animation.
+//! cmk0000 add led2_from_strip?
 //!
 //! ## led_strip! Example 1
 //!
 //! Define a 48-LED strip and set every second LED to blue:
 //!
-//! cmk000 hide many of these lines in the docs
+//! cmk0000 hide many of these lines in the docs (may no longer apply)
 //!
 //! ```rust,no_run
-//! #![no_std]
-//! #![no_main]
-//!
-//! use panic_probe as _;
-//! use core::convert::Infallible;
-//! use core::default::Default;
-//! use core::result::Result::Ok;
-//!
-//! use embassy_executor::Spawner;
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use core::convert::Infallible;
+//! # use core::default::Default;
+//! # use core::future;
+//! # use core::result::Result::Ok;
+//! # use embassy_executor::Spawner;
 //! use device_kit::{Result, led_strip::{Frame, colors, led_strip}};
 //!
 //! led_strip! {
@@ -46,7 +44,7 @@
 //!     }
 //!     led_strip3.write_frame(frame).await?;
 //!
-//!     Ok(core::future::pending().await) // run forever
+//!     Ok(future::pending().await) // run forever
 //! }
 //! ```
 //!
@@ -57,22 +55,22 @@
 //!
 //! Use all optional fields of [`led_strip!`]. Animate a 96-LED strip through red, green, and blue.
 //!
-//! cmk000 hide many of these lines in the docs
+//! cmk0000 hide many of these lines in the docs (may no longer apply)
+//!
 //! ```rust,no_run
-//! #![no_std]
-//! #![no_main]
-//!
-//! use panic_probe as _;
-//! use core::convert::Infallible;
-//! use core::default::Default;
-//! use core::result::Result::Ok;
-//!
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use core::convert::Infallible;
+//! # use core::default::Default;
+//! # use core::future;
+//! # use core::result::Result::Ok;
+//! # use embassy_executor::Spawner;
+//! use embassy_time::Duration;
 //! use device_kit::{
 //!     Result,
 //!     led_strip::{Current, Frame, Gamma, colors, led_strip},
 //! };
-//! use embassy_executor::Spawner;
-//! use embassy_time::Duration;
 //!
 //! led_strip! {
 //!     LedStrip4 {
@@ -100,7 +98,7 @@
 //!         ])
 //!         .await?;
 //!
-//!     Ok(core::future::pending().await) // run forever
+//!     Ok(future::pending().await) // run forever
 //! }
 //! ```
 
@@ -138,13 +136,11 @@ pub type Rgb = RGB8;
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// # use device_kit::led_strip::Frame;
-/// # use device_kit::led_strip::colors;
+/// use device_kit::led_strip::{Frame, colors};
 /// # fn example() {
 /// let mut frame = Frame::<8>::new();
 /// frame[0] = colors::RED;
 /// frame[7] = colors::GREEN;
-/// let _ = frame;
 /// # }
 /// ```
 #[derive(Clone, Copy, Debug)]
@@ -387,7 +383,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
         Ok(())
     }
 
-    // cmk0000 should this be animate_frame
+    // cmk0000 look at all the methods
     /// Loop through a sequence of animation frames until interrupted by another command.
     ///
     /// Each frame is a tuple of `(Frame, Duration)`. Accepts arrays, `Vec`s, or any
@@ -1414,6 +1410,7 @@ macro_rules! led_strip {
     ($($tt:tt)*) => { $crate::__led_strip_impl! { $($tt)* } };
 }
 
+// cmk0000 must/should these be at the top level? (If so, mention that in the doc line)
 /// Implementation macro. Not part of the public API; use [`led_strip!`] instead.
 #[doc(hidden)]
 #[macro_export]

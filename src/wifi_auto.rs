@@ -361,9 +361,7 @@ impl WifiAuto {
     /// # #![no_main]
     /// # use panic_probe as _;
     /// # use embassy_executor::Spawner;
-    /// # use device_kit::wifi_auto::WifiAuto;
-    /// # use device_kit::wifi_auto::WifiAutoEvent;
-    /// # use device_kit::Result;
+    /// use device_kit::{wifi_auto::{WifiAuto,WifiAutoEvent}, Result};
     /// async fn connect_sync(wifi_auto: &WifiAuto, spawner: embassy_executor::Spawner) -> Result<()> {
     ///     wifi_auto.connect(spawner, |event| async move {
     ///         defmt::info!("Event: {:?}", event);
@@ -378,8 +376,7 @@ impl WifiAuto {
     /// # #![no_main]
     /// # use panic_probe as _;
     /// # use embassy_executor::Spawner;
-    /// # use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
-    /// # use device_kit::Result;
+    /// use device_kit::{wifi_auto::{WifiAuto, WifiAutoEvent}, Result};
     /// async fn update_display(event: WifiAutoEvent) {
     ///     // Update UI asynchronously (placeholder)
     ///     core::future::ready(()).await;

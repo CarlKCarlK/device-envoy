@@ -19,7 +19,7 @@ use device_kit::flash_array::{FlashArray, FlashArrayStatic};
 use device_kit::led2d::layout::LedLayout;
 use device_kit::led_strip::Current;
 use device_kit::led_strip::colors;
-use device_kit::led_strip::gamma::Gamma;
+use device_kit::led_strip::Gamma;
 use device_kit::led_strips;
 use device_kit::led2d;
 use device_kit::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};

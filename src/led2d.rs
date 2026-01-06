@@ -22,7 +22,7 @@
 //! use device_kit::led_strips;
 //! use device_kit::led2d;
 //! use device_kit::led_strip::Current;
-//! use device_kit::led_strip::gamma::Gamma;
+//! use device_kit::led_strip::Gamma;
 //! use device_kit::led_strip::colors;
 //! use embassy_time::Duration;
 //!
@@ -83,7 +83,7 @@
 //! use device_kit::led_strip::led_strips;
 //! use device_kit::led2d::led2d_from_strip;
 //! use device_kit::led_strip::Current;
-//! use device_kit::led_strip::gamma::Gamma;
+//! use device_kit::led_strip::Gamma;
 //! use device_kit::led_strip::colors;
 //! use device_kit::pio_split;
 //! use embassy_time::Duration;
@@ -1015,7 +1015,7 @@ pub use led2d_device;
 /// use device_kit::led2d;
 /// use device_kit::led_strips;
 /// use device_kit::led_strip::Current;
-/// use device_kit::led_strip::gamma::Gamma;
+/// use device_kit::led_strip::Gamma;
 /// use device_kit::led_strip::colors;
 /// use embassy_time::Duration;
 ///
@@ -1230,7 +1230,7 @@ macro_rules! led2d {
 /// use device_kit::led_strip::led_strips;
 /// use device_kit::led2d::led2d_from_strip;
 /// use device_kit::led_strip::Current;
-/// use device_kit::led_strip::gamma::Gamma;
+/// use device_kit::led_strip::Gamma;
 /// use device_kit::pio_split;
 /// use embassy_executor::Spawner;
 /// use embassy_time::Duration;

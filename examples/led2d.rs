@@ -10,7 +10,7 @@ use device_kit::button::{Button, PressedTo};
 use device_kit::led_strips;
 use device_kit::led2d::layout::LedLayout;
 use device_kit::led_strip::Current;
-use device_kit::led_strip::gamma::Gamma;
+use device_kit::led_strip::Gamma;
 use device_kit::led2d;
 use device_kit::led2d::Frame;
 use device_kit::{Error, Result};

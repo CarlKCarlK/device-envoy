@@ -13,8 +13,6 @@
 //!
 //! Define a 48-LED strip and set every second LED to blue:
 //!
-//! cmk0000 hide many of these lines in the docs (may no longer apply)
-//!
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
@@ -54,8 +52,6 @@
 //! ## led_strip! Example 2
 //!
 //! Use all optional fields of [`led_strip!`]. Animate a 96-LED strip through red, green, and blue.
-//!
-//! cmk0000 hide many of these lines in the docs (may no longer apply)
 //!
 //! ```rust,no_run
 //! # #![no_std]

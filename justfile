@@ -1,7 +1,7 @@
 open-docs:
 	./scripts/open-docs.sh
 
-docdoc:
+show-docs:
 	cargo docdoc && ./scripts/open-docs.sh
 
 gather:

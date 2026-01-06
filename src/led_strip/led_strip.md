@@ -13,9 +13,17 @@ Control individual LED colors with [`write_frame`](LedStrip::write_frame) or ani
 
 Define a 48-LED strip and set every second LED to blue:
 
-```rust
-use device_kit::{Result, led_strip::{self, Frame, colors}};
+```rust,no_run
+#![no_std]
+#![no_main]
+
+use panic_probe as _;
+use core::convert::Infallible;
+use core::default::Default;
+use core::result::Result::Ok;
+
 use embassy_executor::Spawner;
+use device_kit::{Result, led_strip::{Frame, colors, led_strip}};
 
 led_strip! {
     LedStrip3 {
@@ -49,8 +57,16 @@ See [`led_strip!`] macro documentation for all configuration options (PIO, DMA c
 
 Here is an example using all optional fields with animation:
 
-```rust
-use device_kit::led_strip::{self, Current, Frame, Gamma, colors};
+```rust,no_run
+#![no_std]
+#![no_main]
+
+use panic_probe as _;
+use core::convert::Infallible;
+use core::default::Default;
+use core::result::Result::Ok;
+
+use device_kit::{Result, led_strip::{Current, Frame, Gamma, colors, led_strip}};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 
@@ -91,5 +107,6 @@ cmk LEAVE THIS ALONE
 - the macro has optional values
 - other version of sharing PIO (whatever that is) and 2D
 - animation continues until stoped by a new write_frame or animate
+- panels vs grid?
 
 Most projects only need `led_strip!`. Use `led_strips!` only when you have multiple strips on different state machines.

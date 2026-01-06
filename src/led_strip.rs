@@ -340,6 +340,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
         LedStripStatic::new_static()
     }
 
+    // cmk0000 should hide this
     /// Creates a new LED strip controller bound to the given static resources.
     pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Result<Self> {
         Ok(Self {
@@ -355,6 +356,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
         Ok(())
     }
 
+    // cmk0000 should this be animate_frame
     /// Loop through a sequence of animation frames until interrupted by another command.
     ///
     /// Each frame is a tuple of `(Frame, Duration)`. Accepts arrays, `Vec`s, or any
@@ -487,12 +489,44 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 
 /// Macro for multiple LED strips (rarely used directly).
 ///
+/// Macro to generate multiple LED strip structs sharing one PIO.
+///
+/// For **multiple strips sharing one PIO**, use this macro instead of [`led_strip!`]:
+///
+/// ```ignore
+/// led_strips! {
+///     pio: PIO0,
+///     LedStripGroup {
+///         strip1: {
+///             pin: PIN_0,
+///             len: 8,
+///         },
+///         strip2: {
+///             pin: PIN_1,
+///             len: 16,
+///         },
+///     }
+/// }
+///
+/// // Use the generated group constructor:
+/// let (strip1, strip2) = LedStripGroup::new(
+///     p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_1, p.DMA_CH1, spawner
+/// )?;
+/// ```
+///
 /// **See the module docs for full documentation and examples.**
 ///
 /// This is for advanced use where you need multiple strips sharing one PIO.
 /// Most projects should use [`led_strip!`] instead.
 #[macro_export]
 macro_rules! led_strips {
+    ($($tt:tt)*) => { $crate::__led_strips_impl! { $($tt)* } };
+}
+
+/// Implementation macro. Not part of the public API; use [`led_strips!`] instead.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strips_impl {
     // Internal: full expansion with all fields specified
     (@__expand
         pio: $pio:ident,
@@ -743,7 +777,7 @@ macro_rules! led_strips {
             $( $label:ident: { $($fields:tt)* } ),+ $(,)?
         }
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__with_defaults
             pio: $pio,
             group: $group,
@@ -759,7 +793,7 @@ macro_rules! led_strips {
             $( $label:ident: { $($fields:tt)* } ),+ $(,)?
         }
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__with_defaults
             pio: PIO0,
             group: $group,
@@ -777,7 +811,7 @@ macro_rules! led_strips {
         strips_out: [ $($out:tt)* ],
         strips_in: [ $label:ident: { $($fields:tt)* } $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -804,7 +838,7 @@ macro_rules! led_strips {
         strips_out: [ $($out:tt)* ],
         strips_in: []
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__expand
             pio: $pio,
             group: $group,
@@ -829,7 +863,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: [ pin: $new_pin:ident $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -864,7 +898,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: [ dma: $new_dma:ident $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -899,7 +933,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: [ len: $new_len:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -934,7 +968,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: [ max_current: $new_max_current:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -969,7 +1003,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: [ gamma: $new_gamma:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -1004,7 +1038,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: [ max_frames: $new_max_frames:expr $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -1039,7 +1073,7 @@ macro_rules! led_strips {
         led2d: __NONE__,
         fields: [ led2d: { $($led2d_fields:tt)* } $(, $($rest:tt)* )? ]
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: $sm,
@@ -1076,7 +1110,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: []
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: 0,
@@ -1110,7 +1144,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: []
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: 1,
@@ -1144,7 +1178,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: []
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: 2,
@@ -1178,7 +1212,7 @@ macro_rules! led_strips {
         led2d: $led2d:tt,
         fields: []
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__fill_strip_defaults
             pio: $pio,
             sm_counter: 3,
@@ -1214,7 +1248,7 @@ macro_rules! led_strips {
         led2d: __NONE__,
         fields: []
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__inc_counter
             pio: $pio,
             group: $group,
@@ -1251,7 +1285,7 @@ macro_rules! led_strips {
         led2d: __HAS_LED2D__ { $($led2d_fields:tt)* },
         fields: []
     ) => {
-        led_strips! {
+        $crate::__led_strips_impl! {
             @__inc_counter
             pio: $pio,
             group: $group,
@@ -1274,16 +1308,16 @@ macro_rules! led_strips {
     };
     // Increment counter by expanding to literal numbers
     (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 0, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        led_strips! { @__with_defaults pio: $pio, group: $group, sm_counter: 1, strips_out: [$($out)*], strips_in: [$($in)*] }
+        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 1, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
     (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 1, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        led_strips! { @__with_defaults pio: $pio, group: $group, sm_counter: 2, strips_out: [$($out)*], strips_in: [$($in)*] }
+        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 2, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
     (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 2, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        led_strips! { @__with_defaults pio: $pio, group: $group, sm_counter: 3, strips_out: [$($out)*], strips_in: [$($in)*] }
+        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 3, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
     (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 3, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        led_strips! { @__with_defaults pio: $pio, group: $group, sm_counter: 4, strips_out: [$($out)*], strips_in: [$($in)*] }
+        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 4, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
 }
 

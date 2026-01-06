@@ -2,11 +2,12 @@
 
 A device abstraction for NeoPixel-style (WS2812) LED strips.
 
-You can set each LED to an individual color. This module treats a strip as a 1D line of lights. If your LED strip forms a grid, see [`Led2d`](crate::led2d::Led2d) for text rendering and graphics support.
+Use method `write_frame` to set each LED to an individual color. Use method `animate`
+to look through a sequence of frames.
 
 ## Example
 
-Define a 48-LED strip and set every other LED to blue:
+Define a 48-LED strip and set every second LED to blue:
 
 ```rust
 use device_kit::{Result, led_strip::{self, Frame, colors}};
@@ -34,7 +35,14 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
 }
 ```
 
-See `examples/led_strip1.rs` for the complete program.
+NOTES:
+
+* wraps struct LedStrip and gives access to all its methods
+* don't name it LedStrip in texample
+* the macro has optional values
+* other version of sharing PIO (whatever that is) and 2D
+
+This module treats a strip as a 1D line of lights. If your LED strip forms a grid, see [`Led2d`](crate::led2d::Led2d) for text, graphics, and animation.
 
 ## Macro Configuration
 

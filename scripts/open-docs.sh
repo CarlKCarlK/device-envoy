@@ -10,14 +10,11 @@ if [ ! -f "$DOC_PATH" ]; then
   exit 1
 fi
 
-# Copy entire doc directory (includes all dependencies) to Windows temp
-TEMP_WINDOWS=$(cmd.exe /c "echo %TEMP%" 2>/dev/null | tr -d '\r')
-TEMP_DIR=$(wslpath -u "$TEMP_WINDOWS")
-TEMP_DOCS="$TEMP_DIR/device_kit_docs"
+# Convert to Windows file URL
+WIN_PATH=$(wslpath -w "$DOC_PATH")
+FILE_URL="file:///${WIN_PATH//\\/\/}"
 
-rm -rf "$TEMP_DOCS"
-cp -r "$DOC_PARENT" "$TEMP_DOCS"
+echo "$FILE_URL"
 
-# Convert temp path to Windows path and open
-TEMP_WIN_PATH=$(wslpath -w "$TEMP_DOCS/device_kit/index.html")
-powershell.exe -NoProfile -Command "Invoke-Item '$TEMP_WIN_PATH'" &
+# Open in default browser
+powershell.exe -NoProfile -Command "Invoke-Item '$WIN_PATH'" &

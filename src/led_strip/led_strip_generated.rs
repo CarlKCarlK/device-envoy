@@ -29,21 +29,6 @@
 //! See the struct documentation for [`LEN`](LedStripGenerated::LEN), [`MAX_FRAMES`](LedStripGenerated::MAX_FRAMES),
 //! and [`MAX_BRIGHTNESS`](LedStripGenerated::MAX_BRIGHTNESS).
 //!
-//! ## Methods (via Deref)
-//!
-//! All LED control is accessed through [`Deref`](core::ops::Deref) to [`LedStrip`](crate::led_strip::LedStrip):
-//!
-//! - [`write_frame`](crate::led_strip::LedStrip::write_frame) —
-//!   Display a [`Frame`](crate::led_strip::Frame) immediately, replacing any current animation.
-//!   Returns `async Result<()>`.
-//!
-//! - [`animate`](crate::led_strip::LedStrip::animate) —
-//!   Loop through a sequence of timed frames until interrupted.
-//!   Accepts `impl IntoIterator<Item = (Frame, Duration)>`.
-//!   Returns `async Result<()>`.
-//!
-//! See [`LedStrip`](crate::led_strip::LedStrip) for complete method documentation.
-//!
 //! ## Example 1: Write a Single Frame
 //!
 //! Define a 48-LED strip and set every second LED to blue:
@@ -81,8 +66,14 @@
 //! }
 //! ```
 //!
-//! See the [`led_strip!`](crate::led_strip::led_strip) macro documentation for all configuration options
-//! (PIO block selection, DMA channel, current limiting, gamma correction, animation frame count).
+//! The `led_strip!` macro supports these configuration options:
+//! - **pio** — Select which [PIO](crate#glossary) block to use (default: PIO0)
+//! - **dma** — Select which [DMA](crate#glossary) channel to use (default: DMA_CH0)
+//! - **max_current** — Set current limiting for the LED strip
+//! - **gamma** — Choose gamma correction (Linear, Srgb, or custom)
+//! - **max_frames** — Number of frames to preallocate for animation (default: 1)
+//!
+//! See the [`led_strip!`](crate::led_strip::led_strip) macro documentation for complete details.
 //!
 //! ## Example 2: Animate a Sequence of Frames
 //!

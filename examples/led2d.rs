@@ -26,16 +26,16 @@ const LED_LAYOUT_4X12: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 
 led2d! {
     pub Led4x12,
-    pio: PIO1,
     pin: PIN_3,
-    dma: DMA_CH0,
     width: 12,
     height: 4,
     led_layout: LED_LAYOUT_4X12,
+    font: Font3x4Trim,
+    pio: PIO1,
+    dma: DMA_CH0,
     max_current: Current::Milliamps(500),
     gamma: Gamma::Linear,
     max_frames: 32,
-    font: Font3x4Trim,
 }
 
 #[embassy_executor::main]
@@ -100,7 +100,10 @@ async fn demo_blink_text(led4x12: &Led4x12) -> Result<()> {
         .animate(
             [
                 (on_frame, Duration::from_millis(500)),
-                (device_kit::led2d::Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::new(), Duration::from_millis(500)),
+                (
+                    device_kit::led2d::Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::new(),
+                    Duration::from_millis(500),
+                ),
             ]
             .into_iter(),
         )
@@ -136,7 +139,10 @@ async fn demo_blink_pattern(led4x12: &Led4x12) -> Result<()> {
         .animate(
             [
                 (on_frame, Duration::from_millis(500)),
-                (device_kit::led2d::Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::new(), Duration::from_millis(500)),
+                (
+                    device_kit::led2d::Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::new(),
+                    Duration::from_millis(500),
+                ),
             ]
             .into_iter(),
         )

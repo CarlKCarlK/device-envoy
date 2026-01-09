@@ -28,16 +28,16 @@
 //!
 //! led2d! {
 //!     pub Led12x4,
-//!     pio: PIO0,
 //!     pin: PIN_3,
-//!     dma: DMA_CH1,
 //!     width: 12,
 //!     height: 4,
 //!     led_layout: serpentine_column_major,
+//!     font: Font3x4Trim,
+//!     pio: PIO0,
+//!     dma: DMA_CH1,
 //!     max_current: Current::Milliamps(500),
 //!     gamma: Gamma::Linear,
 //!     max_frames: 32,
-//!     font: Font3x4Trim,
 //! }
 //!
 //! #[embassy_executor::main]

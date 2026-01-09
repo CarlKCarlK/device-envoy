@@ -1,6 +1,6 @@
 //! Compile-only verification that multiple led2d devices can coexist in the same file.
 //!
-//! This demonstrates that the associated constants approach (Led4x12::H, Led8x8::H)
+//! This demonstrates that the associated constants approach (Led4x12::HEIGHT, Led8x8::HEIGHT)
 //! prevents namespace collisions when multiple devices are defined.
 //! Run via: `cargo check-all` (xtask compiles this for thumbv6m-none-eabi)
 
@@ -81,13 +81,13 @@ async fn test_multiple_devices(p: embassy_rp::Peripherals, spawner: Spawner) -> 
     // Create frame for 4x12 display
     let mut frame_4x12 = Led4x12::new_frame();
     frame_4x12[0][0] = colors::RED;
-    frame_4x12[Led4x12::H - 1][Led4x12::W - 1] = colors::BLUE;
+    frame_4x12[Led4x12::HEIGHT - 1][Led4x12::WIDTH - 1] = colors::BLUE;
     led4x12.write_frame(frame_4x12).await?;
 
     // Create frame for 8x8 display (different dimensions)
     let mut frame_8x8 = Led8x8::new_frame();
     frame_8x8[0][0] = colors::GREEN;
-    frame_8x8[Led8x8::H - 1][Led8x8::W - 1] = colors::YELLOW;
+    frame_8x8[Led8x8::HEIGHT - 1][Led8x8::WIDTH - 1] = colors::YELLOW;
     led8x8.write_frame(frame_8x8).await?;
 
     // Verify animations work with both

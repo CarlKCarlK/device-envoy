@@ -411,7 +411,7 @@ async fn show_minutes_seconds(led_8x12: &Led8x12, minutes: u8, seconds: u8) -> R
     led_8x12.write_text(text.as_str(), &DIGIT_COLORS).await
 }
 
-const PERIMETER_LENGTH: usize = (Led8x12::W * 2) + ((Led8x12::H - 2) * 2);
+const PERIMETER_LENGTH: usize = (Led8x12::WIDTH * 2) + ((Led8x12::HEIGHT - 2) * 2);
 
 fn two_line_text(top_chars: [char; 2], bottom_chars: [char; 2]) -> String<5> {
     let mut text = String::new();
@@ -470,16 +470,16 @@ fn perimeter_coordinates(clockwise: bool) -> [(usize, usize); PERIMETER_LENGTH] 
         write_index += 1;
     };
 
-    for column_index in 0..Led8x12::W {
+    for column_index in 0..Led8x12::WIDTH {
         push(0, column_index);
     }
-    for row_index in 1..Led8x12::H {
-        push(row_index, Led8x12::W - 1);
+    for row_index in 1..Led8x12::HEIGHT {
+        push(row_index, Led8x12::WIDTH - 1);
     }
-    for column_index in (0..(Led8x12::W - 1)).rev() {
-        push(Led8x12::H - 1, column_index);
+    for column_index in (0..(Led8x12::WIDTH - 1)).rev() {
+        push(Led8x12::HEIGHT - 1, column_index);
     }
-    for row_index in (1..(Led8x12::H - 1)).rev() {
+    for row_index in (1..(Led8x12::HEIGHT - 1)).rev() {
         push(row_index, 0);
     }
 

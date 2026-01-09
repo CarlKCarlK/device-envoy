@@ -44,15 +44,15 @@ async fn test_led2x3_custom_mapping(p: embassy_rp::Peripherals, spawner: Spawner
     // Verify write_frame works
     let mut frame = Led2x3::new_frame();
     frame[0][0] = colors::RED;
-    frame[0][Led2x3::W - 1] = colors::GREEN;
-    frame[Led2x3::H - 1][0] = colors::BLUE;
-    frame[Led2x3::H - 1][Led2x3::W - 1] = colors::YELLOW;
+    frame[0][Led2x3::WIDTH - 1] = colors::GREEN;
+    frame[Led2x3::HEIGHT - 1][0] = colors::BLUE;
+    frame[Led2x3::HEIGHT - 1][Led2x3::WIDTH - 1] = colors::YELLOW;
     led2x3.write_frame(frame).await?;
 
     // Verify animate works
     let mut frames = heapless::Vec::<_, { Led2x3::MAX_FRAMES }>::new();
-    for row_index in 0..Led2x3::H {
-        for column_index in 0..Led2x3::W {
+    for row_index in 0..Led2x3::HEIGHT {
+        for column_index in 0..Led2x3::WIDTH {
             let mut frame = Led2x3::new_frame();
             frame[row_index][column_index] = colors::CYAN;
             frames.push((frame, Duration::from_millis(200))).ok();

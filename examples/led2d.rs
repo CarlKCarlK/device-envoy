@@ -112,9 +112,9 @@ async fn demo_colored_corners(led4x12: &Led4x12) -> Result<()> {
     // Four corners with different colors
     let mut frame = Led4x12::new_frame();
     frame[0][0] = colors::RED; // Top-left
-    frame[0][Led4x12::W - 1] = colors::GREEN; // Top-right
-    frame[Led4x12::H - 1][0] = colors::BLUE; // Bottom-left
-    frame[Led4x12::H - 1][Led4x12::W - 1] = colors::YELLOW; // Bottom-right
+    frame[0][Led4x12::WIDTH - 1] = colors::GREEN; // Top-right
+    frame[Led4x12::HEIGHT - 1][0] = colors::BLUE; // Bottom-left
+    frame[Led4x12::HEIGHT - 1][Led4x12::WIDTH - 1] = colors::YELLOW; // Bottom-right
 
     led4x12.write_frame(frame).await?;
     Ok(())
@@ -124,8 +124,8 @@ async fn demo_colored_corners(led4x12: &Led4x12) -> Result<()> {
 async fn demo_blink_pattern(led4x12: &Led4x12) -> Result<()> {
     // Create checkerboard pattern
     let mut on_frame = Led4x12::new_frame();
-    for row_index in 0..Led4x12::H {
-        for column_index in 0..Led4x12::W {
+    for row_index in 0..Led4x12::HEIGHT {
+        for column_index in 0..Led4x12::WIDTH {
             if (row_index + column_index) % 2 == 0 {
                 on_frame[row_index][column_index] = colors::CYAN;
             }
@@ -156,17 +156,23 @@ async fn demo_rectangle_diagonals_embedded_graphics(led4x12: &Led4x12) -> Result
 
     // Use the embedded_graphics crate to draw an image.
 
+    let frame_top_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::top_left();
+    let frame_size = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::size();
+    let frame_bottom_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::bottom_right();
+    let frame_bottom_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::bottom_left();
+    let frame_top_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::top_right();
+
     // Draw red rectangle border
-    Rectangle::new(Frame::<4, 12>::top_left(), Frame::<4, 12>::size())
+    Rectangle::new(frame_top_left, frame_size)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::RED, 1))
         .draw(&mut frame)?;
 
     // Draw blue diagonal lines from corner to corner
-    Line::new(Frame::<4, 12>::top_left(), Frame::<4, 12>::bottom_right())
+    Line::new(frame_top_left, frame_bottom_right)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::BLUE, 1))
         .draw(&mut frame)?;
 
-    Line::new(Frame::<4, 12>::bottom_left(), Frame::<4, 12>::top_right())
+    Line::new(frame_bottom_left, frame_top_right)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::BLUE, 1))
         .draw(&mut frame)?;
 
@@ -189,7 +195,7 @@ async fn demo_bouncing_dot_manual(led4x12: &Led4x12, button: &mut Button<'_>) ->
 
     let (mut x, mut y) = (0isize, 0isize);
     let (mut vx, mut vy) = (1isize, 1isize);
-    let (x_limit, y_limit) = (Led4x12::W as isize, Led4x12::H as isize);
+    let (x_limit, y_limit) = (Led4x12::WIDTH as isize, Led4x12::HEIGHT as isize);
     let mut color = *color_cycle.next().unwrap(); // Safe: cycle() over a non-empty array never returns None
 
     loop {
@@ -227,7 +233,7 @@ async fn demo_bouncing_dot_animation(led4x12: &Led4x12) -> Result<()> {
     let mut frames = Vec::<_, { Led4x12::MAX_FRAMES }>::new();
     let (mut x, mut y) = (0isize, 0isize);
     let (mut vx, mut vy) = (1isize, 1isize);
-    let (x_limit, y_limit) = (Led4x12::W as isize, Led4x12::H as isize);
+    let (x_limit, y_limit) = (Led4x12::WIDTH as isize, Led4x12::HEIGHT as isize);
     let mut color = *color_cycle.next().unwrap();
 
     for _ in 0..Led4x12::MAX_FRAMES {

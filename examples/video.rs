@@ -135,12 +135,12 @@ fn create_test_pattern() -> Led12x8Frame {
     let mut frame = Led12x8::new_frame();
 
     frame[0][0] = colors::RED; // Top-left
-    frame[0][Led12x8::W - 1] = colors::GREEN; // Top-right
-    frame[Led12x8::H - 1][0] = colors::BLUE; // Bottom-left
-    frame[Led12x8::H - 1][Led12x8::W - 1] = colors::YELLOW; // Bottom-right
+    frame[0][Led12x8::WIDTH - 1] = colors::GREEN; // Top-right
+    frame[Led12x8::HEIGHT - 1][0] = colors::BLUE; // Bottom-left
+    frame[Led12x8::HEIGHT - 1][Led12x8::WIDTH - 1] = colors::YELLOW; // Bottom-right
 
     // Center cross for additional verification
-    frame[Led12x8::H / 2][Led12x8::W / 2] = colors::WHITE;
+    frame[Led12x8::HEIGHT / 2][Led12x8::WIDTH / 2] = colors::WHITE;
 
     frame.into()
 }

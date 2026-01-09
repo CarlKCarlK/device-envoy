@@ -1811,14 +1811,10 @@ macro_rules! led2d_from_strip {
             #[allow(non_snake_case, dead_code)]
             impl [<$name:camel>] {
                 /// Number of columns in the display.
-                pub const W: usize = $cols_const;
-                /// Number of columns in the display.
                 pub const WIDTH: usize = $cols_const;
                 /// Number of rows in the display.
-                pub const H: usize = $rows_const;
-                /// Number of rows in the display.
                 pub const HEIGHT: usize = $rows_const;
-                /// Total number of LEDs (W * H).
+                /// Total number of LEDs (WIDTH * HEIGHT).
                 pub const N: usize = $n_const;
                 /// Maximum animation frames supported for this device.
                 pub const MAX_FRAMES: usize = $max_frames_const;

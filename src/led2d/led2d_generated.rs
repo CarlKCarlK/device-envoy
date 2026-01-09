@@ -153,15 +153,15 @@ pub struct Led2dGeneratedLedStrip;
 #[cfg(doc)]
 impl Led2dGenerated {
     /// Number of columns in the display.
-    pub const W: usize = 12;
-    /// Number of columns in the display.
     pub const WIDTH: usize = 12;
     /// Number of rows in the display.
-    pub const H: usize = 4;
-    /// Number of rows in the display.
     pub const HEIGHT: usize = 4;
-    /// Total number of LEDs (W * H).
-    pub const N: usize = 48;
+    /// Total number of LEDs (WIDTH * HEIGHT).
+    pub const LEN: usize = 48;
+    /// Maximum brightness level, automatically limited by the power budget.
+    /// We assume each LED draws 60 mA at full brightness.
+    pub const MAX_BRIGHTNESS: u8 =
+        crate::led_strip::Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
     /// Maximum animation frames supported for this panel.
     pub const MAX_FRAMES: usize = 16;
 

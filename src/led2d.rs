@@ -63,7 +63,7 @@
 //! - `led_layout` - LED strip physical layout:
 //!   - `serpentine_column_major` - Common serpentine wiring pattern
 //!   - `LedLayout` expression - Custom LED layout value in LED-index order
-//! - `max_frames` - Maximum animation frames allowed (not buffered)
+//! - `max_frames` - Maximum animation frames allowed
 //! - `font` - Built-in font variant (see [`Led2dFont`])
 //!
 //! ## Generated API
@@ -998,7 +998,7 @@ pub use led2d_device;
 ///   - `serpentine_column_major` - Common serpentine wiring pattern (LED index → `(col, row)`)
 ///   - `LedLayout` expression - Custom LED layout value in LED-index order
 /// - `max_current` - Maximum current budget (e.g., `Current::Milliamps(500)`)
-/// - `max_frames` - Maximum animation frames allowed (not buffered)
+/// - `max_frames` - Maximum animation frames allowed
 /// - `font` - Built-in font variant (see [`Led2dFont`])
 ///
 /// # Generated API
@@ -1221,7 +1221,7 @@ macro_rules! led2d {
 /// - `led_layout` - LED strip physical layout:
 ///   - `serpentine_column_major` - Common serpentine wiring pattern (LED index → `(col, row)`)
 ///   - `LedLayout` expression - Custom LED layout value in LED-index order
-/// - `max_frames` - Maximum animation frames allowed (not buffered)
+/// - `max_frames` - Maximum animation frames allowed
 /// - `font` - Built-in font variant (see [`Led2dFont`])
 ///
 /// # Example

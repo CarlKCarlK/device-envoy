@@ -96,7 +96,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
 
     // Prepare two-frame "gogo" animation for gpio3 Led2d
     let mut go_frames_gpio3 = Vec::<_, 2>::new();
-    let mut frame1 = device_kit::led2d::Frame::<{ Gpio3LedStripLed2d::WIDTH }, { Gpio3LedStripLed2d::HEIGHT }>::new();
+    let mut frame1 = Gpio3LedStripLed2dFrame::new();
     gpio3_led_strip.write_text_to_frame(
         "go  ",
         &[
@@ -111,7 +111,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         .push((frame1, go_frame_duration))
         .expect("go_frames has capacity for 2 frames");
 
-    let mut frame2 = device_kit::led2d::Frame::<{ Gpio3LedStripLed2d::WIDTH }, { Gpio3LedStripLed2d::HEIGHT }>::new();
+    let mut frame2 = Gpio3LedStripLed2dFrame::new();
     gpio3_led_strip.write_text_to_frame(
         "  go",
         &[
@@ -128,7 +128,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
 
     // Prepare two-frame "go" animation for gpio4 Led2d
     let mut go_frames_gpio4 = Vec::<_, 2>::new();
-    let mut frame1 = device_kit::led2d::Frame::<{ Gpio4LedStripLed2d::WIDTH }, { Gpio4LedStripLed2d::HEIGHT }>::new();
+    let mut frame1 = Gpio4LedStripLed2dFrame::new();
     gpio4_led_strip.write_text_to_frame(
         "GO\n",
         &[
@@ -143,7 +143,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         .push((frame1, go_frame_duration))
         .expect("go_frames has capacity for 2 frames");
 
-    let mut frame2 = device_kit::led2d::Frame::<{ Gpio4LedStripLed2d::WIDTH }, { Gpio4LedStripLed2d::HEIGHT }>::new();
+    let mut frame2 = Gpio4LedStripLed2dFrame::new();
     gpio4_led_strip.write_text_to_frame(
         "\nGO",
         &[

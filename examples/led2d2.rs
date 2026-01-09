@@ -22,7 +22,7 @@ const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.concat_v(LED_LAYOU
 const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
 
 led2d! {
-    pub Gpio4Led2d,
+    pub Led2DAnimate,
     pin: PIN_4,
     width: 8,
     height: 12,
@@ -45,9 +45,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("LED 2D Example: Animated text on a rotated 12x8 panel");
     let p = init(Default::default());
 
-    let gpio4_led_strip = Gpio4Led2d::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
+    let gpio4_led_strip = Led2DAnimate::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
-    let mut frame_a = Gpio4Led2dFrame::new();
+    let mut frame_a = Led2DAnimateFrame::new();
     let colors_a = [
         colors::RED,
         colors::ORANGE,
@@ -58,8 +58,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     ];
     gpio4_led_strip.write_text_to_frame("Go\nGo", &colors_a, &mut frame_a)?;
 
-    let mut frame_b =
-        device_kit::led2d::Frame::<{ Gpio4Led2d::WIDTH }, { Gpio4Led2d::HEIGHT }>::new();
+    let mut frame_b = Led2DAnimateFrame::new();
     let colors_b = [
         colors::MAGENTA,
         colors::PURPLE,
@@ -70,8 +69,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     ];
     gpio4_led_strip.write_text_to_frame("Go\nGo", &colors_b, &mut frame_b)?;
 
-    let mut frame_c =
-        device_kit::led2d::Frame::<{ Gpio4Led2d::WIDTH }, { Gpio4Led2d::HEIGHT }>::new();
+    let mut frame_c = Led2DAnimateFrame::new();
     let colors_c = [
         colors::WHITE,
         colors::PINK,

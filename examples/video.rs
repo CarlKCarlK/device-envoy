@@ -132,7 +132,7 @@ impl Mode {
 /// Create a test pattern frame with RGBY corners.
 /// Tests all 4 corners and center cross to verify coordinate mapping.
 fn create_test_pattern() -> Led12x8Frame {
-    let mut frame = device_kit::led2d::Frame::<{ Led12x8::WIDTH }, { Led12x8::HEIGHT }>::new();
+    let mut frame = Led12x8Frame::new();
 
     frame[0][0] = colors::RED; // Top-left
     frame[0][Led12x8::WIDTH - 1] = colors::GREEN; // Top-right
@@ -177,7 +177,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
                 mode = mode.next();
             }
             Mode::TestText => {
-                let mut frame = device_kit::led2d::Frame::<{ Led12x8::WIDTH }, { Led12x8::HEIGHT }>::new();
+                let mut frame = Led12x8Frame::new();
                 led_12x8.write_text_to_frame(
                     "HELLO\nWORLD",
                     &[colors::CYAN, colors::MAGENTA],

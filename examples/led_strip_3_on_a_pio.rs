@@ -81,7 +81,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let mut go_frames = Vec::<_, 2>::new();
 
     // Frame 1: "go  " - each character gets its own color
-    let mut frame1 = device_kit::led2d::Frame::<{ Led12x4Gpio3::WIDTH }, { Led12x4Gpio3::HEIGHT }>::new();
+    let mut frame1 = Led12x4Gpio3Frame::new();
     led12x4_gpio3.write_text_to_frame(
         "go  ",
         &[colors::MAGENTA, colors::CYAN, colors::BLACK, colors::BLACK],
@@ -92,7 +92,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         .expect("go_frames has capacity for 2 frames");
 
     // Frame 2: "  go" - each character gets its own color
-    let mut frame2 = device_kit::led2d::Frame::<{ Led12x4Gpio3::WIDTH }, { Led12x4Gpio3::HEIGHT }>::new();
+    let mut frame2 = Led12x4Gpio3Frame::new();
     led12x4_gpio3.write_text_to_frame(
         "  go",
         &[
@@ -113,7 +113,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let mut go_frames_8x12 = Vec::<_, 2>::new();
 
     // Frame 1: "GO\n  " - two lines
-    let mut frame1_8x12 = device_kit::led2d::Frame::<{ Led8x12Gpio4::WIDTH }, { Led8x12Gpio4::HEIGHT }>::new();
+    let mut frame1_8x12 = Led8x12Gpio4Frame::new();
     led8x12_gpio4.write_text_to_frame(
         "GO\n  ",
         &[colors::MAGENTA, colors::CYAN, colors::BLACK, colors::BLACK],
@@ -124,7 +124,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         .expect("go_frames_8x12 has capacity for 2 frames");
 
     // Frame 2: "  \nGO" - two lines
-    let mut frame2_8x12 = device_kit::led2d::Frame::<{ Led8x12Gpio4::WIDTH }, { Led8x12Gpio4::HEIGHT }>::new();
+    let mut frame2_8x12 = Led8x12Gpio4Frame::new();
     led8x12_gpio4.write_text_to_frame(
         "  \nGO",
         &[

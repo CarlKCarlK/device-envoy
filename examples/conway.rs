@@ -327,7 +327,7 @@ impl<const H: usize, const W: usize> Board<H, W> {
 
     /// Convert board state to an LED frame with the specified color for alive cells.
     fn to_frame(&self, alive_color: Rgb) -> Led8x12Frame {
-        let mut frame = device_kit::led2d::Frame::<{ Led8x12::WIDTH }, { Led8x12::HEIGHT }>::new();
+        let mut frame = Led8x12Frame::new();
         for row_index in 0..H {
             for col_index in 0..W {
                 if self.cells[row_index][col_index] {

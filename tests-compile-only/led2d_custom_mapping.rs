@@ -42,7 +42,7 @@ async fn test_led2x3_custom_mapping(p: embassy_rp::Peripherals, spawner: Spawner
     let led2x3 = Led2x3::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Verify write_frame works
-    let mut frame = device_kit::led2d::Frame::<{ Led2x3::WIDTH }, { Led2x3::HEIGHT }>::new();
+    let mut frame = Led2x3Frame::new();
     frame[0][0] = colors::RED;
     frame[0][Led2x3::WIDTH - 1] = colors::GREEN;
     frame[Led2x3::HEIGHT - 1][0] = colors::BLUE;
@@ -53,7 +53,7 @@ async fn test_led2x3_custom_mapping(p: embassy_rp::Peripherals, spawner: Spawner
     let mut frames = heapless::Vec::<_, { Led2x3::MAX_FRAMES }>::new();
     for row_index in 0..Led2x3::HEIGHT {
         for column_index in 0..Led2x3::WIDTH {
-            let mut frame = device_kit::led2d::Frame::<{ Led2x3::WIDTH }, { Led2x3::HEIGHT }>::new();
+            let mut frame = Led2x3Frame::new();
             frame[row_index][column_index] = colors::CYAN;
             frames.push((frame, Duration::from_millis(200))).ok();
         }

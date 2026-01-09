@@ -367,7 +367,7 @@ async fn show_portal_ready(led_8x12: &Led8x12) -> Result<()> {
     led_8x12
         .animate([
             (on_frame, Duration::from_millis(700)),
-            (device_kit::led2d::Frame::<{ Led8x12::WIDTH }, { Led8x12::HEIGHT }>::new(), Duration::from_millis(300)),
+            (Led8x12Frame::new(), Duration::from_millis(300)),
         ])
         .await
 }
@@ -426,7 +426,7 @@ fn two_line_text(top_chars: [char; 2], bottom_chars: [char; 2]) -> String<5> {
 }
 
 fn text_frame(led_8x12: &Led8x12, text: &str, colors: &[RGB8]) -> Result<Led8x12Frame> {
-    let mut frame = device_kit::led2d::Frame::<{ Led8x12::WIDTH }, { Led8x12::HEIGHT }>::new();
+    let mut frame = Led8x12Frame::new();
     led_8x12.write_text_to_frame(text, colors, &mut frame)?;
     Ok(frame)
 }
@@ -448,7 +448,7 @@ fn perimeter_chase_animation(
     let coordinates = perimeter_coordinates(clockwise);
     let mut frames = heapless::Vec::new();
     for head_index in 0..PERIMETER_LENGTH {
-        let mut frame = device_kit::led2d::Frame::<{ Led8x12::WIDTH }, { Led8x12::HEIGHT }>::new();
+        let mut frame = Led8x12Frame::new();
         for segment_offset in 0..SNAKE_LENGTH {
             let coordinate_index =
                 (head_index + PERIMETER_LENGTH - segment_offset) % PERIMETER_LENGTH;

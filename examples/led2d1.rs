@@ -7,8 +7,6 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
-use device_kit::led_strip::Current;
-use device_kit::led_strip::Gamma;
 use device_kit::led_strip::colors;
 use device_kit::led2d;
 use device_kit::led2d::layout::LedLayout;
@@ -20,15 +18,10 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 
 led2d! {
     pub led12x4,
-    pio: PIO0,
     pin: PIN_3,
-    dma: DMA_CH0,
     width: 12,
     height: 4,
     led_layout: LED_LAYOUT_12X4,
-    max_current: Current::Milliamps(500),
-    gamma: Gamma::Linear,
-    max_frames: 16,
     font: Font3x4Trim,
 }
 
@@ -47,9 +40,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let colors = [
         colors::RED,
         colors::ORANGE,
-        colors::BLUE,
+        colors::YELLOW,
         colors::GREEN,
-        colors::CYAN,
+        colors::BLUE,
         colors::PURPLE,
     ];
     led12x4.write_text("Rust", &colors).await?;

@@ -1073,7 +1073,7 @@ macro_rules! __led2d_impl {
             height: _UNSET_,
             led_layout: _UNSET_,
             max_current: _UNSET_,
-            gamma: _UNSET_,
+            gamma: $crate::led_strip::Gamma::Gamma2_2,
             max_frames: 16,
             font: _UNSET_,
             fields: [ $($fields)* ]
@@ -1091,7 +1091,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ pio: $new_pio:ident $(, $($rest:tt)* )? ]
@@ -1125,7 +1125,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ pin: $new_pin:ident $(, $($rest:tt)* )? ]
@@ -1159,7 +1159,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ dma: $new_dma:ident $(, $($rest:tt)* )? ]
@@ -1193,7 +1193,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ width: $new_width:expr $(, $($rest:tt)* )? ]
@@ -1227,7 +1227,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ height: $new_height:expr $(, $($rest:tt)* )? ]
@@ -1261,7 +1261,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ led_layout: $new_led_layout:tt $(, $($rest:tt)* )? ]
@@ -1295,7 +1295,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ max_current: $new_max_current:expr $(, $($rest:tt)* )? ]
@@ -1329,7 +1329,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ gamma: $new_gamma:expr $(, $($rest:tt)* )? ]
@@ -1363,7 +1363,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ max_frames: $new_max_frames:expr $(, $($rest:tt)* )? ]
@@ -1397,7 +1397,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ font: $new_font_variant:ident $(, $($rest:tt)* )? ]
@@ -1431,7 +1431,7 @@ macro_rules! __led2d_impl {
         height: $height:tt,
         led_layout: $led_layout:tt,
         max_current: _UNSET_,
-        gamma: $gamma:tt,
+        gamma: $gamma:expr,
         max_frames: $max_frames:tt,
         font: $font_variant:tt,
         fields: [ ]

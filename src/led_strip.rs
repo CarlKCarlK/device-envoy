@@ -1817,7 +1817,7 @@ macro_rules! __led_strip_impl {
                 "        frame[pixel_index] = colors::BLUE;\n",
                 "    }\n",
                 "    led_strip.write_frame(frame).await?;\n",
-                "    Ok(future::pending().await) // run forever\n",
+                "    future::pending().await // run forever\n",
                 "}\n",
                 "```\n\n",
                 "# Example: Animate a Sequence\n\n",
@@ -1857,7 +1857,7 @@ macro_rules! __led_strip_impl {
                 "        (Frame::filled(colors::GREEN), frame_duration),\n",
                 "        (Frame::filled(colors::BLUE), frame_duration),\n",
                 "    ]).await?;\n",
-                "    Ok(future::pending().await) // run forever\n",
+                "    future::pending().await // run forever\n",
                 "}\n",
                 "```"
             )]

@@ -2,14 +2,10 @@
 #![no_main]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::convert::Infallible;
-
+use core::{convert::Infallible, future};
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::Result;
-use device_kit::led_strip::colors;
-use device_kit::led2d;
-use device_kit::led2d::layout::LedLayout;
+use device_kit::{Result, led_strip::colors, led2d, led2d::layout::LedLayout};
 use embassy_executor::Spawner;
 use embassy_rp::init;
 use panic_probe as _;
@@ -37,15 +33,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led12x4 = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
 
-    let colors = [
-        colors::RED,
-        colors::ORANGE,
-        colors::YELLOW,
-        colors::GREEN,
-        colors::BLUE,
-        colors::PURPLE,
-    ];
+    let colors = [colors::RED, colors::GREEN, colors::BLUE];
     led12x4.write_text("Rust", &colors).await?;
 
-    core::future::pending().await
+    future::pending().await // run forever
 }

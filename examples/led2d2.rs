@@ -2,16 +2,16 @@
 #![no_main]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future};
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::led2d::layout::LedLayout;
-use device_kit::led_strip::led_strips;
+use device_kit::Result;
 use device_kit::led_strip::Current;
 use device_kit::led_strip::Gamma;
 use device_kit::led_strip::colors;
-use device_kit::Result;
+use device_kit::led_strip::led_strips;
+use device_kit::led2d::layout::LedLayout;
 use embassy_executor::Spawner;
 use embassy_rp::init;
 use embassy_time::Duration;
@@ -96,5 +96,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         ])
         .await?;
 
-    core::future::pending().await
+    future::pending().await
 }

@@ -1785,7 +1785,7 @@ macro_rules! __led_strip_impl {
                 "Generated structs are specialized for their exact use case:\n",
                 "- **Number of LEDs** — Set via the `len` parameter in your [`led_strip!`] or [`led_strips!`](crate::led_strips!) invocation.\n",
                 "- **[PIO](crate#glossary) and [DMA](crate#glossary) resources** — Customized to the pins and channels you specify.\n",
-                "- **Power limiting, gamma correction, and frame buffering** — Configured via `max_current`, `gamma`, and `max_frames` parameters. See the [`led_strip!`] or [`led_strips!`](crate::led_strips!) macro documentation for complete details.\n\n",
+                "- **Power limiting, gamma correction, and max animation frames** — Configured via `max_current`, `gamma`, and `max_frames` parameters. See the [`led_strip!`] or [`led_strips!`](crate::led_strips!) macro documentation for complete details.\n\n",
                 "# Example: Write a Single Frame\n\n",
                 "In this example, we set every other LED to blue. Here, the generated struct is named `LedStripSimple`.\n\n",
                 "```rust,no_run\n",

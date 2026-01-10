@@ -974,77 +974,61 @@ macro_rules! led2d_device {
 #[cfg(not(feature = "host"))]
 pub use led2d_device;
 
-/// cmk00000 Generate a complete Led2d display with automatic PIO and strip management.
+/// Macro to generate a device abstraction for a NeoPixel-style (WS2812) 2D LED panel.
 ///
-/// This macro creates a self-contained LED matrix display with automatic PIO splitting
-/// and internal resource management. For simpler single-strip displays, this is the
-/// recommended approach. For multi-strip scenarios where you need to share a PIO with
-/// other devices, use [`led2d_from_strip!`] instead.
+/// See [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated) for usage examples.
 ///
-/// The macro generates everything needed: the LED strip infrastructure, the Led2d
-/// device abstraction, and a simplified constructor that handles all initialization.
+/// **Required fields:**
 ///
-/// # Parameters
+/// - `pin` — GPIO pin for LED data
+/// - `width` — Number of columns in the panel
+/// - `height` — Number of rows in the panel
+/// - `led_layout` — LED strip physical layout (see [`LedLayout`])
+/// - `font` — Built-in font variant (see [`Led2dFont`])
 ///
-/// - Visibility and base name for generated types (e.g., `pub Led12x4`)
-/// - `pio` - PIO peripheral to use (e.g., `PIO0`, `PIO1`) (optional; default: `PIO0`)
-/// - `pin` - GPIO pin for LED data signal (e.g., `PIN_3`)
-/// - `dma` - DMA channel for LED data transfer (e.g., `DMA_CH0`) (optional; default: `DMA_CH0`)
-/// - `width` - Number of columns in the panel
-/// - `height` - Number of rows in the panel
-/// - `mapping` - LED strip physical layout:
-///   - `serpentine_column_major` - Common serpentine wiring pattern (LED index → `(col, row)`)
-///   - `LedLayout` expression - Custom LED layout value in LED-index order
-/// - `max_current` - Maximum current budget (e.g., `Current::Milliamps(500)`) (optional; default: `Current::Milliamps(250)`)
-/// - `max_frames` - Maximum animation frames allowed (optional; default: `16`)
-/// - `font` - Built-in font variant (see [`Led2dFont`])
+/// **Optional fields:**
 ///
-/// # Generated API
+/// - `pio` — PIO resource to use (default: `PIO0`)
+/// - `dma` — DMA channel (default: `DMA_CH0`)
+/// - `max_current` — Current budget (default: `250` mA via [`Current::Milliamps`](`crate::led_strip::Current::Milliamps`))
+/// - `gamma` — Color curve (default: [`Gamma::Gamma2_2`](`crate::led_strip::Gamma::Gamma2_2`))
+/// - `max_frames` — Maximum animation frames (default: `16`)
 ///
-/// The macro generates a type `YourName` with a simplified constructor:
-/// - `YourName::new_simple(pio, dma, pin, spawner)` - Single-call initialization
+/// # Current Limiting
 ///
-/// # Example
+/// The `max_current` field automatically scales brightness to stay within your power budget.
 ///
-/// ```no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// use embassy_executor::Spawner;
-/// use embassy_rp::init;
-/// use device_kit::led2d;
-/// use device_kit::led_strips;
-/// use device_kit::led_strip::Current;
-/// use device_kit::led_strip::Gamma;
-/// use device_kit::led_strip::colors;
-/// use embassy_time::Duration;
+/// Each WS2812 LED is assumed to draw 60 mA at full brightness. For example:
+/// - 16 LEDs × 60 mA = 960 mA at full brightness
+/// - With `max_current: Current::Milliamps(1000)`, all LEDs fit at 100% brightness
+/// - With `max_current: Current::Milliamps(250)` (the default), the generated `MAX_BRIGHTNESS` limits LEDs to ~26% brightness
 ///
-/// // Generate a 12×4 LED matrix display
-/// led2d! {
-///     pub Led12x4,
-///     pio: PIO0,
-///     pin: PIN_3,
-///     dma: DMA_CH1,
-///     width: 12,
-///     height: 4,
-///     led_layout: serpentine_column_major,
-///     max_current: Current::Milliamps(500),
-///     gamma: Gamma::Linear,
-///     max_frames: 32,
-///     font: Font3x4Trim,
-/// }
+/// The current limit is baked into a compile-time lookup table, so it has no
+/// runtime cost.
 ///
-/// #[embassy_executor::main]
-/// async fn main(spawner: Spawner) {
-///     let p = init(Default::default());
-///     
-///     // Single-call initialization
-///     let led = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH1, spawner).unwrap();
-///     
-///     // Display text
-///     led.write_text("HELLO", &[colors::RED, colors::GREEN, colors::BLUE]).await.unwrap();
-/// }
-/// ```
+/// **Powering LEDs from the Pico's pin 40 (VBUS):** Pin 40 is the USB 5 V rail
+/// pass-through, but the Pico itself has practical current limits — the USB connector,
+/// cable, and internal circuitry aren't designed for heavy loads. Small LED panels
+/// (a few hundred mA) can usually power from pin 40 with a decent USB supply; for
+/// larger loads (1 A+), use a separate 5 V supply and share ground with the Pico.
+///
+/// # Color Correction (Gamma)
+///
+/// The `gamma` field applies a color response curve to make colors look more natural:
+///
+/// - [`Gamma::Linear`](`crate::led_strip::Gamma::Linear`) — No correction (raw values)
+/// - [`Gamma::Gamma2_2`](`crate::led_strip::Gamma::Gamma2_2`) — Standard sRGB curve (default, most natural-looking)
+///
+/// The gamma curve is baked into a compile-time lookup table, so it has no
+/// runtime cost.
+///
+/// # When to Use This Macro
+///
+/// Use `led2d!` when you want a **single LED panel** generated from a strip.
+///
+/// If you need to share a PIO resource or build from an existing strip, use
+/// [`led_strips!`](crate::led_strip::led_strips)'s led2d feature instead.
+/// cmk0000 from strips
 #[macro_export]
 #[cfg(not(feature = "host"))]
 macro_rules! led2d {

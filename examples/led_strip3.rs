@@ -15,36 +15,33 @@ use embassy_time::Duration;
 use panic_probe as _;
 
 led_strips! {
+    pio: PIO0,
     LedStrips {
         gpio0: {
-            dma: DMA_CH0,
             pin: PIN_0,
             len: 8,
-            max_current: Current::Milliamps(50),
+            max_current: Current::Milliamps(25),
         },
         gpio3: {
-            dma: DMA_CH1,
             pin: PIN_3,
             len: 48,
-            max_current: Current::Milliamps(150),
+            max_current: Current::Milliamps(100),
             led2d: {
                 width: 12,
                 height: 4,
                 led_layout: LED_LAYOUT_12X4,
-                max_frames: 1, // cmk000000 delete
                 font: Font3x4Trim,
             }
         },
         gpio4: {
-            dma: DMA_CH2,
             pin: PIN_4,
             len: 96,
-            max_current: Current::Milliamps(100),
+            max_current: Current::Milliamps(175),
+            max_frames: 2, // cmk000000 test this to failure
             led2d: {
                 width: 8,
                 height: 12,
                 led_layout: LED_LAYOUT_12X8_ROTATED,
-                max_frames: 2, // cmk000000 move
                 font: Font4x6Trim,
             }
         },

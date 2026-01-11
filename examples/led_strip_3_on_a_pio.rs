@@ -7,9 +7,9 @@
 use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
-use device_kit::led2d::layout::LedLayout;
 use device_kit::led_strip::led_strips;
 use device_kit::led_strip::{Frame, Rgb, colors};
+use device_kit::led2d::layout::LedLayout;
 use device_kit::led2d::led2d_from_strip;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -27,13 +27,13 @@ led_strips! {
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_8X12: LedLayout<96, 8, 12> = LED_LAYOUT_12X4.concat_v(LED_LAYOUT_12X4).rotate_cw();
 
+// cmk0000 get the max_frames from the 1D strip? (resolved: led2d_from_strip! now uses strip's MAX_FRAMES automatically)
 led2d_from_strip! {
     pub Led12x4Gpio3,
     strip_type: Gpio3LedStrip,
     width: 12,
     height: 4,
     led_layout: LED_LAYOUT_12X4,
-    max_frames: 2,
     font: Font3x4Trim,
 }
 
@@ -43,7 +43,6 @@ led2d_from_strip! {
     width: 8,
     height: 12,
     led_layout: LED_LAYOUT_8X12,
-    max_frames: 2,
     font: Font4x6Trim,
 }
 
@@ -62,11 +61,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio0_led_strip, gpio3_led_strip, gpio4_led_strip) = LedStrips::new(
-        p.PIO0,
-        p.PIN_0, p.DMA_CH0,
-        p.PIN_3, p.DMA_CH1,
-        p.PIN_4, p.DMA_CH2,
-        spawner,
+        p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIN_4, p.DMA_CH2, spawner,
     )?;
 
     let led12x4_gpio3 = Led12x4Gpio3::from_strip(gpio3_led_strip, spawner)?;

@@ -802,7 +802,6 @@ macro_rules! __led_strips_impl {
                             width: $led2d_width,
                             height: $led2d_height,
                             led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
-                            max_frames: $led2d_max_frames,
                             font: $led2d_font,
                         }
 
@@ -946,12 +945,517 @@ macro_rules! __led_strips_impl {
         strips_in: []
     ) => {
         $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [],
+            strips_in: [ $($out)* ]
+        }
+    };
+
+    // Resolve any __DEFAULT_DMA__ placeholders before expansion.
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: []
+    ) => {
+        $crate::__led_strips_impl! {
             @__expand
             pio: $pio,
             group: $group,
             strips: [ $($out)* ]
         }
     };
+
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 0,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                $(,
+                    led2d: {
+                        width: $led2d_width:expr,
+                        height: $led2d_height:expr,
+                        led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                        max_frames: $led2d_max_frames:expr,
+                        font: $led2d_font:ident $(,)?
+                    }
+                )?
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 0,
+                    dma: DMA_CH0,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    $(,
+                        led2d: {
+                            width: $led2d_width,
+                            height: $led2d_height,
+                            led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                            max_frames: $led2d_max_frames,
+                            font: $led2d_font,
+                        }
+                    )?
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    // SM 0 with led2d but no explicit max_frames (use strip-level max_frames)
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 0,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                ,
+                led2d: {
+                    width: $led2d_width:expr,
+                    height: $led2d_height:expr,
+                    led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                    font: $led2d_font:ident $(,)?
+                }
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 0,
+                    dma: DMA_CH0,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    ,
+                    led2d: {
+                        width: $led2d_width,
+                        height: $led2d_height,
+                        led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                        max_frames: $max_frames,
+                        font: $led2d_font,
+                    }
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    // SM 1 with led2d but no explicit max_frames (use strip-level max_frames)
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 1,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                ,
+                led2d: {
+                    width: $led2d_width:expr,
+                    height: $led2d_height:expr,
+                    led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                    font: $led2d_font:ident $(,)?
+                }
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 1,
+                    dma: DMA_CH1,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    ,
+                    led2d: {
+                        width: $led2d_width,
+                        height: $led2d_height,
+                        led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                        max_frames: $max_frames,
+                        font: $led2d_font,
+                    }
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    // SM 1 with led2d and explicit max_frames (original)
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 1,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                $(,
+                    led2d: {
+                        width: $led2d_width:expr,
+                        height: $led2d_height:expr,
+                        led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                        max_frames: $led2d_max_frames:expr,
+                        font: $led2d_font:ident $(,)?
+                    }
+                )?
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 1,
+                    dma: DMA_CH1,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    $(,
+                        led2d: {
+                            width: $led2d_width,
+                            height: $led2d_height,
+                            led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                            max_frames: $led2d_max_frames,
+                            font: $led2d_font,
+                        }
+                    )?
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    // SM 2 with led2d but no explicit max_frames (use strip-level max_frames)
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 2,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                ,
+                led2d: {
+                    width: $led2d_width:expr,
+                    height: $led2d_height:expr,
+                    led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                    font: $led2d_font:ident $(,)?
+                }
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 2,
+                    dma: DMA_CH2,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    ,
+                    led2d: {
+                        width: $led2d_width,
+                        height: $led2d_height,
+                        led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                        max_frames: $max_frames,
+                        font: $led2d_font,
+                    }
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    // SM 3 with led2d but no explicit max_frames (use strip-level max_frames)
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 3,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                ,
+                led2d: {
+                    width: $led2d_width:expr,
+                    height: $led2d_height:expr,
+                    led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                    font: $led2d_font:ident $(,)?
+                }
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 3,
+                    dma: DMA_CH3,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    ,
+                    led2d: {
+                        width: $led2d_width,
+                        height: $led2d_height,
+                        led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                        max_frames: $max_frames,
+                        font: $led2d_font,
+                    }
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 2,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                $(,
+                    led2d: {
+                        width: $led2d_width:expr,
+                        height: $led2d_height:expr,
+                        led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                        max_frames: $led2d_max_frames:expr,
+                        font: $led2d_font:ident $(,)?
+                    }
+                )?
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 2,
+                    dma: DMA_CH2,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    $(,
+                        led2d: {
+                            width: $led2d_width,
+                            height: $led2d_height,
+                            led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                            max_frames: $led2d_max_frames,
+                            font: $led2d_font,
+                        }
+                    )?
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: 3,
+                dma: __DEFAULT_DMA__,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                $(,
+                    led2d: {
+                        width: $led2d_width:expr,
+                        height: $led2d_height:expr,
+                        led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                        max_frames: $led2d_max_frames:expr,
+                        font: $led2d_font:ident $(,)?
+                    }
+                )?
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: 3,
+                    dma: DMA_CH3,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    $(,
+                        led2d: {
+                            width: $led2d_width,
+                            height: $led2d_height,
+                            led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                            max_frames: $led2d_max_frames,
+                            font: $led2d_font,
+                        }
+                    )?
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__resolve_default_dma
+        pio: $pio:ident,
+        group: $group:ident,
+        strips_out: [ $($out:tt)* ],
+        strips_in: [
+            $label:ident {
+                sm: $sm_index:expr,
+                dma: $dma:ident,
+                pin: $pin:ident,
+                len: $len:expr,
+                max_current: $max_current:expr,
+                gamma: $gamma:expr,
+                max_frames: $max_frames:expr
+                $(,
+                    led2d: {
+                        width: $led2d_width:expr,
+                        height: $led2d_height:expr,
+                        led_layout: $led2d_led_layout:ident $( ( $($led2d_led_layout_args:tt)* ) )?,
+                        max_frames: $led2d_max_frames:expr,
+                        font: $led2d_font:ident $(,)?
+                    }
+                )?
+            }
+            $(, $($rest:tt)* )?
+        ]
+    ) => {
+        $crate::__led_strips_impl! {
+            @__resolve_default_dma
+            pio: $pio,
+            group: $group,
+            strips_out: [
+                $($out)*
+                $label {
+                    sm: $sm_index,
+                    dma: $dma,
+                    pin: $pin,
+                    len: $len,
+                    max_current: $max_current,
+                    gamma: $gamma,
+                    max_frames: $max_frames
+                    $(,
+                        led2d: {
+                            width: $led2d_width,
+                            height: $led2d_height,
+                            led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                            max_frames: $led2d_max_frames,
+                            font: $led2d_font,
+                        }
+                    )?
+                },
+            ],
+            strips_in: [ $($($rest)*)? ]
+        }
+    };
+
 
     // Parse fields for a single strip
     (@__fill_strip_defaults

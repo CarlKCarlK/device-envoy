@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use core::convert::Infallible;
 use core::future;
 use defmt::info;
 use defmt_rtt as _;
@@ -27,7 +28,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> Result<()> {
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     let gpio5_led_strip = Gpio5LedStrip::new(p.PIN_5, p.PIO0, p.DMA_CH0, spawner)?;
@@ -67,5 +68,5 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
 
     gpio5_led_strip.animate(frames).await?;
 
-    Ok(future::pending::<()>().await) // Run forever
+    future::pending::<Result<Infallible>>().await // Run forever
 }

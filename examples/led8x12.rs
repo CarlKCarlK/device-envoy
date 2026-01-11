@@ -7,11 +7,11 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_kit::button::{Button, PressedTo};
-use device_kit::led2d::layout::LedLayout;
 use device_kit::led_strip::Current;
 use device_kit::led_strip::Gamma;
 use device_kit::led2d;
 use device_kit::led2d::Frame;
+use device_kit::led2d::layout::LedLayout;
 use device_kit::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -154,16 +154,16 @@ async fn demo_rectangle_diagonals_embedded_graphics(led8x12: &Led8x12) -> Result
     // Use the embedded_graphics crate to draw an image.
 
     // Draw red rectangle border
-    Rectangle::new(Frame::<12, 8>::top_left(), Frame::<12, 8>::size())
+    Rectangle::new(Frame::<12, 8>::TOP_LEFT, Frame::<12, 8>::SIZE)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::RED, 1))
         .draw(&mut frame)?;
 
     // Draw blue diagonal lines from corner to corner
-    Line::new(Frame::<12, 8>::top_left(), Frame::<12, 8>::bottom_right())
+    Line::new(Frame::<12, 8>::TOP_LEFT, Frame::<12, 8>::BOTTOM_RIGHT)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::BLUE, 1))
         .draw(&mut frame)?;
 
-    Line::new(Frame::<12, 8>::bottom_left(), Frame::<12, 8>::top_right())
+    Line::new(Frame::<12, 8>::BOTTOM_LEFT, Frame::<12, 8>::TOP_RIGHT)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::BLUE, 1))
         .draw(&mut frame)?;
 
@@ -239,5 +239,5 @@ async fn demo_bouncing_dot_animation(led8x12: &Led8x12) -> Result<()> {
         }
     }
 
-    led8x12.animate(frames).await
+    led8x12.animate(frames).await // Run forever
 }

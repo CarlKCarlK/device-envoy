@@ -564,7 +564,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 ///         (Frame::filled(colors::RED), frame_duration),
 ///     ]).await?;
 ///
-///     Ok(future::pending::<Infallible>().await) // run forever
+///     future::pending::<Result<Infallible>>().await // Run forever
 /// }
 /// ```
 ///

@@ -38,5 +38,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
     led_strip3.write_frame(frame).await?;
 
-    Ok(future::pending::<Infallible>().await)
+    future::pending::<Result<Infallible>>().await // Run forever
 }

@@ -100,10 +100,7 @@ async fn demo_blink_text(led4x12: &Led4x12) -> Result<()> {
         .animate(
             [
                 (on_frame, Duration::from_millis(500)),
-                (
-                    Led4x12Frame::new(),
-                    Duration::from_millis(500),
-                ),
+                (Led4x12Frame::new(), Duration::from_millis(500)),
             ]
             .into_iter(),
         )
@@ -139,10 +136,7 @@ async fn demo_blink_pattern(led4x12: &Led4x12) -> Result<()> {
         .animate(
             [
                 (on_frame, Duration::from_millis(500)),
-                (
-                    Led4x12Frame::new(),
-                    Duration::from_millis(500),
-                ),
+                (Led4x12Frame::new(), Duration::from_millis(500)),
             ]
             .into_iter(),
         )
@@ -162,11 +156,11 @@ async fn demo_rectangle_diagonals_embedded_graphics(led4x12: &Led4x12) -> Result
 
     // Use the embedded_graphics crate to draw an image.
 
-    let frame_top_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::top_left();
-    let frame_size = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::size();
-    let frame_bottom_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::bottom_right();
-    let frame_bottom_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::bottom_left();
-    let frame_top_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::top_right();
+    let frame_top_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::TOP_LEFT;
+    let frame_size = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::SIZE;
+    let frame_bottom_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::BOTTOM_RIGHT;
+    let frame_bottom_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::BOTTOM_LEFT;
+    let frame_top_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::TOP_RIGHT;
 
     // Draw red rectangle border
     Rectangle::new(frame_top_left, frame_size)
@@ -221,6 +215,7 @@ async fn demo_bouncing_dot_manual(led4x12: &Led4x12, button: &mut Button<'_>) ->
     Ok(())
 }
 
+// cmk should this return Result<infailable> ?
 /// Bouncing dot using pre-built animation frames.
 async fn demo_bouncing_dot_animation(led4x12: &Led4x12) -> Result<()> {
     let mut color_cycle = [colors::CYAN, colors::YELLOW, colors::LIME].iter().cycle();

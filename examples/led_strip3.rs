@@ -61,7 +61,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let (gpio0_led_strip, gpio3_led_strip, gpio4_led_strip) = LedStrips::new(
+    let (gpio0_led_strip, gpio3_led_strip_led2d, gpio4_led_strip_led2d) = LedStrips::new(
         p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIN_4, p.DMA_CH2, spawner,
     )?;
 
@@ -70,13 +70,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let frame_gpio0 = Frame::<{ Gpio0LedStrip::LEN }>::filled(colors::WHITE);
     gpio0_led_strip.write_frame(frame_gpio0).await?;
 
-    let gpio3_led_strip_led2d = Gpio3LedStripLed2d::from_strip(gpio3_led_strip, spawner)?;
     let text_colors = [colors::RED, colors::GREEN, colors::BLUE];
-    gpio3_led_strip_led2d
-        .write_text("Rust", &text_colors)
-        .await?;
-
-    let gpio4_led_strip_led2d = Gpio4LedStripLed2d::from_strip(gpio4_led_strip, spawner)?;
+    gpio3_led_strip_led2d.write_text("Rust", &text_colors).await?;
 
     let mut frame_go_top = Gpio4LedStripLed2dFrame::new();
     gpio4_led_strip_led2d.write_text_to_frame("Go", &[], &mut frame_go_top)?;

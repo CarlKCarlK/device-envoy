@@ -834,7 +834,21 @@ macro_rules! __led_strips_impl {
                     )+
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<(
-                    $( &'static [<$label:camel LedStrip>], )+
+                    $(
+                        $crate::__led_strips_impl!(
+                            @__strip_return_type
+                            $label
+                            $(,
+                                led2d: {
+                                    width: $led2d_width,
+                                    height: $led2d_height,
+                                    led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                                    max_frames: $led2d_max_frames,
+                                    font: $led2d_font,
+                                }
+                            )?
+                        ),
+                    )+
                 )> {
                     // Inline PIO splitting
                     let pio_peri = pio.into();
@@ -857,12 +871,30 @@ macro_rules! __led_strips_impl {
                     // Construct each strip with the appropriate SM
                     Ok((
                         $(
-                            [<$label:camel LedStrip>]::new(
-                                $crate::__led_strips_impl!(@__select_sm $sm_index, sm0_wrapped, sm1_wrapped, sm2_wrapped, sm3_wrapped),
-                                [<$label _pin>],
-                                [<$label _dma>],
-                                spawner
-                            )?,
+                            $crate::__led_strips_impl!(
+                                @__strip_return_value
+                                label: $label,
+                                state_machine: $crate::__led_strips_impl!(
+                                    @__select_sm
+                                    $sm_index,
+                                    sm0_wrapped,
+                                    sm1_wrapped,
+                                    sm2_wrapped,
+                                    sm3_wrapped
+                                ),
+                                pin: [<$label _pin>],
+                                dma: [<$label _dma>],
+                                spawner: spawner
+                                $(,
+                                    led2d: {
+                                        width: $led2d_width,
+                                        height: $led2d_height,
+                                        led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                                        max_frames: $led2d_max_frames,
+                                        font: $led2d_font,
+                                    }
+                                )?
+                            ),
                         )+
                     ))
                 }
@@ -875,6 +907,39 @@ macro_rules! __led_strips_impl {
     (@__select_sm 1, $sm0:ident, $sm1:ident, $sm2:ident, $sm3:ident) => { $sm1 };
     (@__select_sm 2, $sm0:ident, $sm1:ident, $sm2:ident, $sm3:ident) => { $sm2 };
     (@__select_sm 3, $sm0:ident, $sm1:ident, $sm2:ident, $sm3:ident) => { $sm3 };
+
+    (@__strip_return_type $label:ident) => {
+        paste::paste! { &'static [<$label:camel LedStrip>] }
+    };
+    (@__strip_return_type $label:ident, led2d: { $($led2d_fields:tt)* }) => {
+        paste::paste! { [<$label:camel LedStripLed2d>] }
+    };
+
+    (@__strip_return_value
+        label: $label:ident,
+        state_machine: $state_machine:expr,
+        pin: $pin:ident,
+        dma: $dma:ident,
+        spawner: $spawner:ident
+    ) => {
+        paste::paste! {
+            [<$label:camel LedStrip>]::new($state_machine, $pin, $dma, $spawner)?
+        }
+    };
+    (@__strip_return_value
+        label: $label:ident,
+        state_machine: $state_machine:expr,
+        pin: $pin:ident,
+        dma: $dma:ident,
+        spawner: $spawner:ident,
+        led2d: { $($led2d_fields:tt)* }
+    ) => {
+        paste::paste! {{
+            let [<$label:snake _led_strip>] =
+                [<$label:camel LedStrip>]::new($state_machine, $pin, $dma, $spawner)?;
+            [<$label:camel LedStripLed2d>]::from_strip([<$label:snake _led_strip>], $spawner)?
+        }}
+    };
 
     // Entry point with explicit pio and group syntax
     (

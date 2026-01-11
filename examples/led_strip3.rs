@@ -29,18 +29,12 @@ led_strips! {
         gpio3: {
             pin: PIN_3,
             len: 48,
-            max_current: Current::Milliamps(100),
-            led2d: {
-                width: 12,
-                height: 4,
-                led_layout: LED_LAYOUT_12X4,
-                font: Font3x4Trim,
-            }
+            max_current: Current::Milliamps(75),
+            dma: DMA_CH11,
         },
         gpio4: {
             pin: PIN_4,
             len: 96,
-            max_current: Current::Milliamps(175),
             max_frames: 2, // cmk000000 test this to failure
             led2d: {
                 width: 8,
@@ -61,17 +55,20 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let (gpio0_led_strip, gpio3_led2d, gpio4_led2d) = LedStrips::new(
-        p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIN_4, p.DMA_CH2, spawner,
+    let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips::new(
+        p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, spawner,
     )?;
 
-    info!("Setting GPIO0 to white, GPIO3 to Rust text, GPIO4 to Go Go animation");
+    info!("Setting GPIO0 to white, GPIO3 to alternating blue, GPIO4 to Go Go animation");
 
     let frame_gpio0 = Frame::<{ Gpio0LedStrip::LEN }>::filled(colors::WHITE);
     gpio0_led_strip.write_frame(frame_gpio0).await?;
 
-    let text_colors = [colors::RED, colors::GREEN, colors::BLUE];
-    gpio3_led2d.write_text("Rust", &text_colors).await?;
+    let mut frame_gpio3 = Frame::<{ Gpio3LedStrip::LEN }>::new();
+    for pixel_index in (0..frame_gpio3.len()).step_by(2) {
+        frame_gpio3[pixel_index] = colors::BLUE;
+    }
+    gpio3_led_strip.write_frame(frame_gpio3).await?;
 
     let mut frame_go_top = Gpio4Led2dFrame::new();
     gpio4_led2d.write_text_to_frame("Go", &[], &mut frame_go_top)?;

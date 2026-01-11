@@ -110,7 +110,7 @@ led2d! {
     "    font: Font4x6Trim,                    // Use a 4x6 pixel font without the usual 1 pixel padding\n",
     "    pio: PIO1,                            // PIO resource, default is PIO0\n",
     "    dma: DMA_CH1,                         // DMA resource, default is DMA_CH0\n",
-    "    max_current: Current::Milliamps(300), // Power budget, default is 2500 mA.\n",
+    "    max_current: Current::Milliamps(300), // Power budget, default is 250 mA.\n",
     "    gamma: Gamma::Linear,                 // Color correction curve, default is Gamma2_2\n",
     "    max_frames: 2,                        // maximum animation frames, default is 16\n",
     "}\n\n",

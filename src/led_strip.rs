@@ -499,10 +499,11 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 
 /// Macro to generate multiple NeoPixel-style (WS2812) LED strips sharing one PIO resource.
 ///
-/// Use this macro to drive multiple independent LED strips from a single shared [PIO](crate#glossary) resource.
-/// This saves hardware resources compared to using separate [`led_strip!`] invocations, each of which consumes a dedicated PIO resource.
+/// Use this macro to drive multiple independent LED strips and 2D panels from a single shared [PIO](crate#glossary) resource.
+/// This saves hardware resources compared to using separate [`led_strip!`] and [`led2d!`](macro@crate::led2d) invocations, each of which consumes a dedicated PIO resource.
 ///
-/// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for details on using the generated types.
+/// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) and
+/// [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated) for details on using the generated types.
 ///
 /// **Example:**
 ///
@@ -515,26 +516,41 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 /// # use defmt_rtt as _;
 /// # use embassy_executor::Spawner;
 /// # use defmt::info;
-/// use device_kit::Result;
-/// use device_kit::led_strip::{Current, Frame, Gamma, colors, led_strips};
+/// use device_kit::{Result, led2d::layout::LedLayout, led_strip::{Current, Frame, Gamma, colors, led_strips}};
 /// use embassy_time::Duration;
 ///
+/// // Our 2D panel is two 12x4 panels stacked vertically.
+/// const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
+/// const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.concat_v(LED_LAYOUT_12X4);
+/// const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
+///
 /// led_strips! {
-///     pio: PIO1,                 // Optional; default is PIO0
-///     LedStrips1 {               // Label used for `LedStrips1::new` below.
-///         gpio3: {               // Label used for names of generated types
+///     pio: PIO0,                          // Optional; defaults to PIO0.
+///     LedStrips {
+///         gpio0: {                        // Prefix used to name generated types.
+///             pin: PIN_0,                 // GPIO pin for LED data signal.
+///             len: 8,                     // 8 LEDs on this strip.
+///             max_current: Current::Milliamps(25), // Optional; default 250 mA.
+///         },
+///         gpio3: {
 ///             pin: PIN_3,
 ///             len: 48,
-///             // Optional fields: max_current, gamma, max_frames, dma
+///             max_current: Current::Milliamps(75),
+///             gamma: Gamma::Gamma2_2,     // Optional; default Gamma2_2.
+///             max_frames: 1,              // Optional; default 16.
+///             dma: DMA_CH11,              // Optional; auto-assigned by strip order.
 ///         },
-///         gpio4: {               // Label used for names of generated types
+///         gpio4: {
 ///             pin: PIN_4,
 ///             len: 96,
-///             max_current: Current::Milliamps(1000), // optional; default 250 mA
-///             gamma: Gamma::Linear,                  // optional; default Gamma2_2
-///             max_frames: 3,                         // optional; default 16
-///             dma: DMA_CH1,                          // optional; default incremented
-///         }
+///             max_frames: 2,
+///             led2d: {                    // Optional panel configuration for 2D displays.
+///                 width: 8,               // Panel width in LEDs.
+///                 height: 12,             // Panel height in LEDs.
+///                 led_layout: LED_LAYOUT_12X8_ROTATED, // Two 12×4 panels stacked and rotated.
+///                 font: Font4x6Trim,      // 4x6 pixel font without the usual 1 pixel spacing.
+///             }
+///         },
 ///     }
 /// }
 ///
@@ -545,24 +561,39 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 /// # }
 /// async fn example(spawner: Spawner) -> Result<Infallible> {
 ///     let p = embassy_rp::init(Default::default());
-///     let (gpio3_led_strip, gpio4_led_strip) =
-///         // inputs: shared PIO, then pin and DMA channel for each strip, then spawner
-///         LedStrips1::new(p.PIO1, p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, spawner)?;
 ///
-///     info!("Setting every other LED to blue on GPIO3");
-///     let mut frame = Frame::new();
-///     for pixel_index in (0..frame.len()).step_by(2) {
-///         frame[pixel_index] = colors::BLUE;
+///     let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips::new(
+///         p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, spawner,
+///     )?;
+///
+///     info!("Setting GPIO0 to white, GPIO3 to alternating blue, GPIO4 to Go Go animation");
+///
+///     let frame_gpio0 = Frame::<{ Gpio0LedStrip::LEN }>::filled(colors::WHITE);
+///     gpio0_led_strip.write_frame(frame_gpio0).await?;
+///
+///     let mut frame_gpio3 = Frame::<{ Gpio3LedStrip::LEN }>::new();
+///     for pixel_index in (0..frame_gpio3.len()).step_by(2) {
+///         frame_gpio3[pixel_index] = colors::BLUE;
 ///     }
-///     gpio3_led_strip.write_frame(frame).await?;
+///     gpio3_led_strip.write_frame(frame_gpio3).await?;
 ///
-///    info!("Animating GPIO4");
-///     let frame_duration = Duration::from_secs(1);
-///     gpio4_led_strip.animate([
-///         (Frame::filled(colors::GREEN), frame_duration),
-///         (Frame::filled(colors::YELLOW), frame_duration),
-///         (Frame::filled(colors::RED), frame_duration),
-///     ]).await?;
+///     let mut frame_go_top = Gpio4Led2dFrame::new();
+///     gpio4_led2d.write_text_to_frame("Go", &[], &mut frame_go_top)?;
+///
+///     let mut frame_go_bottom = Gpio4Led2dFrame::new();
+///     gpio4_led2d.write_text_to_frame(
+///         "\nGo",
+///         &[colors::HOT_PINK, colors::LIME],
+///         &mut frame_go_bottom,
+///     )?;
+///
+///     let frame_duration = Duration::from_millis(400);
+///     gpio4_led2d
+///         .animate([
+///             (frame_go_top, frame_duration),
+///             (frame_go_bottom, frame_duration),
+///         ])
+///         .await?;
 ///
 ///     future::pending::<Result<Infallible>>().await // Run forever
 /// }

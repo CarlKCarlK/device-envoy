@@ -14,6 +14,7 @@ use embassy_executor::Spawner;
 use embassy_time::Duration;
 use panic_probe as _;
 
+// Our 2D panel is two 12x4 panels stacked vertically.
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.concat_v(LED_LAYOUT_12X4);
 const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();

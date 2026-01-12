@@ -30,7 +30,7 @@ impl Default for Gamma {
     }
 }
 
-/// Default gamma correction curve for generated LED devices.
+/// Default gamma correction curve for generated LED devices (`Gamma::Gamma2_2`).
 pub const GAMMA_DEFAULT: Gamma = Gamma::Gamma2_2;
 
 /// Gamma 2.2 lookup table for 8-bit values.
@@ -626,8 +626,8 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// ## Optional Fields per Strip
 ///
 /// - `dma` — DMA channel (default: auto-assigned by state machine index)
-/// - `max_current` — Current budget (default: [`MAX_CURRENT_DEFAULT`])
-/// - `gamma` — Color curve (default: [`GAMMA_DEFAULT`])
+/// - `max_current` — Current budget (default: [`MAX_CURRENT_DEFAULT`] = 250 mA)
+/// - `gamma` — Color curve (default: [`GAMMA_DEFAULT`] = `Gamma::Gamma2_2`)
 /// - `max_frames` — Maximum animation frames (default: `32`)
 /// - `led2d` — 2D panel configuration (optional). Generates a [`Led2d`](crate::led2d::Led2d) device with text rendering and animation support. See [`led2d!`](crate::led2d!) macro documentation for similar examples and configuration options.
 ///
@@ -655,7 +655,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// Each WS2812 LED is assumed to draw 60 mA at full brightness. For example:
 /// - 8 LEDs × 60 mA = 480 mA at full brightness
 /// - With `max_current: Current::Milliamps(500)` on a strip, all LEDs fit at 100% brightness
-/// - With `max_current: MAX_CURRENT_DEFAULT` (the default), the generated `MAX_BRIGHTNESS` limits LEDs to ~52% brightness
+/// - With `max_current: MAX_CURRENT_DEFAULT` (250 mA by default), the generated `MAX_BRIGHTNESS` limits LEDs to ~52% brightness
 ///
 /// The current limit is baked into a compile-time lookup table, so it has no runtime cost.
 ///
@@ -2164,8 +2164,8 @@ macro_rules! __led_strips_impl {
 ///
 /// - `pio` — PIO resource (default: `PIO0`)
 /// - `dma` — DMA channel (default: `DMA_CH0`)
-/// - `max_current` — Current budget (default: [`MAX_CURRENT_DEFAULT`])
-/// - `gamma` — Color curve (default: [`GAMMA_DEFAULT`])
+/// - `max_current` — Current budget (default: [`MAX_CURRENT_DEFAULT`] = 250 mA)
+/// - `gamma` — Color curve (default: [`GAMMA_DEFAULT`] = `Gamma::Gamma2_2`)
 /// - `max_frames` — Maximum animation frames (default: `16`)
 ///
 /// # Current Limiting
@@ -2175,7 +2175,7 @@ macro_rules! __led_strips_impl {
 /// Each WS2812 LED is assumed to draw 60 mA at full brightness. For example:
 /// - 16 LEDs × 60 mA = 960 mA at full brightness
 /// - With `max_current: Current::Milliamps(1000)`, all LEDs fit at 100% brightness
-/// - With `max_current: MAX_CURRENT_DEFAULT` (the default), the generated `MAX_BRIGHTNESS` limits LEDs to ~26% brightness
+/// - With `max_current: MAX_CURRENT_DEFAULT` (250 mA by default), the generated `MAX_BRIGHTNESS` limits LEDs to ~26% brightness
 ///
 /// The current limit is baked into a compile-time lookup table, so it has no
 /// runtime cost.
@@ -2771,7 +2771,7 @@ impl Default for Current {
     }
 }
 
-/// Default current budget for generated LED devices.
+/// Default current budget for generated LED devices (`Current::Milliamps(250)`).
 pub const MAX_CURRENT_DEFAULT: Current = Current::Milliamps(250);
 
 impl Current {

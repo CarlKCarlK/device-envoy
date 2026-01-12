@@ -989,8 +989,8 @@ pub use led2d_device;
 ///
 /// - `pio` — PIO resource to use (default: `PIO0`)
 /// - `dma` — DMA channel (default: `DMA_CH0`)
-/// - `max_current` — Current budget (default: [`crate::led_strip::MAX_CURRENT_DEFAULT`])
-/// - `gamma` — Color curve (default: [`crate::led_strip::GAMMA_DEFAULT`])
+/// - `max_current` — Current budget (default: [`crate::led_strip::MAX_CURRENT_DEFAULT`] = 250 mA)
+/// - `gamma` — Color curve (default: [`crate::led_strip::GAMMA_DEFAULT`] = `Gamma::Gamma2_2`)
 /// - `max_frames` — Maximum animation frames (default: `16`)
 ///
 /// # Current Limiting
@@ -1000,7 +1000,7 @@ pub use led2d_device;
 /// Each WS2812 LED is assumed to draw 60 mA at full brightness. For example:
 /// - 16 LEDs × 60 mA = 960 mA at full brightness
 /// - With `max_current: Current::Milliamps(1000)`, all LEDs fit at 100% brightness
-/// - With `max_current: crate::led_strip::MAX_CURRENT_DEFAULT` (the default), the generated `MAX_BRIGHTNESS` limits LEDs to ~26% brightness
+/// - With `max_current: crate::led_strip::MAX_CURRENT_DEFAULT` (250 mA by default), the generated `MAX_BRIGHTNESS` limits LEDs to ~26% brightness
 ///
 /// The current limit is baked into a compile-time lookup table, so it has no
 /// runtime cost.

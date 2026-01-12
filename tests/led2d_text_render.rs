@@ -1,7 +1,7 @@
 #![cfg(feature = "host")]
 
 use png::{BitDepth, ColorType, Decoder, Encoder};
-use device_kit::led2d::{Frame, Led2dFont, render_text_to_frame};
+use device_kit::led2d::{Frame2d, Led2dFont, render_text_to_frame};
 use smart_leds::{RGB8, colors};
 use std::fs::File;
 use std::io::BufWriter;
@@ -65,7 +65,7 @@ fn run_render_test<const W: usize, const H: usize>(
     text: &str,
     colors: &[RGB8],
 ) {
-    let mut frame: Frame<W, H> = Frame::new();
+    let mut frame: Frame2d<W, H> = Frame2d::new();
     render_text_to_frame(&mut frame, &font.to_font(), text, colors, (0, 0))
         .expect("render must succeed");
 
@@ -99,7 +99,7 @@ fn run_render_test_heap<const W: usize, const H: usize>(
     let frame_vec: Vec<RGB8> = vec![smart_leds::RGB8::default(); H * W];
     let mut frame_box = frame_vec.into_boxed_slice();
     let frame_ptr = frame_box.as_mut_ptr() as *mut [[RGB8; W]; H];
-    let frame_ref: &mut Frame<W, H> = unsafe { &mut *(frame_ptr as *mut Frame<W, H>) };
+    let frame_ref: &mut Frame2d<W, H> = unsafe { &mut *(frame_ptr as *mut Frame2d<W, H>) };
 
     render_text_to_frame(frame_ref, &font.to_font(), text, colors, (0, 0))
         .expect("render must succeed");
@@ -136,7 +136,7 @@ fn generation_dir() -> Option<PathBuf> {
     Some(dir)
 }
 
-fn write_png<const W: usize, const H: usize>(frame: &Frame<W, H>, path: &Path) {
+fn write_png<const W: usize, const H: usize>(frame: &Frame2d<W, H>, path: &Path) {
     let file = File::create(path).expect("failed to create PNG file");
     let mut encoder = Encoder::new(BufWriter::new(file), W as u32, H as u32);
     encoder.set_color(ColorType::Rgb);
@@ -161,7 +161,7 @@ fn read_png<const W: usize, const H: usize>(path: &Path) -> Vec<u8> {
     buffer[..info.buffer_size()].to_vec()
 }
 
-fn frame_pixels<const W: usize, const H: usize>(frame: &Frame<W, H>) -> Vec<u8> {
+fn frame_pixels<const W: usize, const H: usize>(frame: &Frame2d<W, H>) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(H * W * 3);
     for row in 0..H {
         for col in 0..W {

@@ -6,7 +6,7 @@ use core::future;
 
 use defmt_rtt as _;
 use device_kit::Result;
-use device_kit::led_strip::{Current, Frame, Gamma, colors, led_strip};
+use device_kit::led_strip::{Current, Frame1d, Gamma, colors, led_strip};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use panic_probe as _;
@@ -37,9 +37,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let frame_duration = Duration::from_secs(1);
     led_strip4
         .animate([
-            (Frame::filled(colors::GREEN), frame_duration),
-            (Frame::filled(colors::YELLOW), frame_duration),
-            (Frame::filled(colors::RED), frame_duration),
+            (Frame1d::filled(colors::GREEN), frame_duration),
+            (Frame1d::filled(colors::YELLOW), frame_duration),
+            (Frame1d::filled(colors::RED), frame_duration),
         ])
         .await?;
 

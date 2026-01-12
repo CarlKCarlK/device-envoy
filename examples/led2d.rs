@@ -10,7 +10,7 @@ use device_kit::button::{Button, PressedTo};
 use device_kit::led_strip::Current;
 use device_kit::led_strip::Gamma;
 use device_kit::led2d;
-use device_kit::led2d::Frame;
+use device_kit::led2d::Frame2d;
 use device_kit::led2d::layout::LedLayout;
 use device_kit::{Error, Result};
 use embassy_executor::Spawner;
@@ -156,11 +156,11 @@ async fn demo_rectangle_diagonals_embedded_graphics(led4x12: &Led4x12) -> Result
 
     // Use the embedded_graphics crate to draw an image.
 
-    let frame_top_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::TOP_LEFT;
-    let frame_size = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::SIZE;
-    let frame_bottom_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::BOTTOM_RIGHT;
-    let frame_bottom_left = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::BOTTOM_LEFT;
-    let frame_top_right = Frame::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::TOP_RIGHT;
+    let frame_top_left = Frame2d::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::TOP_LEFT;
+    let frame_size = Frame2d::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::SIZE;
+    let frame_bottom_right = Frame2d::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::BOTTOM_RIGHT;
+    let frame_bottom_left = Frame2d::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::BOTTOM_LEFT;
+    let frame_top_right = Frame2d::<{ Led4x12::WIDTH }, { Led4x12::HEIGHT }>::TOP_RIGHT;
 
     // Draw red rectangle border
     Rectangle::new(frame_top_left, frame_size)

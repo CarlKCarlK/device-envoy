@@ -5,7 +5,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strip;
-use device_kit::led_strip::{Current, Frame, Rgb};
+use device_kit::led_strip::{Current, Frame1d, Rgb};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use panic_probe as _;
@@ -44,7 +44,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
 }
 
 async fn update_rainbow(led_strip: &Gpio0LedStrip, base: u8) -> Result<()> {
-    let mut frame = Frame::<{ Gpio0LedStrip::LEN }>::new();
+    let mut frame = Frame1d::<{ Gpio0LedStrip::LEN }>::new();
     for idx in 0..Gpio0LedStrip::LEN {
         let offset = base.wrapping_add((idx as u8).wrapping_mul(16));
         frame[idx] = wheel(offset);

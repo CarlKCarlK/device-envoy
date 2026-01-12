@@ -6,7 +6,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strip;
-use device_kit::led_strip::{Frame, LedStrip, colors};
+use device_kit::led_strip::{Frame1d, LedStrip, colors};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use panic_probe as _;
@@ -84,7 +84,7 @@ impl<const N: usize> BounceState<N> {
         led_strip: &impl core::ops::Deref<Target = LedStrip<N, MAX_FRAMES>>,
     ) -> Result<()> {
         assert!(self.position < N);
-        let mut frame = Frame::<N>::new();
+        let mut frame = Frame1d::<N>::new();
         frame[self.position] = colors::WHITE;
         led_strip.write_frame(frame).await?;
         self.advance();

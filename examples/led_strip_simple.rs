@@ -6,7 +6,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strip;
-use device_kit::led_strip::{Current, Frame, colors};
+use device_kit::led_strip::{Current, Frame1d, colors};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use panic_probe as _;
@@ -53,7 +53,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
 async fn update_bounce(led_strip: &Gpio0LedStrip, position: usize) -> Result<()> {
     assert!(position < Gpio0LedStrip::LEN);
-    let mut frame = Frame::<{ Gpio0LedStrip::LEN }>::new();
+    let mut frame = Frame1d::<{ Gpio0LedStrip::LEN }>::new();
     frame[position] = colors::WHITE;
     led_strip.write_frame(frame).await?;
     Ok(())

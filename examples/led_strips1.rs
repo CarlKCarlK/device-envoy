@@ -7,7 +7,7 @@ use core::future;
 use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
-use device_kit::led_strip::{Current, Frame, Gamma, colors, led_strips};
+use device_kit::led_strip::{Current, Frame1d, Gamma, colors, led_strips};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use panic_probe as _;
@@ -44,7 +44,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Setting every other LED to blue on GPIO3, animating GPIO4");
 
-    let mut frame = Frame::new();
+    let mut frame = Frame1d::new();
     for pixel_index in (0..frame.len()).step_by(2) {
         frame[pixel_index] = colors::BLUE;
     }
@@ -53,9 +53,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let frame_duration = Duration::from_secs(1);
     gpio4_led_strip
         .animate([
-            (Frame::filled(colors::GREEN), frame_duration),
-            (Frame::filled(colors::YELLOW), frame_duration),
-            (Frame::filled(colors::RED), frame_duration),
+            (Frame1d::filled(colors::GREEN), frame_duration),
+            (Frame1d::filled(colors::YELLOW), frame_duration),
+            (Frame1d::filled(colors::RED), frame_duration),
         ])
         .await?;
 

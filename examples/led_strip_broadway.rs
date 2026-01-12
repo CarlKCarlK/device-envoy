@@ -7,7 +7,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strip;
-use device_kit::led_strip::{Current, Frame, Rgb, colors};
+use device_kit::led_strip::{Current, Frame1d, Rgb, colors};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use panic_probe as _;
@@ -43,10 +43,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const HEAD: Rgb = colors::RED;
     const TAIL: Rgb = colors::GREEN;
 
-    let mut frames = heapless::Vec::<(Frame<{ Gpio5LedStrip::LEN }>, Duration), FRAME_COUNT>::new();
+    let mut frames = heapless::Vec::<(Frame1d<{ Gpio5LedStrip::LEN }>, Duration), FRAME_COUNT>::new();
 
     for frame_offset in 0..FRAME_COUNT {
-        let mut frame = Frame::<{ Gpio5LedStrip::LEN }>::filled(GAP);
+        let mut frame = Frame1d::<{ Gpio5LedStrip::LEN }>::filled(GAP);
 
         for start in (0..Gpio5LedStrip::LEN).step_by(PULSE_SPACING) {
             let head_index = (start + frame_offset) % Gpio5LedStrip::LEN;

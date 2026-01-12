@@ -38,7 +38,7 @@ use device_kit::clock::{Clock, ClockStatic, ONE_SECOND};
 #[cfg(feature = "wifi")]
 use device_kit::flash_array::{FlashArray, FlashArrayStatic};
 use device_kit::ir::{Ir, IrEvent, IrStatic};
-use device_kit::led_strip::{Current, Frame, Rgb};
+use device_kit::led_strip::{Current, Frame1d, Rgb};
 use device_kit::led_strip::colors;
 use device_kit::led_strip::led_strips;
 use device_kit::led_strip::{Gpio14LedStrip, Gpio2LedStrip};
@@ -61,7 +61,7 @@ use colors::{BLACK, BLUE, GREEN, RED, YELLOW};
 
 led_strips! {
     pio: PIO1,
-    LedStrips {
+    LedStrips1 {
         gpio0: { dma: DMA_CH1, pin: PIN_0, len: 8, max_current: Current::Milliamps(50) },
         gpio14: { dma: DMA_CH4, pin: PIN_14, len: 48, max_current: Current::Milliamps(100) }
     }
@@ -84,13 +84,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     servo.set_degrees(90);
 
     // Initialize LED strips (both strips share PIO1)
-    let (gpio0_led_strip, gpio14_led_strip) = LedStrips::new(
+    let (gpio0_led_strip, gpio14_led_strip) = LedStrips1::new(
         p.PIO1,
         p.PIN_0, p.DMA_CH1,
         p.PIN_14, p.DMA_CH4,
         spawner,
     )?;
-    let mut led_pixels = Frame::<{ Gpio0LedStrip::LEN }>::filled(BLACK);
+    let mut led_pixels = Gpio0Frame::filled(BLACK);
     initialize_led_strip(gpio0_led_strip, &mut led_pixels).await?;
     let mut led_progress_index: usize = 0;
 
@@ -304,7 +304,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
 async fn initialize_led_strip(
     strip: &Gpio2LedStrip,
-    pixels: &mut Frame<{ Gpio2LedStrip::LEN }>,
+    pixels: &mut Frame1d<{ Gpio2LedStrip::LEN }>,
 ) -> Result<()> {
     for idx in 0..Gpio2LedStrip::LEN {
         pixels[idx] = if idx == 0 { RED } else { BLACK };
@@ -315,7 +315,7 @@ async fn initialize_led_strip(
 
 async fn advance_led_progress(
     strip: &Gpio2LedStrip,
-    pixels: &mut Frame<{ Gpio2LedStrip::LEN }>,
+    pixels: &mut Frame1d<{ Gpio2LedStrip::LEN }>,
     current_red: &mut usize,
 ) -> Result<()> {
     info!("Turning {} to green", *current_red);

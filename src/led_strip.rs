@@ -118,15 +118,15 @@ pub mod led_strip_generated;
 /// RGB color representation re-exported from the `smart_leds` crate.
 pub type Rgb = RGB8;
 
-/// Frame of [`Rgb`] values for an LED strip.
+/// Frame1d of [`Rgb`] values for an LED strip.
 ///
 /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
 ///
 /// Frames deref to `[Rgb; N]`, so you can mutate pixels directly before passing them to the generated strip's `write_frame` method.
 #[derive(Clone, Copy, Debug)]
-pub struct Frame<const N: usize>(pub [Rgb; N]);
+pub struct Frame1d<const N: usize>(pub [Rgb; N]);
 
-impl<const N: usize> Frame<N> {
+impl<const N: usize> Frame1d<N> {
     /// Create a new blank (all black) frame.
     ///
     /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
@@ -150,7 +150,7 @@ impl<const N: usize> Frame<N> {
     }
 }
 
-impl<const N: usize> core::ops::Deref for Frame<N> {
+impl<const N: usize> core::ops::Deref for Frame1d<N> {
     type Target = [Rgb; N];
 
     fn deref(&self) -> &Self::Target {
@@ -158,25 +158,25 @@ impl<const N: usize> core::ops::Deref for Frame<N> {
     }
 }
 
-impl<const N: usize> core::ops::DerefMut for Frame<N> {
+impl<const N: usize> core::ops::DerefMut for Frame1d<N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl<const N: usize> From<[Rgb; N]> for Frame<N> {
+impl<const N: usize> From<[Rgb; N]> for Frame1d<N> {
     fn from(array: [Rgb; N]) -> Self {
         Self(array)
     }
 }
 
-impl<const N: usize> From<Frame<N>> for [Rgb; N] {
-    fn from(frame: Frame<N>) -> Self {
+impl<const N: usize> From<Frame1d<N>> for [Rgb; N] {
+    fn from(frame: Frame1d<N>) -> Self {
         frame.0
     }
 }
 
-impl<const N: usize> Default for Frame<N> {
+impl<const N: usize> Default for Frame1d<N> {
     fn default() -> Self {
         Self::new()
     }
@@ -278,7 +278,7 @@ impl<'d, PIO: Instance> PioBus<'d, PIO> {
 // ============================================================================
 
 #[doc(hidden)] // Required pub for macro expansion in downstream crates
-pub type LedStripCommands<const N: usize> = EmbassyChannel<CriticalSectionRawMutex, Frame<N>, 2>;
+pub type LedStripCommands<const N: usize> = EmbassyChannel<CriticalSectionRawMutex, Frame1d<N>, 2>;
 
 #[doc(hidden)] // Required pub for macro expansion in downstream crates
 pub type LedStripCommandSignal<const N: usize, const MAX_FRAMES: usize> =
@@ -291,8 +291,8 @@ pub type LedStripCompletionSignal = Signal<CriticalSectionRawMutex, ()>;
 // Command for the LED strip animation loop.
 #[derive(Clone)]
 pub enum Command<const N: usize, const MAX_FRAMES: usize> {
-    DisplayStatic(Frame<N>),
-    Animate(Vec<(Frame<N>, Duration), MAX_FRAMES>),
+    DisplayStatic(Frame1d<N>),
+    Animate(Vec<(Frame1d<N>, Duration), MAX_FRAMES>),
 }
 
 /// Static used to construct LED strip instances with animation support.
@@ -362,7 +362,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// replaces it.
     ///
     /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for example usage.
-    pub async fn write_frame(&self, frame: Frame<N>) -> Result<()> {
+    pub async fn write_frame(&self, frame: Frame1d<N>) -> Result<()> {
         self.command_signal.signal(Command::DisplayStatic(frame));
         self.completion_signal.wait().await;
         Ok(())
@@ -371,19 +371,19 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// Loop forever through a sequence of animation frames.
     /// They remain displayed until another command replaces them.
     ///
-    /// Each frame is a tuple of `(Frame, Duration)`. Accepts arrays, `Vec`s, or any
-    /// iterator that produces `(Frame, Duration)` tuples.
+    /// Each frame is a tuple of `(Frame1d, Duration)`. Accepts arrays, `Vec`s, or any
+    /// iterator that produces `(Frame1d, Duration)` tuples.
     ///
     /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for example usage.
     pub async fn animate(
         &self,
-        frames: impl IntoIterator<Item = (Frame<N>, Duration)>,
+        frames: impl IntoIterator<Item = (Frame1d<N>, Duration)>,
     ) -> Result<()> {
         assert!(
             MAX_FRAMES > 0,
             "max_frames must be positive for LED strip animations"
         );
-        let mut sequence: Vec<(Frame<N>, Duration), MAX_FRAMES> = Vec::new();
+        let mut sequence: Vec<(Frame1d<N>, Duration), MAX_FRAMES> = Vec::new();
         for (frame, duration) in frames {
             assert!(
                 duration.as_micros() > 0,
@@ -460,7 +460,7 @@ where
 
 async fn run_frame_animation<PIO, const SM: usize, const N: usize, const MAX_FRAMES: usize, ORDER>(
     driver: &mut PioWs2812<'static, PIO, SM, N, ORDER>,
-    frames: Vec<(Frame<N>, Duration), MAX_FRAMES>,
+    frames: Vec<(Frame1d<N>, Duration), MAX_FRAMES>,
     command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
     completion_signal: &'static LedStripCompletionSignal,
     combo_table: &'static [u8; 256],
@@ -487,7 +487,7 @@ where
     }
 }
 
-fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256]) {
+fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 256]) {
     for color in frame.iter_mut() {
         *color = Rgb::new(
             combo_table[usize::from(color.r)],
@@ -516,7 +516,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 /// # use defmt_rtt as _;
 /// # use embassy_executor::Spawner;
 /// # use defmt::info;
-/// use device_kit::{Result, led2d::layout::LedLayout, led_strip::{Current, Frame, Gamma, colors, led_strips}};
+/// use device_kit::{Result, led2d::layout::LedLayout, led_strip::{Current, Gamma, colors, led_strips}};
 /// use embassy_time::Duration;
 ///
 /// // Our 2D panel is two 12x4 panels stacked vertically.
@@ -526,7 +526,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 ///
 /// led_strips! {
 ///     pio: PIO0,                          // Optional; defaults to PIO0.
-///     LedStrips {
+///     LedStrips0 {
 ///         gpio0: {                        // Prefix used to name generated types.
 ///             pin: PIN_0,                 // GPIO pin for LED data signal.
 ///             len: 8,                     // 8 LEDs on this strip.
@@ -562,21 +562,23 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 /// async fn example(spawner: Spawner) -> Result<Infallible> {
 ///     let p = embassy_rp::init(Default::default());
 ///
-///     let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips::new(
+///     // Create the two LED strips and one panel on GPIO0, GPIO3, and GPIO4.
+///     let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips0::new(
 ///         p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, spawner,
 ///     )?;
 ///
-///     info!("Setting GPIO0 to white, GPIO3 to alternating blue, GPIO4 to Go Go animation");
-///
-///     let frame_gpio0 = Frame::<{ Gpio0LedStrip::LEN }>::filled(colors::WHITE);
+///     // Turn on all-white on GPIO0 strip.
+///     let frame_gpio0 = Gpio0Frame::filled(colors::WHITE);
 ///     gpio0_led_strip.write_frame(frame_gpio0).await?;
 ///
-///     let mut frame_gpio3 = Frame::<{ Gpio3LedStrip::LEN }>::new();
+///     // Turn on every other LED in blue on GPIO3 strip.
+///     let mut frame_gpio3 = Gpio3Frame::new();
 ///     for pixel_index in (0..frame_gpio3.len()).step_by(2) {
 ///         frame_gpio3[pixel_index] = colors::BLUE;
 ///     }
 ///     gpio3_led_strip.write_frame(frame_gpio3).await?;
 ///
+///     // Animate "Go Go" text on GPIO4 2D panel.
 ///     let mut frame_go_top = Gpio4Led2dFrame::new();
 ///     gpio4_led2d.write_text_to_frame("Go", &[], &mut frame_go_top)?;
 ///
@@ -611,8 +613,11 @@ fn apply_correction<const N: usize>(frame: &mut Frame<N>, combo_table: &[u8; 256
 /// - `gamma` — Color curve (default: [`Gamma::Gamma2_2`])
 /// - `max_frames` — Maximum animation frames (default: `16`)
 /// - `led2d` — 2D layout configuration (optional, for matrix-style displays)
+/// // cmk0000 need more on 2d
 ///
-/// # Current Limiting
+/// // cmk00000 need to tell everything the macro defines
+///
+/// # Current Limiting cmk000 need to update this
 ///
 /// The `max_current` field automatically scales brightness to stay within your power budget.
 /// Each strip can have independent current limits, or they can share a single budget across
@@ -662,6 +667,7 @@ macro_rules! led_strips {
 macro_rules! __led_strips_impl {
     // Internal: full expansion with all fields specified
     (@__expand
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips: [
@@ -790,9 +796,25 @@ macro_rules! __led_strips_impl {
                     }
                 }
 
+                $crate::__led_strips_impl!(
+                    @__maybe_strip_frame_alias
+                    frame_alias: $frame_alias,
+                    label: $label,
+                    len: $len
+                    $(,
+                        led2d: {
+                            width: $led2d_width,
+                            height: $led2d_height,
+                            led_layout: $led2d_led_layout $( ( $($led2d_led_layout_args)* ) )?,
+                            max_frames: $led2d_max_frames,
+                            font: $led2d_font,
+                        }
+                    )?
+                );
+
                 #[cfg(not(feature = "host"))]
                 impl $crate::led2d::WriteFrame<{ $len }> for [<$label:camel LedStrip>] {
-                    async fn write_frame(&self, frame: $crate::led_strip::Frame<{ $len }>) -> $crate::Result<()> {
+                    async fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) -> $crate::Result<()> {
                         self.strip.write_frame(frame).await
                     }
                 }
@@ -946,6 +968,34 @@ macro_rules! __led_strips_impl {
         paste::paste! { [<$label:camel Led2d>] }
     };
 
+    (@__strip_frame_alias
+        label: $label:ident,
+        len: $len:expr
+    ) => {
+        paste::paste! {
+            pub type [<$label:camel Frame>] = $crate::led_strip::Frame1d<{ $len }>;
+        }
+    };
+
+    (@__maybe_strip_frame_alias
+        frame_alias: __WITH_FRAME_ALIAS__,
+        label: $label:ident,
+        len: $len:expr
+        $(, led2d: { $($led2d_fields:tt)* } )?
+    ) => {
+        $crate::__led_strips_impl!(
+            @__strip_frame_alias
+            label: $label,
+            len: $len
+        );
+    };
+    (@__maybe_strip_frame_alias
+        frame_alias: __SKIP_FRAME_ALIAS__,
+        label: $label:ident,
+        len: $len:expr
+        $(, led2d: { $($led2d_fields:tt)* } )?
+    ) => {};
+
     (@__strip_return_value
         label: $label:ident,
         state_machine: $state_machine:expr,
@@ -973,6 +1023,24 @@ macro_rules! __led_strips_impl {
     };
 
     // Entry point with explicit pio and group syntax
+    (@__with_frame_alias
+        frame_alias: $frame_alias:tt,
+        pio: $pio:ident,
+        $group:ident {
+            $( $label:ident: { $($fields:tt)* } ),+ $(,)?
+        }
+    ) => {
+        $crate::__led_strips_impl! {
+            @__with_defaults
+            frame_alias: $frame_alias,
+            pio: $pio,
+            group: $group,
+            sm_counter: 0,
+            strips_out: [],
+            strips_in: [ $( $label: { $($fields)* } ),+ ]
+        }
+    };
+
     (
         pio: $pio:ident,
         $group:ident {
@@ -981,6 +1049,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__with_defaults
+            frame_alias: __WITH_FRAME_ALIAS__,
             pio: $pio,
             group: $group,
             sm_counter: 0,
@@ -990,6 +1059,23 @@ macro_rules! __led_strips_impl {
     };
 
     // Entry point without pio (defaults to PIO0) with group syntax
+    (@__with_frame_alias
+        frame_alias: $frame_alias:tt,
+        $group:ident {
+            $( $label:ident: { $($fields:tt)* } ),+ $(,)?
+        }
+    ) => {
+        $crate::__led_strips_impl! {
+            @__with_defaults
+            frame_alias: $frame_alias,
+            pio: PIO0,
+            group: $group,
+            sm_counter: 0,
+            strips_out: [],
+            strips_in: [ $( $label: { $($fields)* } ),+ ]
+        }
+    };
+
     (
         $group:ident {
             $( $label:ident: { $($fields:tt)* } ),+ $(,)?
@@ -997,6 +1083,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__with_defaults
+            frame_alias: __WITH_FRAME_ALIAS__,
             pio: PIO0,
             group: $group,
             sm_counter: 0,
@@ -1007,6 +1094,7 @@ macro_rules! __led_strips_impl {
 
     // Process strips one at a time, adding defaults
     (@__with_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         sm_counter: $sm:tt,
@@ -1015,6 +1103,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1034,6 +1123,7 @@ macro_rules! __led_strips_impl {
 
     // All strips processed, call the main implementation
     (@__with_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         sm_counter: $sm:tt,
@@ -1042,6 +1132,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [],
@@ -1051,6 +1142,7 @@ macro_rules! __led_strips_impl {
 
     // Resolve any __DEFAULT_DMA__ placeholders before expansion.
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1058,6 +1150,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__expand
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips: [ $($out)* ]
@@ -1065,6 +1158,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1092,6 +1186,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1121,6 +1216,7 @@ macro_rules! __led_strips_impl {
 
     // SM 0 with led2d but no explicit max_frames (use strip-level max_frames)
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1146,6 +1242,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1174,6 +1271,7 @@ macro_rules! __led_strips_impl {
 
     // SM 1 with led2d but no explicit max_frames (use strip-level max_frames)
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1199,6 +1297,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1227,6 +1326,7 @@ macro_rules! __led_strips_impl {
 
     // SM 1 with led2d and explicit max_frames (original)
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1254,6 +1354,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1283,6 +1384,7 @@ macro_rules! __led_strips_impl {
 
     // SM 2 with led2d but no explicit max_frames (use strip-level max_frames)
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1308,6 +1410,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1336,6 +1439,7 @@ macro_rules! __led_strips_impl {
 
     // SM 3 with led2d but no explicit max_frames (use strip-level max_frames)
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1361,6 +1465,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1388,6 +1493,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1415,6 +1521,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1443,6 +1550,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1470,6 +1578,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1498,6 +1607,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__resolve_default_dma
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         group: $group:ident,
         strips_out: [ $($out:tt)* ],
@@ -1525,6 +1635,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__resolve_default_dma
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             strips_out: [
@@ -1555,6 +1666,7 @@ macro_rules! __led_strips_impl {
 
     // Parse fields for a single strip
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1572,6 +1684,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1590,6 +1703,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1607,6 +1721,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1625,6 +1740,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1642,6 +1758,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1660,6 +1777,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1677,6 +1795,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1695,6 +1814,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1712,6 +1832,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1730,6 +1851,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1747,6 +1869,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1765,6 +1888,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1782,6 +1906,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: $sm,
             strips_out: [ $($out)* ],
@@ -1802,6 +1927,7 @@ macro_rules! __led_strips_impl {
     // Done parsing fields, add strip to output and continue
     // Special case: convert __DEFAULT_DMA__ to actual DMA channel based on sm
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: 0,
         strips_out: [ $($out:tt)* ],
@@ -1819,6 +1945,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: 0,
             strips_out: [ $($out)* ],
@@ -1836,6 +1963,7 @@ macro_rules! __led_strips_impl {
         }
     };
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: 1,
         strips_out: [ $($out:tt)* ],
@@ -1853,6 +1981,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: 1,
             strips_out: [ $($out)* ],
@@ -1870,6 +1999,7 @@ macro_rules! __led_strips_impl {
         }
     };
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: 2,
         strips_out: [ $($out:tt)* ],
@@ -1887,6 +2017,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: 2,
             strips_out: [ $($out)* ],
@@ -1904,6 +2035,7 @@ macro_rules! __led_strips_impl {
         }
     };
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: 3,
         strips_out: [ $($out:tt)* ],
@@ -1921,6 +2053,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__fill_strip_defaults
+            frame_alias: $frame_alias,
             pio: $pio,
             sm_counter: 3,
             strips_out: [ $($out)* ],
@@ -1940,6 +2073,7 @@ macro_rules! __led_strips_impl {
 
     // Done parsing fields, add strip to output and continue
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1957,6 +2091,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__inc_counter
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             sm: $sm,
@@ -1977,6 +2112,7 @@ macro_rules! __led_strips_impl {
     };
 
     (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
         pio: $pio:ident,
         sm_counter: $sm:tt,
         strips_out: [ $($out:tt)* ],
@@ -1994,6 +2130,7 @@ macro_rules! __led_strips_impl {
     ) => {
         $crate::__led_strips_impl! {
             @__inc_counter
+            frame_alias: $frame_alias,
             pio: $pio,
             group: $group,
             sm: $sm,
@@ -2014,17 +2151,17 @@ macro_rules! __led_strips_impl {
         }
     };
     // Increment counter by expanding to literal numbers
-    (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 0, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 1, strips_out: [$($out)*], strips_in: [$($in)*] }
+    (@__inc_counter frame_alias: $frame_alias:tt, pio: $pio:ident, group: $group:ident, sm: 0, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
+        $crate::__led_strips_impl! { @__with_defaults frame_alias: $frame_alias, pio: $pio, group: $group, sm_counter: 1, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
-    (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 1, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 2, strips_out: [$($out)*], strips_in: [$($in)*] }
+    (@__inc_counter frame_alias: $frame_alias:tt, pio: $pio:ident, group: $group:ident, sm: 1, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
+        $crate::__led_strips_impl! { @__with_defaults frame_alias: $frame_alias, pio: $pio, group: $group, sm_counter: 2, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
-    (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 2, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 3, strips_out: [$($out)*], strips_in: [$($in)*] }
+    (@__inc_counter frame_alias: $frame_alias:tt, pio: $pio:ident, group: $group:ident, sm: 2, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
+        $crate::__led_strips_impl! { @__with_defaults frame_alias: $frame_alias, pio: $pio, group: $group, sm_counter: 3, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
-    (@__inc_counter pio: $pio:ident, group: $group:ident, sm: 3, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
-        $crate::__led_strips_impl! { @__with_defaults pio: $pio, group: $group, sm_counter: 4, strips_out: [$($out)*], strips_in: [$($in)*] }
+    (@__inc_counter frame_alias: $frame_alias:tt, pio: $pio:ident, group: $group:ident, sm: 3, strips_out: [$($out:tt)*], strips_in: [$($in:tt)*]) => {
+        $crate::__led_strips_impl! { @__with_defaults frame_alias: $frame_alias, pio: $pio, group: $group, sm_counter: 4, strips_out: [$($out)*], strips_in: [$($in)*] }
     };
 }
 
@@ -2386,7 +2523,7 @@ macro_rules! __led_strip_impl {
                 "- **Number of LEDs** — Set via the `len` parameter in your [`led_strip!`] or [`led_strips!`](crate::led_strips!) invocation.\n",
                 "- **[PIO](crate#glossary) and [DMA](crate#glossary) resources** — Customized to the pins and channels you specify.\n",
                 "- **Power limiting, gamma correction, and max animation frames** — Configured via `max_current`, `gamma`, and `max_frames` parameters. See the [`led_strip!`] or [`led_strips!`](crate::led_strips!) macro documentation for complete details.\n\n",
-                "# Example: Write a Single Frame\n\n",
+                "# Example: Write a Single Frame1d\n\n",
                 "In this example, we set every other LED to blue. Here, the generated struct is named `LedStripSimple`.\n\n",
                 "```rust,no_run\n",
                 "# #![no_std]\n",
@@ -2399,7 +2536,7 @@ macro_rules! __led_strip_impl {
                 "# use embassy_executor::Spawner;\n",
                 "use device_kit::{\n",
                 "    Result,\n",
-                "    led_strip::{Frame, colors},\n",
+                "    led_strip::{Frame1d, colors},\n",
                 "};\n\n",
                 "use device_kit::led_strip;\n\n",
                 "led_strip! {\n",
@@ -2412,7 +2549,7 @@ macro_rules! __led_strip_impl {
                 "async fn example(spawner: Spawner) -> Result<Infallible> {\n",
                 "    let p = embassy_rp::init(Default::default());\n",
                 "    let led_strip = LedStripSimple::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;\n\n",
-                "    let mut frame = Frame::new();\n",
+                "    let mut frame = Frame1d::new();\n",
                 "    for pixel_index in (0..frame.len()).step_by(2) {\n",
                 "        frame[pixel_index] = colors::BLUE;\n",
                 "    }\n",
@@ -2434,7 +2571,7 @@ macro_rules! __led_strip_impl {
                 "use embassy_time::Duration;\n",
                 "use device_kit::{\n",
                 "    Result,\n",
-                "    led_strip::{Current, Frame, Gamma, colors},\n",
+                "    led_strip::{Current, Frame1d, Gamma, colors},\n",
                 "};\n\n",
                 "use device_kit::led_strip;\n\n",
                 "led_strip! {\n",
@@ -2453,9 +2590,9 @@ macro_rules! __led_strip_impl {
                 "    let led_strip = LedStripAnimated::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;\n\n",
                 "    let frame_duration = Duration::from_millis(300);\n",
                 "    led_strip.animate([\n",
-                "        (Frame::filled(colors::RED), frame_duration),\n",
-                "        (Frame::filled(colors::GREEN), frame_duration),\n",
-                "        (Frame::filled(colors::BLUE), frame_duration),\n",
+                "        (Frame1d::filled(colors::RED), frame_duration),\n",
+                "        (Frame1d::filled(colors::GREEN), frame_duration),\n",
+                "        (Frame1d::filled(colors::BLUE), frame_duration),\n",
                 "    ]).await?;\n",
                 "    future::pending().await // run forever\n",
                 "}\n",
@@ -2542,7 +2679,7 @@ macro_rules! __led_strip_impl {
 
             #[cfg(not(feature = "host"))]
             impl $crate::led2d::WriteFrame<{ $len }> for $name {
-                async fn write_frame(&self, frame: $crate::led_strip::Frame<{ $len }>) -> $crate::Result<()> {
+                async fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) -> $crate::Result<()> {
                     self.strip.write_frame(frame).await
                 }
             }

@@ -8,7 +8,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strip;
-use device_kit::led_strip::{Frame, colors};
+use device_kit::led_strip::{Frame1d, colors};
 use embassy_executor::Spawner;
 use panic_probe as _;
 
@@ -32,7 +32,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Setting every other LED to blue on GPIO3");
 
-    let mut frame = Frame::new();
+    let mut frame = Frame1d::new();
     for pixel_index in (0..frame.len()).step_by(2) {
         frame[pixel_index] = colors::BLUE;
     }

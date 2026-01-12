@@ -6,7 +6,7 @@ use core::future;
 
 use defmt::info;
 use device_kit::Result;
-use device_kit::led_strip::{Current, Frame, colors, led_strip};
+use device_kit::led_strip::{Current, Frame1d, colors, led_strip};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use {defmt_rtt as _, panic_probe as _};
@@ -35,7 +35,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Create frames for the animation
 
-    let rainbow_frame = Frame::from([
+    let rainbow_frame = Frame1d::from([
         colors::RED,
         colors::ORANGE,
         colors::YELLOW,
@@ -46,7 +46,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         colors::MAGENTA,
     ]);
 
-    let black_frame = Frame::new();
+    let black_frame = Frame1d::new();
 
     info!("Starting rainbow animation...");
     const FRAME_DURATION: Duration = Duration::from_secs(1);

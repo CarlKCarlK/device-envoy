@@ -5,14 +5,14 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strips;
-use device_kit::led_strip::{Frame, Rgb, colors};
+use device_kit::led_strip::{Rgb, colors};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use panic_probe as _;
 
 // Two WS2812B 4x12 LED panels (48 pixels each) sharing PIO0
 led_strips! {
-    LedStrips {
+    LedStrips0 {
         gpio3: { pin: PIN_3, len: 48, max_frames: 48 },
         gpio4: { pin: PIN_4, len: 48, max_frames: 48 }
     }
@@ -30,7 +30,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio3_led_strip, gpio4_led_strip) =
-        LedStrips::new(p.PIO0, p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, spawner)?;
+        LedStrips0::new(p.PIO0, p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, spawner)?;
 
     info!("Dual WS2812B 4x12 Panel demo starting");
     info!("Using PIO0, two state machines, GPIO3 & GPIO4");
@@ -46,11 +46,10 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     const GAP_SPACING: usize = 4;
     const FRAME_COUNT: usize = GAP_SPACING;
 
-    let mut frames =
-        heapless::Vec::<(Frame<{ Gpio3LedStrip::LEN }>, Duration), FRAME_COUNT>::new();
+    let mut frames = heapless::Vec::<(Gpio3Frame, Duration), FRAME_COUNT>::new();
 
     for frame_offset in 0..FRAME_COUNT {
-        let mut frame = Frame::<{ Gpio3LedStrip::LEN }>::filled(BRIGHT);
+        let mut frame = Gpio3Frame::filled(BRIGHT);
         for pixel_index in 0..Gpio3LedStrip::LEN {
             if (pixel_index + frame_offset) % GAP_SPACING == 0 {
                 frame[pixel_index] = GAP;

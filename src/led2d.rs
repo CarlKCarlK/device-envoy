@@ -5,9 +5,9 @@
 //! where you need to share a PIO with other devices, use `led2d_from_strip!` with
 //! [`led_strips!`](crate::led_strip::led_strips).
 //!
-//! For custom graphics, create a [`Frame`] and use the
+//! For custom graphics, create a [`Frame2d`] and use the
 //! [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing API. See the
-//! [`Frame`] documentation for an example.
+//! [`Frame2d`] documentation for an example.
 //!
 //! # Quick Start with `led2d!`
 //!
@@ -169,7 +169,7 @@ use heapless::Vec;
 use smart_leds::RGB8;
 
 #[cfg(not(feature = "host"))]
-use crate::led_strip::Frame as StripFrame;
+use crate::led_strip::Frame1d as StripFrame;
 #[cfg(feature = "host")]
 type StripFrame<const N: usize> = [RGB8; N];
 use crate::Result;
@@ -222,7 +222,7 @@ pub fn bit_matrix3x4_font() -> MonoFont<'static> {
 #[doc(hidden)]
 /// Render text into a frame using the provided font.
 pub fn render_text_to_frame<const W: usize, const H: usize>(
-    frame: &mut Frame<W, H>,
+    frame: &mut Frame2d<W, H>,
     font: &embedded_graphics::mono_font::MonoFont<'static>,
     text: &str,
     colors: &[RGB8],
@@ -430,8 +430,8 @@ impl Led2dFont {
 ///
 /// # Associated Constants cmk0000 delete this section
 ///
-/// - `WIDTH` — Frame width in pixels (columns)
-/// - `HEIGHT` — Frame height in pixels (rows)
+/// - `WIDTH` — Frame2d width in pixels (columns)
+/// - `HEIGHT` — Frame2d height in pixels (rows)
 /// - `LEN` — Total pixel count (WIDTH × HEIGHT)
 /// - `SIZE` — [`Size`] struct for embedded-graphics drawing operations
 /// - `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT` — Corner [`Point`] coordinates
@@ -444,10 +444,10 @@ impl Led2dFont {
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_kit::led2d::Frame;
+/// use device_kit::led2d::Frame2d;
 /// use smart_leds::RGB8;
 /// # fn example() {
-/// let mut frame = Frame::<12, 4>::new();  // 12 columns × 4 rows
+/// let mut frame = Frame2d::<12, 4>::new();  // 12 columns × 4 rows
 /// frame[0][0] = RGB8::new(255, 0, 0);     // Set top-left pixel to red
 /// frame[3][11] = RGB8::new(0, 255, 0);    // Set bottom-right pixel to green
 /// # }
@@ -459,11 +459,11 @@ impl Led2dFont {
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_kit::led2d::{rgb8_to_rgb888, Frame};
+/// use device_kit::led2d::{rgb8_to_rgb888, Frame2d};
 /// use smart_leds::RGB8;
 /// use embedded_graphics::{prelude::*, primitives::{Line, PrimitiveStyle}};
 /// # fn example() {
-/// let mut frame = Frame::<12, 8>::new();
+/// let mut frame = Frame2d::<12, 8>::new();
 /// let color = rgb8_to_rgb888(RGB8::new(255, 0, 0));
 /// Line::new(Point::new(0, 0), Point::new(11, 7))
 ///     .into_styled(PrimitiveStyle::with_stroke(color, 1))
@@ -474,16 +474,16 @@ impl Led2dFont {
 ///
 /// See the [mod@crate::led2d] module docs for more usage examples.
 #[derive(Clone, Copy, Debug)]
-pub struct Frame<const W: usize, const H: usize>(pub [[RGB8; W]; H]);
+pub struct Frame2d<const W: usize, const H: usize>(pub [[RGB8; W]; H]);
 
-impl<const W: usize, const H: usize> Frame<W, H> {
-    /// Frame width in pixels (columns).
+impl<const W: usize, const H: usize> Frame2d<W, H> {
+    /// Frame2d width in pixels (columns).
     pub const WIDTH: usize = W;
-    /// Frame height in pixels (rows).
+    /// Frame2d height in pixels (rows).
     pub const HEIGHT: usize = H;
     /// Total number of pixels (WIDTH × HEIGHT).
     pub const LEN: usize = W * H;
-    /// Frame dimensions as a [`Size`] for embedded-graphics.
+    /// Frame2d dimensions as a [`Size`] for embedded-graphics.
     pub const SIZE: Size = Size::new(W as u32, H as u32);
     /// Top-left corner coordinate.
     pub const TOP_LEFT: Point = Point::new(0, 0);
@@ -507,7 +507,7 @@ impl<const W: usize, const H: usize> Frame<W, H> {
     }
 }
 
-impl<const W: usize, const H: usize> core::ops::Deref for Frame<W, H> {
+impl<const W: usize, const H: usize> core::ops::Deref for Frame2d<W, H> {
     type Target = [[RGB8; W]; H];
 
     fn deref(&self) -> &Self::Target {
@@ -515,37 +515,37 @@ impl<const W: usize, const H: usize> core::ops::Deref for Frame<W, H> {
     }
 }
 
-impl<const W: usize, const H: usize> core::ops::DerefMut for Frame<W, H> {
+impl<const W: usize, const H: usize> core::ops::DerefMut for Frame2d<W, H> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl<const W: usize, const H: usize> From<[[RGB8; W]; H]> for Frame<W, H> {
+impl<const W: usize, const H: usize> From<[[RGB8; W]; H]> for Frame2d<W, H> {
     fn from(array: [[RGB8; W]; H]) -> Self {
         Self(array)
     }
 }
 
-impl<const W: usize, const H: usize> From<Frame<W, H>> for [[RGB8; W]; H] {
-    fn from(frame: Frame<W, H>) -> Self {
+impl<const W: usize, const H: usize> From<Frame2d<W, H>> for [[RGB8; W]; H] {
+    fn from(frame: Frame2d<W, H>) -> Self {
         frame.0
     }
 }
 
-impl<const W: usize, const H: usize> Default for Frame<W, H> {
+impl<const W: usize, const H: usize> Default for Frame2d<W, H> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const W: usize, const H: usize> OriginDimensions for Frame<W, H> {
+impl<const W: usize, const H: usize> OriginDimensions for Frame2d<W, H> {
     fn size(&self) -> Size {
         Size::new(W as u32, H as u32)
     }
 }
 
-impl<const W: usize, const H: usize> DrawTarget for Frame<W, H> {
+impl<const W: usize, const H: usize> DrawTarget for Frame2d<W, H> {
     type Color = Rgb888;
     type Error = core::convert::Infallible;
 
@@ -685,7 +685,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
     /// Convert 2D frame to 1D array using the LED layout.
     fn convert_frame<const W: usize, const H: usize>(
         &self,
-        frame_2d: Frame<W, H>,
+        frame_2d: Frame2d<W, H>,
     ) -> StripFrame<N> {
         let mut frame_1d = [RGB8::new(0, 0, 0); N];
         for row_index in 0..H {
@@ -699,10 +699,10 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
 
     /// Render a fully defined frame to the panel.
     ///
-    /// Frame is a 2D array in row-major order where `frame[row][col]` is the pixel at (col, row).
+    /// Frame2d is a 2D array in row-major order where `frame[row][col]` is the pixel at (col, row).
     pub async fn write_frame<const W: usize, const H: usize>(
         &self,
-        frame: Frame<W, H>,
+        frame: Frame2d<W, H>,
     ) -> Result<()> {
         let strip_frame = self.convert_frame(frame);
         self.command_signal
@@ -713,12 +713,12 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
 
     /// Loop through a sequence of animation frames until interrupted by another command.
     ///
-    /// Each frame is a tuple of `(Frame, Duration)`. Accepts arrays, `Vec`s, or any
-    /// iterator that produces `(Frame, Duration)` tuples. For best efficiency with large
+    /// Each frame is a tuple of `(Frame2d, Duration)`. Accepts arrays, `Vec`s, or any
+    /// iterator that produces `(Frame2d, Duration)` tuples. For best efficiency with large
     /// frame sequences, pass an iterator to avoid intermediate allocations.
     pub async fn animate<const W: usize, const H: usize>(
         &self,
-        frames: impl IntoIterator<Item = (Frame<W, H>, Duration)>,
+        frames: impl IntoIterator<Item = (Frame2d<W, H>, Duration)>,
     ) -> Result<()> {
         assert!(
             MAX_FRAMES > 0,
@@ -1485,7 +1485,9 @@ macro_rules! __led2d_impl {
     ) => {
         $crate::led2d::paste::paste! {
             // Generate the LED strip infrastructure with a CamelCase strip type
-            $crate::led_strips! {
+            $crate::__led_strips_impl! {
+                @__with_frame_alias
+                frame_alias: __SKIP_FRAME_ALIAS__,
                 pio: $pio,
                 [<$name Strips>] {
                     [<$name:snake>]: {
@@ -1563,7 +1565,9 @@ macro_rules! __led2d_impl {
     ) => {
         $crate::led2d::paste::paste! {
             // Generate the LED strip infrastructure with a CamelCase strip type
-            $crate::led_strips! {
+            $crate::__led_strips_impl! {
+                @__with_frame_alias
+                frame_alias: __SKIP_FRAME_ALIAS__,
                 pio: $pio,
                 [<$name Strips>] {
                     [<$name:snake>]: {
@@ -1780,9 +1784,9 @@ macro_rules! led2d_from_strip {
 
             /// Frame type for this LED matrix display.
             ///
-            /// This is a convenience type alias for `Frame<W, H>` specific to this device.
+            /// This is a convenience type alias for `Frame2d<W, H>` specific to this device.
             #[allow(dead_code)]
-            $vis type [<$name Frame>] = $crate::led2d::Frame<$cols_const, $rows_const>;
+            $vis type [<$name Frame>] = $crate::led2d::Frame2d<$cols_const, $rows_const>;
 
             #[allow(non_snake_case, dead_code)]
             impl [<$name>] {
@@ -1842,12 +1846,12 @@ macro_rules! led2d_from_strip {
                 }
 
                 /// Render a fully defined frame to the panel.
-                $vis async fn write_frame(&self, frame: $crate::led2d::Frame<$cols_const, $rows_const>) -> $crate::Result<()> {
+                $vis async fn write_frame(&self, frame: $crate::led2d::Frame2d<$cols_const, $rows_const>) -> $crate::Result<()> {
                     self.led2d.write_frame(frame).await
                 }
 
                 /// Loop through a sequence of animation frames. Pass arrays by value or Vecs/iters.
-                $vis async fn animate(&self, frames: impl IntoIterator<Item = ($crate::led2d::Frame<$cols_const, $rows_const>, ::embassy_time::Duration)>) -> $crate::Result<()> {
+                $vis async fn animate(&self, frames: impl IntoIterator<Item = ($crate::led2d::Frame2d<$cols_const, $rows_const>, ::embassy_time::Duration)>) -> $crate::Result<()> {
                     self.led2d.animate(frames).await
                 }
 
@@ -1856,14 +1860,14 @@ macro_rules! led2d_from_strip {
                     &self,
                     text: &str,
                     colors: &[smart_leds::RGB8],
-                    frame: &mut $crate::led2d::Frame<$cols_const, $rows_const>,
+                    frame: &mut $crate::led2d::Frame2d<$cols_const, $rows_const>,
                 ) -> $crate::Result<()> {
                     $crate::led2d::render_text_to_frame(frame, &self.font, text, colors, self.font_variant.spacing_reduction())
                 }
 
                 /// Render text and display it on the LED matrix.
                 pub async fn write_text(&self, text: &str, colors: &[smart_leds::RGB8]) -> $crate::Result<()> {
-                    let mut frame = $crate::led2d::Frame::<$cols_const, $rows_const>::new();
+                    let mut frame = $crate::led2d::Frame2d::<$cols_const, $rows_const>::new();
                     self.write_text_to_frame(text, colors, &mut frame)?;
                     self.write_frame(frame).await
                 }

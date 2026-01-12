@@ -500,7 +500,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
     }
 }
 
-/// Macro to generate multiple NeoPixel-style (WS2812) LED strips sharing one PIO resource.
+/// Macro to generate multiple NeoPixel-style (WS2812) LED strips & panels sharing one PIO resource.
 ///
 /// Use this macro to drive multiple independent LED strips and 2D panels from a single shared [PIO](crate#glossary) resource.
 /// This saves hardware resources compared to using separate [`led_strip!`] and [`led2d!`](macro@crate::led2d) invocations, each of which consumes a dedicated PIO resource.
@@ -539,19 +539,20 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///         gpio0: {                        // Prefix used to name generated types.
 ///             pin: PIN_0,                 // GPIO pin for LED data signal.
 ///             len: 8,                     // 8 LEDs on this strip.
-///             max_current: Current::Milliamps(25), // Optional; default MAX_CURRENT_DEFAULT.
+///             max_current: Current::Milliamps(25), // Required per strip.
 ///         },
 ///         gpio3: {
 ///             pin: PIN_3,
 ///             len: 48,
 ///             max_current: Current::Milliamps(75),
 ///             gamma: Gamma::Gamma2_2,     // Optional; default GAMMA_DEFAULT.
-///             max_frames: 1,              // Optional; default 16.
+///             max_frames: 1,              // Optional; default MAX_FRAMES_DEFAULT (16).
 ///             dma: DMA_CH11,              // Optional; auto-assigned by strip order.
 ///         },
 ///         gpio4: {
 ///             pin: PIN_4,
 ///             len: 96,
+///             max_current: Current::Milliamps(250),
 ///             max_frames: 2,
 ///             led2d: {                    // Optional panel configuration for 2D displays.
 ///                 width: 8,               // Panel width in LEDs.
@@ -622,13 +623,13 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///
 /// - `pin` — GPIO pin for LED data
 /// - `len` — Number of LEDs
+/// - `max_current` — Current budget per strip (required; no default)
 ///
 /// ## Optional Fields per Strip
 ///
 /// - `dma` — DMA channel (default: auto-assigned by state machine index)
-/// - `max_current` — Current budget (default: [`MAX_CURRENT_DEFAULT`] = 250 mA)
 /// - `gamma` — Color curve (default: [`GAMMA_DEFAULT`] = `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum animation frames (default: `32`)
+/// - `max_frames` — Maximum animation frames (default: [`MAX_FRAMES_DEFAULT`] = 16)
 /// - `led2d` — 2D panel configuration (optional). Generates a [`Led2d`](crate::led2d::Led2d) device with text rendering and animation support. See [`led2d!`](crate::led2d!) macro documentation for similar examples and configuration options.
 ///
 /// ## 2D Panel Configuration (led2d)
@@ -636,34 +637,33 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// When a strip represents a rectangular NeoPixel-style (WS2812) LED panel rather than a linear strip,
 /// you can add a `led2d` configuration block to enable 2D drawing, text rendering, and animation.
 ///
-/// **Panel configuration fields:**
-/// - `width` — Number of columns in the panel (required)
-/// - `height` — Number of rows in the panel (required)
-/// - `led_layout` — Physical layout mapping (required). Common options: `serpentine_column_major`, or a custom [`LedLayout`](crate::led2d::layout::LedLayout) expression
-/// - `font` — Built-in font for text rendering (required). See [`Led2dFont`](crate::led2d::Led2dFont) for all variants
+/// For usage examples, see [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated).
+///
+/// **Panel configuration fields (all required):**
+/// - `width` — Number of columns in the panel
+/// - `height` — Number of rows in the panel
+/// - `led_layout` — Physical layout mapping. Common options: `serpentine_column_major`, or a custom [`LedLayout`](crate::led2d::layout::LedLayout) expression
+/// - `font` — Built-in font for text rendering. See [`Led2dFont`](crate::led2d::Led2dFont) for all variants
 ///
 /// The generated 2D device supports [`Frame2d`](crate::led2d::Frame2d) creation, direct pixel access,
 /// [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing, text rendering, and animation.
-/// For more details and examples, see the [`led2d!`](crate::led2d!) macro documentation.
 ///
-/// # Current Limiting cmk000 need to update this
+/// # Current Limiting
 ///
-/// The `max_current` field automatically scales brightness to stay within your power budget.
-/// Each strip can have independent current limits, or they can share a single budget across
-/// all strips in the group.
+/// The `max_current` field is **required for each strip** because LED currents add up fast.
+/// **When powering from the Pico's USB rail (pin 40):** You have roughly 500 mA total
+/// to work with for all your LED strips combined. For larger arrays or multiple panels,
+/// use a separate 5V power supply instead.
 ///
-/// Each WS2812 LED is assumed to draw 60 mA at full brightness. For example:
+/// A single 8-LED strip at full brightness draws ~480 mA. The `max_current` value scales
+/// brightness via a compile-time lookup table (no runtime cost) to stay within budget.
+/// Each WS2812 LED draws roughly 60 mA at full white brightness:
 /// - 8 LEDs × 60 mA = 480 mA at full brightness
-/// - With `max_current: Current::Milliamps(500)` on a strip, all LEDs fit at 100% brightness
-/// - With `max_current: MAX_CURRENT_DEFAULT` (250 mA by default), the generated `MAX_BRIGHTNESS` limits LEDs to ~52% brightness
+/// - `max_current: Current::Milliamps(500)` on a strip → ~100% brightness across 8 LEDs
+/// - `max_current: Current::Milliamps(250)` on a strip → ~52% brightness across 8 LEDs
 ///
-/// The current limit is baked into a compile-time lookup table, so it has no runtime cost.
-///
-/// **Powering LEDs from the Pico's pin 40 (VBUS):** Pin 40 is the USB 5 V rail
-/// pass-through, but the Pico itself has practical current limits — the USB connector,
-/// cable, and internal circuitry aren't designed for heavy loads. Small LED strips
-/// (a few hundred mA total) can usually power from pin 40 with a decent USB supply; for
-/// larger loads (1 A+), use a separate 5 V supply and share ground with the Pico.
+/// For multiple strips on USB power, add up your per-strip budgets. Two 8-LED strips at
+/// 250 mA each = 500 mA total (the USB limit). Plan accordingly or switch to external power.
 ///
 /// # Color Correction (Gamma)
 ///
@@ -677,14 +677,14 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// # When to Use This Macro
 ///
 /// Use `led_strips!` when:
-/// - You have **multiple independent LED strips** connected to separate GPIO pins
+/// - You have **multiple independent LED strips/panels** connected to separate GPIO pins
 /// - They should **share the same PIO resource** (to save PIO resources)
 /// - Each strip can have independent brightness, animation, and current limits
 ///
 /// Each `led_strips!` invocation can drive up to 4 independent strips on one [PIO](crate#glossary) resource.
 /// On a Pico 2 with 3 PIOs available, you can use **3 instances of `led_strips!`** to drive **up to 12 independent LED strips**.
 ///
-/// If you only have **one strip** (or two), use [`led_strip!`] instead for simpler syntax.
+/// If you only have **one strip** (or two), use [`led_strip!`] or [`led2d!`](macro@crate::led2d) instead for simpler syntax.
 #[macro_export]
 macro_rules! led_strips {
     ($($tt:tt)*) => { $crate::__led_strips_impl! { $($tt)* } };
@@ -1099,9 +1099,9 @@ macro_rules! __led_strips_impl {
             pin: __MISSING_PIN__,
             dma: __DEFAULT_DMA__,
             len: __MISSING_LEN__,
-            max_current: $crate::led_strip::MAX_CURRENT_DEFAULT,
+            max_current: __MISSING_MAX_CURRENT__,
             gamma: $crate::led_strip::GAMMA_DEFAULT,
-            max_frames: 32,
+            max_frames: $crate::led_strip::MAX_FRAMES_DEFAULT,
             led2d: __NONE__,
             fields: [ $($fields)* ]
         }
@@ -2069,6 +2069,46 @@ macro_rules! __led_strips_impl {
         pin: $pin:ident,
         dma: $dma:ident,
         len: $len:expr,
+        max_current: __MISSING_MAX_CURRENT__,
+        gamma: $gamma:expr,
+        max_frames: $max_frames:expr,
+        led2d: __NONE__,
+        fields: []
+    ) => {
+        compile_error!("led_strips!: max_current is required for every strip");
+    };
+
+    (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
+        pio: $pio:ident,
+        sm_counter: $sm:tt,
+        strips_out: [ $($out:tt)* ],
+        strips_remaining: [ $($remaining:tt)* ],
+        label: $label:ident,
+        group: $group:ident,
+        pin: $pin:ident,
+        dma: $dma:ident,
+        len: $len:expr,
+        max_current: __MISSING_MAX_CURRENT__,
+        gamma: $gamma:expr,
+        max_frames: $max_frames:expr,
+        led2d: __HAS_LED2D__ { $($led2d_fields:tt)* },
+        fields: []
+    ) => {
+        compile_error!("led_strips!: max_current is required for every strip");
+    };
+
+    (@__fill_strip_defaults
+        frame_alias: $frame_alias:tt,
+        pio: $pio:ident,
+        sm_counter: $sm:tt,
+        strips_out: [ $($out:tt)* ],
+        strips_remaining: [ $($remaining:tt)* ],
+        label: $label:ident,
+        group: $group:ident,
+        pin: $pin:ident,
+        dma: $dma:ident,
+        len: $len:expr,
         max_current: $max_current:expr,
         gamma: $gamma:expr,
         max_frames: $max_frames:expr,
@@ -2166,7 +2206,7 @@ macro_rules! __led_strips_impl {
 /// - `dma` — DMA channel (default: `DMA_CH0`)
 /// - `max_current` — Current budget (default: [`MAX_CURRENT_DEFAULT`] = 250 mA)
 /// - `gamma` — Color curve (default: [`GAMMA_DEFAULT`] = `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum animation frames (default: `16`)
+/// - `max_frames` — Maximum animation frames (default: [`MAX_FRAMES_DEFAULT`] = 16)
 ///
 /// # Current Limiting
 ///
@@ -2226,7 +2266,7 @@ macro_rules! __led_strip_impl {
             len: _UNSET_,
             max_current: _UNSET_,
             gamma: $crate::led_strip::GAMMA_DEFAULT,
-            max_frames: 16,
+            max_frames: $crate::led_strip::MAX_FRAMES_DEFAULT,
             fields: [ $($fields)* ]
         }
     };
@@ -2773,6 +2813,9 @@ impl Default for Current {
 
 /// Default current budget for generated LED devices (`Current::Milliamps(250)`).
 pub const MAX_CURRENT_DEFAULT: Current = Current::Milliamps(250);
+
+/// Default maximum animation frames for generated LED devices (`16`).
+pub const MAX_FRAMES_DEFAULT: usize = 16;
 
 impl Current {
     /// Calculate maximum brightness based on current budget and worst-case current draw.

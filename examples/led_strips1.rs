@@ -18,6 +18,7 @@ led_strips! {
         gpio3: {
             pin: PIN_3,
             len: 48,
+            max_current: Current::Milliamps(250),
         },
         gpio4: {
             pin: PIN_4,

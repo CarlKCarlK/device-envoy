@@ -25,7 +25,7 @@ led_strips! {
         gpio0: {                                    // Prefix used to name generated types.
             pin: PIN_0,                             // GPIO pin for LED data signal.
             len: 8,                                 // 8 LEDs on this strip.
-            max_current: Current::Milliamps(25),    // Optional; default 250 mA.
+            max_current: Current::Milliamps(25),    // Required per strip.
         },
         gpio3: {
             pin: PIN_3,
@@ -38,6 +38,7 @@ led_strips! {
         gpio4: {
             pin: PIN_4,
             len: 96,
+            max_current: Current::Milliamps(250),
             max_frames: 2,                          // cmk000000 test this to failure
             led2d: {                                // Optional panel configuration for 2D displays.
                 width: 8,                           // Panel width in LEDs.

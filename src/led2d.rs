@@ -991,7 +991,7 @@ pub use led2d_device;
 /// - `dma` — DMA channel (default: `DMA_CH0`)
 /// - `max_current` — Current budget (default: [`crate::led_strip::MAX_CURRENT_DEFAULT`] = 250 mA)
 /// - `gamma` — Color curve (default: [`crate::led_strip::GAMMA_DEFAULT`] = `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum animation frames (default: `16`)
+/// - `max_frames` — Maximum animation frames (default: [`crate::led_strip::MAX_FRAMES_DEFAULT`] = 16)
 ///
 /// # Current Limiting
 ///
@@ -1027,7 +1027,6 @@ pub use led2d_device;
 ///
 /// If you need to share a PIO resource or build from an existing strip, use
 /// [`led_strips!`](crate::led_strip::led_strips)'s led2d feature instead.
-/// cmk0000 from strips
 #[macro_export]
 #[cfg(not(feature = "host"))]
 macro_rules! led2d {
@@ -1055,7 +1054,7 @@ macro_rules! __led2d_impl {
             led_layout: _UNSET_,
             max_current: _UNSET_,
             gamma: $crate::led_strip::GAMMA_DEFAULT,
-            max_frames: 16,
+            max_frames: $crate::led_strip::MAX_FRAMES_DEFAULT,
             font: _UNSET_,
             fields: [ $($fields)* ]
         }
@@ -1073,7 +1072,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ pio: $new_pio:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -1107,7 +1106,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ pin: $new_pin:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -1141,7 +1140,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ dma: $new_dma:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -1175,7 +1174,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ width: $new_width:expr $(, $($rest:tt)* )? ]
     ) => {
@@ -1209,7 +1208,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ height: $new_height:expr $(, $($rest:tt)* )? ]
     ) => {
@@ -1243,7 +1242,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ led_layout: $new_led_layout:tt $(, $($rest:tt)* )? ]
     ) => {
@@ -1277,7 +1276,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ max_current: $new_max_current:expr $(, $($rest:tt)* )? ]
     ) => {
@@ -1311,7 +1310,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ gamma: $new_gamma:expr $(, $($rest:tt)* )? ]
     ) => {
@@ -1345,7 +1344,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ max_frames: $new_max_frames:expr $(, $($rest:tt)* )? ]
     ) => {
@@ -1379,7 +1378,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: $max_current:tt,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ font: $new_font_variant:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -1413,7 +1412,7 @@ macro_rules! __led2d_impl {
         led_layout: $led_layout:tt,
         max_current: _UNSET_,
         gamma: $gamma:expr,
-        max_frames: $max_frames:tt,
+        max_frames: $max_frames:expr,
         font: $font_variant:tt,
         fields: [ ]
     ) => {
@@ -1693,6 +1692,7 @@ macro_rules! __led2d_impl {
 /// #     let led = Led12x4::from_strip(strip, spawner).unwrap();
 /// # }
 /// ```
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
 #[macro_export]
 #[cfg(not(feature = "host"))]
 macro_rules! led2d_from_strip {
@@ -1880,5 +1880,5 @@ macro_rules! led2d_from_strip {
 #[doc(inline)]
 pub use led2d;
 #[cfg(not(feature = "host"))]
-#[doc(inline)]
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
 pub use led2d_from_strip;

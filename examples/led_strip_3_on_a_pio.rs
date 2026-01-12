@@ -8,7 +8,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strips;
-use device_kit::led_strip::{Frame1d, Rgb, colors};
+use device_kit::led_strip::{Current, Frame1d, Rgb, colors};
 use device_kit::led2d::layout::LedLayout;
 use device_kit::led2d::led2d_from_strip;
 use embassy_executor::Spawner;
@@ -18,9 +18,9 @@ use panic_probe as _;
 
 led_strips! {
     LedStrips0 {
-        gpio0: { pin: PIN_0, len: 8},
-        gpio3: { pin: PIN_3, len: 48},
-        gpio4: { pin: PIN_4, len: 96}
+        gpio0: { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) },
+        gpio3: { pin: PIN_3, len: 48, max_current: Current::Milliamps(250) },
+        gpio4: { pin: PIN_4, len: 96, max_current: Current::Milliamps(250) }
     }
 }
 

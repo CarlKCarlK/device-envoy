@@ -5,7 +5,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
 use device_kit::led_strip::led_strips;
-use device_kit::led_strip::{Frame1d, Rgb, colors};
+use device_kit::led_strip::{Current, Frame1d, Rgb, colors};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use panic_probe as _;
@@ -13,8 +13,8 @@ use panic_probe as _;
 // Two WS2812B 4x12 LED panels (48 pixels each) sharing PIO0
 led_strips! {
     LedStrips0 {
-        gpio3: { pin: PIN_3, len: 48, max_frames: 48 },
-        gpio4: { pin: PIN_4, len: 48, max_frames: 48 }
+        gpio3: { pin: PIN_3, len: 48, max_current: Current::Milliamps(100), max_frames: 48 },
+        gpio4: { pin: PIN_4, len: 48, max_current: Current::Milliamps(100), max_frames: 48 }
     }
 }
 

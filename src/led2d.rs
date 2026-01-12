@@ -121,10 +121,10 @@
 //!     let strip = StripLedStrip::new(sm0, p.PIN_3, p.DMA_CH0, spawner).unwrap();
 //!
 //!     // Create Led2d device from strip
-//!     let led_12x4 = Led12x4::from_strip(strip, spawner).unwrap();
+//!     let led12x4 = Led12x4::from_strip(strip, spawner).unwrap();
 //!
 //!     // Display colorful text
-//!     led_12x4.write_text("HI!", &[colors::CYAN, colors::MAGENTA, colors::YELLOW])
+//!     led12x4.write_text("HI!", &[colors::CYAN, colors::MAGENTA, colors::YELLOW])
 //!         .await
 //!         .unwrap();
 //!

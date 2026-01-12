@@ -98,18 +98,18 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     // Set up the 8x12 LED display on GPIO4.
-    let led_8x12 = Led8x12::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
+    let led8x12 = Led8x12::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
     // Connect Wi-Fi, using the LED panel for status.
-    let led_8x12_ref = &led_8x12;
+    let led8x12_ref = &led8x12;
     let (stack, mut button) = wifi_auto
         .connect(spawner, move |event| {
-            let led_8x12_ref = led_8x12_ref;
+            let led8x12_ref = led8x12_ref;
             async move {
                 match event {
                     WifiAutoEvent::CaptivePortalReady => {
                         info!("WiFi: captive portal ready, displaying CONN");
-                        show_portal_ready(led_8x12_ref)
+                        show_portal_ready(led8x12_ref)
                             .await
                             .expect("LED display failed during portal-ready");
                     }
@@ -118,19 +118,19 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                         try_count,
                     } => {
                         info!("WiFi: connecting (attempt {}/{})", try_index + 1, try_count);
-                        show_connecting(led_8x12_ref, try_index, try_count)
+                        show_connecting(led8x12_ref, try_index, try_count)
                             .await
                             .expect("LED display failed during connecting");
                     }
                     WifiAutoEvent::Connected => {
                         info!("WiFi: connected successfully, displaying DONE");
-                        show_connected(led_8x12_ref)
+                        show_connected(led8x12_ref)
                             .await
                             .expect("LED display failed during connected");
                     }
                     WifiAutoEvent::ConnectionFailed => {
                         info!("WiFi: connection failed, displaying FAIL, device will reset");
-                        show_connection_failed(led_8x12_ref)
+                        show_connection_failed(led8x12_ref)
                             .await
                             .expect("LED display failed during connection-failed");
                     }
@@ -160,17 +160,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock, &mut button, &time_sync, &led_8x12)
+                    .execute_hours_minutes(speed, &clock, &mut button, &time_sync, &led8x12)
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock, &mut button, &time_sync, &led_8x12)
+                    .execute_minutes_seconds(&clock, &mut button, &time_sync, &led8x12)
                     .await?
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(&clock, &mut button, &timezone_field, &led_8x12)
+                    .execute_edit_offset(&clock, &mut button, &timezone_field, &led8x12)
                     .await?
             }
         };
@@ -194,11 +194,11 @@ impl State {
         clock: &Clock,
         button: &mut Button<'_>,
         time_sync: &TimeSync,
-        led_8x12: &Led8x12,
+        led8x12: &Led8x12,
     ) -> Result<Self> {
         clock.set_speed(speed).await;
         let (hours, minutes, _) = h12_m_s(&clock.now_local());
-        show_hours_minutes(led_8x12, hours, minutes).await?;
+        show_hours_minutes(led8x12, hours, minutes).await?;
         clock.set_tick_interval(Some(ONE_MINUTE)).await;
         let mut button_press = pin!(button.wait_for_press_duration());
         loop {
@@ -233,7 +233,7 @@ impl State {
                 // Clock tick
                 Either::Second(Either::First(time_event)) => {
                     let (hours, minutes, _) = h12_m_s(&time_event);
-                    show_hours_minutes(led_8x12, hours, minutes).await?;
+                    show_hours_minutes(led8x12, hours, minutes).await?;
                 }
                 // Time sync events
                 Either::Second(Either::Second(TimeSyncEvent::Success { unix_seconds })) => {
@@ -255,11 +255,11 @@ impl State {
         clock: &Clock,
         button: &mut Button<'_>,
         time_sync: &TimeSync,
-        led_8x12: &Led8x12,
+        led8x12: &Led8x12,
     ) -> Result<Self> {
         clock.set_speed(1.0).await;
         let (_, minutes, seconds) = h12_m_s(&clock.now_local());
-        show_minutes_seconds(led_8x12, minutes, seconds).await?;
+        show_minutes_seconds(led8x12, minutes, seconds).await?;
         clock.set_tick_interval(Some(ONE_SECOND)).await;
         loop {
             match select(
@@ -290,7 +290,7 @@ impl State {
                 // Clock tick
                 Either::First(Either::Second(time_event)) => {
                     let (_, minutes, seconds) = h12_m_s(&time_event);
-                    show_minutes_seconds(led_8x12, minutes, seconds).await?;
+                    show_minutes_seconds(led8x12, minutes, seconds).await?;
                 }
                 // Time sync events
                 Either::Second(TimeSyncEvent::Success { unix_seconds }) => {
@@ -312,14 +312,14 @@ impl State {
         clock: &Clock,
         button: &mut Button<'_>,
         timezone_field: &TimezoneField,
-        led_8x12: &Led8x12,
+        led8x12: &Led8x12,
     ) -> Result<Self> {
         info!("Entering edit offset mode");
         clock.set_speed(1.0).await;
 
         // Blink current hours and minutes with edit color accent.
         let (hours, minutes, _) = h12_m_s(&clock.now_local());
-        show_hours_minutes_indicator(led_8x12, hours, minutes).await?;
+        show_hours_minutes_indicator(led8x12, hours, minutes).await?;
 
         // Get the current offset minutes from clock (source of truth)
         let mut offset_minutes = clock.offset_minutes();
@@ -346,7 +346,7 @@ impl State {
                         "Updated time after offset change: {:02}:{:02}",
                         hours, minutes
                     );
-                    show_hours_minutes_indicator(led_8x12, hours, minutes).await?;
+                    show_hours_minutes_indicator(led8x12, hours, minutes).await?;
                 }
                 PressDuration::Long => {
                     info!("Long press detected - saving and exiting edit mode");
@@ -362,9 +362,9 @@ impl State {
 
 // Display helper functions for the 8x12 LED clock
 
-async fn show_portal_ready(led_8x12: &Led8x12) -> Result<()> {
-    let on_frame = text_frame(led_8x12, "CO\nNN", &DIGIT_COLORS)?;
-    led_8x12
+async fn show_portal_ready(led8x12: &Led8x12) -> Result<()> {
+    let on_frame = text_frame(led8x12, "CO\nNN", &DIGIT_COLORS)?;
+    led8x12
         .animate([
             (on_frame, Duration::from_millis(700)),
             (Led8x12Frame::new(), Duration::from_millis(300)),
@@ -372,43 +372,43 @@ async fn show_portal_ready(led_8x12: &Led8x12) -> Result<()> {
         .await
 }
 
-async fn show_connecting(led_8x12: &Led8x12, try_index: u8, _try_count: u8) -> Result<()> {
+async fn show_connecting(led8x12: &Led8x12, try_index: u8, _try_count: u8) -> Result<()> {
     // Delay animation start to avoid wifi initialization glitches
     embassy_time::Timer::after(Duration::from_secs(1)).await;
 
     let clockwise = try_index % 2 == 0;
     const FRAME_DURATION: Duration = Duration::from_millis(90);
     let animation = perimeter_chase_animation(clockwise, CONNECTING_COLOR, FRAME_DURATION)?;
-    led_8x12.animate(animation).await
+    led8x12.animate(animation).await
 }
 
-async fn show_connected(led_8x12: &Led8x12) -> Result<()> {
-    led_8x12.write_text("DO\nNE", &DIGIT_COLORS).await
+async fn show_connected(led8x12: &Led8x12) -> Result<()> {
+    led8x12.write_text("DO\nNE", &DIGIT_COLORS).await
 }
 
-async fn show_connection_failed(led_8x12: &Led8x12) -> Result<()> {
-    led_8x12.write_text("FA\nIL", &DIGIT_COLORS).await
+async fn show_connection_failed(led8x12: &Led8x12) -> Result<()> {
+    led8x12.write_text("FA\nIL", &DIGIT_COLORS).await
 }
 
-async fn show_hours_minutes(led_8x12: &Led8x12, hours: u8, minutes: u8) -> Result<()> {
+async fn show_hours_minutes(led8x12: &Led8x12, hours: u8, minutes: u8) -> Result<()> {
     let (hours_tens, hours_ones) = hours_digits(hours);
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let text = two_line_text([hours_tens, hours_ones], [minutes_tens, minutes_ones]);
-    led_8x12.write_text(text.as_str(), &DIGIT_COLORS).await
+    led8x12.write_text(text.as_str(), &DIGIT_COLORS).await
 }
 
-async fn show_hours_minutes_indicator(led_8x12: &Led8x12, hours: u8, minutes: u8) -> Result<()> {
+async fn show_hours_minutes_indicator(led8x12: &Led8x12, hours: u8, minutes: u8) -> Result<()> {
     let (hours_tens, hours_ones) = hours_digits(hours);
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let text = two_line_text([hours_tens, hours_ones], [minutes_tens, minutes_ones]);
-    led_8x12.write_text(text.as_str(), &EDIT_COLORS).await
+    led8x12.write_text(text.as_str(), &EDIT_COLORS).await
 }
 
-async fn show_minutes_seconds(led_8x12: &Led8x12, minutes: u8, seconds: u8) -> Result<()> {
+async fn show_minutes_seconds(led8x12: &Led8x12, minutes: u8, seconds: u8) -> Result<()> {
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let (seconds_tens, seconds_ones) = two_digit_chars(seconds);
     let text = two_line_text([minutes_tens, minutes_ones], [seconds_tens, seconds_ones]);
-    led_8x12.write_text(text.as_str(), &DIGIT_COLORS).await
+    led8x12.write_text(text.as_str(), &DIGIT_COLORS).await
 }
 
 const PERIMETER_LENGTH: usize = (Led8x12::WIDTH * 2) + ((Led8x12::HEIGHT - 2) * 2);
@@ -425,9 +425,9 @@ fn two_line_text(top_chars: [char; 2], bottom_chars: [char; 2]) -> String<5> {
     text
 }
 
-fn text_frame(led_8x12: &Led8x12, text: &str, colors: &[RGB8]) -> Result<Led8x12Frame> {
+fn text_frame(led8x12: &Led8x12, text: &str, colors: &[RGB8]) -> Result<Led8x12Frame> {
     let mut frame = Led8x12Frame::new();
-    led_8x12.write_text_to_frame(text, colors, &mut frame)?;
+    led8x12.write_text_to_frame(text, colors, &mut frame)?;
     Ok(frame)
 }
 

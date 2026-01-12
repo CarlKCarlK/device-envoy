@@ -43,12 +43,26 @@ pub mod portal;
 
 Variables should generally match their type names converted to snake_case. This improves predictability and encourages better type names.
 
+**Naming: dimensions and 2d**
+
+Use standard Rust snake_case for locals, fields, and functions; UpperCamelCase for types; SCREAMING_SNAKE_CASE for constants.
+
+Treat dimension markers like 12x4, 8x12, and 3x4 as suffix qualifiers, not separate words.
+
+Prefer `led12x4`, `led8x12`, `font3x4`, `frame12x8_landscape`.
+
+Avoid inserting an underscore before the dimension: avoid `led_12x4`, `font_3x4`.
+
+Treat short semantic tags like 2d similarly: prefer `led2d`, avoid `led_2d`.
+
+For constants, keep underscores as word separators: prefer `LED_LAYOUT_12X4`, `FONT_4X6`, etc. (underscore before the dimension is fine in constants).
+
 **Type-based naming:**
 
-- `Led12x4` → `led_12x4` (preserves numeric separators)
+- `Led12x4` → `led12x4` (dimension suffix)
 - `WifiAuto` → `wifi_auto`
 - `LedStrip` → `led_strip`
-- `Led12x4ClockDisplay` → `led_12x4_clock_display`
+- `Led12x4ClockDisplay` → `led12x4_clock_display`
 
 **When to deviate:**
 
@@ -77,7 +91,7 @@ Avoid single-character variables; use descriptive names:
 
 When capturing variables in closures or creating references, append `_ref`:
 
-- `led_12x4` → `led_12x4_ref`
+- `led12x4` → `led12x4_ref`
 - `wifi_auto` → `wifi_auto_ref`
 
 ## Terminology

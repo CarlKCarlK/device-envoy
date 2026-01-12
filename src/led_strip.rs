@@ -526,7 +526,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///
 /// led_strips! {
 ///     pio: PIO0,                          // Optional; defaults to PIO0.
-///     LedStrips0 {
+///     LedStrips0 {                        // Name for this group of LED strips/panels.
 ///         gpio0: {                        // Prefix used to name generated types.
 ///             pin: PIN_0,                 // GPIO pin for LED data signal.
 ///             len: 8,                     // 8 LEDs on this strip.
@@ -566,6 +566,8 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///     let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips0::new(
 ///         p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, spawner,
 ///     )?;
+///
+///     info!("Setting GPIO0 to white, GPIO3 to alternating blue, GPIO4 to Go Go animation");
 ///
 ///     // Turn on all-white on GPIO0 strip.
 ///     let frame_gpio0 = Frame1d::filled(colors::WHITE);

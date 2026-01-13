@@ -23,6 +23,55 @@ pub fn write_frame_png<const W: usize, const H: usize>(
     Ok(())
 }
 
+/// Render multiple `Frame2d` values into a looping APNG file.
+pub fn write_frames_apng<const W: usize, const H: usize>(
+    frames: &[Frame2d<W, H>],
+    output_path: impl AsRef<Path>,
+    target_max_dimension: u32,
+    frame_delay_ms: u32,
+) -> Result<(), Box<dyn Error>> {
+    assert!(!frames.is_empty(), "frames must not be empty");
+    assert!(frame_delay_ms > 0, "frame_delay_ms must be positive");
+    let output_path = output_path.as_ref();
+    let panel_width = W as u32;
+    let panel_height = H as u32;
+    let cell_size = select_cell_size(panel_width, panel_height, target_max_dimension);
+    let led_margin = (cell_size / 8).max(1);
+    let frame_count = u32::try_from(frames.len()).expect("frame count must fit in u32");
+    let delay_num = u16::try_from(frame_delay_ms).expect("frame_delay_ms must fit in u16");
+    let delay_den = 1000u16;
+
+    let (width, height, first_pixels) = panel_pixels(&frames[0], cell_size, led_margin);
+    let mut pixels = Vec::with_capacity(frames.len());
+    pixels.push(first_pixels);
+    for frame in frames.iter().skip(1) {
+        let (frame_width, frame_height, frame_pixels) = panel_pixels(frame, cell_size, led_margin);
+        assert!(frame_width == width, "frame width must match");
+        assert!(frame_height == height, "frame height must match");
+        pixels.push(frame_pixels);
+    }
+
+    if let Some(parent) = output_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+
+    let file = File::create(output_path)?;
+    let mut encoder = Encoder::new(BufWriter::new(file), width, height);
+    encoder.set_color(ColorType::Rgb);
+    encoder.set_depth(BitDepth::Eight);
+    encoder.set_animated(frame_count, 0)?;
+    let mut writer = encoder.write_header()?;
+    for frame_pixels in pixels {
+        writer.set_frame_delay(delay_num, delay_den)?;
+        writer.write_image_data(&frame_pixels)?;
+    }
+    writer.finish()?;
+    println!("wrote APNG to {}", output_path.display());
+    Ok(())
+}
+
 fn select_cell_size(panel_width: u32, panel_height: u32, target_max_dimension: u32) -> u32 {
     assert!(target_max_dimension > 0, "target_max_dimension must be positive");
     let mut cell_size = target_max_dimension;

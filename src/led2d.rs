@@ -1,3 +1,8 @@
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!("led2d1", "docs/assets/led2d1.png"),
+    doc = ::embed_doc_image::embed_image!("led2d2", "docs/assets/led2d2.png")
+)]
 //! A device abstraction for rectangular NeoPixel-style (WS2812) LED panel displays.
 //!
 //! See [`Led2dGenerated`](`crate::led2d::led2d_generated::Led2dGenerated`) for a
@@ -10,6 +15,8 @@
 //! # Example: Write Text
 //!
 //! In this example, we render text on a 12×4 panel. Here, the generated struct is named `Led12x4`.
+//!
+//! ![LED panel preview][led2d1]
 //!
 //! ```no_run
 //! # #![no_std]
@@ -59,6 +66,8 @@
 //! # Example: Animated Text on a Rotated Panel
 //!
 //! This example animates text on a rotated 12×8 panel built from two stacked 12×4 panels.
+//!
+//! ![LED panel preview][led2d2]
 //!
 //! ```no_run
 //! # #![no_std]

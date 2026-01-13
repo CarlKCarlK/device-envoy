@@ -3,6 +3,7 @@
 //! Run with: `cargo xtask <command>`
 
 mod video_frames_gen;
+mod led2d_generated;
 
 use clap::{Parser, Subcommand};
 use owo_colors::OwoColorize;
@@ -167,6 +168,10 @@ fn main() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
+        eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     let examples = discover_examples(&workspace_root);
     let no_wifi_examples: Vec<_> = examples
         .iter()
@@ -374,6 +379,10 @@ fn check_all() -> ExitCode {
 
 fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
+        eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     let arch = Arch::Arm;
     let board = Board::Pico2;
     let target = arch.target(board);

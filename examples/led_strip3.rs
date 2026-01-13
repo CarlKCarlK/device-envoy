@@ -78,10 +78,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     gpio3_led_strip.write_frame(frame_gpio3).await?;
 
     // Animate "Go Go" text on GPIO4 2D panel.
-    let mut frame_go_top = Frame2d::<8, 12>::new();
+    let mut frame_go_top = Frame2d::new();
     gpio4_led2d.write_text_to_frame("Go", &[], &mut frame_go_top)?;
 
-    let mut frame_go_bottom = Frame2d::<8, 12>::new();
+    let mut frame_go_bottom = Frame2d::new();
     gpio4_led2d.write_text_to_frame(
         "\nGo",
         &[colors::HOT_PINK, colors::LIME],

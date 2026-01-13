@@ -49,11 +49,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led_12x8_animated = Led12x8Animated::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
-    let mut frame_0 = Frame2d::<8, 12>::new();
+    let mut frame_0 = Frame2d::new();
     // Empty colors array defaults to white
     led_12x8_animated.write_text_to_frame("Go", &[], &mut frame_0)?;
 
-    let mut frame_1 = Frame2d::<8, 12>::new();
+    let mut frame_1 = Frame2d::new();
     // "/n" starts a new line. Text does not wrap but rather clips.
     led_12x8_animated.write_text_to_frame(
         "\nGo",

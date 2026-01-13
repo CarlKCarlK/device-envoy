@@ -1,135 +1,128 @@
-//! cmk0000 A device abstraction for rectangular NeoPixel-style (WS2812) LED panel displays with arbitrary size.
+//! A device abstraction for rectangular NeoPixel-style (WS2812) LED panel displays.
 //!
-//! Supports text rendering, animation, and full graphics capabilities. For simple
-//! single-strip displays, use the `led2d!` macro. For multi-strip scenarios
-//! where you need to share a PIO with other devices, use `led2d_from_strip!` with
-//! [`led_strips!`](crate::led_strip::led_strips).
+//! See [`Led2dGenerated`](`crate::led2d::led2d_generated::Led2dGenerated`) for a
+//! concrete generated-struct example and [`led2d!`] for the macro that builds these types.
 //!
 //! For custom graphics, create a [`Frame2d`] and use the
 //! [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing API. See the
 //! [`Frame2d`] documentation for an example.
 //!
-//! # Quick Start with `led2d!`
+//! # Example: Write Text
 //!
-//! The simplest way to create an LED matrix display:
+//! In this example, we render text on a 12×4 panel. Here, the generated struct is named `Led12x4`.
 //!
 //! ```no_run
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! use embassy_executor::Spawner;
-//! use embassy_rp::init;
-//! use device_kit::led_strips;
-//! use device_kit::led2d;
-//! use device_kit::led_strip::Current;
-//! use device_kit::led_strip::Gamma;
-//! use device_kit::led_strip::colors;
-//! use embassy_time::Duration;
+//! # use core::convert::Infallible;
+//! # use core::future;
+//! # use core::result::Result::Ok;
+//! # use embassy_executor::Spawner;
+//! # use embassy_rp::init;
+//! use device_kit::{Result, led2d, led2d::layout::LedLayout, led_strip::colors};
 //!
+//! // Tells us how the LED strip is wired up in the panel, in this case, a common snake-like
+//! // pattern.
+//! const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
+//!
+//! // Generate a type named `Led12x4`.
 //! led2d! {
-//!     pub Led12x4,
-//!     pin: PIN_3,
-//!     width: 12,
+//!     pub Led12x4,                         // Struct name and visibility
+//!     pin: PIN_3,                          // GPIO pin for LED data signal
+//!     width: 12,                           // Panel dimensions
 //!     height: 4,
-//!     led_layout: serpentine_column_major,
-//!     font: Font3x4Trim,
-//!     pio: PIO0,
-//!     dma: DMA_CH1,
-//!     max_current: Current::Milliamps(500),
-//!     gamma: Gamma::Linear,
-//!     max_frames: 32,
+//!     led_layout: LED_LAYOUT_12X4,         // LED layout mapping
+//!     font: Font3x4Trim,                   // Font variant
 //! }
 //!
-//! #[embassy_executor::main]
-//! async fn main(spawner: Spawner) {
+//! # #[embassy_executor::main]
+//! # pub async fn main(spawner: Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: Spawner) -> Result<Infallible> {
 //!     let p = init(Default::default());
-//!     let led = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH1, spawner).unwrap();
-//!     led.write_text("HI", &[colors::RED]).await.unwrap();
+//!
+//!     // Create a device abstraction for the LED panel.
+//!     // Behind the scenes, this spawns a channel & background task to manage the display.
+//!     let led12x4 = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
+//!
+//!     // Write text to the display with cycling colors.
+//!     let colors = [colors::RED, colors::GREEN, colors::BLUE];
+//!     led12x4.write_text("Rust", &colors).await?; // Colors cycle as needed.
+//!
+//!     future::pending().await // run forever
 //! }
 //! ```
 //!
-//! # Advanced: Multi-Strip with `led2d_from_strip!`
+//! # Example: Animated Text on a Rotated Panel
 //!
-//! When sharing a PIO with multiple LED strips, use `led_strips!` and
-//! `led2d_from_strip!` together. The macro generates a type-safe device abstraction
-//! with text rendering, animation, and graphics support.
-//!
-//! ## Macro Parameters
-//!
-//! - Visibility and base name for generated types (e.g., `pub Led12x4`)
-//! - `strip_type` - Name of the strip type created by `led_strips!` (e.g., `Led12x4Strip`)
-//! - `width` - Number of columns in the panel
-//! - `height` - Number of rows in the panel
-//! - `led_layout` - LED strip physical layout:
-//!   - `serpentine_column_major` - Common serpentine wiring pattern
-//!   - `LedLayout` expression - Custom LED layout value in LED-index order
-//! - `max_frames` - Maximum animation frames allowed
-//! - `font` - Built-in font variant (see [`Led2dFont`])
-//!
-//! ## Generated API
-//!
-//! The macro generates:
-//! - `YourNameStatic` - Static resources (create with `YourName::new_static()`)
-//! - `YourName` - Device handle with methods for text, animation, and graphics
-//!
-//! # Example
+//! This example animates text on a rotated 12×8 panel built from two stacked 12×4 panels.
 //!
 //! ```no_run
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! use embassy_executor::Spawner;
-//! use embassy_rp::init;
-//! use device_kit::led_strip::led_strips;
-//! use device_kit::led2d::led2d_from_strip;
-//! use device_kit::led_strip::Current;
-//! use device_kit::led_strip::Gamma;
-//! use device_kit::led_strip::colors;
-//! use device_kit::pio_split;
+//! # use core::convert::Infallible;
+//! # use core::future;
+//! # use embassy_executor::Spawner;
+//! # use embassy_rp::init;
+//! use device_kit::{Result, led2d, led2d::layout::LedLayout, led2d::Frame2d, led_strip::{Current, Gamma, colors}};
 //! use embassy_time::Duration;
 //!
-//! // Define LED strip sharing PIO1
-//! led_strips! {
-//!     pio: PIO1,
-//!     Led12x4Strips {
-//!         strip: {
-//!             pin: PIN_3,
-//!             len: 48,
-//!             max_current: Current::Milliamps(500),
-//!             gamma: Gamma::Linear,
-//!         }
-//!     }
+//! // Our panel is two 12x4 panels stacked vertically and then rotated clockwise.
+//! const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
+//! const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.concat_v(LED_LAYOUT_12X4);
+//! const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
+//!
+//! // Generate a type named `Led12x8Animated`.
+//! led2d! {
+//!     pub Led12x8Animated,
+//!     pin: PIN_4,                           // GPIO pin for LED data signal
+//!     width: 8,                             // Rotated panel width
+//!     height: 12,                           // Rotated panel height
+//!     led_layout: LED_LAYOUT_12X8_ROTATED,  // Two 12×4 panels stacked and rotated
+//!     font: Font4x6Trim,                    // Use a 4x6 pixel font without the usual 1 pixel padding
+//!     pio: PIO1,                            // PIO resource, default is PIO0
+//!     dma: DMA_CH1,                         // DMA resource, default is DMA_CH0
+//!     max_current: Current::Milliamps(300), // Power budget, default is 250 mA.
+//!     gamma: Gamma::Linear,                 // Color correction curve, default is Gamma2_2
+//!     max_frames: 2,                        // maximum animation frames, default is 16
 //! }
 //!
-//! // Generate a complete LED matrix device abstraction
-//! led2d_from_strip! {
-//!     pub Led12x4,
-//!     strip_type: StripLedStrip,
-//!     width: 12,
-//!     height: 4,
-//!     led_layout: serpentine_column_major,
-//!     font: Font3x4Trim,
-//! }
-//!
-//! // cmk0000 should return a result
-//! #[embassy_executor::main]
-//! async fn main(spawner: Spawner) {
+//! # #[embassy_executor::main]
+//! # pub async fn main(spawner: Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: Spawner) -> Result<Infallible> {
 //!     let p = init(Default::default());
 //!
-//!     // Split PIO and create strip
-//!     let (sm0, _sm1, _sm2, _sm3) = pio_split!(p.PIO1);
-//!     let strip = StripLedStrip::new(sm0, p.PIN_3, p.DMA_CH0, spawner).unwrap();
+//!    // Create a device abstraction for the rotated LED panel.
+//!     let led_12x8_animated = Led12x8Animated::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 //!
-//!     // Create Led2d device from strip
-//!     let led12x4 = Led12x4::from_strip(strip, spawner).unwrap();
+//!     // Write "Go" into an in-memory frame buffer.
+//!     let mut frame_0 = Frame2d::new();
+//!     // Empty text colors array defaults to white.
+//!     led_12x8_animated.write_text_to_frame("Go", &[], &mut frame_0)?;
 //!
-//!     // Display colorful text
-//!     led12x4.write_text("HI!", &[colors::CYAN, colors::MAGENTA, colors::YELLOW])
-//!         .await
-//!         .unwrap();
+//!     // Write "Go" into a second frame buffer with custom colors and on the 2nd line.
+//!     let mut frame_1 = Frame2d::new();
+//!     // "/n" starts a new line. Text does not wrap but rather clips.
+//!     led_12x8_animated.write_text_to_frame(
+//!         "\nGo",
+//!         &[colors::HOT_PINK, colors::LIME],
+//!         &mut frame_1,
+//!     )?;
 //!
-//!     # use core::future;
-//!     future::pending().await
+//!     // Animate between the two frames indefinitely.
+//!     let frame_duration = Duration::from_millis(400);
+//!     led_12x8_animated
+//!         .animate([(frame_0, frame_duration), (frame_1, frame_duration)])
+//!         .await?;
+//!
+//!     future::pending().await // run forever
 //! }
 //! ```
 
@@ -1000,7 +993,7 @@ pub use led2d_device;
 
 /// Macro to generate a device abstraction for a NeoPixel-style (WS2812) 2D LED panel.
 ///
-/// See [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated) for usage examples.
+/// See the [module documentation](mod@crate::led2d) for usage examples.
 ///
 /// **Required fields:**
 ///

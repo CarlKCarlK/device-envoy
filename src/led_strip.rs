@@ -1,7 +1,7 @@
 //! A device abstraction for NeoPixel-style (WS2812) LED strips.
 //!
 //! - See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for LED-strip usage.
-//! - See [`Led2dGenerated`](`crate::led2d::led2d_generated::Led2dGenerated`) for 2D panel usage.
+//! - See the [`led2d`](mod@crate::led2d) module for 2D panel usage.
 
 /// Predefined RGB color constants from the `smart_leds` crate.
 ///
@@ -503,7 +503,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// This saves hardware resources compared to using separate [`led_strip!`] and [`led2d!`](macro@crate::led2d) invocations, each of which consumes a dedicated PIO resource.
 ///
 /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) and
-/// [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated) for details on using the generated types.
+/// the [`led2d`](mod@crate::led2d) module for details on using the generated types.
 ///
 /// We'll start with a complete example below, then cover required and optional fields in detail.
 ///
@@ -588,10 +588,10 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///     gpio3_led_strip.write_frame(frame_gpio3).await?;
 ///
 ///     // Animate "Go Go" text on GPIO4 2D panel.
-///     let mut frame_go_top = Frame2d::<8, 12>::new();
+///     let mut frame_go_top = Frame2d::new();
 ///     gpio4_led2d.write_text_to_frame("Go", &[], &mut frame_go_top)?;
 ///
-///     let mut frame_go_bottom = Frame2d::<8, 12>::new();
+///     let mut frame_go_bottom = Frame2d::new();
 ///     gpio4_led2d.write_text_to_frame(
 ///         "\nGo",
 ///         &[colors::HOT_PINK, colors::LIME],
@@ -634,7 +634,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// When a strip represents a rectangular NeoPixel-style (WS2812) LED panel rather than a linear strip,
 /// you can add a `led2d` configuration block to enable 2D drawing, text rendering, and animation.
 ///
-/// For usage examples, see [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated).
+/// For usage examples, see the [`led2d`](mod@crate::led2d) module.
 ///
 /// **Panel configuration fields (all required):**
 /// - `width` — Number of columns in the panel

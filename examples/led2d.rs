@@ -90,7 +90,7 @@ async fn demo_rust_text(led4x12: &Led4x12) -> Result<()> {
 
 /// Blink "RUST" by constructing frames explicitly.
 async fn demo_blink_text(led4x12: &Led4x12) -> Result<()> {
-    let mut on_frame = Frame2d::<12, 4>::new();
+    let mut on_frame = Frame2d::new();
     led4x12.write_text_to_frame(
         "rust",
         &[colors::RED, colors::GREEN, colors::BLUE, colors::YELLOW],
@@ -100,7 +100,7 @@ async fn demo_blink_text(led4x12: &Led4x12) -> Result<()> {
         .animate(
             [
                 (on_frame, Duration::from_millis(500)),
-                (Frame2d::<12, 4>::new(), Duration::from_millis(500)),
+                (Frame2d::new(), Duration::from_millis(500)),
             ]
             .into_iter(),
         )
@@ -110,7 +110,7 @@ async fn demo_blink_text(led4x12: &Led4x12) -> Result<()> {
 /// Display colored corners to demonstrate coordinate mapping.
 async fn demo_colored_corners(led4x12: &Led4x12) -> Result<()> {
     // Four corners with different colors
-    let mut frame = Frame2d::<12, 4>::new();
+    let mut frame = Frame2d::new();
     frame[0][0] = colors::RED; // Top-left
     frame[0][Led4x12::WIDTH - 1] = colors::GREEN; // Top-right
     frame[Led4x12::HEIGHT - 1][0] = colors::BLUE; // Bottom-left
@@ -123,7 +123,7 @@ async fn demo_colored_corners(led4x12: &Led4x12) -> Result<()> {
 /// Blink a pattern by constructing frames explicitly.
 async fn demo_blink_pattern(led4x12: &Led4x12) -> Result<()> {
     // Create checkerboard pattern
-    let mut on_frame = Frame2d::<12, 4>::new();
+    let mut on_frame = Frame2d::new();
     for row_index in 0..Led4x12::HEIGHT {
         for column_index in 0..Led4x12::WIDTH {
             if (row_index + column_index) % 2 == 0 {
@@ -136,7 +136,7 @@ async fn demo_blink_pattern(led4x12: &Led4x12) -> Result<()> {
         .animate(
             [
                 (on_frame, Duration::from_millis(500)),
-                (Frame2d::<12, 4>::new(), Duration::from_millis(500)),
+                (Frame2d::new(), Duration::from_millis(500)),
             ]
             .into_iter(),
         )
@@ -152,7 +152,7 @@ async fn demo_rectangle_diagonals_embedded_graphics(led4x12: &Led4x12) -> Result
         primitives::{Line, PrimitiveStyle, Rectangle},
     };
 
-    let mut frame = Frame2d::<12, 4>::new();
+    let mut frame = Frame2d::new();
 
     // Use the embedded_graphics crate to draw an image.
 
@@ -199,7 +199,7 @@ async fn demo_bouncing_dot_manual(led4x12: &Led4x12, button: &mut Button<'_>) ->
     let mut color = *color_cycle.next().unwrap(); // Safe: cycle() over a non-empty array never returns None
 
     loop {
-        let mut frame = Frame2d::<12, 4>::new();
+        let mut frame = Frame2d::new();
         frame[y as usize][x as usize] = color;
         led4x12.write_frame(frame).await?;
 
@@ -238,7 +238,7 @@ async fn demo_bouncing_dot_animation(led4x12: &Led4x12) -> Result<()> {
     let mut color = *color_cycle.next().unwrap();
 
     for _ in 0..Led4x12::MAX_FRAMES {
-        let mut frame = Frame2d::<12, 4>::new();
+        let mut frame = Frame2d::new();
         frame[y as usize][x as usize] = color;
         frames
             .push((frame, Duration::from_millis(50)))

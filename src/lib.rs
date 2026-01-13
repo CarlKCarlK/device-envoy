@@ -36,6 +36,8 @@ pub mod pio_irqs;
 // Only include modules that work without embassy when host feature is enabled
 #[cfg(feature = "host")]
 pub(crate) mod bit_matrix_led4;
+#[cfg(feature = "host")]
+pub mod to_png;
 // These modules require embassy_rp and are excluded when testing on host
 #[cfg(not(feature = "host"))]
 pub(crate) mod bit_matrix_led4;

@@ -14,10 +14,6 @@ check-compile-only = "xtask check-compile-only"
 # Test documentation examples
 test-docs = "test --doc --target thumbv8m.main-none-eabihf --features pico2,wifi,arm --no-default-features"
 
-# Host-only example aliases
-led2d-graphics-png = "run --example led2d_graphics_png --no-default-features --features host -- docs/assets/led2d_graphics.png"
-led2d-graphics-png-check = "check --example led2d_graphics_png --no-default-features --features host"
-
 # Pico 1 WiFi aliases
 full-w = "run --example full --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
 full-w-check = "check --example full --release --target thumbv6m-none-eabi --features pico1,arm,wifi"

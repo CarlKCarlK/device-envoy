@@ -425,39 +425,26 @@ impl Led2dFont {
 /// - Full graphics drawing via [`embedded-graphics`](https://docs.rs/embedded-graphics) (lines, shapes, text, and more)
 /// - Automatic conversion to the strip's physical LED order
 ///
-/// ![LED panel preview][led2d-graphics]
-///
 /// //cmk00000 if x and y are backwards, should/can we fix that?
 /// Frames are stored in row-major order where `frame[row][col]` represents the pixel
 /// at display coordinates (col, row). The physical mapping to the LED strip is handled
 /// automatically by the device abstraction.
 ///
-/// # Associated Constants cmk00000 delete this section
+/// cmk000000000 do the generated structs also have these associated constants and documentation?
+/// cmk000000000 does the 1d rame and generated structs need them too?
+/// # Associated Constants
 ///
 /// - `WIDTH` — Frame2d width in pixels (columns)
 /// - `HEIGHT` — Frame2d height in pixels (rows)
 /// - `LEN` — Total pixel count (WIDTH × HEIGHT)
-/// - `SIZE` — [`Size`] struct for embedded-graphics drawing operations
+///
+///  *For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations:*
+/// - `SIZE` — [`Size`] frame dimensions
 /// - `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT` — Corner [`Point`] coordinates
 ///
-/// # Examples
+/// # Example: Draw directly to pixels and with [`embedded-graphics`](https://docs.rs/embedded-graphics):
 ///
-/// Direct pixel access: cmk000000 improve or kill this
-///
-/// ```no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// use device_kit::led2d::Frame2d;
-/// use smart_leds::RGB8;
-/// # fn example() {
-/// let mut frame = Frame2d::<12, 4>::new();  // 12 columns × 4 rows
-/// frame[0][0] = RGB8::new(255, 0, 0);     // Set top-left pixel to red
-/// frame[3][11] = RGB8::new(0, 255, 0);    // Set bottom-right pixel to green
-/// # }
-/// ```
-///
-/// Drawing with [`embedded-graphics`](https://docs.rs/embedded-graphics):
+/// ![LED panel preview][led2d-graphics]
 ///
 /// // cmk00000 we need to tell about fonts, and the coordinate system, and say us EB for fancy font stuff
 ///
@@ -473,30 +460,39 @@ impl Led2dFont {
 /// };
 /// use smart_leds::colors;
 /// # fn example() {
+///
+/// type Frame = Frame2d<12, 8>;
+///
+/// /// Calculate the top-left corner position to center a shape within a bounding box.
 /// const fn centered_top_left(width: usize, height: usize, size: usize) -> Point {
 ///     assert!(size <= width);
 ///     assert!(size <= height);
 ///     Point::new(((width - size) / 2) as i32, ((height - size) / 2) as i32)
 /// }
 ///
-/// let mut frame = Frame2d::<12, 8>::new(); // cmk000000 don't need all these sizes
-/// Rectangle::new(Frame2d::<12, 8>::TOP_LEFT, Frame2d::<12, 8>::SIZE)
+/// // Create a frame to draw on. This is just an in-memory 2D pixel buffer.
+/// let mut frame = Frame::new();
+///
+/// // Use the embedded-graphics crate to draw a red rectangle border around the edge of the frame.
+/// Rectangle::new(Frame::TOP_LEFT, Frame::SIZE)
 ///     .into_styled(PrimitiveStyle::with_stroke(Rgb888::RED, 1))
 ///     .draw(&mut frame)
-///     .unwrap();
+///     .expect("rectangle draw must succeed");
 ///
+/// // Direct pixel access: set the upper-left LED pixel (x = 0, y = 0).
+/// // Frame2d stores LED colors directly, so we write an LED color here.
 /// frame[0][0] = colors::CYAN;
 ///
+/// // Use the embedded-graphics crate to draw a green circle centered in the frame.
 /// const DIAMETER: u32 = 6;
-/// const CIRCLE_TOP_LEFT: Point = centered_top_left(12, 8, DIAMETER as usize);
+/// const CIRCLE_TOP_LEFT: Point = centered_top_left(Frame::WIDTH, Frame::HEIGHT, DIAMETER as usize);
 /// Circle::new(CIRCLE_TOP_LEFT, DIAMETER)
 ///     .into_styled(PrimitiveStyle::with_stroke(Rgb888::GREEN, 1))
 ///     .draw(&mut frame)
-///     .unwrap();
+///     .expect("circle draw must succeed");
 /// # }
 /// ```
-///
-/// See the [mod@crate::led2d] module docs for more usage examples.
+
 #[cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!("led2d-graphics", "docs/assets/led2d_graphics.png")

@@ -87,8 +87,8 @@ impl CharLcd {
     {
         // Create the I2C instance and pass it to the task
         let i2c = i2c::I2c::new_blocking(i2c_peripheral, scl, sda, I2cConfig::default());
-        let token = lcd_task(i2c, char_lcd_static).map_err(Error::TaskSpawn)?;
-        spawner.spawn(token);
+        let token = lcd_task(i2c, char_lcd_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)?;
         Ok(Self { char_lcd_static })
     }
 

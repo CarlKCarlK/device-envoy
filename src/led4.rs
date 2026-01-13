@@ -12,7 +12,7 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal}
 use embassy_time::{Duration, Timer};
 use heapless::Vec;
 
-use crate::Result;
+use crate::{Error, Result};
 
 #[cfg(feature = "display-trace")]
 use defmt::info;
@@ -188,8 +188,8 @@ impl Led4<'_> {
     ) -> Result<Self> {
         let (outer_static, display_static) = led4_static.split();
         let display = Led4Simple::new(display_static, cell_pins, segment_pins, spawner)?;
-        let token = device_loop(outer_static, display)?;
-        spawner.spawn(token);
+        let token = device_loop(outer_static, display);
+        spawner.spawn(token).map_err(Error::TaskSpawn)?;
         Ok(Self(outer_static))
     }
 

@@ -805,9 +805,8 @@ macro_rules! __led_strips_impl {
                             pin,
                             STRIP_STATIC.command_signal(),
                             STRIP_STATIC.completion_signal(),
-                        )
-                        .map_err($crate::Error::TaskSpawn)?;
-                        spawner.spawn(token);
+                        );
+                        spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
                         let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC)?;
                         let instance = STRIP_CELL.init(Self { strip });
                         Ok(instance)
@@ -2681,9 +2680,8 @@ macro_rules! __led_strip_impl {
                         pin,
                         STRIP_STATIC.command_signal(),
                         STRIP_STATIC.completion_signal(),
-                    )
-                    .map_err($crate::Error::TaskSpawn)?;
-                    spawner.spawn(token);
+                    );
+                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
 
                     let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC)?;
                     let instance = STRIP_CELL.init($name { strip });

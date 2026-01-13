@@ -100,8 +100,8 @@ impl Ir<'_> {
         // Type erase to Peri<'static, AnyPin> (keep the Peri wrapper!)
         let any: Peri<'static, AnyPin> = pin.into();
         // Use Pull::Up for typical IR receivers (they idle HIGH with active-low modules)
-        let token = nec_ir_task(Input::new(any, Pull::Up), ir_static).map_err(Error::TaskSpawn)?;
-        spawner.spawn(token);
+        let token = nec_ir_task(Input::new(any, Pull::Up), ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)?;
         Ok(Self { ir_static })
     }
 

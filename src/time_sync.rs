@@ -144,8 +144,10 @@ mod wifi_impl {
             stack: &'static Stack<'static>,
             spawner: Spawner,
         ) -> &'static Self {
-            let token = unwrap!(time_sync_stack_loop(stack, &time_sync_static.events));
-            spawner.spawn(token);
+            unwrap!(spawner.spawn(time_sync_stack_loop(
+                stack,
+                &time_sync_static.events,
+            )));
 
             time_sync_static.time_sync_cell.init(Self {
                 events: &time_sync_static.events,

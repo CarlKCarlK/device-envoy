@@ -6,7 +6,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::Result;
+use device_kit::{Error, Result};
 use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::led_strip::Current;
 use device_kit::led_strip::Gamma;
@@ -372,7 +372,8 @@ impl Conway<'_> {
         led8x12: Led8x12,
         spawner: Spawner,
     ) -> Result<Self> {
-        spawner.spawn(conway_task(led8x12, &conway_static.signal)?);
+        let token = conway_task(led8x12, &conway_static.signal);
+        spawner.spawn(token).map_err(Error::TaskSpawn)?;
         Ok(Self(&conway_static.signal))
     }
 

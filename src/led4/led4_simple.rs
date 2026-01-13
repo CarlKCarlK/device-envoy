@@ -61,8 +61,8 @@ impl Led4Simple<'_> {
         segment_pins: OutputArray<'static, SEGMENT_COUNT>,
         spawner: Spawner,
     ) -> Result<Self, SpawnError> {
-        let token = device_loop(cell_pins, segment_pins, led4_simple_static)?;
-        spawner.spawn(token);
+        let token = device_loop(cell_pins, segment_pins, led4_simple_static);
+        spawner.spawn(token)?;
         Ok(Self(led4_simple_static))
     }
 

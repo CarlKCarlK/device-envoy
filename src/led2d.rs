@@ -981,8 +981,8 @@ macro_rules! led2d_device {
                     &self.led2d_static.command_signal,
                     &self.led2d_static.completion_signal,
                     led_strip,
-                )?;
-                spawner.spawn(token);
+                );
+                spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
                 let height = $n / $width;
                 assert_eq!(
                     height * $width,
@@ -1861,8 +1861,8 @@ macro_rules! led2d_from_strip {
                         &STATIC.led2d_static.command_signal,
                         &STATIC.led2d_static.completion_signal,
                         led_strip,
-                    )?;
-                    spawner.spawn(token);
+                    );
+                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
                     defmt::info!("Led2d::new: device task spawned");
 
                     let led2d = $crate::led2d::Led2d::new(

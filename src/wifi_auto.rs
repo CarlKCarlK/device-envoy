@@ -508,13 +508,8 @@ impl WifiAuto {
         let stack = self.wifi.wait_for_stack().await;
 
         let captive_portal_ip = Ipv4Address::new(192, 168, 4, 1);
-        match dns_server_task(stack, captive_portal_ip) {
-            Ok(dns_token) => {
-                spawner.spawn(dns_token);
-            }
-            Err(e) => {
-                info!("WifiAuto: DNS server task spawn failed: {:?}", e);
-            }
+        if let Err(err) = spawner.spawn(dns_server_task(stack, captive_portal_ip)) {
+            info!("WifiAuto: DNS server task spawn failed: {:?}", err);
         }
 
         let defaults_owned = self

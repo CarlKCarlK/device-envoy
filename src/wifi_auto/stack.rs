@@ -617,8 +617,7 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
     );
     let stack = STACK.init(stack_val);
 
-    let net_token = unwrap!(net_task(runner));
-    spawner.spawn(net_token);
+    unwrap!(spawner.spawn(net_task(runner)));
 
     // Start captive portal network
     if CAPTIVE_PORTAL_PASSWORD.is_empty() {
@@ -643,10 +642,9 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
     let pool_start = embassy_net::Ipv4Address::new(192, 168, 4, 2);
     let pool_size = 253; // 192.168.4.2 - 192.168.4.254
 
-    let dhcp_token = unwrap!(dhcp_server_task(
+    unwrap!(spawner.spawn(dhcp_server_task(
         stack, server_ip, netmask, pool_start, pool_size,
-    ));
-    spawner.spawn(dhcp_token);
+    )));
 
     info!("DHCP server started (pool: 192.168.4.2-254)");
     info!(
@@ -756,8 +754,7 @@ async fn wifi_device_loop_client_impl<PIO: WifiPio>(
     );
     let stack = STACK.init(stack_val);
 
-    let net_token = unwrap!(net_task(runner));
-    spawner.spawn(net_token);
+    unwrap!(spawner.spawn(net_task(runner)));
 
     // Connect to WiFi
     info!(
@@ -776,7 +773,7 @@ async fn wifi_device_loop_client_impl<PIO: WifiPio>(
             info!("WiFi join succeeded");
         }
         Err(err) => {
-            info!("WiFi join failed: {}", err);
+            info!("WiFi join failed: {:?}", defmt::Debug2Format(&err));
             info!("Not retrying - letting timeout handle this to avoid driver bugs");
             // Don't signal ClientReady - let the timeout in wait_for_client_ready_with_timeout
             // trigger and the higher-level retry logic will restart this entire task
@@ -832,8 +829,7 @@ macro_rules! impl_wifi_pio {
                         PioSpi<'static, Self, 0, DMA_CH0>,
                     >,
                 ) {
-                    let wifi_token = unwrap!([<wifi_task_ $suffix>](runner));
-                    spawner.spawn(wifi_token);
+                    unwrap!(spawner.spawn([<wifi_task_ $suffix>](runner)));
                 }
 
                 fn spawn_device_loop(
@@ -849,7 +845,7 @@ macro_rules! impl_wifi_pio {
                     wifi_events: &'static WifiEvents,
                     stack_storage: &'static StackStorage,
                 ) {
-                    let token = unwrap!([<wifi_device_loop_ $suffix>](
+                    unwrap!(spawner.spawn([<wifi_device_loop_ $suffix>](
                         pin_23,
                         pin_25,
                         pio,
@@ -861,8 +857,7 @@ macro_rules! impl_wifi_pio {
                         wifi_events,
                         stack_storage,
                         spawner,
-                    ));
-                    spawner.spawn(token);
+                    )));
                 }
             }
 

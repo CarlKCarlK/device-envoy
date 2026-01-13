@@ -175,8 +175,7 @@ impl Clock {
     ) -> Self {
         clock_static.set_offset_minutes(offset_minutes);
         clock_static.set_tick_interval_ms(tick_interval.map(|d| d.as_millis()));
-        let token = unwrap!(clock_device_loop(clock_static));
-        spawner.spawn(token);
+        unwrap!(spawner.spawn(clock_device_loop(clock_static)));
         Self {
             commands: &clock_static.commands,
             ticks: &clock_static.ticks,

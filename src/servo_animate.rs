@@ -158,8 +158,8 @@ impl ServoAnimate {
         servo: Servo<'static>,
         spawner: Spawner,
     ) -> Result<Self, SpawnError> {
-        let token = device_loop(servo_animate_static, servo)?;
-        spawner.spawn(token);
+        let token = device_loop(servo_animate_static, servo);
+        spawner.spawn(token)?;
         Ok(Self {
             commands: &servo_animate_static.commands,
         })

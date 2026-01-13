@@ -101,19 +101,19 @@ riscv = { version = "0.11", features = [
     "critical-section-single-hart",
 ], optional = true }
 
-embassy-executor = { git = "https://github.com/embassy-rs/embassy", branch = "main", default-features = false, features = [
+embassy-executor = { version = "0.9.1", default-features = false, features = [
     "executor-thread",
     "defmt",
 ] }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-rp = { git = "https://github.com/embassy-rs/embassy", branch = "main", default-features = false, features = [
+embassy-sync = "0.7.2"
+embassy-rp = { version = "0.9.0", default-features = false, features = [
     "rt",
     "defmt",
     "time-driver",
     "critical-section-impl",
 ], optional = true }
-embassy-futures = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy", branch = "main", features = [
+embassy-futures = "0.1.2"
+embassy-time = { version = "0.5.0", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }
@@ -137,7 +137,7 @@ crc32fast = { version = "1.4.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
-embedded-io-async = "0.6.1"
+embedded-io-async = "0.7.0"
 embedded-hal-bus = { version = "0.3.0", features = [
     "async",
     "portable-atomic",
@@ -145,15 +145,15 @@ embedded-hal-bus = { version = "0.3.0", features = [
 portable-atomic = { version = "1.11.1", features = ["critical-section"] }
 hd44780-driver = "0.4.0"
 esp-hal-mfrc522 = "0.3.2"
-cyw43 = { git = "https://github.com/embassy-rs/embassy", branch = "main", features = [
+cyw43 = { version = "0.6.0", features = [
     "defmt",
     "firmware-logs",
 ], optional = true }
-cyw43-pio = { git = "https://github.com/embassy-rs/embassy", branch = "main", features = [
+cyw43-pio = { version = "0.9.0", features = [
     "defmt",
 ], optional = true }
 cyw43-firmware = { version = "0.1", features = ["wifi"], optional = true }
-embassy-net = { git = "https://github.com/embassy-rs/embassy", branch = "main", features = [
+embassy-net = { version = "0.8.0", features = [
     "defmt",
     "tcp",
     "udp",
@@ -162,7 +162,7 @@ embassy-net = { git = "https://github.com/embassy-rs/embassy", branch = "main", 
     "medium-ethernet",
 ], optional = true }
 static_cell = "2.1.0"
-embassy-hal-internal = { git = "https://github.com/embassy-rs/embassy", branch = "main", default-features = false, optional = true }
+embassy-hal-internal = { version = "0.4.0", default-features = false, optional = true }
 paste = "1.0"
 embedded-graphics = { version = "0.8", default-features = false }
 embed-doc-image = { version = "0.1.4", optional = true }
@@ -185,22 +185,6 @@ name = "led2d_mapping_algebra"
 path = "tests/led2d_mapping_algebra.rs"
 required-features = ["host"]
 
-[patch.crates-io]
-embassy-executor = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-futures = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-time = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-time-driver = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-time-queue-utils = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-net = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-hal-internal = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-rp = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-usb-driver = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-net-driver = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-embassy-net-driver-channel = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-cyw43 = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
-cyw43-pio = { git = "https://github.com/embassy-rs/embassy", branch = "main" }
 
 [lints.rust]
 # To use the `unsafe` keyword, do not remove the `unsafe_code = "forbid"` entry.

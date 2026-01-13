@@ -4,6 +4,9 @@ open-docs:
 show-docs:
 	cargo docdoc && ./scripts/open-docs.sh
 
+docdoc:
+	./scripts/docdoc.sh
+
 gather:
 	./scripts/gather.sh
 

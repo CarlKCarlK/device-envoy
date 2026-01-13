@@ -420,9 +420,12 @@ impl Led2dFont {
 /// A 2D array of RGB pixels representing a single display frame.
 ///
 /// Frames are used to prepare images before sending them to the LED matrix. They support:
+///
 /// - Direct pixel access via array indexing
 /// - Full graphics drawing via [`embedded-graphics`](https://docs.rs/embedded-graphics) (lines, shapes, text, and more)
 /// - Automatic conversion to the strip's physical LED order
+///
+/// <img src="../docs/led2d_graphics.png" alt="LED panel preview" width="150">
 ///
 /// //cmk00000 if x and y are backwards, should/can we fix that?
 /// Frames are stored in row-major order where `frame[row][col]` represents the pixel

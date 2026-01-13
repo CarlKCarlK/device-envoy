@@ -1535,6 +1535,7 @@ macro_rules! __led2d_impl {
                 width: $width,
                 height: $height,
                 led_layout: serpentine_column_major,
+                max_frames: $max_frames,
                 font: $font_variant,
             }
 
@@ -1615,6 +1616,7 @@ macro_rules! __led2d_impl {
                 width: $width,
                 height: $height,
                 led_layout: $led_layout,
+                max_frames: $max_frames,
                 font: $font_variant,
             }
 
@@ -1752,6 +1754,34 @@ macro_rules! led2d_from_strip {
             );
         }
     };
+    // Serpentine column-major led_layout variant (explicit max_frames)
+    (
+        $vis:vis $name:ident,
+        strip_type: $strip_type:ident,
+        width: $width:expr,
+        height: $height:expr,
+        led_layout: serpentine_column_major,
+        max_frames: $max_frames:expr,
+        font: $font_variant:ident $(,)?
+    ) => {
+        $crate::led2d::paste::paste! {
+            const [<$name:upper _W>]: usize = $width;
+            const [<$name:upper _H>]: usize = $height;
+            const [<$name:upper _N>]: usize = [<$name:upper _W>] * [<$name:upper _H>];
+            const [<$name:upper _LED_LAYOUT>]: $crate::led2d::LedLayout<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]> =
+                $crate::led2d::LedLayout::<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]>::serpentine_column_major();
+            const [<$name:upper _MAX_FRAMES>]: usize = $max_frames;
+
+            // Compile-time assertion that strip length matches led_layout length
+            const _: () = assert!([<$name:upper _LED_LAYOUT>].map().len() == $strip_type::LEN);
+
+            $crate::led2d::led2d_from_strip!(
+                @common $vis, $name, $strip_type, [<$name:upper _W>], [<$name:upper _H>], [<$name:upper _N>], [<$name:upper _LED_LAYOUT>],
+                $font_variant,
+                [<$name:upper _MAX_FRAMES>]
+            );
+        }
+    };
     // Custom led_layout variant (uses strip's MAX_FRAMES)
     (
         $vis:vis $name:ident,
@@ -1767,6 +1797,33 @@ macro_rules! led2d_from_strip {
             const [<$name:upper _N>]: usize = [<$name:upper _W>] * [<$name:upper _H>];
             const [<$name:upper _LED_LAYOUT>]: $crate::led2d::LedLayout<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]> = $led_layout;
             const [<$name:upper _MAX_FRAMES>]: usize = $strip_type::MAX_FRAMES;
+
+            // Compile-time assertion that strip length matches led_layout length
+            const _: () = assert!([<$name:upper _LED_LAYOUT>].map().len() == $strip_type::LEN);
+
+            $crate::led2d::led2d_from_strip!(
+                @common $vis, $name, $strip_type, [<$name:upper _W>], [<$name:upper _H>], [<$name:upper _N>], [<$name:upper _LED_LAYOUT>],
+                $font_variant,
+                [<$name:upper _MAX_FRAMES>]
+            );
+        }
+    };
+    // Custom led_layout variant (explicit max_frames)
+    (
+        $vis:vis $name:ident,
+        strip_type: $strip_type:ident,
+        width: $width:expr,
+        height: $height:expr,
+        led_layout: $led_layout:expr,
+        max_frames: $max_frames:expr,
+        font: $font_variant:ident $(,)?
+    ) => {
+        $crate::led2d::paste::paste! {
+            const [<$name:upper _W>]: usize = $width;
+            const [<$name:upper _H>]: usize = $height;
+            const [<$name:upper _N>]: usize = [<$name:upper _W>] * [<$name:upper _H>];
+            const [<$name:upper _LED_LAYOUT>]: $crate::led2d::LedLayout<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]> = $led_layout;
+            const [<$name:upper _MAX_FRAMES>]: usize = $max_frames;
 
             // Compile-time assertion that strip length matches led_layout length
             const _: () = assert!([<$name:upper _LED_LAYOUT>].map().len() == $strip_type::LEN);

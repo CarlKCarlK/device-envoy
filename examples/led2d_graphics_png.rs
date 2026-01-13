@@ -13,26 +13,27 @@ use embedded_graphics::{
 };
 use smart_leds::colors;
 use std::error::Error;
+
+type Frame = Frame2d<12, 8>;
 fn main() -> Result<(), Box<dyn Error>> {
     let frame = build_frame();
     write_frame_png(&frame, "docs/assets/led2d_graphics.png", 200)?;
     Ok(())
 }
 
-fn build_frame() -> Frame2d<12, 8> {
-    const DIAMETER: u32 = 6;
+fn build_frame() -> Frame {
+    let mut frame: Frame = Frame::new();
 
-    let mut frame = Frame2d::<12, 8>::new();
-
-    Rectangle::new(Frame2d::<12, 8>::TOP_LEFT, Frame2d::<12, 8>::SIZE)
+    Rectangle::new(Frame::TOP_LEFT, Frame::SIZE)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::RED, 1))
         .draw(&mut frame)
         .expect("rectangle draw must succeed");
 
     frame[0][0] = colors::CYAN;
 
-    let circle_top_left = centered_top_left(12, 8, DIAMETER as usize);
-    Circle::new(circle_top_left, DIAMETER)
+    const DIAMETER: u32 = 6;
+    const CIRCLE_TOP_LEFT: Point = centered_top_left(12, 8, DIAMETER as usize);
+    Circle::new(CIRCLE_TOP_LEFT, DIAMETER)
         .into_styled(PrimitiveStyle::with_stroke(Rgb888::GREEN, 1))
         .draw(&mut frame)
         .expect("circle draw must succeed");

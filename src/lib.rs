@@ -80,6 +80,10 @@ pub mod wifi_auto;
 pub use error::{Error, Result};
 
 #[cfg(feature = "host")]
-pub type Error = core::convert::Infallible;
+use core::convert::Infallible;
 #[cfg(feature = "host")]
-pub type Result<T, E = Error> = core::result::Result<T, E>;
+use core::result::Result as CoreResult;
+#[cfg(feature = "host")]
+pub type Error = Infallible;
+#[cfg(feature = "host")]
+pub type Result<T, E = Error> = CoreResult<T, E>;

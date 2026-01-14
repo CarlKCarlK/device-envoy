@@ -171,9 +171,13 @@ use embedded_graphics::{
 };
 use heapless::Vec;
 use smart_leds::RGB8;
+use core::{
+    convert::Infallible,
+    ops::{Deref, DerefMut},
+};
 
 #[cfg(not(feature = "host"))]
-use crate::led_strip::Frame1d as StripFrame;
+use crate::led_strip::{Frame1d as StripFrame, LedStrip};
 #[cfg(feature = "host")]
 type StripFrame<const N: usize> = [RGB8; N];
 use crate::Result;
@@ -536,7 +540,7 @@ impl<const W: usize, const H: usize> Frame2d<W, H> {
     }
 }
 
-impl<const W: usize, const H: usize> core::ops::Deref for Frame2d<W, H> {
+impl<const W: usize, const H: usize> Deref for Frame2d<W, H> {
     type Target = [[RGB8; W]; H];
 
     fn deref(&self) -> &Self::Target {
@@ -544,7 +548,7 @@ impl<const W: usize, const H: usize> core::ops::Deref for Frame2d<W, H> {
     }
 }
 
-impl<const W: usize, const H: usize> core::ops::DerefMut for Frame2d<W, H> {
+impl<const W: usize, const H: usize> DerefMut for Frame2d<W, H> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
@@ -576,7 +580,7 @@ impl<const W: usize, const H: usize> OriginDimensions for Frame2d<W, H> {
 
 impl<const W: usize, const H: usize> DrawTarget for Frame2d<W, H> {
     type Color = Rgb888;
-    type Error = core::convert::Infallible;
+    type Error = Infallible;
 
     fn draw_iter<I>(&mut self, pixels: I) -> core::result::Result<(), Self::Error>
     where
@@ -765,9 +769,9 @@ pub async fn led2d_device_loop<const N: usize, const MAX_FRAMES: usize, S>(
     command_signal: &'static Led2dCommandSignal<N, MAX_FRAMES>,
     completion_signal: &'static Led2dCompletionSignal,
     led_strip: S,
-) -> Result<core::convert::Infallible>
+) -> Result<Infallible>
 where
-    S: AsRef<crate::led_strip::LedStrip<N, MAX_FRAMES>>,
+    S: AsRef<LedStrip<N, MAX_FRAMES>>,
 {
     defmt::info!("led2d_device_loop: task started");
     let led_strip_ref = led_strip.as_ref();
@@ -831,7 +835,7 @@ async fn run_animation_loop<const N: usize, const MAX_FRAMES: usize>(
     frames: Vec<(StripFrame<N>, Duration), MAX_FRAMES>,
     command_signal: &'static Led2dCommandSignal<N, MAX_FRAMES>,
     completion_signal: &'static Led2dCompletionSignal,
-    led_strip: &crate::led_strip::LedStrip<N, MAX_FRAMES>,
+    led_strip: &LedStrip<N, MAX_FRAMES>,
 ) -> Result<Command<N, MAX_FRAMES>>
 {
     defmt::info!("run_animation_loop: starting with {} frames", frames.len());

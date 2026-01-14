@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 use core::convert::Infallible;
+use core::ops::Deref;
 
 use defmt::info;
 use defmt_rtt as _;
@@ -30,7 +31,7 @@ led_strip! {
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
-    core::panic!("{err}");
+    panic!("{err}");
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
@@ -81,7 +82,7 @@ impl<const N: usize> BounceState<N> {
 
     async fn update<const MAX_FRAMES: usize>(
         &mut self,
-        led_strip: &impl core::ops::Deref<Target = LedStrip<N, MAX_FRAMES>>,
+        led_strip: &impl Deref<Target = LedStrip<N, MAX_FRAMES>>,
     ) -> Result<()> {
         assert!(self.position < N);
         let mut frame = Frame1d::<N>::new();

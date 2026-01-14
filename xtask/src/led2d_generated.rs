@@ -50,11 +50,18 @@ led2d! {
 pub struct Led2dGenerated;
 
 #[cfg(doc)]
+use crate::led2d::{Frame2d, Led2dStatic};
+#[cfg(doc)]
+use crate::led_strip::Rgb;
+#[cfg(doc)]
+use crate::Result;
+
+#[cfg(doc)]
 /// Static resources for `Led2dGenerated`.
 ///
 /// See the [`mod@crate::led2d`] module docs for usage.
 pub struct Led2dGeneratedStatic {
-    led2d_static: crate::led2d::Led2dStatic<48, 16>,
+    led2d_static: Led2dStatic<48, 16>,
 }
 
 #[cfg(doc)]
@@ -77,7 +84,7 @@ impl Led2dGenerated {
     /// the power budget you specified in the [`led2d!`] macro. This constant is the result
     /// of calculating how much brightness is safe given that budget and the number of LEDs.
     pub const MAX_BRIGHTNESS: u8 =
-        crate::led_strip::Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
+        Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
     /// Maximum animation frames allowed.
     pub const MAX_FRAMES: usize = 16;
 
@@ -88,7 +95,7 @@ impl Led2dGenerated {
     #[doc(hidden)]
     pub const fn new_static() -> Led2dGeneratedStatic {
         Led2dGeneratedStatic {
-            led2d_static: crate::led2d::Led2dStatic::new_static(),
+            led2d_static: Led2dStatic::new_static(),
         }
     }
 
@@ -113,7 +120,7 @@ impl Led2dGenerated {
         pio: embassy_rp::Peri<'static, embassy_rp::peripherals::PIO0>,
         dma: embassy_rp::Peri<'static, embassy_rp::peripherals::DMA_CH0>,
         spawner: embassy_executor::Spawner,
-    ) -> crate::Result<Self> {
+    ) -> Result<Self> {
         let _ = (pin, pio, dma, spawner);
         Ok(Self)
     }
@@ -125,7 +132,7 @@ impl Led2dGenerated {
     pub fn from_strip(
         led_strip: &'static Led2dGeneratedLedStrip,
         spawner: embassy_executor::Spawner,
-    ) -> crate::Result<Self> {
+    ) -> Result<Self> {
         let _ = (led_strip, spawner);
         Ok(Self)
     }
@@ -135,8 +142,8 @@ impl Led2dGenerated {
     /// See the [`mod@crate::led2d`] module docs for usage.
     pub async fn write_frame(
         &self,
-        frame: crate::led2d::Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>,
-    ) -> crate::Result<()> {
+        frame: Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>,
+    ) -> Result<()> {
         let _ = frame;
         Ok(())
     }
@@ -144,7 +151,7 @@ impl Led2dGenerated {
     /// Write text to the LED panel.
     ///
     /// See the [`mod@crate::led2d`] module docs for usage.
-    pub async fn write_text(&self, text: &str, colors: &[crate::led_strip::Rgb]) -> crate::Result<()> {
+    pub async fn write_text(&self, text: &str, colors: &[Rgb]) -> Result<()> {
         let _ = (text, colors);
         Ok(())
     }
@@ -155,9 +162,9 @@ impl Led2dGenerated {
     pub fn write_text_to_frame(
         &self,
         text: &str,
-        colors: &[crate::led_strip::Rgb],
-        frame: &mut crate::led2d::Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>,
-    ) -> crate::Result<()> {
+        colors: &[Rgb],
+        frame: &mut Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>,
+    ) -> Result<()> {
         let _ = (text, colors, frame);
         Ok(())
     }
@@ -167,8 +174,8 @@ impl Led2dGenerated {
     /// See the [`mod@crate::led2d`] module docs for usage.
     pub async fn animate<const N: usize>(
         &self,
-        frames: [(crate::led2d::Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>, embassy_time::Duration); N],
-    ) -> crate::Result<()> {
+        frames: [(Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>, embassy_time::Duration); N],
+    ) -> Result<()> {
         let _ = frames;
         Ok(())
     }

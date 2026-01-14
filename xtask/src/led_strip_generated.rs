@@ -26,11 +26,16 @@ led_strip! {
 pub struct LedStripGenerated;
 
 #[cfg(doc)]
+use crate::led_strip::{Current, Frame1d, LedStripStatic};
+#[cfg(doc)]
+use crate::Result;
+
+#[cfg(doc)]
 /// Static resources for `LedStripGenerated`.
 ///
 /// See the [`mod@crate::led_strip`] module docs for usage.
 pub struct LedStripGeneratedStatic {
-    led_strip_static: crate::led_strip::LedStripStatic<48, 16>,
+    led_strip_static: LedStripStatic<48, 16>,
 }
 
 #[cfg(doc)]
@@ -43,7 +48,7 @@ impl LedStripGenerated {
     ///
     /// We assume each LED draws 60 mA at full brightness.
     pub const MAX_BRIGHTNESS: u8 =
-        crate::led_strip::Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
+        Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
 
     /// Create static resources.
     ///
@@ -52,7 +57,7 @@ impl LedStripGenerated {
     #[doc(hidden)]
     pub const fn new_static() -> LedStripGeneratedStatic {
         LedStripGeneratedStatic {
-            led_strip_static: crate::led_strip::LedStripStatic::new_static(),
+            led_strip_static: LedStripStatic::new_static(),
         }
     }
 
@@ -64,7 +69,7 @@ impl LedStripGenerated {
         pio: embassy_rp::Peri<'static, embassy_rp::peripherals::PIO0>,
         dma: embassy_rp::Peri<'static, embassy_rp::peripherals::DMA_CH0>,
         spawner: embassy_executor::Spawner,
-    ) -> crate::Result<&'static Self> {
+    ) -> Result<&'static Self> {
         static INSTANCE: LedStripGenerated = LedStripGenerated;
         let _ = (pin, pio, dma, spawner);
         Ok(&INSTANCE)
@@ -75,8 +80,8 @@ impl LedStripGenerated {
     /// See the [`mod@crate::led_strip`] module docs for usage.
     pub async fn write_frame(
         &self,
-        frame: crate::led_strip::Frame1d<{ Self::LEN }>,
-    ) -> crate::Result<()> {
+        frame: Frame1d<{ Self::LEN }>,
+    ) -> Result<()> {
         let _ = frame;
         Ok(())
     }
@@ -86,8 +91,8 @@ impl LedStripGenerated {
     /// See the [`mod@crate::led_strip`] module docs for usage.
     pub async fn animate<const N: usize>(
         &self,
-        frames: [(crate::led_strip::Frame1d<{ Self::LEN }>, embassy_time::Duration); N],
-    ) -> crate::Result<()> {
+        frames: [(Frame1d<{ Self::LEN }>, embassy_time::Duration); N],
+    ) -> Result<()> {
         let _ = frames;
         Ok(())
     }

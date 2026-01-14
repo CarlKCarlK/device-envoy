@@ -1,6 +1,6 @@
 //! A device abstraction for NeoPixel-style (WS2812) LED strips.
 //!
-//! See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for a
+//! See [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a
 //! concrete generated-struct example and [`led_strip!`] or [`led_strips!`](crate::led_strips!)
 //! for the macros that build these types.
 //!
@@ -100,6 +100,8 @@
 /// Common colors include `RED`, `GREEN`, `BLUE`, `YELLOW`, `WHITE`, `BLACK`, `CYAN`, `MAGENTA`, `ORANGE`, `PURPLE`.
 #[doc(inline)]
 pub use smart_leds::colors;
+
+use core::ops::{Deref, DerefMut};
 
 // ============================================================================
 // Gamma Correction
@@ -242,7 +244,7 @@ impl<const N: usize> Frame1d<N> {
     }
 }
 
-impl<const N: usize> core::ops::Deref for Frame1d<N> {
+impl<const N: usize> Deref for Frame1d<N> {
     type Target = [Rgb; N];
 
     fn deref(&self) -> &Self::Target {
@@ -250,7 +252,7 @@ impl<const N: usize> core::ops::Deref for Frame1d<N> {
     }
 }
 
-impl<const N: usize> core::ops::DerefMut for Frame1d<N> {
+impl<const N: usize> DerefMut for Frame1d<N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

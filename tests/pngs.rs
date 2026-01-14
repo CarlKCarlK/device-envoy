@@ -2,14 +2,14 @@
 
 use device_kit::led2d::{Frame2d, Led2dFont, render_text_to_frame};
 use device_kit::to_png::{write_frame_png, write_frames_apng};
+use embassy_time::Duration;
 use embedded_graphics::{
     pixelcolor::Rgb888,
     prelude::*,
     primitives::{Circle, PrimitiveStyle, Rectangle},
 };
-use smart_leds::colors;
 use smart_leds::RGB8;
-use embassy_time::Duration;
+use smart_leds::colors;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -105,21 +105,18 @@ fn build_led2d2_frame_1() -> Led8x12Frame {
 
 fn assert_santa_apng_matches_expected() -> Result<(), Box<dyn Error>> {
     let frame_delay_ms =
-        u32::try_from(SANTA_FRAME_DURATION.as_millis()).expect("santa frame delay must fit in u32");
+        u32::try_from(SANTA_FRAME_DURATION.as_millis()).expect("santa frame delay must fit in u32"); // cmk use ?
     for (_, duration) in SANTA_FRAMES.iter() {
         assert!(
             duration.as_millis() == SANTA_FRAME_DURATION.as_millis(),
             "santa frames must share a constant duration"
         );
     }
-    let santa_frames: Vec<Frame2d<12, 8>> =
-        SANTA_FRAMES.iter().map(|(pixels, _)| Frame2d(*pixels)).collect();
-    assert_apng_matches_expected_for_frames(
-        "santa.png",
-        200,
-        frame_delay_ms,
-        &santa_frames,
-    )
+    let santa_frames: Vec<Frame2d<12, 8>> = SANTA_FRAMES
+        .iter()
+        .map(|(pixels, _)| Frame2d(*pixels))
+        .collect();
+    assert_apng_matches_expected_for_frames("santa.png", 200, frame_delay_ms, &santa_frames)
 }
 
 const fn centered_top_left(width: usize, height: usize, size: usize) -> Point {

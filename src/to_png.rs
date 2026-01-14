@@ -1,11 +1,13 @@
 #![cfg(feature = "host")]
 
 use crate::led2d::Frame2d;
-use png::{BitDepth, ColorType, Encoder};
+use png::{BitDepth, ColorType, Encoder, ScaledFloat};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
+
+const PREVIEW_INVERSE_GAMMA: f32 = 2.2;
 
 /// Render a `Frame2d` into a PNG file sized to the requested maximum dimension.
 pub fn write_frame_png<const W: usize, const H: usize>(
@@ -60,7 +62,8 @@ pub fn write_frames_apng<const W: usize, const H: usize>(
     let file = File::create(output_path)?;
     let mut encoder = Encoder::new(BufWriter::new(file), width, height);
     encoder.set_color(ColorType::Rgb);
-    encoder.set_depth(BitDepth::Eight);
+    encoder.set_depth(BitDepth::Sixteen);
+    encoder.set_source_gamma(ScaledFloat::new(1.0));
     encoder.set_animated(frame_count, 0)?;
     let mut writer = encoder.write_header()?;
     for frame_pixels in pixels {
@@ -105,7 +108,8 @@ fn write_panel_png<const W: usize, const H: usize>(
     let file = File::create(output_path)?;
     let mut encoder = Encoder::new(BufWriter::new(file), width, height);
     encoder.set_color(ColorType::Rgb);
-    encoder.set_depth(BitDepth::Eight);
+    encoder.set_depth(BitDepth::Sixteen);
+    encoder.set_source_gamma(ScaledFloat::new(1.0));
     let mut writer = encoder.write_header()?;
     writer.write_image_data(&pixels)?;
     Ok(())
@@ -130,7 +134,7 @@ fn panel_pixels<const W: usize, const H: usize>(
     assert!(border > 0, "border must be positive");
     let width = (W as u32) * cell_size + border * 2;
     let height = (H as u32) * cell_size + border * 2;
-    let mut bytes = vec![0u8; (width * height * 3) as usize];
+    let mut bytes = vec![0u8; (width * height * 3 * 2) as usize];
     let center = (cell_size - 1) as i32 / 2;
     let led_radius_f = led_radius as f32;
     let inner_radius_f = (led_radius - fade_width) as f32;
@@ -157,10 +161,16 @@ fn panel_pixels<const W: usize, const H: usize>(
                         };
                         let x = border + cell_origin_x + local_x;
                         let y = border + cell_origin_y + local_y;
-                        let pixel_index = ((y * width + x) * 3) as usize;
-                        bytes[pixel_index] = (pixel.r as f32 * intensity).round() as u8;
-                        bytes[pixel_index + 1] = (pixel.g as f32 * intensity).round() as u8;
-                        bytes[pixel_index + 2] = (pixel.b as f32 * intensity).round() as u8;
+                        let pixel_index = ((y * width + x) * 3 * 2) as usize;
+                        let red = linear_to_u16(inverse_gamma_to_linear(pixel.r) * intensity);
+                        let green = linear_to_u16(inverse_gamma_to_linear(pixel.g) * intensity);
+                        let blue = linear_to_u16(inverse_gamma_to_linear(pixel.b) * intensity);
+                        bytes[pixel_index] = (red >> 8) as u8;
+                        bytes[pixel_index + 1] = red as u8;
+                        bytes[pixel_index + 2] = (green >> 8) as u8;
+                        bytes[pixel_index + 3] = green as u8;
+                        bytes[pixel_index + 4] = (blue >> 8) as u8;
+                        bytes[pixel_index + 5] = blue as u8;
                     }
                 }
             }
@@ -168,4 +178,14 @@ fn panel_pixels<const W: usize, const H: usize>(
     }
 
     (width, height, bytes)
+}
+
+fn inverse_gamma_to_linear(channel: u8) -> f32 {
+    let normalized = (channel as f32) / 255.0;
+    normalized.powf(PREVIEW_INVERSE_GAMMA)
+}
+
+fn linear_to_u16(value: f32) -> u16 {
+    let clamped = value.clamp(0.0, 1.0);
+    (clamped * 65535.0).round() as u16
 }

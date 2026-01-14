@@ -148,10 +148,12 @@ pub mod led2d_generated;
 
 pub use layout::LedLayout;
 
-use core::convert::Infallible;
+#[cfg(not(feature = "host"))]
 use embassy_futures::select::{Either, select};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embassy_time::{Duration, Timer};
+use embassy_time::Duration;
+#[cfg(not(feature = "host"))]
+use embassy_time::Timer;
 use embedded_graphics::{
     draw_target::DrawTarget,
     mono_font::{
@@ -632,31 +634,6 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2dStatic<N, MAX_FRAMES> {
     }
 }
 
-/// Internal trait for types that can write full LED strip frames.
-#[doc(hidden)] // Required pub for macro expansion in downstream crates
-pub trait WriteFrame<const N: usize> {
-    async fn write_frame(&self, frame: StripFrame<N>) -> Result<()>;
-}
-
-#[cfg(not(feature = "host"))]
-impl<const N: usize, const MAX_FRAMES: usize> WriteFrame<N>
-    for crate::led_strip::LedStrip<N, MAX_FRAMES>
-{
-    async fn write_frame(&self, frame: StripFrame<N>) -> Result<()> {
-        crate::led_strip::LedStrip::write_frame(self, frame).await
-    }
-}
-
-#[cfg(not(feature = "host"))]
-impl<const N: usize, T> WriteFrame<N> for &T
-where
-    T: WriteFrame<N>,
-{
-    async fn write_frame(&self, frame: StripFrame<N>) -> Result<()> {
-        T::write_frame(self, frame).await
-    }
-}
-
 // cmk000 don't use the phrase 'module-level' in docs.
 // cmk00 this needs a compiled-only doc test.
 /// A device abstraction for rectangular NeoPixel-style (WS2812) LED matrix displays.
@@ -778,21 +755,22 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that expands at the call site in downstream crates.
 // This is an implementation detail, not part of the user-facing API.
 #[doc(hidden)]
-#[allow(private_bounds)]
 /// Device loop for Led2d. Called by macro-generated code.
 ///
 /// Since embassy tasks cannot be generic, the macros generate a concrete wrapper task
 /// that calls this function. Must be `pub` because macro expansion happens in the calling
 /// crate's context, but hidden from docs as it's not part of the public API.
+#[cfg(not(feature = "host"))]
 pub async fn led2d_device_loop<const N: usize, const MAX_FRAMES: usize, S>(
     command_signal: &'static Led2dCommandSignal<N, MAX_FRAMES>,
     completion_signal: &'static Led2dCompletionSignal,
     led_strip: S,
-) -> Result<Infallible>
+) -> Result<core::convert::Infallible>
 where
-    S: WriteFrame<N>,
+    S: AsRef<crate::led_strip::LedStrip<N, MAX_FRAMES>>,
 {
     defmt::info!("led2d_device_loop: task started");
+    let led_strip_ref = led_strip.as_ref();
     loop {
         defmt::debug!("led2d_device_loop: waiting for command");
         let command = command_signal.wait().await;
@@ -800,7 +778,7 @@ where
 
         match command {
             Command::DisplayStatic(frame) => {
-                led_strip.write_frame(frame).await?;
+                led_strip_ref.write_frame(frame).await?;
                 completion_signal.signal(());
             }
             Command::Animate(frames) => {
@@ -809,7 +787,7 @@ where
                     frames.len()
                 );
                 let next_command =
-                    run_animation_loop(frames, command_signal, completion_signal, &led_strip)
+                    run_animation_loop(frames, command_signal, completion_signal, led_strip_ref)
                         .await?;
                 defmt::info!("led2d_device_loop: animation interrupted");
                 match next_command {
@@ -817,7 +795,7 @@ where
                         defmt::info!(
                             "led2d_device_loop: processing DisplayStatic from animation interrupt"
                         );
-                        led_strip.write_frame(frame).await?;
+                        led_strip_ref.write_frame(frame).await?;
                         completion_signal.signal(());
                     }
                     Command::Animate(new_frames) => {
@@ -827,13 +805,13 @@ where
                             new_frames,
                             command_signal,
                             completion_signal,
-                            &led_strip,
+                            led_strip_ref,
                         )
                         .await?;
                         // Handle any command that interrupted this animation
                         match next_command {
                             Command::DisplayStatic(frame) => {
-                                led_strip.write_frame(frame).await?;
+                                led_strip_ref.write_frame(frame).await?;
                                 completion_signal.signal(());
                             }
                             Command::Animate(_) => {
@@ -848,14 +826,13 @@ where
     }
 }
 
-async fn run_animation_loop<const N: usize, const MAX_FRAMES: usize, S>(
+#[cfg(not(feature = "host"))]
+async fn run_animation_loop<const N: usize, const MAX_FRAMES: usize>(
     frames: Vec<(StripFrame<N>, Duration), MAX_FRAMES>,
     command_signal: &'static Led2dCommandSignal<N, MAX_FRAMES>,
     completion_signal: &'static Led2dCompletionSignal,
-    led_strip: &S,
+    led_strip: &crate::led_strip::LedStrip<N, MAX_FRAMES>,
 ) -> Result<Command<N, MAX_FRAMES>>
-where
-    S: WriteFrame<N>,
 {
     defmt::info!("run_animation_loop: starting with {} frames", frames.len());
     completion_signal.signal(());
@@ -1018,7 +995,7 @@ pub use led2d_device;
 /// - `dma` — DMA channel (default: `DMA_CH0`)
 /// - `max_current` — Current budget (default: [`crate::led_strip::MAX_CURRENT_DEFAULT`] = 250 mA)
 /// - `gamma` — Color curve (default: [`crate::led_strip::GAMMA_DEFAULT`] = `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum animation frames (default: [`crate::led_strip::MAX_FRAMES_DEFAULT`] = 16)
+/// - `max_frames` — Maximum animation frames for the generated strip (default: [`crate::led_strip::MAX_FRAMES_DEFAULT`] = 16)
 ///
 /// # Current Limiting
 ///
@@ -1522,6 +1499,7 @@ macro_rules! __led2d_impl {
                         len: { $width * $height },
                         max_current: $max_current,
                         gamma: $gamma,
+                        max_frames: $max_frames,
                     }
                 }
             }
@@ -1533,7 +1511,6 @@ macro_rules! __led2d_impl {
                 width: $width,
                 height: $height,
                 led_layout: serpentine_column_major,
-                max_frames: $max_frames,
                 font: $font_variant,
             }
 
@@ -1603,6 +1580,7 @@ macro_rules! __led2d_impl {
                         len: $width * $height,
                         max_current: $max_current,
                         gamma: $gamma,
+                        max_frames: $max_frames,
                     }
                 }
             }
@@ -1614,7 +1592,6 @@ macro_rules! __led2d_impl {
                 width: $width,
                 height: $height,
                 led_layout: $led_layout,
-                max_frames: $max_frames,
                 font: $font_variant,
             }
 
@@ -1673,7 +1650,6 @@ macro_rules! __led2d_impl {
 /// - `led_layout` - LED strip physical layout:
 ///   - `serpentine_column_major` - Common serpentine wiring pattern (LED index → `(col, row)`)
 ///   - `LedLayout` expression - Custom LED layout value in LED-index order
-/// - `max_frames` - Maximum animation frames allowed
 /// - `font` - Built-in font variant (see [`Led2dFont`])
 ///
 /// # Example
@@ -1752,34 +1728,6 @@ macro_rules! led2d_from_strip {
             );
         }
     };
-    // Serpentine column-major led_layout variant (explicit max_frames)
-    (
-        $vis:vis $name:ident,
-        strip_type: $strip_type:ident,
-        width: $width:expr,
-        height: $height:expr,
-        led_layout: serpentine_column_major,
-        max_frames: $max_frames:expr,
-        font: $font_variant:ident $(,)?
-    ) => {
-        $crate::led2d::paste::paste! {
-            const [<$name:upper _W>]: usize = $width;
-            const [<$name:upper _H>]: usize = $height;
-            const [<$name:upper _N>]: usize = [<$name:upper _W>] * [<$name:upper _H>];
-            const [<$name:upper _LED_LAYOUT>]: $crate::led2d::LedLayout<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]> =
-                $crate::led2d::LedLayout::<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]>::serpentine_column_major();
-            const [<$name:upper _MAX_FRAMES>]: usize = $max_frames;
-
-            // Compile-time assertion that strip length matches led_layout length
-            const _: () = assert!([<$name:upper _LED_LAYOUT>].map().len() == $strip_type::LEN);
-
-            $crate::led2d::led2d_from_strip!(
-                @common $vis, $name, $strip_type, [<$name:upper _W>], [<$name:upper _H>], [<$name:upper _N>], [<$name:upper _LED_LAYOUT>],
-                $font_variant,
-                [<$name:upper _MAX_FRAMES>]
-            );
-        }
-    };
     // Custom led_layout variant (uses strip's MAX_FRAMES)
     (
         $vis:vis $name:ident,
@@ -1795,33 +1743,6 @@ macro_rules! led2d_from_strip {
             const [<$name:upper _N>]: usize = [<$name:upper _W>] * [<$name:upper _H>];
             const [<$name:upper _LED_LAYOUT>]: $crate::led2d::LedLayout<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]> = $led_layout;
             const [<$name:upper _MAX_FRAMES>]: usize = $strip_type::MAX_FRAMES;
-
-            // Compile-time assertion that strip length matches led_layout length
-            const _: () = assert!([<$name:upper _LED_LAYOUT>].map().len() == $strip_type::LEN);
-
-            $crate::led2d::led2d_from_strip!(
-                @common $vis, $name, $strip_type, [<$name:upper _W>], [<$name:upper _H>], [<$name:upper _N>], [<$name:upper _LED_LAYOUT>],
-                $font_variant,
-                [<$name:upper _MAX_FRAMES>]
-            );
-        }
-    };
-    // Custom led_layout variant (explicit max_frames)
-    (
-        $vis:vis $name:ident,
-        strip_type: $strip_type:ident,
-        width: $width:expr,
-        height: $height:expr,
-        led_layout: $led_layout:expr,
-        max_frames: $max_frames:expr,
-        font: $font_variant:ident $(,)?
-    ) => {
-        $crate::led2d::paste::paste! {
-            const [<$name:upper _W>]: usize = $width;
-            const [<$name:upper _H>]: usize = $height;
-            const [<$name:upper _N>]: usize = [<$name:upper _W>] * [<$name:upper _H>];
-            const [<$name:upper _LED_LAYOUT>]: $crate::led2d::LedLayout<[<$name:upper _N>], [<$name:upper _W>], [<$name:upper _H>]> = $led_layout;
-            const [<$name:upper _MAX_FRAMES>]: usize = $max_frames;
 
             // Compile-time assertion that strip length matches led_layout length
             const _: () = assert!([<$name:upper _LED_LAYOUT>].map().len() == $strip_type::LEN);

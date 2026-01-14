@@ -107,7 +107,7 @@ led2d! {
     height: 8,
     led_layout: LED_LAYOUT_12X8,
     max_current: Current::Milliamps(250),
-    gamma: Gamma::Gamma2_2,
+    gamma: Gamma::Linear,
     max_frames: 70,
     font: Font3x4Trim,
 }

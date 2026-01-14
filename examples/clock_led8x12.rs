@@ -39,6 +39,13 @@ use smart_leds::RGB8;
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_8X12: LedLayout<96, 8, 12> = LED_LAYOUT_12X4.concat_v(LED_LAYOUT_12X4).rotate_cw();
 
+#[cfg(feature = "pico1")]
+const LED8X12_STRIP_MAX_FRAMES: usize = 16;
+#[cfg(feature = "pico2")]
+const LED8X12_STRIP_MAX_FRAMES: usize = 48;
+#[cfg(not(any(feature = "pico1", feature = "pico2")))]
+const LED8X12_STRIP_MAX_FRAMES: usize = 48;
+
 led2d! {
     pub Led8x12,
     pio: PIO1,
@@ -49,7 +56,7 @@ led2d! {
     led_layout: LED_LAYOUT_8X12,
     max_current: Current::Milliamps(250),
     gamma: Gamma::Linear,
-    max_frames: 48,
+    max_frames: LED8X12_STRIP_MAX_FRAMES,
     font: Font4x6Trim,
 }
 

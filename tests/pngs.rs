@@ -8,10 +8,14 @@ use embedded_graphics::{
     primitives::{Circle, PrimitiveStyle, Rectangle},
 };
 use smart_leds::colors;
+use smart_leds::RGB8;
+use embassy_time::Duration;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+include!("../video_frames_data.rs");
 
 type Frame = Frame2d<12, 8>;
 type Led12x4Frame = Frame2d<12, 4>;
@@ -30,6 +34,11 @@ fn led2d1_png_matches_expected() -> Result<(), Box<dyn Error>> {
 #[test]
 fn led2d2_apng_matches_expected() -> Result<(), Box<dyn Error>> {
     assert_apng_matches_expected("led2d2.png", 200, 400, build_led2d2_frames)
+}
+
+#[test]
+fn santa_apng_matches_expected() -> Result<(), Box<dyn Error>> {
+    assert_santa_apng_matches_expected()
 }
 
 fn build_frame() -> Frame {
@@ -92,6 +101,25 @@ fn build_led2d2_frame_1() -> Led8x12Frame {
         .expect("text render must succeed");
 
     frame
+}
+
+fn assert_santa_apng_matches_expected() -> Result<(), Box<dyn Error>> {
+    let frame_delay_ms =
+        u32::try_from(SANTA_FRAME_DURATION.as_millis()).expect("santa frame delay must fit in u32");
+    for (_, duration) in SANTA_FRAMES.iter() {
+        assert!(
+            duration.as_millis() == SANTA_FRAME_DURATION.as_millis(),
+            "santa frames must share a constant duration"
+        );
+    }
+    let santa_frames: Vec<Frame2d<12, 8>> =
+        SANTA_FRAMES.iter().map(|(pixels, _)| Frame2d(*pixels)).collect();
+    assert_apng_matches_expected_for_frames(
+        "santa.png",
+        200,
+        frame_delay_ms,
+        &santa_frames,
+    )
 }
 
 const fn centered_top_left(width: usize, height: usize, size: usize) -> Point {
@@ -158,9 +186,18 @@ where
     F: FnOnce() -> [Frame2d<W, H>; N],
 {
     let frames = build_frames();
+    assert_apng_matches_expected_for_frames(filename, max_dimension, frame_delay_ms, &frames)
+}
+
+fn assert_apng_matches_expected_for_frames<const W: usize, const H: usize>(
+    filename: &str,
+    max_dimension: u32,
+    frame_delay_ms: u32,
+    frames: &[Frame2d<W, H>],
+) -> Result<(), Box<dyn Error>> {
     let expected_path = docs_assets_path(filename);
     if std::env::var_os("DEVICE_KIT_UPDATE_PNGS").is_some() {
-        write_frames_apng(&frames, &expected_path, max_dimension, frame_delay_ms)?;
+        write_frames_apng(frames, &expected_path, max_dimension, frame_delay_ms)?;
         println!("updated APNG at {}", expected_path.display());
         return Ok(());
     }
@@ -169,7 +206,7 @@ where
     }
 
     let output_path = temp_output_path(filename);
-    write_frames_apng(&frames, &output_path, max_dimension, frame_delay_ms)?;
+    write_frames_apng(frames, &output_path, max_dimension, frame_delay_ms)?;
 
     let expected_bytes = fs::read(&expected_path)?;
     let actual_bytes = fs::read(&output_path)?;

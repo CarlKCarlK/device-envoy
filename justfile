@@ -16,7 +16,7 @@ attach-probe:
 regenerate-text-pngs:
 	./scripts/regenerate-text-pngs.sh
 
-# Generate video frames data
+# Generate video frames data (uses SANTA_VIDEO_PATH or SANTA_FRAMES_DIR)
 video-frames:
 	cargo xtask video-frames-gen > video_frames_data.rs
 

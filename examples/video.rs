@@ -19,22 +19,40 @@
 //! ## Santa Video (Pre-configured)
 //!
 //! The santa frames are embedded from `video_frames_data.rs`, which is **auto-generated**
-//! during the build process from PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`.
+//! during the build process from PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`,
+//! or directly from a source MP4 via ffmpeg.
 //!
 //! The build system automatically:
+//!
 //! 1. Detects when building the `video` example
 //! 2. Runs `cargo xtask video-frames-gen` to convert 65 PNG files to Rust code
 //! 3. Writes the result to `video_frames_data.rs` in the crate root
 //! 4. Includes it at compile time
 //!
 //! To use different frames:
+//!
 //! 1. Replace the PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`
 //! 2. Delete `video_frames_data.rs` to force regeneration (or run `cargo clean`)
 //! 3. Rebuild the example - frames will be regenerated automatically
 //!
 //! Manual generation:
+//!
 //! ```bash
 //! cargo xtask video-frames-gen > video_frames_data.rs
+//! ```
+//!
+//! To regenerate from the original MP4, set `SANTA_VIDEO_PATH` and rerun the generator:
+//!
+//! ```bash
+//! SANTA_VIDEO_PATH="/mnt/e/sync/Pixel7Pro/DCIM/Camera/Camera/PXL_20251227_143029067.mp4" \
+//!   cargo xtask video-frames-gen > video_frames_data.rs
+//! ```
+//!
+//! If you still have the pre-extracted PNGs, set `SANTA_FRAMES_DIR` instead:
+//!
+//! ```bash
+//! SANTA_FRAMES_DIR="$HOME/programs/ffmpeg-test/frames12x8_landscape" \
+//!   cargo xtask video-frames-gen > video_frames_data.rs
 //! ```
 //!
 //! ## Cat Video (From Video File)
@@ -52,7 +70,9 @@
 //!    - Cat playback logic in the match statement
 //!
 //! The xtask command uses ffmpeg to:
+//!
 //! - Extract frames at 10 FPS
+//! - Rotate 90° clockwise (transpose=1)
 //! - Scale to 12x8 pixels
 //! - Convert to embedded Rust arrays
 

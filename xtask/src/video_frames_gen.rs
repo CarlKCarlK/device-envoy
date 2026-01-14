@@ -5,7 +5,35 @@ use std::path::Path;
 use std::process::Command;
 
 pub fn generate_frames() -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(video_path) = santa_video_path() {
+        return generate_video_frames(&video_path, "santa");
+    }
     generate_frames_from_pngs("santa")
+}
+
+fn santa_video_path() -> Option<String> {
+    if let Ok(video_path) = std::env::var("SANTA_VIDEO_PATH") {
+        let path = Path::new(&video_path);
+        if path.exists() {
+            eprintln!("Found santa video at: {}", video_path);
+            return Some(video_path);
+        }
+        eprintln!("SANTA_VIDEO_PATH is set but the file does not exist: {}", video_path);
+    }
+
+    let candidates = [
+        "/mnt/e/sync/Pixel7Pro/DCIM/Camera/Camera/PXL_20251227_143029067.mp4",
+        "/mnt/c/Users/carlk/OneDrive/SkyDrive camera roll/PXL_20251227_143029067.mp4",
+    ];
+
+    for candidate in &candidates {
+        if Path::new(candidate).exists() {
+            eprintln!("Found santa video at: {}", candidate);
+            return Some((*candidate).to_string());
+        }
+    }
+
+    None
 }
 
 pub fn generate_cat_frames() -> Result<(), Box<dyn std::error::Error>> {
@@ -117,13 +145,13 @@ fn generate_video_frames(video_path: &str, name: &str) -> Result<(), Box<dyn std
     eprintln!("Extracting frames from video: {}", video_path);
     eprintln!("Output directory: {}", temp_dir.display());
 
-    // Use ffmpeg to extract frames at 10 FPS, scaled to 12x8
+    // Use ffmpeg to extract frames at 10 FPS, rotate CW, and scale to 12x8
     let status = Command::new("ffmpeg")
         .args([
             "-i",
             &video_path,
             "-vf",
-            "fps=10,scale=12:8:flags=lanczos",
+            "fps=10,transpose=1,scale=12:8:flags=lanczos",
             "-q:v",
             "2",
             &format!("{}/frame_%06d.png", temp_dir.display()),

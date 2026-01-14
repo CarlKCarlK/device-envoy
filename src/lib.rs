@@ -37,6 +37,9 @@ pub mod pio_irqs;
 #[cfg(feature = "host")]
 pub(crate) mod bit_matrix_led4;
 #[cfg(feature = "host")]
+#[path = "led_strip_host.rs"]
+pub mod led_strip;
+#[cfg(feature = "host")]
 pub mod to_png;
 // These modules require embassy_rp and are excluded when testing on host
 #[cfg(not(feature = "host"))]

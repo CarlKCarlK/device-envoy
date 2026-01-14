@@ -1,6 +1,7 @@
 #![cfg(feature = "host")]
 
 use device_kit::led2d::{Frame2d, Led2dFont, render_text_to_frame};
+use device_kit::led_strip::Frame1d;
 use device_kit::to_png::{write_frame_png_with_gamma, write_frames_apng_with_gamma};
 use embassy_time::Duration;
 use embedded_graphics::{
@@ -8,10 +9,13 @@ use embedded_graphics::{
     prelude::*,
     primitives::{Circle, PrimitiveStyle, Rectangle},
 };
+use png::{BitDepth, ColorType, Encoder, ScaledFloat};
 use smart_leds::RGB8;
 use smart_leds::colors;
 use std::error::Error;
 use std::fs;
+use std::fs::File;
+use std::io::BufWriter;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -20,6 +24,7 @@ include!("../video_frames_data.rs");
 type Frame = Frame2d<12, 8>;
 type Led12x4Frame = Frame2d<12, 4>;
 type Led8x12Frame = Frame2d<8, 12>;
+type LedStripSimpleFrame = Frame1d<48>;
 
 #[test]
 fn led2d_graphics_png_matches_expected() -> Result<(), Box<dyn Error>> {
@@ -34,6 +39,11 @@ fn led2d1_png_matches_expected() -> Result<(), Box<dyn Error>> {
 #[test]
 fn led2d1_linear_png_matches_expected() -> Result<(), Box<dyn Error>> {
     assert_png_matches_expected_with_gamma("led2d1_linear.png", 200, 1.0, build_led2d1_frame)
+}
+
+#[test]
+fn led_strip_simple_png_matches_expected() -> Result<(), Box<dyn Error>> {
+    assert_strip_png_matches_expected("led_strip_simple.png", 400, build_led_strip_simple_frame)
 }
 
 #[test]
@@ -111,6 +121,14 @@ fn build_led2d2_frame_1() -> Led8x12Frame {
         .expect("text render must succeed");
 
     frame
+}
+
+fn build_led_strip_simple_frame() -> LedStripSimpleFrame {
+    let mut led_strip_simple_frame = LedStripSimpleFrame::new();
+    for pixel_index in (0..led_strip_simple_frame.len()).step_by(2) {
+        led_strip_simple_frame[pixel_index] = colors::BLUE;
+    }
+    led_strip_simple_frame
 }
 
 fn assert_santa_apng_matches_expected(
@@ -214,6 +232,17 @@ where
     assert_png_matches_expected_with_gamma(filename, max_dimension, 2.2, build_frame)
 }
 
+fn assert_strip_png_matches_expected<F, const N: usize>(
+    filename: &str,
+    target_width: u32,
+    build_frame: F,
+) -> Result<(), Box<dyn Error>>
+where
+    F: FnOnce() -> Frame1d<N>,
+{
+    assert_strip_png_matches_expected_with_gamma(filename, target_width, 2.2, build_frame)
+}
+
 fn assert_png_matches_expected_with_gamma<F, const W: usize, const H: usize>(
     filename: &str,
     max_dimension: u32,
@@ -237,6 +266,43 @@ where
 
     let output_path = temp_output_path(filename);
     write_frame_png_with_gamma(&frame, &output_path, max_dimension, preview_inverse_gamma)?;
+
+    let expected_bytes = fs::read(&expected_path)?;
+    let actual_bytes = fs::read(&output_path)?;
+    assert_eq!(expected_bytes, actual_bytes, "PNG bytes must match");
+
+    let _ = fs::remove_file(&output_path);
+    Ok(())
+}
+
+fn assert_strip_png_matches_expected_with_gamma<F, const N: usize>(
+    filename: &str,
+    target_width: u32,
+    preview_inverse_gamma: f32,
+    build_frame: F,
+) -> Result<(), Box<dyn Error>>
+where
+    F: FnOnce() -> Frame1d<N>,
+{
+    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    let frame = build_frame();
+    let expected_path = docs_assets_path(filename);
+    if std::env::var_os("DEVICE_KIT_UPDATE_PNGS").is_some() {
+        write_strip_png_with_gamma(
+            &frame,
+            &expected_path,
+            target_width,
+            preview_inverse_gamma,
+        )?;
+        println!("updated PNG at {}", expected_path.display());
+        return Ok(());
+    }
+    if !expected_path.exists() {
+        return Err(format!("expected PNG is missing at {}", expected_path.display()).into());
+    }
+
+    let output_path = temp_output_path(filename);
+    write_strip_png_with_gamma(&frame, &output_path, target_width, preview_inverse_gamma)?;
 
     let expected_bytes = fs::read(&expected_path)?;
     let actual_bytes = fs::read(&output_path)?;
@@ -313,4 +379,128 @@ fn assert_apng_matches_expected_for_frames_with_gamma<const W: usize, const H: u
 
     let _ = fs::remove_file(&output_path);
     Ok(())
+}
+
+fn write_strip_png_with_gamma<const N: usize>(
+    frame: &Frame1d<N>,
+    output_path: &PathBuf,
+    target_width: u32,
+    preview_inverse_gamma: f32,
+) -> Result<(), Box<dyn Error>> {
+    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    let cell_size = select_strip_cell_size(N as u32, target_width);
+    let led_margin = (cell_size / 8).max(1);
+    let (width, height, pixels) =
+        strip_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
+
+    if let Some(parent) = output_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+
+    let file = File::create(output_path)?;
+    let mut encoder = Encoder::new(BufWriter::new(file), width, height);
+    encoder.set_color(ColorType::Rgb);
+    encoder.set_depth(BitDepth::Sixteen);
+    encoder.set_source_gamma(ScaledFloat::new(1.0));
+    let mut writer = encoder.write_header()?;
+    writer.write_image_data(&pixels)?;
+    Ok(())
+}
+
+fn select_strip_cell_size(strip_len: u32, target_width: u32) -> u32 {
+    assert!(strip_len > 0, "strip_len must be positive");
+    assert!(target_width > 0, "target_width must be positive");
+    let mut cell_size = target_width;
+    while cell_size > 1 {
+        let led_margin = (cell_size / 8).max(1);
+        let led_radius = (cell_size - (led_margin * 2)) / 2;
+        let output_width = strip_len * cell_size + led_radius * 2;
+        if output_width <= target_width {
+            break;
+        }
+        cell_size -= 1;
+    }
+    cell_size
+}
+
+fn strip_pixels<const N: usize>(
+    frame: &Frame1d<N>,
+    cell_size: u32,
+    led_margin: u32,
+    preview_inverse_gamma: f32,
+) -> (u32, u32, Vec<u8>) {
+    assert!(cell_size > 0, "cell_size must be positive");
+    assert!(
+        led_margin < cell_size / 2,
+        "led_margin must fit inside cell"
+    );
+    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    let led_radius = (cell_size - (led_margin * 2)) / 2;
+    assert!(led_radius > 0, "led_radius must be positive");
+    let fade_width = led_radius / 3;
+    assert!(fade_width > 0, "fade_width must be positive");
+
+    let border = led_radius;
+    assert!(border > 0, "border must be positive");
+    let width = (N as u32) * cell_size + border * 2;
+    let height = cell_size + border * 2;
+    let mut bytes = vec![0u8; (width * height * 3 * 2) as usize];
+    let center = (cell_size - 1) as i32 / 2;
+    let led_radius_f = led_radius as f32;
+    let inner_radius_f = (led_radius - fade_width) as f32;
+    let radius_sq = (led_radius as i32) * (led_radius as i32);
+
+    for led_index in 0..N {
+        let pixel = frame[led_index];
+        let cell_origin_x = (led_index as u32) * cell_size;
+
+        for local_y in 0..cell_size {
+            let delta_y = local_y as i32 - center;
+            for local_x in 0..cell_size {
+                let delta_x = local_x as i32 - center;
+                let distance_sq = delta_x * delta_x + delta_y * delta_y;
+                if distance_sq <= radius_sq {
+                    let distance = (distance_sq as f32).sqrt();
+                    let intensity = if distance <= inner_radius_f {
+                        1.0
+                    } else {
+                        let fade_span = led_radius_f - inner_radius_f;
+                        (1.0 - (distance - inner_radius_f) / fade_span).max(0.0)
+                    };
+                    let x = border + cell_origin_x + local_x;
+                    let y = border + local_y;
+                    let pixel_index = ((y * width + x) * 3 * 2) as usize;
+                    let red = linear_to_u16(
+                        inverse_gamma_to_linear(pixel.r, preview_inverse_gamma) * intensity,
+                    );
+                    let green = linear_to_u16(
+                        inverse_gamma_to_linear(pixel.g, preview_inverse_gamma) * intensity,
+                    );
+                    let blue = linear_to_u16(
+                        inverse_gamma_to_linear(pixel.b, preview_inverse_gamma) * intensity,
+                    );
+                    bytes[pixel_index] = (red >> 8) as u8;
+                    bytes[pixel_index + 1] = red as u8;
+                    bytes[pixel_index + 2] = (green >> 8) as u8;
+                    bytes[pixel_index + 3] = green as u8;
+                    bytes[pixel_index + 4] = (blue >> 8) as u8;
+                    bytes[pixel_index + 5] = blue as u8;
+                }
+            }
+        }
+    }
+
+    (width, height, bytes)
+}
+
+fn inverse_gamma_to_linear(channel: u8, preview_inverse_gamma: f32) -> f32 {
+    let normalized = (channel as f32) / 255.0;
+    normalized.powf(preview_inverse_gamma)
+}
+
+fn linear_to_u16(value: f32) -> u16 {
+    let clamped = value.clamp(0.0, 1.0);
+    (clamped * 65535.0).round() as u16
 }

@@ -1,3 +1,10 @@
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "led_strip_simple",
+        "docs/assets/led_strip_simple.png"
+    )
+)]
 //! A device abstraction for NeoPixel-style (WS2812) LED strips.
 //!
 //! See [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a
@@ -10,6 +17,8 @@
 //!
 //! In this example, we set every other LED to blue. Here, the generated struct is named
 //! `LedStripSimple`.
+//!
+//! ![LED strip preview][led_strip_simple]
 //!
 //! ```no_run
 //! # #![no_std]

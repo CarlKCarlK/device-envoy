@@ -24,6 +24,7 @@ include!("../video_frames_data.rs");
 type Frame = Frame2d<12, 8>;
 type Led12x4Frame = Frame2d<12, 4>;
 type Led8x12Frame = Frame2d<8, 12>;
+type LedStripGpio0Frame = Frame1d<8>;
 type LedStripSimpleFrame = Frame1d<48>;
 type LedStripAnimatedFrame = Frame1d<96>;
 
@@ -48,6 +49,11 @@ fn led_strip_simple_png_matches_expected() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn led_strip_gpio0_png_matches_expected() -> Result<(), Box<dyn Error>> {
+    assert_strip_png_matches_expected("led_strip_gpio0.png", 150, build_led_strip_gpio0_frame)
+}
+
+#[test]
 fn led_strip_animated_apng_matches_expected() -> Result<(), Box<dyn Error>> {
     assert_strip_apng_matches_expected(
         "led_strip_animated.png",
@@ -59,7 +65,7 @@ fn led_strip_animated_apng_matches_expected() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn led2d2_apng_matches_expected() -> Result<(), Box<dyn Error>> {
-    assert_apng_matches_expected("led2d2.png", 200, 400, build_led2d2_frames)
+    assert_apng_matches_expected("led2d2.png", 200, 1000, build_led2d2_frames)
 }
 
 #[test]
@@ -140,6 +146,10 @@ fn build_led_strip_simple_frame() -> LedStripSimpleFrame {
         led_strip_simple_frame[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
     }
     led_strip_simple_frame
+}
+
+fn build_led_strip_gpio0_frame() -> LedStripGpio0Frame {
+    Frame1d::filled(colors::WHITE)
 }
 
 fn build_led_strip_animated_frames() -> [LedStripAnimatedFrame; 3] {

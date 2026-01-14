@@ -88,7 +88,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         &mut frame_go_bottom,
     )?;
 
-    let frame_duration = Duration::from_millis(400);
+    let frame_duration = Duration::from_secs(1);
     gpio4_led2d
         .animate([
             (frame_go_top, frame_duration),

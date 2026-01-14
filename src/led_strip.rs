@@ -5,6 +5,14 @@
         "docs/assets/led_strip_simple.png"
     ),
     doc = ::embed_doc_image::embed_image!(
+        "led_strip_gpio0",
+        "docs/assets/led_strip_gpio0.png"
+    ),
+    doc = ::embed_doc_image::embed_image!(
+        "led_strip_gogo",
+        "docs/assets/led2d2.png"
+    ),
+    doc = ::embed_doc_image::embed_image!(
         "led_strip_animated",
         "docs/assets/led_strip_animated.png"
     )
@@ -622,6 +630,12 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// all sharing PIO0. It demonstrates setting lights on the first two strips
 /// and animating text on the 2D panel.
 ///
+/// ![GPIO0 strip preview][led_strip_gpio0]
+///
+/// ![GPIO3 strip preview][led_strip_simple]
+///
+/// ![GPIO4 panel preview][led_strip_gogo]
+///
 /// ```no_run
 /// # #![no_std]
 /// # #![no_main]
@@ -707,7 +721,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///         &mut frame_go_bottom,
 ///     )?;
 ///
-///     let frame_duration = Duration::from_millis(400);
+///     let frame_duration = Duration::from_secs(1);
 ///     gpio4_led2d
 ///         .animate([
 ///             (frame_go_top, frame_duration),
@@ -791,6 +805,27 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// On a Pico 2 with 3 PIOs available, you can use **3 instances of `led_strips!`** to drive **up to 12 independent LED strips**.
 ///
 /// If you only have **one strip** (or two), use [`led_strip!`] or [`led2d!`](macro@crate::led2d) instead for simpler syntax.
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "led_strip_gpio0",
+        "docs/assets/led_strip_gpio0.png"
+    )
+)]
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "led_strip_simple",
+        "docs/assets/led_strip_simple.png"
+    )
+)]
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "led_strip_gogo",
+        "docs/assets/led2d2.png"
+    )
+)]
 #[macro_export]
 macro_rules! led_strips {
     ($($tt:tt)*) => { $crate::__led_strips_impl! { $($tt)* } };

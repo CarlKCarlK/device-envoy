@@ -80,7 +80,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     // Single-strip on PIO0: gpio4 (12x8 LEDs = 96)
     let (gpio4_led2d,) = LedStripsPio0::new(p.PIO0, p.PIN_4, p.DMA_CH2, spawner)?;
 
-    let go_frame_duration = Duration::from_millis(600);
+    let go_frame_duration = Duration::from_secs(1);
     let snake_tick = Duration::from_millis(80);
 
     info!(

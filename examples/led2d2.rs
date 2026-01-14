@@ -62,7 +62,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     // Animate between the two frames indefinitely.
-    let frame_duration = Duration::from_millis(400);
+    let frame_duration = Duration::from_secs(1);
     led_12x8_animated
         .animate([(frame_0, frame_duration), (frame_1, frame_duration)])
         .await?;

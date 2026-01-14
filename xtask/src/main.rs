@@ -4,6 +4,7 @@
 
 mod video_frames_gen;
 mod led2d_generated;
+mod led_strip_generated;
 
 use clap::{Parser, Subcommand};
 use owo_colors::OwoColorize;
@@ -170,6 +171,10 @@ fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
     if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
         eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
+        eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     let examples = discover_examples(&workspace_root);
@@ -381,6 +386,10 @@ fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
     if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
         eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
+        eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     let arch = Arch::Arm;

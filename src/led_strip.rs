@@ -1,7 +1,99 @@
 //! A device abstraction for NeoPixel-style (WS2812) LED strips.
 //!
-//! - See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for LED-strip usage.
-//! - See the [`led2d`](mod@crate::led2d) module for 2D panel usage.
+//! See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for a
+//! concrete generated-struct example and [`led_strip!`] or [`led_strips!`](crate::led_strips!)
+//! for the macros that build these types.
+//!
+//! See the [`led2d`](mod@crate::led2d) module for 2D panel usage.
+//!
+//! # Example: Write a Single Frame1d
+//!
+//! In this example, we set every other LED to blue. Here, the generated struct is named
+//! `LedStripSimple`.
+//!
+//! ```no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use core::convert::Infallible;
+//! # use core::default::Default;
+//! # use core::result::Result::Ok;
+//! use device_kit::{Result, led_strip::{Frame1d, colors}};
+//! use device_kit::led_strip;
+//!
+//! led_strip! {
+//!     LedStripSimple {
+//!         pin: PIN_3,  // GPIO pin for LED data
+//!         len: 48,     // 48 LEDs
+//!         // other inputs set to their defaults
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let led_strip = LedStripSimple::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
+//!
+//!     let mut frame = Frame1d::new();
+//!     for pixel_index in (0..frame.len()).step_by(2) {
+//!         frame[pixel_index] = colors::BLUE;
+//!     }
+//!     led_strip.write_frame(frame).await?;
+//!     core::future::pending().await // run forever
+//! }
+//! ```
+//!
+//! # Example: Animate a Sequence
+//!
+//! This example animates a 96-LED strip through red, green, and blue frames, cycling
+//! continuously. Here, the generated struct is `LedStripAnimated`.
+//!
+//! ```no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use core::convert::Infallible;
+//! # use core::default::Default;
+//! # use core::result::Result::Ok;
+//! use device_kit::{Result, led_strip::{Current, Frame1d, Gamma, colors}};
+//! use device_kit::led_strip;
+//!
+//! led_strip! {
+//!     LedStripAnimated {
+//!         pin: PIN_4,                            // GPIO pin for LED data
+//!         len: 96,                               // 96 LEDs
+//!         pio: PIO1,                             // Use PIO resource 1
+//!         dma: DMA_CH3,                          // Use DMA channel 3
+//!         max_current: Current::Milliamps(1000), // 1A power budget
+//!         gamma: Gamma::Linear,                  // No color correction
+//!         max_frames: 3,                         // Up to 3 animation frames
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let led_strip = LedStripAnimated::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;
+//!
+//!     let frame_duration = embassy_time::Duration::from_millis(300);
+//!     led_strip
+//!         .animate([
+//!             (Frame1d::filled(colors::RED), frame_duration),
+//!             (Frame1d::filled(colors::GREEN), frame_duration),
+//!             (Frame1d::filled(colors::BLUE), frame_duration),
+//!         ])
+//!         .await?;
+//!     core::future::pending().await // run forever
+//! }
+//! ```
 
 /// Predefined RGB color constants from the `smart_leds` crate.
 ///
@@ -15,7 +107,7 @@ pub use smart_leds::colors;
 
 /// Gamma correction mode for LED strips.
 ///
-/// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
+/// See the [module documentation](mod@crate::led_strip) for usage examples.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Gamma {
     /// Linear gamma (no correction). Gamma = 1.0
@@ -123,7 +215,7 @@ pub type Rgb = RGB8;
 
 /// [`Rgb`] pixel data for an LED strip.
 ///
-/// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
+/// See the [module documentation](mod@crate::led_strip) for usage examples.
 ///
 /// Frames deref to `[Rgb; N]`, so you can mutate pixels directly before passing them to the generated strip's `write_frame` method.
 #[derive(Clone, Copy, Debug)]
@@ -135,7 +227,7 @@ impl<const N: usize> Frame1d<N> {
 
     /// Create a new blank (all black) frame.
     ///
-    /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
+    /// See the [module documentation](mod@crate::led_strip) for usage examples.
     #[must_use]
     pub const fn new() -> Self {
         Self([Rgb::new(0, 0, 0); N])
@@ -143,7 +235,7 @@ impl<const N: usize> Frame1d<N> {
 
     /// Create a frame filled with a single color.
     ///
-    /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
+    /// See the [module documentation](mod@crate::led_strip) for usage examples.
     #[must_use]
     pub const fn filled(color: Rgb) -> Self {
         Self([color; N])
@@ -361,7 +453,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// Writes a full frame to the LED strip. It remains displayed until another command
     /// replaces it.
     ///
-    /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for example usage.
+    /// See the [module documentation](mod@crate::led_strip) for example usage.
     pub async fn write_frame(&self, frame: Frame1d<N>) -> Result<()> {
         self.command_signal.signal(Command::DisplayStatic(frame));
         self.completion_signal.wait().await;
@@ -374,7 +466,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// Each frame is a tuple of `(Frame1d, Duration)`. Accepts arrays, `Vec`s, or any
     /// iterator that produces `(Frame1d, Duration)` tuples.
     ///
-    /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for example usage.
+    /// See the [module documentation](mod@crate::led_strip) for example usage.
     pub async fn animate(
         &self,
         frames: impl IntoIterator<Item = (Frame1d<N>, Duration)>,
@@ -502,7 +594,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// Use this macro to drive multiple independent LED strips and 2D panels from a single shared [PIO](crate#glossary) resource.
 /// This saves hardware resources compared to using separate [`led_strip!`] and [`led2d!`](macro@crate::led2d) invocations, each of which consumes a dedicated PIO resource.
 ///
-/// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) and
+/// See the [module documentation](mod@crate::led_strip) and
 /// the [`led2d`](mod@crate::led2d) module for details on using the generated types.
 ///
 /// We'll start with a complete example below, then cover required and optional fields in detail.
@@ -762,7 +854,7 @@ macro_rules! __led_strips_impl {
                     "LED strip wrapper generated by [`led_strips!`].\n\n",
                     "Derefs to provide all LED control methods. ",
                     "Created with [`", stringify!($group), "::new`]. ",
-                    "See [`led_strip_generated`] for a similar example."
+                    "See the [module documentation](mod@crate::led_strip) for a similar example."
                 )]
                 pub struct [<$label:camel LedStrip>] {
                     strip: $crate::led_strip::LedStrip<{ $len }, { $max_frames }>,
@@ -2189,7 +2281,7 @@ macro_rules! __led_strips_impl {
 
 /// Macro to generate a device abstraction for a NeoPixel-style (WS2812) LED strip.
 ///
-/// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
+/// See the [module documentation](mod@crate::led_strip) for usage examples.
 ///
 /// **Required fields:**
 ///
@@ -2535,89 +2627,8 @@ macro_rules! __led_strip_impl {
             }
 
             #[doc = concat!(
-                "A LED strip generated by the [`led_strip!`] or [`led_strips!`](crate::led_strips!) macro.\n\n",
-                "**This is a concrete example.** When you write your own [`led_strip!`] or [`led_strips!`](crate::led_strips!) invocation, the compiler generates \n",
-                "a struct with *your chosen name* (e.g., `LedStrip3`, `LedStripAnimated`) and your specified LED count. \n",
-                "Any struct generated by [`led_strip!`] or [`led_strips!`](crate::led_strips!) has the same interface and methods you see documented here.\n\n",
-                "## Configuration\n\n",
-                "Generated structs are specialized for their exact use case:\n",
-                "- **Number of LEDs** — Set via the `len` parameter in your [`led_strip!`] or [`led_strips!`](crate::led_strips!) invocation.\n",
-                "- **[PIO](crate#glossary) and [DMA](crate#glossary) resources** — Customized to the pins and channels you specify.\n",
-                "- **Power limiting, gamma correction, and max animation frames** — Configured via `max_current`, `gamma`, and `max_frames` parameters. See the [`led_strip!`] or [`led_strips!`](crate::led_strips!) macro documentation for complete details.\n\n",
-                "# Example: Write a Single Frame1d\n\n",
-                "In this example, we set every other LED to blue. Here, the generated struct is named `LedStripSimple`.\n\n",
-                "```rust,no_run\n",
-                "# #![no_std]\n",
-                "# #![no_main]\n",
-                "# use panic_probe as _;\n",
-                "# use core::convert::Infallible;\n",
-                "# use core::default::Default;\n",
-                "# use core::future;\n",
-                "# use core::result::Result::Ok;\n",
-                "# use embassy_executor::Spawner;\n",
-                "use device_kit::{\n",
-                "    Result,\n",
-                "    led_strip::{Frame1d, colors},\n",
-                "};\n\n",
-                "use device_kit::led_strip;\n\n",
-                "led_strip! {\n",
-                "    LedStripSimple {\n",
-                "        pin: PIN_3,  // GPIO pin for LED data\n",
-                "        len: 48,     // 48 LEDs\n",
-                "        // other inputs set to their defaults\n",
-                "    }\n",
-                "}\n\n",
-                "async fn example(spawner: Spawner) -> Result<Infallible> {\n",
-                "    let p = embassy_rp::init(Default::default());\n",
-                "    let led_strip = LedStripSimple::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;\n\n",
-                "    let mut frame = Frame1d::new();\n",
-                "    for pixel_index in (0..frame.len()).step_by(2) {\n",
-                "        frame[pixel_index] = colors::BLUE;\n",
-                "    }\n",
-                "    led_strip.write_frame(frame).await?;\n",
-                "    future::pending().await // run forever\n",
-                "}\n",
-                "```\n\n",
-                "# Example: Animate a Sequence\n\n",
-                "This example animates a 96-LED strip through red, green, and blue frames, cycling continuously. Here, the generated struct is `LedStripAnimated`.\n\n",
-                "```rust,no_run\n",
-                "# #![no_std]\n",
-                "# #![no_main]\n",
-                "# use panic_probe as _;\n",
-                "# use core::convert::Infallible;\n",
-                "# use core::default::Default;\n",
-                "# use core::future;\n",
-                "# use core::result::Result::Ok;\n",
-                "# use embassy_executor::Spawner;\n",
-                "use embassy_time::Duration;\n",
-                "use device_kit::{\n",
-                "    Result,\n",
-                "    led_strip::{Current, Frame1d, Gamma, colors},\n",
-                "};\n\n",
-                "use device_kit::led_strip;\n\n",
-                "led_strip! {\n",
-                "    LedStripAnimated {\n",
-                "        pin: PIN_4,                            // GPIO pin for LED data\n",
-                "        len: 96,                               // 96 LEDs\n",
-                "        pio: PIO1,                             // Use PIO block 1\n",
-                "        dma: DMA_CH3,                          // Use DMA channel 3\n",
-                "        max_current: Current::Milliamps(1000), // 1A power budget\n",
-                "        gamma: Gamma::Linear,                  // No color correction\n",
-                "        max_frames: 3,                         // Up to 3 animation frames\n",
-                "    }\n",
-                "}\n\n",
-                "async fn example(spawner: Spawner) -> Result<Infallible> {\n",
-                "    let p = embassy_rp::init(Default::default());\n",
-                "    let led_strip = LedStripAnimated::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;\n\n",
-                "    let frame_duration = Duration::from_millis(300);\n",
-                "    led_strip.animate([\n",
-                "        (Frame1d::filled(colors::RED), frame_duration),\n",
-                "        (Frame1d::filled(colors::GREEN), frame_duration),\n",
-                "        (Frame1d::filled(colors::BLUE), frame_duration),\n",
-                "    ]).await?;\n",
-                "    future::pending().await // run forever\n",
-                "}\n",
-                "```"
+                "LED strip generated by [`led_strip!`] or [`led_strips!`](crate::led_strips!).\n\n",
+                "See the [module documentation](mod@crate::led_strip) for usage and examples."
             )]
             pub struct $name {
                 strip: $crate::led_strip::LedStrip<{ $len }, { $max_frames }>,
@@ -2642,14 +2653,14 @@ macro_rules! __led_strip_impl {
                 /// Create a new LED strip instance of the struct type
                 /// defined by [`led_strip!`] or [`led_strips!`](crate::led_strips!).
                 ///
-                /// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for example usage.
+                /// See the [module documentation](mod@crate::led_strip) for example usage.
                 ///
                 /// The `pin`, `pio`, and `dma` parameters must correspond to the
                 /// GPIO pin, PIO resource, and DMA channel specified in the macro.
                 ///
                 /// - The [`led_strip!`] macro defaults to `PIO0` and `DMA_CH0` if not specified.
                 /// - The [`led_strips!`](crate::led_strips!) macro defaults to `PIO0` and
-                /// automatically assigns consecutive DMA channels to each strip, starting at `DMA_CH0`.                 
+                /// automatically assigns consecutive DMA channels to each strip, starting at `DMA_CH0`.
                 ///
                 /// # Parameters
                 ///
@@ -2784,7 +2795,7 @@ pub use led_strips;
 
 /// Used by [`led_strip!`] and [`led_strips!`] to budget current for LED strips.
 ///
-/// See [`LedStripGenerated`](crate::led_strip::led_strip_generated::LedStripGenerated) for usage examples.
+/// See the [module documentation](mod@crate::led_strip) for usage examples.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Current {
     /// Limit brightness to stay within a specific milliamp budget.

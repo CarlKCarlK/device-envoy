@@ -2,7 +2,8 @@ open-docs:
 	./scripts/open-docs.sh
 
 show-docs:
-	cargo docdoc && ./scripts/open-docs.sh
+	just docdoc
+	./scripts/open-docs.sh
 
 docdoc:
 	./scripts/docdoc.sh

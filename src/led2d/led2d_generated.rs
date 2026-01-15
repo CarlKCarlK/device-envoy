@@ -33,7 +33,7 @@ led2d! {
     max_current: Current::Unlimited,
     // Gamma correction mode (default: Gamma2_2)
     gamma: Gamma::Gamma2_2,
-    // Maximum animation frames (default: 16)
+    // Maximum number of aniamtion frames (default: 16)
     max_frames: 16,
     // Font variant (see [`Led2dFont`](crate::led2d::Led2dFont) for available fonts)
     font: Font3x4Trim,
@@ -101,7 +101,7 @@ impl Led2dGenerated {
     /// of calculating how much brightness is safe given that budget and the number of LEDs.
     pub const MAX_BRIGHTNESS: u8 =
         Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
-    /// Maximum animation frames allowed.
+    /// Maximum number of aniamtion frames allowed.
     pub const MAX_FRAMES: usize = 16;
 
     /// Create static resources.

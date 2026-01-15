@@ -1024,7 +1024,7 @@ pub use led2d_device;
 /// - `dma` — DMA channel (default: `DMA_CH0`)
 /// - `max_current` — Current budget (default: 250 mA)
 /// - `gamma` — Color curve (default: `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum animation frames for the generated strip (default: 16 frames)
+/// - `max_frames` — Maximum number of aniamtion frames for the generated strip (default: 16 frames)
 ///
 /// # Current Limiting
 ///
@@ -1773,7 +1773,7 @@ macro_rules! led2d_from_strip {
                 pub const BOTTOM_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<$cols_const, $rows_const>::BOTTOM_LEFT;
                 /// Bottom-right corner coordinate for embedded-graphics drawing.
                 pub const BOTTOM_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<$cols_const, $rows_const>::BOTTOM_RIGHT;
-                /// Maximum animation frames supported for this device.
+                /// Maximum number of aniamtion frames supported for this device.
                 pub const MAX_FRAMES: usize = $max_frames_const;
 
                 /// Create static resources.

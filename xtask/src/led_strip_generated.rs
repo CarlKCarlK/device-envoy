@@ -42,7 +42,7 @@ pub struct LedStripGeneratedStatic {
 impl LedStripGenerated {
     /// Number of LEDs in this strip.
     pub const LEN: usize = 48;
-    /// Maximum animation frames allowed.
+    /// Maximum number of aniamtion frames allowed.
     pub const MAX_FRAMES: usize = 16;
     /// Maximum brightness level, automatically limited by the power budget specified in `max_current`.
     ///

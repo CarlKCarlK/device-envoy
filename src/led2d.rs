@@ -14,7 +14,7 @@
 //!
 //! # Example: Write Text
 //!
-//! In this example, we render text on a 12×4 panel. Here, the generated struct is named `Led12x4`.
+//! In this example, we render text on a 12×4 panel. Here, the generated struct type is named `Led12x4`.
 //!
 //! ![LED panel preview][led2d1]
 //!
@@ -425,7 +425,7 @@ impl Led2dFont {
     }
 }
 
-// cmk0000000 needs links to led2d! and generated struct
+// cmk0000000 needs links to led2d! and generated struct type
 /// A 2D array of RGB pixels representing a single display frame.
 ///
 /// Frames are used to prepare images before sending them to the LED matrix. They support:
@@ -439,8 +439,8 @@ impl Led2dFont {
 /// at display coordinates (col, row). The physical mapping to the LED strip is handled
 /// automatically by the device abstraction.
 ///
-/// cmk000000000 do the generated structs also have these associated constants and documentation?
-/// cmk000000000 does the 1d frame and generated structs need them too?
+/// cmk000000000 do the generated struct typess also have these associated constants and documentation?
+/// cmk000000000 does the 1d frame and generated struct typess need them too?
 /// # Associated Constants
 ///
 /// - `WIDTH` — Frame2d width in pixels (columns)

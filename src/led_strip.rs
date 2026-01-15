@@ -19,15 +19,17 @@
 )]
 //! A device abstraction for NeoPixel-style (WS2812) LED strips.
 //!
-//! See [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a
-//! concrete generated-struct example and [`led_strip!`] or [`led_strips!`](crate::led_strips!)
-//! for the macros that build these types.
+//! LED strip device types are defined using the [`led_strip!`] and [`led_strips!`](crate::led_strips!) macros.
 //!
-//! See the [`led2d`](mod@crate::led2d) module for 2D panel usage.
+//! See [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a concrete example of the
+//! struct types produced by these macros. It documents the full set of methods and associated
+//! constants that are available on all generated LED strip types.
 //!
-//! # Example: Write a Single Frame1d
+//! For examples that treat LED strips as 2D panels, see the [`led2d`](mod@crate::led2d) module.
 //!
-//! In this example, we set every other LED to blue and gray. Here, the generated struct is named
+//! # Example: Write a Single 1-Dimensional Frame
+//!
+//! In this example, we set every other LED to blue and gray. Here, the generated struct type is named
 //! `LedStripSimple`.
 //!
 //! ![LED strip preview][led_strip_simple]
@@ -42,6 +44,7 @@
 //! use device_kit::{Result, led_strip::{Frame1d, colors}};
 //! use device_kit::led_strip;
 //!
+//! // Define LedStripSimple, a struct type for a 48-LED strip on PIN_3.
 //! led_strip! {
 //!     LedStripSimple {
 //!         pin: PIN_3,  // GPIO pin for LED data
@@ -57,13 +60,19 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     let led_strip = LedStripSimple::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
+//!     // Create an LedStripSimple instance.
+//!     let led_strip_simple = LedStripSimple::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
 //!
+//!     // Create and write a frame with alternating blue and gray pixels.
 //!     let mut frame = Frame1d::new();
 //!     for pixel_index in 0..LedStripSimple::LEN {
+//!         // Directly index into the frame buffer.
 //!         frame[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
 //!     }
-//!     led_strip.write_frame(frame).await?;
+//!
+//!     // Display the frame on the LED strip (until replaced).
+//!     led_strip_simple.write_frame(frame).await?;
+//!
 //!     core::future::pending().await // run forever
 //! }
 //! ```
@@ -71,7 +80,7 @@
 //! # Example: Animate a Sequence
 //!
 //! This example animates a 96-LED strip through red, green, and blue frames, cycling
-//! continuously. Here, the generated struct is `LedStripAnimated`.
+//! continuously. Here, the generated struct type is named `LedStripAnimated`.
 //!
 //! ![LED strip preview][led_strip_animated]
 //!
@@ -85,6 +94,8 @@
 //! use device_kit::{Result, led_strip::{Current, Frame1d, Gamma, colors}};
 //! use device_kit::led_strip;
 //!
+//! // Define LedStripAnimated, a struct type for a 96-LED strip on PIN_4.
+//! // We change some defaults including setting a 1A power budget and disabling gamma correction.
 //! led_strip! {
 //!     LedStripAnimated {
 //!         pin: PIN_4,                            // GPIO pin for LED data
@@ -104,16 +115,18 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     let led_strip = LedStripAnimated::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;
+//!     let led_strip_animated = LedStripAnimated::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;
 //!
+//!     // Create a sequence of frames and durations and then animate them (looping, until replaced).
 //!     let frame_duration = embassy_time::Duration::from_millis(300);
-//!     led_strip
+//!     led_strip_animated
 //!         .animate([
 //!             (Frame1d::filled(colors::RED), frame_duration),
 //!             (Frame1d::filled(colors::GREEN), frame_duration),
 //!             (Frame1d::filled(colors::BLUE), frame_duration),
 //!         ])
 //!         .await?;
+//!
 //!     core::future::pending().await // run forever
 //! }
 //! ```

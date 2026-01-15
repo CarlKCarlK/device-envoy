@@ -248,10 +248,10 @@ use crate::Result;
 
 pub mod led_strip_generated;
 
-/// RGB color representation re-exported from the `smart_leds` crate.
+/// RGB color representation re-exported from the `smart_leds` crate for compatibility with generated LED devices.
 pub type Rgb = RGB8;
 
-/// [`Rgb`] pixel data for an LED strip.
+/// [`Rgb`] pixel frame data for a 1-dimensional LED strip.
 ///
 /// See the [module documentation](mod@crate::led_strip) for usage examples.
 ///

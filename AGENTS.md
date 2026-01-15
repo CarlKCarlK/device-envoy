@@ -119,6 +119,7 @@ Preserving comments: When changing code, generally don't remove TODO's and cmk's
 
 - Start module docs with "A device abstraction ..." and have them point readers to the main struct docs.
 - Put a single compilable example on the primary struct; other public docs should link back to that example instead of duplicating snippets.
+- When linking to module documentation, name the module in the link text (for example, "led_strip module documentation").
 
 - **Markdown formatting**: When creating or editing markdown files, follow these rules to avoid linter warnings:
   - Add blank lines before and after lists (both bulleted and numbered)

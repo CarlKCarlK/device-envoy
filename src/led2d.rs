@@ -1008,7 +1008,7 @@ pub use led2d_device;
 
 /// Macro to generate a device abstraction for a NeoPixel-style (WS2812) 2D LED panel.
 ///
-/// See the [module documentation](mod@crate::led2d) for usage examples.
+/// See the [led2d module documentation](mod@crate::led2d) for usage examples.
 ///
 /// **Required fields:**
 ///

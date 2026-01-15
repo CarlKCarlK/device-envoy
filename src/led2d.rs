@@ -517,15 +517,25 @@ impl<const W: usize, const H: usize> Frame2d<W, H> {
     pub const HEIGHT: usize = H;
     /// Total number of pixels (WIDTH × HEIGHT).
     pub const LEN: usize = W * H;
-    /// Frame2d dimensions as a [`Size`] for embedded-graphics.
+    /// Frame dimensions as a [`Size`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const SIZE: Size = Size::new(W as u32, H as u32);
-    /// Top-left corner coordinate.
+    /// Top-left corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const TOP_LEFT: Point = Point::new(0, 0);
-    /// Top-right corner coordinate.
+    /// Top-right corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const TOP_RIGHT: Point = Point::new((W - 1) as i32, 0);
-    /// Bottom-left corner coordinate.
+    /// Bottom-left corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const BOTTOM_LEFT: Point = Point::new(0, (H - 1) as i32);
-    /// Bottom-right corner coordinate.
+    /// Bottom-right corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const BOTTOM_RIGHT: Point = Point::new((W - 1) as i32, (H - 1) as i32);
 
     /// Create a new blank (all black) frame.

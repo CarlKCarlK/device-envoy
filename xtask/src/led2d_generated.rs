@@ -50,7 +50,7 @@ led2d! {
 pub struct Led2dGenerated;
 
 #[cfg(doc)]
-use crate::led2d::{Frame2d, Led2dStatic};
+use crate::led2d::{Frame2d, Led2dStatic, Point, Size};
 #[cfg(doc)]
 use crate::led_strip::Rgb;
 #[cfg(doc)]
@@ -76,6 +76,26 @@ impl Led2dGenerated {
     pub const WIDTH: usize = 12;
     /// Number of rows in the panel.
     pub const HEIGHT: usize = 4;
+    /// Frame dimensions as a [`Size`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
+    pub const SIZE: Size = Frame2d::<12, 4>::SIZE;
+    /// Top-left corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
+    pub const TOP_LEFT: Point = Frame2d::<12, 4>::TOP_LEFT;
+    /// Top-right corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
+    pub const TOP_RIGHT: Point = Frame2d::<12, 4>::TOP_RIGHT;
+    /// Bottom-left corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
+    pub const BOTTOM_LEFT: Point = Frame2d::<12, 4>::BOTTOM_LEFT;
+    /// Bottom-right corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
+    pub const BOTTOM_RIGHT: Point = Frame2d::<12, 4>::BOTTOM_RIGHT;
     /// Total number of LEDs in this panel (WIDTH * HEIGHT).
     pub const LEN: usize = 48;
     /// Maximum brightness level, automatically limited by the power budget specified in `max_current`.

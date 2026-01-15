@@ -14,7 +14,7 @@ name = "device_kit"
 path = "src/lib.rs"
 
 [package.metadata.docs.rs]
-features = ["doc-images"]
+features = ["doc-images", "pico2", "arm"]
 
 # Compile-only tests (not run, just type-checked)
 [[bin]]

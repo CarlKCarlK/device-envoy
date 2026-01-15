@@ -632,7 +632,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 }
 
 /// Macro to generate multiple NeoPixel-style (WS2812) LED strips and panels
-/// that share a single PIO resource.
+/// that share a single [PIO resource](crate#glossary).
 ///
 /// See [`LedStripGenerated`](led_strip_generated::LedStripGenerated)
 /// and [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated)
@@ -779,7 +779,9 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// - `dma` — DMA channel (default: auto-assigned by strip order)
 /// - `gamma` — Gramma correction curve (default: `Gamma::Gamma2_2`)
 /// - `max_frames` — Maximum number of aniamtion frames (default: 16 frames)
-/// - `led2d` — Marks this strip as a 2D LED panel and enables 2D rendering support (optional, see below)
+/// - `led2d` — Marks this strip as a 2D LED panel and enables 2D rendering support (optional, see below).
+///    Detailed 2D rendering APIs, examples, and animation support are documented
+///    in the [`led2d` module](mod@crate::led2d).
 ///
 /// ## 2D Panel Configuration (`led2d`)
 ///
@@ -792,34 +794,29 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// - `led_layout` — Physical layout mapping. See [`LedLayout`](crate::led2d::layout::LedLayout) for details.
 /// - `font` — Built-in font for text rendering. See [`Led2dFont`](crate::led2d::Led2dFont) for available fonts.
 ///
-/// Detailed 2D rendering APIs, examples, and animation support are documented
-/// in the [`led2d` module](mod@crate::led2d).
-///
 /// # Current Limiting
 ///
-/// The `max_current` field is **required for each strip/panel** because LED currents add up fast.
-/// **When powering from the Pico's USB rail (pin 40):** You have roughly 500 mA total
-/// to work with for all your LED strips combined. For larger arrays or multiple panels,
-/// use a separate 5V power supply instead.
+/// The `max_current` field is **required for each strip or panel** to prevent
+/// over-current conditions.
 ///
-/// A single 8-LED strip at full brightness draws ~480 mA. The `max_current` value scales
-/// brightness via a compile-time lookup table (no runtime cost) to stay within budget.
-/// Each WS2812 LED can draw up to ~60 mA at full white brightness:
-/// - 8 LEDs × 60 mA = 480 mA at full brightness
-/// - `max_current: Current::Milliamps(500)` on a strip → ~100% brightness across 8 LEDs
-/// - `max_current: Current::Milliamps(250)` on a strip → ~52% brightness across 8 LEDs
+/// When powering LEDs from the Pico’s 5 V USB rail (pin 40), keep the **total
+/// current across all strips below ~500 mA**. LED current draw adds up quickly,
+/// especially at full brightness. For larger installations, use an external 5V
+/// power supply.
 ///
-/// For multiple strips on USB power, add up your per-strip budgets. Two 8-LED strips at
-/// 250 mA each = 500 mA total (the USB limit). Plan accordingly or switch to external power.
+/// The `max_current` value sets a per-strip current budget. Brightness is scaled
+/// automatically using a compile-time lookup table (no runtime cost) to stay
+/// within this budget.
 ///
 /// # Color Correction (Gamma)
 ///
 /// The `gamma` field applies a color response curve to make colors look more natural:
 ///
-/// - [`Gamma::Linear`] — No correction (raw values)
-/// - [`Gamma::Gamma2_2`] — Standard sRGB curve (default, most natural-looking)
+/// - [`Gamma::Linear`] — No correction (raw, linear values)
+/// - [`Gamma::Gamma2_2`] — sRGB-like display gamma (γ ≈ 2.2, default)
 ///
-/// The gamma curve is baked into a compile-time lookup table, so it has no runtime cost.
+/// The gamma curve is implemented as a compile-time lookup table, so it has no
+/// runtime cost.
 ///
 /// # Capacity and Limitations
 ///
@@ -832,9 +829,6 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///
 /// - **Pico 1** provides 2 PIO resources, supporting up to **8 LED strips or panels**
 /// - **Pico 2** provides 3 PIO resources, supporting up to **12 LED strips or panels**
-///
-/// These limits are enforced by the target hardware and reflect the currently
-/// supported platforms for this crate.
 #[cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!(

@@ -47,6 +47,24 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         &self.map
     }
 
+    /// Number of columns in the layout.
+    #[must_use]
+    pub const fn width(&self) -> usize {
+        W
+    }
+
+    /// Number of rows in the layout.
+    #[must_use]
+    pub const fn height(&self) -> usize {
+        H
+    }
+
+    /// Total number of LEDs in the layout.
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        N
+    }
+
     /// Reverse lookup: (row, col) → LED index in row-major order.
     ///
     /// ```rust,no_run

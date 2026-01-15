@@ -24,10 +24,7 @@ led2d! {
     pin: PIN_3,
     // DMA channel for LED data transfer (default: DMA_CH0)
     dma: DMA_CH0,
-    // Panel dimensions
-    width: 12,
-    height: 4,
-    // LED layout mapping (see [`layout::LedLayout`](crate::led2d::layout::LedLayout) for options)
+    // LED layout mapping (defines panel dimensions)
     led_layout: LED_LAYOUT,
     // Power budget (default: unlimited)
     max_current: Current::Unlimited,

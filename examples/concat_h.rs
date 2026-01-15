@@ -23,8 +23,6 @@ led2d! {
     pio: PIO1,
     pin: PIN_4,
     dma: DMA_CH1,
-    width: 24,
-    height: 4,
     led_layout: LED_LAYOUT_24X4,
     max_current: Current::Milliamps(1000),
     gamma: Gamma::Gamma2_2,

@@ -29,8 +29,6 @@ led2d! {
     pio: PIO0,
     pin: PIN_3,
     dma: DMA_CH0,
-    width: 3,
-    height: 2,
     led_layout: LED2X3_ROW_MAJOR,
     max_current: Current::Milliamps(100),
     gamma: Gamma::Linear,

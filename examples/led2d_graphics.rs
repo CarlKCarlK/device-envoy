@@ -24,8 +24,6 @@ const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.concat_v(LED_LAYOU
 led2d! {
     pub Led12x8,
     pin: PIN_4,
-    width: 12,
-    height: 8,
     led_layout: LED_LAYOUT_12X8,
     font: Font4x6Trim,
 }

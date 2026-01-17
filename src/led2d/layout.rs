@@ -1,4 +1,5 @@
 //! A fully const module that tells the x,y location of each LED pixel.
+//! cmk0000000 read and review this
 //!
 //! See [`LedLayout`] for examples including: linear strips,
 //! serpentine grids, rotations, flips, and concatenation.

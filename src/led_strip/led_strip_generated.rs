@@ -16,7 +16,7 @@ led_strip! {
 }
 
 #[cfg(doc)]
-/// Auto-generated example type for rustdoc.
+/// Auto-generated example type for rustdoc. // cmk000000 improve
 ///
 /// See the [`led_strip`](mod@crate::led_strip) module docs for usage.
 pub struct LedStripGenerated;

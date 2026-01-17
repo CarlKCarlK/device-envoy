@@ -17,7 +17,7 @@
         "docs/assets/led_strip_animated.png"
     )
 )]
-//! A device abstraction for NeoPixel-style (WS2812) LED strips.
+//! A device abstraction for NeoPixel-style (WS2812) LED strips. For 2-dimensional panels, see the [`led2d`](mod@crate::led2d) module.
 //!
 //! LED strip device types are defined using the [`led_strip!`] and [`led_strips!`](crate::led_strips!) macros.
 //!

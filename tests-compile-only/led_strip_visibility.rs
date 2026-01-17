@@ -3,8 +3,8 @@
 #![allow(dead_code)]
 //! Test visibility support for led_strip! macro.
 
-use panic_probe as _;
 use device_kit::led_strip;
+use panic_probe as _;
 
 // Test default visibility (public)
 led_strip! {
@@ -75,7 +75,7 @@ mod test_module_visibility {
             len: 16,
         }
     }
-    
+
     // Module function that uses the type
     pub fn use_module_type() -> &'static str {
         type _Test = LedStripModulePrivate;

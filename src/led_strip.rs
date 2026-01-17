@@ -1078,7 +1078,7 @@ macro_rules! __led_strips_impl {
                     let dma = dma.into();
 
                     let (bus, sm) = state_machine.into_parts();
-                    let token = [<$group:snake _ $label:snake _animation_task>](
+                    let token = [<$group:snake _ $label:snake _device_task>](
                         bus,
                         sm,
                         dma,
@@ -1109,7 +1109,7 @@ macro_rules! __led_strips_impl {
             }
 
             #[::embassy_executor::task]
-            async fn [<$group:snake _ $label:snake _animation_task>](
+            async fn [<$group:snake _ $label:snake _device_task>](
                 bus: &'static $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$pio>,
                 sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$pio, $sm_index>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
@@ -1197,7 +1197,7 @@ macro_rules! __led_strips_impl {
                     let dma = dma.into();
 
                     let (bus, sm) = state_machine.into_parts();
-                    let token = [<$group:snake _ $label:snake _animation_task>](
+                    let token = [<$group:snake _ $label:snake _device_task>](
                         bus,
                         sm,
                         dma,
@@ -1228,7 +1228,7 @@ macro_rules! __led_strips_impl {
             }
 
             #[::embassy_executor::task]
-            async fn [<$group:snake _ $label:snake _animation_task>](
+            async fn [<$group:snake _ $label:snake _device_task>](
                 bus: &'static $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$pio>,
                 sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$pio, $sm_index>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
@@ -2967,7 +2967,7 @@ macro_rules! __led_strip_impl {
                     let sm0 = [<$name:snake _split_sm0>](pio);
                     let (bus, sm) = sm0.into_parts();
 
-                    let token = [<$name:snake _device_loop>](
+                    let token = [<$name:snake _device_task>](
                         bus,
                         sm,
                         dma,
@@ -2999,7 +2999,7 @@ macro_rules! __led_strip_impl {
             }
 
             #[::embassy_executor::task]
-            async fn [<$name:snake _device_loop>](
+            async fn [<$name:snake _device_task>](
                 bus: &'static $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$pio>,
                 sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$pio, 0>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,

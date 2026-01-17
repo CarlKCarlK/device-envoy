@@ -1618,7 +1618,7 @@ macro_rules! led2d_from_strip {
 
             // Generate the task wrapper
             $crate::led2d::led2d_device_task!(
-                [<$name:snake _device_loop>],
+                [<$name:snake _device_task>],
                 &'static $strip_type,
                 { $led_layout_const.len() },
                 $max_frames_const
@@ -1669,7 +1669,7 @@ macro_rules! led2d_from_strip {
                     static STATIC: [<$name Static>] = [<$name>]::new_static();
 
                     defmt::info!("Led2d::new: spawning device task");
-                    let token = [<$name:snake _device_loop>](
+                    let token = [<$name:snake _device_task>](
                         &STATIC.led2d_static.command_signal,
                         &STATIC.led2d_static.completion_signal,
                         led_strip,

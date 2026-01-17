@@ -61,7 +61,7 @@ use colors::{BLACK, BLUE, GREEN, RED, YELLOW};
 
 led_strips! {
     pio: PIO1,
-    pub LedStrips1 {
+    LedStrips1 {
         Gpio0LedStrip: { dma: DMA_CH1, pin: PIN_0, len: 8, max_current: Current::Milliamps(50) },
         Gpio14LedStrip: { dma: DMA_CH4, pin: PIN_14, len: 48, max_current: Current::Milliamps(100) }
     }

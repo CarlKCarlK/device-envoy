@@ -37,7 +37,7 @@ use smart_leds::RGB8;
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 
 led2d! {
-    pub Led12x4 {
+    Led12x4 {
         pio: PIO0,
         pin: PIN_3,
         dma: DMA_CH1,
@@ -170,7 +170,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     .execute_minutes_seconds(&clock, &mut button, &time_sync, &led12x4)
                     .await?
             }
-            State::EditOffset => {
+        Led12x4 {
                 state
                     .execute_edit_offset(&clock, &mut button, &timezone_field, &led12x4)
                     .await?

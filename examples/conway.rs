@@ -29,7 +29,7 @@ const LED_LAYOUT_8X12: LedLayout<96, 8, 12> = LED_LAYOUT_12X4.concat_v(LED_LAYOU
 
 // cmk000 add default
 led2d! {
-    pub Led8x12 {
+    Led8x12 {
         pio: PIO0,
         pin: PIN_4,
         dma: DMA_CH0,

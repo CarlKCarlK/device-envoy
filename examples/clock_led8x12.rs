@@ -47,7 +47,7 @@ const LED8X12_STRIP_MAX_FRAMES: usize = 48;
 const LED8X12_STRIP_MAX_FRAMES: usize = 48;
 
 led2d! {
-    pub Led8x12 {
+    Led8x12 {
         pio: PIO1,
         pin: PIN_4,
         dma: DMA_CH1,

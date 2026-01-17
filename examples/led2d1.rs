@@ -13,7 +13,7 @@ use panic_probe as _;
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 
 led2d! {
-    pub Led12x4 {
+    Led12x4 {
         pin: PIN_3,
         led_layout: LED_LAYOUT_12X4,
         font: Font3x4Trim,

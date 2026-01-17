@@ -21,7 +21,7 @@ const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw(
 
 led_strips! {
     pio: PIO0, // Optional; defaults to PIO0.
-    pub LedStrips0 { // Name for this collection of strips.
+    LedStrips0 { // Name for this collection of strips.
         Gpio0LedStrip: {                            // Exact struct name (not prefix).
             pin: PIN_0,                             // GPIO pin for LED data signal.
             len: 8,                                 // 8 LEDs on this strip.

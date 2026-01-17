@@ -12,7 +12,7 @@ use panic_probe as _;
 
 // Two WS2812B 4x12 LED panels (48 pixels each) sharing PIO0
 led_strips! {
-    pub LedStrips0 {
+    LedStrips0 {
         Gpio3LedStrip: { pin: PIN_3, len: 48, max_current: Current::Milliamps(100), max_frames: 48 },
         Gpio4LedStrip: { pin: PIN_4, len: 48, max_current: Current::Milliamps(100), max_frames: 48 }
     }

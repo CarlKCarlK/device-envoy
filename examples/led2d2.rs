@@ -24,7 +24,7 @@ const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.concat_v(LED_LAYOU
 const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
 
 led2d! {
-    pub Led12x8Animated {
+    Led12x8Animated {
         pin: PIN_4, // GPIO pin for LED data signal
         led_layout: LED_LAYOUT_12X8_ROTATED, // Two 12×4 panels stacked and rotated
         font: Font4x6Trim, // Use a 4x6 pixel font without the usual 1 pixel spacing

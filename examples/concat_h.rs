@@ -19,7 +19,7 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 const LED_LAYOUT_24X4: LedLayout<96, 24, 4> = LED_LAYOUT_12X4.concat_h(LED_LAYOUT_12X4);
 
 led2d! {
-    pub Led24x4Concat {
+    Led24x4Concat {
         pio: PIO1,
         pin: PIN_4,
         dma: DMA_CH1,

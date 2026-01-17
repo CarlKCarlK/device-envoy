@@ -36,7 +36,7 @@
 //! // cmk0000000 does the static have the same visibility as the struct? should it?
 //! // Generate a type named `Led12x4`.
 //! led2d! {
-//!     pub Led12x4 {
+//!     Led12x4 {
 //!         pin: PIN_3,                          // GPIO pin for LED data signal
 //!         led_layout: LED_LAYOUT_12X4,         // LED layout mapping (defines dimensions)
 //!         font: Font3x4Trim,                   // Font variant
@@ -87,7 +87,7 @@
 //!
 //! // Generate a type named `Led12x8Animated`.
 //! led2d! {
-//!     pub Led12x8Animated {
+//!     Led12x8Animated {
 //!         pin: PIN_4,                           // GPIO pin for LED data signal
 //!         led_layout: LED_LAYOUT_12X8_ROTATED,  // Two 12×4 panels stacked and rotated
 //!         font: Font4x6Trim,                    // Use a 4x6 pixel font without the usual 1 pixel padding

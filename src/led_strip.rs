@@ -680,7 +680,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///
 /// led_strips! {
 ///     pio: PIO0,                          // Optional; defaults to PIO0.
-///     pub LedStrips0 {                    // Name for this group of LED strips/panels.
+///     LedStrips0 {                        // Name for this group of LED strips/panels.
 ///         // 1. a 8-LED strip on GPIO0
 ///         Gpio0LedStrip: {                // Exact struct name for this strip.
 ///             pin: PIN_0,                 // GPIO pin for LED data signal.

@@ -4,7 +4,7 @@
     doc = ::embed_doc_image::embed_image!("led2d2", "docs/assets/led2d2.png")
 )]
 //! A device abstraction for rectangular NeoPixel-style (WS2812) LED panel displays.
-//! For 1-dimensional strips, see the [`led_strip`](mod@crate::led_strip) module.
+//! For 1-dimensional LED strips, see the [`led_strip`](mod@crate::led_strip) module.
 //!
 //! This page provides the primary documentation and examples for programming LED panels.
 //! The device abstraction supports text, graphics, and animation.
@@ -144,8 +144,12 @@
 pub use paste;
 
 /// Re-exported from the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
+///
+/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Point.html) Documenation:
 pub use embedded_graphics::geometry::Point;
 /// Re-exported from the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
+///
+/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Size.html) Documenation:
 pub use embedded_graphics::geometry::Size;
 
 pub mod layout;
@@ -1027,7 +1031,7 @@ pub use led2d_device;
 /// - `dma` — DMA channel (default: `DMA_CH0`)
 /// - `max_current` — Current budget (default: 250 mA)
 /// - `gamma` — Color curve (default: `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum number of aniamtion frames for the generated strip (default: 16 frames)
+/// - `max_frames` — Maximum number of animation frames for the generated strip (default: 16 frames)
 ///
 /// # Current Limiting
 ///
@@ -1052,7 +1056,7 @@ pub use led2d_device;
 /// The `gamma` field applies a color response curve to make colors look more natural:
 ///
 /// - [`Gamma::Linear`](`crate::led_strip::Gamma::Linear`) — No correction (raw values)
-/// - [`Gamma::Gamma2_2`](`crate::led_strip::Gamma::Gamma2_2`) — Standard sRGB curve (default, most natural-looking)
+/// - [`Gamma::Gamma2_2`](`crate::led_strip::Gamma::Gamma2_2`) — sRGB-like curve (default; often looks most natural)
 ///
 /// The gamma curve is baked into a compile-time lookup table, so it has no
 /// runtime cost.
@@ -1060,7 +1064,7 @@ pub use led2d_device;
 /// # Related Macros
 ///
 /// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other panels or LED strips (includes examples)
-/// - [`led_strip!`](mod@crate::led_strip) — For 1-dimensional strips
+/// - [`led_strip!`](mod@crate::led_strip) — For 1-dimensional LED strips
 #[macro_export]
 #[cfg(not(feature = "host"))]
 macro_rules! led2d {
@@ -1651,7 +1655,7 @@ macro_rules! led2d_from_strip {
                 pub const BOTTOM_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::BOTTOM_LEFT;
                 /// Bottom-right corner coordinate for embedded-graphics drawing.
                 pub const BOTTOM_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::BOTTOM_RIGHT;
-                /// Maximum number of aniamtion frames supported for this device.
+                /// Maximum number of animation frames supported for this device.
                 pub const MAX_FRAMES: usize = $max_frames_const;
 
                 /// Create static resources.

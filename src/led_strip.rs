@@ -140,7 +140,7 @@
 ///
 /// Conversion to [`Rgb888`] via [`ToRgb888::to_rgb888`].
 ///
-/// # [`smart_leds` docs](https://docs.rs/smart-leds/latest/smart_leds/type.RGB8.html)
+/// # [`smart_leds`](https://docs.rs/smart-leds/latest/smart_leds/type.RGB8.html) Documentation:
 #[doc(inline)]
 pub use smart_leds::RGB8;
 
@@ -167,7 +167,7 @@ pub use smart_leds::colors;
 ///
 /// Conversion to [`RGB8`] via [`ToRgb8::to_rgb8`].
 ///
-/// # [`embedded-graphics` docs](https://docs.rs/embedded-graphics/latest/embedded_graphics/pixelcolor/struct.Rgb888.html)
+/// # [`embedded-graphics`](https://docs.rs/embedded-graphics/latest/embedded_graphics/pixelcolor/struct.Rgb888.html) Documentation:
 #[doc(inline)]
 pub use embedded_graphics::pixelcolor::Rgb888;
 
@@ -912,7 +912,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///
 /// - `dma` — DMA channel (default: auto-assigned by strip order)
 /// - `gamma` — Gramma correction curve (default: `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum number of aniamtion frames (default: 16 frames)
+/// - `max_frames` — Maximum number of animation frames (default: 16 frames)
 /// - `led2d` — Marks this strip as a 2D LED panel and enables 2D rendering support (optional, see below).
 ///    Detailed 2D rendering APIs, examples, and animation support are documented
 ///    in the [`led2d` module](mod@crate::led2d).
@@ -2667,7 +2667,7 @@ macro_rules! __led_strips_impl {
 /// - `dma` — DMA channel (default: `DMA_CH0`)
 /// - `max_current` — Current budget (default: 250 mA)
 /// - `gamma` — Color curve (default: `Gamma::Gamma2_2`)
-/// - `max_frames` — Maximum number of aniamtion frames (default: 16 frames)
+/// - `max_frames` — Maximum number of animation frames (default: 16 frames)
 ///
 /// # Current Limiting
 ///
@@ -2692,7 +2692,7 @@ macro_rules! __led_strips_impl {
 /// The `gamma` field applies a color response curve to make colors look more natural:
 ///
 /// - [`Gamma::Linear`] — No correction (raw values)
-/// - [`Gamma::Gamma2_2`] — Standard sRGB curve (default, most natural-looking)
+/// - [`Gamma::Gamma2_2`] — sRGB-like curve (default; often looks most natural)
 ///
 /// The gamma curve is baked into a compile-time lookup table, so it has no
 /// runtime cost.

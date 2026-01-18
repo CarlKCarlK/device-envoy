@@ -131,13 +131,30 @@
 //! }
 //! ```
 
-/// Predefined RGB color constants from the `smart_leds` crate.
+/// 8-bit-per-channel RGB color re-exported from the
+/// [`smart_leds`](https://docs.rs/smart-leds/latest/smart_leds/index.html) crate.
 ///
-/// Common colors include `RED`, `GREEN`, `BLUE`, `YELLOW`, `WHITE`, `BLACK`, `CYAN`, `MAGENTA`, `ORANGE`, `PURPLE`.
+/// Used in [`Frame1d`] and [Frame2d](crate::led2d::Frame2d) for pixel colors.
+///
+/// Zero-cost conversion to [`Rgb888`] via [`rgb8_to_rgb888`].
+///
+/// # [`smart_leds` docs](https://docs.rs/smart-leds/latest/smart_leds/type.RGB8.html)
+#[doc(inline)]
+pub use smart_leds::RGB8;
+
+/// Predefined [`RGB8`] color constants re-exported from the
+/// [`smart_leds`](https://docs.rs/smart-leds/latest/smart_leds/index.html) crate.
 #[doc(inline)]
 pub use smart_leds::colors;
 
-/// 8-bit-per-channel RGB color (24-bit total) from `embedded_graphics`.
+/// 8-bit-per-channel RGB color re-exported from the
+/// [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
+///
+/// See [Frame2d](crate::led2d::Frame2d) for usage examples of [`Rgb888`] and [`RGB8`].
+///
+/// Zero-cost conversion to [`RGB8`] via [`rgb888_to_rgb8`].
+///
+/// # [`embedded-graphics` docs](https://docs.rs/embedded-graphics/latest/embedded_graphics/pixelcolor/struct.Rgb888.html)
 #[doc(inline)]
 pub use embedded_graphics::pixelcolor::Rgb888;
 
@@ -260,9 +277,6 @@ use embassy_sync::once_lock::OnceLock;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use heapless::Vec;
-/// 8-bit-per-channel RGB color (24-bit total) from `smart_leds`.
-#[doc(inline)]
-pub use smart_leds::RGB8;
 
 use crate::Result;
 

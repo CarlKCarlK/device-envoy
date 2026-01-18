@@ -1,4 +1,5 @@
 #![cfg(feature = "host")]
+//cmk000000000000000 we can't have this file!
 
 use core::ops::{Deref, DerefMut};
 use embedded_graphics::prelude::RgbColor;
@@ -7,7 +8,7 @@ use embedded_graphics::prelude::RgbColor;
 #[doc(inline)]
 pub use smart_leds::colors;
 
-/// 8-bit-per-channel RGB color (24-bit total) from `embedded_graphics`.
+/// 8-bit-per-channel RGB color from `embedded_graphics`.
 #[doc(inline)]
 pub use embedded_graphics::pixelcolor::Rgb888;
 

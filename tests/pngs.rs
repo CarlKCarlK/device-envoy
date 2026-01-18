@@ -1,11 +1,10 @@
 #![cfg(feature = "host")]
 
+use device_kit::led_strip::{Frame1d, Rgb888};
 use device_kit::led2d::{Frame2d, Led2dFont, render_text_to_frame};
-use device_kit::led_strip::Frame1d;
 use device_kit::to_png::{write_frame_png_with_gamma, write_frames_apng_with_gamma};
 use embassy_time::Duration;
 use embedded_graphics::{
-    pixelcolor::Rgb888,
     prelude::*,
     primitives::{Circle, PrimitiveStyle, Rectangle},
 };
@@ -281,7 +280,10 @@ fn assert_png_matches_expected_with_gamma<F, const W: usize, const H: usize>(
 where
     F: FnOnce() -> Frame2d<W, H>,
 {
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let frame = build_frame();
     let expected_path = docs_assets_path(filename);
     if std::env::var_os("DEVICE_KIT_UPDATE_PNGS").is_some() {
@@ -313,16 +315,14 @@ fn assert_strip_png_matches_expected_with_gamma<F, const N: usize>(
 where
     F: FnOnce() -> Frame1d<N>,
 {
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let frame = build_frame();
     let expected_path = docs_assets_path(filename);
     if std::env::var_os("DEVICE_KIT_UPDATE_PNGS").is_some() {
-        write_strip_png_with_gamma(
-            &frame,
-            &expected_path,
-            target_width,
-            preview_inverse_gamma,
-        )?;
+        write_strip_png_with_gamma(&frame, &expected_path, target_width, preview_inverse_gamma)?;
         println!("updated PNG at {}", expected_path.display());
         return Ok(());
     }
@@ -369,7 +369,10 @@ fn assert_strip_apng_matches_expected_with_gamma<F, const N: usize, const M: usi
 where
     F: FnOnce() -> [Frame1d<N>; M],
 {
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     assert!(frame_delay_ms > 0, "frame_delay_ms must be positive");
     let frames = build_frames();
     let expected_path = docs_assets_path(filename);
@@ -440,7 +443,10 @@ fn assert_apng_matches_expected_for_frames_with_gamma<const W: usize, const H: u
     preview_inverse_gamma: f32,
     frames: &[Frame2d<W, H>],
 ) -> Result<(), Box<dyn Error>> {
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let expected_path = docs_assets_path(filename);
     if std::env::var_os("DEVICE_KIT_UPDATE_PNGS").is_some() {
         write_frames_apng_with_gamma(
@@ -480,11 +486,13 @@ fn write_strip_png_with_gamma<const N: usize>(
     target_width: u32,
     preview_inverse_gamma: f32,
 ) -> Result<(), Box<dyn Error>> {
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let cell_size = select_strip_cell_size(N as u32, target_width);
     let led_margin = (cell_size / 8).max(1);
-    let (width, height, pixels) =
-        strip_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
+    let (width, height, pixels) = strip_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
 
     if let Some(parent) = output_path.parent() {
         if !parent.as_os_str().is_empty() {
@@ -510,7 +518,10 @@ fn write_strip_apng_with_gamma<const N: usize>(
     preview_inverse_gamma: f32,
 ) -> Result<(), Box<dyn Error>> {
     assert!(!frames.is_empty(), "frames must not be empty");
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let cell_size = select_strip_cell_size(N as u32, target_width);
     let led_margin = (cell_size / 8).max(1);
     let frame_count = u32::try_from(frames.len()).expect("frame count must fit in u32");
@@ -577,7 +588,10 @@ fn strip_pixels<const N: usize>(
         led_margin < cell_size / 2,
         "led_margin must fit inside cell"
     );
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let led_radius = (cell_size - (led_margin * 2)) / 2;
     assert!(led_radius > 0, "led_radius must be positive");
     let fade_width = led_radius / 3;

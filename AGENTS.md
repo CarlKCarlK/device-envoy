@@ -210,7 +210,7 @@ Setters: set_offset_minutes(), set_text() (with set_ prefix)
 
 ## Colors
 
-For RGB colors, use the predefined constants from `smart_leds::colors` (re-exported from `led_strip::colors`) rather than creating RGB values manually:
+For RGB8 colors, use the predefined constants from `smart_leds::colors` (re-exported from `led_strip::colors`) rather than creating RGB values manually:
 
 ✅ Good:
 

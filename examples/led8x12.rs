@@ -143,10 +143,10 @@ async fn demo_blink_pattern(led8x12: &Led8x12) -> Result<()> {
 async fn demo_rectangle_diagonals_embedded_graphics(led8x12: &Led8x12) -> Result<()> {
     use embedded_graphics::{
         Drawable,
-        pixelcolor::Rgb888,
         prelude::*,
         primitives::{Line, PrimitiveStyle, Rectangle},
     };
+    use device_kit::led_strip::Rgb888;
 
     let mut frame = Frame2d::new();
 

@@ -458,8 +458,8 @@ impl Led2dFont {
 /// # #![no_main]
 /// # use panic_probe as _;
 /// use device_kit::led2d::Frame2d;
+/// use device_kit::led_strip::Rgb888;
 /// use embedded_graphics::{
-///     pixelcolor::Rgb888,
 ///     prelude::*,
 ///     primitives::{Circle, PrimitiveStyle, Rectangle},
 /// };

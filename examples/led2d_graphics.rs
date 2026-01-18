@@ -6,11 +6,10 @@ use core::{convert::Infallible, future};
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::{Result, led2d, led2d::Frame2d, led2d::layout::LedLayout};
+use device_kit::{Result, led_strip::Rgb888, led2d, led2d::Frame2d, led2d::layout::LedLayout};
 use embassy_executor::Spawner;
 use embassy_rp::init;
 use embedded_graphics::{
-    pixelcolor::Rgb888,
     prelude::*,
     primitives::{Circle, PrimitiveStyle, Rectangle},
 };

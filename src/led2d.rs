@@ -423,7 +423,6 @@ impl Led2dFont {
     }
 }
 
-// cmk0000000 needs links to led2d! and generated struct type
 /// 2D pixel array used for general graphics (includes examples).
 ///
 /// Frames are used to prepare images before sending them to the LED matrix. They support:
@@ -432,22 +431,12 @@ impl Led2dFont {
 /// - Full graphics drawing via [`embedded-graphics`](https://docs.rs/embedded-graphics) (lines, shapes, text, and more)
 /// - Automatic conversion to the strip's physical LED order
 ///
-/// //cmk00000 if x and y are backwards, should/can we fix that?
-/// Frames are stored in row-major order where `frame[(col, row)]` represents the pixel
-/// at display coordinates (col, row). The physical mapping to the LED strip is handled
-/// automatically by the device abstraction.
+///  cmk0000000 needs links to led2d! and generated struct type
+///  cmk0000000 needs to remind that (0,0) is top-left
+///  cmk0000000 needs to explain direct pixel access via indexing.
 ///
-/// cmk000000000 do the generated struct typess also have these associated constants and documentation?
-/// cmk000000000 does the 1d frame and generated struct typess need them too?
-/// # Associated Constants
-///
-/// - `WIDTH` — Frame2d width in pixels (columns)
-/// - `HEIGHT` — Frame2d height in pixels (rows)
-/// - `LEN` — Total pixel count (WIDTH × HEIGHT)
-///
-///  *For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations:*
-/// - `SIZE` — [`Size`] frame dimensions
-/// - `TOP_LEFT`, `TOP_RIGHT`, `BOTTOM_LEFT`, `BOTTOM_RIGHT` — Corner [`Point`] coordinates
+/// The physical mapping from x,y coordinates to the LED strip is handled
+/// automatically by the device abstraction via an efficient const lookup table.
 ///
 /// # Example: Draw pixels both directly and with [`embedded-graphics`](https://docs.rs/embedded-graphics):
 ///

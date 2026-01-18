@@ -136,7 +136,9 @@
 ///
 /// Used in [`Frame1d`] and [Frame2d](crate::led2d::Frame2d) for pixel colors.
 ///
-/// Zero-cost conversion to [`Rgb888`] via [`ToRgb888::to_rgb888`].
+/// See [`colors`] for the predefined color list.
+///
+/// Conversion to [`Rgb888`] via [`ToRgb888::to_rgb888`].
 ///
 /// # [`smart_leds` docs](https://docs.rs/smart-leds/latest/smart_leds/type.RGB8.html)
 #[doc(inline)]
@@ -144,6 +146,14 @@ pub use smart_leds::RGB8;
 
 /// Predefined [`RGB8`] color constants re-exported from the
 /// [`smart_leds`](https://docs.rs/smart-leds/latest/smart_leds/index.html) crate.
+///
+/// These constants follow CSS/Web color names. In particular, `GREEN` is
+/// `(0, 128, 0)` and `LIME` is `(0, 255, 0)`. If you want "full green," use
+/// `LIME`.
+///
+/// All examples in this crate use `smart_leds::colors::*` as the single source
+/// of named colors; when an embedded-graphics API needs `Rgb888`, convert with
+/// `ToRgb888::to_rgb888()`.
 #[doc(inline)]
 pub use smart_leds::colors;
 
@@ -152,7 +162,10 @@ pub use smart_leds::colors;
 ///
 /// See [Frame2d](crate::led2d::Frame2d) for usage examples of [`Rgb888`] and [`RGB8`].
 ///
-/// Zero-cost conversion to [`RGB8`] via [`ToRgb8::to_rgb8`].
+/// Get named colors from [`colors`] and convert to `Rgb888` with
+/// [`ToRgb888::to_rgb888`].
+///
+/// Conversion to [`RGB8`] via [`ToRgb8::to_rgb8`].
 ///
 /// # [`embedded-graphics` docs](https://docs.rs/embedded-graphics/latest/embedded_graphics/pixelcolor/struct.Rgb888.html)
 #[doc(inline)]

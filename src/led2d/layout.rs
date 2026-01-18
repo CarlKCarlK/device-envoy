@@ -1,4 +1,4 @@
-//! Fully const struct for specifying how LED strips are arranged into a 2D panel (includes examples).
+//! Fully const description of panel geometry and wiring, including dimensions (with examples).
 //!
 //! cmk0000000 read and review this
 //!

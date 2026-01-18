@@ -5,7 +5,7 @@
 //! See [`LedLayout`] for examples including: linear strips,
 //! serpentine grids, rotations, flips, and concatenation.
 
-/// cmk0000 A fully const struct that tells the x,y location of each LED pixel.
+/// Fully const description of panel geometry and wiring, including dimensions (with examples)
 ///
 /// # Examples
 ///

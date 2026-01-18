@@ -452,8 +452,14 @@ impl Led2dFont {
 /// ## Rendering pipeline (what happens when you display a frame)
 ///
 /// `Frame2d` is only pixel storage. When you render a frame through a generated panel type,
-/// the device abstraction handles mapping from `(x, y)` pixels to physical LED order, and it applies
-/// any configured gamma correction and current limiting.
+/// the device abstraction:
+///
+/// - Maps `(x, y)` pixels to the physical LED wiring order
+/// - Applies gamma correction
+/// - Scales brightness to respect the configured current budget
+///
+/// These steps are implemented using two **compile-time–generated lookup tables**.
+/// Writing a frame performs only indexed memory reads and writes.
 ///
 /// # Example: Draw pixels both directly and with [`embedded-graphics`](https://docs.rs/embedded-graphics):
 ///

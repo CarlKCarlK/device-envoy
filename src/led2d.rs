@@ -423,26 +423,41 @@ impl Led2dFont {
     }
 }
 
-/// 2D pixel array used for general graphics (includes examples).
+/// 2D pixel array used for general graphics on LED panels (includes examples).
 ///
-/// Frames are used to prepare images before sending them to the LED matrix. They support:
+/// This page provides the primary documentation for drawing onto LED panels.
 ///
-/// - Direct pixel access via tuple indexing
-/// - Full graphics drawing via [`embedded-graphics`](https://docs.rs/embedded-graphics) (lines, shapes, text, and more)
-/// - Automatic conversion to the strip's physical LED order
+/// **Read the examples below first.** After that, keep these details in mind:
 ///
-///  cmk0000000 needs links to led2d! and generated struct type
-///  cmk0000000 needs to remind that (0,0) is top-left
-///  cmk0000000 needs to explain direct pixel access via indexing.
+/// - Use a frame to prepare an image before sending it to the panel.
+/// - Coordinates are `(x, y)` with `(0, 0)` at the top-left. The x-axis increases to the right,
+///   and the y-axis increases downward.
+/// - Set pixels using tuple indexing: `frame[(x, y)] = colors::RED;`.
+/// - For shapes, lines, and text rendering, use the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
+/// - Frames are rendered by a panel type generated with [`led2d!`](macro@crate::led2d).
+///   See [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated) for the full API of the generated panel type.
+/// - For animation, call [`animate`](crate::led2d::led2d_generated::Led2dGenerated::animate) with a sequence
+///   of `(`[`Frame2d`]`, `[`Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html)`)`
+///   pairs. See the [led2d](mod@crate::led2d) module for an example.
 ///
-/// The physical mapping from x,y coordinates to the LED strip is handled
-/// automatically by the device abstraction via an efficient const lookup table.
+/// ## Indexing and storage
+///
+/// `Frame2d` supports both:
+///
+/// - `(x, y)` tuple indexing: `frame[(x, y)]`
+/// - Row-major array indexing: `frame[y][x]`
+///
+/// Tuple indexing matches display coordinates. Array indexing matches the underlying storage.
+///
+/// ## Rendering pipeline (what happens when you display a frame)
+///
+/// `Frame2d` is only pixel storage. When you render a frame through a generated panel type,
+/// the device abstraction handles mapping from `(x, y)` pixels to physical LED order, and it applies
+/// any configured gamma correction and current limiting.
 ///
 /// # Example: Draw pixels both directly and with [`embedded-graphics`](https://docs.rs/embedded-graphics):
 ///
 /// ![LED panel preview][led2d-graphics]
-///
-/// // cmk00000 we need to tell about fonts, and the coordinate system, and say us EB for fancy font stuff
 ///
 /// ```rust,no_run
 /// # #![no_std]
@@ -488,7 +503,6 @@ impl Led2dFont {
 ///     .expect("circle draw must succeed");
 /// # }
 /// ```
-
 #[cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!("led2d-graphics", "docs/assets/led2d_graphics.png")
@@ -668,7 +682,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2dStatic<N, MAX_FRAMES> {
 /// N (total LEDs) and MAX_FRAMES (animation capacity).
 ///
 /// Most users should use the `led2d!` or `led2d_from_strip!` macros which generate
-/// a higher-level wrapper. See the [mod@crate::led2d] module docs for examples.
+/// a higher-level wrapper. See the [led2d](mod@crate::led2d) module docs for examples.
 pub struct Led2d<const N: usize, const MAX_FRAMES: usize> {
     command_signal: &'static Led2dCommandSignal<N, MAX_FRAMES>,
     completion_signal: &'static Led2dCompletionSignal,

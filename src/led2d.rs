@@ -517,11 +517,11 @@ impl Led2dFont {
 pub struct Frame2d<const W: usize, const H: usize>(pub [[RGB8; W]; H]);
 
 impl<const W: usize, const H: usize> Frame2d<W, H> {
-    /// Frame2d width in pixels (columns).
+    /// The width of the frame.
     pub const WIDTH: usize = W;
-    /// Frame2d height in pixels (rows).
+    /// The height of the frame.
     pub const HEIGHT: usize = H;
-    /// Total number of pixels (WIDTH × HEIGHT).
+    /// Total pixels in this frame (width × height).
     pub const LEN: usize = W * H;
     /// Frame dimensions as a [`Size`].
     ///

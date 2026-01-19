@@ -79,11 +79,11 @@ pub struct Led2dGeneratedLedStrip;
 
 #[cfg(doc)]
 impl Led2dGenerated {
-    /// Number of columns in the panel.
+    /// The width of the panel.
     pub const WIDTH: usize = 12;
-    /// Number of rows in the panel.
+    /// The height of the panel.
     pub const HEIGHT: usize = 4;
-    /// Frame dimensions as a [`Size`].
+    /// Panel dimensions as a [`Size`].
     ///
     /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const SIZE: Size = Frame2d::<12, 4>::SIZE;
@@ -103,7 +103,7 @@ impl Led2dGenerated {
     ///
     /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const BOTTOM_RIGHT: Point = Frame2d::<12, 4>::BOTTOM_RIGHT;
-    /// Total number of LEDs in this panel (WIDTH * HEIGHT).
+    /// Total pixels in this panel (width × height).
     pub const LEN: usize = 48;
     /// Maximum brightness level, automatically limited by the power budget specified in `max_current`.
     ///

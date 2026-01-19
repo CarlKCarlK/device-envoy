@@ -113,7 +113,7 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 const LED_LAYOUT_12X4_ORIENTED: LedLayout<48, 4, 12> =
     LED_LAYOUT_12X4.rotate_cw().flip_h().flip_v();
 const CLOCK_COMPOSED: LedLayout<96, 8, 12> =
-    LED_LAYOUT_12X4_ORIENTED.concat_h::<48, 96, 4, 8>(LED_LAYOUT_12X4_ORIENTED);
+    LED_LAYOUT_12X4_ORIENTED.combine_h::<48, 96, 4, 8>(LED_LAYOUT_12X4_ORIENTED);
 
 #[test]
 fn clock_mapping_matches_composition() {

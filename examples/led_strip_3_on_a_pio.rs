@@ -40,7 +40,7 @@ led_strips! {
 }
 
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
-const LED_LAYOUT_8X12: LedLayout<96, 8, 12> = LED_LAYOUT_12X4.concat_v(LED_LAYOUT_12X4).rotate_cw();
+const LED_LAYOUT_8X12: LedLayout<96, 8, 12> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
 
 const SNAKE_LENGTH: usize = 4;
 const SNAKE_COLORS: [RGB8; SNAKE_LENGTH] =

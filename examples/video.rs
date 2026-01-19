@@ -96,7 +96,7 @@ use smart_leds::{RGB8, colors};
 
 // Display: 12 wide × 8 tall built from two 12×4 serpentine panels stacked vertically.
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
-const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.concat_v(LED_LAYOUT_12X4);
+const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4);
 
 led2d! {
     Led12x8 {

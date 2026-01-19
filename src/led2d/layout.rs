@@ -20,7 +20,7 @@
 /// and [`Frame2d`](crate::led2d::Frame2d).
 ///
 /// Most users should start with one of the constructors below,
-/// then apply transforms ([`Self::rotate_cw`], [`Self::flip_h`], [`Self::concat_v`], etc.) if needed.
+/// then apply transforms ([`Self::rotate_cw`], [`Self::flip_h`], [`Self::combine_v`], etc.) if needed.
 ///
 /// ## Constructing layouts
 ///
@@ -40,7 +40,7 @@
 /// You can adapt a layout without rewriting it:
 /// - rotate: [`rotate_cw`](Self::rotate_cw), [`rotate_ccw`](Self::rotate_ccw), [`rotate_180`](Self::rotate_180)
 /// - flip: [`flip_h`](Self::flip_h), [`flip_v`](Self::flip_v)
-/// - combine: [`concat_h`](Self::concat_h), [`concat_v`](Self::concat_v)
+/// - combine: [`combine_h`](Self::combine_h), [`combine_v`](Self::combine_v)  (join two layouts into a larger one)
 ///
 /// ## Validation
 ///
@@ -553,7 +553,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// use device_kit::led2d::layout::LedLayout;
     ///
     /// const LED_LAYOUT: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
-    /// const COMBINED: LedLayout<12, 6, 2> = LED_LAYOUT.concat_h::<6, 12, 3, 6>(LED_LAYOUT);
+    /// const COMBINED: LedLayout<12, 6, 2> = LED_LAYOUT.combine_h::<6, 12, 3, 6>(LED_LAYOUT);
     /// const EXPECTED: LedLayout<12, 6, 2> = LedLayout::new([
     ///     (0, 0), (0, 1), (1, 1), (1, 0), (2, 0), (2, 1), (3, 0), (3, 1), (4, 1),
     ///     (4, 0), (5, 0), (5, 1),
@@ -571,7 +571,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     ///   1  2  5  7  8 11
     /// ```
     #[must_use]
-    pub const fn concat_h<
+    pub const fn combine_h<
         const N2: usize,
         const OUT_N: usize,
         const W2: usize,
@@ -611,7 +611,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// use device_kit::led2d::layout::LedLayout;
     ///
     /// const LED_LAYOUT: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
-    /// const COMBINED: LedLayout<12, 3, 4> = LED_LAYOUT.concat_v::<6, 12, 2, 4>(LED_LAYOUT);
+    /// const COMBINED: LedLayout<12, 3, 4> = LED_LAYOUT.combine_v::<6, 12, 2, 4>(LED_LAYOUT);
     /// const EXPECTED: LedLayout<12, 3, 4> = LedLayout::new([
     ///     (0, 0), (0, 1), (1, 1), (1, 0), (2, 0), (2, 1), (0, 2), (0, 3), (1, 3),
     ///     (1, 2), (2, 2), (2, 3),
@@ -631,7 +631,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     ///   7  8 11
     /// ```
     #[must_use]
-    pub const fn concat_v<
+    pub const fn combine_v<
         const N2: usize,
         const OUT_N: usize,
         const H2: usize,
@@ -648,7 +648,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let top_t = self.rotate_cw().flip_h(); // H width, W height
         let bot_t = bottom.rotate_cw().flip_h(); // H2 width, W height
 
-        let combined_t: LedLayout<OUT_N, OUT_H, W> = top_t.concat_h::<N2, OUT_N, H2, OUT_H>(bot_t);
+        let combined_t: LedLayout<OUT_N, OUT_H, W> = top_t.combine_h::<N2, OUT_N, H2, OUT_H>(bot_t);
 
         combined_t.rotate_cw().flip_h() // transpose back to W x OUT_H
     }

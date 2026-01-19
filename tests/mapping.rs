@@ -93,9 +93,9 @@ fn serpentine_transforms_match_expected() {
         [(0, 1), (0, 0), (1, 0), (1, 1), (2, 1), (2, 0),]
     );
 
-    let concat_h = SERPENTINE.concat_h::<6, 12, 3, 6>(SERPENTINE);
+    let combine_h = SERPENTINE.combine_h::<6, 12, 3, 6>(SERPENTINE);
     assert_eq!(
-        *concat_h.index_to_xy(),
+        *combine_h.index_to_xy(),
         [
             (0, 0),
             (0, 1),
@@ -112,9 +112,9 @@ fn serpentine_transforms_match_expected() {
         ]
     );
 
-    let concat_v = SERPENTINE.concat_v::<6, 12, 2, 4>(SERPENTINE);
+    let combine_v = SERPENTINE.combine_v::<6, 12, 2, 4>(SERPENTINE);
     assert_eq!(
-        *concat_v.index_to_xy(),
+        *combine_v.index_to_xy(),
         [
             (0, 0),
             (0, 1),
@@ -133,10 +133,10 @@ fn serpentine_transforms_match_expected() {
 }
 
 #[test]
-fn concat_horizontal_and_vertical() {
+fn combine_horizontal_and_vertical() {
     const LEFT: LedLayout<2, 2, 1> = LedLayout::new([(0, 0), (1, 0)]);
     const RIGHT: LedLayout<4, 4, 1> = LedLayout::new([(0, 0), (1, 0), (2, 0), (3, 0)]);
-    let combined_h = LEFT.concat_h::<4, 6, 4, 6>(RIGHT);
+    let combined_h = LEFT.combine_h::<4, 6, 4, 6>(RIGHT);
     assert_eq!(
         combined_h.index_to_xy(),
         &[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0)]
@@ -144,7 +144,7 @@ fn concat_horizontal_and_vertical() {
 
     const TOP: LedLayout<2, 1, 2> = LedLayout::new([(0, 0), (0, 1)]);
     const BOTTOM: LedLayout<3, 1, 3> = LedLayout::new([(0, 0), (0, 1), (0, 2)]);
-    let combined_v = TOP.concat_v::<3, 5, 3, 5>(BOTTOM);
+    let combined_v = TOP.combine_v::<3, 5, 3, 5>(BOTTOM);
     assert_eq!(
         *combined_v.index_to_xy(),
         [(0, 0), (0, 1), (0, 2), (0, 3), (0, 4),]

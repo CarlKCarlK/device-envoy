@@ -8,19 +8,24 @@
 /// Compile-time description of panel geometry and wiring, including dimensions (with examples).
 ///
 /// `LedLayout` defines how a rectangular `(x, y)` panel of LEDs maps to the linear
-/// order of LEDs on a NeoPixel-style (WS2812) panel.
+/// wiring order of LEDs on a NeoPixel-style (WS2812) panel.
 ///
-/// LedLayout lets you describe LED panel wiring once, then write text, graphics, and animations
-/// in (x, y) space without caring about LED strip order
+/// For examples of `LedLayout` in use, see the [`led2d`](mod@crate::led2d) module,
+/// [`Frame2d`](crate::led2d::Frame2d), and the example below.
 ///
-/// Coordinates use a screen-style convention: `(0, 0)` is the top-left corner,
-/// `x` increases to the right, and `y` increases downward.
+/// **What `LedLayout` does:**
+/// - Lets you describe panel wiring once
+/// - Enables drawing text, graphics, and animations in `(x, y)` space
+/// - Hides LED strip order from rendering code
 ///
-/// For examples of `LedLayout` in use, see the [`led2d`](mod@crate::led2d) module
-/// and [`Frame2d`](crate::led2d::Frame2d).
+/// Coordinates use a screen-style convention:
+/// - `(0, 0)` is the top-left corner
+/// - `x` increases to the right
+/// - `y` increases downward
 ///
-/// Most users should start with one of the constructors below,
-/// then apply transforms ([`Self::rotate_cw`], [`Self::flip_h`], [`Self::combine_v`], etc.) if needed.
+/// Most users should start with one of the constructors below and then apply
+/// transforms ([rotate_cw](`Self::rotate_cw`), [flip_h](`Self::flip_h`), [combine_v](`Self::combine_v`), etc.)
+/// as needed.
 ///
 /// ## Constructing layouts
 ///
@@ -32,8 +37,8 @@
 /// For unusual wiring, you can construct a layout directly with [`LedLayout::new`]
 /// by listing `(x, y)` for each LED in the order the strip is wired.
 ///
-/// **The example below shows both construction methods.** Also, every construtor
-/// and method includes illustations of use.
+/// **The example below shows both construction methods.** Also, the documentation for every constructor
+/// and method includes illustrations of use.
 ///
 /// ## Transforming layouts
 ///
@@ -175,8 +180,15 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         true
     }
 
-    /// Constructor: verifies mapping covers every cell exactly once across the W×H (width x heightpanel.
+    /// Construct a `LedLayout` by explicitly specifying the wiring order.
     ///
+    /// Use this constructor when your panel wiring does not match one of the
+    /// built-in patterns (linear, serpentine, etc.). You provide the `(x, y)`
+    /// coordinate for **each LED in strip order**, and `LedLayout` derives the
+    /// panel geometry from that mapping.
+    ///
+    /// This constructor is `const` and is intended to be used in a `const`
+    /// definition, so layout errors are caught at **compile time**, not at runtime.
     /// ```rust,no_run
     /// # #![no_std]
     /// # #![no_main]

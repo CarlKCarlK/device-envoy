@@ -145,11 +145,11 @@ pub use paste;
 
 /// Re-exported from the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
 ///
-/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Point.html) Documenation:
+/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Point.html) Documentation:
 pub use embedded_graphics::geometry::Point;
 /// Re-exported from the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
 ///
-/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Size.html) Documenation:
+/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Size.html) Documentation:
 pub use embedded_graphics::geometry::Size;
 
 pub mod layout;
@@ -1021,8 +1021,7 @@ pub use led2d_device;
 
 /// Macro to generate an LED-panel struct type (includes syntax details). See [`Led2dGenerated`](`crate::led2d::led2d_generated::Led2dGenerated`) for a sample of a generated type.
 ///
-/// # Usage Example
-/// *See the [led2d module](mod@crate::led2d) documentation.*
+/// **See the [led2d module](mod@crate::led2d) for usage examples.**
 ///
 /// # Fields
 ///

@@ -25,11 +25,13 @@
         "atqa",
         "BLKS",
         "creds",
+        "DCIM",
         "iface",
         "INTERBIT",
         "mcus",
         "mfrc",
         "micromath",
+        "milliamp",
         "MMSS",
         "MOSI",
         "picc",
@@ -37,7 +39,8 @@
         "prio",
         "refdiv",
         "reqa",
-        "syncer"
+        "syncer",
+        "Vecs"
     ],
     "terminal.integrated.shellIntegration.enabled": true
 }

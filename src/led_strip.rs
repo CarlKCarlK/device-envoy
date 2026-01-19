@@ -256,7 +256,7 @@ use embedded_graphics::prelude::RgbColor;
 
 /// Configuration enum used by the macros to configure gamma correction for LED strips.
 ///
-/// cmk000000 read and review. Maybe give a link to Wiikipedia or other explanation of gamma correction?
+/// cmk000000 read and review. Maybe give a link to Wikipedia or other explanation of gamma correction?
 /// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Gamma {
@@ -911,7 +911,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// ## Optional Fields per Strip/Panel
 ///
 /// - `dma` — DMA channel (default: auto-assigned by strip order)
-/// - `gamma` — Gramma correction curve (default: `Gamma::Gamma2_2`)
+/// - `gamma` — Gamma correction curve (default: `Gamma::Gamma2_2`)
 /// - `max_frames` — Maximum number of animation frames (default: 16 frames)
 /// - `led2d` — Marks this strip as a 2D LED panel and enables 2D rendering support (optional, see below).
 ///    Detailed 2D rendering APIs, examples, and animation support are documented

@@ -1,9 +1,7 @@
-//! Compile-time description of panel geometry and wiring, including dimensions (with examples).
+//! Module containing [`LedLayout`], the struct for compile-time description of
+//! panel geometry and wiring.
 //!
-//! cmk0000000 read and review this
-//!
-//! See [`LedLayout`] for examples including: linear strips,
-//! serpentine panels, rotations, flips, and concatenation.
+//! See [`LedLayout`] for details and examples.
 
 /// Compile-time description of panel geometry and wiring, including dimensions (with examples).
 ///

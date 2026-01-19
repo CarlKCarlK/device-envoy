@@ -517,7 +517,6 @@ impl Led2dFont {
 pub struct Frame2d<const W: usize, const H: usize>(pub [[RGB8; W]; H]);
 
 impl<const W: usize, const H: usize> Frame2d<W, H> {
-    // cmk00000 are all these constants still needed?
     /// Frame2d width in pixels (columns).
     pub const WIDTH: usize = W;
     /// Frame2d height in pixels (rows).

@@ -21,13 +21,13 @@
 //! panels, see the [`led2d`](mod@crate::led2d) module.
 //!
 //! This page provides the primary documentation and examples for programming LED strips.
-//! The device abstraction supports patterns and animation on the LED strip.
+//! The device abstraction supports pixel patterns and animation on the LED strip.
 //!
 //! **After reading the examples below, see also:**
 //!
 //! - [`led_strip!`](macro@crate::led_strip) — Macro to generate an LED strip struct type (includes syntax details). See [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a sample of a generated type.
 //! - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) — Sample struct type showing all methods and associated constants.
-//! - [`Frame1d`] — 1D pixel array used for pixel patterns.
+//! - [`Frame1d`] — 1D pixel array used to describe LED strip patterns.
 //! - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples).
 //!
 //! # Example: Write a Single 1-Dimensional Frame
@@ -376,7 +376,7 @@ use crate::Result;
 
 pub mod led_strip_generated;
 
-/// 1D pixel array used for pixel patterns.
+/// 1D pixel array used to describe LED strip patterns.
 ///
 /// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
 ///
@@ -2646,19 +2646,7 @@ macro_rules! __led_strips_impl {
 /// Macro to generate an LED-strip struct type (includes syntax details). See
 /// [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a sample of a generated type.
 ///
-/// This macro generates a concrete LED strip device type with associated methods and constants
-/// at compile time.
-///
-/// See [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a complete example of the
-/// struct produced by this macro and the API it exposes.
-///
-/// For treating LED strips as 2D panels, see the [`led2d`](mod@crate::led2d) module.
-///
-/// If you have multiple LED strips or panels sharing a single PIO resource, consider using
-/// [`led_strips!`] instead.
-///
-/// cmk0000000000 this should be first thing after the summary
-/// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
+/// **See the [led_strip module documentation](mod@crate::led_strip) for usage examples.**
 ///
 /// **Required fields:**
 ///
@@ -2701,7 +2689,10 @@ macro_rules! __led_strips_impl {
 /// The gamma curve is baked into a compile-time lookup table, so it has no
 /// runtime cost.
 ///
-/// For 2D LED panels and pattern-style rendering, see the [`led2d`](mod@crate::led2d) module.
+/// # Related Macros
+///
+/// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples)
+/// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
 ///
 #[cfg(not(feature = "host"))]
 #[macro_export]

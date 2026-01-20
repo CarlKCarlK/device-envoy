@@ -102,7 +102,7 @@ impl Led2dGenerated {
     ///
     /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
     pub const BOTTOM_RIGHT: Point = Frame2d::<12, 4>::BOTTOM_RIGHT;
-    /// Total pixels in this panel (width × height).
+    /// Total LEDs in this panel (width × height).
     pub const LEN: usize = 48;
     /// Maximum brightness level, automatically limited by the power budget specified in `max_current`.
     ///

@@ -672,8 +672,6 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2dStatic<N, MAX_FRAMES> {
     }
 }
 
-// cmk000 don't use the phrase 'module-level' in docs.
-// cmk00 this needs a compiled-only doc test.
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that expands at the call site in downstream crates.
 // This is an implementation detail, not part of the user-facing API.
 #[doc(hidden)]

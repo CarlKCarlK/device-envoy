@@ -625,7 +625,6 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
         LedStripStatic::new_static()
     }
 
-    // cmk0000 should hide this
     /// Creates a new LED strip controller bound to the given static resources.
     pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Result<Self> {
         Ok(Self {
@@ -1190,7 +1189,6 @@ macro_rules! __led_strips_impl {
 
                 // Calculate max brightness from current budget
                 // Each WS2812B LED draws ~60mA at full brightness
-                /// cmk00 OK to assume 60 mA per LED
                 const WORST_CASE_MA: u32 = ($len as u32) * 60;
                 pub const MAX_BRIGHTNESS: u8 =
                     $max_current.max_brightness(Self::WORST_CASE_MA);
@@ -1309,7 +1307,6 @@ macro_rules! __led_strips_impl {
 
                 // Calculate max brightness from current budget
                 // Each WS2812B LED draws ~60mA at full brightness
-                /// cmk00 OK to assume 60 mA per LED
                 const WORST_CASE_MA: u32 = ($len as u32) * 60;
                 pub const MAX_BRIGHTNESS: u8 =
                     $max_current.max_brightness(Self::WORST_CASE_MA);

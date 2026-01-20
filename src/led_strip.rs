@@ -194,6 +194,8 @@ pub use embedded_graphics::pixelcolor::Rgb888;
 /// ```
 pub trait ToRgb8 {
     /// Convert this color to [`RGB8`].
+    ///
+    /// See the [`ToRgb8`](Self) trait docs for a usage example.
     #[must_use]
     fn to_rgb8(self) -> RGB8;
 }
@@ -232,6 +234,8 @@ impl ToRgb8 for Rgb888 {
 /// ```
 pub trait ToRgb888 {
     /// Convert this color to [`Rgb888`].
+    ///
+    /// See the [`ToRgb888`](Self) trait docs for a usage example.
     #[must_use]
     fn to_rgb888(self) -> Rgb888;
 }

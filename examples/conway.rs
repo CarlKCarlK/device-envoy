@@ -8,7 +8,6 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::led_strip::Current;
-use device_kit::led_strip::Gamma;
 use device_kit::led_strip::RGB8;
 use device_kit::led2d;
 use device_kit::led2d::Frame2d;
@@ -23,20 +22,16 @@ use embassy_time::{Duration, Timer};
 use panic_probe as _;
 use smart_leds::colors;
 
-// Two 12x4 panels stacked vertically and rotated 90° CW → 8×12 display.
-const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
-const LED_LAYOUT_8X12: LedLayout<96, 8, 12> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
+// One 16x16 panel in serpentine column-major order.
+const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 // cmk000 add default
 led2d! {
-    Led8x12 {
-        pio: PIO0,
-        pin: PIN_4,
-        dma: DMA_CH0,
-        led_layout: LED_LAYOUT_8X12,
-        max_current: Current::Milliamps(1000),
-        gamma: Gamma::Linear,
-        max_frames: 32,
+    Led16x16 {
+        pin: PIN_5,
+        led_layout: LED_LAYOUT_16X16,
+        max_current: Current::Milliamps(500),
+        max_frames: 1,
         font: Led2dFont::Font4x6Trim,
     }
 }
@@ -86,15 +81,15 @@ pub async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    info!("Conway's Game of Life on 8x12 LED board");
+    info!("Conway's Game of Life on 16x16 LED panel");
     let p = init(Default::default());
 
-    let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
+    let led16x16 = Led16x16::new(p.PIN_5, p.PIO0, p.DMA_CH0, spawner)?;
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
     // Create Conway device with static resources and spawn background task
     static CONWAY_STATIC: ConwayStatic = Conway::new_static();
-    let conway = Conway::new(&CONWAY_STATIC, led8x12, spawner)?;
+    let conway = Conway::new(&CONWAY_STATIC, led16x16, spawner)?;
 
     // Speed mode cycling state
     let mut speed_mode = SpeedMode::Slower;
@@ -120,17 +115,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
 #[embassy_executor::task]
 async fn conway_task(
-    led8x12: Led8x12,
+    led16x16: Led16x16,
     signal: &'static Signal<CriticalSectionRawMutex, ConwayMessage>,
 ) {
-    let mut board = Board::<{ Led8x12::HEIGHT }, { Led8x12::WIDTH }>::new();
+    let mut board = Board::<{ Led16x16::HEIGHT }, { Led16x16::WIDTH }>::new();
     let mut pattern_index = 0;
     let mut speed_mode = SpeedMode::Slower;
     board.add_pattern(PATTERNS[pattern_index]);
 
     loop {
-        let frame = board.to_frame(colors::GREEN);
-        led8x12
+        let frame = board.to_frame(colors::LIME);
+        led16x16
             .write_frame(frame)
             .await
             .expect("write_frame failed");
@@ -158,7 +153,7 @@ async fn conway_task(
                         info!("=== Pattern: {:?} ===", pattern);
 
                         // Reset board with new pattern
-                        board = Board::<{ Led8x12::HEIGHT }, { Led8x12::WIDTH }>::new();
+                        board = Board::<{ Led16x16::HEIGHT }, { Led16x16::WIDTH }>::new();
                         board.add_pattern(pattern);
                     }
                     ConwayMessage::SetSpeed(new_speed) => {
@@ -326,8 +321,8 @@ impl<const H: usize, const W: usize> Board<H, W> {
     }
 
     /// Convert board state to an LED frame with the specified color for alive cells.
-    fn to_frame(&self, alive_color: RGB8) -> Frame2d<8, 12> {
-        let mut frame = Frame2d::new();
+    fn to_frame(&self, alive_color: RGB8) -> Frame2d<W, H> {
+        let mut frame = Frame2d::<W, H>::new();
         for y_index in 0..H {
             for x_index in 0..W {
                 if self.cells[y_index][x_index] {
@@ -368,10 +363,10 @@ impl Conway<'_> {
     /// Create a new Conway device, spawn its background task, and return a handle for control.
     pub fn new(
         conway_static: &'static ConwayStatic,
-        led8x12: Led8x12,
+        led16x16: Led16x16,
         spawner: Spawner,
     ) -> Result<Self> {
-        let token = conway_task(led8x12, &conway_static.signal);
+        let token = conway_task(led16x16, &conway_static.signal);
         spawner.spawn(token).map_err(Error::TaskSpawn)?;
         Ok(Self(&conway_static.signal))
     }

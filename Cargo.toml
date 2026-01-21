@@ -91,6 +91,12 @@ path = "demos/a_led/a4_strip_96_blue_white_dot.rs"
 test = false
 required-features = ["arm"]
 
+[[bin]]
+name = "demo_b1_panel_12x8_rust_cursor"
+path = "demos/b_led/b1_panel_12x8_rust_cursor.rs"
+test = false
+required-features = ["arm"]
+
 [features]
 default = ["defmt", "pico1", "arm"]
 defmt = []

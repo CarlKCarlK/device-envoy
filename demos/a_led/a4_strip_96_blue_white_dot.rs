@@ -48,11 +48,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             frame1d[dot_index] = colors::BLUE;
         }
     }
-
-    // Issues Fixed:
-    //   -- Full-white estimate: ~60mA/pixel × 96 ≈ 5.76A (too much for my supply).
-    //   -- Web and X11 colors, PNGs, mp4 assume sRGB color space. LEDs are linear.
-    // Issues Remaining:
-    // - Because of the weird wiring, it is hard to write text or draw a line.
-    // - Can only connect 2 or 3 strips.
 }
+
+// Issues Fixed:
+//   -- Full-white estimate: ~60mA/pixel × 96 ≈ 5.76A (too much for my supply).
+//   -- Web and X11 colors, PNGs, mp4 assume sRGB color space. LEDs are linear.
+// Issues Remaining:
+// - Because of the weird wiring, it is hard to write text or draw a line.
+// - Can only connect 2 or 3 strips.

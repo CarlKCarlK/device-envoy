@@ -41,3 +41,13 @@ Run/flash (Pico 1 ARM):
 ```bash
 cargo run --release --bin demo_a4_strip_96_blue_white_dot --target thumbv6m-none-eabi --features pico1,arm
 ```
+
+## B1 – 12×8 panel, "Rust" with cursor
+
+Renders "Rust" on the first line with alternating blue and light gray letters and a 3-pixel cursor under the `R`.
+
+Run/flash (Pico 1 ARM):
+
+```bash
+cargo run --release --bin demo_b1_panel_12x8_rust_cursor --target thumbv6m-none-eabi --features pico1,arm
+```

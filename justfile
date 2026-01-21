@@ -11,6 +11,10 @@ docdoc:
 gather:
 	./scripts/gather.sh
 
+gather-docs:
+	just docdoc
+	./scripts/gather-docs.sh
+
 attach-probe:
 	./scripts/attach-probe.sh
 

@@ -30,6 +30,8 @@ enum Commands {
     CheckCompileOnly,
     /// Check all examples (pico1 + pico2, with and without wifi)
     CheckExamples,
+    /// Check all demos (pico1 + pico2, no wifi)
+    CheckDemos,
     /// Check documentation: run doc tests and generate docs
     CheckDocs,
     /// Generate video frames from PNG files (santa video)
@@ -121,6 +123,7 @@ fn main() -> ExitCode {
         Commands::CheckAll => check_all(),
         Commands::CheckCompileOnly => check_compile_only(),
         Commands::CheckExamples => check_examples(),
+        Commands::CheckDemos => check_demos(),
         Commands::CheckDocs => check_docs(),
         Commands::VideoFramesGen => {
             if let Err(e) = video_frames_gen::generate_frames() {
@@ -237,6 +240,7 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
     let examples = discover_examples(&workspace_root);
+    let demos = discover_demo_bins(&workspace_root);
     let no_wifi_examples: Vec<_> = examples
         .iter()
         .filter(|example| !example.wifi_required)
@@ -247,6 +251,7 @@ fn check_all() -> ExitCode {
     let target_pico2 = arch.target(board_pico2);
     let target_pico1 = arch.target(board_pico1);
     let features_no_wifi = build_features(board_pico2, arch, false);
+    let features_no_wifi_pico1 = build_features(board_pico1, arch, false);
     let features_wifi_pico2 = build_features(board_pico2, arch, true);
     let features_wifi_pico1 = build_features(board_pico1, arch, true);
 
@@ -257,7 +262,7 @@ fn check_all() -> ExitCode {
     rayon::scope(|s| {
         // 1. Doc tests
         s.spawn(|_| {
-            println!("{}", "  [1/8] Doc tests...".bright_black());
+            println!("{}", "  [1/9] Doc tests...".bright_black());
             if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                 "test",
                 "--doc",
@@ -275,7 +280,7 @@ fn check_all() -> ExitCode {
         s.spawn(|_| {
             println!(
                 "{}",
-                "  [2/8] Host tests (unit + integration)...".bright_black()
+                "  [2/9] Host tests (unit + integration)...".bright_black()
             );
             let host_target = host_target();
             let mut host_test_cmd = Command::new("cargo");
@@ -300,7 +305,7 @@ fn check_all() -> ExitCode {
 
         // 3. Library build
         s.spawn(|_| {
-            println!("{}", "  [3/8] Library build...".bright_black());
+            println!("{}", "  [3/9] Library build...".bright_black());
             if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                 "build",
                 "--lib",
@@ -316,7 +321,7 @@ fn check_all() -> ExitCode {
 
         // 4. Examples (pico2, no wifi)
         s.spawn(|_| {
-            println!("{}", "  [4/8] Examples (pico2, no wifi)...".bright_black());
+            println!("{}", "  [4/9] Examples (pico2, no wifi)...".bright_black());
             no_wifi_examples.par_iter().for_each(|example| {
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                     "build",
@@ -333,11 +338,42 @@ fn check_all() -> ExitCode {
             });
         });
 
-        // 5. Examples (pico2, with wifi)
+        // 5. Demos (pico2 + pico1, no wifi)
+        s.spawn(|_| {
+            println!("{}", "  [5/9] Demos (pico2 + pico1, no wifi)...".bright_black());
+            demos.par_iter().for_each(|demo| {
+                if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+                    "build",
+                    "--bin",
+                    &demo.name,
+                    "--target",
+                    target_pico2,
+                    "--features",
+                    features_no_wifi.as_str(),
+                    "--no-default-features",
+                ])) {
+                    failures.lock().unwrap().push("demos (pico2, no wifi)");
+                }
+                if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+                    "build",
+                    "--bin",
+                    &demo.name,
+                    "--target",
+                    target_pico1,
+                    "--features",
+                    features_no_wifi_pico1.as_str(),
+                    "--no-default-features",
+                ])) {
+                    failures.lock().unwrap().push("demos (pico1, no wifi)");
+                }
+            });
+        });
+
+        // 6. Examples (pico2, with wifi)
         s.spawn(|_| {
             println!(
                 "{}",
-                "  [5/8] Examples (pico2, with wifi)...".bright_black()
+                "  [6/9] Examples (pico2, with wifi)...".bright_black()
             );
             examples.par_iter().for_each(|example| {
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
@@ -355,11 +391,11 @@ fn check_all() -> ExitCode {
             });
         });
 
-        // 6. Examples (pico1, with wifi)
+        // 7. Examples (pico1, with wifi)
         s.spawn(|_| {
             println!(
                 "{}",
-                "  [6/8] Examples (pico1, with wifi)...".bright_black()
+                "  [7/9] Examples (pico1, with wifi)...".bright_black()
             );
             examples.par_iter().for_each(|example| {
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
@@ -377,9 +413,9 @@ fn check_all() -> ExitCode {
             });
         });
 
-        // 7. Compile-only tests
+        // 8. Compile-only tests
         s.spawn(|_| {
-            println!("{}", "  [7/8] Compile-only tests...".bright_black());
+            println!("{}", "  [8/9] Compile-only tests...".bright_black());
             let compile_tests_dir = workspace_root.join("tests-compile-only");
             if compile_tests_dir.exists() {
                 let mut compile_tests = Vec::new();
@@ -411,9 +447,9 @@ fn check_all() -> ExitCode {
             }
         });
 
-        // 8. Documentation
+        // 9. Documentation
         s.spawn(|_| {
-            println!("{}", "  [8/8] Documentation...".bright_black());
+            println!("{}", "  [9/9] Documentation...".bright_black());
             if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                 "doc",
                 "--target",
@@ -605,6 +641,54 @@ fn check_examples() -> ExitCode {
     ExitCode::SUCCESS
 }
 
+fn check_demos() -> ExitCode {
+    let workspace_root = workspace_root();
+    let demos = discover_demo_bins(&workspace_root);
+    if demos.is_empty() {
+        println!("{}", "No demos found.".yellow());
+        return ExitCode::SUCCESS;
+    }
+
+    let arch = Arch::Arm;
+    let board_pico2 = Board::Pico2;
+    let board_pico1 = Board::Pico1;
+    let target_pico2 = arch.target(board_pico2);
+    let target_pico1 = arch.target(board_pico1);
+    let features_no_wifi_pico2 = build_features(board_pico2, arch, false);
+    let features_no_wifi_pico1 = build_features(board_pico1, arch, false);
+
+    println!("{}", "==> Checking demos...".cyan());
+
+    for demo in &demos {
+        if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+            "build",
+            "--bin",
+            &demo.name,
+            "--target",
+            target_pico2,
+            "--features",
+            features_no_wifi_pico2.as_str(),
+            "--no-default-features",
+        ])) {
+            return ExitCode::FAILURE;
+        }
+        if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+            "build",
+            "--bin",
+            &demo.name,
+            "--target",
+            target_pico1,
+            "--features",
+            features_no_wifi_pico1.as_str(),
+            "--no-default-features",
+        ])) {
+            return ExitCode::FAILURE;
+        }
+    }
+
+    ExitCode::SUCCESS
+}
+
 fn build_lib(board: Board, arch: Arch, wifi: bool) -> ExitCode {
     let workspace_root = workspace_root();
     let target = arch.target(board);
@@ -742,6 +826,76 @@ fn discover_examples(workspace_root: &Path) -> Vec<ExampleInfo> {
     }
     examples.sort_by(|a, b| a.name.cmp(&b.name));
     examples
+}
+
+#[derive(Debug, Clone)]
+struct DemoInfo {
+    name: String,
+}
+
+fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
+    let cargo_toml = workspace_root.join("Cargo.toml");
+    let contents = fs::read_to_string(&cargo_toml).expect("Failed to read Cargo.toml");
+    let mut demos = Vec::new();
+
+    let mut in_bin = false;
+    let mut current_name: Option<String> = None;
+    let mut current_path: Option<String> = None;
+
+    let finalize = |current_name: &mut Option<String>,
+                    current_path: &mut Option<String>,
+                    demos: &mut Vec<DemoInfo>| {
+        if let (Some(name), Some(path)) = (current_name.take(), current_path.take()) {
+            if path.starts_with("demos/") {
+                demos.push(DemoInfo { name });
+            }
+        }
+    };
+
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[[bin]]" {
+            if in_bin {
+                finalize(&mut current_name, &mut current_path, &mut demos);
+            }
+            in_bin = true;
+            continue;
+        }
+
+        if in_bin && trimmed.starts_with('[') && trimmed != "[[bin]]" {
+            finalize(&mut current_name, &mut current_path, &mut demos);
+            in_bin = false;
+            continue;
+        }
+
+        if !in_bin {
+            continue;
+        }
+
+        if let Some(value) = parse_toml_string(trimmed, "name") {
+            current_name = Some(value);
+        } else if let Some(value) = parse_toml_string(trimmed, "path") {
+            current_path = Some(value);
+        }
+    }
+
+    if in_bin {
+        finalize(&mut current_name, &mut current_path, &mut demos);
+    }
+
+    demos.sort_by(|a, b| a.name.cmp(&b.name));
+    demos
+}
+
+fn parse_toml_string(line: &str, key: &str) -> Option<String> {
+    let line = line.split('#').next()?.trim();
+    let prefix = format!("{key} =");
+    if !line.starts_with(&prefix) {
+        return None;
+    }
+    let value = line[prefix.len()..].trim();
+    let value = value.strip_prefix('"')?.strip_suffix('"')?;
+    Some(value.to_string())
 }
 
 fn build_features(board: Board, arch: Arch, wifi: bool) -> String {

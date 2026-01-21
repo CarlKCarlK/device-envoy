@@ -31,7 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Create two frames
-    let palette = [colors::BLUE, colors::WHITE];
+    let palette = [colors::BLUE, colors::LIGHT_GRAY];
     let mut frame0 = Frame1d::new();
     let mut frame1 = frame0.clone();
     for pixel_index in 0..frame0.len() {

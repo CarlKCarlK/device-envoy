@@ -34,7 +34,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Fill an array of pixels with alternating blue and gray colors
     let mut frame1d = Frame1d::new(); // just an owned array of RGB pixels
-    let palette = [colors::BLUE, colors::WHITE];
+    let palette = [colors::BLUE, colors::LIGHT_GRAY];
     for pixel_index in 0..frame1d.len() {
         frame1d[pixel_index] = palette[pixel_index % 2];
     }

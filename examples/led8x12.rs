@@ -222,7 +222,7 @@ impl BouncingDot {
         self.color_index = (self.color_index + 1) % self.colors.len();
     }
 
-    async fn run(&mut self, led8x12: &Led8x12) -> Result<()> {
+    async fn run(&mut self, led8x12: &Led8x12) -> Result<Infallible> {
         loop {
             let mut frame = Frame2d::new();
             let x_position =
@@ -246,7 +246,7 @@ impl BouncingDot {
 async fn demo_bouncing_dot_manual(led8x12: &Led8x12, button: &mut Button<'_>) -> Result<()> {
     let mut bouncing_dot = BouncingDot::new();
     match select(bouncing_dot.run(led8x12), button.wait_for_press2()).await {
-        Either::First(result) => result,
+        Either::First(result) => result.map(|_| ()),
         Either::Second(_) => Ok(()),
     }
 }

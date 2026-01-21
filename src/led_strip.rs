@@ -256,7 +256,6 @@ impl ToRgb888 for Rgb888 {
 
 use core::ops::{Deref, DerefMut};
 use embedded_graphics::prelude::RgbColor;
-use micromath::F32Ext;
 
 // ============================================================================
 // Gamma Correction
@@ -271,20 +270,16 @@ use micromath::F32Ext;
 /// [Wikipedia article on gamma correction](https://en.wikipedia.org/wiki/Gamma_correction).
 ///
 /// This is not display-calibrated color management; it is a simple LED brightness curve.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Gamma {
     /// No correction; raw LED PWM values.
     Linear,
-    /// Perceptual sRGB semantics. cmk0000 approx
+    /// Perceptual sRGB semantics (gamma 2.2).
     ///
     /// This preserves the intent of the named color constants.
     Srgb,
-    /// Compatibility with the historical `smart_leds::gamma()` curve (= 2.8).
+    /// Compatibility with the historical `smart_leds::gamma()` curve (2.8).
     SmartLeds,
-    /// Explicit power-law gamma: `out = in^(1/gamma)`.
-    ///
-    /// This is useful for tuning and experimentation.
-    Power(f32),
 }
 
 impl Default for Gamma {
@@ -298,73 +293,70 @@ impl Default for Gamma {
 /// Default gamma correction curve for generated LED devices (`Gamma::Srgb`).
 pub const GAMMA_DEFAULT: Gamma = Gamma::Srgb;
 
-pub(crate) enum GammaMap {
-    Linear,
-    Table([u8; 256]),
-}
+/// Gamma 2.2 lookup table for 8-bit values.
+/// Pre-computed to avoid floating point math: corrected = (value/255)^2.2 * 255
+#[allow(dead_code)]
+pub(crate) const GAMMA_SRGB_TABLE: [u8; 256] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
+    3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6,
+    6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 11, 12,
+    12, 13, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19,
+    20, 20, 21, 22, 22, 23, 23, 24, 25, 25, 26, 26, 27, 28, 28, 29,
+    30, 30, 31, 32, 33, 33, 34, 35, 35, 36, 37, 38, 39, 39, 40, 41,
+    42, 43, 43, 44, 45, 46, 47, 48, 49, 49, 50, 51, 52, 53, 54, 55,
+    56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
+    73, 74, 75, 76, 77, 78, 79, 81, 82, 83, 84, 85, 87, 88, 89, 90,
+    91, 93, 94, 95, 97, 98, 99, 100, 102, 103, 105, 106, 107, 109, 110, 111,
+    113, 114, 116, 117, 119, 120, 121, 123, 124, 126, 127, 129, 130, 132, 133, 135,
+    137, 138, 140, 141, 143, 145, 146, 148, 149, 151, 153, 154, 156, 158, 159, 161,
+    163, 165, 166, 168, 170, 172, 173, 175, 177, 179, 181, 182, 184, 186, 188, 190,
+    192, 194, 196, 197, 199, 201, 203, 205, 207, 209, 211, 213, 215, 217, 219, 221,
+    223, 225, 227, 229, 231, 234, 236, 238, 240, 242, 244, 246, 248, 251, 253, 255,
+];
 
-impl Gamma {
-    pub(crate) fn compile(self) -> GammaMap {
-        match self {
-            Gamma::Linear => GammaMap::Linear,
-            Gamma::Srgb => GammaMap::Table(make_srgb_table()),
-            Gamma::SmartLeds => GammaMap::Table(make_gamma_table(2.8)),
-            Gamma::Power(gamma) => match normalize_gamma(gamma) {
-                Some(gamma) => GammaMap::Table(make_gamma_table(1.0 / gamma)),
-                None => {
-                    debug_assert!(
-                        gamma.is_finite() && gamma > 0.0,
-                        "gamma must be positive and finite; using Linear"
-                    );
-                    GammaMap::Linear
-                }
-            },
-        }
-    }
-}
+/// Gamma 2.8 lookup table for 8-bit values.
+/// Matches `smart_leds::gamma()` behavior.
+#[allow(dead_code)]
+pub(crate) const GAMMA_SMARTLEDS_TABLE: [u8; 256] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
+    2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
+    5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10,
+    10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
+    17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
+    25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
+    37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
+    51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
+    69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
+    90, 92, 93, 95, 96, 98, 99, 101, 102, 104, 105, 107, 109, 110, 112, 114,
+    115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137, 138, 140, 142,
+    144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
+    177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213,
+    215, 218, 220, 223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255,
+];
 
-impl GammaMap {
-    #[inline]
-    pub fn map(&self, value: u8) -> u8 {
-        match self {
-            GammaMap::Linear => value,
-            GammaMap::Table(table) => table[usize::from(value)],
-        }
-    }
-
-    #[inline]
-    #[allow(dead_code)]
-    pub fn map_rgb(&self, color: RGB8) -> RGB8 {
-        RGB8::new(self.map(color.r), self.map(color.g), self.map(color.b))
-    }
-}
-
-fn normalize_gamma(gamma: f32) -> Option<f32> {
-    if gamma.is_finite() && gamma > 0.0 {
-        Some(gamma)
-    } else {
-        None
-    }
-}
-
-fn make_srgb_table() -> [u8; 256] {
-    // This is an approximation; sRGB may become piecewise later.
-    const SRGB_GAMMA: f32 = 2.2;
-    make_gamma_table(SRGB_GAMMA)
-}
-
-fn make_gamma_table(gamma: f32) -> [u8; 256] {
-    let mut table = [0u8; 256];
-    let mut index = 0;
-    while index < 256 {
-        let normalized = (index as f32) / 255.0;
-        let corrected = (F32Ext::powf(normalized, gamma) * 255.0).round();
-        let corrected = corrected.min(255.0).max(0.0);
-        table[index] = corrected as u8;
-        index += 1;
-    }
-    table
-}
+/// Linear lookup table (identity function).
+#[allow(dead_code)]
+const LINEAR_TABLE: [u8; 256] = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+    64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+    80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
+    96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+    112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127,
+    128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143,
+    144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159,
+    160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175,
+    176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
+    192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
+    208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223,
+    224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239,
+    240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255,
+];
 
 /// Generate a combined gamma correction and brightness scaling lookup table.
 ///
@@ -376,12 +368,16 @@ fn make_gamma_table(gamma: f32) -> [u8; 256] {
 #[doc(hidden)] // Implementation detail used by macro-generated strip types
 #[must_use]
 #[allow(dead_code)]
-pub fn generate_combo_table(gamma: Gamma, max_brightness: u8) -> [u8; 256] {
-    let gamma_map = gamma.compile();
+pub const fn generate_combo_table(gamma: Gamma, max_brightness: u8) -> [u8; 256] {
+    let gamma_table = match gamma {
+        Gamma::Linear => &LINEAR_TABLE,
+        Gamma::Srgb => &GAMMA_SRGB_TABLE,
+        Gamma::SmartLeds => &GAMMA_SMARTLEDS_TABLE,
+    };
     let mut result = [0u8; 256];
     let mut index = 0;
     while index < 256 {
-        let gamma_corrected = gamma_map.map(index as u8);
+        let gamma_corrected = gamma_table[index];
         // Apply brightness scaling: (value * brightness) / 255
         let scaled = ((gamma_corrected as u16 * max_brightness as u16) / 255) as u8;
         result[index] = scaled;
@@ -693,10 +689,9 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
         &self,
         frames: impl IntoIterator<Item = (Frame1d<N>, Duration)>,
     ) -> Result<()> {
-        assert!(
-            MAX_FRAMES > 0,
-            "max_frames must be positive for LED strip animations"
-        );
+        if MAX_FRAMES == 0 {
+            return Err(crate::Error::AnimationDisabled(MAX_FRAMES));
+        }
         let mut sequence: Vec<(Frame1d<N>, Duration), MAX_FRAMES> = Vec::new();
         for (frame, duration) in frames {
             assert!(
@@ -963,6 +958,8 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// - `dma` — DMA channel (default: auto-assigned by strip order)
 /// - `gamma` — Gamma correction curve (default: `Gamma::Srgb`)
 /// - `max_frames` — Maximum number of animation frames (default: 16 frames)
+///
+/// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
 /// - `led2d` — Marks this strip as a 2D LED panel and enables 2D rendering support (optional, see below).
 ///    Detailed 2D rendering, examples, and animation support are documented
 ///    in the [`led2d` module](mod@crate::led2d).
@@ -1232,6 +1229,9 @@ macro_rules! __led_strips_impl {
                 pub const MAX_BRIGHTNESS: u8 =
                     $max_current.max_brightness(Self::WORST_CASE_MA);
 
+                // Combined gamma correction and brightness scaling table
+                const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
+
                 pub(crate) const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
                     $crate::led_strip::LedStrip::new_static()
                 }
@@ -1245,11 +1245,8 @@ macro_rules! __led_strips_impl {
                     static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> =
                         $label::new_static();
                     static STRIP_CELL: ::static_cell::StaticCell<$label> = ::static_cell::StaticCell::new();
-                    static COMBO_TABLE_CELL: ::static_cell::StaticCell<[u8; 256]> = ::static_cell::StaticCell::new();
                     let pin = pin.into();
                     let dma = dma.into();
-                    let combo_table =
-                        COMBO_TABLE_CELL.init($crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS));
 
                     let (bus, sm) = state_machine.into_parts();
                     let token = [<$label:snake _device_task>](
@@ -1257,7 +1254,6 @@ macro_rules! __led_strips_impl {
                         sm,
                         dma,
                         pin,
-                        combo_table,
                         STRIP_STATIC.command_signal(),
                         STRIP_STATIC.completion_signal(),
                     );
@@ -1289,7 +1285,6 @@ macro_rules! __led_strips_impl {
                 sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$pio, $sm_index>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
                 pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
-                combo_table: &'static [u8; 256],
                 command_signal: &'static $crate::led_strip::LedStripCommandSignal<{ $len }, { $max_frames }>,
                 completion_signal: &'static $crate::led_strip::LedStripCompletionSignal,
             ) -> ! {
@@ -1308,7 +1303,7 @@ macro_rules! __led_strips_impl {
                     { $len },
                     { $max_frames },
                     _
-                >(driver, command_signal, completion_signal, combo_table).await
+                >(driver, command_signal, completion_signal, &$label::COMBO_TABLE).await
             }
         }
     };
@@ -1352,6 +1347,9 @@ macro_rules! __led_strips_impl {
                 pub const MAX_BRIGHTNESS: u8 =
                     $max_current.max_brightness(Self::WORST_CASE_MA);
 
+                // Combined gamma correction and brightness scaling table
+                const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
+
                 pub(crate) const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
                     $crate::led_strip::LedStrip::new_static()
                 }
@@ -1365,11 +1363,8 @@ macro_rules! __led_strips_impl {
                     static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> =
                         [<$label:camel LedStrip>]::new_static();
                     static STRIP_CELL: ::static_cell::StaticCell<[<$label:camel LedStrip>]> = ::static_cell::StaticCell::new();
-                    static COMBO_TABLE_CELL: ::static_cell::StaticCell<[u8; 256]> = ::static_cell::StaticCell::new();
                     let pin = pin.into();
                     let dma = dma.into();
-                    let combo_table =
-                        COMBO_TABLE_CELL.init($crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS));
 
                     let (bus, sm) = state_machine.into_parts();
                     let token = [<$label:snake _led_strip _device_task>](
@@ -1377,7 +1372,6 @@ macro_rules! __led_strips_impl {
                         sm,
                         dma,
                         pin,
-                        combo_table,
                         STRIP_STATIC.command_signal(),
                         STRIP_STATIC.completion_signal(),
                     );
@@ -1409,7 +1403,6 @@ macro_rules! __led_strips_impl {
                 sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$pio, $sm_index>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
                 pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
-                combo_table: &'static [u8; 256],
                 command_signal: &'static $crate::led_strip::LedStripCommandSignal<{ $len }, { $max_frames }>,
                 completion_signal: &'static $crate::led_strip::LedStripCompletionSignal,
             ) -> ! {
@@ -1428,7 +1421,7 @@ macro_rules! __led_strips_impl {
                     { $len },
                     { $max_frames },
                     _
-                >(driver, command_signal, completion_signal, combo_table).await
+                >(driver, command_signal, completion_signal, &[<$label:camel LedStrip>]::COMBO_TABLE).await
             }
 
             #[cfg(not(feature = "host"))]
@@ -2697,6 +2690,8 @@ macro_rules! __led_strips_impl {
 /// - `gamma` — Color curve (default: `Gamma::Srgb`)
 /// - `max_frames` — Maximum number of animation frames (default: 16 frames)
 ///
+/// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
+///
 #[doc = include_str!("docs/current_limiting_and_gamma.md")]
 ///
 /// # Related Macros
@@ -3065,6 +3060,9 @@ macro_rules! __led_strip_impl {
                 pub const MAX_BRIGHTNESS: u8 =
                     $max_current.max_brightness(Self::WORST_CASE_MA);
 
+                // Combined gamma correction and brightness scaling table
+                const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
+
                 /// Create a new LED strip instance of the struct type
                 /// defined by [`led_strip!`] or [`led_strips!`](crate::led_strips!).
                 ///
@@ -3092,12 +3090,9 @@ macro_rules! __led_strip_impl {
                     static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> =
                         $crate::led_strip::LedStrip::new_static();
                     static STRIP_CELL: ::static_cell::StaticCell<$name> = ::static_cell::StaticCell::new();
-                    static COMBO_TABLE_CELL: ::static_cell::StaticCell<[u8; 256]> = ::static_cell::StaticCell::new();
 
                     let pin = pin.into();
                     let dma = dma.into();
-                    let combo_table =
-                        COMBO_TABLE_CELL.init($crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS));
 
                     let sm0 = [<$name:snake _split_sm0>](pio);
                     let (bus, sm) = sm0.into_parts();
@@ -3107,7 +3102,6 @@ macro_rules! __led_strip_impl {
                         sm,
                         dma,
                         pin,
-                        combo_table,
                         STRIP_STATIC.command_signal(),
                         STRIP_STATIC.completion_signal(),
                     );
@@ -3140,7 +3134,6 @@ macro_rules! __led_strip_impl {
                 sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$pio, 0>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
                 pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
-                combo_table: &'static [u8; 256],
                 command_signal: &'static $crate::led_strip::LedStripCommandSignal<{ $len }, { $max_frames }>,
                 completion_signal: &'static $crate::led_strip::LedStripCompletionSignal,
             ) -> ! {
@@ -3159,7 +3152,7 @@ macro_rules! __led_strip_impl {
                     { $len },
                     { $max_frames },
                     _
-                >(driver, command_signal, completion_signal, combo_table).await
+                >(driver, command_signal, completion_signal, &$name::COMBO_TABLE).await
             }
         }
     };

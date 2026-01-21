@@ -201,7 +201,7 @@ Use American over British spelling
 
 When making up variable notes for examples and elsewhere, never use the prefix "My". I hate that.
 
-- If an item comes from `core`, `std`, or `alloc`, import it with `use` instead of using a fully-qualified `core::`, `std::`, or `alloc::` path in code. (Fully-qualified paths are fine in docs or comments.)
+- If an item comes from `crate`, `core`, `std`, or `alloc`, import it with `use` instead of using a fully-qualified `crate::`, `core::`, `std::`, or `alloc::` path in code. (Fully-qualified paths are fine in docs or comments.)
 - In all demos, examples, and doctests, prefer condensed `use` statements (group related imports on a single `use` line where it stays readable).
 
 Yes, in Rust the get_ prefix is generally discouraged for getters. The Rust API guidelines specifically recommend against it.

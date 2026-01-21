@@ -47,7 +47,6 @@ pub mod button;
 pub mod char_lcd;
 #[cfg(not(feature = "host"))]
 pub mod clock;
-#[cfg(not(feature = "host"))]
 mod error;
 #[cfg(not(feature = "host"))]
 pub mod flash_array;
@@ -75,14 +74,4 @@ pub mod wifi;
 pub mod wifi_auto;
 
 // Re-export error types and result (used throughout)
-#[cfg(not(feature = "host"))]
-pub use error::{Error, Result};
-
-#[cfg(feature = "host")]
-use core::convert::Infallible;
-#[cfg(feature = "host")]
-use core::result::Result as CoreResult;
-#[cfg(feature = "host")]
-pub type Error = Infallible;
-#[cfg(feature = "host")]
-pub type Result<T, E = Error> = CoreResult<T, E>;
+pub use crate::error::{Error, Result};

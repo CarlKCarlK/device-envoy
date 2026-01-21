@@ -18,7 +18,6 @@ The `gamma` field applies a color response curve to make colors look more natura
 
 - [`Gamma::Linear`](crate::led_strip::Gamma::Linear) — No correction (raw values)
 - [`Gamma::Srgb`](crate::led_strip::Gamma::Srgb) — Perceptual sRGB semantics (default; preserves named color constants)
-- [`Gamma::SmartLeds`](crate::led_strip::Gamma::SmartLeds) — `smart_leds::gamma()` compatibility (≈ 2.8)
-- [`Gamma::Power`](crate::led_strip::Gamma::Power) — Power-law tuning (`out = in^(1/gamma)`)
+- [`Gamma::SmartLeds`](crate::led_strip::Gamma::SmartLeds) — `smart_leds::gamma()` compatibility (2.8)
 
 The gamma curve is compiled into a lookup table at device initialization, so it has no per-frame runtime cost.

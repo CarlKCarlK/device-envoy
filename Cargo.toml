@@ -166,7 +166,6 @@ rp235x-hal = { git = "https://github.com/rp-rs/rp-hal", branch = "main", package
     "rt",
 ], optional = true }
 smart-leds = "0.4.0"
-micromath = "2.1.0"
 itertools = { version = "0.13.0", default-features = false }
 crc32fast = { version = "1.4.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }

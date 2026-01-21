@@ -1,3 +1,4 @@
+#[cfg(not(feature = "host"))]
 use core::convert::Infallible;
 
 use derive_more::derive::{Display, Error};
@@ -39,11 +40,15 @@ pub enum Error {
     #[display("Format error")]
     FormatError,
 
+    #[cfg(not(feature = "host"))]
     #[display("Flash operation failed: {_0:?}")]
     Flash(#[error(not(source))] embassy_rp::flash::Error),
 
     #[display("Storage is invalid or corrupted")]
     StorageCorrupted,
+
+    #[display("animation disabled (max_frames = {_0})")]
+    AnimationDisabled(#[error(not(source))] usize),
 }
 
 impl From<()> for Error {

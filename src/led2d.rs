@@ -763,10 +763,9 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
         &self,
         frames: impl IntoIterator<Item = (Frame2d<W, H>, Duration)>,
     ) -> Result<()> {
-        assert!(
-            MAX_FRAMES > 0,
-            "max_frames must be positive for Led2d animations"
-        );
+        if MAX_FRAMES == 0 {
+            return Err(crate::Error::AnimationDisabled(MAX_FRAMES));
+        }
         let mut sequence: Vec<(StripFrame<N>, Duration), MAX_FRAMES> = Vec::new();
         for (frame, duration) in frames {
             assert!(
@@ -1036,6 +1035,8 @@ pub use led2d_device;
 /// - `max_current` — Electrical current budget (default: 250 mA)
 /// - `gamma` — Color curve (default: `Gamma::Srgb`)
 /// - `max_frames` — Maximum number of animation frames for the generated strip (default: 16 frames)
+///
+/// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
 ///
 #[doc = include_str!("docs/current_limiting_and_gamma.md")]
 ///

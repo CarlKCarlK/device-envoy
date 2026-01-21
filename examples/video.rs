@@ -193,7 +193,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
                 let test_pattern = create_test_pattern();
                 led_12x8.write_frame(test_pattern).await?;
 
-                button.wait_for_press2().await;
+                button.wait_for_press().await;
                 mode = mode.next();
             }
             Mode::TestText => {
@@ -205,7 +205,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
                 )?;
                 led_12x8.write_frame(frame).await?;
 
-                button.wait_for_press2().await;
+                button.wait_for_press().await;
                 mode = mode.next();
             }
             Mode::Santa => {
@@ -213,7 +213,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
                     .iter()
                     .map(|&(frame, duration)| (frame.into(), duration));
                 led_12x8.animate(frames_with_duration).await?;
-                button.wait_for_press2().await;
+                button.wait_for_press().await;
                 mode = mode.next();
             }
             Mode::Clock => {
@@ -221,7 +221,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
                     .iter()
                     .map(|&(frame, duration)| (frame.into(), duration));
                 led_12x8.animate(frames_with_duration).await?;
-                button.wait_for_press2().await;
+                button.wait_for_press().await;
                 mode = mode.next();
             }
         }

@@ -149,7 +149,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // and `button` can be used for user interactions (e.g., triggering actions).
     info!("WiFi setup complete - press button to fetch NTP time");
     loop {
-        button.wait_for_press2().await;
+        button.wait_for_press().await;
         match fetch_ntp_time(stack).await {
             Ok(unix_seconds) => info!("Current time: {}", unix_seconds.as_i64()),
             Err(err) => warn!("Failed to fetch time: {}", err),

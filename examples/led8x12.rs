@@ -55,30 +55,30 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     loop {
         info!("Demo 1: Clock-style two-line text");
         demo_clock_text(&led8x12).await?;
-        button.wait_for_press2().await;
+        button.wait_for_press().await;
 
         info!("Demo 2: Colored corners (orientation test)");
         demo_colored_corners(&led8x12).await?;
-        button.wait_for_press2().await;
+        button.wait_for_press().await;
 
         info!("Demo 3: Blink text");
         demo_blink_text(&led8x12).await?;
-        button.wait_for_press2().await;
+        button.wait_for_press().await;
 
         info!("Demo 4: Blink pattern");
         demo_blink_pattern(&led8x12).await?;
-        button.wait_for_press2().await;
+        button.wait_for_press().await;
 
         info!("Demo 5: Rectangle with diagonals (embedded-graphics)");
         demo_rectangle_diagonals_embedded_graphics(&led8x12).await?;
-        button.wait_for_press2().await;
+        button.wait_for_press().await;
 
         info!("Demo 6: Bouncing dot (manual frames)");
         demo_bouncing_dot_manual(&led8x12, &mut button).await?;
 
         info!("Demo 7: Bouncing dot (animation)");
         demo_bouncing_dot_animation(&led8x12).await?;
-        button.wait_for_press2().await;
+        button.wait_for_press().await;
     }
 }
 
@@ -245,7 +245,7 @@ impl BouncingDot {
 
 async fn demo_bouncing_dot_manual(led8x12: &Led8x12, button: &mut Button<'_>) -> Result<()> {
     let mut bouncing_dot = BouncingDot::new();
-    match select(bouncing_dot.run(led8x12), button.wait_for_press2()).await {
+    match select(bouncing_dot.run(led8x12), button.wait_for_press()).await {
         Either::First(result) => result.map(|_| ()),
         Either::Second(_) => Ok(()),
     }

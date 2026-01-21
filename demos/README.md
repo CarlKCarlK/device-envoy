@@ -51,3 +51,13 @@ Run/flash (Pico 1 ARM):
 ```bash
 cargo run --release --bin demo_b1_panel_12x8_rust_cursor --target thumbv6m-none-eabi --features pico1,arm
 ```
+
+## B2 – 12×8 panel, text to frame and graphics
+
+Writes colored "Go" to an in-memory frame, fills in the `o` with direct pixels, and draws a red rectangle with a yellow circle using embedded-graphics.
+
+Run/flash (Pico 1 ARM):
+
+```bash
+cargo run --release --bin demo_b2_panel_12x8_text_graphics --target thumbv6m-none-eabi --features pico1,arm
+```

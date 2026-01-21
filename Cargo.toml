@@ -86,8 +86,8 @@ test = false
 required-features = ["arm"]
 
 [[bin]]
-name = "demo_a4_strip_48_blue_white_dot"
-path = "demos/a_led/a4_strip_48_blue_white_dot.rs"
+name = "demo_a4_strip_96_blue_white_dot"
+path = "demos/a_led/a4_strip_96_blue_white_dot.rs"
 test = false
 required-features = ["arm"]
 

@@ -16,7 +16,6 @@ led_strip! {
     LedStrip8 {
         pin: PIN_0,
         len: 8,
-        max_current: Current::Milliamps(50),
     }
 }
 

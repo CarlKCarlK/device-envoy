@@ -84,5 +84,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     future::pending().await // run forever
 }
 
-// Not shown today: 2D animations. They work as you'd expect from the 1D example.
-// Animations take an iterator of (frame, duration) and copy it into their own frame array.
+// Not shown today:
+//   -- 2D animations. They work as you'd expect from the 1D example.
+//      Animations take an iterator of (frame, duration) and copy it into their own frame array.
+//   -- Having up to four LED strips and panels share one PIO resource, via the `led_strips!` macro.
+//      On a Pico 2, this lets you control up to 12 strips and panels total.

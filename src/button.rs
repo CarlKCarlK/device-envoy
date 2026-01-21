@@ -29,7 +29,7 @@ pub enum PressedTo {
     /// Button connects pin to voltage (3.3V) when pressed.
     /// Uses internal pull-down resistor. Pin reads HIGH when pressed.
     ///
-    /// Note: Pico 2 (RP2350) has a known silicon bug with pull-down resistors
+    /// Note: The original Pico 2 (RP2350) has a known silicon bug with pull-down resistors
     /// that can cause pins to stay HIGH after button release. Use ToGround instead.
     Voltage,
 

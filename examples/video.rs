@@ -105,7 +105,7 @@ led2d! {
         dma: DMA_CH1,
         led_layout: LED_LAYOUT_12X8,
         max_current: Current::Milliamps(250),
-        gamma: Gamma::Gamma2_2,
+        gamma: Gamma::Srgb,
         max_frames: 70,
         font: Led2dFont::Font3x4Trim,
     }

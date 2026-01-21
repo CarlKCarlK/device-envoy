@@ -99,7 +99,7 @@
 //!         pio: PIO1,                            // PIO resource, default is PIO0
 //!         dma: DMA_CH1,                         // DMA resource, default is DMA_CH0
 //!         max_current: Current::Milliamps(300), // Power budget, default is 250 mA.
-//!         gamma: Gamma::Linear,                 // Color correction curve, default is Gamma2_2
+//!         gamma: Gamma::Linear,                 // Color correction curve, default is Gamma::Srgb
 //!         max_frames: 2,                        // maximum animation frames, default is 16
 //!     }
 //! }
@@ -1034,7 +1034,7 @@ pub use led2d_device;
 /// - `pio` — PIO resource to use (default: `PIO0`)
 /// - `dma` — DMA channel (default: `DMA_CH0`)
 /// - `max_current` — Electrical current budget (default: 250 mA)
-/// - `gamma` — Color curve (default: `Gamma::Gamma2_2`)
+/// - `gamma` — Color curve (default: `Gamma::Srgb`)
 /// - `max_frames` — Maximum number of animation frames for the generated strip (default: 16 frames)
 ///
 #[doc = include_str!("docs/current_limiting_and_gamma.md")]

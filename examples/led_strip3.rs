@@ -31,7 +31,7 @@ led_strips! {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(75),
-            gamma: Gamma::Gamma2_2,                 // Optional; default Gamma2_2.
+            gamma: Gamma::SmartLeds,                // Optional; default Gamma::Srgb.
             max_frames: 1,                          // Optional; default 16.
             dma: DMA_CH11,                          // Optional; auto-assigned by strip order.
         },

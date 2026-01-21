@@ -31,8 +31,8 @@ led2d! {
         led_layout: LED_LAYOUT,
         // Power budget (default: unlimited)
         max_current: Current::Unlimited,
-        // Gamma correction mode (default: Gamma2_2)
-        gamma: Gamma::Gamma2_2,
+        // Gamma correction mode (default: Gamma::Srgb)
+        gamma: Gamma::Srgb,
         // Maximum number of animation frames (default: 16)
         max_frames: 16,
         // Font variant (see [`Led2dFont`](crate::led2d::Led2dFont) for available fonts)

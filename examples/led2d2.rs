@@ -31,7 +31,7 @@ led2d! {
         pio: PIO1, // PIO resource, default is PIO0
         dma: DMA_CH1, // DMA resource, default is DMA_CH0
         max_current: Current::Milliamps(300), // Power budget, default is 250 mA
-        gamma: Gamma::Linear, // Color correction curve, default is Gamma2_2
+        gamma: Gamma::Linear, // Color correction curve, default is Gamma::Srgb
         max_frames: 2, // maximum animation frames, default is 16
     }
 }

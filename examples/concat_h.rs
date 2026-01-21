@@ -25,7 +25,7 @@ led2d! {
         dma: DMA_CH1,
         led_layout: LED_LAYOUT_24X4,
         max_current: Current::Milliamps(1000),
-        gamma: Gamma::Gamma2_2,
+        gamma: Gamma::SmartLeds,
         max_frames: 8,
         font: Led2dFont::Font3x4Trim,
     }

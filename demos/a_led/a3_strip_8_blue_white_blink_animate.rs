@@ -6,7 +6,7 @@ use core::{convert::Infallible, future, panic};
 
 use device_kit::{
     Result,
-    led_strip::{Current, Frame1d, colors, led_strip},
+    led_strip::{Frame1d, colors, led_strip},
 };
 use embassy_executor::Spawner;
 use embassy_time::Duration;

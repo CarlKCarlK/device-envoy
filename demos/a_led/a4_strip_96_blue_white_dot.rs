@@ -6,16 +6,22 @@ use core::{convert::Infallible, future, panic};
 
 use device_kit::{
     Result,
-    led_strip::{Frame1d, colors, led_strip},
+    led_strip::{Current, Frame1d, Gamma, colors, led_strip},
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
-    LedStrip96 {
+    pub LedStrip96 { // can add 'pub' to make struct public
         pin: PIN_4,
         len: 96,
+        // Optionals
+        pio: PIO1,     // which of 2 or 3 PIO resources to use
+        dma: DMA_CH5,  // which of 12 DMA resources to use
+        max_current: Current::Milliamps(500), // limit max current to 500mA
+        gamma: Gamma::Gamma2_2, // apply gamma correction
+        max_frames: 1, // Allocate space for 1 frame of animation
     }
 }
 
@@ -28,7 +34,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip96 = LedStrip96::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip96 = LedStrip96::new(p.PIN_4, p.PIO1, p.DMA_CH5, spawner)?;
 
     let mut frame1d = Frame1d::filled(colors::BLUE);
     for dot_index in (0..LedStrip96::LEN).cycle() {

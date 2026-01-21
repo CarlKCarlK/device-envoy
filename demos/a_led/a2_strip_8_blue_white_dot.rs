@@ -2,7 +2,7 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::{convert::Infallible, panic};
+use core::{convert::Infallible, future, panic};
 
 use device_kit::{
     Result,
@@ -31,20 +31,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
-    // Create two frames with alternating blue and white dots
-    let palette = [colors::BLUE, colors::GRAY];
-    let mut frame0 = Frame1d::new();
-    let mut frame1 = frame0.clone();
-    for pixel_index in 0..frame0.len() {
-        frame0[pixel_index] = palette[pixel_index % 2];
-        frame1[pixel_index] = palette[(pixel_index + 1) % 2];
+    // Start with all blue LEDs
+    let mut frame1d = Frame1d::filled(colors::BLUE);
+    // Do 0,1,2,3 over and over (a computer-science foxtrot)
+    for dot_index in (0..4).cycle() {
+        frame1d[dot_index] = colors::WHITE;
+        frame1d[dot_index + 4] = colors::WHITE;
+
+        led_strip8.write_frame(frame1d).await?;
+        Timer::after(Duration::from_millis(150)).await;
+
+        frame1d[dot_index] = colors::BLUE;
+        frame1d[dot_index + 4] = colors::BLUE;
     }
 
-    // Animate the frames in a loop
-    loop {
-        led_strip8.write_frame(frame0).await?;
-        Timer::after(Duration::from_millis(150)).await;
-        led_strip8.write_frame(frame1).await?;
-        Timer::after(Duration::from_millis(150)).await;
-    }
+    // Needed because compiler can't tell this is an infinite loop
+    future::pending().await // run forever
 }

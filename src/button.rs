@@ -3,7 +3,6 @@
 //! See [`Button`] for usage example.
 // cmk check this now that it works connected to both ground and voltage
 
-use defmt::info;
 use embassy_futures::select::{Either, select};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Pull};
@@ -157,36 +156,51 @@ impl<'a> Button<'a> {
         self
     }
 
-    // cmk should there be a wait_for_press that is the same with a length
-    // cmk is it bad that this one waits for up but wait for press does not? At the very least should be documented.
-    /// Measures the duration of a button press.
-    ///
-    /// This method does not wait for the button to be released. It only waits
-    /// as long as necessary to determine whether the press was "short" or "long".
-    ///
-    /// See also: [`wait_for_press()`](Self::wait_for_press) for simple press detection.
+    #[inline]
+    async fn wait_for_stable_down(&mut self) -> &mut Self {
+        loop {
+            self.wait_for_button_down().await;
+            Timer::after(BUTTON_DEBOUNCE_DELAY).await;
+            if self.is_pressed() {
+                break;
+            }
+            // otherwise it was bounce; keep waiting
+        }
+        self
+    }
+
+    #[inline]
+    async fn wait_for_stable_up(&mut self) -> &mut Self {
+        loop {
+            self.wait_for_button_up().await;
+            Timer::after(BUTTON_DEBOUNCE_DELAY).await;
+            if !self.is_pressed() {
+                break;
+            }
+        }
+        self
+    }
+    /// Waits for the next press (button goes down, debounced).
+    /// Does not wait for release.
+    pub async fn wait_for_press(&mut self) {
+        self.wait_for_stable_up().await; // ensure edge-triggered
+        self.wait_for_stable_down().await; // return on down
+    }
     pub async fn wait_for_press_duration(&mut self) -> PressDuration {
-        self.wait_for_button_up().await;
-        Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-        self.wait_for_button_down().await;
-        Timer::after(BUTTON_DEBOUNCE_DELAY).await;
+        self.wait_for_stable_up().await;
+        self.wait_for_stable_down().await;
+
         let press_duration =
-            match select(self.wait_for_button_up(), Timer::after(LONG_PRESS_DURATION)).await {
+            match select(self.wait_for_stable_up(), Timer::after(LONG_PRESS_DURATION)).await {
                 Either::First(_) => PressDuration::Short,
                 Either::Second(()) => PressDuration::Long,
             };
-        info!("Press duration: {:?}", press_duration);
+
         press_duration
     }
 
-    /// This method uses the same debounce and press-start behavior as
-    /// [`wait_for_press_duration()`](Self::wait_for_press_duration) but discards
-    /// the duration result.
-    ///
-    /// Short presses return after release. Long presses return once the long
-    /// press timeout is reached (while the button is still down).
-    #[inline]
-    pub async fn wait_for_press(&mut self) {
-        self.wait_for_press_duration().await;
+    /// Waits until the button is released (debounced).
+    pub async fn wait_for_release(&mut self) {
+        self.wait_for_stable_up().await;
     }
 }

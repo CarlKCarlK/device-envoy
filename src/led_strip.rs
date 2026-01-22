@@ -602,7 +602,6 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStripStatic<N, MAX_FRAMES> {
     pub fn command_signal(&'static self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
         &self.command_signal
     }
-
 }
 
 // Public so macro-generated types can deref to it; hidden from docs.
@@ -651,10 +650,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// by a new `animate` call or `write_frame`.
     ///
     /// See the [led_strip module documentation](mod@crate::led_strip) for example usage.
-    pub fn animate(
-        &self,
-        frames: impl IntoIterator<Item = (Frame1d<N>, Duration)>,
-    ) -> Result<()> {
+    pub fn animate(&self, frames: impl IntoIterator<Item = (Frame1d<N>, Duration)>) -> Result<()> {
         if MAX_FRAMES == 0 {
             return Err(crate::Error::AnimationDisabled(MAX_FRAMES));
         }
@@ -679,7 +675,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
 
 #[cfg(not(feature = "host"))]
 #[doc(hidden)] // Required pub for macro expansion in downstream crates
-pub async fn led_strip_animation_loop<
+pub async fn led_strip_device_loop<
     PIO,
     const SM: usize,
     const N: usize,
@@ -695,26 +691,19 @@ where
     ORDER: embassy_rp::pio_programs::ws2812::RgbColorOrder,
 {
     loop {
-        let mut current_command = command_signal.wait().await;
+        let mut command = command_signal.wait().await;
         command_signal.reset();
 
         loop {
-            match current_command {
-                Command::DisplayStatic(frame) => {
-                    let mut corrected_frame = frame;
-                    apply_correction(&mut corrected_frame, combo_table);
-                    driver.write(&corrected_frame).await;
+            match command {
+                Command::DisplayStatic(mut frame) => {
+                    apply_correction(&mut frame, combo_table);
+                    driver.write(&frame).await;
                     break;
                 }
                 Command::Animate(frames) => {
-                    current_command = run_frame_animation(
-                        &mut driver,
-                        frames,
-                        command_signal,
-                        combo_table,
-                    )
-                    .await;
-                    // Process the returned command immediately without resetting signal
+                    command =
+                        run_frame_animation(&mut driver, frames, command_signal, combo_table).await;
                 }
             }
         }
@@ -724,7 +713,7 @@ where
 #[cfg(not(feature = "host"))]
 async fn run_frame_animation<PIO, const SM: usize, const N: usize, const MAX_FRAMES: usize, ORDER>(
     driver: &mut PioWs2812<'static, PIO, SM, N, ORDER>,
-    frames: Vec<(Frame1d<N>, Duration), MAX_FRAMES>,
+    mut frames: Vec<(Frame1d<N>, Duration), MAX_FRAMES>,
     command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
     combo_table: &'static [u8; 256],
 ) -> Command<N, MAX_FRAMES>
@@ -732,11 +721,13 @@ where
     PIO: Instance,
     ORDER: embassy_rp::pio_programs::ws2812::RgbColorOrder,
 {
+    frames
+        .iter_mut()
+        .for_each(|(frame, _)| apply_correction(frame, combo_table));
+
     loop {
         for (frame, duration) in &frames {
-            let mut corrected_frame = *frame;
-            apply_correction(&mut corrected_frame, combo_table);
-            driver.write(&corrected_frame).await;
+            driver.write(frame).await;
 
             match select(command_signal.wait(), Timer::after(*duration)).await {
                 Either::First(new_command) => {
@@ -751,15 +742,12 @@ where
 
 #[cfg(not(feature = "host"))]
 fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 256]) {
-    for color in frame.iter_mut() {
-        *color = RGB8::new(
-            combo_table[usize::from(color.r)],
-            combo_table[usize::from(color.g)],
-            combo_table[usize::from(color.b)],
-        );
-    }
+    frame.iter_mut().for_each(|pixel| {
+        pixel.r = combo_table[pixel.r as usize];
+        pixel.g = combo_table[pixel.g as usize];
+        pixel.b = combo_table[pixel.b as usize];
+    });
 }
-
 /// Macro to generate multiple LED strip and panel struct types that share a single
 /// [PIO resource](crate#glossary) (includes syntax details).
 ///
@@ -1246,7 +1234,7 @@ macro_rules! __led_strips_impl {
                         _
                     >::new(common, sm, dma, pin, program)
                 });
-                $crate::led_strip::led_strip_animation_loop::<
+                $crate::led_strip::led_strip_device_loop::<
                     ::embassy_rp::peripherals::$pio,
                     $sm_index,
                     { $len },
@@ -1362,7 +1350,7 @@ macro_rules! __led_strips_impl {
                         _
                     >::new(common, sm, dma, pin, program)
                 });
-                $crate::led_strip::led_strip_animation_loop::<
+                $crate::led_strip::led_strip_device_loop::<
                     ::embassy_rp::peripherals::$pio,
                     $sm_index,
                     { $len },
@@ -3091,7 +3079,8 @@ macro_rules! __led_strip_impl {
                         _
                     >::new(common, sm, dma, pin, program)
                 });
-                $crate::led_strip::led_strip_animation_loop::<
+                $crate::led_strip::led_strip_device_loop
+                ::<
                     ::embassy_rp::peripherals::$pio,
                     0,
                     { $len },

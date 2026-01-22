@@ -734,10 +734,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
     /// Render a fully defined frame to the panel.
     ///
     /// Frame2d is a 2D array in row-major order where `frame[(col, row)]` is the pixel at (col, row).
-    pub fn write_frame<const W: usize, const H: usize>(
-        &self,
-        frame: Frame2d<W, H>,
-    ) -> Result<()> {
+    pub fn write_frame<const W: usize, const H: usize>(&self, frame: Frame2d<W, H>) -> Result<()> {
         let strip_frame = self.convert_frame(frame);
         self.command_signal
             .signal(Command::DisplayStatic(strip_frame));
@@ -800,13 +797,13 @@ where
     let led_strip_ref = led_strip.as_ref();
     loop {
         defmt::debug!("led2d_device_loop: waiting for command");
-        let mut current_command = command_signal.wait().await;
+        let mut command = command_signal.wait().await;
         command_signal.reset();
 
         loop {
-            match current_command {
-                Command::DisplayStatic(frame) => {
-                    led_strip_ref.write_frame(frame)?;
+            match command {
+                Command::DisplayStatic(frame1d) => {
+                    led_strip_ref.write_frame(frame1d)?;
                     break;
                 }
                 Command::Animate(frames) => {
@@ -814,12 +811,7 @@ where
                         "led2d_device_loop: received Animate command with {} frames",
                         frames.len()
                     );
-                    current_command = run_animation_loop(
-                        frames,
-                        command_signal,
-                        led_strip_ref,
-                    )
-                    .await?;
+                    command = run_animation_loop(frames, command_signal, led_strip_ref).await?;
                     defmt::info!("led2d_device_loop: animation interrupted");
                 }
             }
@@ -836,9 +828,9 @@ async fn run_animation_loop<const N: usize, const MAX_FRAMES: usize>(
     defmt::info!("run_animation_loop: starting with {} frames", frames.len());
 
     loop {
-        for (frame_index, (strip_frame, duration)) in frames.iter().enumerate() {
+        for (frame_index, (frame1d, duration)) in frames.iter().enumerate() {
             defmt::trace!("run_animation_loop: displaying frame {}", frame_index);
-            led_strip.write_frame(*strip_frame)?;
+            led_strip.write_frame(*frame1d)?;
 
             match select(command_signal.wait(), Timer::after(*duration)).await {
                 Either::First(new_command) => {

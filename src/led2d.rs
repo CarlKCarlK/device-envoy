@@ -177,7 +177,6 @@ use embedded_graphics::{
     },
     prelude::*,
 };
-use heapless::Vec;
 use smart_leds::RGB8;
 
 #[cfg(not(feature = "host"))]
@@ -192,10 +191,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
         Ok(())
     }
 
-    fn animate_frames(
-        &self,
-        _sequence: Vec<(StripFrame<N>, Duration), MAX_FRAMES>,
-    ) -> Result<()> {
+    fn animate(&self, _frames: impl IntoIterator<Item = (StripFrame<N>, Duration)>) -> Result<()> {
         Ok(())
     }
 }
@@ -728,26 +724,10 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
         &self,
         frames: impl IntoIterator<Item = (Frame2d<W, H>, Duration)>,
     ) -> Result<()> {
-        if MAX_FRAMES == 0 {
-            return Err(crate::Error::AnimationDisabled(MAX_FRAMES));
-        }
-        let mut sequence: Vec<(StripFrame<N>, Duration), MAX_FRAMES> = Vec::new();
-        for (frame, duration) in frames {
-            assert!(
-                duration.as_micros() > 0,
-                "animation frame duration must be positive"
-            );
-            let strip_frame = self.convert_frame(frame);
-            sequence
-                .push((strip_frame, duration))
-                .expect("animation sequence fits");
-        }
-        assert!(
-            !sequence.is_empty(),
-            "animation requires at least one frame"
-        );
-        defmt::info!("Led2d::animate: sending {} frames", sequence.len());
-        self.led_strip.animate_frames(sequence)
+        self.led_strip
+            .animate(frames.into_iter().map(|(frame, duration)| {
+                (self.convert_frame(frame), duration)
+            }))
     }
 }
 

@@ -54,9 +54,9 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     const ANIMATION_DELAY: embassy_time::Duration = embassy_time::Duration::from_millis(50);
 
     loop {
+        let mut frame1d = Frame1d::new();
+        let mut frame1d_b = Frame1d::new();
         for index in 0..4 {
-            let mut frame1d = Frame1d::new();
-            let mut frame1d_b = Frame1d::new();
             let mut frame2d = Frame2d::new();
             let mut frame2d_b = Frame2d::new();
             let text = match index {
@@ -78,12 +78,12 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
             button.wait_for_press().await;
 
             // animate
-            frame1d_b[index] = colors::RED;
+            frame1d_b[index] = colors::YELLOW;
             gpio0_led_strip
                 .animate([(frame1d_b, ANIMATION_DELAY), (frame1d, ANIMATION_DELAY)])
                 .await?;
-            gpio3_led2d.write_text_to_frame(text, &[colors::YELLOW], &mut frame2d)?;
-            gpio3_led2d.write_text_to_frame(text, &[colors::RED], &mut frame2d_b)?;
+            gpio3_led2d.write_text_to_frame(text, &[colors::RED], &mut frame2d)?;
+            gpio3_led2d.write_text_to_frame(text, &[colors::YELLOW], &mut frame2d_b)?;
             gpio3_led2d
                 .animate([(frame2d_b, ANIMATION_DELAY), (frame2d, ANIMATION_DELAY)])
                 .await?;

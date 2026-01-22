@@ -4,19 +4,21 @@
 
 use core::{convert::Infallible, future, panic};
 
+use defmt::info;
 use device_kit::{
     Result,
     button::{Button, PressedTo},
     led_strip::{Frame1d, colors, led_strip},
 };
 use embassy_executor::Spawner;
-use embassy_time::Duration;
+use embassy_time::Duration; // , Timer};
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
     LedStrip8 {
         pin: PIN_0,
         len: 8,
+        max_frames: 2,
     }
 }
 
@@ -41,28 +43,22 @@ async fn demo_c1(led_strip8: &LedStrip8, button: &mut Button<'_>) -> Result<()> 
     const BLINK_DELAY: Duration = Duration::from_millis(150);
 
     loop {
+        let mut solid_frame = Frame1d::new();
+        let mut solid_and_blink_frame = Frame1d::new();
         for led_index in 0..LedStrip8::LEN {
-            let mut off_frame = Frame1d::filled(colors::BLACK);
-            let mut on_frame = Frame1d::filled(colors::BLACK);
-            for solid_index in 0..led_index {
-                off_frame[solid_index] = colors::YELLOW;
-                on_frame[solid_index] = colors::YELLOW;
-            }
-            on_frame[led_index] = colors::YELLOW;
+            // Add the next blink LED
+            solid_and_blink_frame[led_index] = colors::YELLOW;
 
             led_strip8
-                .animate([(off_frame, BLINK_DELAY), (on_frame, BLINK_DELAY)])
+                .animate([
+                    (solid_frame, BLINK_DELAY),
+                    (solid_and_blink_frame, BLINK_DELAY),
+                ])
                 .await?;
             button.wait_for_press().await;
 
-            let mut frame1d = Frame1d::filled(colors::BLACK);
-            for solid_index in 0..=led_index {
-                frame1d[solid_index] = colors::YELLOW;
-            }
-            led_strip8.write_frame(frame1d).await?;
+            // Add the next solid LED
+            solid_frame[led_index] = colors::YELLOW;
         }
-
-        let frame1d = Frame1d::filled(colors::BLACK);
-        led_strip8.write_frame(frame1d).await?;
     }
 }

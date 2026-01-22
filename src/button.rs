@@ -179,19 +179,14 @@ impl<'a> Button<'a> {
         press_duration
     }
 
-    /// Waits for the button to be pressed.
+    /// This method uses the same debounce and press-start behavior as
+    /// [`wait_for_press_duration()`](Self::wait_for_press_duration) but discards
+    /// the duration result.
     ///
-    /// This method returns immediately when the button press is detected,
-    /// without waiting for release or measuring duration.
-    ///
-    /// Use this when you only need to detect button presses. If you need to
-    /// distinguish between short and long presses, use
-    /// [`wait_for_press_duration()`](Self::wait_for_press_duration) instead.
-    ///
-    /// See the [struct-level example](Self) for usage.
+    /// Short presses return after release. Long presses return once the long
+    /// press timeout is reached (while the button is still down).
     #[inline]
-    pub async fn wait_for_press(&mut self) -> &mut Self {
+    pub async fn wait_for_press(&mut self) {
         self.wait_for_press_duration().await;
-        self
     }
 }

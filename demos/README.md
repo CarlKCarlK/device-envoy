@@ -61,3 +61,13 @@ Run/flash (Pico 1 ARM):
 ```bash
 cargo run --release --bin demo_b2_panel_12x8_text_graphics --target thumbv6m-none-eabi --features pico1,arm
 ```
+
+## C1 – 8-LED strip, yellow blink step with button
+
+Blinks a single yellow pixel that advances on each button press, leaving solid yellow pixels behind until all 8 are lit.
+
+Run/flash (Pico 1 ARM):
+
+```bash
+cargo run --release --bin demo_c1_strip_8_yellow_button_blink --target thumbv6m-none-eabi --features pico1,arm
+```

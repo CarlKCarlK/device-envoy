@@ -134,6 +134,7 @@ Preserving comments: When changing code, generally don't remove TODO's and cmk's
   - Heading followed immediately by another heading (needs blank line or text between)
 
 When adding new examples, also add the standard cargo aliases (run + check for pico1 and pico2 variants) in `.cargo/config.toml` so they stay discoverable.
+Use `cargo run --bin <name> --target <target> --features <features>` as the standard way to run demos/examples; only use short `cargo demo-*` commands when they are defined as aliases in `.cargo/config.toml`.
 
 ### Documentation Spec (for device modules)
 

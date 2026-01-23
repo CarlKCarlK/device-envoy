@@ -21,7 +21,8 @@ pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 ///
 /// Required fields: `pin`, `slice`.
 ///
-/// Optional fields: `min_us`, `max_us` (defaults to [`SERVO_MIN_US_DEFAULT`]/[`SERVO_MAX_US_DEFAULT`]),
+/// Optional fields: `min_us`, `max_us`, `max_degrees` (defaults to
+/// [`SERVO_MIN_US_DEFAULT`]/[`SERVO_MAX_US_DEFAULT`]/[`Servo::DEFAULT_MAX_DEGREES`]),
 /// plus `channel: A/B` or `odd`/`even` to override the inferred channel.
 ///
 /// See [`Servo`] for details and examples.
@@ -42,6 +43,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ ]
     ) => {
         $crate::__servo_impl! {
@@ -50,7 +52,8 @@ macro_rules! __servo_impl {
             slice: $slice,
             channel: $channel,
             min_us: $min_us,
-            max_us: $max_us
+            max_us: $max_us,
+            max_degrees: $max_degrees
         }
     };
 
@@ -60,6 +63,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ pin: $pin_value:expr, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -69,6 +73,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -79,6 +84,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ pin: $pin_value:expr ]
     ) => {
         $crate::__servo_impl! {
@@ -88,6 +94,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -98,6 +105,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ slice: $slice_value:expr, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -107,6 +115,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -117,6 +126,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ slice: $slice_value:expr ]
     ) => {
         $crate::__servo_impl! {
@@ -126,6 +136,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -136,6 +147,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ min_us: $min_us_value:expr, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -145,6 +157,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us_value,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -155,6 +168,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ min_us: $min_us_value:expr ]
     ) => {
         $crate::__servo_impl! {
@@ -164,6 +178,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us_value,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -174,6 +189,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ max_us: $max_us_value:expr, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -183,6 +199,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us,
             max_us: $max_us_value,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -193,6 +210,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ max_us: $max_us_value:expr ]
     ) => {
         $crate::__servo_impl! {
@@ -202,6 +220,7 @@ macro_rules! __servo_impl {
             channel: $channel,
             min_us: $min_us,
             max_us: $max_us_value,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -212,6 +231,49 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
+        fields: [ max_degrees: $max_degrees_value:expr, $($rest:tt)* ]
+    ) => {
+        $crate::__servo_impl! {
+            @__fill_defaults
+            pin: $pin,
+            slice: $slice,
+            channel: $channel,
+            min_us: $min_us,
+            max_us: $max_us,
+            max_degrees: $max_degrees_value,
+            fields: [ $($rest)* ]
+        }
+    };
+
+    (@__fill_defaults
+        pin: $pin:tt,
+        slice: $slice:tt,
+        channel: $channel:tt,
+        min_us: $min_us:expr,
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
+        fields: [ max_degrees: $max_degrees_value:expr ]
+    ) => {
+        $crate::__servo_impl! {
+            @__fill_defaults
+            pin: $pin,
+            slice: $slice,
+            channel: $channel,
+            min_us: $min_us,
+            max_us: $max_us,
+            max_degrees: $max_degrees_value,
+            fields: [ ]
+        }
+    };
+
+    (@__fill_defaults
+        pin: $pin:tt,
+        slice: $slice:tt,
+        channel: $channel:tt,
+        min_us: $min_us:expr,
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ channel: A, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -221,6 +283,7 @@ macro_rules! __servo_impl {
             channel: A,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -231,6 +294,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ channel: A ]
     ) => {
         $crate::__servo_impl! {
@@ -240,6 +304,7 @@ macro_rules! __servo_impl {
             channel: A,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -250,6 +315,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ channel: B, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -259,6 +325,7 @@ macro_rules! __servo_impl {
             channel: B,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -269,6 +336,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ channel: B ]
     ) => {
         $crate::__servo_impl! {
@@ -278,6 +346,7 @@ macro_rules! __servo_impl {
             channel: B,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -288,6 +357,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ even, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -297,6 +367,7 @@ macro_rules! __servo_impl {
             channel: A,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -307,6 +378,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ even ]
     ) => {
         $crate::__servo_impl! {
@@ -316,6 +388,7 @@ macro_rules! __servo_impl {
             channel: A,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -326,6 +399,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ odd, $($rest:tt)* ]
     ) => {
         $crate::__servo_impl! {
@@ -335,6 +409,7 @@ macro_rules! __servo_impl {
             channel: B,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ $($rest)* ]
         }
     };
@@ -345,6 +420,7 @@ macro_rules! __servo_impl {
         channel: $channel:tt,
         min_us: $min_us:expr,
         max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
         fields: [ odd ]
     ) => {
         $crate::__servo_impl! {
@@ -354,6 +430,7 @@ macro_rules! __servo_impl {
             channel: B,
             min_us: $min_us,
             max_us: $max_us,
+            max_degrees: $max_degrees,
             fields: [ ]
         }
     };
@@ -363,7 +440,8 @@ macro_rules! __servo_impl {
         slice: $slice:tt,
         channel: $channel:tt,
         min_us: $min_us:expr,
-        max_us: $max_us:expr
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr
     ) => {
         compile_error!("servo! requires `pin: ...`");
     };
@@ -373,7 +451,8 @@ macro_rules! __servo_impl {
         slice: _UNSET_,
         channel: $channel:tt,
         min_us: $min_us:expr,
-        max_us: $max_us:expr
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr
     ) => {
         compile_error!("servo! requires `slice: ...`");
     };
@@ -383,9 +462,10 @@ macro_rules! __servo_impl {
         slice: $slice:expr,
         channel: _UNSET_,
         min_us: $min_us:expr,
-        max_us: $max_us:expr
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr
     ) => {
-        $crate::servo::servo_from_pin_slice($pin, $slice, $min_us, $max_us)
+        $crate::servo::servo_from_pin_slice($pin, $slice, $min_us, $max_us, $max_degrees)
     };
 
     (@__build
@@ -393,7 +473,8 @@ macro_rules! __servo_impl {
         slice: $slice:expr,
         channel: A,
         min_us: $min_us:expr,
-        max_us: $max_us:expr
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr
     ) => {
         $crate::servo::Servo::new_output_a(
             embassy_rp::pwm::Pwm::new_output_a(
@@ -403,6 +484,7 @@ macro_rules! __servo_impl {
             ),
             $min_us,
             $max_us,
+            $max_degrees,
         )
     };
 
@@ -411,7 +493,8 @@ macro_rules! __servo_impl {
         slice: $slice:expr,
         channel: B,
         min_us: $min_us:expr,
-        max_us: $max_us:expr
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr
     ) => {
         $crate::servo::Servo::new_output_b(
             embassy_rp::pwm::Pwm::new_output_b(
@@ -421,6 +504,7 @@ macro_rules! __servo_impl {
             ),
             $min_us,
             $max_us,
+            $max_degrees,
         )
     };
 
@@ -434,6 +518,7 @@ macro_rules! __servo_impl {
             channel: _UNSET_,
             min_us: $crate::servo::SERVO_MIN_US_DEFAULT,
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
+            max_degrees: $crate::servo::Servo::DEFAULT_MAX_DEGREES,
             fields: [ $($fields)* ]
         }
     };
@@ -453,6 +538,7 @@ pub fn servo_from_pin_slice<'d, P, S>(
     slice: embassy_rp::Peri<'d, S>,
     min_us: u16,
     max_us: u16,
+    max_degrees: u16,
 ) -> Servo<'d>
 where
     P: ServoPwmPin<S>,
@@ -460,9 +546,9 @@ where
 {
     let pwm = P::new_pwm(slice, pin);
     if P::IS_CHANNEL_A {
-        Servo::new_output_a(pwm, min_us, max_us)
+        Servo::new_output_a(pwm, min_us, max_us, max_degrees)
     } else {
-        Servo::new_output_b(pwm, min_us, max_us)
+        Servo::new_output_b(pwm, min_us, max_us, max_degrees)
     }
 }
 
@@ -589,6 +675,7 @@ pub struct Servo<'d> {
     top: u16,
     min_us: u16,
     max_us: u16,
+    max_degrees: u16,
     channel: ServoChannel, // Track which channel (A or B) this servo uses
     state: ServoState,
 }
@@ -606,23 +693,33 @@ enum ServoState {
 }
 
 impl<'d> Servo<'d> {
+    pub const DEFAULT_MAX_DEGREES: u16 = 180;
+
     /// Create a servo on a PWM output A channel.
     ///
     /// See the [struct-level example](Self) for usage.
-    pub fn new_output_a(pwm: Pwm<'d>, min_us: u16, max_us: u16) -> Self {
-        Self::init(pwm, ServoChannel::A, min_us, max_us)
+    pub fn new_output_a(pwm: Pwm<'d>, min_us: u16, max_us: u16, max_degrees: u16) -> Self {
+        Self::init(pwm, ServoChannel::A, min_us, max_us, max_degrees)
     }
 
     /// Create a servo on a PWM output B channel.
     ///
     /// See the [struct-level example](Self) for usage.
-    pub fn new_output_b(pwm: Pwm<'d>, min_us: u16, max_us: u16) -> Self {
-        Self::init(pwm, ServoChannel::B, min_us, max_us)
+    pub fn new_output_b(pwm: Pwm<'d>, min_us: u16, max_us: u16, max_degrees: u16) -> Self {
+        Self::init(pwm, ServoChannel::B, min_us, max_us, max_degrees)
     }
 
     /// Configure PWM and initialize servo. Internal shared logic.
-    fn init(mut pwm: Pwm<'d>, channel: ServoChannel, min_us: u16, max_us: u16) -> Self {
+    fn init(
+        mut pwm: Pwm<'d>,
+        channel: ServoChannel,
+        min_us: u16,
+        max_us: u16,
+        max_degrees: u16,
+    ) -> Self {
+        // cmk000 revisit
         assert!(min_us < max_us, "min_us must be less than max_us");
+        assert!(max_degrees > 0, "max_degrees must be positive");
         let clk = clk_sys_freq() as u64; // Hz
         // Aim for tick ≈ 1 µs: divider = clk_sys / 1_000_000 (with /16 fractional)
         let mut div_int = (clk / 1_000_000).clamp(1, 255) as u16;
@@ -663,6 +760,7 @@ impl<'d> Servo<'d> {
             top,
             min_us,
             max_us,
+            max_degrees,
             channel,
             state: ServoState::Enabled,
         };
@@ -680,16 +778,17 @@ impl<'d> Servo<'d> {
         self.set_pulse_us(self.min_us + (self.max_us - self.min_us) / 2);
     }
 
-    /// Set position in degrees 0..=180 mapped into [min_us, max_us].
+    /// Set position in degrees 0..=max_degrees mapped into [min_us, max_us].
     ///
     /// Automatically enables the servo if it was disabled.
     ///
     /// See the [struct-level example](Self) for usage.
     pub fn set_degrees(&mut self, degrees: u16) {
-        assert!((0..=180).contains(&degrees));
+        assert!((0..=self.max_degrees).contains(&degrees));
         self.ensure_enabled();
         let us = self.min_us as u32
-            + (u32::from(degrees)) * (u32::from(self.max_us) - u32::from(self.min_us)) / 180;
+            + (u32::from(degrees)) * (u32::from(self.max_us) - u32::from(self.min_us))
+                / u32::from(self.max_degrees);
         info!("Servo set_degrees({}) -> {}µs", degrees, us);
         self.set_pulse_us(us as u16);
     }

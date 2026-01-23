@@ -22,13 +22,13 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Create a servo on GPIO 11
+    info!("Starting servo demo (GPIO 11)");
     let mut servo = servo! {
         pin: p.PIN_11,
         slice: p.PWM_SLICE5, // 11 → (11/2) % 8 = 5
     };
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
-    
     servo.set_degrees(0);
     Timer::after_millis(400).await;
     servo.set_degrees(180);
@@ -39,13 +39,16 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     for degree in (0..=180).step_by(10).cycle() {
         match button.wait_for_press_duration().await {
             PressDuration::Short => {
+                // Move servo to next position
+                info!("Servo -> {} degrees", degree);
                 servo.set_degrees(degree);
             }
             PressDuration::Long => {
+                // Disable can make the servo quiet
                 servo.disable();
             }
         }
     }
 
-    future::pending().await
+    future::pending().await // Needed because compiler can't see that loop is infinite
 }

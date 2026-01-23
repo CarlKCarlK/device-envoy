@@ -2,8 +2,8 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
+use core::future;
 use core::{convert::Infallible, panic};
-
 use device_kit::{
     Result,
     button::{Button, PressedTo},
@@ -39,21 +39,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     const BLINK_DELAY: Duration = Duration::from_millis(150);
 
-    loop {
-        // These frames *ours*. `animate()` copies them. After 4 presses:
-        // short frame: Ⓨ Ⓨ Ⓨ Ⓨ
-        // long  frame: Ⓨ Ⓨ Ⓨ Ⓨ Ⓨ
-        let mut short_frame = Frame1d::new();
-        let mut long_frame = Frame1d::new();
-        for led_index in 0..LedStrip8::LEN {
-            long_frame[led_index] = colors::YELLOW;
-            led_strip8.animate([(short_frame, BLINK_DELAY), (long_frame, BLINK_DELAY)])?;
+    // Fill with initial color, YELLOW.
+    let steady_frame = Frame1d::filled(colors::YELLOW);
+    let mut blink_frame = Frame1d::filled(colors::YELLOW);
+    for led_index in (0..LedStrip8::LEN).cycle() {
+        // Make the current LED blink.
+        blink_frame[led_index] = colors::BLACK;
+        led_strip8.animate([(steady_frame, BLINK_DELAY), (blink_frame, BLINK_DELAY)])?;
 
-            // Wait for the next *new* press: first ensure the button is stably released,
-            // then return on a debounced down (does not wait for release).
-            button.wait_for_press().await;
+        // Wait for a press. (If down already, waits for release, first.)
+        // Do debouncing internally. When pressed, don't wait for release.
+        button.wait_for_press().await;
 
-            short_frame[led_index] = colors::YELLOW;
-        }
+        // Fill in the "hole".
+        blink_frame[led_index] = colors::YELLOW;
     }
+    future::pending().await // run forever
 }

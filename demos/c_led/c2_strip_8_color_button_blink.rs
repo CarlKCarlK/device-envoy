@@ -39,22 +39,23 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut color = *colors.next().unwrap();
 
     // Fill with initial color, YELLOW.
-    let mut short_frame = Frame1d::filled(color);
-    let mut long_frame = Frame1d::filled(color);
+    let mut blink_frame = Frame1d::filled(color);
+    let mut steady_frame = Frame1d::filled(color);
     for led_index in (0..LedStrip8::LEN).cycle() {
         loop {
-            // Make the current LED blink.
-            short_frame[led_index] = colors::BLACK;
-            long_frame[led_index] = color;
-            led_strip8.animate([(short_frame, BLINK_DELAY), (long_frame, BLINK_DELAY)])?;
+            // Make the current LED blink with the current color.
+            blink_frame[led_index] = colors::BLACK;
+            steady_frame[led_index] = color;
+            led_strip8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)])?;
 
             // Tells if a long or short press. Returns from a long press before button release.
             match button.wait_for_press_duration().await {
-                // If short, change BLACK to current color and move to next LED.
+                // If short, fill "hole" with current color and move to next LED.
                 PressDuration::Short => {
-                    short_frame[led_index] = color;
+                    blink_frame[led_index] = color;
                     break;
                 }
+
                 // On a long press, change color for subsequent LEDs.
                 // Loop up to continue work on this pixel.
                 PressDuration::Long => {

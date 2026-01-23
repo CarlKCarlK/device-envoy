@@ -50,5 +50,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
         blink_frame[led_index] = colors::YELLOW;
     }
-    future::pending().await // run forever
+    future::pending().await // Needed because compiler doesn't know "cycle" is infinite.
 }

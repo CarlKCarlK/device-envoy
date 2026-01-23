@@ -50,7 +50,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         led_strip8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)])?;
 
         // Wait for a button press.
-        // Tells if a long or short press. Returns from a long press before button release.
+        // Tells if a long or short press.
+        // Long press returns as soon as it becomes long (no need to release).
         match button.wait_for_press_duration().await {
             // If short, fill "hole" with current color and move to next LED.
             PressDuration::Short => {

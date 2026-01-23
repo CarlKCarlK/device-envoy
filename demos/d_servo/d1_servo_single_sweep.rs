@@ -25,7 +25,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     info!("Starting servo demo (GPIO 11)");
     let mut servo = servo! {
         pin: p.PIN_11,
-        slice: p.PWM_SLICE5, // 11 → (11/2) % 8 = 5
+        slice: p.PWM_SLICE5,  // rule: slice = (gpio/2) % 8; GPIO11 -> 5
     };
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
@@ -33,9 +33,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     Timer::after_millis(400).await;
     servo.set_degrees(180);
     Timer::after_millis(400).await;
-    servo.center(); // cmk000 need "center"
+    servo.set_degrees(90);
 
-    // Loop by 10 degrees. Include 180 degrees.
+    // Use a cyclic iterator so we never need to reset state manually.
     for degree in (0..=180).step_by(10).cycle() {
         match button.wait_for_press_duration().await {
             PressDuration::Short => {
@@ -44,7 +44,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
                 servo.set_degrees(degree);
             }
             PressDuration::Long => {
-                // Disable can make the servo quiet
+                // Disable can make the servo quiet.
+                // Calling set_degrees() later will re-enable it.
                 servo.disable();
             }
         }

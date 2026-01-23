@@ -58,8 +58,8 @@ pub async fn main(_spawner: Spawner) -> ! {
     }
 
     info!("Done! Centering servos");
-    servo11.center();
-    servo12.center();
+    servo11.set_degrees(90);
+    servo12.set_degrees(90);
 
     Timer::after_millis(500).await;
 

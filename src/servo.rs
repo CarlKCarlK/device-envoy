@@ -664,9 +664,9 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 ///     };
 ///
 ///     servo.set_degrees(45);  // Move to 45 degrees
-///     servo.center();          // Move to center position
-///     servo.disable();         // Let the servo relax
-///     servo.enable();          // Resume control signals
+///     servo.set_degrees(90);  // Move to 90 degrees
+///     servo.disable();        // Let the servo relax
+///     servo.enable();         // Resume control signals
 /// }
 /// ```
 pub struct Servo<'d> {
@@ -764,18 +764,9 @@ impl<'d> Servo<'d> {
             channel,
             state: ServoState::Enabled,
         };
-        servo.center();
+        let center_us = min_us + (max_us - min_us) / 2;
+        servo.set_pulse_us(center_us);
         servo
-    }
-
-    /// Center (~midpoint of min/max).
-    ///
-    /// Automatically enables the servo if it was disabled.
-    ///
-    /// See the [struct-level example](Self) for usage.
-    pub fn center(&mut self) {
-        self.ensure_enabled();
-        self.set_pulse_us(self.min_us + (self.max_us - self.min_us) / 2);
     }
 
     /// Set position in degrees 0..=max_degrees mapped into [min_us, max_us].

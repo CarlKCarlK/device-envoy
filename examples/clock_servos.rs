@@ -75,16 +75,16 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         ServoAnimate::new(
             &LEFT_SERVO_ANIMATE_STATIC,
             servo! {
-                pin: p.PIN_0,
-                slice: p.PWM_SLICE0,
+                pin: p.PIN_11,
+                slice: p.PWM_SLICE5,
             },
             spawner,
         )?,
         ServoAnimate::new(
             &RIGHT_SERVO_ANIMATE_STATIC,
             servo! {
-                pin: p.PIN_2,
-                slice: p.PWM_SLICE1,
+                pin: p.PIN_12,
+                slice: p.PWM_SLICE6,
             },
             spawner,
         )?,

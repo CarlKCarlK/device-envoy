@@ -117,8 +117,8 @@ impl ServoAnimateStatic {
 ///     let servo = ServoAnimate::new(
 ///         &SERVO_ANIMATE_STATIC,
 ///         servo! {
-///             pin: p.PIN_0,
-///             slice: p.PWM_SLICE0,
+///             pin: p.PIN_11,
+///             slice: p.PWM_SLICE5,
 ///             min_us: 500,
 ///             max_us: 2500,
 ///         },

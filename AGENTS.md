@@ -398,11 +398,11 @@ When using `#[doc(hidden)]` for this reason, always add a comment explaining why
 
 ## LED Hardware Configuration
 
-Examples use the following standard pin assignments:
+Examples use the following standard PIO resource and pin assignments:
 
-- **PIN_0** – 8 LEDs in a line (e.g., `led_strip_single.rs`)
-- **PIN_3** – 12×4 matrix (48 pixels, e.g., `led_strip_3_on_a_pio.rs`)
-- **PIN_4** – Two 12×4 matrices combined into 12×8 display (96 pixels)
+- **PIO resource 0 + PIN_0** – 8 LEDs in a line (e.g., `led_strip_single.rs`)
+- **PIN_3** – 12×4 panel (48 pixels, e.g., `led_strip_3_on_a_pio.rs`)
+- **PIN_4** – Two 12×4 panels combined into 12×8 panel (96 pixels)
 
 When writing new examples or documentation, follow this convention for consistency.
 
@@ -415,3 +415,7 @@ let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 ```
 
 Use this consistently when adding button input to examples.
+
+## Servo Pins
+
+The standard servo pins across examples are **PIN_11** and **PIN_12**.

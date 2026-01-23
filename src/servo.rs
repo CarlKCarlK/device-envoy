@@ -443,10 +443,7 @@ macro_rules! __servo_impl {
 #[doc(hidden)]
 pub trait ServoPwmPin<S: embassy_rp::PeripheralType>: embassy_rp::PeripheralType {
     const IS_CHANNEL_A: bool;
-    fn new_pwm<'d>(
-        slice: embassy_rp::Peri<'d, S>,
-        pin: embassy_rp::Peri<'d, Self>,
-    ) -> Pwm<'d>;
+    fn new_pwm<'d>(slice: embassy_rp::Peri<'d, S>, pin: embassy_rp::Peri<'d, Self>) -> Pwm<'d>;
 }
 
 // Public for macro expansion in downstream crates.
@@ -562,7 +559,7 @@ servo_pin_map!(PIN_46, PWM_SLICE11, A);
 #[cfg(feature = "pico2")]
 servo_pin_map!(PIN_47, PWM_SLICE11, B);
 
-/// A device abstraction for SG90 servo motors.
+/// A device abstraction for hobby servos such as the SG90.
 ///
 /// # Examples
 /// ```rust,no_run
@@ -573,10 +570,11 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 /// # #[panic_handler]
 /// # fn panic(_info: &PanicInfo) -> ! { loop {} }
 /// async fn example(p: embassy_rp::Peripherals) {
-///     // Create a servo on GPIO 15 (odd pin maps to PWM slice 7).
+///     // Create a servo on GPIO 11.
+///     // GPIO 11 → (11/2) % 8 = 5 → PWM_SLICE5
 ///     let mut servo = servo! {
-///         pin: p.PIN_15,
-///         slice: p.PWM_SLICE7,
+///         pin: p.PIN_11,
+///         slice: p.PWM_SLICE5,
 ///     };
 ///
 ///     servo.set_degrees(45);  // Move to 45 degrees

@@ -45,7 +45,7 @@ use device_kit::led_strip::{Gpio14LedStrip, Gpio2LedStrip};
 use device_kit::led24x4::Led24x4;
 use device_kit::pio_split;
 use device_kit::rfid::{Rfid, RfidEvent, RfidStatic};
-use device_kit::servo::servo_a;
+use device_kit::servo;
 use device_kit::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 #[cfg(feature = "wifi")]
 use device_kit::wifi::DEFAULT_CAPTIVE_PORTAL_SSID;
@@ -78,9 +78,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Test servo: sweep angles 0,45,90,135,180 with 1s pause, 2 times
-    // GPIO0 is on PWM0 slice, channel A
+    // GPIO 11 uses PWM_SLICE5 (channel B)
     info!("Starting servo test...");
-    let mut servo = servo_a!(p.PWM_SLICE0, p.PIN_0, 500, 2500); // min=500µs (0°), max=2500µs (180°)
+    let mut servo = servo! {
+        pin: p.PIN_11,
+        slice: p.PWM_SLICE5,
+        min_us: 500,
+        max_us: 2500,
+    };
     servo.set_degrees(90);
 
     // Initialize LED strips (both strips share PIO1)

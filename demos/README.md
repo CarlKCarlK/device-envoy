@@ -81,3 +81,13 @@ Run/flash (Pico 1 ARM):
 ```bash
 cargo run --release --bin demo_d1_servo_single_sweep --target thumbv6m-none-eabi --features pico1,arm
 ```
+
+## D2 – Servo animate sweep
+
+Uses `ServoAnimate` to sweep a servo on GPIO 11 between 0 and 180 degrees until interrupted.
+
+Run/flash (Pico 1 ARM):
+
+```bash
+cargo run --release --bin demo_d2_servo_animate --target thumbv6m-none-eabi --features pico1,arm
+```

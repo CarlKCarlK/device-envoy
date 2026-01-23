@@ -121,6 +121,12 @@ path = "demos/d_servo/d1_servo_single_sweep.rs"
 test = false
 required-features = ["arm"]
 
+[[bin]]
+name = "demo_d2_servo_animate"
+path = "demos/d_servo/d2_servo_animate.rs"
+test = false
+required-features = ["arm"]
+
 [features]
 default = ["defmt", "pico1", "arm"]
 defmt = []

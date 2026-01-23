@@ -53,9 +53,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             // then return on a debounced down (does not wait for release).
             button.wait_for_press().await;
 
-            // No manual concurrency here: the LED strip task keeps animating on its own,
-            // and the button abstraction handles debouncing internally.
-
             short_frame[led_index] = colors::YELLOW;
         }
     }

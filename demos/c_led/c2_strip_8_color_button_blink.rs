@@ -2,7 +2,6 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::future;
 use core::{convert::Infallible, panic};
 use device_kit::{
     Result,
@@ -39,30 +38,30 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut color = *colors.next().unwrap();
 
     // Fill with initial color, YELLOW.
-    let mut blink_frame = Frame1d::filled(color);
     let mut steady_frame = Frame1d::filled(color);
-    for led_index in (0..LedStrip8::LEN).cycle() {
-        loop {
-            // Make the current LED blink with the current color.
-            blink_frame[led_index] = colors::BLACK;
-            steady_frame[led_index] = color;
-            led_strip8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)])?;
+    let mut blink_frame = steady_frame; // copy
 
-            // Tells if a long or short press. Returns from a long press before button release.
-            match button.wait_for_press_duration().await {
-                // If short, fill "hole" with current color and move to next LED.
-                PressDuration::Short => {
-                    blink_frame[led_index] = color;
-                    break;
-                }
+    let mut led_index_iter = (0..LedStrip8::LEN).cycle();
+    let mut led_index = led_index_iter.next().unwrap();
+    loop {
+        // Make the current LED blink with the current color.
+        blink_frame[led_index] = colors::BLACK;
+        steady_frame[led_index] = color;
+        led_strip8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)])?;
 
-                // On a long press, change color for subsequent LEDs.
-                // Loop up to continue work on this pixel.
-                PressDuration::Long => {
-                    color = *colors.next().unwrap();
-                }
+        // Tells if a long or short press. Returns from a long press before button release.
+        match button.wait_for_press_duration().await {
+            // If short, fill "hole" with current color and move to next LED.
+            PressDuration::Short => {
+                blink_frame[led_index] = color;
+                led_index = led_index_iter.next().unwrap()
+            }
+
+            // On a long press, change color for subsequent LEDs.
+            // Loop up to continue work on this pixel.
+            PressDuration::Long => {
+                color = *colors.next().unwrap();
             }
         }
     }
-    future::pending().await // run forever
 }

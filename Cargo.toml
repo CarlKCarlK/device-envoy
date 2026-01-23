@@ -109,6 +109,12 @@ path = "demos/c_led/c1_strip_8_yellow_button_blink.rs"
 test = false
 required-features = ["arm"]
 
+[[bin]]
+name = "demo_c2_strip_8_color_button_blink"
+path = "demos/c_led/c2_strip_8_color_button_blink.rs"
+test = false
+required-features = ["arm"]
+
 [features]
 default = ["defmt", "pico1", "arm"]
 defmt = []

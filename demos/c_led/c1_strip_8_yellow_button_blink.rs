@@ -2,7 +2,7 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, panic};
 
 use device_kit::{
     Result,
@@ -10,7 +10,7 @@ use device_kit::{
     led_strip::{Frame1d, colors, led_strip},
 };
 use embassy_executor::Spawner;
-use embassy_time::Duration; // , Timer};
+use embassy_time::Duration;
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
@@ -30,34 +30,33 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
+    // A button just needs to know its pin and whether it connects to Vcc or Ground.
+    // (Pico 2 erratum E9 is avoided by wiring buttons to GND.)
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
-    demo_c1(&led_strip8, &mut button).await?;
+    // We also create a LED strip on GPIO0 with length 8.
+    let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
-    future::pending().await
-}
-
-async fn demo_c1(led_strip8: &LedStrip8, button: &mut Button<'_>) -> Result<()> {
     const BLINK_DELAY: Duration = Duration::from_millis(150);
 
     loop {
-        let mut solid_frame = Frame1d::new();
-        let mut solid_and_blink_frame = Frame1d::new();
+        // These frames *ours*. `animate()` copies them. After 4 presses:
+        // short frame: Ⓨ Ⓨ Ⓨ Ⓨ
+        // long  frame: Ⓨ Ⓨ Ⓨ Ⓨ Ⓨ
+        let mut short_frame = Frame1d::new();
+        let mut long_frame = Frame1d::new();
         for led_index in 0..LedStrip8::LEN {
-            // Add the next blink LED
-            solid_and_blink_frame[led_index] = colors::YELLOW;
+            long_frame[led_index] = colors::YELLOW;
+            led_strip8.animate([(short_frame, BLINK_DELAY), (long_frame, BLINK_DELAY)])?;
 
-            led_strip8
-                .animate([
-                    (solid_frame, BLINK_DELAY),
-                    (solid_and_blink_frame, BLINK_DELAY),
-                ])
-                ?;
+            // Wait for the next *new* press: first ensure the button is stably released,
+            // then return on a debounced down (does not wait for release).
             button.wait_for_press().await;
 
-            // Add the next solid LED
-            solid_frame[led_index] = colors::YELLOW;
+            // No manual concurrency here: the LED strip task keeps animating on its own,
+            // and the button abstraction handles debouncing internally.
+
+            short_frame[led_index] = colors::YELLOW;
         }
     }
 }

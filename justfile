@@ -5,8 +5,16 @@ show-docs:
 	just update-docs
 	./scripts/open-docs.sh
 
+show-docs-host:
+	cargo update-docs-host
+	./scripts/open-docs-host.sh
+
 update-docs:
 	./scripts/docdoc.sh
+
+update-docs-host:
+	@echo "Building host documentation (errors expected for macro-generated code)..."
+	-cargo doc --no-default-features --features host --no-deps 2>&1 | grep -v "^warning" || true
 
 gather:
 	./scripts/gather.sh

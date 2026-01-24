@@ -2,13 +2,14 @@
 //!
 //! See [`ServoPlayer`] for usage and examples.
 
-use core::array;
-
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use heapless::Vec;
+// cmk00 should led*.animate use borrow?
+
+use core::borrow::Borrow;
 
 use crate::servo::Servo;
 
@@ -23,68 +24,129 @@ enum PlayerCommand<const MAX_STEPS: usize> {
     },
     Animate {
         steps: Vec<(u16, Duration), MAX_STEPS>,
-        mode: AnimateMode,
+        mode: AtEnd,
     },
 }
 
 /// Animation end behavior.
 #[derive(Clone, Copy, Debug, defmt::Format)]
-pub enum AnimateMode {
+pub enum AtEnd {
     /// Repeat the animation sequence indefinitely.
     Loop,
     /// Hold the final position when animation completes.
-    Stay,
+    Hold,
     /// Disable PWM after animation completes (servo relaxes).
     Relax,
 }
 
-/// Build a linear sequence of animation steps from `start_degrees` to `end_degrees` over
-/// `total_duration` split into `N` steps (inclusive of endpoints).
+/// Iterator that generates a linear sequence of animation steps from `start_degrees` to `end_degrees`.
 ///
-/// Each step is a tuple `(degrees, duration)`.
+/// Create with [`linear()`].
+#[derive(Clone, Debug)]
+pub struct Linear {
+    current_step: usize,
+    total_steps: usize,
+    start_degrees: u16,
+    end_degrees: u16,
+    step_duration: Duration,
+}
+
+impl Iterator for Linear {
+    type Item = (u16, Duration);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_step >= self.total_steps {
+            return None;
+        }
+
+        let degrees = if self.total_steps == 1 {
+            self.start_degrees
+        } else {
+            let delta = i32::from(self.end_degrees) - i32::from(self.start_degrees);
+            let denom = (self.total_steps - 1) as i32;
+            let step_delta = delta * (self.current_step as i32) / denom;
+            u16::try_from(i32::from(self.start_degrees) + step_delta).expect("angle fits")
+        };
+
+        self.current_step += 1;
+        Some((degrees, self.step_duration))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.total_steps.saturating_sub(self.current_step);
+        (remaining, Some(remaining))
+    }
+}
+
+impl ExactSizeIterator for Linear {}
+
+/// Build a linear sequence of animation steps from `start_degrees` to `end_degrees` over
+/// `total_duration` split into `steps` (inclusive of endpoints).
+///
+/// Returns a [`Linear`] iterator that yields `(degrees, duration)` tuples.
 ///
 /// See the [struct-level example](ServoPlayer) for usage.
 #[must_use]
-pub fn linear<const N: usize>(
+pub fn linear(
+    start_degrees: u16,
+    end_degrees: u16,
+    total_duration: Duration,
+    steps: usize,
+) -> Linear {
+    assert!(steps > 0, "at least one step required");
+    assert!(
+        total_duration.as_micros() > 0,
+        "total duration must be positive"
+    );
+    let step_duration = total_duration / (steps as u32);
+    Linear {
+        current_step: 0,
+        total_steps: steps,
+        start_degrees,
+        end_degrees,
+        step_duration,
+    }
+}
+
+// cmk000 Kill?
+/// Build a const linear sequence of animation steps as an array.
+///
+/// Unlike [`linear()`], this returns a fixed-size array and can be used in const contexts.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use embassy_time::Duration;
+/// # use device_kit::servo_player::linear_array;
+/// # use panic_probe as _;
+/// const SWEEP: [(u16, Duration); 11] = linear_array(0, 180, Duration::from_secs(2));
+/// ```
+#[must_use]
+pub const fn linear_array<const N: usize>(
     start_degrees: u16,
     end_degrees: u16,
     total_duration: Duration,
 ) -> [(u16, Duration); N] {
     assert!(N > 0, "at least one step required");
-    assert!(
-        total_duration.as_micros() > 0,
-        "total duration must be positive"
-    );
-    let step_duration = total_duration / (N as u32);
-    let delta = i32::from(end_degrees) - i32::from(start_degrees);
-    let denom = i32::try_from(((N - 1) as i32).max(1)).expect("denom fits in i32");
-    array::from_fn(|step_index| {
+    let step_duration = Duration::from_micros(total_duration.as_micros() / (N as u64));
+    let delta = end_degrees as i32 - start_degrees as i32;
+    let denom = if N == 1 { 1 } else { (N - 1) as i32 };
+
+    let mut result = [(0u16, Duration::from_micros(0)); N];
+    let mut step_index = 0;
+    while step_index < N {
         let degrees = if N == 1 {
             start_degrees
         } else {
-            let step_delta = delta * i32::try_from(step_index).expect("index fits") / denom;
-            u16::try_from(i32::from(start_degrees) + step_delta).expect("angle fits")
+            let step_delta = delta * (step_index as i32) / denom;
+            (start_degrees as i32 + step_delta) as u16
         };
-        (degrees, step_duration)
-    })
-}
-
-/// Concatenate arrays of animation steps into a single sequence.
-///
-/// Each step is a tuple `(degrees, duration)`.
-///
-/// See the [struct-level example](ServoPlayer) for usage.
-#[must_use]
-pub fn concat_steps<const CAP: usize>(
-    sequences: &[&[(u16, Duration)]],
-) -> Vec<(u16, Duration), CAP> {
-    let mut out: Vec<(u16, Duration), CAP> = Vec::new();
-    for sequence in sequences {
-        for step in *sequence {
-            out.push(*step).expect("sequence fits");
-        }
+        result[step_index] = (degrees, step_duration);
+        step_index += 1;
     }
-    out
+    result
 }
 
 /// Static resources for [`ServoPlayer`].
@@ -119,7 +181,7 @@ impl<const MAX_STEPS: usize> ServoPlayerStatic<MAX_STEPS> {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_kit::servo_player::{AnimateMode, concat_steps, linear, servo_player};
+/// use device_kit::servo_player::{AtEnd, linear, servo_player};
 /// use embassy_time::Duration;
 /// # use core::panic::PanicInfo;
 /// # #[panic_handler]
@@ -135,9 +197,7 @@ impl<const MAX_STEPS: usize> ServoPlayerStatic<MAX_STEPS> {
 ///     let servo_sweep = ServoSweep::new(p.PIN_11, p.PWM_SLICE5, spawner).unwrap();
 ///
 ///     const SWEEP_SECONDS: Duration = Duration::from_secs(2);
-///     let sweep = linear::<11>(0, 180, SWEEP_SECONDS);
-///     let sequence = concat_steps::<16>(&[&sweep]);
-///     servo_sweep.animate(sequence, AnimateMode::Loop);
+///     servo_sweep.animate(linear(0, 180, SWEEP_SECONDS, 11), AtEnd::Loop);
 /// }
 /// ```
 pub struct ServoPlayer<const MAX_STEPS: usize> {
@@ -161,6 +221,7 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
         }
     }
 
+    // cmk0000 must be consistent with servo
     /// Set the target angle. The most recent command always wins.
     ///
     /// See the [struct-level example](Self) for usage.
@@ -171,13 +232,19 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
 
     /// Animate the servo through a sequence of angles with per-step hold durations.
     ///
-    /// Each step is a tuple `(degrees, duration)`.
+    /// Each step is a tuple `(degrees, duration)`. Accepts both owned iterators and
+    /// references to collections.
     ///
     /// See the [struct-level example](Self) for usage.
-    pub fn animate(&self, steps: impl IntoIterator<Item = (u16, Duration)>, mode: AnimateMode) {
+    pub fn animate<I>(&self, steps: I, mode: AtEnd)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(u16, Duration)>,
+    {
         assert!(MAX_STEPS > 0, "animate disabled: max_steps is 0");
         let mut sequence: Vec<(u16, Duration), MAX_STEPS> = Vec::new();
         for step in steps {
+            let step = *step.borrow();
             assert!(
                 step.1.as_micros() > 0,
                 "animation step duration must be positive"
@@ -1081,7 +1148,7 @@ pub async fn device_loop<const MAX_STEPS: usize>(
 
 async fn run_animation<const MAX_STEPS: usize>(
     steps: &[(u16, Duration)],
-    mode: AnimateMode,
+    mode: AtEnd,
     servo: &mut Servo<'static>,
     servo_player_static: &'static ServoPlayerStatic<MAX_STEPS>,
     current_degrees: &mut u16,
@@ -1100,14 +1167,14 @@ async fn run_animation<const MAX_STEPS: usize>(
 
         // Animation sequence completed - handle end behavior
         match mode {
-            AnimateMode::Loop => {
+            AtEnd::Loop => {
                 // Continue looping
             }
-            AnimateMode::Stay => {
+            AtEnd::Hold => {
                 // Hold final position and wait for next command
                 return servo_player_static.wait().await;
             }
-            AnimateMode::Relax => {
+            AtEnd::Relax => {
                 // Disable PWM (servo relaxes) and wait for next command
                 servo.disable();
                 return servo_player_static.wait().await;

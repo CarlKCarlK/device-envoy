@@ -6,7 +6,7 @@ use core::{convert::Infallible, panic};
 use device_kit::{
     Result,
     button::{Button, PressDuration, PressedTo},
-    servo_player::{AnimateMode, concat_steps, linear, servo_player},
+    servo_player::{AtEnd, linear, servo_player},
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -48,12 +48,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Create a sweep animation: 0→180 (2s), hold (400ms), 180→0 (2s), hold (400ms)
     const SWEEP_DURATION: Duration = Duration::from_secs(2);
     const HOLD_DURATION: Duration = Duration::from_millis(400);
-    let animate_sequence = concat_steps::<64>(&[
-        &linear::<19>(0, 180, SWEEP_DURATION),
-        &[(180, HOLD_DURATION)],
-        &linear::<19>(180, 0, SWEEP_DURATION),
-        &[(0, HOLD_DURATION)],
-    ]);
 
     loop {
         match button.wait_for_press_duration().await {
@@ -61,7 +55,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 // Start the sweep animation (repeats until interrupted).
                 info!("Servo animate sweep");
                 // cmk000 understand the enum better
-                demo_servo.animate(animate_sequence.clone(), AnimateMode::Loop);
+                let steps = linear(0, 180, SWEEP_DURATION, 19)
+                    .chain([(180, HOLD_DURATION)])
+                    .chain(linear(180, 0, SWEEP_DURATION, 19))
+                    .chain([(0, HOLD_DURATION)]);
+                demo_servo.animate(steps, AtEnd::Loop);
             }
             PressDuration::Long => {
                 // Interrupt animation and move to 90 degrees.

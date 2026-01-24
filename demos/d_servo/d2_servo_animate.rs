@@ -6,16 +6,18 @@ use core::{convert::Infallible, panic};
 use device_kit::{
     Result,
     button::{Button, PressDuration, PressedTo},
-    servo_player::{Step, concat_steps, linear, servo_player},
+    servo_player::{AnimateMode, concat_steps, linear, servo_player},
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt::info, defmt_rtt as _, panic_probe as _};
 
 servo_player! {
+    // cmk000 good name?
     DemoServo {
         pin: PIN_11,
         max_steps: 64,
+        // cmk000 what's optional here?
     }
 }
 
@@ -30,40 +32,41 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Create a servo player on GPIO 11
     info!("Starting servo player demo (GPIO 11)");
-    let servo = DemoServo::new(p.PIN_11, p.PWM_SLICE5, spawner)?;
+    // cmk000 give the formuala agan here
+    // cmk000 good name?
+    let demo_servo = DemoServo::new(p.PIN_11, p.PWM_SLICE5, spawner)?;
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
-    servo.set(0);
+    // It's set here and set_degree in servero
+    demo_servo.set(0);
     Timer::after_millis(400).await;
-    servo.set(180);
+    demo_servo.set(180);
     Timer::after_millis(400).await;
-    servo.set(90);
+    demo_servo.set(90);
 
-    const SWEEP_SECONDS: Duration = Duration::from_secs(2);
-    const HOLD_MILLIS: Duration = Duration::from_millis(400);
-    let sweep_up = linear::<19>(0, 180, SWEEP_SECONDS);
-    let sweep_down = linear::<19>(180, 0, SWEEP_SECONDS);
-    let hold_high = [Step {
-        degrees: 180,
-        duration: HOLD_MILLIS,
-    }];
-    let hold_low = [Step {
-        degrees: 0,
-        duration: HOLD_MILLIS,
-    }];
-    let animate_sequence = concat_steps::<64>(&[&sweep_up, &hold_high, &sweep_down, &hold_low]);
+    // cmk0000 this seems overly complex
+    // Create a sweep animation: 0→180 (2s), hold (400ms), 180→0 (2s), hold (400ms)
+    const SWEEP_DURATION: Duration = Duration::from_secs(2);
+    const HOLD_DURATION: Duration = Duration::from_millis(400);
+    let animate_sequence = concat_steps::<64>(&[
+        &linear::<19>(0, 180, SWEEP_DURATION),
+        &[(180, HOLD_DURATION)],
+        &linear::<19>(180, 0, SWEEP_DURATION),
+        &[(0, HOLD_DURATION)],
+    ]);
 
     loop {
         match button.wait_for_press_duration().await {
             PressDuration::Short => {
                 // Start the sweep animation (repeats until interrupted).
                 info!("Servo animate sweep");
-                servo.animate(&animate_sequence);
+                // cmk000 understand the enum better
+                demo_servo.animate(animate_sequence.clone(), AnimateMode::Loop);
             }
             PressDuration::Long => {
                 // Interrupt animation and move to 90 degrees.
                 info!("Servo set to 90 degrees");
-                servo.set(90);
+                demo_servo.set(90);
             }
         }
     }

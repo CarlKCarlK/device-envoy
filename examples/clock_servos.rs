@@ -18,7 +18,7 @@ use defmt_rtt as _;
 use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::clock::{Clock, ClockStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_kit::flash_array::{FlashArray, FlashArrayStatic};
-use device_kit::servo_player::{Step, concat_steps, linear, servo_player};
+use device_kit::servo_player::{AnimateMode, concat_steps, linear, servo_player};
 use device_kit::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
@@ -271,17 +271,11 @@ impl State {
             .show_hours_minutes_indicator(hours, minutes)
             .await;
         // Add a gentle wiggle on the bottom servo to signal edit mode.
-        const WIGGLE: [Step; 2] = [
-            Step {
-                degrees: 80,
-                duration: Duration::from_millis(250),
-            },
-            Step {
-                degrees: 100,
-                duration: Duration::from_millis(250),
-            },
+        const WIGGLE: [(u16, Duration); 2] = [
+            (80, Duration::from_millis(250)),
+            (100, Duration::from_millis(250)),
         ];
-        servo_display.bottom.animate(&WIGGLE);
+        servo_display.bottom.animate(WIGGLE, AnimateMode::Loop);
 
         // Get the current offset minutes from clock (source of truth)
         let mut offset_minutes = clock.offset_minutes();
@@ -311,7 +305,7 @@ impl State {
                     servo_display
                         .show_hours_minutes_indicator(hours, minutes)
                         .await;
-                    servo_display.bottom.animate(&WIGGLE);
+                    servo_display.bottom.animate(WIGGLE, AnimateMode::Loop);
                 }
                 PressDuration::Long => {
                     info!("Long press detected - saving and exiting edit mode");
@@ -348,9 +342,9 @@ impl ServoClockDisplay {
         let clockwise = linear::<10>(180 - 18, 0, FIVE_SECONDS);
         let and_back = linear::<2>(0, 180, FIVE_SECONDS);
         let top_sequence = concat_steps::<16>(&[&clockwise, &and_back]);
-        self.top.animate(&top_sequence);
+        self.top.animate(top_sequence, AnimateMode::Loop);
         let bottom_sequence = concat_steps::<16>(&[&and_back, &clockwise]);
-        self.bottom.animate(&bottom_sequence);
+        self.bottom.animate(bottom_sequence, AnimateMode::Loop);
     }
 
     async fn show_hours_minutes(&self, hours: u8, minutes: u8) {

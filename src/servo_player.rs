@@ -149,6 +149,41 @@ pub const fn linear_array<const N: usize>(
     result
 }
 
+/// Concatenate two animation step arrays into one larger array.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use embassy_time::Duration;
+/// # use device_kit::servo_player::{concat_arrays, linear_array};
+/// # use panic_probe as _;
+/// const SWEEP_UP: [(u16, Duration); 19] = linear_array(0, 180, Duration::from_secs(2));
+/// const HOLD: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
+/// const COMBINED: [(u16, Duration); 20] = concat_arrays(SWEEP_UP, HOLD);
+/// ```
+#[must_use]
+pub const fn concat_arrays<const N1: usize, const N2: usize, const OUT_N: usize>(
+    first: [(u16, Duration); N1],
+    second: [(u16, Duration); N2],
+) -> [(u16, Duration); OUT_N] {
+    assert!(OUT_N == N1 + N2, "OUT_N must equal N1 + N2");
+
+    let mut result = [(0u16, Duration::from_micros(0)); OUT_N];
+    let mut i = 0;
+    while i < N1 {
+        result[i] = first[i];
+        i += 1;
+    }
+    let mut j = 0;
+    while j < N2 {
+        result[N1 + j] = second[j];
+        j += 1;
+    }
+    result
+}
+
 /// Static resources for [`ServoPlayer`].
 pub struct ServoPlayerStatic<const MAX_STEPS: usize> {
     command: Signal<CriticalSectionRawMutex, PlayerCommand<MAX_STEPS>>,

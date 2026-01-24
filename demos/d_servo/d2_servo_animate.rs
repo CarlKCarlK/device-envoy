@@ -6,7 +6,7 @@ use core::{convert::Infallible, panic};
 use device_kit::{
     Result,
     button::{Button, PressDuration, PressedTo},
-    servo_player::{AtEnd, linear, servo_player},
+    servo_player::{AtEnd, concat_arrays, linear_array, servo_player},
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -57,22 +57,26 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     servo_player_12.set_degrees(90);
 
     // Create a sweep animation: 0→180 (2s), hold (400ms), 180→0 (2s), hold (400ms)
-    // Any array, list, slice, or iterator of (degrees, duration) pairs can be used.
-    let steps = linear(0, 180, 19, Duration::from_secs(2))
-        .chain([(180, Duration::from_millis(400))])
-        .chain(linear(180, 0, 19, Duration::from_secs(2)))
-        .chain([(0, Duration::from_millis(400))]);
+    // Build animation using const arrays that concatenate at compile time.
+    const SWEEP_UP: [(u16, Duration); 19] = linear_array(0, 180, Duration::from_secs(2));
+    const SWEEP_DOWN: [(u16, Duration); 19] = linear_array(180, 0, Duration::from_secs(2));
+    // const HOLD_180: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
+    // const HOLD_0: [(u16, Duration); 1] = [(0, Duration::from_millis(400))];
+    const STEPS: [(u16, Duration); 38] = concat_arrays(SWEEP_UP, SWEEP_DOWN);
+    //     concat_arrays(concat_arrays(SWEEP_UP, HOLD_180), SWEEP_DOWN),
+    //     HOLD_0,
+    // );
 
     loop {
         match button.wait_for_press_duration().await {
             PressDuration::Short => {
-                servo_player_11.animate(steps.clone(), AtEnd::Relax);
-                servo_player_12.animate(steps.clone(), AtEnd::Loop);
+                servo_player_11.animate(STEPS, AtEnd::Relax);
+                servo_player_12.animate(STEPS, AtEnd::Loop);
             }
             PressDuration::Long => {
                 // Interrupt animation and move to 90 degrees.
-                servo_player_11.set_degrees(90);
-                servo_player_12.set_degrees(90);
+                servo_player_11.animate([(90, Duration::from_millis(500))], AtEnd::Relax);
+                servo_player_12.animate([(90, Duration::from_millis(500))], AtEnd::Relax);
             }
         }
     }

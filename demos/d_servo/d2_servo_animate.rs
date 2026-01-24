@@ -6,7 +6,8 @@ use core::{convert::Infallible, panic};
 use device_kit::{
     Result,
     button::{Button, PressDuration, PressedTo},
-    servo_player::{AtEnd, concat_arrays, linear_array, servo_player},
+    combine,
+    servo_player::{AtEnd, linear, servo_player},
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -58,18 +59,19 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Create a sweep animation: 0→180 (2s), hold (400ms), 180→0 (2s), hold (400ms)
     // Build animation using const arrays that concatenate at compile time.
-    const SWEEP_UP: [(u16, Duration); 19] = linear_array(0, 180, Duration::from_secs(2));
-    const SWEEP_DOWN: [(u16, Duration); 19] = linear_array(180, 0, Duration::from_secs(2));
-    // const HOLD_180: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
-    // const HOLD_0: [(u16, Duration); 1] = [(0, Duration::from_millis(400))];
-    const STEPS: [(u16, Duration); 38] = concat_arrays(SWEEP_UP, SWEEP_DOWN);
-    //     concat_arrays(concat_arrays(SWEEP_UP, HOLD_180), SWEEP_DOWN),
-    //     HOLD_0,
-    // );
+    const SWEEP_UP: [(u16, Duration); 19] = linear(0, 180, Duration::from_secs(2));
+    const SWEEP_DN: [(u16, Duration); 19] = linear(180, 0, Duration::from_secs(2));
+    const STEPS: [(u16, Duration); 40] = combine!(
+        SWEEP_UP,
+        [(180, Duration::from_millis(400))],
+        SWEEP_DN,
+        [(0, Duration::from_millis(400))]
+    );
 
     loop {
         match button.wait_for_press_duration().await {
             PressDuration::Short => {
+                //Play the sweep animation.
                 servo_player_11.animate(STEPS, AtEnd::Relax);
                 servo_player_12.animate(STEPS, AtEnd::Loop);
             }

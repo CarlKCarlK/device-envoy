@@ -39,79 +39,9 @@ pub enum AtEnd {
     Relax,
 }
 
-/// Iterator that generates a linear sequence of animation steps from `start_degrees` to `end_degrees`.
-///
-/// Create with [`linear()`].
-#[derive(Clone, Debug)]
-pub struct Linear {
-    current_step: usize,
-    total_steps: usize,
-    start_degrees: u16,
-    end_degrees: u16,
-    step_duration: Duration,
-}
-
-impl Iterator for Linear {
-    type Item = (u16, Duration);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.current_step >= self.total_steps {
-            return None;
-        }
-
-        let degrees = if self.total_steps == 1 {
-            self.start_degrees
-        } else {
-            let delta = i32::from(self.end_degrees) - i32::from(self.start_degrees);
-            let denom = (self.total_steps - 1) as i32;
-            let step_delta = delta * (self.current_step as i32) / denom;
-            u16::try_from(i32::from(self.start_degrees) + step_delta).expect("angle fits")
-        };
-
-        self.current_step += 1;
-        Some((degrees, self.step_duration))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.total_steps.saturating_sub(self.current_step);
-        (remaining, Some(remaining))
-    }
-}
-
-impl ExactSizeIterator for Linear {}
-
-/// Build a linear sequence of animation steps from `start_degrees` to `end_degrees`
-/// split into `steps` (inclusive of endpoints) over `total_duration`.
-///
-/// Returns a [`Linear`] iterator that yields `(degrees, duration)` tuples.
-///
-/// See the [struct-level example](ServoPlayer) for usage.
-#[must_use]
-pub fn linear(
-    start_degrees: u16,
-    end_degrees: u16,
-    steps: usize,
-    total_duration: Duration,
-) -> Linear {
-    assert!(steps > 0, "at least one step required");
-    assert!(
-        total_duration.as_micros() > 0,
-        "total duration must be positive"
-    );
-    let step_duration = total_duration / (steps as u32);
-    Linear {
-        current_step: 0,
-        total_steps: steps,
-        start_degrees,
-        end_degrees,
-        step_duration,
-    }
-}
-
-// cmk000 Kill?
 /// Build a const linear sequence of animation steps as an array.
 ///
-/// Unlike [`linear()`], this returns a fixed-size array and can be used in const contexts.
+/// Returns a fixed-size array and can be used in const contexts.
 ///
 /// # Example
 ///
@@ -119,12 +49,12 @@ pub fn linear(
 /// # #![no_std]
 /// # #![no_main]
 /// # use embassy_time::Duration;
-/// # use device_kit::servo_player::linear_array;
+/// # use device_kit::servo_player::linear;
 /// # use panic_probe as _;
-/// const SWEEP: [(u16, Duration); 11] = linear_array(0, 180, Duration::from_secs(2));
+/// const SWEEP: [(u16, Duration); 11] = linear(0, 180, Duration::from_secs(2));
 /// ```
 #[must_use]
-pub const fn linear_array<const N: usize>(
+pub const fn linear<const N: usize>(
     start_degrees: u16,
     end_degrees: u16,
     total_duration: Duration,
@@ -149,7 +79,9 @@ pub const fn linear_array<const N: usize>(
     result
 }
 
-/// Concatenate two animation step arrays into one larger array.
+/// Combine two animation step arrays into one larger array.
+///
+/// For combining more than two arrays, use the `combine!` macro.
 ///
 /// # Example
 ///
@@ -157,14 +89,14 @@ pub const fn linear_array<const N: usize>(
 /// # #![no_std]
 /// # #![no_main]
 /// # use embassy_time::Duration;
-/// # use device_kit::servo_player::{concat_arrays, linear_array};
+/// # use device_kit::servo_player::{combine, linear};
 /// # use panic_probe as _;
-/// const SWEEP_UP: [(u16, Duration); 19] = linear_array(0, 180, Duration::from_secs(2));
+/// const SWEEP_UP: [(u16, Duration); 19] = linear(0, 180, Duration::from_secs(2));
 /// const HOLD: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
-/// const COMBINED: [(u16, Duration); 20] = concat_arrays(SWEEP_UP, HOLD);
+/// const COMBINED: [(u16, Duration); 20] = combine(SWEEP_UP, HOLD);
 /// ```
 #[must_use]
-pub const fn concat_arrays<const N1: usize, const N2: usize, const OUT_N: usize>(
+pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
     first: [(u16, Duration); N1],
     second: [(u16, Duration); N2],
 ) -> [(u16, Duration); OUT_N] {
@@ -182,6 +114,45 @@ pub const fn concat_arrays<const N1: usize, const N2: usize, const OUT_N: usize>
         j += 1;
     }
     result
+}
+
+/// Combine multiple animation step arrays into one larger array.
+///
+/// This macro allows combining any number of const arrays with a clean syntax.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use embassy_time::Duration;
+/// # use device_kit::servo_player::linear;
+/// # use device_kit::combine;
+/// # use panic_probe as _;
+/// const SWEEP_UP: [(u16, Duration); 19] = linear(0, 180, Duration::from_secs(2));
+/// const HOLD_180: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
+/// const SWEEP_DOWN: [(u16, Duration); 19] = linear(180, 0, Duration::from_secs(2));
+/// const HOLD_0: [(u16, Duration); 1] = [(0, Duration::from_millis(400))];
+/// const STEPS: [(u16, Duration); 40] = combine!(SWEEP_UP, HOLD_180, SWEEP_DOWN, HOLD_0);
+/// ```
+#[macro_export]
+macro_rules! combine {
+    () => {
+        []
+    };
+    ($single:expr) => {
+        $single
+    };
+    ($first:expr, $second:expr) => {{
+        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
+        const SECOND: &[(u16, ::embassy_time::Duration)] = &$second;
+        $crate::servo_player::combine::<{FIRST.len()}, {SECOND.len()}, {FIRST.len() + SECOND.len()}>($first, $second)
+    }};
+    ($first:expr, $($rest:expr),+ $(,)?) => {{
+        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
+        const REST: &[(u16, ::embassy_time::Duration)] = &$crate::combine!($($rest),+);
+        $crate::servo_player::combine::<{FIRST.len()}, {REST.len()}, {FIRST.len() + REST.len()}>($first, $crate::combine!($($rest),+))
+    }};
 }
 
 /// Static resources for [`ServoPlayer`].
@@ -231,8 +202,8 @@ impl<const MAX_STEPS: usize> ServoPlayerStatic<MAX_STEPS> {
 /// async fn demo(p: embassy_rp::Peripherals, spawner: embassy_executor::Spawner) {
 ///     let servo_sweep = ServoSweep::new(p.PIN_11, p.PWM_SLICE5, spawner).unwrap();
 ///
-///     const SWEEP_SECONDS: Duration = Duration::from_secs(2);
-///     servo_sweep.animate(linear(0, 180, 11, SWEEP_SECONDS), AtEnd::Loop);
+///     const SWEEP: [(u16, Duration); 11] = linear(0, 180, Duration::from_secs(2));
+///     servo_sweep.animate(SWEEP, AtEnd::Loop);
 /// }
 /// ```
 pub struct ServoPlayer<const MAX_STEPS: usize> {

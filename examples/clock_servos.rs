@@ -17,6 +17,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::clock::{Clock, ClockStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s};
+use device_kit::combine;
 use device_kit::flash_array::{FlashArray, FlashArrayStatic};
 use device_kit::servo_player::{AtEnd, linear, servo_player};
 use device_kit::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
@@ -339,14 +340,14 @@ impl ServoClockDisplay {
         self.bottom.set_degrees(0);
         // cmk understand if we really want this to have 11 steps and a sleep after each.
         const FIVE_SECONDS: Duration = Duration::from_secs(5);
-        self.top.animate(
-            linear(180 - 18, 0, 10, FIVE_SECONDS).chain(linear(0, 180, 2, FIVE_SECONDS)),
-            AtEnd::Loop,
-        );
-        self.bottom.animate(
-            linear(0, 180, 2, FIVE_SECONDS).chain(linear(180 - 18, 0, 10, FIVE_SECONDS)),
-            AtEnd::Loop,
-        );
+        const TOP_PHASE1: [(u16, Duration); 10] = linear(180 - 18, 0, FIVE_SECONDS);
+        const TOP_PHASE2: [(u16, Duration); 2] = linear(0, 180, FIVE_SECONDS);
+        const TOP_STEPS: [(u16, Duration); 12] = combine!(TOP_PHASE1, TOP_PHASE2);
+        const BOTTOM_PHASE1: [(u16, Duration); 2] = linear(0, 180, FIVE_SECONDS);
+        const BOTTOM_PHASE2: [(u16, Duration); 10] = linear(180 - 18, 0, FIVE_SECONDS);
+        const BOTTOM_STEPS: [(u16, Duration); 12] = combine!(BOTTOM_PHASE1, BOTTOM_PHASE2);
+        self.top.animate(TOP_STEPS, AtEnd::Loop);
+        self.bottom.animate(BOTTOM_STEPS, AtEnd::Loop);
     }
 
     async fn show_hours_minutes(&self, hours: u8, minutes: u8) {

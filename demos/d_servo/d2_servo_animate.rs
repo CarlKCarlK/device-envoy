@@ -12,6 +12,7 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
+// Define a struct `ServoPlayer11` to servo player on PIN_11
 servo_player! {
     ServoPlayer11 {
         pin: PIN_11,
@@ -19,6 +20,7 @@ servo_player! {
     }
 }
 
+// Can control up to 8 servos.
 servo_player! {
     ServoPlayer12 {
         pin: PIN_12,
@@ -47,6 +49,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let servo_player_12 = ServoPlayer12::new(p.PIN_12, p.PWM_SLICE6, spawner)?;
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
+    // But the two servos in the center position to start.
     servo_player_11.set_degrees(0);
     servo_player_12.set_degrees(180);
     Timer::after_millis(400).await;
@@ -54,7 +57,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     servo_player_12.set_degrees(90);
 
     // Create a sweep animation: 0→180 (2s), hold (400ms), 180→0 (2s), hold (400ms)
-    // An array, list, slice, or iterator of (degrees, duration) pairs can be used.
+    // Any array, list, slice, or iterator of (degrees, duration) pairs can be used.
     let steps = linear(0, 180, 19, Duration::from_secs(2))
         .chain([(180, Duration::from_millis(400))])
         .chain(linear(180, 0, 19, Duration::from_secs(2)))

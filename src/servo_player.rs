@@ -1,19 +1,27 @@
-//! A device abstraction for a servo that can play motion sequences.
+//! A device abstraction for a servo that can animate motion sequences.
 //!
-//! This page provides the primary documentation and examples for controlling servos.
-//! The device abstraction supports setting angles, holding/relaxing position, and sequenced animation.
+//! This page provides the primary documentation and examples for controlling servos that can
+//! animate motion sequences. The device abstraction supports moving to angles,
+//! holding/relaxing position, and sequenced animation.
+//!
+//! # PWM Slices
+//!
+//! Supports up to eight servos, one per [PWM slice](crate#glossary). Each servo must use a
+//! different slice. Calculate which slice a pin uses: `slice = pin / 2`. For example, PIN_10
+//! and PIN_11 both use PWM_SLICE5 (10 / 2 = 5, 11 / 2 = 5), so only one can have a servo.
+//!
 //!
 //! **After reading the examples below, see also:**
 //!
 //! - [`servo_player!`](macro@crate::servo_player) — Macro to generate a servo player struct type (includes syntax details). See [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) for a sample of a generated type.
 //! - [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) — Sample struct type showing all methods and associated constants.
 //! - [`combine!`](macro@crate::combine) & [`linear`] — Macro and function for creating complex motion sequences.
-//! - [`servo`](mod@crate::servo) module — Direct servo control without animation support.
+//! - [`Servo`] — Direct servo control without animation support.
 //!
-//! # Example: Animate a Servo Sweep
+//! # Example: Basic Servo Control
 //!
-//! This example creates a servo that sweeps from 0° to 180° over 2 seconds, then loops forever.
-//! Here, the generated struct type is named `ServoSweep`.
+//! This example demonstrates basic servo control: moving to a position, holding, relaxing,
+//! and using animation. Here, the generated struct type is named `ServoBasic`.
 //!
 //! ```rust,no_run
 //! # #![no_std]
@@ -22,12 +30,12 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_kit::{Result, servo_player::{AtEnd, linear, servo_player}};
-//! use embassy_time::Duration;
+//! use device_kit::{Result, servo_player::{AtEnd, servo_player}};
+//! use embassy_time::{Duration, Timer};
 //!
-//! // Define ServoSweep, a struct type for a servo on PIN_11.
+//! // Define ServoBasic, a struct type for a servo on PIN_11.
 //! servo_player! {
-//!     ServoSweep {
+//!     ServoBasic {
 //!         pin: PIN_11,  // GPIO pin for servo PWM signal
 //!         // other inputs set to their defaults
 //!     }
@@ -40,12 +48,21 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     // Create a ServoSweep instance.
-//!     let servo_sweep = ServoSweep::new(p.PIN_11, p.PWM_SLICE5, spawner)?;
 //!
-//!     // Create a linear sweep from 0° to 180° over 2 seconds and loop it.
-//!     const SWEEP: [(u16, Duration); 11] = linear(0, 180, Duration::from_secs(2));
-//!     servo_sweep.animate(SWEEP, AtEnd::Loop);
+//!     // PIN_11 uses PWM_SLICE5 (slice = pin / 2 = 11 / 2 = 5)
+//!     let servo_basic = ServoBasic::new(p.PIN_11, p.PWM_SLICE5, spawner)?;
+//!
+//!     // Move to 90°, wait 1 second, then relax.
+//!     servo_basic.set_degrees(90);
+//!     Timer::after(Duration::from_secs(1)).await;
+//!     servo_basic.relax();
+//!
+//!     // Animate: hold at 180° for 1 second, then 0° for 1 second, then relax.
+//!     const STEPS: [(u16, Duration); 2] = [
+//!         (180, Duration::from_secs(1)),
+//!         (0, Duration::from_secs(1)),
+//!     ];
+//!     servo_basic.animate(STEPS, AtEnd::Relax);
 //!
 //!     core::future::pending().await // run forever
 //! }

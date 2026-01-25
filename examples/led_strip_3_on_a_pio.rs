@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-// cmk000 where are are pools? should they be set?
-
 use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;

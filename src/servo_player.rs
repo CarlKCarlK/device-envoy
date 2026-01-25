@@ -313,7 +313,6 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
         }
     }
 
-    // cmk0000 must be consistent with servo
     /// Set the target angle. The most recent command always wins.
     ///
     /// See the [servo_player module documentation](mod@crate::servo_player) for usage.

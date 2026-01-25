@@ -27,7 +27,6 @@ use smart_leds::colors;
 // One 16x16 panel in serpentine column-major order.
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
-// cmk000 add default
 led2d! {
     Led16x16 {
         pin: PIN_6,

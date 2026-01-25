@@ -116,12 +116,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 }
 
 /// Generate N intermediate frames by linearly interpolating between two frames.
-/// Returns frames excluding the start and end frames themselves.
+/// Returns frames with durations, ready for animate(). Excludes start and end frames.
 fn fade<const W: usize, const H: usize, const N: usize>(
     start_frame: Frame2d<W, H>,
     end_frame: Frame2d<W, H>,
-) -> Vec<Frame2d<W, H>, N> {
+    total_duration: Duration,
+) -> Vec<(Frame2d<W, H>, Duration), N> {
     let mut frames = Vec::new();
+    let frame_duration = total_duration / N as u32;
 
     for step_index in 1..=N {
         let mut interpolated_frame = Frame2d::<W, H>::new();
@@ -148,7 +150,7 @@ fn fade<const W: usize, const H: usize, const N: usize>(
             }
         }
 
-        frames.push(interpolated_frame).ok();
+        frames.push((interpolated_frame, frame_duration)).ok();
     }
 
     frames
@@ -159,7 +161,7 @@ async fn conway_task(
     led16x16: Led16x16,
     signal: &'static Signal<CriticalSectionRawMutex, ConwayMessage>,
 ) {
-    let mut board = Board::<{ Led16x16::HEIGHT }, { Led16x16::WIDTH }>::new();
+    let mut board = Board::new();
     let mut pattern_index = 0;
     let mut speed_mode = SpeedMode::Slower;
     board.add_pattern(PATTERNS[pattern_index]);
@@ -169,9 +171,6 @@ async fn conway_task(
 
     loop {
         let current_frame = board.to_frame(colors::LIME);
-        led16x16
-            .write_frame(current_frame)
-            .expect("write_frame failed");
 
         // Calculate frame duration based on speed mode
         let frame_duration = match speed_mode {
@@ -189,23 +188,12 @@ async fn conway_task(
                 let next_frame = next_board.to_frame(colors::LIME);
 
                 // Generate and play fade animation (duration / 2)
-                const FADE_FRAMES: usize = 10;
-                let fade_frames = fade::<{ Led16x16::WIDTH }, { Led16x16::HEIGHT }, FADE_FRAMES>(
-                    current_frame,
-                    next_frame,
-                );
-
-                // Start animation and let it play for exactly one loop
-                let frame_duration = frame_duration / (2 * FADE_FRAMES as u32);
-                let frames_with_duration: Vec<_, FADE_FRAMES> = fade_frames
-                    .iter()
-                    .map(|frame| (*frame, frame_duration))
-                    .collect();
-                led16x16
-                    .animate(frames_with_duration)
-                    .expect("animate failed");
-                let total_fade_duration = frame_duration * FADE_FRAMES as u32;
-                Timer::after(total_fade_duration).await;
+                const FADE_FRAMES: usize = 3;
+                let fade_duration = frame_duration / 2;
+                let frames_with_duration =
+                    fade::<_, _, FADE_FRAMES>(current_frame, next_frame, fade_duration);
+                led16x16.animate(frames_with_duration).unwrap();
+                Timer::after(fade_duration).await;
 
                 // Advance to next generation
                 board.step();
@@ -229,44 +217,28 @@ async fn conway_task(
 
                             // Capture old pattern before creating new one
                             let old_board = board;
-                            let mut new_board =
-                                Board::<{ Led16x16::HEIGHT }, { Led16x16::WIDTH }>::new();
+                            let mut new_board = Board::new();
                             new_board.add_pattern(Pattern::Random);
 
                             // Generate fade animation frames (5 seconds total)
-                            const FADE_FRAMES: usize = 40;
-                            const FRAME_DURATION_MS: u64 = 125; // 40 frames * 125ms = 5000ms
+                            const FADE_FRAMES: usize = 10;
+                            const FADE_DURATION: Duration = Duration::from_millis(2500); // 2500ms per fade
 
                             let start_frame = old_board.to_frame(colors::LIME);
-                            let black_frame =
-                                Frame2d::<{ Led16x16::WIDTH }, { Led16x16::HEIGHT }>::new();
+                            let black_frame = Frame2d::new();
                             let end_frame = new_board.to_frame(colors::LIME);
 
                             // Fade out: old pattern to black
                             let fade_out_frames =
-                                fade::<{ Led16x16::WIDTH }, { Led16x16::HEIGHT }, FADE_FRAMES>(
-                                    start_frame,
-                                    black_frame,
-                                );
+                                fade::<_, _, FADE_FRAMES>(start_frame, black_frame, FADE_DURATION);
+                            led16x16.animate(fade_out_frames).unwrap();
+                            Timer::after(FADE_DURATION).await;
 
                             // Fade in: black to new pattern
                             let fade_in_frames =
-                                fade::<{ Led16x16::WIDTH }, { Led16x16::HEIGHT }, FADE_FRAMES>(
-                                    black_frame,
-                                    end_frame,
-                                );
-
-                            // Play fade-out animation
-                            for frame in fade_out_frames.iter() {
-                                led16x16.write_frame(*frame).expect("write_frame failed");
-                                Timer::after(Duration::from_millis(FRAME_DURATION_MS)).await;
-                            }
-
-                            // Play fade-in animation
-                            for frame in fade_in_frames.iter() {
-                                led16x16.write_frame(*frame).expect("write_frame failed");
-                                Timer::after(Duration::from_millis(FRAME_DURATION_MS)).await;
-                            }
+                                fade::<_, _, FADE_FRAMES>(black_frame, end_frame, FADE_DURATION);
+                            led16x16.animate(fade_in_frames).unwrap();
+                            Timer::after(FADE_DURATION).await;
 
                             // Update to new board
                             board = new_board;
@@ -288,7 +260,7 @@ async fn conway_task(
                         info!("=== Pattern: {:?} ===", pattern);
 
                         // Reset board with new pattern
-                        board = Board::<{ Led16x16::HEIGHT }, { Led16x16::WIDTH }>::new();
+                        board = Board::new();
                         board.add_pattern(pattern);
 
                         // Reset stasis detection

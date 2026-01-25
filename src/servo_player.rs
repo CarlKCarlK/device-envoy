@@ -4,19 +4,25 @@
 //! animate motion sequences. The device abstraction supports moving to angles,
 //! holding/relaxing position, and sequenced animation.
 //!
-//! # PWM Slices
+//! # Controlling Multiple Servos
 //!
-//! Supports up to eight servos, one per [PWM slice](crate#glossary). Each servo must use a
-//! different slice. Calculate which slice a pin uses: `slice = pin / 2`. For example, PIN_10
-//! and PIN_11 both use PWM_SLICE5 (10 / 2 = 5, 11 / 2 = 5), so only one can have a servo.
+//! Supports up to eight servos, one per [PWM slice](crate#glossary) resource. Each servo must use a
+//! different PWM slice. Calculate which PWM slice a pin uses: `PWM slice = pin / 2 % 8`. For example, PIN_10
+//! and PIN_11 both use PWM_SLICE5 (10 / 2 % 8 = 5, 11 / 2 % 8 = 5), so
+//! only one of those pins can have a servo.
 //!
 //!
 //! **After reading the examples below, see also:**
 //!
-//! - [`servo_player!`](macro@crate::servo_player) — Macro to generate a servo player struct type (includes syntax details). See [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) for a sample of a generated type.
-//! - [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) — Sample struct type showing all methods and associated constants.
-//! - [`combine!`](macro@crate::combine) & [`linear`] — Macro and function for creating complex motion sequences.
-//! - [`Servo`] — Direct servo control without animation support.
+//! - [`servo_player!`](macro@crate::servo_player) — Macro to generate a servo player struct
+//!   type (includes syntax details). See [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated)
+//!   for a sample of a generated type.
+//! - [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) — Sample struct
+//!   type showing all methods and associated constants.
+//! - [`combine!`](macro@crate::combine) & [`linear`] — Macro and function for creating
+//!   complex motion sequences.
+//! - [`Servo`] — Direct servo control without animation support. Use `Servo` for direct,
+//!   immediate control; use `servo_player` when you want motion to continue in the background.
 //!
 //! # Example: Basic Servo Control
 //!
@@ -62,16 +68,19 @@
 //!         (180, Duration::from_secs(1)),
 //!         (0, Duration::from_secs(1)),
 //!     ];
+//!     // AtEnd::Relax quiets the servo; AtEnd::Hold keeps driving pulses to hold
+//!     // position; AtEnd::Loop repeats.
 //!     servo_basic.animate(STEPS, AtEnd::Relax);
 //!
 //!     core::future::pending().await // run forever
 //! }
 //! ```
 //!
-//! # Example: Multi-Segment Animation
+//! # Example: Multi-Step Animation
 //!
-//! This example combines multiple animation segments using the `combine!` macro to create
-//! a sweep up, hold, sweep down, hold pattern. Here, the generated struct type is named `ServoSweep`.
+//! This example combines 40 animation steps using `linear` and`combine!` to
+//! a sweep up, hold, sweep down, hold pattern. Here, the generated struct type is named
+//! `ServoSweep`.
 //!
 //! ```rust,no_run
 //! # #![no_std]
@@ -87,7 +96,7 @@
 //! servo_player! {
 //!     ServoSweep {
 //!         pin: PIN_12,
-//!         max_steps: 40,          // Increase from default (16) to hold all segments
+//!         max_steps: 40,          // Increase from default (16) to hold all steps
 //!
 //!        // Optional
 //!         min_us: 500,            // Minimum pulse width (µs) for 0° (default)
@@ -105,14 +114,19 @@
 //!     let p = embassy_rp::init(Default::default());
 //!     let servo_sweep = ServoSweep::new(p.PIN_12, p.PWM_SLICE6, spawner)?;
 //!
-//!     // Combine animation segments into one sequence.
-//!     const SWEEP_UP: [(u16, Duration); 19] = linear(0, 180, Duration::from_secs(2));
-//!     const HOLD_180: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
-//!     const SWEEP_DOWN: [(u16, Duration); 19] = linear(180, 0, Duration::from_secs(2));
-//!     const HOLD_0: [(u16, Duration); 1] = [(0, Duration::from_millis(400))];
-//!     const STEPS: [(u16, Duration); 40] = combine!(SWEEP_UP, HOLD_180, SWEEP_DOWN, HOLD_0);
+//!     // Combine animation steps into one array.
+//!     const STEPS: [(u16, Duration); 40] = combine!(
+//!         linear::<19>(0, 180, Duration::from_secs(2)), // 19 steps from 0° to 180°
+//!         [(180, Duration::from_millis(400))],          // Hold at 180° for 400 ms
+//!         linear::<19>(180, 0, Duration::from_secs(2)), // 19 steps from 180° to 0°
+//!         [(0, Duration::from_millis(400))]             // Hold at 0° for 400 ms
+//!     );
 //!
-//!     servo_sweep.animate(STEPS, AtEnd::Loop);
+//!     servo_sweep.animate(STEPS, AtEnd::Loop); // Loop the sweep animation
+//!
+//!     // Let it run for 10 seconds, then relax.
+//!     embassy_time::Timer::after(Duration::from_secs(10)).await;
+//!     servo_sweep.relax();
 //!
 //!     core::future::pending().await // run forever
 //! }
@@ -129,7 +143,8 @@ use core::borrow::Borrow;
 
 use crate::servo::Servo;
 
-/// Re-exported [`servo!`](macro@crate::servo) macro from the [`servo`](mod@crate::servo) module for convenience.
+/// Re-exported [`servo!`](macro@crate::servo) macro from the [`servo`](mod@crate::servo)
+/// module for convenience.
 ///
 /// See the [`servo`](mod@crate::servo) module for direct servo control without animation.
 pub use crate::servo::servo;
@@ -162,24 +177,23 @@ pub enum AtEnd {
     Loop,
     /// Hold the final position when animation completes.
     Hold,
-    /// Disable PWM after animation completes (servo relaxes).
+    /// Stop holding position after animation completes (servo relaxes).
     Relax,
 }
 
 /// Build a const linear sequence of animation steps as an array.
 ///
-/// Returns a fixed-size array and can be used in const contexts.
+/// Returns a fixed-size array with `N` steps interpolating linearly from `start_degrees` to
+/// `end_degrees` over `total_duration`. Can be used in const contexts.
 ///
-/// # Example
+/// # Parameters
 ///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use embassy_time::Duration;
-/// # use device_kit::servo_player::linear;
-/// # use panic_probe as _;
-/// const SWEEP: [(u16, Duration); 11] = linear(0, 180, Duration::from_secs(2));
-/// ```
+/// - `N` — Number of steps in the sequence (const generic parameter)
+/// - `start_degrees` — Starting angle in degrees
+/// - `end_degrees` — Ending angle in degrees
+/// - `total_duration` — Total time for the entire sequence
+///
+/// See the [servo_player module documentation](mod@crate::servo_player) for usage.
 #[must_use]
 pub const fn linear<const N: usize>(
     start_degrees: u16,
@@ -248,21 +262,7 @@ pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
 ///
 /// This macro allows combining any number of const arrays with a clean syntax.
 ///
-/// # Example
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use embassy_time::Duration;
-/// # use device_kit::servo_player::linear;
-/// # use device_kit::combine;
-/// # use panic_probe as _;
-/// const SWEEP_UP: [(u16, Duration); 19] = linear(0, 180, Duration::from_secs(2));
-/// const HOLD_180: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
-/// const SWEEP_DOWN: [(u16, Duration); 19] = linear(180, 0, Duration::from_secs(2));
-/// const HOLD_0: [(u16, Duration); 1] = [(0, Duration::from_millis(400))];
-/// const STEPS: [(u16, Duration); 40] = combine!(SWEEP_UP, HOLD_180, SWEEP_DOWN, HOLD_0);
-/// ```
+/// See the [servo_player module documentation](mod@crate::servo_player) for usage.
 #[macro_export]
 macro_rules! combine {
     () => {
@@ -337,22 +337,25 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
 
     /// Set the target angle. The most recent command always wins.
     ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for usage.
+    /// See the [servo_player module documentation](mod@crate::servo_player) for
+    /// usage.
     pub fn set_degrees(&self, degrees: u16) {
         self.servo_player_static
             .signal(PlayerCommand::Set { degrees });
     }
 
-    /// Hold the servo at its current position (turn on PWM).
+    /// Hold the servo at its current position.
     ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for usage.
+    /// See the [servo_player module documentation](mod@crate::servo_player) for
+    /// usage.
     pub fn hold(&self) {
         self.servo_player_static.signal(PlayerCommand::Hold);
     }
 
-    /// Relax the servo (turn off PWM, servo can move freely).
+    /// Relax the servo (stops holding position, servo can move freely).
     ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for usage.
+    /// See the [servo_player module documentation](mod@crate::servo_player) for
+    /// usage.
     pub fn relax(&self) {
         self.servo_player_static.signal(PlayerCommand::Relax);
     }
@@ -362,7 +365,8 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
     /// Each step is a tuple `(degrees, duration)`. Accepts both owned iterators and
     /// references to collections.
     ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for usage.
+    /// See the [servo_player module documentation](mod@crate::servo_player) for
+    /// usage.
     pub fn animate<I>(&self, steps: I, at_end: AtEnd)
     where
         I: IntoIterator,
@@ -395,8 +399,10 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
 ///
 /// **After reading the configuration details below, see also:**
 ///
-/// - [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) — Sample servo player type showing all methods and associated constants
-/// - [`servo_player`](mod@crate::servo_player) module — Complete examples and usage patterns
+/// - [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) — Sample servo
+///   player type showing all methods and associated constants
+/// - [`servo_player`](mod@crate::servo_player) module — Complete examples and usage
+///   patterns
 /// - [`ServoPlayer`] — Core player type used by macro-generated types
 ///
 /// Use this macro when your project has a servo that needs scripted animation control.
@@ -412,15 +418,18 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
 /// ## Optional Fields
 ///
 /// - `min_us` — Minimum pulse width in microseconds for 0° (default: 500)
-/// - `max_us` — Maximum pulse width in microseconds for max_degrees (default: 2500)
+/// - `max_us` — Maximum pulse width in microseconds for max_degrees
+///   (default: 2500)
 /// - `max_degrees` — Maximum servo angle in degrees (default: 270)
 /// - `max_steps` — Maximum number of animation steps (default: 16)
 ///
-/// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`, `hold()`, and `relax()` are still supported.
+/// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`,
+/// `hold()`, and `relax()` are still supported.
 ///
 /// # Example
 ///
-/// See the [servo_player module documentation](mod@crate::servo_player) for complete examples.
+/// See the [servo_player module documentation](mod@crate::servo_player) for complete
+/// examples.
 ///
 /// Basic usage:
 ///
@@ -1125,7 +1134,20 @@ macro_rules! __servo_player_impl {
             impl $name {
                 /// Create the servo player and spawn its background task.
                 ///
-                /// The slice is automatically determined from the pin via the type system.
+                /// The slice is automatically determined from the pin via the type
+                /// system.
+                ///
+                /// # PWM Slice Calculation
+                ///
+                /// Calculate which [PWM slice](crate#glossary) a pin uses:
+                /// `slice = pin / 2 % 8`. For example, PIN_11 uses PWM_SLICE5
+                /// (11 / 2 % 8 = 5).
+                ///
+                /// # Parameters
+                ///
+                /// - `pin` — GPIO pin for servo PWM signal
+                /// - `slice` — PWM slice corresponding to the pin
+                /// - `spawner` — Task spawner for background operations
                 ///
                 /// See the [struct-level example](Self) for usage.
                 pub fn new<S: 'static>(
@@ -1194,6 +1216,18 @@ macro_rules! __servo_player_impl {
 
             impl $name {
                 /// Create the servo player and spawn its background task.
+                ///
+                /// # PWM Slice Calculation
+                ///
+                /// Calculate which [PWM slice](crate#glossary) a pin uses:
+                /// `slice = pin / 2 % 8`. For example, PIN_11 uses PWM_SLICE5
+                /// (11 / 2 % 8 = 5).
+                ///
+                /// # Parameters
+                ///
+                /// - `pin` — GPIO pin for servo PWM signal
+                /// - `slice` — PWM slice corresponding to the pin
+                /// - `spawner` — Task spawner for background operations
                 ///
                 /// See the [struct-level example](Self) for usage.
                 pub fn new(
@@ -1378,7 +1412,7 @@ async fn run_animation<const MAX_STEPS: usize>(
                 return servo_player_static.wait().await;
             }
             AtEnd::Relax => {
-                // Disable PWM (servo relaxes) and wait for next command
+                // Stop holding position (servo relaxes) and wait for next command
                 servo.relax();
                 return servo_player_static.wait().await;
             }

@@ -17,12 +17,12 @@ use {defmt_rtt as _, panic_probe as _};
 servo_player! {
     ServoPlayer11 {
         pin: PIN_11,
-        max_steps: 40,
+        max_steps: 40, // up to 40 steps in animation
     }
 }
 
 // Define a struct `ServoPlayer12` to control a servo player on PIN_12.
-// Can control up to 8 servos. This demo controls 2.
+// (Can control up to 8 servos. This demo controls 2.)
 servo_player! {
     ServoPlayer12 {
         pin: PIN_12,
@@ -44,7 +44,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    // Create a servo player on GPIO 11
+    // Create the servo player on GPIO 11
     // GPIO 11 → (11/2) % 8 = 5 → PWM_SLICE5
     let servo_player_11 = ServoPlayer11::new(p.PIN_11, p.PWM_SLICE5, spawner)?;
     // GPIO 12 → (12/2) % 8 = 6 → PWM_SLICE6
@@ -54,9 +54,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Create a const array of (degrees, duration) steps for sweeping the servo.
     // Compiler will catch size mismatches.
     const STEPS: [(u16, Duration); 40] = combine!(
-        linear::<19>(0, 180, Duration::from_secs(2)), // sweep up
+        linear::<19>(0, 180, Duration::from_secs(2)), // sweep up in 19 steps
         [(180, Duration::from_millis(400))],          // hold
-        linear::<19>(180, 0, Duration::from_secs(2)), // sweep down
+        linear::<19>(180, 0, Duration::from_secs(2)), // sweep down in 19 steps
         [(0, Duration::from_millis(400))]             // hold
     );
 

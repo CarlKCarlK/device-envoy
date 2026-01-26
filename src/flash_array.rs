@@ -67,7 +67,7 @@ impl FlashManager {
         })
     }
 
-    fn reserve<const N: usize>(&'static self) -> Result<[FlashElement; N]> {
+    fn reserve<const N: usize>(&'static self) -> Result<[FlashBlock; N]> {
         let start = self.next_block.fetch_add(N as u32, Ordering::SeqCst);
         let end = start.checked_add(N as u32).ok_or(Error::IndexOutOfBounds)?;
         if end > TOTAL_BLOCKS {
@@ -75,22 +75,22 @@ impl FlashManager {
             self.next_block.fetch_sub(N as u32, Ordering::SeqCst);
             return Err(Error::IndexOutOfBounds);
         }
-        Ok(array::from_fn(|idx| FlashElement {
+        Ok(array::from_fn(|idx| FlashBlock {
             manager: self,
             block: start + idx as u32,
         }))
     }
 }
 
-/// Type of a [`FlashArray`] element, with methods such as [`load`](Self::load), [`save`](Self::save), and [`clear`](Self::clear).
+/// Type of a [`FlashArray`] block, with methods such as [`load`](Self::load), [`save`](Self::save), and [`clear`](Self::clear).
 ///
 /// See [`FlashArray`] for usage examples.
-pub struct FlashElement {
+pub struct FlashBlock {
     manager: &'static FlashManager,
     block: u32,
 }
 
-impl FlashElement {
+impl FlashBlock {
     /// Load data stored in this block.
     ///
     /// See [`FlashArray`] for usage examples.
@@ -161,8 +161,8 @@ impl FlashArrayStatic {
 ///
 /// - **Type safety**: Hash-based type checking prevents reading data written under a
 ///   different Rust type name. The hash is derived from the full type path
-///   (for example, `app1::BootCounter`), so renaming or moving a type causes reads
-///   to return `Ok(None)`. Structural changes (adding or removing fields) do not
+///   (for example, `app1::BootCounter`). **Trying to read a different types
+///   returns `Ok(None)`**. Structural changes (adding or removing fields) do not
 ///   change the hash, but may cause deserialization to fail and return an error.
 /// - **Postcard serialization**: A compact, `no_std`-friendly binary format.
 ///
@@ -183,9 +183,9 @@ impl FlashArrayStatic {
 /// # #![no_main]
 /// # use panic_probe as _;
 /// # use defmt_rtt as _;
-/// use core::{convert::Infallible, future};
+/// # use core::{convert::Infallible, future};
 /// use device_kit::flash_array::{FlashArray, FlashArrayStatic};
-/// use defmt::info;
+/// # use defmt::info;
 ///
 /// /// Boot counter (newtype) that wraps at 10.
 /// /// Stored with `postcard` (Serde).
@@ -205,23 +205,23 @@ impl FlashArrayStatic {
 /// async fn example() -> device_kit::Result<Infallible> {
 ///     let p = embassy_rp::init(Default::default());
 ///
-///     // Create a flash array. Here we make it length 1.
+///     // Create a flash array by creating a static and a struct instance.
+///     // Here we make it length 1. You can destructure the array however you like.
 ///     static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-///     // Can destructure the array however you like.
-///     let [mut boot_counter_flash_element] = FlashArray::<1>::new(&FLASH_STATIC, p.FLASH)?;
+///     let [mut boot_counter_flash_block] = FlashArray::<1>::new(&FLASH_STATIC, p.FLASH)?;
 ///
 ///     // Read boot counter from flash then increment.
 ///     // FlashArray includes a runtime type hash so values are only loaded
 ///     // if the stored type matches the requested type; mismatches yield `None`.
-///     let boot_counter = boot_counter_flash_element
+///     let boot_counter = boot_counter_flash_block
 ///         .load()?
-///         .unwrap_or(BootCounter::new(0)) // Default to 0 if not present
+///         .unwrap_or(BootCounter::new(0)) // Default to 0 type not present
 ///         .increment();
 ///
 ///     // Write incremented counter back to flash.
 ///     // This example writes once per power-up (fine for a demo; don't write in a tight loop).
 ///     // Flash is typically good for ~100K erase cycles per sector.
-///     boot_counter_flash_element.save(&boot_counter)?;
+///     boot_counter_flash_block.save(&boot_counter)?;
 ///
 ///     info!("Boot counter: {}", boot_counter.0);
 ///     future::pending().await // Keep running
@@ -236,13 +236,13 @@ impl<const N: usize> FlashArray<N> {
         FlashArrayStatic::new_static()
     }
 
-    /// Reserve `N` contiguous elements and return them as an array that you can destructure however you like.
+    /// Reserve `N` contiguous blocks and return them as an array that you can destructure however you like.
     ///
     /// See [`FlashArray`] for usage examples.
     pub fn new(
         flash_static: &'static FlashArrayStatic,
         peripheral: Peri<'static, FLASH>,
-    ) -> Result<[FlashElement; N]> {
+    ) -> Result<[FlashBlock; N]> {
         let manager = flash_static.manager(peripheral);
         manager.reserve::<N>()
     }

@@ -26,7 +26,7 @@ use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
 use crate::button::{Button, PressedTo};
-use crate::flash_array::FlashElement;
+use crate::flash_array::FlashBlock;
 use crate::{Error, Result};
 
 mod credentials;
@@ -230,7 +230,7 @@ impl WifiAuto {
         pin_24: Peri<'static, PIN_24>,
         pin_29: Peri<'static, PIN_29>,
         dma_ch0: Peri<'static, DMA_CH0>,
-        mut wifi_credentials_flash_element: FlashElement,
+        mut wifi_credentials_flash_block: FlashBlock,
         button_pin: Peri<'static, impl Pin>,
         button_pressed_to: PressedTo,
         captive_portal_ssid: &'static str,
@@ -240,8 +240,8 @@ impl WifiAuto {
         static WIFI_AUTO_STATIC: WifiAutoStatic = WifiAuto::new_static();
         let wifi_auto_static = &WIFI_AUTO_STATIC;
 
-        let stored_credentials = Wifi::peek_credentials(&mut wifi_credentials_flash_element);
-        let stored_start_mode = Wifi::peek_start_mode(&mut wifi_credentials_flash_element);
+        let stored_credentials = Wifi::peek_credentials(&mut wifi_credentials_flash_block);
+        let stored_start_mode = Wifi::peek_start_mode(&mut wifi_credentials_flash_block);
         if matches!(stored_start_mode, WifiStartMode::CaptivePortal) {
             if let Some(creds) = stored_credentials.clone() {
                 wifi_auto_static.defaults.lock(|cell| {
@@ -259,7 +259,7 @@ impl WifiAuto {
                 });
             }
             Wifi::prepare_start_mode(
-                &mut wifi_credentials_flash_element,
+                &mut wifi_credentials_flash_block,
                 WifiStartMode::CaptivePortal,
             )
             .map_err(|_| Error::StorageCorrupted)?;
@@ -273,7 +273,7 @@ impl WifiAuto {
             pin_24,
             pin_29,
             dma_ch0,
-            wifi_credentials_flash_element,
+            wifi_credentials_flash_block,
             captive_portal_ssid,
             spawner,
         );

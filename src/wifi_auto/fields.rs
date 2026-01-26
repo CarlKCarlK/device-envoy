@@ -17,7 +17,7 @@ use heapless::String;
 use static_cell::StaticCell;
 
 use super::portal::{FormData, HtmlBuffer, WifiAutoField};
-use crate::flash_array::FlashElement;
+use crate::flash_array::FlashBlock;
 use crate::{Error, Result};
 
 /// A timezone selection field for WiFi provisioning.
@@ -32,7 +32,7 @@ use crate::{Error, Result};
 /// # #![no_std]
 /// # #![no_main]
 /// use device_kit::button::PressedTo;
-/// use device_kit::flash_array::{FlashArray, FlashArrayStatic, FlashElement};
+/// use device_kit::flash_array::{FlashArray, FlashArrayStatic, FlashBlock};
 /// use device_kit::wifi_auto::WifiAuto;
 /// use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 /// # #[panic_handler]
@@ -72,7 +72,7 @@ use crate::{Error, Result};
 /// }
 /// ```
 pub struct TimezoneField {
-    flash: RefCell<FlashElement>,
+    flash: RefCell<FlashBlock>,
 }
 
 // SAFETY: TimezoneField is used in a single-threaded Embassy executor on RP2040/RP2350.
@@ -107,12 +107,12 @@ impl TimezoneField {
     /// See [`TimezoneField`] for a complete example.
     pub fn new(
         timezone_field_static: &'static TimezoneFieldStatic,
-        flash: FlashElement,
+        flash: FlashBlock,
     ) -> &'static Self {
         timezone_field_static.cell.init(Self::from_flash(flash))
     }
 
-    fn from_flash(flash: FlashElement) -> Self {
+    fn from_flash(flash: FlashBlock) -> Self {
         Self {
             flash: RefCell::new(flash),
         }
@@ -383,7 +383,7 @@ const TIMEZONE_OPTIONS: &[TimezoneOption] = &[
 /// # #![no_std]
 /// # #![no_main]
 /// use device_kit::button::PressedTo;
-/// use device_kit::flash_array::{FlashArray, FlashArrayStatic, FlashElement};
+/// use device_kit::flash_array::{FlashArray, FlashArrayStatic, FlashBlock};
 /// use device_kit::wifi_auto::WifiAuto;
 /// use device_kit::wifi_auto::fields::{TextField, TextFieldStatic};
 /// # #[panic_handler]
@@ -429,7 +429,7 @@ const TIMEZONE_OPTIONS: &[TimezoneOption] = &[
 /// }
 /// ```
 pub struct TextField<const N: usize> {
-    flash: RefCell<FlashElement>,
+    flash: RefCell<FlashBlock>,
     field_name: &'static str,
     label: &'static str,
     default_value: &'static str,
@@ -476,7 +476,7 @@ impl<const N: usize> TextField<N> {
     /// See [`TextField`] for a complete example.
     pub fn new(
         text_field_static: &'static TextFieldStatic<N>,
-        flash: FlashElement,
+        flash: FlashBlock,
         field_name: &'static str,
         label: &'static str,
         default_value: &'static str,
@@ -487,7 +487,7 @@ impl<const N: usize> TextField<N> {
     }
 
     fn from_flash(
-        flash: FlashElement,
+        flash: FlashBlock,
         field_name: &'static str,
         label: &'static str,
         default_value: &'static str,

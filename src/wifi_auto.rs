@@ -252,7 +252,13 @@ impl WifiAuto {
 
         let button = Button::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
-        if force_captive_portal {
+
+        // Check if custom fields are satisfied
+        let extras_ready = custom_fields
+            .iter()
+            .all(|field| field.is_satisfied().unwrap_or(false));
+
+        if force_captive_portal || !extras_ready {
             if let Some(creds) = stored_credentials.clone() {
                 wifi_auto_static.defaults.lock(|cell| {
                     *cell.borrow_mut() = Some(creds);
@@ -332,10 +338,16 @@ impl WifiAuto {
 
     fn extra_fields_ready(&self) -> Result<bool> {
         for field in self.fields {
-            if !field.is_satisfied().map_err(|_| Error::StorageCorrupted)? {
+            let satisfied = field.is_satisfied().map_err(|_| Error::StorageCorrupted)?;
+            if !satisfied {
+                info!("WifiAuto: custom field not satisfied, forcing captive portal");
                 return Ok(false);
             }
         }
+        info!(
+            "WifiAuto: all {} custom fields satisfied",
+            self.fields.len()
+        );
         Ok(true)
     }
 
@@ -425,6 +437,10 @@ impl WifiAuto {
             let start_mode = self.wifi.current_start_mode();
             let has_creds = self.wifi.has_persisted_credentials();
             let extras_ready = self.extra_fields_ready()?;
+            info!(
+                "WifiAuto: force={} has_creds={} extras_ready={}",
+                force_captive_portal, has_creds, extras_ready
+            );
             if force_captive_portal
                 || matches!(start_mode, WifiStartMode::CaptivePortal)
                 || !has_creds

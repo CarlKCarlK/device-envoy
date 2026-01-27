@@ -14,6 +14,7 @@ use device_kit::{
     led_strip::colors,
     led2d,
     led2d::{Led2dFont, layout::LedLayout},
+    wifi_auto::fields::{TextField, TextFieldStatic},
     wifi_auto::{WifiAuto, WifiAutoEvent},
 };
 use embassy_executor::Spawner;
@@ -58,10 +59,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("WiFi Auto LED Display - Starting");
     let p = embassy_rp::init(Default::default());
 
-    // Set up flash storage for WiFi credentials
-    // cmk0 Commenting out device name field for now - only need 1 flash block
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-    let [wifi_credentials_flash_block] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    // Set up flash storage for WiFi credentials and device name
+    static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
+    let [wifi_credentials_flash_block, device_name_flash_block] =
+        FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+
+    // Create device name field (max 4 characters)
+    static DEVICE_NAME_STATIC: TextFieldStatic<4> = TextField::new_static();
+    let device_name_field = TextField::new(
+        &DEVICE_NAME_STATIC,
+        device_name_flash_block,
+        "name",
+        "Name",
+        "PICO",
+    );
 
     // Initialize WifiAuto
     let wifi_auto = WifiAuto::new(
@@ -75,7 +86,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIN_13, // Button for forced reconfiguration
         PressedTo::Ground,
         "PicoTime", // Captive-portal SSID
-        [],         // No custom fields
+        [device_name_field],
         spawner,
     )?;
 
@@ -103,8 +114,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         })
         .await?;
 
+    // Get device name from field
+    let device_name = device_name_field.text()?.unwrap_or_default();
+    info!("Device name: {}", device_name.as_str());
+
     // Show initial state with dashes until time arrives
-    led12x8.write_text("----", COLORS).await?;
+    let initial_display = format_two_lines("----", device_name.as_str());
+    led12x8.write_text(&initial_display, COLORS).await?;
 
     // Main loop: fetch and display time every minute
     loop {
@@ -113,11 +129,18 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 // Get last 4 digits of unix timestamp
                 let last_4_digits = (unix_seconds % 10000) as u16;
                 let time_str = format_4_digits(last_4_digits);
-                led12x8.write_text(&time_str, COLORS).await?;
+
+                // Display: time on line 1, name on line 2
+                let display_text = format_two_lines(&time_str, device_name.as_str());
+                led12x8.write_text(&display_text, COLORS).await?;
+
+                info!("Time: {} | Name: {}", time_str, device_name.as_str());
             }
             Err(msg) => {
                 warn!("NTP fetch failed: {}", msg);
-                led12x8.write_text("----", COLORS).await?;
+                // Keep showing dashes with device name on error
+                let error_display = format_two_lines("----", device_name.as_str());
+                led12x8.write_text(&error_display, COLORS).await?;
             }
         }
 
@@ -130,6 +153,14 @@ fn format_4_digits(num: u16) -> heapless::String<4> {
     use core::fmt::Write;
     let mut s = heapless::String::new();
     write!(&mut s, "{:04}", num).unwrap();
+    s
+}
+
+/// Format two lines of text separated by newline
+fn format_two_lines(line1: &str, line2: &str) -> heapless::String<9> {
+    use core::fmt::Write;
+    let mut s = heapless::String::new();
+    write!(&mut s, "{}\n{}", line1, line2).unwrap();
     s
 }
 

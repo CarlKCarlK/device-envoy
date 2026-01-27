@@ -139,6 +139,12 @@ path = "demos/f_wifi_auto/f1_unix_time.rs"
 test = false
 required-features = ["arm", "wifi"]
 
+[[bin]]
+name = "demo_f2_extra"
+path = "demos/f_wifi_auto/f2_extra.rs"
+test = false
+required-features = ["arm", "wifi"]
+
 [features]
 default = ["defmt", "pico1", "arm"]
 defmt = []

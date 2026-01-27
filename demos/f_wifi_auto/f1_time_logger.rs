@@ -1,8 +1,9 @@
-//! Simple WiFi auto-provisioning demo that fetches time from NTP server every minute.
+//! WiFi auto-provisioning demo with LED display showing time and device name.
 //!
-//! This demo shows basic `WifiAuto` usage: connecting to WiFi through captive portal
-//! provisioning, then querying an NTP (Network Time Protocol) server to get the current
-//! time. It logs the Unix timestamp every minute.
+//! This demo shows `WifiAuto` usage with a custom text field. It provisions WiFi
+//! credentials and a short device name through a captive portal, then displays:
+//! - Line 1: Last 4 digits of Unix timestamp (updates every minute, cyan)
+//! - Line 2: The device name entered during provisioning (magenta)
 
 #![no_std]
 #![no_main]
@@ -15,6 +16,10 @@ use device_kit::{
     Result,
     button::PressedTo,
     flash_array::{FlashArray, FlashArrayStatic},
+    led_strip::colors,
+    led2d,
+    led2d::{Led2dFont, layout::LedLayout},
+    wifi_auto::fields::{TextField, TextFieldStatic},
     wifi_auto::{WifiAuto, WifiAutoEvent},
 };
 use embassy_executor::Spawner;
@@ -29,6 +34,35 @@ use {defmt_rtt as _, panic_probe as _};
 const NTP_SERVER: &str = "pool.ntp.org";
 const NTP_PORT: u16 = 123;
 
+// Set up LED layout for 12x8 panel (two 12x4 panels stacked)
+const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
+const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4);
+
+// Color palettes for display
+const COLORS_WIFI: &[smart_leds::RGB8] = &[colors::YELLOW, colors::CYAN, colors::WHITE];
+const COLORS_SUCCESS: &[smart_leds::RGB8] = &[colors::GREEN, colors::CYAN];
+const COLORS_ERROR: &[smart_leds::RGB8] = &[colors::RED, colors::ORANGE];
+const COLORS_MAIN: &[smart_leds::RGB8] = &[
+    colors::CYAN,
+    colors::YELLOW,
+    colors::GREEN,
+    colors::BLUE,
+    colors::MAGENTA,
+    colors::RED,
+    colors::ORANGE,
+    colors::PURPLE,
+];
+
+led2d! {
+    Led12x8 {
+        pin: PIN_4,
+        pio: PIO1,
+        dma: DMA_CH1,
+        led_layout: LED_LAYOUT_12X8,
+        font: Led2dFont::Font3x4Trim,
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -36,14 +70,25 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    info!("WiFi Auto NTP Demo - Starting");
+    info!("WiFi Auto LED Display - Starting");
     let p = embassy_rp::init(Default::default());
 
-    // Set up flash storage for WiFi credentials
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-    let [wifi_credentials_flash_block] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    // Set up flash storage for WiFi credentials and device name
+    static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
+    let [wifi_credentials_flash_block, device_name_flash_block] =
+        FlashArray::new(&FLASH_STATIC, p.FLASH)?;
 
-    // Initialize WifiAuto - no custom fields needed for this simple demo
+    // Create device name field (max 4 characters for the display)
+    static DEVICE_NAME_STATIC: TextFieldStatic<4> = TextField::new_static();
+    let device_name_field = TextField::new(
+        &DEVICE_NAME_STATIC,
+        device_name_flash_block,
+        "name",
+        "Name",
+        "PICO",
+    );
+
+    // Initialize WifiAuto with device name field
     let wifi_auto = WifiAuto::new(
         p.PIN_23,  // CYW43 power
         p.PIN_25,  // CYW43 chip select
@@ -54,53 +99,94 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         wifi_credentials_flash_block,
         p.PIN_13, // Button for forced reconfiguration
         PressedTo::Ground,
-        "PicoDemo", // Captive-portal SSID
-        [],         // No custom fields
+        "PicoTime",          // Captive-portal SSID
+        [device_name_field], // Custom field for device name
         spawner,
     )?;
 
-    // Connect with status logging
+    // Set up LED display
+    let led12x8 = Led12x8::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
+
+    // Connect with status on display
+    let led12x8_ref = &led12x8;
     let (stack, _button) = wifi_auto
-        .connect(spawner, |event| async move {
+        .connect(spawner, move |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    info!("Captive portal ready - connect to 'PicoDemo' WiFi network");
+                    info!("Captive portal ready - connect to 'PicoTime' WiFi network");
+                    // Don't show anything - portal runs in background for reconfiguration
                 }
-                WifiAutoEvent::Connecting {
-                    try_index,
-                    try_count,
-                } => {
-                    info!(
-                        "Connecting to WiFi (attempt {}/{})",
-                        try_index + 1,
-                        try_count
-                    );
+                WifiAutoEvent::Connecting { try_index, .. } => {
+                    info!("Connecting to WiFi");
+                    // Show connecting animation
+                    let dots = match try_index {
+                        0 => "WIFI",
+                        1 => "WIFI\n.",
+                        2 => "WIFI\n..",
+                        _ => "WIFI\n...",
+                    };
+                    led12x8_ref.write_text(dots, COLORS_WIFI).await.ok();
                 }
                 WifiAutoEvent::Connected => {
-                    info!("WiFi connected successfully!");
+                    info!("WiFi connected");
+                    led12x8_ref.write_text("DONE", COLORS_SUCCESS).await.ok();
                 }
                 WifiAutoEvent::ConnectionFailed => {
-                    info!("WiFi connection failed - device will reset");
+                    info!("WiFi connection failed");
+                    led12x8_ref.write_text("FAIL", COLORS_ERROR).await.ok();
                 }
             }
         })
         .await?;
 
-    info!("WiFi connected - fetching time from NTP server");
+    // Get device name from the field
+    let device_name = device_name_field.text()?.unwrap_or_default();
+    info!("Device name: {}", device_name.as_str());
 
-    // Fetch and log time every minute
+    // Show initial state with dashes until time arrives
+    let initial_display = format_two_lines("----", device_name.as_str());
+    led12x8.write_text(&initial_display, COLORS_MAIN).await?;
+
+    // Main loop: fetch and display time every minute
     loop {
         match fetch_ntp_time(stack).await {
             Ok(unix_seconds) => {
-                info!("Current time: {} seconds since Unix epoch", unix_seconds);
+                // Get last 4 digits of unix timestamp
+                let last_4_digits = (unix_seconds % 10000) as u16;
+                let time_str = format_4_digits(last_4_digits);
+
+                // Display: time on line 1, name on line 2
+                let display_text = format_two_lines(&time_str, device_name.as_str());
+                led12x8.write_text(&display_text, COLORS_MAIN).await?;
+
+                info!("Time: {} | Name: {}", time_str, device_name.as_str());
             }
             Err(msg) => {
                 warn!("NTP fetch failed: {}", msg);
+                // Keep showing dashes with device name on error
+                let error_display = format_two_lines("----", device_name.as_str());
+                led12x8.write_text(&error_display, COLORS_MAIN).await?;
             }
         }
 
         Timer::after(Duration::from_secs(60)).await;
     }
+}
+
+/// Format a number as a 4-digit string with leading zeros
+fn format_4_digits(num: u16) -> heapless::String<4> {
+    use core::fmt::Write;
+    let mut s = heapless::String::new();
+    write!(&mut s, "{:04}", num).unwrap();
+    s
+}
+
+/// Format two lines of text separated by newline
+fn format_two_lines(line1: &str, line2: &str) -> heapless::String<9> {
+    use core::fmt::Write;
+    let mut s = heapless::String::new();
+    write!(&mut s, "{}\n{}", line1, line2).unwrap();
+    s
 }
 
 /// Fetch current time from NTP server and return Unix timestamp.

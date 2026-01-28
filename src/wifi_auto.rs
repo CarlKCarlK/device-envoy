@@ -273,13 +273,11 @@ impl WifiAuto {
             }
         }
 
+        // Allow the pull-up to stabilize after reset before sampling the button.
+        let button_reset_stabilize_cycles: u32 = 100_000;
+        cortex_m::asm::delay(button_reset_stabilize_cycles);
         let button = Button::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
-        let button_level_high = button.is_high_raw();
-        info!(
-            "WifiAuto: button_pressed={} button_level_high={} pressed_to={:?}",
-            force_captive_portal, button_level_high, button_pressed_to
-        );
 
         // Check if custom fields are satisfied
         let extras_ready = custom_fields

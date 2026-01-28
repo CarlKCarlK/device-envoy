@@ -135,12 +135,6 @@ impl<'a> Button<'a> {
         }
     }
 
-    #[allow(dead_code)] // cmk00
-    #[must_use]
-    pub(crate) fn is_high_raw(&self) -> bool {
-        self.input.is_high()
-    }
-
     #[inline]
     async fn wait_for_button_up(&mut self) -> &mut Self {
         loop {

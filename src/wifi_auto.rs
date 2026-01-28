@@ -83,12 +83,15 @@ pub(crate) struct WifiAutoStatic {
     button: Mutex<CriticalSectionRawMutex, RefCell<Option<Button<'static>>>>,
     fields_storage: StaticCell<Vec<&'static dyn WifiAutoField, MAX_WIFI_AUTO_FIELDS>>,
 }
-/// A device abstraction for WiFi auto-provisioning on the Pico W.
+/// A device abstraction for WiFi auto-provisioning on the Pico 1 W or Pico 2 W.
 ///
-/// `WifiAuto` handles WiFi connection end-to-end. It normally connects using
+/// `WifiAuto` handles WiFi connections end-to-end. It normally connects using
 /// a saved WiFi network name (SSID) and password. If those values are missing
 /// or invalid, it temporarily creates its own WiFi network (a “captive
-/// portal”) and hosts a web form where the user can enter them.
+/// portal”) and hosts a web form where the user can enter the local WiFi
+/// ssid and password.
+///
+/// `WifiAuto` works on the Pico 1 W and Pico 2 W, which include the CYW43 WiFi chip.
 ///
 /// The typical usage pattern is:
 ///
@@ -97,11 +100,12 @@ pub(crate) struct WifiAutoStatic {
 /// 2. Use [`WifiAuto::new`] to construct a `WifiAuto`.
 /// 3. Use [`WifiAuto::connect_with`] to connect to WiFi while optionally showing status.
 ///
-/// `connect_with` returns a network stack and the reconfigure button, and it consumes
+/// The `connect_with` method returns a network stack and the button, and it consumes
 /// the `WifiAuto`.
+///
 /// Let’s look at an example. Following the example, we’ll explain the details.
 ///
-/// ## Example: connect with logging
+/// ## Example: Connect with logging
 ///
 /// This example connects to WiFi and logs progress.
 ///
@@ -176,8 +180,8 @@ pub(crate) struct WifiAutoStatic {
 /// ## Performance and code size
 ///
 /// You may choose any PIO instance and any DMA channel for WiFi.
-/// With **Thin LTO enabled**, this flexibility has minimal impact on
-/// code size (about 0.25% in typical builds).
+/// With **Thin LTO enabled**, this flexibility should have no impact on
+/// code size.
 ///
 /// Recommended release profile:
 ///
@@ -189,13 +193,20 @@ pub(crate) struct WifiAutoStatic {
 /// panic = "abort"
 /// ```
 ///
+/// (Your application could also enable linker garbage collection (`--gc-sections`)
+/// for embedded targets. We enable it in our `rustflags`, but in recent builds
+/// it had no measurable effect on size. See the
+/// [rustc linker argument docs](https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg)
+/// and the
+/// [Cargo rustflags docs](https://doc.rust-lang.org/cargo/reference/config.html#buildrustflags).)
+///
 /// ## Hardware model
 ///
 /// On the Pico W, the CYW43 WiFi chip is wired to fixed GPIOs. You must
 /// also provide a PIO instance and a DMA channel for the WiFi driver.
 ///
 /// These are supplied explicitly to [`WifiAuto::new`]. The chosen PIO/DMA
-/// pair cannot be shared with other devices; the compiler enforces this.
+/// pair cannot be shared with other uses; the compiler enforces this.
 pub struct WifiAuto {
     wifi_auto: &'static WifiAutoInner,
 }

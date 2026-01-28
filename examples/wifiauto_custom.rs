@@ -26,7 +26,6 @@ use embassy_net::{
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-device_kit::wifi!();
 
 // Set up LED layout for 12x8 panel (two 12x4 panels stacked)
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();

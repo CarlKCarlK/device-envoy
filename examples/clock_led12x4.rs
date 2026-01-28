@@ -34,7 +34,6 @@ use heapless::String;
 use panic_probe as _;
 use smart_leds::RGB8;
 
-device_kit::wifi!(PIO1, DMA_CH0);
 
 // Single 12x4 panel wired serpentine column-major.
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();

@@ -17,8 +17,6 @@
 //! use device_kit::flash_array::{FlashArray, FlashArrayStatic};
 //! # #[cfg(feature = "wifi")]
 //! use device_kit::wifi::{Wifi, WifiStatic};
-//! # #[cfg(feature = "wifi")]
-//! device_kit::wifi!();
 //! # fn main() {}
 //! #[cfg(feature = "wifi")]
 //! async fn example(spawner: embassy_executor::Spawner) {
@@ -61,8 +59,6 @@
 //! use device_kit::wifi::{Wifi, WifiStatic};
 //! # #[cfg(feature = "wifi")]
 //! use device_kit::wifi_auto::WifiCredentials;
-//! # #[cfg(feature = "wifi")]
-//! device_kit::wifi!();
 //! # fn main() {}
 //! #[cfg(feature = "wifi")]
 //! async fn example(spawner: embassy_executor::Spawner, credentials: WifiCredentials) {
@@ -913,14 +909,3 @@ impl_wifi_pio!(PIO0, Pio0Irqs, pio0);
 impl_wifi_pio!(PIO1, Pio1Irqs, pio1);
 #[cfg(feature = "pico2")]
 impl_wifi_pio!(PIO2, Pio2Irqs, pio2);
-
-#[macro_export]
-/// Marker macro retained for ergonomics.
-///
-/// The PIO and DMA selection comes from the peripherals passed to
-/// [`WifiAuto::new`](crate::wifi_auto::WifiAuto::new) or
-/// [`Wifi::new`](crate::wifi::Wifi::new).
-macro_rules! wifi {
-    () => {};
-    ($pio:ident, $dma:ident) => {};
-}

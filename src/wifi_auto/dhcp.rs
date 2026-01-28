@@ -5,7 +5,7 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 #![allow(
     dead_code,
-    reason = "Used by wifi! macro-generated tasks in downstream crates"
+    reason = "Used by WiFi tasks in downstream crates"
 )]
 
 use defmt::*;

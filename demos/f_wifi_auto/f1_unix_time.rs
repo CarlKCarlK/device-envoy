@@ -25,26 +25,17 @@ use embassy_net::{
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-device_kit::wifi!(PIO1, DMA_CH0);
 
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
     LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
 
-const COLORS: &[smart_leds::RGB8] = &[
-    colors::YELLOW,
-    colors::LIME,
-    colors::CYAN,
-    colors::RED,
-    colors::WHITE,
-];
+const COLORS: &[smart_leds::RGB8] = &[colors::YELLOW, colors::LIME, colors::CYAN, colors::RED];
 
 // Pico wifi always claims DMA_CH0 for itself, so we use DMA_CH1 for the LED display.
 led2d! {
     Led8x12 {
         pin: PIN_4,
-        pio: PIO0,
-        dma: DMA_CH1,
         led_layout: LED_LAYOUT_8X12,
         font: Led2dFont::Font4x6Trim,
     }
@@ -63,7 +54,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
     let [wifi_credentials_flash_block] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
 
-    let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH1, spawner)?;
+    let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Create a WifiAuto instance.
     // Pico W uses the CYW43 chip wired to fixed GPIOs; we pass those resources here.
@@ -74,7 +65,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO1,    // CYW43 PIO interface (required)
         p.PIN_24,  // CYW43 clock
         p.PIN_29,  // CYW43 data
-        p.DMA_CH0, // CYW43 DMA 0 (required)
+        p.DMA_CH1, // CYW43 DMA 0 (required)
         wifi_credentials_flash_block,
         p.PIN_13, // Button for forced reconfiguration
         PressedTo::Ground,

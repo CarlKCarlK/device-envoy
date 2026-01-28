@@ -23,7 +23,6 @@ use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use panic_probe as _;
 
-device_kit::wifi!();
 
 #[embassy_executor::main]
 pub async fn main(spawner: Spawner) -> ! {

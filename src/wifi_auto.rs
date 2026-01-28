@@ -102,7 +102,6 @@ pub struct WifiAutoStatic {
 /// - **PIO0** or **PIO1** can be used by the WiFi driver
 /// - a dedicated **DMA channel** is used for WiFi SPI
 ///
-/// The [`wifi!`](crate::wifi!) macro is a no-op marker retained for ergonomics.
 /// The PIO and DMA selection comes from the peripherals passed to [`WifiAuto::new`].
 ///
 /// Other peripherals (LEDs, displays, etc.) must use *different* PIO/DMA
@@ -142,7 +141,6 @@ pub struct WifiAutoStatic {
 ///     flash_array::{FlashArray, FlashArrayStatic},
 ///     wifi_auto::{WifiAuto, WifiAutoEvent},
 /// };
-/// device_kit::wifi!();
 ///
 /// async fn example(
 ///     spawner: embassy_executor::Spawner,

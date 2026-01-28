@@ -36,7 +36,6 @@ use heapless::String;
 use panic_probe as _;
 use smart_leds::RGB8;
 
-device_kit::wifi!();
 
 // Two 12x4 panels stacked vertically and rotated 90° CW → 8×12 display.
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();

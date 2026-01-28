@@ -35,7 +35,7 @@ use crate::{Error, Result};
 /// use device_kit::flash_array::{FlashArray, FlashArrayStatic, FlashBlock};
 /// use device_kit::wifi_auto::WifiAuto;
 /// use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-/// device_kit::wifi!();
+///
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// async fn example(
@@ -387,7 +387,7 @@ const TIMEZONE_OPTIONS: &[TimezoneOption] = &[
 /// use device_kit::flash_array::{FlashArray, FlashArrayStatic, FlashBlock};
 /// use device_kit::wifi_auto::WifiAuto;
 /// use device_kit::wifi_auto::fields::{TextField, TextFieldStatic};
-/// device_kit::wifi!();
+///
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// async fn example(

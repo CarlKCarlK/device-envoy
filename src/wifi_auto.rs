@@ -93,7 +93,7 @@ pub struct WifiAutoStatic {
 /// - Automatic captive portal on first boot or failed connections
 /// - Customizable configuration fields beyond WiFi credentials
 /// - Button-triggered reconfiguration
-/// - Event-driven UI updates via [`connect`](Self::connect)
+/// - Event-driven UI updates via [`WifiAutoHandle::connect_with`]
 ///
 /// Supports any PIO instance that implements [`WifiPio`], including `PIO0` and `PIO1`
 /// (and `PIO2` on supported boards).
@@ -144,7 +144,7 @@ pub struct WifiAutoStatic {
 ///     //   let display_ref = &display;
 ///     // Then use display_ref inside the closure.
 ///     let (stack, button) = wifi_auto
-///         .connect(spawner, |event| async move {
+///         .connect_with(|event| async move {
 ///             match event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     defmt::info!("Captive portal ready - connect to WiFi network");
@@ -173,10 +173,16 @@ pub struct WifiAutoStatic {
 pub struct WifiAuto {
     events: &'static WifiAutoEvents,
     wifi: &'static Wifi,
+    spawner: Spawner,
     force_captive_portal: &'static AtomicBool,
     defaults: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>>,
     button: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<Button<'static>>>>,
     fields: &'static [&'static dyn WifiAutoField],
+}
+
+/// Handle for [`WifiAuto`]. See [`WifiAuto`] for usage example.
+pub struct WifiAutoHandle {
+    wifi_auto: &'static WifiAuto,
 }
 
 impl WifiAutoStatic {
@@ -236,7 +242,7 @@ impl WifiAuto {
         captive_portal_ssid: &'static str,
         custom_fields: [&'static dyn WifiAutoField; N],
         spawner: Spawner,
-    ) -> Result<&'static Self> {
+    ) -> Result<WifiAutoHandle> {
         static WIFI_AUTO_STATIC: WifiAutoStatic = WifiAuto::new_static();
         let wifi_auto_static = &WIFI_AUTO_STATIC;
 
@@ -308,6 +314,7 @@ impl WifiAuto {
         let instance = wifi_auto_static.wifi_auto_cell.init(Self {
             events: &wifi_auto_static.events,
             wifi,
+            spawner,
             force_captive_portal: wifi_auto_static.force_captive_portal_flag(),
             defaults: wifi_auto_static.defaults(),
             button: wifi_auto_static.button(),
@@ -318,7 +325,9 @@ impl WifiAuto {
             instance.force_captive_portal();
         }
 
-        Ok(instance)
+        Ok(WifiAutoHandle {
+            wifi_auto: instance,
+        })
     }
 
     fn force_captive_portal(&self) {
@@ -355,58 +364,8 @@ impl WifiAuto {
         self.events.wait().await
     }
 
-    /// Ensures WiFi connection with UI callback for event-driven status updates.
-    ///
-    /// Automatically monitors connection events and awaits the provided callback for
-    /// each event. The callback can be either synchronous (no `.await` calls) or
-    /// asynchronous (with `.await` calls for async operations like updating displays).
-    ///
-    /// The future resolves once WiFi connectivity is established and returns access to
-    /// the network stack plus the reconfiguration button.
-    ///
-    /// # Examples
-    ///
-    /// Synchronous callback (no `.await` calls):
-    /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # use panic_probe as _;
-    /// # use embassy_executor::Spawner;
-    /// use device_kit::{wifi_auto::{WifiAuto,WifiAutoEvent}, Result};
-    /// async fn connect_sync(wifi_auto: &WifiAuto, spawner: embassy_executor::Spawner) -> Result<()> {
-    ///     wifi_auto.connect(spawner, |event| async move {
-    ///         defmt::info!("Event: {:?}", event);
-    ///     }).await?;
-    ///     Ok(())
-    /// }
-    /// ```
-    ///
-    /// Asynchronous callback (with `.await` calls):
-    /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # use panic_probe as _;
-    /// # use embassy_executor::Spawner;
-    /// use device_kit::{wifi_auto::{WifiAuto, WifiAutoEvent}, Result};
-    /// async fn update_display(event: WifiAutoEvent) {
-    ///     // Update UI asynchronously (placeholder)
-    ///     core::future::ready(()).await;
-    ///     defmt::info!("Updated display: {:?}", event);
-    /// }
-    ///
-    /// async fn connect_async(
-    ///     wifi_auto: &WifiAuto,
-    ///     spawner: embassy_executor::Spawner,
-    /// ) -> Result<()> {
-    ///     wifi_auto.connect(spawner, |event| async move {
-    ///         update_display(event).await;
-    ///     }).await?;
-    ///     Ok(())
-    /// }
-    /// ```
-    pub async fn connect<Fut, F>(
+    async fn connect_with<Fut, F>(
         &self,
-        spawner: Spawner,
         mut on_event: F,
     ) -> Result<(&'static Stack<'static>, Button<'static>)>
     where
@@ -424,14 +383,14 @@ impl WifiAuto {
             }
         };
 
-        let (result, ()) = embassy_futures::join::join(self.ensure_connected(spawner), ui).await;
+        let (result, ()) = embassy_futures::join::join(self.ensure_connected(), ui).await;
         result?;
         let stack = self.wifi.wait_for_stack().await;
         let button = self.take_button().ok_or(Error::StorageCorrupted)?;
         Ok((stack, button))
     }
 
-    async fn ensure_connected(&self, spawner: Spawner) -> Result<()> {
+    async fn ensure_connected(&self) -> Result<()> {
         loop {
             let force_captive_portal = self.force_captive_portal.swap(false, Ordering::AcqRel);
             let start_mode = self.wifi.current_start_mode();
@@ -454,7 +413,7 @@ impl WifiAuto {
                     }
                 }
                 self.events.signal(WifiAutoEvent::CaptivePortalReady);
-                self.run_captive_portal(spawner).await?;
+                self.run_captive_portal().await?;
                 unreachable!("Device should reset after captive portal submission");
             }
 
@@ -518,12 +477,15 @@ impl WifiAuto {
     }
 
     #[allow(unreachable_code)]
-    async fn run_captive_portal(&self, spawner: Spawner) -> Result<Infallible> {
+    async fn run_captive_portal(&self) -> Result<Infallible> {
         self.wifi.wait_for_wifi_event().await;
         let stack = self.wifi.wait_for_stack().await;
 
         let captive_portal_ip = Ipv4Address::new(192, 168, 4, 1);
-        if let Err(err) = spawner.spawn(dns_server_task(stack, captive_portal_ip)) {
+        if let Err(err) = self
+            .spawner
+            .spawn(dns_server_task(stack, captive_portal_ip))
+        {
             info!("WifiAuto: DNS server task spawn failed: {:?}", err);
         }
 
@@ -532,7 +494,7 @@ impl WifiAuto {
             .lock(|cell| cell.borrow_mut().take())
             .or_else(|| self.wifi.load_persisted_credentials());
         let submission =
-            portal::collect_credentials(stack, spawner, defaults_owned.as_ref(), self.fields)
+            portal::collect_credentials(stack, self.spawner, defaults_owned.as_ref(), self.fields)
                 .await?;
         self.wifi.persist_credentials(&submission).map_err(|err| {
             warn!("{}", err);
@@ -544,5 +506,30 @@ impl WifiAuto {
         loop {
             cortex_m::asm::nop();
         }
+    }
+}
+
+impl WifiAutoHandle {
+    /// Return the underlying WiFi handle for advanced operations such as clearing
+    /// credentials. Avoid waiting on WiFi events while [`WifiAuto`] is running, as it
+    /// already owns the event stream.
+    ///
+    /// See the [struct-level example](WifiAuto) for usage.
+    pub fn wifi(&self) -> &'static Wifi {
+        self.wifi_auto.wifi()
+    }
+
+    /// Ensures WiFi connection with UI callback for event-driven status updates.
+    ///
+    /// See the [struct-level example](WifiAuto) for usage.
+    pub async fn connect_with<Fut, F>(
+        self,
+        on_event: F,
+    ) -> Result<(&'static Stack<'static>, Button<'static>)>
+    where
+        F: FnMut(WifiAutoEvent) -> Fut,
+        Fut: Future<Output = ()>,
+    {
+        self.wifi_auto.connect_with(on_event).await
     }
 }

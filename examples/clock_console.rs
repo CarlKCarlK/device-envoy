@@ -62,7 +62,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect to WiFi
     let (stack, _button) = wifi_auto
-        .connect(spawner, |event| async move {
+        .connect_with(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready - connect to WiFi network");

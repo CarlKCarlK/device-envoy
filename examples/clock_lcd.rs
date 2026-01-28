@@ -68,7 +68,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     // Connect to WiFi
-    let (stack, _button) = wifi_auto.connect(spawner, |_event| async move {}).await?;
+    let (stack, _button) = wifi_auto.connect_with(|_event| async move {}).await?;
 
     // Create Clock device with timezone from WiFi portal
     // cmk offset must be set or return error

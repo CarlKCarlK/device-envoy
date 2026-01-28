@@ -87,28 +87,22 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
     let led8x12_ref = &led8x12;
     let (stack, _button) = wifi_auto
-        .connect(
-            // Spawner is used to spawn background tasks for WiFi driver, network stack, and captive portal.
-            spawner,
-            // A closure is passed that is called when WiFi connection state changes, allowing us to update the display.
-            // If the display fails, we just ignore the error here.
-            move |event| async move {
-                match event {
-                    WifiAutoEvent::CaptivePortalReady => {
-                        led8x12_ref.write_text("JO\nIN", COLORS).await.ok();
-                    }
-                    WifiAutoEvent::Connecting { .. } => {
-                        show_connecting(led8x12_ref).await.ok(); // animate dots
-                    }
-                    WifiAutoEvent::Connected => {
-                        led8x12_ref.write_text("DO\nNE", COLORS).await.ok();
-                    }
-                    WifiAutoEvent::ConnectionFailed => {
-                        led8x12_ref.write_text("FA\nIL", COLORS).await.ok();
-                    }
+        .connect_with(move |event| async move {
+            match event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    led8x12_ref.write_text("JO\nIN", COLORS).await.ok();
                 }
-            },
-        )
+                WifiAutoEvent::Connecting { .. } => {
+                    show_connecting(led8x12_ref).await.ok(); // animate dots
+                }
+                WifiAutoEvent::Connected => {
+                    led8x12_ref.write_text("DO\nNE", COLORS).await.ok();
+                }
+                WifiAutoEvent::ConnectionFailed => {
+                    led8x12_ref.write_text("FA\nIL", COLORS).await.ok();
+                }
+            }
+        })
         .await?;
 
     // Show initial state with dashes until time is fetched.

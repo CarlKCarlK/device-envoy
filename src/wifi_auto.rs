@@ -347,15 +347,6 @@ impl WifiAuto {
         })
     }
 
-    /// Return the underlying WiFi handle for advanced operations such as clearing
-    /// credentials. Avoid waiting on WiFi events while [`WifiAuto`] is running, as it
-    /// already owns the event stream.
-    ///
-    /// See the [WifiAuto struct example](Self) for usage.
-    pub fn wifi(&self) -> &'static Wifi {
-        self.wifi_auto.wifi()
-    }
-
     /// Ensures WiFi connection with UI callback for event-driven status updates.
     ///
     /// If the handler returns an error, connection is aborted and the error is returned.
@@ -381,10 +372,6 @@ impl WifiAutoInner {
 
     fn force_captive_portal(&self) {
         self.force_captive_portal.store(true, Ordering::Relaxed);
-    }
-
-    fn wifi(&self) -> &'static Wifi {
-        self.wifi
     }
 
     fn take_button(&self) -> Option<Button<'static>> {

@@ -2,7 +2,7 @@
 //!
 //! See [`WifiAuto`] for the main struct and usage examples.
 // cmk we we really need both wifi and wifi_auto modules? If so, give better names and descriptions.
-// cmk understand all top-level files and folder in the gitproject (is barlink there)
+// cmk understand all top-level files and folder in the git project (is barlink there)
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
@@ -342,7 +342,9 @@ impl WifiAuto {
             instance.force_captive_portal();
         }
 
-        Ok(Self { wifi_auto: instance })
+        Ok(Self {
+            wifi_auto: instance,
+        })
     }
 
     /// Return the underlying WiFi handle for advanced operations such as clearing

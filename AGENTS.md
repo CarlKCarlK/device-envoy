@@ -122,6 +122,7 @@ Preserving comments: When changing code, generally don't remove TODO's and cmk's
 - Start module docs with "A device abstraction ..." and have them point readers to the main struct docs.
 - Put a single compilable example on the primary struct; other public docs should link back to that example instead of duplicating snippets.
 - When linking to module documentation, name the module in the link text (for example, "led_strip module documentation").
+- When referring to examples, never say "struct-level example" or "module-level example". Use the name, for example: "WifiAuto struct example" or "led_strip module example".
 
 - **Markdown formatting**: When creating or editing markdown files, follow these rules to avoid linter warnings:
   - Add blank lines before and after lists (both bulleted and numbered)
@@ -141,7 +142,7 @@ Use `cargo run --bin <name> --target <target> --features <features>` as the stan
 - Module-level docs must start with "A device abstraction ..." and immediately direct readers to the primary public struct for details.
 - Each module should have exactly one full, compilable example placed on the primary struct; keep other docs free of extra examples.
 - Other public items (constructors, helper methods, type aliases) should point back to the primary struct's example rather than adding new snippets.
-- **API completeness**: Every public method must either (1) have its own doc test, OR (2) be used in the struct's main example AND have a link from its doc comment pointing to that example (e.g., `See the [struct-level example](Self) for usage.`). This ensures all functionality is documented and discoverable.
+- **API completeness**: Every public method must either (1) have its own doc test, OR (2) be used in the struct's main example AND have a link from its doc comment pointing to that example (e.g., `See the [WifiAuto struct example](Self) for usage.`). This ensures all functionality is documented and discoverable.
 - Examples should use the module's real constructors (e.g., `new_static`, `new`) and follow the device/static pair pattern shown elsewhere in the repo.
 - Avoid unnecessary public type aliases; prefer private or newtype wrappers when exposing resources so internal types stay hidden.
 - In examples, prefer importing the types you need (`use crate::foo::{Device, DeviceStatic};`) instead of fully-qualified paths for statics.

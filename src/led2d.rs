@@ -665,7 +665,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
     /// provides the `(col, row)` destination for LED `i`. The layout is inverted via
     /// [`LedLayout::xy_to_index`] so (row, col) queries are O(1) when converting frames.
     ///
-    /// See the [struct-level example](Self) for usage.
+    /// See the [Led2d struct example](Self) for usage.
     #[must_use]
     pub fn new<const W: usize, const H: usize>(
         led_strip: &'static LedStrip<N, MAX_FRAMES>,

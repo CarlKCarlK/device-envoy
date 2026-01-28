@@ -1119,7 +1119,7 @@ macro_rules! __servo_player_impl {
                 /// - `slice` — PWM slice corresponding to the pin
                 /// - `spawner` — Task spawner for background operations
                 ///
-                /// See the [struct-level example](Self) for usage.
+                /// See the `ServoPlayer` struct example for usage.
                 pub fn new<S: 'static>(
                     pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     slice: impl Into<::embassy_rp::Peri<'static, S>>,
@@ -1199,7 +1199,7 @@ macro_rules! __servo_player_impl {
                 /// - `slice` — PWM slice corresponding to the pin
                 /// - `spawner` — Task spawner for background operations
                 ///
-                /// See the [struct-level example](Self) for usage.
+                /// See the `ServoPlayer` struct example for usage.
                 pub fn new(
                     pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     slice: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$slice>>,

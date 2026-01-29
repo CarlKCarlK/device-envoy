@@ -13,7 +13,7 @@ use device_kit::{
     button::PressedTo,
     flash_array::{FlashArray, FlashArrayStatic},
     wifi_auto::{WifiAuto, WifiAutoEvent},
-    wifi_auto::fields::{TextField, TextFieldStatic},
+    wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
 };
 
 #[embassy_executor::main]
@@ -25,8 +25,8 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
-    let [wifi_flash, website_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    static FLASH_STATIC: FlashArrayStatic = FlashArray::<3>::new_static();
+    let [wifi_flash, website_flash, timezone_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
 
     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
     let website_field = TextField::new(
@@ -36,6 +36,10 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         "Website",
         "google.com",
     );
+
+    // Create timezone field
+    static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
+    let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
 
     let wifi_auto = WifiAuto::new(
         p.PIN_23,  // CYW43 power
@@ -47,8 +51,8 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         wifi_flash,
         p.PIN_13, // Button for reconfiguration
         PressedTo::Ground,
-        "PicoAccess",     // Captive-portal SSID
-        [website_field],  // Custom fields
+        "PicoAccess", // Captive-portal SSID
+        [website_field, timezone_field], // Custom fields
         spawner,
     )?;
 
@@ -77,6 +81,8 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         .await?;
 
     let website = website_field.text()?.unwrap_or_default();
+    let offset_minutes = timezone_field.offset_minutes()?.unwrap_or(0);
+    defmt::info!("Timezone offset minutes: {}", offset_minutes);
 
     loop {
         let query_name = website.as_str();

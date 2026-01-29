@@ -42,7 +42,8 @@ use dns::dns_server_task;
 use stack::{WifiStartMode, WifiStatic as InnerWifiStatic};
 
 pub use credentials::WifiCredentials;
-pub use stack::{Wifi, WifiEvent, WifiPio, WifiStatic};
+pub use stack::WifiPio;
+pub(crate) use stack::{Wifi, WifiEvent};
 
 pub use portal::WifiAutoField;
 

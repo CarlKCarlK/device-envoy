@@ -1,91 +1,6 @@
-//! WiFi device abstraction supporting both captive portal and client modes.
+//! A device abstraction for WiFi connectivity used internally by [`crate::wifi_auto::WifiAuto`].
 //!
-//! This module provides a high-level interface for managing WiFi connectivity on the
-//! Raspberry Pi Pico W. It supports two main operating modes:
-//!
-//! - **Captive portal mode**: Creates a WiFi hotspot for device configuration
-//! - **Client mode**: Connects to an existing WiFi network
-//!
-//! # Examples
-//!
-//! ## Provisioning via captive portal
-//!
-//! ```rust,no_run
-//! # #![no_std]
-//! # use panic_probe as _;
-//! # #[cfg(feature = "wifi")]
-//! use device_kit::flash_array::{FlashArray, FlashArrayStatic};
-//! # #[cfg(feature = "wifi")]
-//! use device_kit::wifi::{Wifi, WifiStatic};
-//! # fn main() {}
-//! #[cfg(feature = "wifi")]
-//! async fn example(spawner: embassy_executor::Spawner) {
-//! let p = embassy_rp::init(core::default::Default::default());
-//!
-//! static WIFI_STATIC: WifiStatic = Wifi::new_static();
-//! static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-//! let [wifi_block] = FlashArray::new(&FLASH_STATIC, p.FLASH).unwrap();
-//!
-//! // Start in captive portal mode for user configuration
-//! let wifi = Wifi::new(
-//!     &WIFI_STATIC,
-//!     p.PIN_23,
-//!     p.PIN_24,
-//!     p.PIN_25,
-//!     p.PIN_29,
-//!     p.PIO0,
-//!     p.DMA_CH0,
-//!     wifi_block,
-//!     spawner,
-//! );
-//!
-//! // Wait for the captive portal to be ready
-//! wifi.wait_for_wifi_event().await;
-//!
-//! // Get network stack for serving configuration interface
-//! let stack = wifi.wait_for_stack().await;
-//! // ... serve web interface on 192.168.4.1 ...
-//! }
-//! ```
-//!
-//! ## Client mode with stored credentials
-//!
-//! ```rust,no_run
-//! # #![no_std]
-//! # use panic_probe as _;
-//! # #[cfg(feature = "wifi")]
-//! use device_kit::flash_array::{FlashArray, FlashArrayStatic};
-//! # #[cfg(feature = "wifi")]
-//! use device_kit::wifi::{Wifi, WifiStatic};
-//! # #[cfg(feature = "wifi")]
-//! use device_kit::wifi_auto::WifiCredentials;
-//! # fn main() {}
-//! #[cfg(feature = "wifi")]
-//! async fn example(spawner: embassy_executor::Spawner, credentials: WifiCredentials) {
-//! let p = embassy_rp::init(core::default::Default::default());
-//!
-//! static WIFI_STATIC: WifiStatic = Wifi::new_static();
-//! static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-//! let [wifi_block] = FlashArray::new(&FLASH_STATIC, p.FLASH).unwrap();
-//!
-//! // Connect using credentials that were provisioned earlier (e.g., loaded from flash)
-//! let wifi = Wifi::new(
-//!     &WIFI_STATIC,
-//!     p.PIN_23,
-//!     p.PIN_24,
-//!     p.PIN_25,
-//!     p.PIN_29,
-//!     p.PIO0,
-//!     p.DMA_CH0,
-//!     wifi_block,
-//!     spawner,
-//! );
-//!
-//! wifi.wait_for_wifi_event().await;
-//! let stack = wifi.wait_for_stack().await;
-//! // ... use stack ...
-//! }
-//! ```
+//! See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 #![allow(
@@ -118,6 +33,7 @@ use super::credentials::WifiCredentials;
 use super::dhcp::dhcp_server_task;
 use crate::flash_array::FlashBlock;
 
+#[allow(dead_code)]
 pub const DEFAULT_CAPTIVE_PORTAL_SSID: &str = "Pico";
 
 // ============================================================================
@@ -248,7 +164,7 @@ pub struct WifiStatic {
 
 /// A device abstraction that manages WiFi connectivity and network stack in both captive portal and client modes.
 ///
-/// See the [module-level documentation](mod@crate::wifi) for usage examples.
+/// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
 // cmk consider hiding this behind WifiAuto-only APIs if external access is unwanted
 pub struct Wifi {
     events: &'static WifiEvents,
@@ -261,7 +177,7 @@ impl Wifi {
     ///
     /// This must be called once to create a static `WifiStatic` that will be passed to [`Wifi::new`].
     ///
-    /// See the [module-level documentation](mod@crate::wifi) for usage examples.
+    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
     #[must_use]
     pub const fn new_static() -> WifiStatic {
         WifiStatic {
@@ -278,7 +194,7 @@ impl Wifi {
     /// - In captive portal mode: static IP 192.168.4.1
     /// - In client mode: DHCP-assigned IP
     ///
-    /// See the [module-level documentation](mod@crate::wifi) for usage examples.
+    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
     pub async fn wait_for_stack(&self) -> &'static Stack<'static> {
         self.stack.get().await
     }
@@ -289,7 +205,7 @@ impl Wifi {
     /// - [`WifiEvent::CaptivePortalReady`] when captive portal mode is initialized
     /// - [`WifiEvent::ClientReady`] when connected to WiFi and DHCP is configured
     ///
-    /// See the [module-level documentation](mod@crate::wifi) for usage examples.
+    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
     pub async fn wait_for_wifi_event(&self) -> WifiEvent {
         self.events.wait().await
     }
@@ -311,7 +227,8 @@ impl Wifi {
     /// * `credential_store` - Flash block reserved for WiFi credentials
     /// * `spawner` - Embassy task spawner
     ///
-    /// See the [module-level documentation](mod@crate::wifi) for usage examples.
+    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    #[allow(dead_code)]
     pub fn new<PIO: WifiPio, DMA: Channel>(
         wifi_static: &'static WifiStatic,
         pin_23: Peri<'static, PIN_23>,
@@ -384,6 +301,7 @@ impl Wifi {
 
     /// Reconfigure WiFi to client mode with provided credentials
     /// This is called after collecting credentials in captive portal mode
+    #[allow(dead_code)]
     pub async fn switch_to_client_mode(
         &self,
         credentials: WifiCredentials,
@@ -424,6 +342,7 @@ impl Wifi {
     }
 
     /// Remove any stored credentials from flash.
+    #[allow(dead_code)]
     pub fn clear_persisted_credentials(&self) -> Result<(), &'static str> {
         self.update_state(|state| {
             state.credentials = None;

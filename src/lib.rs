@@ -73,7 +73,6 @@ pub mod servo_player;
 #[cfg(not(feature = "host"))]
 pub mod time_sync;
 #[cfg(all(feature = "wifi", not(feature = "host")))]
-pub mod wifi;
 #[cfg(all(feature = "wifi", not(feature = "host")))]
 pub mod wifi_auto;
 

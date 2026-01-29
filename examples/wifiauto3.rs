@@ -1,4 +1,4 @@
-//! WiFiAuto example with a custom web name field for DNS lookups.
+//! WifiAuto example with a custom website field for DNS lookups.
 
 #![cfg(feature = "wifi")]
 #![no_std]
@@ -8,7 +8,6 @@
 extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
-use core::convert::Infallible;
 use device_kit::{
     Result,
     button::PressedTo,
@@ -23,18 +22,18 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
     core::panic!("{err}");
 }
 
-async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
     let p = embassy_rp::init(Default::default());
 
     static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
-    let [wifi_flash, web_name_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    let [wifi_flash, website_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
 
-    static WEB_NAME_STATIC: TextFieldStatic<32> = TextField::new_static();
-    let web_name_field = TextField::new(
-        &WEB_NAME_STATIC,
-        web_name_flash,
-        "web_name",
-        "Web Name",
+    static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
+    let website_field = TextField::new(
+        &WEBSITE_STATIC,
+        website_flash,
+        "website",
+        "Website",
         "google.com",
     );
 
@@ -48,8 +47,8 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         wifi_flash,
         p.PIN_13, // Button for reconfiguration
         PressedTo::Ground,
-        "PicoAccess",      // Captive-portal SSID
-        [web_name_field],  // Custom fields
+        "PicoAccess",     // Captive-portal SSID
+        [website_field],  // Custom fields
         spawner,
     )?;
 
@@ -59,8 +58,15 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
                 WifiAutoEvent::CaptivePortalReady => {
                     defmt::info!("Captive portal ready");
                 }
-                WifiAutoEvent::Connecting { .. } => {
-                    defmt::info!("Connecting to WiFi");
+                WifiAutoEvent::Connecting {
+                    try_index,
+                    try_count,
+                } => {
+                    defmt::info!(
+                        "Connecting to WiFi (attempt {} of {})...",
+                        try_index + 1,
+                        try_count
+                    );
                 }
                 WifiAutoEvent::ConnectionFailed => {
                     defmt::info!("WiFi connection failed");
@@ -70,25 +76,19 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         })
         .await?;
 
-    defmt::info!("WiFi connected");
-
-    let web_name = web_name_field
-        .text()?
-        .unwrap_or_else(|| {
-            let mut web_name_default: heapless::String<32> = heapless::String::new();
-            web_name_default.push_str("google.com").unwrap();
-            web_name_default
-        });
+    let website = website_field.text()?.unwrap_or_default();
 
     loop {
+        let query_name = website.as_str();
         if let Ok(addresses) = stack
-            .dns_query(web_name.as_str(), embassy_net::dns::DnsQueryType::A)
+            .dns_query(query_name, embassy_net::dns::DnsQueryType::A)
             .await
         {
-            defmt::info!("{}: {:?}", web_name.as_str(), addresses);
+            defmt::info!("{}: {:?}", query_name, addresses);
         } else {
-            defmt::info!("{}: lookup failed", web_name.as_str());
+            defmt::info!("{}: lookup failed", query_name);
         }
+
         embassy_time::Timer::after(embassy_time::Duration::from_secs(15)).await;
     }
 }

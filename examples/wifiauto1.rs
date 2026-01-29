@@ -9,13 +9,14 @@ extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
 use core::convert::Infallible;
-use core::future;
 use device_kit::{
     Result,
     button::PressedTo,
     flash_array::{FlashArray, FlashArrayStatic},
     wifi_auto::{WifiAuto, WifiAutoEvent},
 };
+use embassy_net::dns::DnsQueryType;
+use embassy_time::{Duration, Timer};
 
 #[embassy_executor::main]
 async fn main(spawner: embassy_executor::Spawner) -> ! {
@@ -63,7 +64,13 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     // The stack is ready for network operations (for example, NTP or HTTP).
     defmt::info!("WiFi connected");
-    let _stack = stack;
 
-    future::pending().await // run forever
+    loop {
+        if let Ok(addresses) = stack.dns_query("google.com", DnsQueryType::A).await {
+            defmt::info!("google.com: {:?}", addresses);
+        } else {
+            defmt::info!("google.com: lookup failed");
+        }
+        Timer::after(Duration::from_secs(15)).await;
+    }
 }

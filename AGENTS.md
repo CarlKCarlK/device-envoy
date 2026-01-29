@@ -47,6 +47,8 @@ pub mod portal;
 
 Variables should generally match their type names converted to snake_case. This improves predictability and encourages better type names.
 
+Avoid abbreviations like `addrs`; spell out `addresses`.
+
 **Naming: dimensions and 2d**
 
 Use standard Rust snake_case for locals, fields, and functions; UpperCamelCase for types; SCREAMING_SNAKE_CASE for constants.

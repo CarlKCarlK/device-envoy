@@ -7,6 +7,7 @@
 - Avoid silent clamping; prefer asserts or typed ranges so out-of-range inputs fail fast.
 - Prefer `no_run` doctests; use `ignore` only when absolutely necessary (and call out why).
 - Always use `rust,no_run` in doctest fences, not just `no_run`.
+- For Pico programs that should run forever, use `core::future::pending().await` instead of a timer loop.
 - **Hide boilerplate in doctests** using the `#` prefix (e.g., `# #![no_std]`). Hide lines that are noise to the reader but required for compilation: `#![no_std]`, `#![no_main]`, `use panic_probe as _`, `use defmt_rtt as _`, and standard imports like `use embassy_executor::Spawner;`. Keep only the essential code showing how to use the API. **Important:** Do NOT hide imports from `device_kit`, `embassy_time::Duration`, `smart_leds`, or `embedded_graphics` because they are unusual and users need to see them to understand what to import.
 - When adding docs for modules or public items, link readers to the primary struct and keep the single compilable example on that struct; other items should point back to it rather than duplicating examples.
 - I often like `const` values defined in the local context (inside the function/example) rather than at module scope when they’re only used there.

@@ -385,33 +385,30 @@ const TIMEZONE_OPTIONS: &[TimezoneOption] = &[
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
+/// # use defmt_rtt as _;
+/// # use panic_probe as _;
 /// use device_kit::button::PressedTo;
-/// use device_kit::flash_array::{FlashArray, FlashArrayStatic, FlashBlock};
-/// use device_kit::wifi_auto::WifiAuto;
+/// use device_kit::flash_array::{FlashArray, FlashArrayStatic};
+/// use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
 /// use device_kit::wifi_auto::fields::{TextField, TextFieldStatic};
 ///
-/// # #[panic_handler]
-/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// async fn example(
 ///     spawner: embassy_executor::Spawner,
 ///     p: embassy_rp::Peripherals,
 /// ) -> Result<(), device_kit::Error> {
-///     // Set up flash storage
 ///     static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
-///     let [wifi_flash, device_name_flash] =
+///     let [wifi_flash, website_flash] =
 ///         FlashArray::new(&FLASH_STATIC, p.FLASH)?;
 ///
-///     // Create device name field (max 32 chars)
-///     static DEVICE_NAME_STATIC: TextFieldStatic<32> = TextField::new_static();
-///     let device_name_field = TextField::new(
-///         &DEVICE_NAME_STATIC,
-///         device_name_flash,
-///         "device_name",    // HTML field name
-///         "Device Name",    // Label text
-///         "Pico",           // Default value
+///     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
+///     let website_field = TextField::new(
+///         &WEBSITE_STATIC,
+///         website_flash,
+///         "website",
+///         "Website",
+///         "google.com",
 ///     );
 ///
-///     // Pass to WifiAuto
 ///     let wifi_auto = WifiAuto::new(
 ///         p.PIN_23,
 ///         p.PIN_24,
@@ -423,13 +420,47 @@ const TIMEZONE_OPTIONS: &[TimezoneOption] = &[
 ///         p.PIN_13,
 ///         PressedTo::Ground,
 ///         "Pico",
-///         [device_name_field],  // Custom fields array
+///         [website_field],
 ///         spawner,
 ///     )?;
 ///
-///     // Later, retrieve the device name
-///     let device_name = device_name_field.text()?.unwrap_or_default();
-///     Ok(())
+///     let (stack, _button) = wifi_auto
+///         .connect(|event| async move {
+///             match event {
+///                 WifiAutoEvent::CaptivePortalReady => {
+///                     defmt::info!("Captive portal ready");
+///                 }
+///                 WifiAutoEvent::Connecting {
+///                     try_index,
+///                     try_count,
+///                 } => {
+///                     defmt::info!(
+///                         "Connecting to WiFi (attempt {} of {})...",
+///                         try_index + 1,
+///                         try_count
+///                     );
+///                 }
+///                 WifiAutoEvent::ConnectionFailed => {
+///                     defmt::info!("WiFi connection failed");
+///                 }
+///             }
+///             Ok(())
+///         })
+///         .await?;
+///
+///     let website = website_field.text()?.unwrap_or_default();
+///     loop {
+///         let query_name = website.as_str();
+///         if let Ok(addresses) = stack
+///             .dns_query(query_name, embassy_net::dns::DnsQueryType::A)
+///             .await
+///         {
+///             defmt::info!("{}: {:?}", query_name, addresses);
+///         } else {
+///             defmt::info!("{}: lookup failed", query_name);
+///         }
+///         embassy_time::Timer::after(embassy_time::Duration::from_secs(15)).await;
+///     }
 /// }
 /// ```
 pub struct TextField<const N: usize> {

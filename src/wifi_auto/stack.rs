@@ -213,6 +213,7 @@ impl StackStorage {
 pub type WifiEvents = Signal<CriticalSectionRawMutex, WifiEvent>;
 
 /// PIO peripheral used by the WiFi driver.
+#[doc(hidden)]
 pub trait WifiPio: Instance {
     type Irqs: Binding<Self::Interrupt, InterruptHandler<Self>>;
 

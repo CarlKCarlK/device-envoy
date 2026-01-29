@@ -98,8 +98,8 @@ pub(crate) struct WifiAutoStatic {
 /// 2. Use [`WifiAuto::new`] to construct a `WifiAuto`.
 /// 3. Use [`WifiAuto::connect`] to connect to WiFi while optionally showing status.
 ///
-/// The `connect` method returns a network stack and the button, and it consumes
-/// the `WifiAuto`.
+/// The [`WifiAuto::connect`] method returns a network stack and the button, and it consumes
+/// the `WifiAuto`. See its documentation for examples and details.
 ///
 /// Let’s look at an example. Following the example, we’ll explain the details.
 ///
@@ -365,39 +365,51 @@ impl WifiAuto {
         })
     }
 
-    /// Ensures WiFi connection with UI callback for event-driven status updates.
+    /// Connects to WiFi (if possible), reports status, and returns the
+    /// network stack and button, consuming the `WifiAuto`.
     ///
-    /// If the handler returns an error, connection is aborted and the error is returned.
+    /// See the [WifiAuto struct example](Self) for a usage example.
     ///
-    /// See the [WifiAuto struct example](Self) for usage.
+    /// This method does not return until WiFi is connected. It may briefly
+    /// restart the Pico while switching between normal WiFi operation
+    /// and hosting its temporary setup network.
     ///
+    /// This `connect` method reports progress by calling a user-provided async
+    /// handler whenever the WiFi state changes.
+    /// The handler receives a [`WifiAutoEvent`].
+    /// The handler is called sequentially for each event and may `await`.
+    ///
+    /// The three events are:
+    /// - `Connecting`: The device is attempting to connect to the WiFi network.
+    /// - `CaptivePortalReady`: The device is hosting a captive portal and waiting for user input.
+    /// - `ConnectionFailed`: All connection attempts failed. The device
+    ///   will reset and re-enter setup mode (for example, if the password
+    ///   is incorrect).
+    ///
+    /// The first example uses a handler that does nothing.
+    /// The second example shows how to use an LED panel to display status messages.
+    /// The example on the [`WifiAuto`] struct shows simple logging.
+    ///
+    /// # Example 1: No-op event handler
     /// ```rust,no_run
-    /// # // Based on the f1_dns demo.
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// # use device_kit::{
-/// #     Result,
-/// #     button::PressedTo,
-/// #     flash_array::{FlashArray, FlashArrayStatic},
-/// #     led_strip::colors,
-/// #     wifi_auto::{WifiAuto, WifiAutoEvent},
-/// # };
-/// # use smart_leds::RGB8;
-/// # use embassy_executor::Spawner;
-/// # use embassy_rp::Peripherals;
-/// # struct Led8x12;
-/// # impl Led8x12 {
-/// #     async fn write_text(&self, _text: &str, _colors: &[RGB8]) -> Result<()> { Ok(()) }
-/// # }
-/// # async fn show_animated_dots(_led8x12: &Led8x12) -> Result<()> { Ok(()) }
-/// # const COLORS: &[RGB8] = &[colors::WHITE];
-/// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
-/// # static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-/// # let [wifi_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
-/// # let wifi_auto = WifiAuto::new(
-/// #     p.PIN_23,
-/// #     p.PIN_24,
+    /// # // Based on examples/wifiauto2.rs.
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # use panic_probe as _;
+    /// # use device_kit::{
+    /// #     Result,
+    /// #     button::PressedTo,
+    /// #     flash_array::{FlashArray, FlashArrayStatic},
+    /// #     wifi_auto::WifiAuto,
+    /// # };
+    /// # use embassy_executor::Spawner;
+    /// # use embassy_rp::Peripherals;
+    /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
+    /// # static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
+    /// # let [wifi_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    /// # let wifi_auto = WifiAuto::new(
+    /// #     p.PIN_23,
+    /// #     p.PIN_24,
     /// #     p.PIN_25,
     /// #     p.PIN_29,
     /// #     p.PIO0,
@@ -406,15 +418,60 @@ impl WifiAuto {
     /// #     p.PIN_13,
     /// #     PressedTo::Ground,
     /// #     "PicoAccess",
-/// #     [],
-/// #     spawner,
-/// # )?;
-/// # let led8x12 = Led8x12;
-/// // Keep a reference so the handler can reuse the display across events.
-/// let led8x12_ref = &led8x12;
-/// let (stack, button) = wifi_auto
+    /// #     [],
+    /// #     spawner,
+    /// # )?;
+    /// let (_stack, _button) = wifi_auto
+    ///     .connect(|_event| async move { Ok(()) })
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Example 2: Using a display to show status
+    /// ```rust,no_run
+    /// # // Based on demos/f_wifi_auto/f1_dns.rs.
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # use panic_probe as _;
+    /// # use device_kit::{
+    /// #     Result,
+    /// #     button::PressedTo,
+    /// #     flash_array::{FlashArray, FlashArrayStatic},
+    /// #     led_strip::colors,
+    /// #     wifi_auto::{WifiAuto, WifiAutoEvent},
+    /// # };
+    /// # use smart_leds::RGB8;
+    /// # use embassy_executor::Spawner;
+    /// # use embassy_rp::Peripherals;
+    /// # struct Led8x12;
+    /// # impl Led8x12 {
+    /// #     async fn write_text(&self, _text: &str, _colors: &[RGB8]) -> Result<()> { Ok(()) }
+    /// # }
+    /// # async fn show_animated_dots(_led8x12: &Led8x12) -> Result<()> { Ok(()) }
+    /// # const COLORS: &[RGB8] = &[colors::WHITE];
+    /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
+    /// # static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
+    /// # let [wifi_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    /// # let wifi_auto = WifiAuto::new(
+    /// #     p.PIN_23,
+    /// #     p.PIN_24,
+    /// #     p.PIN_25,
+    /// #     p.PIN_29,
+    /// #     p.PIO0,
+    /// #     p.DMA_CH0,
+    /// #     wifi_flash,
+    /// #     p.PIN_13,
+    /// #     PressedTo::Ground,
+    /// #     "PicoAccess",
+    /// #     [],
+    /// #     spawner,
+    /// # )?;
+    /// # let led8x12 = Led8x12;
+    /// // Keep a reference so the handler can reuse the display across events.
+    /// let led8x12_ref = &led8x12;
+    /// let (stack, button) = wifi_auto
     ///     .connect(|event| async move {
-    ///         // `async move` keeps `event` alive across await points.
     ///         match event {
     ///             WifiAutoEvent::CaptivePortalReady => {
     ///                 led8x12_ref.write_text("JO\nIN", COLORS).await?;
@@ -428,12 +485,12 @@ impl WifiAuto {
     ///         }
     ///         Ok(())
     ///     })
-///     .await?;
-/// # let _stack = stack;
-/// # let _button = button;
-/// # Ok(())
-/// # }
-/// ```
+    ///     .await?;
+    /// # let _stack = stack;
+    /// # let _button = button;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn connect<Fut, F>(
         self,
         on_event: F,

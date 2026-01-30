@@ -53,7 +53,7 @@ const BLINK_OFF_DELAY: Duration = Duration::from_millis(50);
 /// Delay for the "on" state during blinking.
 const BLINK_ON_DELAY: Duration = Duration::from_millis(150);
 
-// cmk should this be configurable?
+// This is not configurable for now because that would require use of an extra macro.
 const ANIMATION_MAX_FRAMES: usize = 16;
 
 // ============================================================================
@@ -157,7 +157,6 @@ impl AnimationFrame {
 /// }
 /// ```
 ///
-/// cmk should the example include animation?
 /// Beyond simple text, the driver can loop animations via [`Led4::animate_text`].
 /// The struct owns the background task and signal wiring; create it once with
 /// [`Led4::new`] and use the returned handle for all display updates.

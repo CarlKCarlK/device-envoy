@@ -226,10 +226,9 @@ impl DecoderState {
                 }
             }
             RepeatTail => {
+                // Repeat support not yet implemented; silently ignore valid repeats
                 if !level_low && inr(dt, BIT_LOW) {
-                    // CMK let out = last_code.map(|(a, c)| IrNecEvent::Repeat { addr: a, cmd: c });
                     self = Idle;
-                    // cmk return (self, out, last_code);
                 } else {
                     self = Idle;
                     defmt::info!("IR: Decode failed (bad RepeatTail timing)");

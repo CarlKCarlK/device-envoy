@@ -487,25 +487,27 @@ pub trait LedStripPio: Instance {
 /// This is returned by `pio_split!` and passed to strip constructors.
 #[cfg(not(feature = "host"))]
 #[doc(hidden)] // Support type for macro-generated strip types; not intended as surface API
-pub struct PioStateMachine<PIO: Instance + 'static, const SM: usize> {
-    bus: &'static PioBus<'static, PIO>,
-    sm: embassy_rp::pio::StateMachine<'static, PIO, SM>,
+pub struct PioBusStateMachine<PIO: Instance + 'static, const SM: usize> {
+    pio_bus: &'static PioBus<'static, PIO>,
+    state_machine: embassy_rp::pio::StateMachine<'static, PIO, SM>,
 }
-// cmk should spell out sm and name bus pio_bus, this this be PioBusStateMachine?ks
 
 #[cfg(not(feature = "host"))]
-impl<PIO: Instance + 'static, const SM: usize> PioStateMachine<PIO, SM> {
+impl<PIO: Instance + 'static, const SM: usize> PioBusStateMachine<PIO, SM> {
     #[doc(hidden)]
     pub fn new(
-        bus: &'static PioBus<'static, PIO>,
-        sm: embassy_rp::pio::StateMachine<'static, PIO, SM>,
+        pio_bus: &'static PioBus<'static, PIO>,
+        state_machine: embassy_rp::pio::StateMachine<'static, PIO, SM>,
     ) -> Self {
-        Self { bus, sm }
+        Self {
+            pio_bus,
+            state_machine,
+        }
     }
 
     #[doc(hidden)]
-    pub fn bus(&self) -> &'static PioBus<'static, PIO> {
-        self.bus
+    pub fn pio_bus(&self) -> &'static PioBus<'static, PIO> {
+        self.pio_bus
     }
 
     #[doc(hidden)]
@@ -515,9 +517,10 @@ impl<PIO: Instance + 'static, const SM: usize> PioStateMachine<PIO, SM> {
         &'static PioBus<'static, PIO>,
         embassy_rp::pio::StateMachine<'static, PIO, SM>,
     ) {
-        (self.bus, self.sm)
+        (self.pio_bus, self.state_machine)
     }
 }
+
 /// Shared PIO bus that manages the Common resource and WS2812 program.
 #[cfg(not(feature = "host"))]
 #[doc(hidden)] // Support type for macro-generated strip types; not intended as surface API
@@ -1024,10 +1027,10 @@ macro_rules! __led_strips_impl {
             pub fn [<$pio:lower _split>](
                 pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
             ) -> (
-                $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, 0>,
-                $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, 1>,
-                $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, 2>,
-                $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, 3>,
+                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 0>,
+                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 1>,
+                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 2>,
+                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 3>,
             ) {
                 let ::embassy_rp::pio::Pio { common, sm0, sm1, sm2, sm3, .. } =
                     ::embassy_rp::pio::Pio::new(pio, <::embassy_rp::peripherals::$pio as $crate::led_strip::LedStripPio>::irqs());
@@ -1035,10 +1038,10 @@ macro_rules! __led_strips_impl {
                     $crate::led_strip::PioBus::new(common)
                 });
                 (
-                    $crate::led_strip::PioStateMachine::new(pio_bus, sm0),
-                    $crate::led_strip::PioStateMachine::new(pio_bus, sm1),
-                    $crate::led_strip::PioStateMachine::new(pio_bus, sm2),
-                    $crate::led_strip::PioStateMachine::new(pio_bus, sm3),
+                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm0),
+                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm1),
+                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm2),
+                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm3),
                 )
                 }
 
@@ -1105,13 +1108,13 @@ macro_rules! __led_strips_impl {
 
                     // Create individual state machine wrappers
                     #[allow(unused_variables)]
-                    let sm0_wrapped = $crate::led_strip::PioStateMachine::new(pio_bus, sm0);
+                    let sm0_wrapped = $crate::led_strip::PioBusStateMachine::new(pio_bus, sm0);
                     #[allow(unused_variables)]
-                    let sm1_wrapped = $crate::led_strip::PioStateMachine::new(pio_bus, sm1);
+                    let sm1_wrapped = $crate::led_strip::PioBusStateMachine::new(pio_bus, sm1);
                     #[allow(unused_variables)]
-                    let sm2_wrapped = $crate::led_strip::PioStateMachine::new(pio_bus, sm2);
+                    let sm2_wrapped = $crate::led_strip::PioBusStateMachine::new(pio_bus, sm2);
                     #[allow(unused_variables)]
-                    let sm3_wrapped = $crate::led_strip::PioStateMachine::new(pio_bus, sm3);
+                    let sm3_wrapped = $crate::led_strip::PioBusStateMachine::new(pio_bus, sm3);
 
                     // Construct each strip with the appropriate SM
                     Ok((
@@ -1193,7 +1196,7 @@ macro_rules! __led_strips_impl {
                 }
 
                 pub fn new(
-                    state_machine: $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
+                    state_machine: $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
                     pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                     spawner: ::embassy_executor::Spawner,
@@ -1311,7 +1314,7 @@ macro_rules! __led_strips_impl {
                 }
 
                 pub fn new(
-                    state_machine: $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
+                    state_machine: $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
                     pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                     spawner: ::embassy_executor::Spawner,
@@ -1391,7 +1394,7 @@ macro_rules! __led_strips_impl {
             #[cfg(not(feature = "host"))]
             impl [<$label:camel LedStrip>] {
                 pub fn new_led2d(
-                    state_machine: $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
+                    state_machine: $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
                     pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                     spawner: ::embassy_executor::Spawner,
@@ -2985,13 +2988,13 @@ macro_rules! __led_strip_impl {
             #[allow(dead_code)]
             fn [<$name:snake _split_sm0>](
                 pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
-            ) -> $crate::led_strip::PioStateMachine<::embassy_rp::peripherals::$pio, 0> {
+            ) -> $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 0> {
                 let ::embassy_rp::pio::Pio { common, sm0, .. } =
                     ::embassy_rp::pio::Pio::new(pio, <::embassy_rp::peripherals::$pio as $crate::led_strip::LedStripPio>::irqs());
                 let pio_bus = [<$name:snake _ $pio _BUS>].init_with(|| {
                     $crate::led_strip::PioBus::new(common)
                 });
-                $crate::led_strip::PioStateMachine::new(pio_bus, sm0)
+                $crate::led_strip::PioBusStateMachine::new(pio_bus, sm0)
             }
 
             #[doc = concat!(

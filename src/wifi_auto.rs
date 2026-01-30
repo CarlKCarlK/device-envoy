@@ -2,7 +2,6 @@
 //! creates a temporary WiFi network to enter credentials.
 //!
 //! See [`WifiAuto`] for the main struct and usage examples.
-// cmk we we really need both wifi and wifi_auto modules? If so, give better names and descriptions.
 // cmk understand all top-level files and folder in the git project (is barlink there)
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]

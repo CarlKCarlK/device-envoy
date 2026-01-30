@@ -55,20 +55,15 @@ mod wifi_impl {
     use embassy_time::{Duration, Timer};
     use static_cell::StaticCell;
 
-    use crate::Result;
     use crate::time_sync::UnixSeconds;
+    use crate::{Error, Result};
 
     // ============================================================================
     // Types
     // ============================================================================
 
-    /// Events emitted by [`TimeSync`]. See the [`TimeSync`] documentation for usage details.
-    #[derive(Clone)]
-    pub enum TimeSyncEvent {
-        Success { unix_seconds: UnixSeconds },
-        // cmk consider changing to Error type?
-        Failed(&'static str),
-    }
+    /// Result of a time sync attempt. Emitted by [`TimeSync`] when sync completes.
+    pub type TimeSyncEvent = Result<UnixSeconds>;
 
     /// Signal type used by [`TimeSync`] to publish events (see [`TimeSync`] docs).
     type TimeSyncEvents = Signal<CriticalSectionRawMutex, TimeSyncEvent>;
@@ -116,10 +111,7 @@ mod wifi_impl {
             stack: &'static Stack<'static>,
             spawner: Spawner,
         ) -> &'static Self {
-            unwrap!(spawner.spawn(time_sync_stack_loop(
-                stack,
-                &time_sync_static.events,
-            )));
+            unwrap!(spawner.spawn(time_sync_stack_loop(stack, &time_sync_static.events,)));
 
             time_sync_static.time_sync_cell.init(Self {
                 events: &time_sync_static.events,
@@ -144,7 +136,6 @@ mod wifi_impl {
     async fn run_time_sync_loop(
         stack: &'static Stack<'static>,
         sync_events: &'static TimeSyncEvents,
-        // cmk Infallible to ! everywhere
     ) -> Result<Infallible> {
         info!("TimeSync received network stack");
         info!("TimeSync device started");
@@ -161,12 +152,12 @@ mod wifi_impl {
                         unix_seconds.as_i64()
                     );
 
-                    sync_events.signal(TimeSyncEvent::Success { unix_seconds });
+                    sync_events.signal(Ok(unix_seconds));
                     break;
                 }
                 Err(e) => {
                     info!("Sync failed: {}", e);
-                    sync_events.signal(TimeSyncEvent::Failed(e));
+                    sync_events.signal(Err(e));
                     // Exponential backoff: 10s, 30s, 60s, then 5min intervals
                     let delay_secs = if attempt == 1 {
                         10
@@ -202,12 +193,12 @@ mod wifi_impl {
                         unix_seconds.as_i64()
                     );
 
-                    sync_events.signal(TimeSyncEvent::Success { unix_seconds });
+                    sync_events.signal(Ok(unix_seconds));
                     last_success_elapsed = 0; // reset backoff
                 }
                 Err(e) => {
                     info!("Periodic sync failed: {}", e);
-                    sync_events.signal(TimeSyncEvent::Failed(e));
+                    sync_events.signal(Err(e));
                     info!("Sync failed, will retry in 5 minutes");
                 }
             }
@@ -218,7 +209,7 @@ mod wifi_impl {
     // Network - Network Time Protocol (NTP) Fetch
     // ============================================================================
 
-    async fn fetch_ntp_time(stack: &Stack<'static>) -> Result<UnixSeconds, &'static str> {
+    async fn fetch_ntp_time(stack: &Stack<'static>) -> Result<UnixSeconds> {
         use dns::DnsQueryType;
         use udp::UdpSocket;
 
@@ -236,9 +227,9 @@ mod wifi_impl {
             .await
             .map_err(|e| {
                 warn!("DNS lookup failed: {:?}", e);
-                "DNS lookup failed"
+                Error::Ntp("DNS lookup failed")
             })?;
-        let server_addr = dns_result.first().ok_or("No DNS results")?;
+        let server_addr = dns_result.first().ok_or(Error::Ntp("No DNS results"))?;
 
         info!("Network Time Protocol (NTP) server IP: {}", server_addr);
 
@@ -257,7 +248,7 @@ mod wifi_impl {
 
         socket.bind(0).map_err(|e| {
             warn!("Socket bind failed: {:?}", e);
-            "Socket bind failed"
+            Error::Ntp("Socket bind failed")
         })?;
 
         // Build Network Time Protocol (NTP) request (48 bytes, version 3, client mode)
@@ -274,7 +265,7 @@ mod wifi_impl {
             .await
             .map_err(|e| {
                 warn!("Network Time Protocol (NTP) send failed: {:?}", e);
-                "Network Time Protocol (NTP) send failed"
+                Error::Ntp("Network Time Protocol (NTP) send failed")
             })?;
 
         // Receive response with timeout
@@ -284,11 +275,11 @@ mod wifi_impl {
                 .await
                 .map_err(|_| {
                     warn!("Network Time Protocol (NTP) receive timeout");
-                    "Network Time Protocol (NTP) receive timeout"
+                    Error::Ntp("Network Time Protocol (NTP) receive timeout")
                 })?
                 .map_err(|e| {
                     warn!("Network Time Protocol (NTP) receive failed: {:?}", e);
-                    "Network Time Protocol (NTP) receive failed"
+                    Error::Ntp("Network Time Protocol (NTP) receive failed")
                 })?;
 
         if n < 48 {
@@ -296,7 +287,7 @@ mod wifi_impl {
                 "Network Time Protocol (NTP) response too short: {} bytes",
                 n
             );
-            return Err("Network Time Protocol (NTP) response too short");
+            return Err(Error::Ntp("Network Time Protocol (NTP) response too short"));
         }
 
         // Extract Network Time Protocol (NTP) transmit timestamp (bytes 40-47, big-endian)
@@ -305,7 +296,7 @@ mod wifi_impl {
 
         // Convert Network Time Protocol (NTP) timestamp to Unix seconds
         let unix_time = UnixSeconds::from_ntp_seconds(ntp_seconds)
-            .ok_or("Invalid Network Time Protocol (NTP) timestamp")?;
+            .ok_or(Error::Ntp("Invalid Network Time Protocol (NTP) timestamp"))?;
 
         info!(
             "Network Time Protocol (NTP) time: {} (unix timestamp)",
@@ -331,12 +322,8 @@ mod stub {
     use embassy_sync::signal::Signal;
     use static_cell::StaticCell;
 
-    /// Events produced by [`TimeSync`] (see [`TimeSync`] docs for context).
-    #[derive(Clone)]
-    pub enum TimeSyncEvent {
-        Success { unix_seconds: UnixSeconds },
-        Failed(&'static str),
-    }
+    /// Result of a time sync attempt. Emitted by [`TimeSync`] when sync completes.
+    pub type TimeSyncEvent = crate::Result<UnixSeconds>;
 
     /// Signal type that mirrors the WiFi implementation (see [`TimeSync`] docs).
     type TimeSyncEvents = Signal<CriticalSectionRawMutex, TimeSyncEvent>;
@@ -377,4 +364,10 @@ mod stub {
 }
 
 #[cfg(not(feature = "wifi"))]
-pub use stub::{TimeSync, TimeSyncEvent, TimeSyncStatic};
+pub use stub::{TimeSync, TimeSyncStatic};
+
+// Export TimeSyncEvent type alias from both implementations
+#[cfg(not(feature = "wifi"))]
+pub use stub::TimeSyncEvent;
+#[cfg(feature = "wifi")]
+pub use wifi_impl::TimeSyncEvent;

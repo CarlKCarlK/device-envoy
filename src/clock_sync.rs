@@ -297,15 +297,15 @@ async fn clock_sync_loop(
 ) -> ! {
     loop {
         match time_sync.wait_for_sync().await {
-            TimeSyncEvent::Success { unix_seconds } => {
+            Ok(unix_seconds) => {
                 clock.set_utc_time(unix_seconds).await;
                 let now_ticks = Instant::now().as_ticks();
                 last_sync_ticks.store(now_ticks, Ordering::Release);
                 synced.store(true, Ordering::Release);
                 sync_ready.signal(());
             }
-            TimeSyncEvent::Failed(message) => {
-                defmt::info!("ClockSync time sync failed: {}", message);
+            Err(err) => {
+                defmt::info!("ClockSync time sync failed: {}", err);
             }
         }
     }

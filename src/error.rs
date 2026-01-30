@@ -43,6 +43,9 @@ pub enum Error {
     #[display("Custom WiFi Auto field missing")]
     MissingCustomWifiAutoField,
 
+    #[display("Network Time Protocol (NTP) error: {_0}")]
+    Ntp(#[error(not(source))] &'static str),
+
     #[cfg(not(feature = "host"))]
     #[display("Flash operation failed: {_0:?}")]
     Flash(#[error(not(source))] embassy_rp::flash::Error),

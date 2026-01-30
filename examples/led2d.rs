@@ -252,7 +252,6 @@ async fn demo_bouncing_dot_manual(led4x12: &Led4x12, button: &mut Button<'_>) ->
     }
 }
 
-// cmk should this return Result<infallible> ?
 /// Bouncing dot using pre-built animation frames.
 async fn demo_bouncing_dot_animation(led4x12: &Led4x12) -> Result<()> {
     let mut color_cycle = [colors::CYAN, colors::YELLOW, colors::LIME].iter().cycle();

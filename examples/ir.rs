@@ -2,22 +2,27 @@
 #![no_std]
 #![no_main]
 
+use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
+use device_kit::Result;
 use device_kit::ir::{Ir, IrEvent, IrStatic};
 use embassy_executor::Spawner;
 use panic_probe as _;
 
-// cmk make an inner-main and remove the unwrap...panic
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    core::panic!("{err}");
+}
+
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     info!("IR NEC decoder example starting...");
 
     static IR_STATIC: IrStatic = Ir::new_static();
-    let ir = Ir::new(&IR_STATIC, p.PIN_15, spawner)
-        .unwrap_or_else(|e| panic!("Failed to initialize IR receiver: {:?}", e));
+    let ir = Ir::new(&IR_STATIC, p.PIN_15, spawner)?;
 
     info!("IR receiver initialized on GP15");
 

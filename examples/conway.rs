@@ -51,9 +51,9 @@ enum ConwayMessage {
 /// Speed modes for the simulation.
 #[derive(Clone, Copy, Debug, defmt::Format, PartialEq, Eq)]
 enum SpeedMode {
-    Slower,  // 10x slower (500ms per generation)
-    Medium,  // Log midpoint (~160ms per generation)
-    Normal,  // 1x normal (50ms per generation)
+    Slower, // 10x slower (500ms per generation)
+    Medium, // Log midpoint (~160ms per generation)
+    Normal, // 1x normal (50ms per generation)
 }
 
 impl SpeedMode {
@@ -534,7 +534,6 @@ impl ConwayStatic {
     }
 }
 
-// cmk make generic for any size led2d
 /// Conway's Game of Life device that runs in its own spawned task.
 /// Wraps a reference to the static signal for sending pattern change messages.
 struct Conway<'a>(&'a Signal<CriticalSectionRawMutex, ConwayMessage>);

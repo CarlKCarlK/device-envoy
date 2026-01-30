@@ -1,7 +1,6 @@
 //! A device abstraction for buttons with debouncing and press duration detection.
 //!
 //! See [`Button`] for usage example.
-// cmk check this now that it works connected to both ground and voltage
 
 use embassy_futures::select::{Either, select};
 use embassy_rp::Peri;

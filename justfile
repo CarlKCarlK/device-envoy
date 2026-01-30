@@ -57,7 +57,7 @@ pngs-check-all:
 
 # Generate video frames data (uses SANTA_VIDEO_PATH or SANTA_FRAMES_DIR)
 video-frames:
-	cargo xtask video-frames-gen > video_frames_data.rs
+	cargo xtask video-frames-gen > examples/data/frame-data/video_frames_data.rs
 
 # Build an example for Pico 2 (ARM)
 example name:

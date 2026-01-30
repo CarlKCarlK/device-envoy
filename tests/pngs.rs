@@ -19,7 +19,7 @@ use std::io::BufWriter;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-include!("../video_frames_data.rs");
+include!("../target/frame-data/video_frames_data.rs");
 
 type Frame = Frame2d<12, 8>;
 type Led12x4Frame = Frame2d<12, 4>;

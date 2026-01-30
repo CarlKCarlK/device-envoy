@@ -19,7 +19,7 @@
 //!
 //! ## Santa Video (Pre-configured)
 //!
-//! The santa frames are embedded from `video_frames_data.rs`, which is **auto-generated**
+//! The santa frames are embedded from `target/frame-data/video_frames_data.rs`, which is **auto-generated**
 //! during the build process from PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`,
 //! or directly from a source MP4 via ffmpeg.
 //!
@@ -27,33 +27,33 @@
 //!
 //! 1. Detects when building the `video` example
 //! 2. Runs `cargo xtask video-frames-gen` to convert 65 PNG files to Rust code
-//! 3. Writes the result to `video_frames_data.rs` in the crate root
-//! 4. Includes it at compile time
+//! 3. Writes the result to `examples/data/frame-data/video_frames_data.rs`
+//! 4. Copies it into `target/frame-data/video_frames_data.rs` for compile-time include
 //!
 //! To use different frames:
 //!
 //! 1. Replace the PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`
-//! 2. Delete `video_frames_data.rs` to force regeneration (or run `cargo clean`)
+//! 2. Delete `examples/data/frame-data/video_frames_data.rs` to force regeneration (or run `cargo clean`)
 //! 3. Rebuild the example - frames will be regenerated automatically
 //!
 //! Manual generation:
 //!
 //! ```bash
-//! cargo xtask video-frames-gen > video_frames_data.rs
+//! cargo xtask video-frames-gen > examples/data/frame-data/video_frames_data.rs
 //! ```
 //!
 //! To regenerate from the original MP4, set `SANTA_VIDEO_PATH` and rerun the generator:
 //!
 //! ```bash
 //! SANTA_VIDEO_PATH="/mnt/e/sync/Pixel7Pro/DCIM/Camera/Camera/PXL_20251227_143029067.mp4" \
-//!   cargo xtask video-frames-gen > video_frames_data.rs
+//!   cargo xtask video-frames-gen > examples/data/frame-data/video_frames_data.rs
 //! ```
 //!
 //! If you still have the pre-extracted PNGs, set `SANTA_FRAMES_DIR` instead:
 //!
 //! ```bash
 //! SANTA_FRAMES_DIR="$HOME/programs/ffmpeg-test/frames12x8_landscape" \
-//!   cargo xtask video-frames-gen > video_frames_data.rs
+//!   cargo xtask video-frames-gen > examples/data/frame-data/video_frames_data.rs
 //! ```
 //!
 //! ## Cat Video (From Video File)
@@ -63,10 +63,10 @@
 //!    (or update the path in `xtask/src/video_frames_gen.rs`)
 //! 2. Generate frames:
 //!    ```bash
-//!    cargo xtask cat-frames-gen > cat_frames_data.rs
+//!    cargo xtask cat-frames-gen > examples/data/frame-data/cat_frames_data.rs
 //!    ```
 //! 3. Uncomment the cat-related lines in this file:
-//!    - `include!("../cat_frames_data.rs");`
+//!    - `include!("../target/frame-data/cat_frames_data.rs");`
 //!    - `Mode::Cat` enum variant
 //!    - Cat playback logic in the match statement
 //!
@@ -119,16 +119,16 @@ led2d! {
 // Video frames and frame duration embedded at compile time
 // Auto-generated during build from PNG files in ~/programs/ffmpeg-test/frames12x8_landscape/
 // See build.rs for generation logic
-include!("../video_frames_data.rs");
+include!("../target/frame-data/video_frames_data.rs");
 
 // Cat video frames - generated from OneDrive camera roll
-// include!("../cat_frames_data.rs");
+// include!("../target/frame-data/cat_frames_data.rs");
 
 // Hand video frames - generated from OneDrive camera roll
-// include!("../hand_frames_data.rs");
+// include!("../target/frame-data/hand_frames_data.rs");
 
 // Clock video frames
-include!("../clock_frames_data.rs");
+include!("../target/frame-data/clock_frames_data.rs");
 
 /// Video display modes.
 #[derive(defmt::Format, Clone, Copy)]

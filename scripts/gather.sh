@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-output="all_code.txt"
+output="target/gathers/all_code.txt"
+mkdir -p "$(dirname "$output")"
 rm -f "$output"
 
 echo "Gathering Rust files from ., src, and examples..."

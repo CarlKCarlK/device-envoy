@@ -11,25 +11,13 @@ fn main() {
         .map(|s| s.contains("examples/video-"))
         .unwrap_or(false);
 
-    if should_generate {
-        eprintln!("Generating video frames data...");
-        let output = Command::new("cargo")
-            .args(["xtask", "video-frames-gen"])
-            .output()
-            .expect("Failed to run cargo xtask video-frames-gen");
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let source_frames_dir = manifest_dir.join("examples/data/frame-data");
+    let frames_dir = manifest_dir.join("target/frame-data");
+    fs::create_dir_all(&frames_dir).expect("Failed to create target/frame-data directory");
+    let frames_path = frames_dir.join("video_frames_data.rs");
 
-        if output.status.success() {
-            let frames_data = String::from_utf8_lossy(&output.stdout);
-            fs::write("video_frames_data.rs", frames_data.as_bytes())
-                .expect("Failed to write video_frames_data.rs");
-            eprintln!("Video frames data generated successfully");
-        } else {
-            eprintln!(
-                "Warning: Failed to generate video frames, creating placeholder: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-            // Create a minimal placeholder file so the build doesn't fail
-            let placeholder = r#"// Video frames generated from PNG files (santa video)
+    let placeholder = r#"// Video frames generated from PNG files (santa video)
 // Auto-generated - do not edit manually
 // Placeholder - run `just video-frames` with SANTA_FRAMES_DIR set to generate real frames
 
@@ -57,8 +45,49 @@ const SANTA_FRAMES: [([[RGB8; 12]; 8], Duration); SANTA_FRAME_COUNT] = [
     )
 ];
 "#;
-            fs::write("video_frames_data.rs", placeholder)
+
+    if should_generate {
+        eprintln!("Generating video frames data...");
+        let output = Command::new("cargo")
+            .args(["xtask", "video-frames-gen"])
+            .output()
+            .expect("Failed to run cargo xtask video-frames-gen");
+
+        if output.status.success() {
+            let frames_data = String::from_utf8_lossy(&output.stdout);
+            fs::write(&frames_path, frames_data.as_bytes())
+                .expect("Failed to write video_frames_data.rs");
+            eprintln!("Video frames data generated successfully");
+        } else {
+            eprintln!(
+                "Warning: Failed to generate video frames, creating placeholder: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            // Create a minimal placeholder file so the build doesn't fail
+            fs::write(&frames_path, placeholder)
                 .expect("Failed to write placeholder video_frames_data.rs");
+        }
+    } else {
+        let source_video_frames = source_frames_dir.join("video_frames_data.rs");
+        if source_video_frames.exists() {
+            fs::copy(&source_video_frames, &frames_path)
+                .expect("Failed to copy video_frames_data.rs to target/frame-data");
+        } else if !frames_path.exists() {
+            fs::write(&frames_path, placeholder)
+                .expect("Failed to write placeholder video_frames_data.rs");
+        }
+    }
+
+    for name in [
+        "cat_frames_data.rs",
+        "hand_frames_data.rs",
+        "clock_frames_data.rs",
+    ] {
+        let source_path = source_frames_dir.join(name);
+        let dest_path = frames_dir.join(name);
+        if source_path.exists() && !dest_path.exists() {
+            fs::copy(&source_path, &dest_path)
+                .unwrap_or_else(|_| panic!("Failed to copy {name} to target/frame-data"));
         }
     }
 

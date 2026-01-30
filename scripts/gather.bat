@@ -1,9 +1,10 @@
 @echo off
 REM ==========================================
-REM  Gather top-level, src/, and examples/ .rs files into all_code.txt
+REM  Gather top-level, src/, and examples/ .rs files into target\gathers\all_code.txt
 REM ==========================================
 
-set OUTPUT=all_code.txt
+set OUTPUT=target\gathers\all_code.txt
+if not exist target\gathers mkdir target\gathers
 del "%OUTPUT%" 2>nul
 
 echo Gathering Rust files from ., src, and examples...

@@ -14,23 +14,18 @@ use core::{convert::Infallible, pin::pin};
 use defmt::info;
 use defmt_rtt as _;
 use device_kit::button::{Button, PressDuration, PressedTo};
-use device_kit::clock_sync::{ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s};
-use device_kit::flash_array::{FlashArray, FlashArrayStatic};
-use device_kit::led4::{
-    BlinkState,
-    Led4,
-    Led4Static,
-    OutputArray,
-    circular_outline_animation,
+use device_kit::clock_sync::{
+    ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
-use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_kit::flash_array::{FlashArray, FlashArrayStatic};
+use device_kit::led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation};
 use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
+use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
 use device_kit::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_rp::gpio::{self, Level};
 use panic_probe as _;
-
 
 const FAST_MODE_SPEED: f32 = 720.0;
 
@@ -94,7 +89,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect Wi-Fi, using the clock display for status.
     let led4_ref = &led4;
     let (stack, mut button) = wifi_auto
-        .connect( |event| async move {
+        .connect(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['C', 'O', 'N', 'N'], BlinkState::BlinkingAndOn);
@@ -173,22 +168,17 @@ impl State {
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
         led4.write_text(
             [
-                tens_hours(hours),
-                ones_digit(hours),
-                tens_digit(minutes),
-                ones_digit(minutes),
+                Self::tens_hours(hours),
+                Self::ones_digit(hours),
+                Self::tens_digit(minutes),
+                Self::ones_digit(minutes),
             ],
             BlinkState::Solid,
         );
         clock_sync.set_tick_interval(Some(ONE_MINUTE)).await;
         let mut button_press = pin!(button.wait_for_press_duration());
         loop {
-            match select(
-                &mut button_press,
-                clock_sync.wait_for_tick(),
-            )
-            .await
-            {
+            match select(&mut button_press, clock_sync.wait_for_tick()).await {
                 // Button pushes
                 Either::First(press_duration) => match (press_duration, speed.to_bits()) {
                     (PressDuration::Short, bits) if bits == 1.0f32.to_bits() => {
@@ -206,10 +196,10 @@ impl State {
                     let (hours, minutes, _) = h12_m_s(&tick.local_time);
                     led4.write_text(
                         [
-                            tens_hours(hours),
-                            ones_digit(hours),
-                            tens_digit(minutes),
-                            ones_digit(minutes),
+                            Self::tens_hours(hours),
+                            Self::ones_digit(hours),
+                            Self::tens_digit(minutes),
+                            Self::ones_digit(minutes),
                         ],
                         BlinkState::Solid,
                     );
@@ -228,10 +218,10 @@ impl State {
         let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
         led4.write_text(
             [
-                tens_digit(minutes),
-                ones_digit(minutes),
-                tens_digit(seconds),
-                ones_digit(seconds),
+                Self::tens_digit(minutes),
+                Self::ones_digit(minutes),
+                Self::tens_digit(seconds),
+                Self::ones_digit(seconds),
             ],
             BlinkState::Solid,
         );
@@ -252,10 +242,10 @@ impl State {
                     let (_, minutes, seconds) = h12_m_s(&tick.local_time);
                     led4.write_text(
                         [
-                            tens_digit(minutes),
-                            ones_digit(minutes),
-                            tens_digit(seconds),
-                            ones_digit(seconds),
+                            Self::tens_digit(minutes),
+                            Self::ones_digit(minutes),
+                            Self::tens_digit(seconds),
+                            Self::ones_digit(seconds),
                         ],
                         BlinkState::Solid,
                     );
@@ -277,10 +267,10 @@ impl State {
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
         led4.write_text(
             [
-                tens_hours(hours),
-                ones_digit(hours),
-                tens_digit(minutes),
-                ones_digit(minutes),
+                Self::tens_hours(hours),
+                Self::ones_digit(hours),
+                Self::tens_digit(minutes),
+                Self::ones_digit(minutes),
             ],
             BlinkState::BlinkingAndOn,
         );
@@ -313,10 +303,10 @@ impl State {
                     );
                     led4.write_text(
                         [
-                            tens_hours(hours),
-                            ones_digit(hours),
-                            tens_digit(minutes),
-                            ones_digit(minutes),
+                            Self::tens_hours(hours),
+                            Self::ones_digit(hours),
+                            Self::tens_digit(minutes),
+                            Self::ones_digit(minutes),
                         ],
                         BlinkState::BlinkingAndOn,
                     );
@@ -331,30 +321,29 @@ impl State {
             }
         }
     }
-}
 
-// cmk attach to an impl
-#[inline]
-#[expect(
-    clippy::arithmetic_side_effects,
-    clippy::integer_division_remainder_used,
-    reason = "Value < 60 ensures division is safe"
-)]
-const fn tens_digit(value: u8) -> char {
-    ((value / 10) + b'0') as char
-}
+    #[inline]
+    #[expect(
+        clippy::arithmetic_side_effects,
+        clippy::integer_division_remainder_used,
+        reason = "Value < 60 ensures division is safe"
+    )]
+    const fn tens_digit(value: u8) -> char {
+        ((value / 10) + b'0') as char
+    }
 
-#[inline]
-const fn tens_hours(value: u8) -> char {
-    if value >= 10 { '1' } else { ' ' }
-}
+    #[inline]
+    const fn tens_hours(value: u8) -> char {
+        if value >= 10 { '1' } else { ' ' }
+    }
 
-#[inline]
-#[expect(
-    clippy::arithmetic_side_effects,
-    clippy::integer_division_remainder_used,
-    reason = "Value < 60 ensures division is safe"
-)]
-const fn ones_digit(value: u8) -> char {
-    ((value % 10) + b'0') as char
+    #[inline]
+    #[expect(
+        clippy::arithmetic_side_effects,
+        clippy::integer_division_remainder_used,
+        reason = "Value < 60 ensures division is safe"
+    )]
+    const fn ones_digit(value: u8) -> char {
+        ((value % 10) + b'0') as char
+    }
 }

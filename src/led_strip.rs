@@ -293,7 +293,6 @@ pub const GAMMA_DEFAULT: Gamma = Gamma::Srgb;
 
 /// Gamma 2.2 lookup table for 8-bit values.
 /// Pre-computed to avoid floating point math: corrected = (value/255)^2.2 * 255
-#[allow(dead_code)]
 pub(crate) const GAMMA_SRGB_TABLE: [u8; 256] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
     3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11,
@@ -311,7 +310,6 @@ pub(crate) const GAMMA_SRGB_TABLE: [u8; 256] = [
 
 /// Gamma 2.8 lookup table for 8-bit values.
 /// Matches `smart_leds::gamma()` behavior.
-#[allow(dead_code)]
 pub(crate) const GAMMA_SMARTLEDS_TABLE: [u8; 256] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
@@ -327,7 +325,6 @@ pub(crate) const GAMMA_SMARTLEDS_TABLE: [u8; 256] = [
 ];
 
 /// Linear lookup table (identity function).
-#[allow(dead_code)]
 const LINEAR_TABLE: [u8; 256] = [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
@@ -353,7 +350,6 @@ const LINEAR_TABLE: [u8; 256] = [
 /// The result is a table where `combo_table[input_value]` gives the final output value.
 #[doc(hidden)] // Implementation detail used by macro-generated strip types
 #[must_use]
-#[allow(dead_code)]
 pub const fn generate_combo_table(gamma: Gamma, max_brightness: u8) -> [u8; 256] {
     let gamma_table = match gamma {
         Gamma::Linear => &LINEAR_TABLE,

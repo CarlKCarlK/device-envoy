@@ -1,5 +1,4 @@
 //! Internal segment state representation for 4-digit 7-segment displays.
-#![cfg_attr(feature = "host", allow(dead_code))]
 
 use core::num::NonZeroU8;
 use core::ops::{BitOrAssign, Index, IndexMut};
@@ -49,25 +48,6 @@ impl Leds {
     const SEG_E: u8 = 0b_0001_0000;
     /// Segment F of the 7-segment display.
     const SEG_F: u8 = 0b_0010_0000;
-
-    #[cfg_attr(not(test), allow(dead_code))]
-    /// Array representing the segments for digits 0-9 on a 7-segment display.
-    const DIGITS: [u8; 10] = [
-        0b_0011_1111, // Digit 0
-        0b_0000_0110, // Digit 1
-        0b_0101_1011, // Digit 2
-        0b_0100_1111, // Digit 3
-        0b_0110_0110, // Digit 4
-        0b_0110_1101, // Digit 5
-        0b_0111_1101, // Digit 6
-        0b_0000_0111, // Digit 7
-        0b_0111_1111, // Digit 8
-        0b_0110_1111, // Digit 9
-    ];
-
-    #[cfg_attr(not(test), allow(dead_code))]
-    /// Decimal point of the 7-segment display.
-    const DECIMAL: u8 = 0b_1000_0000;
 
     /// ASCII table mapping characters to their 7-segment display representations.
     const ASCII_TABLE: [u8; 128] = [
@@ -226,11 +206,6 @@ impl BitMatrixLed4 {
         Self(bits)
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn from_bits(bits: u8) -> Self {
-        Self([bits; CELL_COUNT])
-    }
-
     pub fn iter(&self) -> impl Iterator<Item = &u8> {
         self.0.iter()
     }
@@ -242,30 +217,6 @@ impl BitMatrixLed4 {
     pub fn from_text(text: &[char; 4]) -> Self {
         let bytes = text.map(|char| Leds::ASCII_TABLE.get(char as usize).copied().unwrap_or(0));
         Self::new(bytes)
-    }
-
-    #[expect(
-        clippy::indexing_slicing,
-        clippy::integer_division_remainder_used,
-        reason = "Indexing and arithmetic are safe; modulo is required for digit extraction"
-    )]
-    /// Creates bit matrix from number. If overflow, lights decimal points.
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(crate) fn from_number(mut number: u16, padding: u8) -> Self {
-        let mut bit_matrix = Self::from_bits(padding);
-
-        for bits in bit_matrix.iter_mut().rev() {
-            *bits = Leds::DIGITS[(number % 10) as usize];
-            number /= 10;
-            if number == 0 {
-                break;
-            }
-        }
-        if number > 0 {
-            bit_matrix |= Leds::DECIMAL;
-        }
-
-        bit_matrix
     }
 
     /// Converts to optimized index mapping for multiplexing.
@@ -348,35 +299,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_from_bits() {
-        // Creates array with same bits in all positions
-        let matrix = BitMatrixLed4::from_bits(0b_0011_1111);
-        assert_eq!(matrix[0], 0b_0011_1111);
-        assert_eq!(matrix[1], 0b_0011_1111);
-        assert_eq!(matrix[2], 0b_0011_1111);
-        assert_eq!(matrix[3], 0b_0011_1111);
-    }
-
-    #[test]
-    fn test_from_number() {
-        // Converts number to digit segments (1234)
-        let matrix = BitMatrixLed4::from_number(1234, 0);
-        assert_eq!(matrix[0], 0b_0000_0110); // '1'
-        assert_eq!(matrix[1], 0b_0101_1011); // '2'
-        assert_eq!(matrix[2], 0b_0100_1111); // '3'
-        assert_eq!(matrix[3], 0b_0110_0110); // '4'
-    }
-
-    #[test]
-    fn test_from_number_overflow() {
-        // Number > 9999 should light all decimal points
-        let matrix = BitMatrixLed4::from_number(12345, 0);
-        for &bits in matrix.iter() {
-            assert_ne!(bits & 0b_1000_0000, 0, "Decimal point should be lit");
-        }
-    }
-
-    #[test]
     fn test_from_text() {
         // Converts characters to segments
         let matrix = BitMatrixLed4::from_text(&['A', 'b', 'C', 'd']);
@@ -390,7 +312,7 @@ mod tests {
     fn test_bits_to_indexes() {
         // Optimizes multiplexing by grouping identical patterns
         // For "1221", digit '1' appears at positions 0 and 3, digit '2' at positions 1 and 2
-        let matrix = BitMatrixLed4::from_number(1221, 0);
+        let matrix = BitMatrixLed4::from_text(&['1', '2', '2', '1']);
         let mut bits_to_index = BitsToIndexes::new();
 
         matrix

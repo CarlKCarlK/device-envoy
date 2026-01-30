@@ -6,7 +6,6 @@
 //! See [`Clock`] for usage and examples.
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
-#![allow(dead_code)]
 
 use core::convert::Infallible;
 use core::sync::atomic::{AtomicI32, Ordering};
@@ -31,9 +30,8 @@ use crate::time_sync::UnixSeconds;
 // Constants
 // ============================================================================
 
-const ONE_DAY_SECONDS: i32 = 86_400;
 /// Maximum absolute offset minutes supported by [`UtcOffset`] (< 24h).
-const MAX_OFFSET_MINUTES: i32 = (ONE_DAY_SECONDS / 60) - 1;
+const MAX_OFFSET_MINUTES: i32 = (24 * 60) - 1;
 /// Fixed-point scale factor for speed multiplier (parts per million).
 const SPEED_SCALE_PPM: u64 = 1_000_000;
 

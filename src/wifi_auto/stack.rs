@@ -33,9 +33,6 @@ use super::credentials::WifiCredentials;
 use super::dhcp::dhcp_server_task;
 use crate::flash_array::FlashBlock;
 
-#[allow(dead_code)]
-pub const DEFAULT_CAPTIVE_PORTAL_SSID: &str = "Pico";
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -175,7 +172,8 @@ pub struct Wifi {
 impl Wifi {
     /// Create WiFi resources (events + storage).
     ///
-    /// This must be called once to create a static `WifiStatic` that will be passed to [`Wifi::new`].
+    /// This must be called once to create a static `WifiStatic` that will be passed to
+    /// [`Wifi::new_with_captive_portal_ssid`].
     ///
     /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
     #[must_use]
@@ -208,50 +206,6 @@ impl Wifi {
     /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
     pub async fn wait_for_wifi_event(&self) -> WifiEvent {
         self.events.wait().await
-    }
-
-    /// Create a new WiFi device and spawn its background task.
-    ///
-    /// This initializes the WiFi hardware and spawns tasks to manage the WiFi connection
-    /// and network stack. Returns a static reference to the WiFi handle.
-    ///
-    /// # Arguments
-    ///
-    /// * `resources` - Static WiFi resources created with [`Wifi::new_static`]
-    /// * `pin_23` - WiFi chip power pin (GPIO 23)
-    /// * `pin_24` - WiFi chip clock pin (GPIO 24)
-    /// * `pin_25` - WiFi chip chip select pin (GPIO 25)
-    /// * `pin_29` - WiFi chip data pin (GPIO 29)
-    /// * `pio` - PIO peripheral for WiFi communication
-    /// * `dma` - DMA channel for WiFi SPI communication
-    /// * `credential_store` - Flash block reserved for WiFi credentials
-    /// * `spawner` - Embassy task spawner
-    ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
-    #[allow(dead_code)]
-    pub fn new<PIO: WifiPio, DMA: Channel>(
-        wifi_static: &'static WifiStatic,
-        pin_23: Peri<'static, PIN_23>,
-        pin_24: Peri<'static, PIN_24>,
-        pin_25: Peri<'static, PIN_25>,
-        pin_29: Peri<'static, PIN_29>,
-        pio: Peri<'static, PIO>,
-        dma: Peri<'static, DMA>,
-        credential_store: FlashBlock,
-        spawner: Spawner,
-    ) -> &'static Self {
-        Self::new_with_captive_portal_ssid(
-            wifi_static,
-            pin_23,
-            pin_24,
-            pin_25,
-            pin_29,
-            pio,
-            dma,
-            credential_store,
-            DEFAULT_CAPTIVE_PORTAL_SSID,
-            spawner,
-        )
     }
 
     pub fn new_with_captive_portal_ssid<PIO: WifiPio, DMA: Channel>(
@@ -299,19 +253,6 @@ impl Wifi {
         })
     }
 
-    /// Reconfigure WiFi to client mode with provided credentials
-    /// This is called after collecting credentials in captive portal mode
-    #[allow(dead_code)]
-    pub async fn switch_to_client_mode(
-        &self,
-        credentials: WifiCredentials,
-    ) -> Result<(), &'static str> {
-        info!("Switching to client mode with SSID: {}", credentials.ssid);
-        // For now, we'll need to restart the device to switch modes
-        // This is a limitation - full implementation would need control handle
-        Err("Mode switch requires device restart - not yet implemented")
-    }
-
     fn update_state<F>(&self, f: F) -> Result<(), &'static str>
     where
         F: FnOnce(&mut WifiStoredState),
@@ -338,15 +279,6 @@ impl Wifi {
         self.update_state(|state| {
             state.credentials = Some(cloned.clone());
             state.start_mode = WifiStartMode::Client;
-        })
-    }
-
-    /// Remove any stored credentials from flash.
-    #[allow(dead_code)]
-    pub fn clear_persisted_credentials(&self) -> Result<(), &'static str> {
-        self.update_state(|state| {
-            state.credentials = None;
-            state.start_mode = WifiStartMode::CaptivePortal;
         })
     }
 

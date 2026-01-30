@@ -50,7 +50,7 @@ pub(crate) mod bit_matrix_led4;
 pub mod button;
 #[cfg(not(feature = "host"))]
 pub mod char_lcd;
-#[cfg(not(feature = "host"))]
+#[cfg(all(feature = "wifi", not(feature = "host")))]
 pub(crate) mod clock;
 #[cfg(all(feature = "wifi", not(feature = "host")))]
 pub mod clock_sync;

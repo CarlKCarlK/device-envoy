@@ -213,17 +213,23 @@ async fn conway_task(
                 // Message received
                 match msg {
                     ConwayMessage::NextPattern => {
-                        // Pattern change requested
-                        pattern_index = (pattern_index + 1) % PATTERNS.len();
-                        let pattern = PATTERNS[pattern_index];
-                        info!("=== Pattern: {:?} ===", pattern);
+                        if paused {
+                            board.step();
+                            let current_frame = board.to_frame(colors::LIME);
+                            led16x16.write_frame(current_frame).unwrap();
+                        } else {
+                            // Pattern change requested
+                            pattern_index = (pattern_index + 1) % PATTERNS.len();
+                            let pattern = PATTERNS[pattern_index];
+                            info!("=== Pattern: {:?} ===", pattern);
 
-                        // Reset board with new pattern
-                        board = Board::new();
-                        board.add_pattern(pattern);
+                            // Reset board with new pattern
+                            board = Board::new();
+                            board.add_pattern(pattern);
 
-                        // Reset stasis detection
-                        stasis_tracker = (0, 0);
+                            // Reset stasis detection
+                            stasis_tracker = (0, 0);
+                        }
                     }
                     ConwayMessage::SetSpeed(new_speed) => {
                         // Speed change requested

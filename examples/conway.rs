@@ -6,7 +6,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::ir_kepler::{IrKepler, IrKeplerStatic, KeplerButton};
+use device_kit::ir::{IrKepler, IrKeplerStatic, KeplerButton};
 use device_kit::led_strip::Current;
 use device_kit::led_strip::RGB8;
 use device_kit::led2d;

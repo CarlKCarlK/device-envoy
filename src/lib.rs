@@ -58,10 +58,6 @@ mod error;
 pub mod flash_array;
 #[cfg(not(feature = "host"))]
 pub mod ir;
-#[cfg(not(feature = "host"))]
-pub mod ir_kepler;
-#[cfg(not(feature = "host"))]
-pub mod ir_mapping;
 pub mod led2d;
 #[cfg(not(feature = "host"))]
 pub mod led4;

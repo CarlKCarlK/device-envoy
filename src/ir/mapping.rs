@@ -1,6 +1,6 @@
 //! A device abstraction for mapping IR remote buttons to application-specific actions.
 //!
-//! See [`IrLedLayout`] for usage examples.
+//! See [`IrMapping`] for usage examples.
 
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
@@ -12,10 +12,10 @@ use crate::ir::{Ir, IrEvent, IrStatic};
 
 /// Static channel for IR mapping events.
 ///
-/// See [`IrLedLayout`] for usage examples.
-pub struct IrLedLayoutStatic(IrStatic);
+/// See [`IrMapping`] for usage examples.
+pub struct IrMappingStatic(IrStatic);
 
-impl IrLedLayoutStatic {
+impl IrMappingStatic {
     /// Create static mapping resources.
     #[must_use]
     pub(crate) const fn new() -> Self {
@@ -35,7 +35,7 @@ impl IrLedLayoutStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_kit::ir_mapping::{IrLedLayout, IrLedLayoutStatic};
+/// use device_kit::ir::{IrMapping, IrMappingStatic};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// #[derive(Debug, Clone, Copy)]
@@ -50,8 +50,8 @@ impl IrLedLayoutStatic {
 ///         (0x0000, 0x08, RemoteButton::Stop),
 ///     ];
 ///
-///     static IR_MAPPING_STATIC: IrLedLayoutStatic = IrLedLayout::<RemoteButton, 3>::new_static();
-///     let ir_mapping: IrLedLayout<RemoteButton, 3> = IrLedLayout::new(&IR_MAPPING_STATIC, p.PIN_15, &button_map, spawner)?;
+///     static IR_MAPPING_STATIC: IrMappingStatic = IrMapping::<RemoteButton, 3>::new_static();
+///     let ir_mapping: IrMapping<RemoteButton, 3> = IrMapping::new(&IR_MAPPING_STATIC, p.PIN_15, &button_map, spawner)?;
 ///
 ///     loop {
 ///         let button = ir_mapping.wait_for_press().await;
@@ -59,21 +59,21 @@ impl IrLedLayoutStatic {
 ///     }
 /// }
 /// ```
-pub struct IrLedLayout<'a, B, const N: usize> {
+pub struct IrMapping<'a, B, const N: usize> {
     ir: Ir<'a>,
     button_map: LinearMap<(u16, u8), B, N>,
 }
 
-impl<'a, B, const N: usize> IrLedLayout<'a, B, N>
+impl<'a, B, const N: usize> IrMapping<'a, B, N>
 where
     B: Copy,
 {
     /// Create static channel resources for IR mapping events.
     ///
-    /// See [`IrLedLayout`] for usage examples.
+    /// See [`IrMapping`] for usage examples.
     #[must_use]
-    pub const fn new_static() -> IrLedLayoutStatic {
-        IrLedLayoutStatic::new()
+    pub const fn new_static() -> IrMappingStatic {
+        IrMappingStatic::new()
     }
 
     /// Create a new IR remote button mapper.
@@ -84,12 +84,12 @@ where
     /// - `button_map`: Array mapping (address, command) pairs to button types
     /// - `spawner`: Embassy spawner for background task
     ///
-    /// See [`IrLedLayout`] for usage examples.
+    /// See [`IrMapping`] for usage examples.
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
     pub fn new<P: Pin>(
-        ir_mapping_static: &'static IrLedLayoutStatic,
+        ir_mapping_static: &'static IrMappingStatic,
         pin: Peri<'static, P>,
         button_map: &[(u16, u8, B)],
         spawner: Spawner,
@@ -112,7 +112,7 @@ where
     ///
     /// Ignores button presses that are not in the button map.
     ///
-    /// See [`IrLedLayout`] for usage examples.
+    /// See [`IrMapping`] for usage examples.
     pub async fn wait_for_press(&self) -> B {
         loop {
             let IrEvent::Press { addr, cmd } = self.ir.wait_for_press().await;

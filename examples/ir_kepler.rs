@@ -8,7 +8,7 @@ use defmt_rtt as _;
 use device_kit::Result;
 use embassy_executor::Spawner;
 use panic_probe as _;
-use device_kit::ir_kepler::{IrKepler, IrKeplerStatic};
+use device_kit::ir::{IrKepler, IrKeplerStatic};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {

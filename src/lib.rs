@@ -51,6 +51,8 @@ pub mod button;
 pub mod char_lcd;
 #[cfg(not(feature = "host"))]
 pub mod clock;
+#[cfg(all(feature = "wifi", not(feature = "host")))]
+pub mod clock_sync;
 mod error;
 #[cfg(not(feature = "host"))]
 pub mod flash_array;
@@ -72,7 +74,6 @@ pub mod servo;
 pub mod servo_player;
 #[cfg(not(feature = "host"))]
 pub mod time_sync;
-#[cfg(all(feature = "wifi", not(feature = "host")))]
 #[cfg(all(feature = "wifi", not(feature = "host")))]
 pub mod wifi_auto;
 

@@ -15,7 +15,13 @@ use defmt_rtt as _;
 use device_kit::button::{Button, PressDuration, PressedTo};
 use device_kit::clock_sync::{ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_kit::flash_array::{FlashArray, FlashArrayStatic};
-use device_kit::led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation};
+use device_kit::led4::{
+    BlinkState,
+    Led4,
+    Led4Static,
+    OutputArray,
+    circular_outline_animation,
+};
 use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
 use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_kit::{Error, Result};

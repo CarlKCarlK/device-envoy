@@ -6,6 +6,8 @@
 //! 4-digit 7-segment LED displays. Supports displaying text and numbers with
 //! optional blinking.
 
+use core::borrow::Borrow;
+
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
@@ -240,17 +242,29 @@ impl Led4<'_> {
     ///     static LED4_STATIC: Led4Static = Led4::new_static();
     ///     let display = Led4::new(&LED4_STATIC, cells, segments, spawner)?;
     ///     const FRAME_DURATION: Duration = Duration::from_millis(120);
-    ///     let mut animation: heapless::Vec<AnimationFrame, 16> = heapless::Vec::new();
-    ///     animation.push(AnimationFrame::new(['-', '-', '-', '-'], FRAME_DURATION)).unwrap();
-    ///     animation.push(AnimationFrame::new([' ', ' ', ' ', ' '], FRAME_DURATION)).unwrap();
-    ///     animation.push(AnimationFrame::new(['1', '2', '3', '4'], FRAME_DURATION)).unwrap();
+    ///     let animation = [
+    ///         AnimationFrame::new(['-', '-', '-', '-'], FRAME_DURATION),
+    ///         AnimationFrame::new([' ', ' ', ' ', ' '], FRAME_DURATION),
+    ///         AnimationFrame::new(['1', '2', '3', '4'], FRAME_DURATION),
+    ///     ];
     ///     display.animate_text(animation);
     ///     Ok(())
     /// }
     /// ```
     /// See the example below for how to build animations.
-    pub fn animate_text(&self, animation: Vec<AnimationFrame, ANIMATION_MAX_FRAMES>) {
-        self.0.signal(Led4Command::Animation(animation));
+    pub fn animate_text<I>(&self, animation: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<AnimationFrame>,
+    {
+        let mut frames: Vec<AnimationFrame, ANIMATION_MAX_FRAMES> = Vec::new();
+        for animation_frame in animation {
+            let animation_frame = *animation_frame.borrow();
+            frames
+                .push(animation_frame)
+                .expect("animate sequence fits within ANIMATION_MAX_FRAMES");
+        }
+        self.0.signal(Led4Command::Animation(frames));
     }
 }
 

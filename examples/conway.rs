@@ -6,7 +6,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::button::{Button, PressDuration, PressedTo};
+use device_kit::ir_kepler::{IrKepler, IrKeplerStatic, KeplerButton};
 use device_kit::led_strip::Current;
 use device_kit::led_strip::RGB8;
 use device_kit::led2d;
@@ -42,6 +42,7 @@ led2d! {
 enum ConwayMessage {
     NextPattern,
     SetSpeed(SpeedMode),
+    SetPatternIndex(usize),
 }
 
 /// Speed modes for the simulation.
@@ -50,6 +51,24 @@ enum SpeedMode {
     Slower, // 10x slower (500ms per generation)
     Normal, // 1x normal (50ms per generation)
     Faster, // 10x faster (5ms per generation)
+}
+
+impl SpeedMode {
+    const fn slower(self) -> Self {
+        match self {
+            Self::Slower => Self::Faster,
+            Self::Normal => Self::Slower,
+            Self::Faster => Self::Normal,
+        }
+    }
+
+    const fn faster(self) -> Self {
+        match self {
+            Self::Slower => Self::Normal,
+            Self::Normal => Self::Faster,
+            Self::Faster => Self::Slower,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, defmt::Format)]
@@ -82,11 +101,12 @@ pub async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    info!("Conway's Game of Life on 16x16 LED panel");
+    info!("Conway's Game of Life on 16x16 LED panel (IR remote on GPIO15)");
     let p = init(Default::default());
 
     let led16x16 = Led16x16::new(p.PIN_6, p.PIO0, p.DMA_CH0, spawner)?;
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    static IR_KEPLER_STATIC: IrKeplerStatic = IrKepler::new_static();
+    let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, spawner)?;
 
     // Create Conway device with static resources and spawn background task
     static CONWAY_STATIC: ConwayStatic = Conway::new_static();
@@ -95,21 +115,29 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Speed mode cycling state
     let mut speed_mode = SpeedMode::Slower;
 
-    // Main loop: detect button presses and long-presses
+    // Main loop: handle IR remote input
     loop {
-        match button.wait_for_press_duration().await {
-            PressDuration::Short => {
-                conway.next_pattern();
+        match ir_kepler.wait_for_press().await {
+            KeplerButton::Num(number) => {
+                if number > 0 && number <= PATTERNS.len() as u8 {
+                    let pattern_index = (number - 1) as usize;
+                    conway.set_pattern_index(pattern_index);
+                }
             }
-            PressDuration::Long => {
-                speed_mode = match speed_mode {
-                    SpeedMode::Slower => SpeedMode::Normal,
-                    SpeedMode::Normal => SpeedMode::Faster,
-                    SpeedMode::Faster => SpeedMode::Slower,
-                };
+            KeplerButton::Minus => {
+                speed_mode = speed_mode.slower();
                 conway.set_speed(speed_mode);
                 info!("=== Speed: {:?} ===", speed_mode);
             }
+            KeplerButton::Plus => {
+                speed_mode = speed_mode.faster();
+                conway.set_speed(speed_mode);
+                info!("=== Speed: {:?} ===", speed_mode);
+            }
+            KeplerButton::Next => {
+                conway.next_pattern();
+            }
+            _ => {}
         }
     }
 }
@@ -268,6 +296,19 @@ async fn conway_task(
                     ConwayMessage::SetSpeed(new_speed) => {
                         // Speed change requested
                         speed_mode = new_speed;
+                    }
+                    ConwayMessage::SetPatternIndex(new_pattern_index) => {
+                        assert!(new_pattern_index < PATTERNS.len());
+                        pattern_index = new_pattern_index;
+                        let pattern = PATTERNS[pattern_index];
+                        info!("=== Pattern: {:?} ===", pattern);
+
+                        // Reset board with new pattern
+                        board = Board::new();
+                        board.add_pattern(pattern);
+
+                        // Reset stasis detection
+                        stasis_tracker = (0, 0);
                     }
                 }
             }
@@ -502,5 +543,10 @@ impl Conway<'_> {
     /// Send a message to change the simulation speed.
     pub fn set_speed(&self, speed: SpeedMode) {
         self.0.signal(ConwayMessage::SetSpeed(speed));
+    }
+
+    /// Send a message to select a specific pattern by index.
+    pub fn set_pattern_index(&self, pattern_index: usize) {
+        self.0.signal(ConwayMessage::SetPatternIndex(pattern_index));
     }
 }

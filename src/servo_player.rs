@@ -441,6 +441,7 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
 /// `hold()`, and `relax()` are still supported.
 
 #[cfg(not(feature = "host"))]
+#[doc(hidden)]
 #[macro_export]
 macro_rules! servo_player {
     ($($tt:tt)*) => { $crate::__servo_player_impl! { $($tt)* } };

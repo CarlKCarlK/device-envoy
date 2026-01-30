@@ -27,6 +27,7 @@ pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 ///
 /// See [`Servo`] for details and examples.
 #[macro_export]
+#[doc(hidden)]
 macro_rules! servo {
     ($($tt:tt)*) => { $crate::__servo_impl! { $($tt)* } };
 }

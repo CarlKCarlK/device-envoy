@@ -764,6 +764,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
 /// - [`led_strip!`](mod@crate::led_strip) — For 1-dimensional LED strips
 #[macro_export]
 #[cfg(not(feature = "host"))]
+#[doc(hidden)]
 macro_rules! led2d {
     ($($tt:tt)*) => { $crate::__led2d_impl! { $($tt)* } };
 }

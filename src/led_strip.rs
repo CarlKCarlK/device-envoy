@@ -968,6 +968,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
     )
 )]
 #[cfg(not(feature = "host"))]
+#[doc(hidden)]
 #[macro_export]
 macro_rules! led_strips {
     ($($tt:tt)*) => { $crate::__led_strips_impl! { $($tt)* } };
@@ -2645,6 +2646,7 @@ macro_rules! __led_strips_impl {
 /// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
 ///
 #[cfg(not(feature = "host"))]
+#[doc(hidden)]
 #[macro_export]
 macro_rules! led_strip {
     ($($tt:tt)*) => { $crate::__led_strip_impl! { $($tt)* } };
@@ -3152,8 +3154,10 @@ impl LedStripPio for embassy_rp::peripherals::PIO2 {
 }
 
 #[cfg(not(feature = "host"))]
+#[doc(inline)]
 pub use led_strip;
 #[cfg(not(feature = "host"))]
+#[doc(inline)]
 pub use led_strips;
 
 /// Electrical current budget configuration for LED strips.

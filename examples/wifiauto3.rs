@@ -10,11 +10,11 @@ extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
 use device_kit::{
-    Result,
+    Error, Result,
     button::PressedTo,
     flash_array::{FlashArray, FlashArrayStatic},
-    wifi_auto::{WifiAuto, WifiAutoEvent},
     wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
+    wifi_auto::{WifiAuto, WifiAutoEvent},
 };
 
 #[embassy_executor::main]
@@ -52,7 +52,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         wifi_flash,
         p.PIN_13, // Button for reconfiguration
         PressedTo::Ground,
-        "PicoAccess", // Captive-portal SSID
+        "PicoAccess",                    // Captive-portal SSID
         [website_field, timezone_field], // Custom fields
         spawner,
     )?;

@@ -9,7 +9,7 @@
 use core::{convert::Infallible, panic};
 use defmt::info;
 use device_kit::{
-    Result,
+    Error, Result,
     button::PressedTo,
     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND, h12_m_s},
     flash_array::{FlashArray, FlashArrayStatic},

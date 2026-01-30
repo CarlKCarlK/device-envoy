@@ -10,7 +10,6 @@
 use core::convert::Infallible;
 use defmt::{info, warn};
 use defmt_rtt as _;
-use device_kit::{Error, Result};
 use device_kit::button::PressedTo;
 use device_kit::clock_sync::UnixSeconds;
 use device_kit::flash_array::{FlashArray, FlashArrayStatic};
@@ -19,6 +18,7 @@ use device_kit::wifi_auto::fields::{
     TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic,
 };
 use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_kit::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_net::{Stack, dns::DnsQueryType, udp};
 use embassy_rp::gpio::{self, Level};

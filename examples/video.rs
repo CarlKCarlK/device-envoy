@@ -19,7 +19,7 @@
 //!
 //! ## Santa Video (Pre-configured)
 //!
-//! The santa frames are embedded from `target/frame-data/video_frames_data.rs`, which is **auto-generated**
+//! The santa frames are embedded from `examples/data/frame-data/video_frames_data.rs`, which is **auto-generated**
 //! during the build process from PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`,
 //! or directly from a source MP4 via ffmpeg.
 //!
@@ -28,7 +28,7 @@
 //! 1. Detects when building the `video` example
 //! 2. Runs `cargo xtask video-frames-gen` to convert 65 PNG files to Rust code
 //! 3. Writes the result to `examples/data/frame-data/video_frames_data.rs`
-//! 4. Copies it into `target/frame-data/video_frames_data.rs` for compile-time include
+//! 4. Copies it into `examples/data/frame-data/video_frames_data.rs` for compile-time include
 //!
 //! To use different frames:
 //!
@@ -66,7 +66,7 @@
 //!    cargo xtask cat-frames-gen > examples/data/frame-data/cat_frames_data.rs
 //!    ```
 //! 3. Uncomment the cat-related lines in this file:
-//!    - `include!("../target/frame-data/cat_frames_data.rs");`
+//!    - `include!("data/frame-data/cat_frames_data.rs");`
 //!    - `Mode::Cat` enum variant
 //!    - Cat playback logic in the match statement
 //!
@@ -119,16 +119,16 @@ led2d! {
 // Video frames and frame duration embedded at compile time
 // Auto-generated during build from PNG files in ~/programs/ffmpeg-test/frames12x8_landscape/
 // See build.rs for generation logic
-include!("../target/frame-data/video_frames_data.rs");
+include!("data/frame-data/video_frames_data.rs");
 
 // Cat video frames - generated from OneDrive camera roll
-// include!("../target/frame-data/cat_frames_data.rs");
+// include!("data/frame-data/cat_frames_data.rs");
 
 // Hand video frames - generated from OneDrive camera roll
-// include!("../target/frame-data/hand_frames_data.rs");
+// include!("data/frame-data/hand_frames_data.rs");
 
 // Clock video frames
-include!("../target/frame-data/clock_frames_data.rs");
+include!("data/frame-data/clock_frames_data.rs");
 
 /// Video display modes.
 #[derive(defmt::Format, Clone, Copy)]

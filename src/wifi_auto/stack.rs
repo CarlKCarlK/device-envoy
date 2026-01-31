@@ -68,6 +68,7 @@ impl Default for WifiStoredState {
 
 /// Internal WiFi operating mode used during startup.
 #[derive(Clone, PartialEq, Eq)]
+#[doc(hidden)]
 pub enum WifiMode {
     /// Start in captive portal mode for configuration (no credentials needed)
     CaptivePortal,

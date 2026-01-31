@@ -25,8 +25,7 @@ const CELL_COUNT_U8: u8 = CELL_COUNT as u8;
 /// Internal type for optimizing multiplexing by grouping digits with identical segment patterns.
 ///
 /// Maps from segment bit patterns to the indexes of digits that share that pattern.
-#[doc(hidden)]
-pub type BitsToIndexes = LinearMap<NonZeroU8, Vec<u8, CELL_COUNT>, CELL_COUNT>;
+pub(crate) type BitsToIndexes = LinearMap<NonZeroU8, Vec<u8, CELL_COUNT>, CELL_COUNT>;
 
 // ============================================================================
 // LED Constants
@@ -220,8 +219,7 @@ impl BitMatrixLed4 {
     }
 
     /// Converts to optimized index mapping for multiplexing.
-    #[doc(hidden)]
-    pub fn bits_to_indexes(&self, bits_to_index: &mut BitsToIndexes) -> Result<()> {
+    pub(crate) fn bits_to_indexes(&self, bits_to_index: &mut BitsToIndexes) -> Result<()> {
         bits_to_index.clear();
         for (&bits, index) in self.iter().zip(0..CELL_COUNT_U8) {
             if let Some(nonzero_bits) = NonZeroU8::new(bits) {

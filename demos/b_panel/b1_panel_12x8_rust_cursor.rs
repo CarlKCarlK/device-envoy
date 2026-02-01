@@ -5,13 +5,7 @@
 
 use core::{convert::Infallible, future, panic};
 
-use device_kit::{
-    Result,
-    led_strip::colors,
-    led2d,
-    led2d::Led2dFont,
-    led2d::layout::LedLayout,
-};
+use device_kit::{Result, led_strip::colors, led2d, led2d::Led2dFont, led2d::layout::LedLayout};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 

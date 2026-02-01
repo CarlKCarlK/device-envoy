@@ -88,12 +88,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let frame_duration = Duration::from_secs(1);
-    gpio4_led2d
-        .animate([
-            (frame_go_top, frame_duration),
-            (frame_go_bottom, frame_duration),
-        ])
-        ?;
+    gpio4_led2d.animate([
+        (frame_go_top, frame_duration),
+        (frame_go_bottom, frame_duration),
+    ])?;
 
     future::pending::<Result<Infallible>>().await // Run forever
 }

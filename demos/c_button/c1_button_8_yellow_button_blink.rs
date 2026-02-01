@@ -31,15 +31,14 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    // A button just needs to know its pin and whether it connects to Vcc or Ground.
-    // (Pico 2 erratum E9 is avoided by wiring buttons to GND.)
-    // (No macro needed: buttons don't need a background task or a static; pins are generic.)
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
-
     let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     let steady_frame = Frame1d::filled(colors::YELLOW);
     let mut blink_frame = steady_frame; // copy
+
+    // A button just needs to know its pin and whether it connects to Vcc or Ground.
+    // (Pico 2 erratum E9 is avoided by wiring buttons to GND.)
+    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
     for led_index in (0..LedStrip8::LEN).cycle() {
         blink_frame[led_index] = colors::BLACK; // add hole

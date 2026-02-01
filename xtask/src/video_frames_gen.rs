@@ -18,7 +18,10 @@ fn santa_video_path() -> Option<String> {
             eprintln!("Found santa video at: {}", video_path);
             return Some(video_path);
         }
-        eprintln!("SANTA_VIDEO_PATH is set but the file does not exist: {}", video_path);
+        eprintln!(
+            "SANTA_VIDEO_PATH is set but the file does not exist: {}",
+            video_path
+        );
     }
 
     let candidates = [

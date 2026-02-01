@@ -53,13 +53,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     gpio3_led_strip.write_frame(frame)?;
 
     let frame_duration = Duration::from_secs(1);
-    gpio4_led_strip
-        .animate([
-            (Frame1d::filled(colors::GREEN), frame_duration),
-            (Frame1d::filled(colors::YELLOW), frame_duration),
-            (Frame1d::filled(colors::RED), frame_duration),
-        ])
-        ?;
+    gpio4_led_strip.animate([
+        (Frame1d::filled(colors::GREEN), frame_duration),
+        (Frame1d::filled(colors::YELLOW), frame_duration),
+        (Frame1d::filled(colors::RED), frame_duration),
+    ])?;
 
     future::pending::<Result<Infallible>>().await // Run forever
 }

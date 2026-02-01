@@ -15,7 +15,12 @@ pub fn write_frame_png<const W: usize, const H: usize>(
     output_path: impl AsRef<Path>,
     target_max_dimension: u32,
 ) -> Result<(), Box<dyn Error>> {
-    write_frame_png_with_gamma(frame, output_path, target_max_dimension, PREVIEW_INVERSE_GAMMA)
+    write_frame_png_with_gamma(
+        frame,
+        output_path,
+        target_max_dimension,
+        PREVIEW_INVERSE_GAMMA,
+    )
 }
 
 /// Render a `Frame2d` into a PNG file with a custom preview inverse gamma.
@@ -25,7 +30,10 @@ pub fn write_frame_png_with_gamma<const W: usize, const H: usize>(
     target_max_dimension: u32,
     preview_inverse_gamma: f32,
 ) -> Result<(), Box<dyn Error>> {
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let output_path = output_path.as_ref();
     let panel_width = W as u32;
     let panel_height = H as u32;
@@ -68,7 +76,10 @@ pub fn write_frames_apng_with_gamma<const W: usize, const H: usize>(
 ) -> Result<(), Box<dyn Error>> {
     assert!(!frames.is_empty(), "frames must not be empty");
     assert!(frame_delay_ms > 0, "frame_delay_ms must be positive");
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let output_path = output_path.as_ref();
     let panel_width = W as u32;
     let panel_height = H as u32;
@@ -113,7 +124,10 @@ pub fn write_frames_apng_with_gamma<const W: usize, const H: usize>(
 }
 
 fn select_cell_size(panel_width: u32, panel_height: u32, target_max_dimension: u32) -> u32 {
-    assert!(target_max_dimension > 0, "target_max_dimension must be positive");
+    assert!(
+        target_max_dimension > 0,
+        "target_max_dimension must be positive"
+    );
     let mut cell_size = target_max_dimension;
     while cell_size > 1 {
         let led_margin = (cell_size / 8).max(1);
@@ -136,8 +150,7 @@ fn write_panel_png<const W: usize, const H: usize>(
     led_margin: u32,
     preview_inverse_gamma: f32,
 ) -> Result<(), Box<dyn Error>> {
-    let (width, height, pixels) =
-        panel_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
+    let (width, height, pixels) = panel_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
     if let Some(parent) = output_path.parent() {
         if !parent.as_os_str().is_empty() {
             std::fs::create_dir_all(parent)?;
@@ -165,7 +178,10 @@ fn panel_pixels<const W: usize, const H: usize>(
         led_margin < cell_size / 2,
         "led_margin must fit inside cell"
     );
-    assert!(preview_inverse_gamma > 0.0, "preview_inverse_gamma must be positive");
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
     let led_radius = (cell_size - (led_margin * 2)) / 2;
     assert!(led_radius > 0, "led_radius must be positive");
     let fade_width = led_radius / 3;

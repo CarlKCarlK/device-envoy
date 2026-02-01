@@ -36,13 +36,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led_strip4 = LedStrip4::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;
 
     let frame_duration = Duration::from_secs(1);
-    led_strip4
-        .animate([
-            (Frame1d::filled(colors::GREEN), frame_duration),
-            (Frame1d::filled(colors::YELLOW), frame_duration),
-            (Frame1d::filled(colors::RED), frame_duration),
-        ])
-        ?;
+    led_strip4.animate([
+        (Frame1d::filled(colors::GREEN), frame_duration),
+        (Frame1d::filled(colors::YELLOW), frame_duration),
+        (Frame1d::filled(colors::RED), frame_duration),
+    ])?;
 
     future::pending::<Result<Infallible>>().await // Run forever
 }

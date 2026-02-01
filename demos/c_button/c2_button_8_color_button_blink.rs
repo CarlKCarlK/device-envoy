@@ -30,8 +30,6 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
-
     let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     const COLORS: [RGB8; 4] = [colors::YELLOW, colors::ORANGE, colors::GREEN, colors::BLUE];
@@ -43,6 +41,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let mut led_index_iter = (0..LedStrip8::LEN).cycle();
     let mut led_index = led_index_iter.next().unwrap();
+
+    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
     loop {
         blink_frame[led_index] = colors::BLACK;

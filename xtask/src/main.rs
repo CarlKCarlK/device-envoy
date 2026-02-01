@@ -241,10 +241,7 @@ fn check_all() -> ExitCode {
     }
     let examples = discover_examples(&workspace_root);
     let demos = discover_demo_bins(&workspace_root);
-    let no_wifi_demos: Vec<_> = demos
-        .iter()
-        .filter(|demo| !demo.wifi_required)
-        .collect();
+    let no_wifi_demos: Vec<_> = demos.iter().filter(|demo| !demo.wifi_required).collect();
     let no_wifi_examples: Vec<_> = examples
         .iter()
         .filter(|example| !example.wifi_required)
@@ -344,7 +341,10 @@ fn check_all() -> ExitCode {
 
         // 5. Demos (pico2 + pico1, no wifi)
         s.spawn(|_| {
-            println!("{}", "  [5/9] Demos (pico2 + pico1, no wifi)...".bright_black());
+            println!(
+                "{}",
+                "  [5/9] Demos (pico2 + pico1, no wifi)...".bright_black()
+            );
             no_wifi_demos.par_iter().for_each(|demo| {
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                     "build",
@@ -864,7 +864,10 @@ fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
                         .unwrap_or_else(|_| panic!("Failed to read {}", demo_path.display()));
                     wifi_required = source.contains("#![cfg(feature = \"wifi\")]");
                 }
-                demos.push(DemoInfo { name, wifi_required });
+                demos.push(DemoInfo {
+                    name,
+                    wifi_required,
+                });
             }
         }
         *current_wifi_required = false;

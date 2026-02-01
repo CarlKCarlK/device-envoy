@@ -25,7 +25,8 @@ use smart_leds::{RGB8, colors};
 
 // Two 12x4 panels stacked vertically and rotated 90° CW → 8×12 display.
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
-const LED_LAYOUT_8X12: LedLayout<96, 8, 12> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
+const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
+    LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
 
 led2d! {
     Led8x12 {
@@ -94,11 +95,10 @@ async fn demo_clock_text(led8x12: &Led8x12) -> Result<()> {
 async fn demo_blink_text(led8x12: &Led8x12) -> Result<()> {
     let mut on_frame = Frame2d::new();
     led8x12.write_text_to_frame("HI", &[colors::YELLOW], &mut on_frame)?;
-    led8x12
-        .animate([
-            (on_frame, Duration::from_millis(500)),
-            (Frame2d::new(), Duration::from_millis(500)),
-        ])
+    led8x12.animate([
+        (on_frame, Duration::from_millis(500)),
+        (Frame2d::new(), Duration::from_millis(500)),
+    ])
 }
 
 /// Display colored corners to demonstrate coordinate mapping.
@@ -126,11 +126,10 @@ async fn demo_blink_pattern(led8x12: &Led8x12) -> Result<()> {
         }
     }
 
-    led8x12
-        .animate([
-            (on_frame, Duration::from_millis(500)),
-            (Frame2d::new(), Duration::from_millis(500)),
-        ])
+    led8x12.animate([
+        (on_frame, Duration::from_millis(500)),
+        (Frame2d::new(), Duration::from_millis(500)),
+    ])
 }
 
 /// Create a red rectangle border with blue diagonals using embedded-graphics.

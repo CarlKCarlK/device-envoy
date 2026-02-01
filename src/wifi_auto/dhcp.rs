@@ -3,10 +3,7 @@
 //! Provides IP address leases to clients connecting to the WiFi captive portal.
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
-#![allow(
-    dead_code,
-    reason = "Used by WiFi tasks in downstream crates"
-)]
+#![allow(dead_code, reason = "Used by WiFi tasks in downstream crates")]
 
 use defmt::*;
 // Import panic! explicitly from prelude to disambiguate from defmt::*

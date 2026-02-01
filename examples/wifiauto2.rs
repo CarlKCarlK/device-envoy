@@ -45,9 +45,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         spawner,
     )?;
 
-    let (_stack, _button) = wifi_auto
-        .connect(|_event| async move { Ok(()) })
-        .await?;
+    let (_stack, _button) = wifi_auto.connect(|_event| async move { Ok(()) }).await?;
 
     future::pending().await // run forever
 }

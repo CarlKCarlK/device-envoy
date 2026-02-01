@@ -7,9 +7,9 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_kit::Result;
+use device_kit::ir::{IrKepler, IrKeplerStatic};
 use embassy_executor::Spawner;
 use panic_probe as _;
-use device_kit::ir::{IrKepler, IrKeplerStatic};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {

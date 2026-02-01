@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 #![cfg(feature = "host")]
 
-use png::{BitDepth, ColorType, Decoder, Encoder};
 use device_kit::led2d::{Frame2d, Led2dFont, render_text_to_frame};
+use png::{BitDepth, ColorType, Decoder, Encoder};
 use smart_leds::{RGB8, colors};
 use std::fs::File;
 use std::io::BufWriter;
@@ -52,12 +52,7 @@ fn font5x8_on_600x800_fibonacci() {
 
 #[test]
 fn font3x4_on_12x4_no_colors_defaults_to_white() {
-    run_render_test::<12, 4>(
-        "font3x4_12x4_white",
-        Led2dFont::Font3x4Trim,
-        "RUST",
-        &[],
-    );
+    run_render_test::<12, 4>("font3x4_12x4_white", Led2dFont::Font3x4Trim, "RUST", &[]);
 }
 
 fn run_render_test<const W: usize, const H: usize>(

@@ -51,12 +51,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting rainbow animation...");
     const FRAME_DURATION: Duration = Duration::from_secs(1);
-    led_strip
-        .animate([
-            (rainbow_frame, FRAME_DURATION),
-            (black_frame, FRAME_DURATION),
-        ])
-        ?;
+    led_strip.animate([
+        (rainbow_frame, FRAME_DURATION),
+        (black_frame, FRAME_DURATION),
+    ])?;
 
     future::pending().await // run forever
 }

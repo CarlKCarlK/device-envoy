@@ -20,7 +20,7 @@ led_strip! {
     }
 }
 
-// Nice trick: Two "mains" let's us use Results.
+// Nice trick: Two "mains" lets us use Results.
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();

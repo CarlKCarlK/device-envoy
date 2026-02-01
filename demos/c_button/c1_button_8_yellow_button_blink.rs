@@ -52,7 +52,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
         blink_frame[led_index] = colors::YELLOW;
 
-        // Using device abstractions for LEDs and buttons let's us
+        // Using device abstractions for LEDs and buttons lets us
         // avoid tricky async programming issues like loop/select & select/loop.
         // Each device abstraction handles its own business internally.
     }

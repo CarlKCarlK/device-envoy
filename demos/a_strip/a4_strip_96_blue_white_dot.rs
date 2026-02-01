@@ -24,8 +24,8 @@ led_strip! {
         gamma: Gamma::SmartLeds, // compatibility curve (= 2.8)
         max_frames: 0, // Disable animation; write_frame() still works
     }
-    // Gamma correction and current limiting are folded into a single lookup table
-    // (one table lookup per RGB channel at runtime).
+    // Gamma correction and current limiting are folded into a single
+    // lookup table (one table lookup per RGB channel at runtime).
 }
 
 #[embassy_executor::main]

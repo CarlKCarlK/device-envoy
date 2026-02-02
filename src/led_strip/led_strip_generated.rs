@@ -27,9 +27,9 @@ led_strip! {
 pub struct LedStripGenerated;
 
 #[cfg(doc)]
-use crate::Result;
-#[cfg(doc)]
 use crate::led_strip::{Current, Frame1d, LedStripStatic};
+#[cfg(doc)]
+use crate::Result;
 
 #[cfg(doc)]
 // Must be public for macro expansion in downstream crates, but not user-facing API.
@@ -52,7 +52,8 @@ impl LedStripGenerated {
     /// or [`led_strips!`](crate::led_strips!) macro.
     /// This constant is the result
     /// of calculating how much brightness is safe given that budget and the number of LEDs.
-    pub const MAX_BRIGHTNESS: u8 = Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
+    pub const MAX_BRIGHTNESS: u8 =
+        Current::Unlimited.max_brightness(Self::LEN as u32 * 60);
     /// Maximum number of animation frames allowed.
     ///
     /// Specified in the [`led_strip!`](macro@crate::led_strip)
@@ -100,7 +101,10 @@ impl LedStripGenerated {
     /// Write a frame to the LED strip.
     ///
     /// See the [`led_strip`](mod@crate::led_strip) module docs for usage.
-    pub fn write_frame(&self, frame: Frame1d<{ Self::LEN }>) -> Result<()> {
+    pub fn write_frame(
+        &self,
+        frame: Frame1d<{ Self::LEN }>,
+    ) -> Result<()> {
         let _ = frame;
         Ok(())
     }

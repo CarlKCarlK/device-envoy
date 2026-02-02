@@ -44,31 +44,31 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    // Flash stores WiFi credentials after first captive-portal setup
+    let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
+
+    // Flash stores WiFi credentials after first setup
     static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
     let [wifi_credentials_flash_block] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
 
-    let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
-
     // Create a WifiAuto instance.
-    // A button is used to force reconfiguration via captive portal.
-    // Pico W uses the CYW43 chip wired to fixed GPIOs; we pass those resources here.
+    // A button is used to force reconfiguration via setup web page.
+    // Pico W uses the CYW43 chip wired to fixed GPIOs; we pass those here.
     let wifi_auto = WifiAuto::new(
-        p.PIN_23,  // CYW43 power
-        p.PIN_24,  // CYW43 clock
-        p.PIN_25,  // CYW43 chip select
-        p.PIN_29,  // CYW43 data
-        p.PIO1,    // CYW43 PIO interface (required)
-        p.DMA_CH1, // CYW43 DMA 0 (required)
+        p.PIN_23,
+        p.PIN_24,
+        p.PIN_25,
+        p.PIN_29,  // CYW43 pins (fixed)
+        p.PIO1,    // Needs a PIO resource
+        p.DMA_CH1, // Needs a DMA resource
         wifi_credentials_flash_block,
         p.PIN_15, // Button for forced reconfiguration
         PressedTo::Ground,
-        "PicoTime", // Captive-portal SSID
+        "PicoDemo", // Setup SSID
         [],         // Any custom fields
         spawner,
     )?;
 
-    // Try to connect. Will launch captive portal as needed.
+    // Try to connect. Will launch setup web page as needed.
     // Returns network stack and button.
     //
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
@@ -77,7 +77,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .connect(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    led8x12_ref.write_text("JO\nIN", COLORS).await?
+                    led8x12_ref.write_text("JO\nIN", COLORS).await? // Join setup network
                 }
                 WifiAutoEvent::Connecting { .. } => show_animated_dots(led8x12_ref).await?,
                 WifiAutoEvent::ConnectionFailed => led8x12_ref.write_text("FA\nIL", COLORS).await?,

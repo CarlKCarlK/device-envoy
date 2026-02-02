@@ -1,8 +1,23 @@
 //! A device abstraction for buttons with debouncing and press duration detection.
 //!
-//! See [`Button`] for usage example and [`button_watch!`](crate::button_watch!) for background monitoring.
+//! This module provides two ways to monitor button presses:
+//!
+//! - [`Button`] — Simple button monitoring. Each call to `wait_for_press()`, etc. starts fresh
+//!   button monitoring.
+//! - [`button_watch!`](crate::button_watch!) — Monitors a button in a background task
+//!   so that it works even in a fast loop/select.
+//! 
 
-pub mod button_watch;
+mod button_watch;
+pub mod button_watch_generated;
+
+// Must be public for macro expansion in downstream crates, but not user-facing API.
+#[doc(hidden)]
+pub use button_watch::{ButtonWatch, ButtonWatchStatic};
+
+// Must be public for macro expansion in downstream crates, but not user-facing API.
+#[doc(hidden)]
+pub use button_watch::{button_watch_task, button_watch_task_from_input};
 
 use embassy_futures::select::{Either, select};
 use embassy_rp::Peri;
@@ -23,7 +38,7 @@ pub(crate) const LONG_PRESS_DURATION: Duration = Duration::from_millis(500);
 // PressedTo - How the button is wired
 // ============================================================================
 
-/// Describes how the button is physically wired.
+/// Describes if the button connects to voltage or ground when pressed.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, defmt::Format)]
 pub enum PressedTo {
     /// Button connects pin to voltage (3.3V) when pressed.
@@ -216,20 +231,19 @@ impl<'a> Button<'a> {
         self.wait_for_stable_up().await;
     }
 
-    /// Returns how the button is wired.
-    #[must_use]
-    pub const fn pressed_to(&self) -> PressedTo {
-        self.pressed_to
-    }
-
     /// Consumes the button and returns its internal components.
     ///
     /// This is useful for converting a `Button` (returned from `WifiAuto::connect`)
     /// into a `ButtonWatch` for background monitoring.
     ///
     /// See the [`button_watch!`](crate::button_watch!) macro documentation for usage with `from_button()`.
+    // Must be public for macro expansion but not part of the user-facing API.
+    #[doc(hidden)]
     #[must_use]
     pub fn into_parts(self) -> (Input<'a>, PressedTo) {
         (self.input, self.pressed_to)
     }
 }
+
+#[doc(inline)]
+pub use crate::button_watch;

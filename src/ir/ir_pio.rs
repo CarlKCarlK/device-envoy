@@ -5,19 +5,100 @@
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Pin, Pull};
-use embassy_rp::peripherals::PIO0;
 use embassy_rp::pio::{
-    Common, Config, FifoJoin, Instance, PioPin, ShiftConfig, ShiftDirection,
-    StateMachine,
+    Common, Config, FifoJoin, Instance, PioPin, ShiftConfig, ShiftDirection, StateMachine,
 };
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel as EmbassyChannel;
 use fixed::traits::ToFixed;
 
 use crate::{Error, Result};
-use crate::pio_irqs::Pio0Irqs;
 
 use super::IrEvent;
+
+// ===== NEC Receiver (forward declaration) ==================================
+
+/// NEC IR receiver using PIO
+#[doc(hidden)] // Internal helper type; not part of public API
+pub struct NecReceiver<'d, PIO: Instance, const SM: usize> {
+    sm: StateMachine<'d, PIO, SM>,
+}
+
+// ===== PIO Trait and Implementations =======================================
+
+/// Trait for PIO peripherals used with IR receivers.
+///
+/// This trait associates each PIO peripheral with its interrupt bindings.
+#[doc(hidden)]
+pub trait IrPioPeripheral: Instance {
+    /// The interrupt binding type for this PIO
+    type Irqs: embassy_rp::interrupt::typelevel::Binding<
+            <Self as Instance>::Interrupt,
+            embassy_rp::pio::InterruptHandler<Self>,
+        >;
+
+    /// Get the interrupt configuration
+    fn irqs() -> Self::Irqs;
+
+    /// Spawn the task for this PIO
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_pio_static: &'static IrPioStatic,
+        spawner: Spawner,
+    ) -> Result<()>;
+}
+
+impl IrPioPeripheral for embassy_rp::peripherals::PIO0 {
+    type Irqs = crate::pio_irqs::Pio0Irqs;
+
+    fn irqs() -> Self::Irqs {
+        crate::pio_irqs::Pio0Irqs
+    }
+
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_pio_static: &'static IrPioStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio0_task(receiver, ir_pio_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+}
+
+impl IrPioPeripheral for embassy_rp::peripherals::PIO1 {
+    type Irqs = crate::pio_irqs::Pio1Irqs;
+
+    fn irqs() -> Self::Irqs {
+        crate::pio_irqs::Pio1Irqs
+    }
+
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_pio_static: &'static IrPioStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio1_task(receiver, ir_pio_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+}
+
+#[cfg(feature = "pico2")]
+impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
+    type Irqs = crate::pio_irqs::Pio2Irqs;
+
+    fn irqs() -> Self::Irqs {
+        crate::pio_irqs::Pio2Irqs
+    }
+
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_pio_static: &'static IrPioStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio2_task(receiver, ir_pio_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+}
 
 // ===== Public API ===========================================================
 
@@ -45,8 +126,8 @@ impl IrPioStatic {
 /// A device abstraction for an infrared receiver using PIO hardware for NEC protocol decoding.
 ///
 /// This implementation uses the RP2040's PIO state machine to decode NEC IR signals in hardware,
-/// making decoding reliable even when the CPU is busy with other tasks. For this first version,
-/// it assumes PIO0 is available.
+/// making decoding reliable even when the CPU is busy with other tasks. Works with any PIO
+/// peripheral (PIO0, PIO1, or PIO2 on Pico 2).
 ///
 /// # Examples
 /// ```rust,no_run
@@ -88,17 +169,21 @@ impl IrPio<'_> {
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
-    pub fn new<P: Pin + PioPin>(
+    pub fn new<P, PIO>(
         ir_pio_static: &'static IrPioStatic,
         pin: Peri<'static, P>,
-        pio0: Peri<'static, PIO0>,
+        pio: Peri<'static, PIO>,
         spawner: Spawner,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        P: Pin + PioPin,
+        PIO: IrPioPeripheral,
+    {
         // Set up PIO in the generic context where we have the concrete pin type
-        let pio = embassy_rp::pio::Pio::new(pio0, Pio0Irqs);
+        let pio_instance = embassy_rp::pio::Pio::new(pio, PIO::irqs());
         let embassy_rp::pio::Pio {
             mut common, sm0, ..
-        } = pio;
+        } = pio_instance;
 
         // Configure pin for IR receiver input with pull-up
         // IR receivers idle HIGH and pull LOW when detecting carrier
@@ -108,9 +193,8 @@ impl IrPio<'_> {
         // Load and configure the PIO program
         let nec_receiver = NecReceiver::new(&mut common, sm0, ir_pin);
 
-        // Spawn the task with the configured receiver
-        let token = ir_pio_task(nec_receiver, ir_pio_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        // Spawn the task with the configured receiver (dispatch to PIO-specific task)
+        PIO::spawn_task(nec_receiver, ir_pio_static, spawner)?;
 
         Ok(Self { ir_pio_static })
     }
@@ -124,8 +208,8 @@ impl IrPio<'_> {
 }
 
 #[embassy_executor::task]
-async fn ir_pio_task(
-    mut nec_receiver: NecReceiver<'static, PIO0, 0>,
+async fn ir_pio0_task(
+    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO0, 0>,
     ir_pio_static: &'static IrPioStatic,
 ) -> ! {
     loop {
@@ -139,10 +223,40 @@ async fn ir_pio_task(
     }
 }
 
-/// NEC IR receiver using PIO
-struct NecReceiver<'d, PIO: Instance, const SM: usize> {
-    sm: StateMachine<'d, PIO, SM>,
+#[embassy_executor::task]
+async fn ir_pio1_task(
+    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO1, 0>,
+    ir_pio_static: &'static IrPioStatic,
+) -> ! {
+    loop {
+        // Wait for a frame from the PIO FIFO
+        let raw_frame = nec_receiver.receive_frame().await;
+
+        // Decode and validate the frame
+        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
+            ir_pio_static.send(IrEvent::Press { addr, cmd }).await;
+        }
+    }
 }
+
+#[cfg(feature = "pico2")]
+#[embassy_executor::task]
+async fn ir_pio2_task(
+    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO2, 0>,
+    ir_pio_static: &'static IrPioStatic,
+) -> ! {
+    loop {
+        // Wait for a frame from the PIO FIFO
+        let raw_frame = nec_receiver.receive_frame().await;
+
+        // Decode and validate the frame
+        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
+            ir_pio_static.send(IrEvent::Press { addr, cmd }).await;
+        }
+    }
+}
+
+// ===== NEC Receiver Implementation =========================================
 
 impl<'d, PIO: Instance, const SM: usize> NecReceiver<'d, PIO, SM> {
     fn new(

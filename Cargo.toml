@@ -260,6 +260,8 @@ embedded-graphics = { version = "0.8", default-features = false }
 embed-doc-image = { version = "0.1.4", optional = true }
 png = { version = "0.17", optional = true }
 tempfile = { version = "3.13", optional = true }
+pio = "0.3"
+fixed = "1.29"
 
 # Integration tests
 [[test]]

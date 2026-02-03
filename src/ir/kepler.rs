@@ -5,8 +5,10 @@
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;
+use embassy_rp::pio::PioPin;
 
 use crate::Result;
+use crate::ir::IrPioPeripheral;
 use crate::ir::mapping::{IrMapping, IrMappingStatic};
 
 /// Button types for the SunFounder Kepler Kit remote control.
@@ -108,7 +110,7 @@ const KEPLER_MAPPING: [(u16, u8, KeplerButton); 21] = [
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_kit::Result<()> {
 ///     static IR_KEPLER_STATIC: IrKeplerStatic = IrKepler::new_static();
-///     let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, spawner)?;
+///     let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO0, spawner)?;
 ///
 ///     loop {
 ///         let button = ir_kepler.wait_for_press().await;
@@ -134,18 +136,24 @@ impl<'a> IrKepler<'a> {
     /// # Parameters
     /// - `ir_kepler_static`: Static reference to the channel resources
     /// - `pin`: GPIO pin connected to the IR receiver
+    /// - `pio`: PIO peripheral to use (PIO0, PIO1, or PIO2)
     /// - `spawner`: Embassy spawner for background task
     ///
     /// See [`IrKepler`] for usage examples.
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
-    pub fn new<P: Pin>(
+    pub fn new<P, PIO>(
         ir_kepler_static: &'static IrKeplerStatic,
         pin: Peri<'static, P>,
+        pio: Peri<'static, PIO>,
         spawner: Spawner,
-    ) -> Result<Self> {
-        let mapping = IrMapping::new(ir_kepler_static.inner(), pin, &KEPLER_MAPPING, spawner)?;
+    ) -> Result<Self>
+    where
+        P: Pin + PioPin,
+        PIO: IrPioPeripheral,
+    {
+        let mapping = IrMapping::new(ir_kepler_static.inner(), pin, pio, &KEPLER_MAPPING, spawner)?;
         Ok(Self { mapping })
     }
 

@@ -120,7 +120,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led16x16 = Led16x16::new(p.PIN_6, p.PIO0, p.DMA_CH0, spawner)?;
     static IR_KEPLER_STATIC: IrKeplerStatic = IrKepler::new_static();
-    let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, spawner)?;
+    let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO1, spawner)?;
 
     // Create Conway device with static resources and spawn background task
     static CONWAY_STATIC: ConwayStatic = Conway::new_static();

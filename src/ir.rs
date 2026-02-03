@@ -1,14 +1,16 @@
 //! A device abstraction for infrared receivers using the NEC protocol.
 //!
 //! See [`Ir`], [`IrMapping`], and [`IrKepler`] for usage examples.
-// nec_ir.rs
-use defmt::info;
+
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
-use embassy_rp::gpio::{AnyPin, Input, Pin, Pull};
+use embassy_rp::gpio::{Pin, Pull};
+use embassy_rp::pio::{
+    Common, Config, FifoJoin, Instance, PioPin, ShiftConfig, ShiftDirection, StateMachine,
+};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel as EmbassyChannel;
-use embassy_time::Instant;
+use fixed::traits::ToFixed;
 
 use crate::{Error, Result};
 
@@ -16,11 +18,9 @@ use crate::{Error, Result};
 // Submodules
 // ============================================================================
 
-pub mod ir_pio;
 mod kepler;
 mod mapping;
 
-pub use ir_pio::{IrPio, IrPioStatic};
 pub use kepler::{IrKepler, IrKeplerStatic, KeplerButton};
 pub use mapping::{IrMapping, IrMappingStatic};
 
@@ -39,10 +39,93 @@ pub enum IrEvent {
         /// 8-bit command code.
         cmd: u8,
     },
-    // Repeat { addr: u16, cmd: u8 },
 }
 
-/// Static resources for the `Ir` device abstraction.
+// ===== NEC Receiver (forward declaration) ==================================
+
+/// NEC IR receiver using PIO
+#[doc(hidden)] // Internal helper type; not part of public API
+pub struct NecReceiver<'d, PIO: Instance, const SM: usize> {
+    sm: StateMachine<'d, PIO, SM>,
+}
+
+// ===== PIO Trait and Implementations =======================================
+
+/// Trait for PIO peripherals used with IR receivers.
+///
+/// This trait associates each PIO peripheral with its interrupt bindings.
+#[doc(hidden)]
+pub trait IrPioPeripheral: Instance {
+    /// The interrupt binding type for this PIO
+    type Irqs: embassy_rp::interrupt::typelevel::Binding<
+            <Self as Instance>::Interrupt,
+            embassy_rp::pio::InterruptHandler<Self>,
+        >;
+
+    /// Get the interrupt configuration
+    fn irqs() -> Self::Irqs;
+
+    /// Spawn the task for this PIO
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()>;
+}
+
+impl IrPioPeripheral for embassy_rp::peripherals::PIO0 {
+    type Irqs = crate::pio_irqs::Pio0Irqs;
+
+    fn irqs() -> Self::Irqs {
+        crate::pio_irqs::Pio0Irqs
+    }
+
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio0_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+}
+
+impl IrPioPeripheral for embassy_rp::peripherals::PIO1 {
+    type Irqs = crate::pio_irqs::Pio1Irqs;
+
+    fn irqs() -> Self::Irqs {
+        crate::pio_irqs::Pio1Irqs
+    }
+
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio1_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+}
+
+#[cfg(feature = "pico2")]
+impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
+    type Irqs = crate::pio_irqs::Pio2Irqs;
+
+    fn irqs() -> Self::Irqs {
+        crate::pio_irqs::Pio2Irqs
+    }
+
+    fn spawn_task(
+        receiver: NecReceiver<'static, Self, 0>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio2_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+}
+
+/// Static resources for the [`Ir`] device abstraction.
 ///
 /// See [`Ir`] for usage examples.
 pub struct IrStatic(EmbassyChannel<CriticalSectionRawMutex, IrEvent, 8>);
@@ -63,7 +146,11 @@ impl IrStatic {
     }
 }
 
-/// A device abstraction for an infrared receiver using the NEC protocol.
+/// A device abstraction for an infrared receiver for NEC protocol decoding.
+///
+/// This implementation uses the RP2040's PIO state machine to decode NEC IR signals in hardware,
+/// making decoding reliable even when the CPU is busy with other tasks. Works with any PIO
+/// peripheral (PIO0, PIO1, or PIO2 on Pico 2).
 ///
 /// # Examples
 /// ```rust,no_run
@@ -78,7 +165,7 @@ impl IrStatic {
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_kit::Result<()> {
 ///     static IR_STATIC: IrStatic = Ir::new_static();
-///     let ir = Ir::new(&IR_STATIC, p.PIN_15, spawner)?;
+///     let ir = Ir::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
 ///
 ///     loop {
 ///         let IrEvent::Press { addr, cmd } = ir.wait_for_press().await;
@@ -99,22 +186,39 @@ impl Ir<'_> {
         IrStatic::new()
     }
 
-    /// Create a new IR receiver on the specified pin.
+    /// Create a new PIO-based IR receiver on the specified pin.
     ///
     /// See [`Ir`] for usage examples.
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
-    pub fn new<P: Pin>(
+    pub fn new<P, PIO>(
         ir_static: &'static IrStatic,
         pin: Peri<'static, P>,
+        pio: Peri<'static, PIO>,
         spawner: Spawner,
-    ) -> Result<Self> {
-        // Type erase to Peri<'static, AnyPin> (keep the Peri wrapper!)
-        let any: Peri<'static, AnyPin> = pin.into();
-        // Use Pull::Up for typical IR receivers (they idle HIGH with active-low modules)
-        let token = nec_ir_task(Input::new(any, Pull::Up), ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+    ) -> Result<Self>
+    where
+        P: Pin + PioPin,
+        PIO: IrPioPeripheral,
+    {
+        // Set up PIO in the generic context where we have the concrete pin type
+        let pio_instance = embassy_rp::pio::Pio::new(pio, PIO::irqs());
+        let embassy_rp::pio::Pio {
+            mut common, sm0, ..
+        } = pio_instance;
+
+        // Configure pin for IR receiver input with pull-up
+        // IR receivers idle HIGH and pull LOW when detecting carrier
+        let mut ir_pin = common.make_pio_pin(pin);
+        ir_pin.set_pull(Pull::Up);
+
+        // Load and configure the PIO program
+        let nec_receiver = NecReceiver::new(&mut common, sm0, ir_pin);
+
+        // Spawn the task with the configured receiver (dispatch to PIO-specific task)
+        PIO::spawn_task(nec_receiver, ir_static, spawner)?;
+
         Ok(Self { ir_static })
     }
 
@@ -127,197 +231,169 @@ impl Ir<'_> {
 }
 
 #[embassy_executor::task]
-async fn nec_ir_task(mut pin: Input<'static>, ir_static: &'static IrStatic) -> ! {
-    let mut decoder_state: DecoderState = DecoderState::Idle;
-    let mut last_code: Option<(u16, u8)> = None;
-    let mut level_low: bool = pin.is_low(); // Initialize from pin state
-    let mut last_edge: Instant = Instant::now();
-
-    info!("NEC IR task started");
+async fn ir_pio0_task(
+    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO0, 0>,
+    ir_static: &'static IrStatic,
+) -> ! {
     loop {
-        pin.wait_for_any_edge().await;
+        // Wait for a frame from the PIO FIFO
+        let raw_frame = nec_receiver.receive_frame().await;
 
-        let now = Instant::now();
-        let dt = now.duration_since(last_edge).as_micros() as u32;
-        // info!("NEC IR edge: dt={}µs", dt);
-        last_edge = now;
-
-        // Active-low receiver: every edge toggles the level.
-        // Toggle instead of reading pin to avoid race conditions and glitches
-        level_low = !level_low;
-
-        // Sanity check: verify our toggle matches the actual pin state
-        let actual_level_low = pin.is_low();
-        if level_low != actual_level_low {
-            defmt::warn!(
-                "IR: Pin state mismatch! Expected {}, got {} (missed edge?)",
-                level_low,
-                actual_level_low
-            );
-            // Resync to actual pin state
-            level_low = actual_level_low;
-            // Reset decoder to avoid processing corrupt data
-            decoder_state = DecoderState::Idle;
-            continue;
-        }
-
-        // info!("NEC IR state: {}", decoder_state.name());
-
-        let (decoder_state0, ir_nec_event, last_code0) =
-            decoder_state.feed(level_low, dt, last_code);
-        decoder_state = decoder_state0;
-        last_code = last_code0;
-
-        if let Some(ir_event) = ir_nec_event {
-            ir_static.send(ir_event).await;
+        // Decode and validate the frame
+        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
+            ir_static.send(IrEvent::Press { addr, cmd }).await;
         }
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-enum DecoderState {
-    Idle,
-    LdrLow,
-    LdrHigh,
-    BitLow { n: u8, v: u32 },
-    BitHigh { n: u8, v: u32 },
-    StopBit { addr: u16, cmd: u8 }, // Waiting for final stop bit after 32 bits
-    RepeatTail,
-}
+#[embassy_executor::task]
+async fn ir_pio1_task(
+    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO1, 0>,
+    ir_static: &'static IrStatic,
+) -> ! {
+    loop {
+        // Wait for a frame from the PIO FIFO
+        let raw_frame = nec_receiver.receive_frame().await;
 
-impl DecoderState {
-    fn feed(
-        mut self,
-        level_low: bool,
-        dt: u32,
-        mut last_code: Option<(u16, u8)>,
-    ) -> (DecoderState, Option<IrEvent>, Option<(u16, u8)>) {
-        if dt < GLITCH {
-            return (self, None, last_code);
+        // Decode and validate the frame
+        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
+            ir_static.send(IrEvent::Press { addr, cmd }).await;
         }
-        use DecoderState::*;
-        match self {
-            Idle => {
-                // Only start decoding if we've been idle (HIGH) for at least MIN_IDLE
-                // This filters out SPI crosstalk and other electrical noise
-                if level_low && dt >= MIN_IDLE {
-                    self = LdrLow;
-                    defmt::info!("IR: Decoding started");
-                }
-            }
-            LdrLow => {
-                if !level_low && inr(dt, LDR_LOW) {
-                    self = LdrHigh;
-                } else {
-                    self = Idle;
-                    // Only log decode failures for pulses that were at least somewhat close
-                    // Very short pulses (<2ms) are likely NEC stop bits, not decode failures
-                    if dt > 2_000 {
-                        defmt::info!("IR: Decode failed (bad LDR_LOW timing)");
-                    }
-                }
-            }
-            LdrHigh => {
-                if level_low && inr(dt, LDR_HIGH) {
-                    self = BitLow { n: 0, v: 0 };
-                } else if level_low && inr(dt, REP_HIGH) {
-                    self = RepeatTail;
-                } else {
-                    self = Idle;
-                    defmt::info!("IR: Decode failed (bad LDR_HIGH/REP_HIGH timing)");
-                }
-            }
-            RepeatTail => {
-                // Repeat support not yet implemented; silently ignore valid repeats
-                if !level_low && inr(dt, BIT_LOW) {
-                    self = Idle;
-                } else {
-                    self = Idle;
-                    defmt::info!("IR: Decode failed (bad RepeatTail timing)");
-                }
-            }
-            BitLow { n, v } => {
-                if !level_low && inr(dt, BIT_LOW) {
-                    self = BitHigh { n, v };
-                } else {
-                    self = Idle;
-                    defmt::info!("IR: Decode failed (bad BIT_LOW timing, bit={})", n);
-                }
-            }
-            BitHigh { n, mut v } => {
-                if level_low && inr(dt, BIT1_HIGH) {
-                    v |= 1u32 << n;
-                } else if !(level_low && inr(dt, BIT0_HIGH)) {
-                    self = Idle;
-                    defmt::info!("IR: Decode failed (bad BIT_HIGH timing, bit={})", n);
-                    return (self, None, last_code);
-                }
-
-                let n2 = n + 1;
-                if n2 == 32 {
-                    if let Some((a, c)) = nec_ok(v) {
-                        last_code = Some((a, c));
-                        // Don't emit the event yet - wait for stop bit validation
-                        self = StopBit { addr: a, cmd: c };
-                    } else {
-                        self = Idle;
-                        defmt::info!(
-                            "IR: Decode failed (checksum validation failed, v=0x{:08X})",
-                            v
-                        );
-                    }
-                } else {
-                    self = BitLow { n: n2, v };
-                }
-            }
-            StopBit { addr, cmd } => {
-                // NEC stop bit: short low pulse (~562µs)
-                if !level_low && inr(dt, BIT_LOW) {
-                    self = Idle;
-                    // Stop bit validated - emit the event
-                    return (self, Some(IrEvent::Press { addr, cmd }), last_code);
-                } else {
-                    self = Idle;
-                    defmt::info!("IR: Decode failed (missing or bad stop bit, dt={}µs)", dt);
-                }
-            }
-        }
-        (self, None, last_code)
     }
 }
 
-#[inline]
-fn inr(x: u32, r: (u32, u32)) -> bool {
-    x >= r.0 && x <= r.1
-}
-#[inline]
-fn nec_ok(f: u32) -> Option<(u16, u8)> {
-    let b0 = (f & 0xFF) as u8;
-    let b1 = ((f >> 8) & 0xFF) as u8;
-    let b2 = ((f >> 16) & 0xFF) as u8;
-    let b3 = ((f >> 24) & 0xFF) as u8;
+#[cfg(feature = "pico2")]
+#[embassy_executor::task]
+async fn ir_pio2_task(
+    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO2, 0>,
+    ir_static: &'static IrStatic,
+) -> ! {
+    loop {
+        // Wait for a frame from the PIO FIFO
+        let raw_frame = nec_receiver.receive_frame().await;
 
-    // Validate command with its inverse (required in both variants)
-    if (b2 ^ b3) != 0xFF {
+        // Decode and validate the frame
+        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
+            ir_static.send(IrEvent::Press { addr, cmd }).await;
+        }
+    }
+}
+
+// ===== NEC Receiver Implementation =========================================
+
+impl<'d, PIO: Instance, const SM: usize> NecReceiver<'d, PIO, SM> {
+    fn new(
+        common: &mut Common<'d, PIO>,
+        mut sm: StateMachine<'d, PIO, SM>,
+        ir_pin: embassy_rp::pio::Pin<'d, PIO>,
+    ) -> Self {
+        // PIO program (ported from nec_receive.pio)
+        let prg = pio::pio_asm!(
+            r#"
+            ; Constants for burst detection and bit sampling
+            ; These values are calibrated for 10 SM clock ticks per 562.5µs burst period
+            .define BURST_LOOP_COUNTER 30    ; threshold for sync burst detection
+            .define BIT_SAMPLE_DELAY 15      ; wait 1.5 burst periods before sampling
+
+            .wrap_target
+            next_burst:
+                set x, BURST_LOOP_COUNTER
+                wait 0 pin 0                 ; wait for burst to start (active low)
+
+            burst_loop:
+                jmp pin data_bit             ; burst ended before counter expired
+                jmp x-- burst_loop           ; keep waiting for burst to end
+
+                                             ; counter expired = sync burst detected
+                mov isr, null                ; reset ISR for new frame
+                wait 1 pin 0                 ; wait for sync burst to finish
+                jmp next_burst               ; ready for first data bit
+
+            data_bit:
+                nop [BIT_SAMPLE_DELAY - 1]   ; wait 1.5 burst periods
+                in pins, 1                   ; sample gap length: short=0, long=1
+                                             ; autopush after 32 bits
+            .wrap
+            "#
+        );
+
+        let mut cfg = Config::default();
+
+        // Input shift register: shift right, autopush after 32 bits
+        let mut shift_config = ShiftConfig::default();
+        shift_config.direction = ShiftDirection::Right;
+        shift_config.auto_fill = true;
+        shift_config.threshold = 32;
+        cfg.shift_in = shift_config;
+
+        // Join FIFOs to make a larger receive FIFO
+        cfg.fifo_join = FifoJoin::RxOnly;
+
+        // Set the IN pin for sampling
+        cfg.set_in_pins(&[&ir_pin]);
+
+        // Set the JMP pin for burst detection
+        cfg.set_jmp_pin(&ir_pin);
+
+        // Set clock divisor: 10 ticks per 562.5µs burst period
+        // System clock is typically 125 MHz
+        // Target: 10 / 562.5µs = 17,777.78 Hz
+        let clock_freq = 125_000_000.0_f32; // 125 MHz system clock
+        let target_freq = 10.0_f32 / 562.5e-6_f32; // 10 ticks per burst period
+        let divisor: f32 = clock_freq / target_freq;
+        cfg.clock_divider = divisor.to_fixed();
+
+        // Load the PIO program first
+        let loaded_program = common.load_program(&prg.program);
+
+        // Configure using the loaded program (sets wrap, origin, etc.)
+        cfg.use_program(&loaded_program, &[]);
+
+        // Initialize and start the state machine
+        sm.set_config(&cfg);
+        sm.set_pin_dirs(embassy_rp::pio::Direction::In, &[&ir_pin]);
+        sm.set_enable(true);
+
+        // Keep the loaded program to prevent deallocation
+        let _ = loaded_program;
+
+        Self { sm }
+    }
+
+    /// Wait for and receive a 32-bit NEC frame from the PIO FIFO
+    async fn receive_frame(&mut self) -> u32 {
+        self.sm.rx().wait_pull().await
+    }
+}
+
+/// Decode and validate a 32-bit NEC frame
+///
+/// NEC protocol structure (32 bits, LSB first):
+/// - Byte 0: Address (8 bits)
+/// - Byte 1: Address inverse (~Address)
+/// - Byte 2: Command (8 bits)
+/// - Byte 3: Command inverse (~Command)
+///
+/// Extended NEC uses 16-bit address (bytes 0-1) without inversion check
+///
+/// Returns `Some((address, command))` if valid, `None` if checksum fails
+fn decode_nec_frame(frame: u32) -> Option<(u16, u8)> {
+    let byte0 = (frame & 0xFF) as u8;
+    let byte1 = ((frame >> 8) & 0xFF) as u8;
+    let byte2 = ((frame >> 16) & 0xFF) as u8;
+    let byte3 = ((frame >> 24) & 0xFF) as u8;
+
+    // Validate command bytes (required in both standard and extended NEC)
+    if (byte2 ^ byte3) != 0xFF {
         return None;
     }
 
-    // Standard NEC: second byte is inverse of the first (8-bit address)
-    if (b0 ^ b1) == 0xFF {
-        return Some((b0 as u16, b2));
+    // Standard NEC: 8-bit address with inverse validation
+    if (byte0 ^ byte1) == 0xFF {
+        return Some((u16::from(byte0), byte2));
     }
 
-    // Extended NEC: two address bytes (16-bit address)
-    let addr16 = ((b1 as u16) << 8) | (b0 as u16);
-    Some((addr16, b2))
+    // Extended NEC: 16-bit address (no inversion check on address)
+    let addr16 = ((u16::from(byte1)) << 8) | u16::from(byte0);
+    Some((addr16, byte2))
 }
-
-// µs windows - RELAXED TOLERANCES for better reliability
-const GLITCH: u32 = 120;
-const MIN_IDLE: u32 = 5_000; // Require 5ms of idle before starting decode (filters SPI crosstalk)
-const LDR_LOW: (u32, u32) = (7_000, 11_000); // was (7_500, 10_500) - ±15%
-const LDR_HIGH: (u32, u32) = (3_500, 5_500); // was (3_700, 5_300) - ±22%
-const REP_HIGH: (u32, u32) = (1_500, 3_000); // was (1_750, 2_750) - ±33%
-const BIT_LOW: (u32, u32) = (300, 900); // was (360, 760) - ±40%
-const BIT0_HIGH: (u32, u32) = (250, 900); // was (310, 810) - ±56%
-const BIT1_HIGH: (u32, u32) = (1_000, 2_400); // was (1_190, 2_190) - ±40%

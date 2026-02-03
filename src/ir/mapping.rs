@@ -5,10 +5,11 @@
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;
+use embassy_rp::pio::PioPin;
 use heapless::LinearMap;
 
 use crate::Result;
-use crate::ir::{Ir, IrEvent, IrStatic};
+use crate::ir::{Ir, IrEvent, IrPioPeripheral, IrStatic};
 
 /// Static channel for IR mapping events.
 ///
@@ -51,7 +52,7 @@ impl IrMappingStatic {
 ///     ];
 ///
 ///     static IR_MAPPING_STATIC: IrMappingStatic = IrMapping::<RemoteButton, 3>::new_static();
-///     let ir_mapping: IrMapping<RemoteButton, 3> = IrMapping::new(&IR_MAPPING_STATIC, p.PIN_15, &button_map, spawner)?;
+///     let ir_mapping: IrMapping<RemoteButton, 3> = IrMapping::new(&IR_MAPPING_STATIC, p.PIN_15, p.PIO0, &button_map, spawner)?;
 ///
 ///     loop {
 ///         let button = ir_mapping.wait_for_press().await;
@@ -81,6 +82,7 @@ where
     /// # Parameters
     /// - `ir_mapping_static`: Static reference to the channel resources
     /// - `pin`: GPIO pin connected to the IR receiver
+    /// - `pio`: PIO peripheral to use (PIO0, PIO1, or PIO2)
     /// - `button_map`: Array mapping (address, command) pairs to button types
     /// - `spawner`: Embassy spawner for background task
     ///
@@ -88,13 +90,18 @@ where
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
-    pub fn new<P: Pin>(
+    pub fn new<P, PIO>(
         ir_mapping_static: &'static IrMappingStatic,
         pin: Peri<'static, P>,
+        pio: Peri<'static, PIO>,
         button_map: &[(u16, u8, B)],
         spawner: Spawner,
-    ) -> Result<Self> {
-        let ir = Ir::new(ir_mapping_static.inner(), pin, spawner)?;
+    ) -> Result<Self>
+    where
+        P: Pin + PioPin,
+        PIO: IrPioPeripheral,
+    {
+        let ir = Ir::new(ir_mapping_static.inner(), pin, pio, spawner)?;
 
         // Convert the flat array to a LinearMap
         let mut map = LinearMap::new();

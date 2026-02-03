@@ -12,7 +12,7 @@ extern crate panic_probe as _;
 use device_kit::{
     Error, Result,
     button::PressedTo,
-    flash_array::{FlashArray, FlashArrayStatic},
+    flash_array::FlashArray,
     wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
     wifi_auto::{WifiAuto, WifiAutoEvent},
 };
@@ -26,8 +26,7 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<3>::new_static();
-    let [wifi_flash, website_flash, timezone_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    let [wifi_flash, website_flash, timezone_flash] = FlashArray::<3>::new(p.FLASH)?;
 
     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
     let website_field = TextField::new(

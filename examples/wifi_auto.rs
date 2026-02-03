@@ -12,7 +12,7 @@ use defmt::{info, warn};
 use defmt_rtt as _;
 use device_kit::button::PressedTo;
 use device_kit::clock_sync::UnixSeconds;
-use device_kit::flash_array::{FlashArray, FlashArrayStatic};
+use device_kit::flash_array::FlashArray;
 use device_kit::led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation};
 use device_kit::wifi_auto::fields::{
     TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic,
@@ -58,13 +58,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static LED4_STATIC: Led4Static = Led4::new_static();
     let led4 = Led4::new(&LED4_STATIC, cells, segments, spawner)?;
 
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<4>::new_static();
     let [
         wifi_credentials_flash_block,
         timezone_flash_block,
         device_name_flash_block,
         location_flash_block,
-    ] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    ] = FlashArray::<4>::new(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);

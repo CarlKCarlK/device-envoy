@@ -6,7 +6,7 @@
 use core::{convert::Infallible, future, panic};
 use device_kit::{
     Result,
-    flash_array::{FlashArray, FlashArrayStatic},
+    flash_array::FlashArray,
     led2d,
     led2d::{Led2dFont, layout::LedLayout},
 };
@@ -41,8 +41,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Create a flash array with one element.
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-    let mut flash_array = FlashArray::<1>::new(&FLASH_STATIC, p.FLASH)?;
+    let mut flash_array = FlashArray::<1>::new(p.FLASH)?;
 
     // Write a ResetMarker (different type than BootCounter) to flash.
     // This clears any existing BootCounter since FlashArray type-checks on load.

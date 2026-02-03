@@ -76,7 +76,7 @@ pub struct ClockSyncStatic {
 ///     Result,
 ///     button::PressedTo,
 ///     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND, h12_m_s},
-///     flash_array::{FlashArray, FlashArrayStatic},
+///     flash_array::FlashArray,
 ///     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
 ///     wifi_auto::{WifiAuto, WifiAutoEvent},
 /// };
@@ -86,9 +86,7 @@ pub struct ClockSyncStatic {
 ///     spawner: embassy_executor::Spawner,
 ///     p: embassy_rp::Peripherals,
 /// ) -> Result<(), device_kit::Error> {
-///     static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
-///     let [wifi_credentials_flash_block, timezone_flash_block] =
-///         FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+///     let [wifi_credentials_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
 ///
 ///     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
 ///     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);

@@ -118,17 +118,14 @@ impl FlashBlock {
 }
 
 /// Static resources for [`FlashArray`].
-///
-/// See [`FlashArray`] for usage examples.
-pub struct FlashArrayStatic {
+pub(crate) struct FlashArrayStatic {
     manager_cell: StaticCell<FlashManager>,
     manager_ref: Mutex<CriticalSectionRawMutex, core::cell::RefCell<Option<&'static FlashManager>>>,
 }
 
 impl FlashArrayStatic {
-    /// Create flash resources.
     #[must_use]
-    pub const fn new_static() -> Self {
+    const fn new() -> Self {
         Self {
             manager_cell: StaticCell::new(),
             manager_ref: Mutex::new(core::cell::RefCell::new(None)),
@@ -184,7 +181,7 @@ impl FlashArrayStatic {
 /// # use panic_probe as _;
 /// # use defmt_rtt as _;
 /// # use core::{convert::Infallible, future};
-/// use device_kit::flash_array::{FlashArray, FlashArrayStatic};
+/// use device_kit::flash_array::FlashArray;
 /// # use defmt::info;
 ///
 /// /// Boot counter (newtype) that wraps at 10.
@@ -205,10 +202,8 @@ impl FlashArrayStatic {
 /// async fn example() -> device_kit::Result<Infallible> {
 ///     let p = embassy_rp::init(Default::default());
 ///
-///     // Create a flash array by creating a static and a struct instance.
-///     // Here we make it length 1. You can destructure the array however you like.
-///     static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-///     let [mut boot_counter_flash_block] = FlashArray::<1>::new(&FLASH_STATIC, p.FLASH)?;
+///     // Create a flash array. You can destructure it however you like.
+///     let [mut boot_counter_flash_block] = FlashArray::<1>::new(p.FLASH)?;
 ///
 ///     // Read boot counter from flash then increment.
 ///     // FlashArray includes a runtime type hash so values are only loaded
@@ -230,20 +225,12 @@ impl FlashArrayStatic {
 pub struct FlashArray<const N: usize>;
 
 impl<const N: usize> FlashArray<N> {
-    /// Construct static resources for [`FlashArray`].
-    #[must_use]
-    pub const fn new_static() -> FlashArrayStatic {
-        FlashArrayStatic::new_static()
-    }
-
     /// Reserve `N` contiguous blocks and return them as an array that you can destructure however you like.
     ///
     /// See [`FlashArray`] for usage examples.
-    pub fn new(
-        flash_static: &'static FlashArrayStatic,
-        peripheral: Peri<'static, FLASH>,
-    ) -> Result<[FlashBlock; N]> {
-        let manager = flash_static.manager(peripheral);
+    pub fn new(peripheral: Peri<'static, FLASH>) -> Result<[FlashBlock; N]> {
+        static FLASH_STATIC: FlashArrayStatic = FlashArrayStatic::new();
+        let manager = FLASH_STATIC.manager(peripheral);
         manager.reserve::<N>()
     }
 }

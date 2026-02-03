@@ -14,7 +14,7 @@
 //! # use defmt_rtt as _;
 //! # use panic_probe as _;
 //! use device_kit::button::PressedTo;
-//! use device_kit::flash_array::{FlashArray, FlashArrayStatic};
+//! use device_kit::flash_array::FlashArray;
 //! use device_kit::Error;
 //! use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
 //! use device_kit::wifi_auto::fields::{
@@ -28,9 +28,7 @@
 //!     spawner: embassy_executor::Spawner,
 //!     p: embassy_rp::Peripherals,
 //! ) -> Result<(), device_kit::Error> {
-//!     static FLASH_STATIC: FlashArrayStatic = FlashArray::<3>::new_static();
-//!     let [wifi_flash, website_flash, timezone_flash] =
-//!         FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+//!     let [wifi_flash, website_flash, timezone_flash] = FlashArray::<3>::new(p.FLASH)?;
 //!
 //!     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
 //!     let website_field = TextField::new(

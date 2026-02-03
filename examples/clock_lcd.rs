@@ -12,7 +12,7 @@ use defmt_rtt as _;
 use device_kit::button::PressedTo;
 use device_kit::char_lcd::{CharLcd, CharLcdStatic};
 use device_kit::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
-use device_kit::flash_array::{FlashArray, FlashArrayStatic};
+use device_kit::flash_array::FlashArray;
 use device_kit::wifi_auto::WifiAuto;
 use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_kit::{Error, Result};
@@ -42,9 +42,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let char_lcd = CharLcd::new(&CHAR_LCD_STATIC, p.I2C0, p.PIN_5, p.PIN_4, spawner)?;
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
-    let [wifi_credentials_flash_block, timezone_flash_block] =
-        FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    let [wifi_credentials_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
 
     // Define timezone field for captive portal
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();

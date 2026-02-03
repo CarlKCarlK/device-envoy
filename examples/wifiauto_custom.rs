@@ -11,7 +11,7 @@ use defmt::{info, warn};
 use device_kit::{
     Result,
     button::PressedTo,
-    flash_array::{FlashArray, FlashArrayStatic},
+    flash_array::FlashArray,
     led_strip::colors,
     led2d,
     led2d::{Led2dFont, layout::LedLayout},
@@ -61,9 +61,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Set up flash storage for WiFi credentials and device name
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<2>::new_static();
-    let [wifi_credentials_flash_block, device_name_flash_block] =
-        FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    let [wifi_credentials_flash_block, device_name_flash_block] = FlashArray::<2>::new(p.FLASH)?;
 
     // Create device name field (max 4 characters)
     static DEVICE_NAME_STATIC: TextFieldStatic<4> = TextField::new_static();

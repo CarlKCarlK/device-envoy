@@ -117,7 +117,7 @@ pub(crate) struct WifiAutoStatic {
 /// use device_kit::{
 ///     Result,
 ///     button::PressedTo,
-///     flash_array::{FlashArray, FlashArrayStatic},
+///     flash_array::FlashArray,
 ///     wifi_auto::{WifiAuto, WifiAutoEvent},
 /// };
 /// use embassy_time::Duration;
@@ -127,8 +127,7 @@ pub(crate) struct WifiAutoStatic {
 ///     p: embassy_rp::Peripherals,
 /// ) -> Result<()> {
 ///     // Set up flash storage for WiFi credentials
-///     static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-///     let [wifi_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+///     let [wifi_flash] = FlashArray::<1>::new(p.FLASH)?;
 ///
 ///     // Construct WifiAuto
 ///     let wifi_auto = WifiAuto::new(
@@ -420,14 +419,13 @@ impl WifiAuto {
     /// # use device_kit::{
     /// #     Result,
     /// #     button::PressedTo,
-    /// #     flash_array::{FlashArray, FlashArrayStatic},
+    /// #     flash_array::FlashArray,
     /// #     wifi_auto::WifiAuto,
     /// # };
     /// # use embassy_executor::Spawner;
     /// # use embassy_rp::Peripherals;
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
-    /// # static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-    /// # let [wifi_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    /// # let [wifi_flash] = FlashArray::<1>::new(p.FLASH)?;
     /// # let wifi_auto = WifiAuto::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,
@@ -458,7 +456,7 @@ impl WifiAuto {
     /// # use device_kit::{
     /// #     Result,
     /// #     button::PressedTo,
-    /// #     flash_array::{FlashArray, FlashArrayStatic},
+    /// #     flash_array::FlashArray,
     /// #     led_strip::colors,
     /// #     wifi_auto::{WifiAuto, WifiAutoEvent},
     /// # };
@@ -472,8 +470,7 @@ impl WifiAuto {
     /// # async fn show_animated_dots(_led8x12: &Led8x12) -> Result<()> { Ok(()) }
     /// # const COLORS: &[RGB8] = &[colors::WHITE];
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
-    /// # static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-    /// # let [wifi_flash] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    /// # let [wifi_flash] = FlashArray::<1>::new(p.FLASH)?;
     /// # let wifi_auto = WifiAuto::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,

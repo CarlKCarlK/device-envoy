@@ -17,7 +17,7 @@ use panic_probe as _;
 use serde::{Deserialize, Serialize};
 
 use device_kit::Result;
-use device_kit::flash_array::{FlashArray, FlashArrayStatic};
+use device_kit::flash_array::FlashArray;
 
 // ============================================================================
 // Test Data Structures
@@ -43,9 +43,8 @@ async fn inner_main(_spawner: Spawner) -> Result<()> {
     // Initialize hardware
     let p = embassy_rp::init(Default::default());
 
-    // Initialize Flash device using the static resources pattern
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<5>::new_static();
-    let [_, _, _, mut string_block, mut config_block] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    // Initialize Flash device
+    let [_, _, _, mut string_block, mut config_block] = FlashArray::<5>::new(p.FLASH)?;
 
     info!("Part 1: Storing data to flash");
     string_block.save(&String::<64>::try_from("Hello, Flash Storage!")?)?;

@@ -10,7 +10,7 @@ use core::{convert::Infallible, fmt::Write, panic};
 use device_kit::{
     Result,
     button::PressedTo,
-    flash_array::{FlashArray, FlashArrayStatic},
+    flash_array::FlashArray,
     led_strip::colors,
     led2d,
     led2d::{Led2dFont, layout::LedLayout},
@@ -47,8 +47,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Flash stores WiFi credentials after first setup
-    static FLASH_STATIC: FlashArrayStatic = FlashArray::<1>::new_static();
-    let [wifi_credentials_flash_block] = FlashArray::new(&FLASH_STATIC, p.FLASH)?;
+    let [wifi_credentials_flash_block] = FlashArray::<1>::new(p.FLASH)?;
 
     // Create a WifiAuto instance.
     // A button is used to force reconfiguration via setup web page.

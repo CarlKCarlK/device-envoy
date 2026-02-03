@@ -9,7 +9,7 @@
 extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
-use device_kit::{
+use device_envoy::{
     Error, Result,
     button::PressedTo,
     flash_array::FlashArray,

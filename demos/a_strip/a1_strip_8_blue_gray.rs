@@ -5,7 +5,7 @@
 
 use core::{convert::Infallible, future, panic};
 
-use device_kit::{
+use device_envoy::{
     Result,
     led_strip::{Frame1d, colors, led_strip},
 };

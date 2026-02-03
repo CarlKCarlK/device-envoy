@@ -6,12 +6,12 @@
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::Result;
-use device_kit::led_strip::led_strips;
-use device_kit::led_strip::{Current, Frame1d, RGB8, colors};
-use device_kit::led2d::Frame2d;
-use device_kit::led2d::Led2dFont;
-use device_kit::led2d::layout::LedLayout;
+use device_envoy::Result;
+use device_envoy::led_strip::led_strips;
+use device_envoy::led_strip::{Current, Frame1d, RGB8, colors};
+use device_envoy::led2d::Frame2d;
+use device_envoy::led2d::Led2dFont;
+use device_envoy::led2d::layout::LedLayout;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use heapless::Vec;

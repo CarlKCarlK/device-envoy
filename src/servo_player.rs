@@ -41,7 +41,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_kit::{Result, servo_player::{AtEnd, servo_player}};
+//! use device_envoy::{Result, servo_player::{AtEnd, servo_player}};
 //! use embassy_time::{Duration, Timer};
 //!
 //! // Define ServoPlayer11, a struct type for a servo on PIN_11.
@@ -94,7 +94,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_kit::{Result, servo_player::{AtEnd, combine, linear, servo_player}};
+//! use device_envoy::{Result, servo_player::{AtEnd, combine, linear, servo_player}};
 //! use embassy_time::Duration;
 //!
 //! // Define ServoSweep, a struct type for a servo on PIN_12.
@@ -236,7 +236,7 @@ pub const fn linear<const N: usize>(
 /// # #![no_std]
 /// # #![no_main]
 /// # use embassy_time::Duration;
-/// # use device_kit::servo_player::{combine, linear};
+/// # use device_envoy::servo_player::{combine, linear};
 /// # use panic_probe as _;
 /// const SWEEP_UP: [(u16, Duration); 19] = linear(0, 180, Duration::from_secs(2));
 /// const HOLD: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];

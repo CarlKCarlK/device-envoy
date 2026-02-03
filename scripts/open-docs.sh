@@ -2,7 +2,7 @@
 set -e
 
 DOC_PARENT="$(pwd)/target/thumbv8m.main-none-eabihf/doc"
-DOC_PATH="$DOC_PARENT/device_kit/index.html"
+DOC_PATH="$DOC_PARENT/device_envoy/index.html"
 
 if [ ! -f "$DOC_PATH" ]; then
   echo "Error: Documentation not found at $DOC_PATH"

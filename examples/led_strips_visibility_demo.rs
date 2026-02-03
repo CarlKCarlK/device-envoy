@@ -3,7 +3,7 @@
 #![no_main]
 
 use defmt_rtt as _;
-use device_kit::led_strip::{Current, led_strips};
+use device_envoy::led_strip::{Current, led_strips};
 use panic_probe as _;
 
 // Public (visibility is required)

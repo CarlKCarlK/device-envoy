@@ -13,11 +13,11 @@
 //! # #![no_main]
 //! # use defmt_rtt as _;
 //! # use panic_probe as _;
-//! use device_kit::button::PressedTo;
-//! use device_kit::flash_array::FlashArray;
-//! use device_kit::Error;
-//! use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
-//! use device_kit::wifi_auto::fields::{
+//! use device_envoy::button::PressedTo;
+//! use device_envoy::flash_array::FlashArray;
+//! use device_envoy::Error;
+//! use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
+//! use device_envoy::wifi_auto::fields::{
 //!     TextField,
 //!     TextFieldStatic,
 //!     TimezoneField,
@@ -27,7 +27,7 @@
 //! async fn example(
 //!     spawner: embassy_executor::Spawner,
 //!     p: embassy_rp::Peripherals,
-//! ) -> Result<(), device_kit::Error> {
+//! ) -> Result<(), device_envoy::Error> {
 //!     let [wifi_flash, website_flash, timezone_flash] = FlashArray::<3>::new(p.FLASH)?;
 //!
 //!     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();

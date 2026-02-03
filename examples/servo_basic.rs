@@ -3,7 +3,7 @@
 #![no_main]
 
 use core::{convert::Infallible, panic};
-use device_kit::{Result, servo};
+use device_envoy::{Result, servo};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};

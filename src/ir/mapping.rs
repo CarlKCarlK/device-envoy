@@ -36,7 +36,7 @@ impl IrMappingStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_kit::ir::{IrMapping, IrMappingStatic};
+/// use device_envoy::ir::{IrMapping, IrMappingStatic};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// #[derive(Debug, Clone, Copy)]
@@ -44,7 +44,7 @@ impl IrMappingStatic {
 /// async fn example(
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
-/// ) -> device_kit::Result<()> {
+/// ) -> device_envoy::Result<()> {
 ///     let button_map = [
 ///         (0x0000, 0x45, RemoteButton::Power),
 ///         (0x0000, 0x0C, RemoteButton::Play),

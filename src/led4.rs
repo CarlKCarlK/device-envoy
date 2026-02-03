@@ -118,7 +118,7 @@ impl AnimationFrame {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_kit::{Error, led4::{BlinkState, Led4, Led4Static, OutputArray}};
+/// use device_envoy::{Error, led4::{BlinkState, Led4, Led4Static, OutputArray}};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///
@@ -226,7 +226,7 @@ impl Led4<'_> {
     /// # use panic_probe as _;
     /// # use embassy_rp::gpio::{Level, Output};
     /// # use embassy_executor::Spawner;
-    /// use device_kit::{Result, led4::{AnimationFrame, Led4, Led4Static, OutputArray}};
+    /// use device_envoy::{Result, led4::{AnimationFrame, Led4, Led4Static, OutputArray}};
     /// use embassy_time::Duration;
     /// async fn demo(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     ///     let cells = OutputArray::new([
@@ -362,7 +362,7 @@ async fn run_animation_loop(
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_kit::led4::{Led4, circular_outline_animation};
+/// use device_envoy::led4::{Led4, circular_outline_animation};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///

@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 #![cfg(feature = "host")]
 
-use device_kit::led2d::{Frame2d, Led2dFont, render_text_to_frame};
+use device_envoy::led2d::{Frame2d, Led2dFont, render_text_to_frame};
 use png::{BitDepth, ColorType, Decoder, Encoder};
 use smart_leds::{RGB8, colors};
 use std::fs::File;
@@ -120,10 +120,10 @@ fn run_render_test_heap<const W: usize, const H: usize>(
 }
 
 fn generation_dir() -> Option<PathBuf> {
-    let env_value = std::env::var("DEVICE_KIT_GENERATE_TEXT_PNGS").ok()?;
+    let env_value = std::env::var("DEVICE_ENVOY_GENERATE_TEXT_PNGS").ok()?;
     let dir = if env_value.is_empty() {
         let mut path = std::env::temp_dir();
-        path.push("device-kit-text-pngs");
+        path.push("device-envoy-text-pngs");
         path
     } else {
         PathBuf::from(env_value)

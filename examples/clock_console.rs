@@ -13,13 +13,13 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::button::PressedTo;
-use device_kit::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
-use device_kit::flash_array::FlashArray;
-use device_kit::wifi_auto::WifiAuto;
-use device_kit::wifi_auto::WifiAutoEvent;
-use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_kit::{Error, Result};
+use device_envoy::button::PressedTo;
+use device_envoy::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
+use device_envoy::flash_array::FlashArray;
+use device_envoy::wifi_auto::WifiAuto;
+use device_envoy::wifi_auto::WifiAutoEvent;
+use device_envoy::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
+use device_envoy::{Error, Result};
 use embassy_executor::Spawner;
 use panic_probe as _;
 

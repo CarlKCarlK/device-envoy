@@ -7,9 +7,9 @@ use core::future;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::Result;
-use device_kit::led_strip::led_strip;
-use device_kit::led_strip::{Frame1d, colors};
+use device_envoy::Result;
+use device_envoy::led_strip::led_strip;
+use device_envoy::led_strip::{Frame1d, colors};
 use embassy_executor::Spawner;
 use panic_probe as _;
 

@@ -114,7 +114,7 @@ pub(crate) struct WifiAutoStatic {
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_kit::{
+/// use device_envoy::{
 ///     Result,
 ///     button::PressedTo,
 ///     flash_array::FlashArray,
@@ -416,7 +416,7 @@ impl WifiAuto {
     /// # #![no_std]
     /// # #![no_main]
     /// # use panic_probe as _;
-    /// # use device_kit::{
+    /// # use device_envoy::{
     /// #     Result,
     /// #     button::PressedTo,
     /// #     flash_array::FlashArray,
@@ -453,7 +453,7 @@ impl WifiAuto {
     /// # #![no_std]
     /// # #![no_main]
     /// # use panic_probe as _;
-    /// # use device_kit::{
+    /// # use device_envoy::{
     /// #     Result,
     /// #     button::PressedTo,
     /// #     flash_array::FlashArray,

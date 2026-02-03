@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 //! Test visibility support for led_strip! and led_strips! macros.
 
-use device_kit::led_strip;
+use device_envoy::led_strip;
 use panic_probe as _;
 
 // Test default visibility (public)
@@ -17,7 +17,7 @@ led_strip! {
 
 // Test explicit public visibility - separate module to avoid conflicts
 mod test_explicit_pub {
-    use device_kit::led_strip;
+    use device_envoy::led_strip;
 
     led_strip! {
         pub LedStripExplicitPub {
@@ -32,7 +32,7 @@ mod test_explicit_pub {
 
 // Test pub(crate) visibility - separate module
 mod test_pub_crate {
-    use device_kit::led_strip;
+    use device_envoy::led_strip;
 
     led_strip! {
         pub(crate) LedStripPubCrate {
@@ -47,7 +47,7 @@ mod test_pub_crate {
 
 // Test private visibility - separate module
 mod test_private {
-    use device_kit::led_strip;
+    use device_envoy::led_strip;
 
     led_strip! {
         pub(self) LedStripPrivate {
@@ -68,7 +68,7 @@ mod test_private {
 
 // Test module visibility
 mod test_module_visibility {
-    use device_kit::led_strip;
+    use device_envoy::led_strip;
 
     led_strip! {
         pub(super) LedStripModulePrivate {
@@ -89,8 +89,8 @@ mod test_module_visibility {
 
 // led_strips! public visibility (strip mode)
 mod test_led_strips_public_strip {
-    use device_kit::led_strip::Current;
-    use device_kit::led_strips;
+    use device_envoy::led_strip::Current;
+    use device_envoy::led_strips;
 
     // Public visibility
     led_strips! {
@@ -106,8 +106,8 @@ mod test_led_strips_public_strip {
 
 // led_strips! private visibility (strip mode)
 mod test_led_strips_private_strip {
-    use device_kit::led_strip::Current;
-    use device_kit::led_strips;
+    use device_envoy::led_strip::Current;
+    use device_envoy::led_strips;
 
     led_strips! {
         pub(self) LedStripsPrivateStrip {
@@ -122,10 +122,10 @@ mod test_led_strips_private_strip {
 
 // led_strips! public visibility (led2d mode)
 mod test_led_strips_public_led2d {
-    use device_kit::led_strip::Current;
-    use device_kit::led_strips;
-    use device_kit::led2d::Led2dFont;
-    use device_kit::led2d::layout::LedLayout;
+    use device_envoy::led_strip::Current;
+    use device_envoy::led_strips;
+    use device_envoy::led2d::Led2dFont;
+    use device_envoy::led2d::layout::LedLayout;
 
     const LED_LAYOUT_PUBLIC: LedLayout<12, 4, 3> = LedLayout::serpentine_column_major();
 
@@ -151,10 +151,10 @@ mod test_led_strips_public_led2d {
 
 // led_strips! private visibility (led2d mode)
 mod test_led_strips_private_led2d {
-    use device_kit::led_strip::Current;
-    use device_kit::led_strips;
-    use device_kit::led2d::Led2dFont;
-    use device_kit::led2d::layout::LedLayout;
+    use device_envoy::led_strip::Current;
+    use device_envoy::led_strips;
+    use device_envoy::led2d::Led2dFont;
+    use device_envoy::led2d::layout::LedLayout;
 
     const LED_LAYOUT_PRIVATE: LedLayout<12, 4, 3> = LedLayout::serpentine_column_major();
 

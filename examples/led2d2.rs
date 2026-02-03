@@ -7,7 +7,7 @@ use core::{convert::Infallible, future};
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::{
+use device_envoy::{
     Result,
     led_strip::{Current, Gamma, colors},
     led2d,

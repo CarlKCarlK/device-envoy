@@ -8,9 +8,9 @@
 #![no_main]
 #![allow(dead_code, reason = "Compile-time verification only")]
 
-use device_kit::Result;
-use device_kit::led_strip::Current;
-use device_kit::led_strip::led_strip;
+use device_envoy::Result;
+use device_envoy::led_strip::Current;
+use device_envoy::led_strip::led_strip;
 use embassy_executor::Spawner;
 
 led_strip! {

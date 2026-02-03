@@ -1,6 +1,6 @@
-# device-kit
+# device-envoy
 
-Device-kit explores application-level device abstractions in embedded Rust, enabled by Embassy async.
+Device-envoy explores application-level device abstractions in embedded Rust, enabled by Embassy async.
 
 It focuses on building reusable, long-lived device abstractions that expose small, typed async APIs, while hiding timing, interrupts, channels, and shared state inside the device.
 

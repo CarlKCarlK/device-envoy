@@ -5,21 +5,25 @@ default-members = ["."]
 [package]
 edition = "2024"
 # if this changes, update .vscode/launch.json and .cargo/config.toml
-name = "device-kit"
+name = "device-envoy"
 version = "0.0.2-alpha"
-description = "High-level device abstractions for Raspberry Pi Pico (RP2040 and RP2350) including LED strips, servos, WiFi, flash storage, and more"
+description = "Build Pico applications with LED panels, easy Wi-Fi, and composable device abstractions"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/CarlKCarlK/device-kit"
-documentation = "https://docs.rs/device-kit"
-homepage = "https://github.com/CarlKCarlK/device-kit"
+repository = "https://github.com/CarlKCarlK/device-envoy"
+documentation = "https://docs.rs/device-envoy"
+homepage = "https://github.com/CarlKCarlK/device-envoy"
 
 # Pure library crate - all applications are in examples/
 [lib]
-name = "device_kit"
+name = "device_envoy"
 path = "src/lib.rs"
 
 [package.metadata.docs.rs]
 features = ["doc-images", "pico2", "arm"]
+
+[package.metadata.envoy]
+# Envoy package marker
+rename-from = "device-kit"
 
 # Compile-only tests (not run, just type-checked)
 [[bin]]

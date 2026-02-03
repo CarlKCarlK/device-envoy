@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use device_kit::led_strip::{RGB8, Rgb888, ToRgb8, ToRgb888};
+use device_envoy::led_strip::{RGB8, Rgb888, ToRgb8, ToRgb888};
 
 #[test]
 fn rgb888_to_rgb8_matches_rgb8() {

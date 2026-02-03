@@ -5,7 +5,7 @@
 
 use core::future;
 use core::{convert::Infallible, panic};
-use device_kit::{
+use device_envoy::{
     Result,
     button::{Button, PressedTo},
     led_strip::{Frame1d, colors, led_strip},

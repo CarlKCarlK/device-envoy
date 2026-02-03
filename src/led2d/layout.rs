@@ -62,7 +62,7 @@
 /// # #![no_main]
 /// # #[panic_handler]
 /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-/// use device_kit::led2d::layout::LedLayout;
+/// use device_envoy::led2d::layout::LedLayout;
 ///
 /// const ROTATED: LedLayout<6, 2, 3> = LedLayout::serpentine_column_major().rotate_cw();
 /// const EXPECTED: LedLayout<6, 2, 3> =
@@ -153,7 +153,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const LINEAR: LedLayout<4, 4, 1> = LedLayout::linear_h();
     /// const ROTATED: LedLayout<4, 4, 1> = LedLayout::linear_v().rotate_cw();
@@ -192,7 +192,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// // 3×2 panel (landscape, W×H)
     /// const MAP: LedLayout<6, 3, 2> =
@@ -257,7 +257,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const LINEAR: LedLayout<6, 6, 1> = LedLayout::linear_h();
     /// const EXPECTED: LedLayout<6, 6, 1> =
@@ -290,7 +290,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const LINEAR: LedLayout<6, 1, 6> = LedLayout::linear_v();
     /// const EXPECTED: LedLayout<6, 1, 6> =
@@ -328,7 +328,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const MAP: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -373,7 +373,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const MAP: LedLayout<6, 3, 2> = LedLayout::serpentine_row_major();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -416,7 +416,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const ROTATED: LedLayout<6, 2, 3> = LedLayout::serpentine_column_major().rotate_cw();
     /// const EXPECTED: LedLayout<6, 2, 3> =
@@ -451,7 +451,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const FLIPPED: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major().flip_h();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -484,7 +484,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const ROTATED: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major().rotate_180();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -509,7 +509,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const ROTATED: LedLayout<6, 2, 3> = LedLayout::serpentine_column_major().rotate_ccw();
     /// const EXPECTED: LedLayout<6, 2, 3> =
@@ -535,7 +535,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const FLIPPED: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major().flip_v();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -560,7 +560,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const LED_LAYOUT: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
     /// const COMBINED: LedLayout<12, 6, 2> = LED_LAYOUT.combine_h::<6, 12, 3, 6>(LED_LAYOUT);
@@ -618,7 +618,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_kit::led2d::layout::LedLayout;
+    /// use device_envoy::led2d::layout::LedLayout;
     ///
     /// const LED_LAYOUT: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
     /// const COMBINED: LedLayout<12, 3, 4> = LED_LAYOUT.combine_v::<6, 12, 2, 4>(LED_LAYOUT);

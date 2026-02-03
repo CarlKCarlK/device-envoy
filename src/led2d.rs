@@ -32,7 +32,7 @@
 //! # use core::result::Result::Ok;
 //! # use embassy_executor::Spawner;
 //! # use embassy_rp::init;
-//! use device_kit::{Result, led2d, led2d::layout::LedLayout, led2d::Led2dFont, led_strip::colors};
+//! use device_envoy::{Result, led2d, led2d::layout::LedLayout, led2d::Led2dFont, led_strip::colors};
 //!
 //! // Tells us how the LED strip is wired up in the panel
 //! // in this case, a common snake-like pattern.
@@ -82,7 +82,7 @@
 //! # use core::future;
 //! # use embassy_executor::Spawner;
 //! # use embassy_rp::init;
-//! use device_kit::{Result, led2d, led2d::layout::LedLayout, led2d::Frame2d, led2d::Led2dFont, led_strip::{Current, Gamma, colors}};
+//! use device_envoy::{Result, led2d, led2d::layout::LedLayout, led2d::Frame2d, led2d::Led2dFont, led_strip::{Current, Gamma, colors}};
 //! use embassy_time::Duration;
 //!
 //! // Our panel is two 12x4 panels stacked vertically and then rotated clockwise.
@@ -524,7 +524,7 @@ impl Led2dFont {
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_kit::{led2d::Frame2d, led_strip::ToRgb888};
+/// use device_envoy::{led2d::Frame2d, led_strip::ToRgb888};
 /// use embedded_graphics::{
 ///     prelude::*,
 ///     primitives::{Circle, PrimitiveStyle, Rectangle},
@@ -793,7 +793,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
 /// - `pin` — GPIO pin for LED data
 /// - `led_layout` — LED strip physical layout (see [`LedLayout`]); this defines the panel size
 /// - `font` — Built-in font variant (see [`Led2dFont`]), e.g. `Led2dFont::Font4x6Trim`.
-///   Bring `Led2dFont` into scope or use a full path like `device_kit::led2d::Led2dFont::Font4x6Trim`.
+///   Bring `Led2dFont` into scope or use a full path like `device_envoy::led2d::Led2dFont::Font4x6Trim`.
 ///
 /// The `led_layout` value must be a const so its dimensions can be derived at compile time.
 ///

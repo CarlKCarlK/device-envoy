@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 //! Compile-only checks for public/private visibility in led_strip!.
 
-use device_kit::led_strip;
+use device_envoy::led_strip;
 use panic_probe as _;
 
 // Public visibility: accessible outside module.
@@ -16,7 +16,7 @@ led_strip! {
 }
 
 mod private_case {
-    use device_kit::led_strip;
+    use device_envoy::led_strip;
 
     // Private visibility: accessible only inside this module.
     led_strip! {

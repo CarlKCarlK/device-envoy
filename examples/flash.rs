@@ -16,8 +16,8 @@ use heapless::String;
 use panic_probe as _;
 use serde::{Deserialize, Serialize};
 
-use device_kit::Result;
-use device_kit::flash_array::FlashArray;
+use device_envoy::Result;
+use device_envoy::flash_array::FlashArray;
 
 // ============================================================================
 // Test Data Structures

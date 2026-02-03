@@ -8,7 +8,7 @@
 
 use core::{convert::Infallible, panic};
 use defmt::{info, warn};
-use device_kit::{
+use device_envoy::{
     Result,
     button::PressedTo,
     flash_array::FlashArray,

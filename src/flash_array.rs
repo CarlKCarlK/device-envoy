@@ -181,7 +181,7 @@ impl FlashArrayStatic {
 /// # use panic_probe as _;
 /// # use defmt_rtt as _;
 /// # use core::{convert::Infallible, future};
-/// use device_kit::flash_array::FlashArray;
+/// use device_envoy::flash_array::FlashArray;
 /// # use defmt::info;
 ///
 /// /// Boot counter (newtype) that wraps at 10.
@@ -199,7 +199,7 @@ impl FlashArrayStatic {
 ///     }
 /// }
 ///
-/// async fn example() -> device_kit::Result<Infallible> {
+/// async fn example() -> device_envoy::Result<Infallible> {
 ///     let p = embassy_rp::init(Default::default());
 ///
 ///     // Create a flash array. You can destructure it however you like.

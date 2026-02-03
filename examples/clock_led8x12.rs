@@ -18,7 +18,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::{
+use device_envoy::{
     Error, Result,
     button::{PressDuration, PressedTo},
     button_watch,

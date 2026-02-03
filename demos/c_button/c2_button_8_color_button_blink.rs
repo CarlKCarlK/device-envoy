@@ -4,7 +4,7 @@
 #![cfg(not(feature = "host"))]
 
 use core::{convert::Infallible, panic};
-use device_kit::{
+use device_envoy::{
     Result,
     button::{Button, PressDuration, PressedTo},
     led_strip::{Frame1d, RGB8, colors, led_strip},

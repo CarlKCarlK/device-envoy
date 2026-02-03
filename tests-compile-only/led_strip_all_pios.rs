@@ -6,9 +6,9 @@
 
 use defmt_rtt as _;
 
-use device_kit::Result;
-use device_kit::led_strip::Current;
-use device_kit::led_strip::led_strips;
+use device_envoy::Result;
+use device_envoy::led_strip::Current;
+use device_envoy::led_strip::led_strips;
 use embassy_executor::Spawner;
 
 const MAX_CURRENT: Current = Current::Milliamps(250);

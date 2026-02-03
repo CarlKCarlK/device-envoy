@@ -1,9 +1,9 @@
 #![allow(missing_docs)]
 #![cfg(feature = "host")]
 
-use device_kit::led_strip::{Frame1d, ToRgb888};
-use device_kit::led2d::{Frame2d, Led2dFont, render_text_to_frame};
-use device_kit::to_png::{write_frame_png_with_gamma, write_frames_apng_with_gamma};
+use device_envoy::led_strip::{Frame1d, ToRgb888};
+use device_envoy::led2d::{Frame2d, Led2dFont, render_text_to_frame};
+use device_envoy::to_png::{write_frame_png_with_gamma, write_frames_apng_with_gamma};
 use embassy_time::Duration;
 use embedded_graphics::{
     prelude::*,

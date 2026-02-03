@@ -6,8 +6,8 @@ use core::convert::Infallible;
 use core::future;
 
 use defmt_rtt as _;
-use device_kit::Result;
-use device_kit::led_strip::{Current, Frame1d, Gamma, colors, led_strip};
+use device_envoy::Result;
+use device_envoy::led_strip::{Current, Frame1d, Gamma, colors, led_strip};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use panic_probe as _;

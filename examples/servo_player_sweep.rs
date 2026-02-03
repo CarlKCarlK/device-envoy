@@ -7,7 +7,7 @@ use panic_probe as _;
 
 use core::convert::Infallible;
 use core::default::Default;
-use device_kit::{
+use device_envoy::{
     Result,
     servo_player::{AtEnd, combine, linear, servo_player},
 };

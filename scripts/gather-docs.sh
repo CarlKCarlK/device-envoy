@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-root="target/thumbv8m.main-none-eabihf/doc/device_kit"
+root="target/thumbv8m.main-none-eabihf/doc/device_envoy"
 output="target/gathers/all_docs.txt"
 
 test -d "$root"

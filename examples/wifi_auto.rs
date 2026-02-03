@@ -10,15 +10,15 @@
 use core::convert::Infallible;
 use defmt::{info, warn};
 use defmt_rtt as _;
-use device_kit::button::PressedTo;
-use device_kit::clock_sync::UnixSeconds;
-use device_kit::flash_array::FlashArray;
-use device_kit::led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation};
-use device_kit::wifi_auto::fields::{
+use device_envoy::button::PressedTo;
+use device_envoy::clock_sync::UnixSeconds;
+use device_envoy::flash_array::FlashArray;
+use device_envoy::led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation};
+use device_envoy::wifi_auto::fields::{
     TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic,
 };
-use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
-use device_kit::{Error, Result};
+use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_envoy::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_net::{Stack, dns::DnsQueryType, udp};
 use embassy_rp::gpio::{self, Level};

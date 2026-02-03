@@ -8,7 +8,7 @@
 
 use core::{convert::Infallible, panic};
 use defmt::info;
-use device_kit::{
+use device_envoy::{
     Error, Result,
     button::PressedTo,
     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND, h12_m_s},

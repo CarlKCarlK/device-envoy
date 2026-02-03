@@ -8,7 +8,7 @@
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::servo;
+use device_envoy::servo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use panic_probe as _;

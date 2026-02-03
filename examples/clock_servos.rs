@@ -13,16 +13,16 @@
 use core::convert::{Infallible, TryFrom};
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::button::{PressDuration, PressedTo};
-use device_kit::button_watch;
-use device_kit::clock_sync::{
+use device_envoy::button::{PressDuration, PressedTo};
+use device_envoy::button_watch;
+use device_envoy::clock_sync::{
     ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
-use device_kit::flash_array::FlashArray;
-use device_kit::servo_player::{AtEnd, combine, linear, servo_player};
-use device_kit::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_kit::wifi_auto::{WifiAuto, WifiAutoEvent};
-use device_kit::{Error, Result};
+use device_envoy::flash_array::FlashArray;
+use device_envoy::servo_player::{AtEnd, combine, linear, servo_player};
+use device_envoy::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
+use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_envoy::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Timer};

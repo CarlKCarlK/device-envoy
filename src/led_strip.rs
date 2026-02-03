@@ -44,8 +44,8 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_kit::{Result, led_strip::{Frame1d, colors}};
-//! use device_kit::led_strip;
+//! use device_envoy::{Result, led_strip::{Frame1d, colors}};
+//! use device_envoy::led_strip;
 //!
 //! // Define LedStripSimple, a struct type for an 8-LED strip on PIN_0.
 //! led_strip! {
@@ -94,8 +94,8 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_kit::{Result, led_strip::{Current, Frame1d, Gamma, colors}};
-//! use device_kit::led_strip;
+//! use device_envoy::{Result, led_strip::{Current, Frame1d, Gamma, colors}};
+//! use device_envoy::led_strip;
 //!
 //! // Define LedStripAnimated, a struct type for a 96-LED strip on PIN_4.
 //! // We change some defaults including setting a 1A power budget and disabling gamma correction.
@@ -181,7 +181,7 @@ pub use embedded_graphics::pixelcolor::Rgb888;
 /// # #![no_main]
 /// # use panic_probe as _;
 /// # use core::assert_eq;
-/// use device_kit::led_strip::{Rgb888, ToRgb8, RGB8};
+/// use device_envoy::led_strip::{Rgb888, ToRgb8, RGB8};
 /// # fn main() {
 /// let rgb8 = RGB8::new(16, 32, 48).to_rgb8();
 /// let rgb888 = Rgb888::new(16, 32, 48);
@@ -221,7 +221,7 @@ impl ToRgb8 for Rgb888 {
 /// # #![no_main]
 /// # use panic_probe as _;
 /// # use core::assert_eq;
-/// use device_kit::led_strip::{Rgb888, ToRgb888, RGB8};
+/// use device_envoy::led_strip::{Rgb888, ToRgb888, RGB8};
 /// # fn main() {
 /// let rgb8 = RGB8::new(16, 32, 48);
 /// let rgb888 = rgb8.to_rgb888();
@@ -806,7 +806,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// # use defmt_rtt as _;
 /// # use embassy_executor::Spawner;
 /// # use defmt::info;
-/// use device_kit::{Result, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout, led_strip::{Current, Frame1d, Gamma, colors, led_strips}};
+/// use device_envoy::{Result, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout, led_strip::{Current, Frame1d, Gamma, colors, led_strips}};
 /// use embassy_time::Duration;
 ///
 /// // Our 2D panel is two 12x4 panels stacked vertically.
@@ -926,7 +926,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// Required fields:
 /// - `led_layout` — Physical layout mapping (defines the panel size). See [`LedLayout`](crate::led2d::layout::LedLayout) for details.
 /// - `font` — Built-in font for text rendering. See [`Led2dFont`](crate::led2d::Led2dFont) for available fonts.
-///   Bring `Led2dFont` into scope or use a full path like `device_kit::led2d::Led2dFont::Font4x6Trim`.
+///   Bring `Led2dFont` into scope or use a full path like `device_envoy::led2d::Led2dFont::Font4x6Trim`.
 ///
 /// The `led_layout` value must be a const so its dimensions can be derived at compile time.
 ///

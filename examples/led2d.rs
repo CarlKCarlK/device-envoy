@@ -7,14 +7,14 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::button::{Button, PressedTo};
-use device_kit::led_strip::Current;
-use device_kit::led_strip::Gamma;
-use device_kit::led2d;
-use device_kit::led2d::Frame2d;
-use device_kit::led2d::Led2dFont;
-use device_kit::led2d::layout::LedLayout;
-use device_kit::{Error, Result};
+use device_envoy::button::{Button, PressedTo};
+use device_envoy::led_strip::Current;
+use device_envoy::led_strip::Gamma;
+use device_envoy::led2d;
+use device_envoy::led2d::Frame2d;
+use device_envoy::led2d::Led2dFont;
+use device_envoy::led2d::layout::LedLayout;
+use device_envoy::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_rp::init;
@@ -136,7 +136,7 @@ async fn demo_blink_pattern(led4x12: &Led4x12) -> Result<()> {
 
 /// Create a red rectangle border with blue diagonals using embedded-graphics.
 async fn demo_rectangle_diagonals_embedded_graphics(led4x12: &Led4x12) -> Result<()> {
-    use device_kit::led_strip::ToRgb888;
+    use device_envoy::led_strip::ToRgb888;
     use embedded_graphics::{
         Drawable,
         prelude::*,

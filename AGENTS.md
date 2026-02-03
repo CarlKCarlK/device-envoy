@@ -8,7 +8,7 @@
 - Prefer `no_run` doctests; use `ignore` only when absolutely necessary (and call out why). Running doctests is best when possible, but rarely feasible for embedded code.
 - Always use `rust,no_run` in doctest fences, not just `no_run`.
 - For Pico programs that should run forever, use `core::future::pending().await` instead of a timer loop.
-- **Hide boilerplate in doctests** using the `#` prefix (e.g., `# #![no_std]`). Hide lines that are noise to the reader but required for compilation: `#![no_std]`, `#![no_main]`, `use panic_probe as _`, `use defmt_rtt as _`, and standard imports like `use embassy_executor::Spawner;`. Keep only the essential code showing how to use the API. **Important:** Do NOT hide imports from `device_kit`, `embassy_time::Duration`, `smart_leds`, or `embedded_graphics` because they are unusual and users need to see them to understand what to import.
+- **Hide boilerplate in doctests** using the `#` prefix (e.g., `# #![no_std]`). Hide lines that are noise to the reader but required for compilation: `#![no_std]`, `#![no_main]`, `use panic_probe as _`, `use defmt_rtt as _`, and standard imports like `use embassy_executor::Spawner;`. Keep only the essential code showing how to use the API. **Important:** Do NOT hide imports from `device_envoy`, `embassy_time::Duration`, `smart_leds`, or `embedded_graphics` because they are unusual and users need to see them to understand what to import.
 - When adding docs for modules or public items, link readers to the primary struct and keep the single compilable example on that struct; other items should point back to it rather than duplicating examples.
 - Prefer `const` values defined in the local context (inside the function/example) rather than at module scope when they're only used there.
 - Always run `cargo check-all` before handing work back; xtask keeps doctests and examples in sync.
@@ -146,42 +146,7 @@ Use `cargo run --bin <name> --target <target> --features <features>` as the stan
 - In examples, prefer importing the types you need (`use crate::foo::{Device, DeviceStatic};`) instead of fully-qualified paths for statics.
 - Keep example shape consistent: show an async function that receives `Peripherals`/`Spawner` (or other handles) and constructs the device with `new_static`/`new`; avoid mixing inline examples without that pattern next to function-based ones.
 - Examples must show the actual `use` statements for the module being documented (bring types into scope explicitly rather than relying on hidden imports).
-- In examples, keep `use` statements limited to `device_kit::...` items; refer to other crates/modules with fully qualified paths inline.
-
-### Precision Over Future‑Proofing
-
-- Prefer precise code that encodes current assumptions with `assert!`s and fails fast when violated.
-- Do not write code that is “resilient to possible future changes” at the expense of clarity; instead, express today’s preconditions explicitly and let assertions catch regressions if behavior changes later.
-- When control flow has expected invariants (e.g., counters must be equal, ranges nonnegative), use `assert!` rather than saturating math or silent fallbacks.
-- If a `match` requires a catch‑all only for type completeness, use `unreachable!()`/`panic!()` rather than `_ => {}` to surface violations early.
-
-- In Rust, generally custom Error enums should be named 'Error' rather than 'MyThingError'
-
-- In Rust, move deconstruction into the arguments were possible.
-
-- In Rust, prefer using the same name when unwrapping, if let Some(max_steps) = max_steps {
-
-- Prefer asserts. If the difference between two values must always be nonnegative, do NOT use saturating_sub; instead use assert!(a >= b); let diff = a - b; to catch any violations. Likewise, if a match requires a catch all, use unreachable or panic, not_ => {}.
-
-### Shadow Names (Rust)
-
-Use shadowing to keep identifiers stable when unwrapping, narrowing types, or parsing values. This keeps code concise, avoids suffix noise (like `_opt`, `_u32`), and clearly communicates that the variable’s invariants/precision have been tightened at that point.
-
-Patterns we prefer:
-
-- Option unwrap (narrowing scope and invariants):
-
-```rust
-if let Some(max_steps) = max_steps {
-    // use max_steps here (shadowed)
-}
-```
-
-- Type narrowing with checked conversion (fail fast):
-
-```rust
-let count = u32::try_from(count).expect("count must fit in u32");
-```
+- In examples, keep `use` statements limited to `device_envoy::...` items; refer to other crates/modules with fully qualified paths inline.
 
 - Parsing into a stronger type:
 
@@ -218,21 +183,21 @@ For RGB8 colors, use the predefined constants from `smart_leds::colors` (re-expo
 ✅ Good:
 
 ```rust
-use device_kit::led_strip::colors;
+use device_envoy::led_strip::colors;
 let frame = [colors::RED, colors::GREEN, colors::BLUE, colors::YELLOW];
 ```
 
 ❌ Bad:
 
 ```rust
-use device_kit::led_strip::Rgb;
+use device_envoy::led_strip::Rgb;
 let red = Rgb::new(255, 0, 0);
 let green = Rgb::new(0, 255, 0);
 ```
 
 Common colors available: `RED`, `GREEN`, `BLUE`, `YELLOW`, `WHITE`, `BLACK`, `CYAN`, `MAGENTA`, `ORANGE`, `PURPLE`, etc.
 
-When working directly with the `embedded_graphics` crate, using `colors::RED.to_rgb888()` (with `device_kit::led_strip::ToRgb888` in scope) is acceptable to avoid conversions.
+When working directly with the `embedded_graphics` crate, using `colors::RED.to_rgb888()` (with `device_envoy::led_strip::ToRgb888` in scope) is acceptable to avoid conversions.
 
 ## Terminology: "Panel" vs "Matrix"
 

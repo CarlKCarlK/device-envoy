@@ -7,7 +7,7 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use core::{convert::Infallible, fmt::Write, panic};
-use device_kit::{
+use device_envoy::{
     Result,
     button::PressedTo,
     flash_array::FlashArray,

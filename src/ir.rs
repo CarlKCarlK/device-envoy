@@ -156,14 +156,14 @@ impl IrStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_kit::ir::{Ir, IrEvent, IrStatic};
+/// use device_envoy::ir::{Ir, IrEvent, IrStatic};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///
 /// async fn example(
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
-/// ) -> device_kit::Result<()> {
+/// ) -> device_envoy::Result<()> {
 ///     static IR_STATIC: IrStatic = Ir::new_static();
 ///     let ir = Ir::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
 ///

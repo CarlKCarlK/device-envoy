@@ -7,7 +7,7 @@ use core::{convert::Infallible, future};
 
 use defmt::info;
 use defmt_rtt as _;
-use device_kit::{
+use device_envoy::{
     Result, led_strip::ToRgb888, led2d, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout,
 };
 use embassy_executor::Spawner;

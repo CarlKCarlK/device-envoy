@@ -98,7 +98,7 @@ pub enum PressDuration {
 /// # #![no_std]
 /// # #![no_main]
 ///
-/// use device_kit::button::{Button, PressDuration, PressedTo};
+/// use device_envoy::button::{Button, PressDuration, PressedTo};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///

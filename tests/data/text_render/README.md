@@ -25,15 +25,15 @@ When you modify the font rendering code or want to update the reference images:
 2. Visually inspect the generated PNGs:
 
    ```bash
-   eog /tmp/device-kit-text-pngs-XXXXX/*.png
+   eog /tmp/device-envoy-text-pngs-XXXXX/*.png
    # or
-   display /tmp/device-kit-text-pngs-XXXXX/*.png
+   display /tmp/device-envoy-text-pngs-XXXXX/*.png
    ```
 
 3. If they look correct, copy them to replace the references:
 
    ```bash
-   cp /tmp/device-kit-text-pngs-XXXXX/*.png tests/data/text_render/
+   cp /tmp/device-envoy-text-pngs-XXXXX/*.png tests/data/text_render/
    ```
 
 4. Commit the updated PNGs to git.

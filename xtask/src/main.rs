@@ -1,4 +1,4 @@
-//! Build automation tasks for the device-kit project.
+//! Build automation tasks for the device-envoy project.
 //!
 //! Run with: `cargo xtask <command>`
 
@@ -16,7 +16,7 @@ use std::sync::Mutex;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
-#[command(about = "Build automation for device-kit project", long_about = None)]
+#[command(about = "Build automation for device-envoy project", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -294,7 +294,7 @@ fn check_all() -> ExitCode {
             host_test_cmd.args([
                 "--no-default-features",
                 "--features",
-                "host",
+                "defmt,host",
                 "--lib",
                 "--tests",
             ]);

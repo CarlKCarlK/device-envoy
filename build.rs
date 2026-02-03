@@ -1,4 +1,4 @@
-//! Build script for device-kit.
+//! Build script for device-envoy.
 
 use std::{env, fs, path::PathBuf, process::Command};
 

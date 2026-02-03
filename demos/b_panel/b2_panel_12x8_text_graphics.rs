@@ -62,7 +62,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // With embedded-graphics, you can draw any shapes you want (and text too).
 
-    // - We use smart-leds' `RGB8` color type throughout device-kit.
+    // - We use smart-leds' `RGB8` color type throughout device-envoy.
     //   embedded-graphics uses its own `Rgb888`, so we convert.
     // - Named colors follow different conventions.
     //   smart-leds uses web/X11 colors (GREEN = 0,128,0).

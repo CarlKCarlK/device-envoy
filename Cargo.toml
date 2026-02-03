@@ -23,7 +23,7 @@ features = ["doc-images", "pico2", "arm"]
 
 [package.metadata.envoy]
 # Envoy package marker
-rename-from = "device-kit"
+rename-from = "device-kit" # Historical: renamed from device-kit to device-envoy
 
 # Compile-only tests (not run, just type-checked)
 [[bin]]

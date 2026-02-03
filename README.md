@@ -10,7 +10,7 @@ Currently targeting Raspberry Pi Pico 1 and Pico 2, with patterns intended to tr
 
 ⚠️ **Alpha / Experimental**
 
-`device-kit` is an experimental library exploring composable device abstractions
+`device-envoy` is an experimental library exploring composable device abstractions
 for embedded Rust. The API is evolving and will change.
 
 The crate is currently focused on Raspberry Pi Pico–class hardware and is intended

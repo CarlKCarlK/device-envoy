@@ -16,9 +16,11 @@ use crate::{Error, Result};
 // Submodules
 // ============================================================================
 
+pub mod ir_pio;
 mod kepler;
 mod mapping;
 
+pub use ir_pio::{IrPio, IrPioStatic};
 pub use kepler::{IrKepler, IrKeplerStatic, KeplerButton};
 pub use mapping::{IrMapping, IrMappingStatic};
 

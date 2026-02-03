@@ -44,8 +44,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Create a one-block flash array. Each block holds up to 3900 bytes
     // of serialized data (one 4 KB flash sector minus metadata).
+    let flash_array = FlashArray::<1>::new(p.FLASH)?;
     // Can destructure the array.
-    let [mut boot_counter_block] = FlashArray::<1>::new(p.FLASH)?;
+    let [mut boot_counter_block] = flash_array;
 
     // Read the boot counter. Wrong type -> None -> BootCounter(0).
     let mut boot_counter = boot_counter_block.load()?.unwrap_or(BootCounter(0));

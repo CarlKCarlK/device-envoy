@@ -49,7 +49,7 @@ Variables should generally match their type names converted to snake_case. This 
 
 Avoid abbreviations like `addrs`; spell out `addresses`.
 
-**Naming: dimensions and 2d**
+### Naming: dimensions and 2d
 
 Use standard Rust snake_case for locals, fields, and functions; UpperCamelCase for types; SCREAMING_SNAKE_CASE for constants.
 
@@ -384,7 +384,7 @@ pub struct InternalHelper { ... }  // Public but hidden - confusing!
 
 If something truly shouldn't be in public docs, it shouldn't be `pub` either. Use `pub(crate)` for crate-internal APIs or omit `pub` entirely for private items. The `#[doc(hidden)]` attribute creates a mismatch between visibility and documentation that makes the API less clear.
 
-**Exception: Macro helpers**
+### Exception: Macro helpers
 
 There is one legitimate use case for `#[doc(hidden)]` on `pub` items: functions called by public macros that expand at the call site. These must be `pub` (not `pub(crate)`) because macro-generated code in downstream crates needs to call them, but they're not part of the user-facing API.
 

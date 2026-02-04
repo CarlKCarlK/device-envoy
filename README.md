@@ -1,194 +1,137 @@
 # device-envoy
 
-Device-envoy explores application-level device abstractions in embedded Rust, enabled by Embassy async.
+**Build Pico applications with LED panels, easy WiFi, and composable device abstractions.**
 
-It focuses on building reusable, long-lived device abstractions that expose small, typed async APIs, while hiding timing, interrupts, channels, and shared state inside the device.
+`device-envoy` explores application-level device abstractions in embedded Rust using the Embassy async framework. It focuses on building reusable, typed async APIs that hide timing, interrupts, channels, and shared state inside the device.
 
-Currently targeting Raspberry Pi Pico 1 and Pico 2, with patterns intended to transfer to other microcontrollers.
+Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores). RISC-V core support exists but is not actively tested.
 
 ## Status
 
-⚠️ **Alpha / Experimental**
+⚠️ **Alpha / Experimental** (version 0.0.2-alpha)
 
-`device-envoy` is an experimental library exploring composable device abstractions
-for embedded Rust. The API is evolving and will change.
-
-The crate is currently focused on Raspberry Pi Pico–class hardware and is intended
-for experimentation, examples, and discussion rather than production use.
+The API is actively evolving. Not recommended for production use, but excellent for experimentation and embedded Rust learning.
 
 **Background:** See [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson.
 
-## Features (current)
+## Features
 
-- **Async peripheral drivers** - Non-blocking I/O using Embassy async framework
-- **Device abstraction pattern** - Hardware abstraction with message-passing channels
-- **2D LED Matrices** - Addressable LED strip displays with text rendering, animation, and embedded-graphics support
-- **RFID Reader** - MFRC522 SPI reader with card detection events
-- **IR Remote** - NEC protocol decoder with GPIO interrupt edge detection
-- **LCD Display** - HD44780 I2C async driver with timed messages and two-line support
-- **Servo Control** - Hardware PWM-based servo positioning (0-180°)
-- **WiFi (Pico W)** - CYW43439 WiFi with TCP/UDP networking and NTP time sync
+- **LED Panels & Strips** - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, and embedded-graphics support
+- **WiFi (Pico W)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to stored networks.
+- **Button Input** - Button handling with debouncing
+- **Servo Control** - Servo positioning and animation
+- **Flash Storage** - Type-safe, on-board persist storage
+- **LCD Display** - Text display (HD44780)
+- **IR Remote** - Remote control decoder (NEC protocol)
+- **RFID Reader** - Card detection and reading (MFRC522)
 
-## Examples
+## Examples & Demos
 
-### Full Demo (`examples/full.rs`)
+The project includes **examples** (single-device tests) in `examples/` and **demo applications** in `demos/` showing real-world integration patterns:
 
-Complete demonstration integrating all peripherals:
+- **LED Strip Examples**: Simple animations, color control, text rendering
+- **LED Panel Examples**: 12×4, 12×8, and multi-panel configurations with graphics
+- **Button Examples**: Debouncing and state handling
+- **Servo Examples**: Position sweeps and animation playback
+- **WiFi Examples**: WiFi setup, time sync, DNS
+- **Flash Examples**: Configuration persistence and data reset
 
-- RFID cards assigned letters A-D, control servo position
-- IR remote buttons 0-9 set servo angles (0°-180° in 20° steps)
-- LCD displays real-time status with two-line messages
-- Card mapping with automatic assignment
+See the `examples/` and `demos/` directories for complete runnable code.
+
+## Building & Running
+
+### Prerequisites
 
 ```bash
-cargo full
+# Add Rust targets for Pico boards (ARM cores are fully tested)
+rustup target add thumbv6m-none-eabi           # Pico 1 (ARM)
+rustup target add thumbv8m.main-none-eabihf    # Pico 2 (ARM)
+
+# Optional: Pico 2 RISC-V core (not actively tested, experimental)
+rustup target add riscv32imac-unknown-none-elf
 ```
 
-### Clock LCD (`examples/clock_lcd.rs`)
-
-Pico W WiFi clock with automatic time sync:
-
-- On-device captive portal provisions WiFi credentials and timezone (stored in flash)
-- Fetches local time with DST support via WorldTimeAPI
-- Displays time in 12-hour format with AM/PM on LCD
-- Keeps local time, syncs with internet hourly
+### Build the library
 
 ```bash
+# Build just the library for Pico 1 (ARM core, no WiFi)
+cargo build --lib --target thumbv6m-none-eabi
+
+# Pico 2 with WiFi (requires --no-default-features to override pico1 default)
+cargo build --lib --target thumbv8m.main-none-eabihf --features pico2,wifi,arm --no-default-features
+```
+
+**Feature flags explained:**
+
+- `pico1` / `pico2` — Which board to target
+- `arm` — Use ARM core (default on both boards)
+- `wifi` — Enable WiFi module (Pico W only)
+
+### Run examples
+
+Examples are easiest to run using cargo aliases defined in `.cargo/config.toml`:
+
+```bash
+# Pico 1 examples (simplest)
+cargo blinky
+
+# Pico 2 examples (with WiFi)
 cargo clock-lcd-w
+cargo clock-led12x4-w
+
+# Just check without running
+cargo blinky-check
 ```
 
-### Wireless/NTP (`examples/wireless.rs`)
-
-Pico W WiFi connectivity example:
-
-- Captive portal collects WiFi credentials before starting the network stack
-- Fetches current time via WorldTimeAPI (HTTP)
-- Displays local time every minute
+Or use `cargo xtask` for more control:
 
 ```bash
-cargo wireless
+cargo xtask example blinky --board pico1 --arch arm
+cargo xtask example clock_lcd --board pico2 --arch arm --wifi
 ```
 
-### IR NEC Decoder (`examples/ir.rs`)
+For a complete list of cargo aliases, see `.cargo/config.toml`. For `just` commands, see `justfile`.
 
-IR remote receiver using the NEC protocol decoder library
+### Check all (builds, tests, docs)
 
 ```bash
-cargo ir
+cargo check-all  # Runs all checks in parallel
 ```
 
-## Hardware Setup
+## Hardware Notes
 
-### Pico Pinout (examples/full.rs)
+### Standard Pinouts
 
-- **GP0**: Servo PWM signal (PWM0 Channel A)
-- **GP4**: LCD SDA (I2C0)
-- **GP5**: LCD SCL (I2C0)
-- **GP15-19**: RFID MFRC522 (SPI0: CS, MISO, SCK, MOSI, RST)
-- **GP28**: IR receiver signal (pulled high, edge detection)
+Examples use conventional pin assignments for consistency:
 
-### Pico W Additional (examples/wireless.rs, examples/clock_lcd.rs)
+- **PIN_0**: LED strip (8-pixel simple example)
+- **PIN_3**: LED panel (12×4, 48 pixels)
+- **PIN_4**: Extended LED panel (12×8, 96 pixels)
+- **PIN_13**: Button (active-low)
+- **PIN_11, PIN_12**: Servo signals
 
-- **GP23**: CYW43 power enable
-- **GP24**: CYW43 SPI data (via PIO)
-- **GP25**: CYW43 SPI chip select
-- **GP29**: CYW43 SPI clock (via PIO)
+### WiFi (Pico W)
 
-## EMI Mitigation Notes
-
-For reliable IR operation alongside SPI RFID:
-
-- Use **GP28** for IR (away from SPI cluster GP15-19)
-- Add **22pF capacitor** between IR signal and GND
-- Reduce RFID polling to **500ms intervals**
-- MIN_IDLE filter rejects <5ms noise pulses
+- **PIN_23**: CYW43 power enable
+- **PIN_24–29**: CYW43 SPI + control pins (via PIO)
 
 ## Testing
 
-The project includes host-side tests for font rendering that run on your development machine (no hardware required).
+Host-side tests run on your development machine without hardware:
 
 ```bash
-# Run all host tests (font rendering comparisons against reference PNGs)
-cargo test --features host --no-default-features --test '*'
+# Run host tests (unit + integration)
+cargo test --no-default-features --features defmt,host
 
-# Regenerate reference PNGs for visual inspection
-./scripts/regenerate-text-pngs.sh
-# Then visually inspect the generated PNGs and copy to tests/data/text_render/ if correct
+# Or run via xtask
+cargo xtask check-docs  # Includes doc tests
 ```
 
-See [tests/data/text_render/README.md](tests/data/text_render/README.md) for details on the font rendering tests.
+Tests include:
 
-## Building
-
-Requires Rust nightly with appropriate target for your board:
-
-```bash
-rustup target add thumbv6m-none-eabi           # Pico 1 (ARM)
-rustup target add thumbv8m.main-none-eabihf    # Pico 2 (ARM)
-rustup target add riscv32imac-unknown-none-elf # Pico 2 (RISC-V)
-
-cargo build                    # Library only (defaults: pico1,arm)
-cargo build --example full     # Full peripheral demo
-cargo build --example full --features pico2,arm  # Full demo for Pico 2
-```
-
-Or use the cargo aliases:
-
-```bash
-# Pico 1 (default, ARM, no WiFi)
-cargo full       # Run full demo (--release)
-cargo ir         # Run IR reader (--release)
-cargo flash      # Run flash example (--release)
-
-# Pico 1 with WiFi
-cargo full-w        # Run full demo with WiFi (--release)
-cargo clock-lcd-w   # Run LCD clock (--release)
-
-# Pico 2 ARM
-cargo full-2        # Run full demo on Pico 2 (--release)
-cargo blinky-2      # Run blinky on Pico 2 (--release)
-
-# Pico 2 RISC-V (experimental)
-cargo blinky-2r     # Run blinky on Pico 2 RISC-V (--release)
-```
-
-See `ARCHITECTURE.md` for detailed information about board and architecture features.
-
-## Limitations
-
-- These patterns will work on any microcontroller, but this specific library
-works only on the Pico 1 and Pico 2.
-
-## Windows/WSL Debug Probe Helper
-
-`scripts/probeusb.ps1` automates moving the CMSIS-DAP probe between Windows and WSL:
-
-```powershell
-# Show current owner ("Windows" vs "WSL")
-powershell -ExecutionPolicy Bypass -File .\scripts\probeusb.ps1
-
-# Give WSL exclusive access (Windows COM port disappears)
-powershell -ExecutionPolicy Bypass -File .\scripts\probeusb.ps1 wsl
-
-# Return the probe to Windows
-powershell -ExecutionPolicy Bypass -File .\scripts\probeusb.ps1 win
-```
-
-It detects the bus ID automatically (assumes a single probe is connected). If you
-have multiple USB entries, set `PROBEUSB_PATTERN` to part of the device name.
-
-## Configuration
-
-WiFi credentials and timezone offset are provisioned on-device. When the Pico W
-boots without stored settings it automatically starts in captive-portal mode
-(`www.picoclock.net`) and hosts a captive portal at `http://192.168.4.1`. Use that page
-to enter your SSID, password, and UTC offset in minutes. The submission is saved
-to flash (blocks 0/1) and the device reboots into client mode. Clear those flash
-blocks or use the UI option in the clock demos to return to provisioning mode.
-
-## Demo
-
-[![Demo Video](https://img.youtube.com/vi/Rx-7iw-0UeA/0.jpg)](https://youtu.be/Rx-7iw-0UeA)
+- LED text rendering comparisons against reference images
+- 2D LED matrix mapping algebra
+- LED color space conversions
 
 ## License
 

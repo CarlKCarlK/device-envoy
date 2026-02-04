@@ -370,6 +370,24 @@ Examples use the following standard PIO resource and pin assignments:
 
 When writing new examples or documentation, follow this convention for consistency.
 
+### Single LED Wiring (for `Led` device)
+
+For single LED examples using the `Led` device abstraction, use **PIN_1**. The `Led` device supports both high-level-on and low-level-on configurations:
+
+**High level on (default):**
+
+- LED anode (long leg) → 220Ω resistor → PIN_1
+- LED cathode (short leg) → GND
+- Use: `Led::new(&led_static, pin, OnLevel::High, spawner)`
+
+**Low level on:**
+
+- LED anode (long leg) → 3.3V
+- LED cathode (short leg) → 220Ω resistor → PIN_1
+- Use: `Led::new(&led_static, pin, OnLevel::Low, spawner)`
+
+The `OnLevel` enum specifies what pin level turns the LED on.
+
 ## Button Pin
 
 The standard button pin across examples is **PIN_13**:

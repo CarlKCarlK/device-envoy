@@ -204,6 +204,8 @@ fn check_compile_only() -> ExitCode {
     compile_tests.par_iter().for_each(|test| {
         if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
             "check",
+            "-p",
+            "device-envoy-compile-only",
             "--bin",
             test,
             "--target",
@@ -348,6 +350,8 @@ fn check_all() -> ExitCode {
             no_wifi_demos.par_iter().for_each(|demo| {
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                     "build",
+                    "-p",
+                    "device-envoy-demos",
                     "--bin",
                     &demo.name,
                     "--target",
@@ -360,6 +364,8 @@ fn check_all() -> ExitCode {
                 }
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                     "build",
+                    "-p",
+                    "device-envoy-demos",
                     "--bin",
                     &demo.name,
                     "--target",
@@ -437,6 +443,8 @@ fn check_all() -> ExitCode {
                 compile_tests.par_iter().for_each(|test| {
                     if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                         "check",
+                        "-p",
+                        "device-envoy-compile-only",
                         "--bin",
                         test,
                         "--target",
@@ -713,6 +721,8 @@ fn check_demos() -> ExitCode {
         }
         if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
             "build",
+            "-p",
+            "device-envoy-demos",
             "--bin",
             &demo.name,
             "--target",
@@ -725,6 +735,8 @@ fn check_demos() -> ExitCode {
         }
         if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
             "build",
+            "-p",
+            "device-envoy-demos",
             "--bin",
             &demo.name,
             "--target",
@@ -886,7 +898,7 @@ struct DemoInfo {
 }
 
 fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
-    let cargo_toml = workspace_root.join("Cargo.toml");
+    let cargo_toml = workspace_root.join("demos/Cargo.toml");
     let contents = fs::read_to_string(&cargo_toml).expect("Failed to read Cargo.toml");
     let mut demos = Vec::new();
 
@@ -900,19 +912,17 @@ fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
                     current_wifi_required: &mut bool,
                     demos: &mut Vec<DemoInfo>| {
         if let (Some(name), Some(path)) = (current_name.take(), current_path.take()) {
-            if path.starts_with("demos/") {
-                let demo_path = workspace_root.join(&path);
-                let mut wifi_required = *current_wifi_required;
-                if !wifi_required {
-                    let source = fs::read_to_string(&demo_path)
-                        .unwrap_or_else(|_| panic!("Failed to read {}", demo_path.display()));
-                    wifi_required = source.contains("#![cfg(feature = \"wifi\")]");
-                }
-                demos.push(DemoInfo {
-                    name,
-                    wifi_required,
-                });
+            let demo_path = workspace_root.join("demos").join(&path);
+            let mut wifi_required = *current_wifi_required;
+            if !wifi_required {
+                let source = fs::read_to_string(&demo_path)
+                    .unwrap_or_else(|_| panic!("Failed to read {}", demo_path.display()));
+                wifi_required = source.contains("#![cfg(feature = \"wifi\")]");
             }
+            demos.push(DemoInfo {
+                name,
+                wifi_required,
+            });
         }
         *current_wifi_required = false;
     };

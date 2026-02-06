@@ -1,0 +1,130 @@
+[package]
+name = "device-envoy-demos"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[features]
+default = []
+defmt = ["device-envoy/defmt"]
+embedded = ["device-envoy/embedded"]
+pico1 = ["device-envoy/pico1", "embassy-rp/rp2040"]
+pico2 = ["device-envoy/pico2", "embassy-rp/rp235xb"]
+arm = ["device-envoy/arm", "embassy-executor/arch-cortex-m"]
+riscv = ["device-envoy/riscv", "embassy-executor/arch-riscv32", "riscv-rt"]
+host = ["device-envoy/host"]
+doc-images = ["device-envoy/doc-images"]
+wifi = ["device-envoy/wifi"]
+display-trace = ["device-envoy/display-trace"]
+
+[dependencies]
+device-envoy = { path = "..", default-features = false }
+defmt = "0.3.10"
+defmt-rtt = "1.1.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+embassy-executor = { version = "0.9.1", default-features = false, features = [
+    "executor-thread",
+    "defmt",
+] }
+embassy-time = { version = "0.5.0", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
+embassy-rp = { version = "0.9.0", default-features = false, features = [
+    "rt",
+    "defmt",
+    "time-driver",
+    "critical-section-impl",
+] }
+embedded-graphics = { version = "0.8", default-features = false }
+smart-leds = "0.4.0"
+paste = "1.0"
+heapless = "0.8.0"
+static_cell = "2.1.0"
+cortex-m-rt = "0.7.5"
+riscv-rt = { version = "0.12", optional = true }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+
+[[bin]]
+name = "demo_a1_strip_8_blue_gray"
+path = "a_strip/a1_strip_8_blue_gray.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_a2_strip_8_blue_white_blink"
+path = "a_strip/a2_strip_8_blue_white_blink.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_a3_strip_8_blue_white_blink_animate"
+path = "a_strip/a3_strip_8_blue_white_blink_animate.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_a4_strip_96_blue_white_dot"
+path = "a_strip/a4_strip_96_blue_white_dot.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_b1_panel_12x8_rust_cursor"
+path = "b_panel/b1_panel_12x8_rust_cursor.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_b2_panel_12x8_text_graphics"
+path = "b_panel/b2_panel_12x8_text_graphics.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_c1_button_8_yellow_button_blink"
+path = "c_button/c1_button_8_yellow_button_blink.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_c2_button_8_color_button_blink"
+path = "c_button/c2_button_8_color_button_blink.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_d1_servo_single_sweep"
+path = "d_servo/d1_servo_single_sweep.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_d2_servo_animate"
+path = "d_servo/d2_servo_animate.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_e0_reset"
+path = "e_flash/e0_reset.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_e1_power_counter"
+path = "e_flash/e1_power_counter.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_f1_dns"
+path = "f_wifi_auto/f1_dns.rs"
+test = false
+required-features = ["arm", "wifi"]
+
+[[bin]]
+name = "demo_g1_clock_sync"
+path = "g_clock/g1_clock_sync.rs"
+test = false
+required-features = ["arm", "wifi"]

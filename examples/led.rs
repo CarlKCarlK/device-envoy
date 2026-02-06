@@ -10,9 +10,9 @@ use device_envoy::{
     Result,
     led::{Led, LedStatic, OnLevel},
 };
-use embassy_executor::Spawner;
 use embassy_rp::gpio::Level;
 use embassy_time::{Duration, Timer};
+use embassy_executor::Spawner;
 use panic_probe as _;
 
 #[embassy_executor::main]

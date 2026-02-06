@@ -1,12 +1,12 @@
 [workspace]
-members = ["xtask"]
+members = ["xtask", "demos", "tests-compile-only"]
 default-members = ["."]
 
 [package]
 edition = "2024"
 # if this changes, update .vscode/launch.json and .cargo/config.toml
 name = "device-envoy"
-version = "0.0.2-alpha.4"
+version = "0.0.2-alpha.5"
 description = "Build Pico applications with LED panels, easy Wi-Fi, and composable device abstractions"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/CarlKCarlK/device-envoy"
@@ -28,141 +28,6 @@ features = ["embedded", "wifi", "doc-images"]
 [package.metadata.envoy]
 # Envoy package marker
 rename-from = "device-kit" # Historical: renamed from device-kit to device-envoy
-
-# Compile-only tests (not run, just type-checked)
-[[bin]]
-name = "led12x4"
-path = "tests-compile-only/led12x4.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led2d_custom_mapping"
-path = "tests-compile-only/led2d_custom_mapping.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led2d_multiple"
-path = "tests-compile-only/led2d_multiple.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led2d_visibility"
-path = "tests-compile-only/led2d_visibility.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led_strip_visibility"
-path = "tests-compile-only/led_strip_visibility.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led_strip_visibility_public_private"
-path = "tests-compile-only/led_strip_visibility_public_private.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led_strip_pio0"
-path = "tests-compile-only/led_strip_pio0.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led_strip_pio1"
-path = "tests-compile-only/led_strip_pio1.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led_strip_all_pios"
-path = "tests-compile-only/led_strip_all_pios.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "led_strip_two_one"
-path = "tests-compile-only/led_strip_two_one.rs"
-required-features = ["pico1"]
-
-[[bin]]
-name = "demo_a1_strip_8_blue_gray"
-path = "demos/a_strip/a1_strip_8_blue_gray.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_a2_strip_8_blue_white_blink"
-path = "demos/a_strip/a2_strip_8_blue_white_blink.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_a3_strip_8_blue_white_blink_animate"
-path = "demos/a_strip/a3_strip_8_blue_white_blink_animate.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_a4_strip_96_blue_white_dot"
-path = "demos/a_strip/a4_strip_96_blue_white_dot.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_b1_panel_12x8_rust_cursor"
-path = "demos/b_panel/b1_panel_12x8_rust_cursor.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_b2_panel_12x8_text_graphics"
-path = "demos/b_panel/b2_panel_12x8_text_graphics.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_c1_button_8_yellow_button_blink"
-path = "demos/c_button/c1_button_8_yellow_button_blink.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_c2_button_8_color_button_blink"
-path = "demos/c_button/c2_button_8_color_button_blink.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_d1_servo_single_sweep"
-path = "demos/d_servo/d1_servo_single_sweep.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_d2_servo_animate"
-path = "demos/d_servo/d2_servo_animate.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_e0_reset"
-path = "demos/e_flash/e0_reset.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_e1_power_counter"
-path = "demos/e_flash/e1_power_counter.rs"
-test = false
-required-features = ["arm"]
-
-[[bin]]
-name = "demo_f1_dns"
-path = "demos/f_wifi_auto/f1_dns.rs"
-test = false
-required-features = ["arm", "wifi"]
-
-[[bin]]
-name = "demo_g1_clock_sync"
-path = "demos/g_clock/g1_clock_sync.rs"
-test = false
-required-features = ["arm", "wifi"]
 
 [features]
 default = ["host"]

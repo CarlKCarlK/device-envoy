@@ -1,0 +1,95 @@
+[package]
+name = "device-envoy-compile-only"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[features]
+default = []
+defmt = ["device-envoy/defmt"]
+embedded = ["device-envoy/embedded"]
+pico1 = ["device-envoy/pico1", "embassy-rp/rp2040"]
+pico2 = ["device-envoy/pico2", "embassy-rp/rp235xb"]
+arm = ["device-envoy/arm", "embassy-executor/arch-cortex-m"]
+riscv = ["device-envoy/riscv", "embassy-executor/arch-riscv32", "riscv-rt"]
+host = ["device-envoy/host"]
+doc-images = ["device-envoy/doc-images"]
+wifi = ["device-envoy/wifi"]
+display-trace = ["device-envoy/display-trace"]
+
+[dependencies]
+device-envoy = { path = "..", default-features = false }
+defmt = "0.3.10"
+defmt-rtt = "1.1.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+embassy-executor = { version = "0.9.1", default-features = false, features = [
+    "executor-thread",
+    "defmt",
+] }
+embassy-time = { version = "0.5.0", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
+embassy-rp = { version = "0.9.0", default-features = false, features = [
+    "rt",
+    "defmt",
+    "time-driver",
+    "critical-section-impl",
+] }
+embedded-graphics = { version = "0.8", default-features = false }
+smart-leds = "0.4.0"
+paste = "1.0"
+heapless = "0.8.0"
+static_cell = "2.1.0"
+cortex-m-rt = "0.7.5"
+riscv-rt = { version = "0.12", optional = true }
+
+[[bin]]
+name = "led12x4"
+path = "led12x4.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led2d_custom_mapping"
+path = "led2d_custom_mapping.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led2d_multiple"
+path = "led2d_multiple.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led2d_visibility"
+path = "led2d_visibility.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_visibility"
+path = "led_strip_visibility.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_visibility_public_private"
+path = "led_strip_visibility_public_private.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_pio0"
+path = "led_strip_pio0.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_pio1"
+path = "led_strip_pio1.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_all_pios"
+path = "led_strip_all_pios.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_two_one"
+path = "led_strip_two_one.rs"
+required-features = ["pico1"]

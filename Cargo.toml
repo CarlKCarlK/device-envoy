@@ -165,7 +165,7 @@ test = false
 required-features = ["arm", "wifi"]
 
 [features]
-default = ["embedded"]
+default = ["host"]
 defmt = ["dep:defmt-rtt", "dep:panic-probe"]
 embedded = ["defmt", "pico1", "arm"]
 pico1 = ["dep:embassy-rp", "embassy-rp/rp2040", "defmt"]

@@ -199,27 +199,11 @@ defmt = "0.3.10"
 defmt-rtt = { version = "1.1.0", optional = true }
 panic-probe = { version = "1.0.0", features = ["print-defmt"], optional = true }
 
-# ARM Cortex-M dependencies (for Pico 1 and Pico 2 ARM core)
-cortex-m-rt = { version = "0.7.5", optional = true }
-cortex-m = { version = "0.7.7", optional = true }
-
-# RISC-V dependencies (for Pico 2 RISC-V core)
-riscv-rt = { version = "0.12", optional = true }
-riscv = { version = "0.11", features = [
-    "critical-section-single-hart",
-], optional = true }
-
 embassy-executor = { version = "0.9.1", default-features = false, features = [
     "executor-thread",
     "defmt",
 ] }
 embassy-sync = "0.7.2"
-embassy-rp = { version = "0.9.0", default-features = false, features = [
-    "rt",
-    "defmt",
-    "time-driver",
-    "critical-section-impl",
-], optional = true }
 embassy-futures = "0.1.2"
 embassy-time = { version = "0.5.0", features = [
     "defmt",
@@ -250,6 +234,23 @@ embedded-hal-bus = { version = "0.3.0", features = [
 portable-atomic = { version = "1.11.1", features = ["critical-section"] }
 hd44780-driver = "0.4.0"
 esp-hal-mfrc522 = "0.3.2"
+static_cell = "2.1.0"
+paste = "1.0"
+embedded-graphics = { version = "0.8", default-features = false }
+embed-doc-image = { version = "0.1.4", optional = true }
+png = { version = "0.17", optional = true }
+tempfile = { version = "3.13", optional = true }
+pio = "0.3"
+fixed = "1.29"
+
+[target.'cfg(target_os = "none")'.dependencies]
+embassy-rp = { version = "0.9.0", default-features = false, features = [
+    "rt",
+    "defmt",
+    "time-driver",
+    "critical-section-impl",
+], optional = true }
+embassy-hal-internal = { version = "0.4.0", default-features = false, optional = true }
 cyw43 = { version = "0.6.0", features = [
     "defmt",
     "firmware-logs",
@@ -264,15 +265,18 @@ embassy-net = { version = "0.8.0", features = [
     "dns",
     "medium-ethernet",
 ], optional = true }
-static_cell = "2.1.0"
-embassy-hal-internal = { version = "0.4.0", default-features = false, optional = true }
-paste = "1.0"
-embedded-graphics = { version = "0.8", default-features = false }
-embed-doc-image = { version = "0.1.4", optional = true }
-png = { version = "0.17", optional = true }
-tempfile = { version = "3.13", optional = true }
-pio = "0.3"
-fixed = "1.29"
+
+[target.'cfg(all(target_os = "none", target_arch = "arm"))'.dependencies]
+# ARM Cortex-M dependencies (for Pico 1 and Pico 2 ARM core)
+cortex-m-rt = { version = "0.7.5", optional = true }
+cortex-m = { version = "0.7.7", optional = true }
+
+[target.'cfg(all(target_os = "none", target_arch = "riscv32"))'.dependencies]
+# RISC-V dependencies (for Pico 2 RISC-V core)
+riscv-rt = { version = "0.12", optional = true }
+riscv = { version = "0.11", features = [
+    "critical-section-single-hart",
+], optional = true }
 
 # Integration tests
 [[test]]

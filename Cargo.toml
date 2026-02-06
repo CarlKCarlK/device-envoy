@@ -6,7 +6,7 @@ default-members = ["."]
 edition = "2024"
 # if this changes, update .vscode/launch.json and .cargo/config.toml
 name = "device-envoy"
-version = "0.0.2-alpha.5"
+version = "0.0.2-alpha.6"
 description = "Build Pico applications with LED panels, easy Wi-Fi, and composable device abstractions"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/CarlKCarlK/device-envoy"

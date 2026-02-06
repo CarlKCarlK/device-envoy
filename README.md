@@ -6,9 +6,11 @@
 
 **Build Pico applications with LED panels, easy WiFi, and composable device abstractions.**
 
-`device-envoy` provides device-level abstractions for embedded Rust, built on the Embassy async framework. It focuses on reusable, typed async APIs that hide timing, interrupts, channels, and shared state inside each device.
+`device-envoy` is a library for building embedded applications in Rust, built on the Embassy framework. It organizes hardware around *device abstractions*.
 
-Rather than replacing HALs or drivers, `device-envoy` builds on them, modeling devices as long-lived async tasks with clear, high-level APIs.
+A device abstraction is a software encapsulation of hardware that manages timing, tasks, control flow, interrupts, channels, and state within the abstraction.
+
+Rather than replacing HALs or drivers, `device-envoy` builds on them. It defines device abstractions that expose a small set of simple operations to the rest of the program.
 
 Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores). RISC-V core support exists but is not actively tested.
 
@@ -21,7 +23,7 @@ The API is actively evolving. Not recommended for production use, but excellent 
 ## Features
 
 - **[LED Strips](https://docs.rs/device-envoy/latest/device_envoy/led_strip/) & [Panels](https://docs.rs/device-envoy/latest/device_envoy/led2d/)**  - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, embedded-graphics support. Provides efficient options for power limiting and color correction.
-- **[WiFi (Pico W)](https://docs.rs/device-envoy/latest/device_envoy/wifi_auto/)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to stored networks. Requires Pico W; WiFi is not supported on non-W boards.
+- **[WiFi (Pico W)](https://docs.rs/device-envoy/latest/device_envoy/wifi_auto/)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to a stored network. Requires Pico W; WiFi is not supported on non-W boards.
 - **[Button Input](https://docs.rs/device-envoy/latest/device_envoy/button/)** - Button handling with debouncing
 - **[Servo Control](https://docs.rs/device-envoy/latest/device_envoy/servo/)** - Servo positioning and animation
 - **[Flash Storage](https://docs.rs/device-envoy/latest/device_envoy/flash_array/)** - Type-safe, on-board persist storage
@@ -39,7 +41,7 @@ The API is actively evolving. Not recommended for production use, but excellent 
 ## Forum
 
 - **[Using Embassy to build applications](https://github.com/CarlKCarlK/device-envoy/discussions)**  
-  A place to talk about writing embedded applications with Embassy—sharing code, asking practical questions, and learning what works in practice.  
+  A place to talk about writing embedded applications with Embassy: sharing code, asking practical questions, and learning what works in practice.  
   Not limited to Pico boards or to `device-envoy`.
 
 ## Examples & Demos
@@ -51,7 +53,7 @@ The project includes **examples** (single-device tests) in `examples/` and **dem
 This example cycles a 96-LED strip through red, green, and blue frames.
 ![Animated 96-LED strip example (APNG)](docs/assets/led_strip_animated.png)
 
-It shows how device-envoy generates a device struct for an LED strip and animates a sequence of frames.
+It shows how device-envoy generates a struct (device abstraction) for an LED strip and then animates a sequence of frames.
 
 ```rust,no_run
 # #![no_std]
@@ -168,6 +170,14 @@ Tests include:
 - LED text rendering comparisons against reference images
 - 2D LED matrix mapping algebra
 - LED color space conversions
+
+## Policy on AI-assisted development and contributions
+
+The use of AI tools is permitted for development and contributions to this repository. AI may be used as a productivity aid for drafting, exploration, and refactoring.
+
+All code and documentation contributed to this repository must be reviewed, edited, and validated by a human contributor. AI tools are not a substitute for design judgment, testing, or responsibility for correctness.
+
+[AGENTS.md](AGENTS.md) contains the general instructions and constraints given to AI tools used during development of this repository.
 
 ## License
 

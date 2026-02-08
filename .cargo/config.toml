@@ -12,6 +12,8 @@ check-examples = "xtask check-examples"
 check-demos = "xtask check-demos"
 check-compile-only = "xtask check-compile-only"
 check-compile-only-tests = "xtask check-compile-only"
+publish-embedded-dry-run = "publish --dry-run --no-verify"
+publish-embedded = "publish --no-verify"
 
 # Test documentation examples
 test-docs = "test --doc --target thumbv8m.main-none-eabihf --features pico2,wifi,arm --no-default-features"

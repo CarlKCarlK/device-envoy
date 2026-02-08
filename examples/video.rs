@@ -20,8 +20,8 @@
 //! ## Santa Video (Pre-configured)
 //!
 //! The santa frames are embedded from `examples/data/frame-data/video_frames_data.rs`, which is **auto-generated**
-//! during the build process from PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`,
-//! or directly from a source MP4 via ffmpeg.
+//! during the build process from PNG files in `SANTA_FRAMES_DIR`,
+//! or directly from a source MP4 via `SANTA_VIDEO_PATH`.
 //!
 //! The build system automatically:
 //!
@@ -32,7 +32,7 @@
 //!
 //! To use different frames:
 //!
-//! 1. Replace the PNG files in `~/programs/ffmpeg-test/frames12x8_landscape/`
+//! 1. Set `SANTA_FRAMES_DIR` to a directory containing `frame_000001.png` style files
 //! 2. Delete `examples/data/frame-data/video_frames_data.rs` to force regeneration (or run `cargo clean`)
 //! 3. Rebuild the example - frames will be regenerated automatically
 //!
@@ -45,25 +45,25 @@
 //! To regenerate from the original MP4, set `SANTA_VIDEO_PATH` and rerun the generator:
 //!
 //! ```bash
-//! SANTA_VIDEO_PATH="/mnt/e/sync/Pixel7Pro/DCIM/Camera/Camera/PXL_20251227_143029067.mp4" \
+//! SANTA_VIDEO_PATH="/path/to/santa.mp4" \
 //!   cargo xtask video-frames-gen > examples/data/frame-data/video_frames_data.rs
 //! ```
 //!
 //! If you still have the pre-extracted PNGs, set `SANTA_FRAMES_DIR` instead:
 //!
 //! ```bash
-//! SANTA_FRAMES_DIR="$HOME/programs/ffmpeg-test/frames12x8_landscape" \
+//! SANTA_FRAMES_DIR="/path/to/frames12x8_landscape" \
 //!   cargo xtask video-frames-gen > examples/data/frame-data/video_frames_data.rs
 //! ```
 //!
 //! ## Cat Video (From Video File)
 //!
 //! To add the cat video mode:
-//! 1. Place your video file at: `C:\Users\carlk\OneDrive\SkyDrive camera roll\cat.mp4`
-//!    (or update the path in `xtask/src/video_frames_gen.rs`)
+//! 1. Set `CAT_VIDEO_PATH` to your source MP4 path.
 //! 2. Generate frames:
 //!    ```bash
-//!    cargo xtask cat-frames-gen > examples/data/frame-data/cat_frames_data.rs
+//!    CAT_VIDEO_PATH="/path/to/cat.mp4" \
+//!      cargo xtask cat-frames-gen > examples/data/frame-data/cat_frames_data.rs
 //!    ```
 //! 3. Uncomment the cat-related lines in this file:
 //!    - `include!("data/frame-data/cat_frames_data.rs");`
@@ -117,7 +117,7 @@ led2d! {
 // Now defined in generated files: SANTA_FRAME_COUNT, CAT_FRAME_COUNT (with per-frame durations)
 
 // Video frames and frame duration embedded at compile time
-// Auto-generated during build from PNG files in ~/programs/ffmpeg-test/frames12x8_landscape/
+// Auto-generated during build from SANTA_FRAMES_DIR or SANTA_VIDEO_PATH
 // See build.rs for generation logic
 #[cfg(not(rust_analyzer))]
 include!(concat!(
@@ -138,13 +138,13 @@ const SANTA_FRAME_COUNT: usize = 1;
 const SANTA_FRAMES: [([[RGB8; 12]; 8], Duration); SANTA_FRAME_COUNT] =
     [([[colors::BLACK; 12]; 8], SANTA_FRAME_DURATION)];
 
-// Cat video frames - generated from OneDrive camera roll
+// Cat video frames
 // include!(concat!(
 //     env!("CARGO_MANIFEST_DIR"),
 //     "/examples/data/frame-data/cat_frames_data.rs"
 // ));
 
-// Hand video frames - generated from OneDrive camera roll
+// Hand video frames
 // include!(concat!(
 //     env!("CARGO_MANIFEST_DIR"),
 //     "/examples/data/frame-data/hand_frames_data.rs"

@@ -206,7 +206,12 @@ impl State {
         show_hours_minutes(led8x12, hours, minutes).await?;
         clock_sync.set_tick_interval(Some(ONE_MINUTE)).await;
         loop {
-            match select(button_watch13.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
+            match select(
+                button_watch13.wait_for_press_duration(),
+                clock_sync.wait_for_tick(),
+            )
+            .await
+            {
                 // Button pushes
                 Either::First(press_duration) => {
                     info!(
@@ -249,7 +254,12 @@ impl State {
         show_minutes_seconds(led8x12, minutes, seconds).await?;
         clock_sync.set_tick_interval(Some(ONE_SECOND)).await;
         loop {
-            match select(button_watch13.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
+            match select(
+                button_watch13.wait_for_press_duration(),
+                clock_sync.wait_for_tick(),
+            )
+            .await
+            {
                 // Button pushes
                 Either::First(press_duration) => {
                     info!(

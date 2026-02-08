@@ -1,38 +1,5 @@
-open-docs:
-	./scripts/open-docs.sh
-
-show-docs:
-	just update-docs
-	./scripts/open-docs.sh
-
-show-docs-host:
-	cargo update-docs-host
-	./scripts/open-docs-host.sh
-
 update-docs:
-	./scripts/docdoc.sh
-
-update-docs-host:
-	@echo "Building host documentation (errors expected for macro-generated code)..."
-	-cargo doc --no-default-features --features host --no-deps 2>&1 | grep -v "^warning" || true
-
-gather:
-	./scripts/gather.sh
-
-gather-docs:
-	just update-docs
-	./scripts/gather-docs.sh
-
-attach-probe:
-	./scripts/attach-probe.sh
-
-demo-e1:
-	./scripts/attach-probe.sh
-	cargo demo-e1
-
-demo-e1-2:
-	./scripts/attach-probe.sh
-	cargo demo-e1-2
+	./scripts/update-docs.sh
 
 regenerate-text-pngs:
 	./scripts/regenerate-text-pngs.sh

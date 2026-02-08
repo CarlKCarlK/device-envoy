@@ -6,7 +6,7 @@
 //!   button monitoring.
 //! - [`button_watch!`](crate::button_watch!) — Monitors a button in a background task
 //!   so that it works even in a fast loop/select.
-//! 
+//!
 
 mod button_watch;
 pub mod button_watch_generated;

@@ -94,14 +94,6 @@ const SANTA_FRAMES: [([[RGB8; 12]; 8], Duration); SANTA_FRAME_COUNT] = [
         }
     }
 
-    // Set up rerun trigger for video source directory
-    if let Ok(home) = env::var("HOME") {
-        let frames_dir = PathBuf::from(home).join("programs/ffmpeg-test/frames12x8_landscape");
-        if frames_dir.exists() {
-            println!("cargo:rerun-if-changed={}", frames_dir.display());
-        }
-    }
-
     // 2) Handle memory.x based on target
     let target = env::var("TARGET").unwrap();
 

@@ -12,6 +12,7 @@
 - When adding docs for modules or public items, link readers to the primary struct and keep the single compilable example on that struct; other items should point back to it rather than duplicating examples.
 - Prefer `const` values defined in the local context (inside the function/example) rather than at module scope when they're only used there.
 - Always run `cargo check-all` before handing work back; xtask keeps doctests and examples in sync.
+- Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 
 ## Const-Only APIs
 

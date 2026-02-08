@@ -11,12 +11,7 @@ extern crate panic_probe as _;
 
 use core::convert::Infallible;
 use core::future;
-use device_envoy::{
-    Result,
-    button::PressedTo,
-    flash_array::FlashArray,
-    wifi_auto::WifiAuto,
-};
+use device_envoy::{Result, button::PressedTo, flash_array::FlashArray, wifi_auto::WifiAuto};
 
 #[embassy_executor::main]
 async fn main(spawner: embassy_executor::Spawner) -> ! {

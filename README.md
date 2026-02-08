@@ -14,6 +14,10 @@ Rather than replacing HALs or drivers, `device-envoy` builds on them. It defines
 
 Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores). RISC-V core support exists but is not actively tested.
 
+## Start From a Template
+
+Want a minimal starting project? Use [`device-envoy-blinky` on GitHub](https://github.com/CarlKCarlK/device-envoy-blinky) as a template.
+
 ## Status
 
 ⚠️ **Alpha / Experimental**
@@ -34,15 +38,16 @@ The API is actively evolving. Not recommended for production use, but excellent 
 - **[LED4 Display](https://docs.rs/device-envoy/latest/device_envoy/led4/)** - 4-digit, 7-segment LED display control with optional animation and blinking
 - **[Single LED](https://docs.rs/device-envoy/latest/device_envoy/led/)** - Single digital LED control with animation support
 
-## Article
-
-- [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson.
-
 ## Forum
 
 - **[Using Embassy to build applications](https://github.com/CarlKCarlK/device-envoy/discussions)**  
   A place to talk about writing embedded applications with Embassy: sharing code, asking practical questions, and learning what works in practice.  
   Not limited to Pico boards or to `device-envoy`.
+
+## Articles
+
+- [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson.
+- [More Rust articles](https://medium.com/@carlmkadie)
 
 ## Examples & Demos
 
@@ -115,6 +120,9 @@ rustup target add thumbv8m.main-none-eabihf    # Pico 2 (ARM)
 ### Quick Start
 
 ```bash
+# New project template
+# https://github.com/CarlKCarlK/device-envoy-blinky
+
 # Run examples using convenient aliases
 cargo blinky                # Simple LED blinky (Pico 1)
 cargo blinky-2              # Simple LED blinky (Pico 2)

@@ -18,21 +18,23 @@ use device_envoy::Result;
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
-use embassy_rp::peripherals::{DMA_CH0, PIN_8, PIN_9, PIN_10, PIO0};
-use embassy_rp::pio::Pio;
+use embassy_rp::dma::{AnyChannel, Channel};
+#[cfg(feature = "pico2")]
+use embassy_rp::peripherals::PIO2;
+use embassy_rp::peripherals::{PIN_8, PIN_9, PIN_10, PIO0, PIO1};
+use embassy_rp::pio::{Instance, Pio};
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use heapless::Vec;
 use {defmt_rtt as _, panic_probe as _};
 
 include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
+// Rebuild the source clip (s16le mono raw) with:
+// ffmpeg -i input.wav -ac 1 -ar 22050 -f s16le examples/data/audio/computers_in_control_mono_s16le_22050.raw
 
-const SAMPLE_RATE_HZ: u32 = 44_100;
+const SAMPLE_RATE_HZ: u32 = 22_050;
 const BIT_DEPTH_BITS: u32 = 16;
 const AMPLITUDE: i16 = 8_000;
 const SAMPLE_BUFFER_LEN: usize = 256;
-const AUDIO_VEC_CAPACITY: usize = 8_192;
-const AUDIO_VEC_START_SAMPLE: usize = 22_050;
 
 type AudioCommandSignal = Signal<CriticalSectionRawMutex, AudioCommand>;
 
@@ -46,11 +48,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
+    // TODO0 should pins or PIO come first?
     static AUDIO_OUT_STATIC: AudioOutStatic = AudioOut::new_static();
     let audio_out = AudioOut::new(
         &AUDIO_OUT_STATIC,
-        p.PIO0,
-        p.DMA_CH0,
+        p.PIO1,
+        p.DMA_CH7,
         p.PIN_8,
         p.PIN_9,
         p.PIN_10,
@@ -59,30 +62,16 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
     info!(
-        "Loaded sample: {} samples ({} bytes), 44.1kHz mono s16le",
+        "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
         AUDIO_SAMPLE_I16.len(),
         AUDIO_SAMPLE_I16.len() * 2
     );
     info!("Button on GP13 queues playback");
 
-    let mut play_from_vec_next = false;
     loop {
         button.wait_for_press().await;
-
-        if play_from_vec_next {
-            let audio_sample_i16_vec = audio_sample_i16_vec();
-            audio_out.play(AudioSamples::Vec(audio_sample_i16_vec), AtEnd::AtEnd);
-            info!(
-                "Queued Vec<i16> playback (start={}, len={})",
-                AUDIO_VEC_START_SAMPLE,
-                AUDIO_VEC_CAPACITY
-            );
-        } else {
-            audio_out.play(AudioSamples::Static(&AUDIO_SAMPLE_I16), AtEnd::AtEnd);
-            info!("Queued static slice playback");
-        }
-
-        play_from_vec_next = !play_from_vec_next;
+        audio_out.play(&AUDIO_SAMPLE_I16, AtEnd::AtEnd);
+        info!("Queued static slice playback");
     }
 }
 
@@ -102,52 +91,131 @@ struct AudioOut<'a> {
     audio_out_static: &'a AudioOutStatic,
 }
 
+trait AudioOutPio: Instance {
+    type Irqs: embassy_rp::interrupt::typelevel::Binding<
+            <Self as Instance>::Interrupt,
+            embassy_rp::pio::InterruptHandler<Self>,
+        >;
+
+    fn irqs() -> Self::Irqs;
+
+    fn spawn_task(
+        spawner: Spawner,
+        audio_out_static: &'static AudioOutStatic,
+        pio: Peri<'static, Self>,
+        dma: Peri<'static, AnyChannel>,
+        pin_8: Peri<'static, PIN_8>,
+        pin_9: Peri<'static, PIN_9>,
+        pin_10: Peri<'static, PIN_10>,
+    ) -> Result<()>;
+}
+
+impl AudioOutPio for PIO0 {
+    type Irqs = device_envoy::pio_irqs::Pio0Irqs;
+
+    fn irqs() -> Self::Irqs {
+        device_envoy::pio_irqs::Pio0Irqs
+    }
+
+    fn spawn_task(
+        spawner: Spawner,
+        audio_out_static: &'static AudioOutStatic,
+        pio: Peri<'static, Self>,
+        dma: Peri<'static, AnyChannel>,
+        pin_8: Peri<'static, PIN_8>,
+        pin_9: Peri<'static, PIN_9>,
+        pin_10: Peri<'static, PIN_10>,
+    ) -> Result<()> {
+        let token = audio_out_pio0_task(audio_out_static, pio, dma, pin_8, pin_9, pin_10);
+        spawner.spawn(token).map_err(device_envoy::Error::TaskSpawn)
+    }
+}
+
+impl AudioOutPio for PIO1 {
+    type Irqs = device_envoy::pio_irqs::Pio1Irqs;
+
+    fn irqs() -> Self::Irqs {
+        device_envoy::pio_irqs::Pio1Irqs
+    }
+
+    fn spawn_task(
+        spawner: Spawner,
+        audio_out_static: &'static AudioOutStatic,
+        pio: Peri<'static, Self>,
+        dma: Peri<'static, AnyChannel>,
+        pin_8: Peri<'static, PIN_8>,
+        pin_9: Peri<'static, PIN_9>,
+        pin_10: Peri<'static, PIN_10>,
+    ) -> Result<()> {
+        let token = audio_out_pio1_task(audio_out_static, pio, dma, pin_8, pin_9, pin_10);
+        spawner.spawn(token).map_err(device_envoy::Error::TaskSpawn)
+    }
+}
+
+#[cfg(feature = "pico2")]
+impl AudioOutPio for PIO2 {
+    type Irqs = device_envoy::pio_irqs::Pio2Irqs;
+
+    fn irqs() -> Self::Irqs {
+        device_envoy::pio_irqs::Pio2Irqs
+    }
+
+    fn spawn_task(
+        spawner: Spawner,
+        audio_out_static: &'static AudioOutStatic,
+        pio: Peri<'static, Self>,
+        dma: Peri<'static, AnyChannel>,
+        pin_8: Peri<'static, PIN_8>,
+        pin_9: Peri<'static, PIN_9>,
+        pin_10: Peri<'static, PIN_10>,
+    ) -> Result<()> {
+        let token = audio_out_pio2_task(audio_out_static, pio, dma, pin_8, pin_9, pin_10);
+        spawner.spawn(token).map_err(device_envoy::Error::TaskSpawn)
+    }
+}
+
 impl AudioOut<'_> {
     const fn new_static() -> AudioOutStatic {
         AudioOutStatic::new_static()
     }
 
-    fn new(
+    fn new<PIO: AudioOutPio, DMA: Channel>(
         audio_out_static: &'static AudioOutStatic,
-        pio0: Peri<'static, PIO0>,
-        dma_ch0: Peri<'static, DMA_CH0>,
+        pio: Peri<'static, PIO>,
+        dma: Peri<'static, DMA>,
         pin_8: Peri<'static, PIN_8>,
         pin_9: Peri<'static, PIN_9>,
         pin_10: Peri<'static, PIN_10>,
         spawner: Spawner,
     ) -> Result<Self> {
-        let token = audio_out_task(audio_out_static, pio0, dma_ch0, pin_8, pin_9, pin_10);
-        spawner.spawn(token).map_err(device_envoy::Error::TaskSpawn)?;
+        PIO::spawn_task(
+            spawner,
+            audio_out_static,
+            pio,
+            dma.into(),
+            pin_8,
+            pin_9,
+            pin_10,
+        )?;
 
         Ok(Self { audio_out_static })
     }
 
-    fn play(&self, audio_samples: AudioSamples, at_end: AtEnd) {
+    fn play(&self, audio_sample_i16: &'static [i16], at_end: AtEnd) {
         self.audio_out_static
             .command_signal
-            .signal(AudioCommand::Play { audio_samples, at_end });
+            .signal(AudioCommand::Play {
+                audio_sample_i16,
+                at_end,
+            });
     }
 }
 
 enum AudioCommand {
     Play {
-        audio_samples: AudioSamples,
+        audio_sample_i16: &'static [i16],
         at_end: AtEnd,
     },
-}
-
-enum AudioSamples {
-    Static(&'static [i16]),
-    Vec(Vec<i16, AUDIO_VEC_CAPACITY>),
-}
-
-impl AudioSamples {
-    fn as_slice(&self) -> &[i16] {
-        match self {
-            Self::Static(audio_sample_i16) => audio_sample_i16,
-            Self::Vec(audio_sample_i16) => audio_sample_i16.as_slice(),
-        }
-    }
 }
 
 #[allow(dead_code)]
@@ -157,20 +225,56 @@ enum AtEnd {
 }
 
 #[embassy_executor::task]
-async fn audio_out_task(
+async fn audio_out_pio0_task(
     audio_out_static: &'static AudioOutStatic,
-    pio0: Peri<'static, PIO0>,
-    dma_ch0: Peri<'static, DMA_CH0>,
+    pio: Peri<'static, PIO0>,
+    dma: Peri<'static, AnyChannel>,
     pin_8: Peri<'static, PIN_8>,
     pin_9: Peri<'static, PIN_9>,
     pin_10: Peri<'static, PIN_10>,
-) {
-    let mut pio = Pio::new(pio0, device_envoy::pio_irqs::Pio0Irqs);
+) -> ! {
+    audio_out_task_impl::<PIO0>(audio_out_static, pio, dma, pin_8, pin_9, pin_10).await
+}
+
+#[embassy_executor::task]
+async fn audio_out_pio1_task(
+    audio_out_static: &'static AudioOutStatic,
+    pio: Peri<'static, PIO1>,
+    dma: Peri<'static, AnyChannel>,
+    pin_8: Peri<'static, PIN_8>,
+    pin_9: Peri<'static, PIN_9>,
+    pin_10: Peri<'static, PIN_10>,
+) -> ! {
+    audio_out_task_impl::<PIO1>(audio_out_static, pio, dma, pin_8, pin_9, pin_10).await
+}
+
+#[cfg(feature = "pico2")]
+#[embassy_executor::task]
+async fn audio_out_pio2_task(
+    audio_out_static: &'static AudioOutStatic,
+    pio: Peri<'static, PIO2>,
+    dma: Peri<'static, AnyChannel>,
+    pin_8: Peri<'static, PIN_8>,
+    pin_9: Peri<'static, PIN_9>,
+    pin_10: Peri<'static, PIN_10>,
+) -> ! {
+    audio_out_task_impl::<PIO2>(audio_out_static, pio, dma, pin_8, pin_9, pin_10).await
+}
+
+async fn audio_out_task_impl<PIO: AudioOutPio>(
+    audio_out_static: &'static AudioOutStatic,
+    pio: Peri<'static, PIO>,
+    dma: Peri<'static, AnyChannel>,
+    pin_8: Peri<'static, PIN_8>,
+    pin_9: Peri<'static, PIN_9>,
+    pin_10: Peri<'static, PIN_10>,
+) -> ! {
+    let mut pio = Pio::new(pio, PIO::irqs());
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
     let mut pio_i2s_out = PioI2sOut::new(
         &mut pio.common,
         pio.sm0,
-        dma_ch0,
+        dma,
         pin_8,
         pin_9,
         pin_10,
@@ -188,42 +292,24 @@ async fn audio_out_task(
 
         match audio_command {
             AudioCommand::Play {
-                audio_samples,
+                audio_sample_i16,
                 at_end,
-            } => {
-                let audio_sample_i16 = audio_samples.as_slice();
-                match at_end {
-                    AtEnd::AtEnd => {
-                        play_full_sample_once(&mut pio_i2s_out, audio_sample_i16, &mut sample_buffer)
-                            .await;
-                    }
-                    AtEnd::Loop => loop {
-                        play_full_sample_once(&mut pio_i2s_out, audio_sample_i16, &mut sample_buffer)
-                            .await;
-                    },
+            } => match at_end {
+                AtEnd::AtEnd => {
+                    play_full_sample_once(&mut pio_i2s_out, audio_sample_i16, &mut sample_buffer)
+                        .await;
                 }
-            }
+                AtEnd::Loop => loop {
+                    play_full_sample_once(&mut pio_i2s_out, audio_sample_i16, &mut sample_buffer)
+                        .await;
+                },
+            },
         }
     }
 }
 
-fn audio_sample_i16_vec() -> Vec<i16, AUDIO_VEC_CAPACITY> {
-    let mut audio_sample_i16_vec = Vec::<i16, AUDIO_VEC_CAPACITY>::new();
-
-    for sample_value_ref in AUDIO_SAMPLE_I16
-        .iter()
-        .skip(AUDIO_VEC_START_SAMPLE)
-        .take(AUDIO_VEC_CAPACITY)
-    {
-        let sample_value = *sample_value_ref;
-        assert!(audio_sample_i16_vec.push(sample_value).is_ok());
-    }
-
-    audio_sample_i16_vec
-}
-
-async fn play_full_sample_once(
-    pio_i2s_out: &mut PioI2sOut<'static, PIO0, 0>,
+async fn play_full_sample_once<PIO: Instance>(
+    pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
     audio_sample_i16: &[i16],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
 ) {
@@ -232,6 +318,7 @@ async fn play_full_sample_once(
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
+            // TODO0 should we preprocess all this?
             let scaled_sample = ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_768) as i16;
             *sample_buffer_slot = stereo_sample(scaled_sample);
         }

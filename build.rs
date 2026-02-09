@@ -125,7 +125,7 @@ const SANTA_FRAMES: [([[RGB8; 12]; 8], Duration); SANTA_FRAME_COUNT] = [
 }
 
 fn generate_audio_data_i16(manifest_dir: &PathBuf, out_dir: &PathBuf) {
-    let audio_source_path = manifest_dir.join("examples/data/audio/computers_in_control_mono_s16le_44100.raw");
+    let audio_source_path = manifest_dir.join("examples/data/audio/computers_in_control_mono_s16le_22050.raw");
     let audio_dest_path = out_dir.join("audio_data.rs");
 
     println!("cargo:rerun-if-changed={}", audio_source_path.display());

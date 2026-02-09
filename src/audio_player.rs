@@ -17,8 +17,69 @@ use heapless::Vec;
 /// Audio sample rate used by `AudioPlayer` playback.
 pub const SAMPLE_RATE_HZ: u32 = 22_050;
 const BIT_DEPTH_BITS: u32 = 16;
-const AMPLITUDE: i16 = 8_000;
 const SAMPLE_BUFFER_LEN: usize = 256;
+/// Maximum linear volume scale value.
+pub const MAX_VOLUME: i16 = i16::MAX;
+const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
+
+/// Linear volume scale used by [`with_volume`].
+///
+/// `Volume` is a value object, not device state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Volume(i16);
+
+impl Volume {
+    /// Silence.
+    pub const MUTE: Self = Self(0);
+
+    /// Full-scale linear volume (no attenuation).
+    pub const FULL_SCALE: Self = Self(MAX_VOLUME);
+
+    /// Creates a volume from a percentage of full scale.
+    ///
+    /// Values above `100` are clamped to `100`.
+    #[must_use]
+    pub const fn percent(percent: u8) -> Self {
+        let percent = if percent > 100 { 100 } else { percent };
+        let value_i32 = (percent as i32 * MAX_VOLUME as i32) / 100;
+        Self(value_i32 as i16)
+    }
+
+    /// Creates a volume from decibel attenuation.
+    ///
+    /// - `0 dB` is full-scale.
+    /// - Positive values map to full-scale.
+    /// - Negative values attenuate.
+    #[must_use]
+    pub const fn db(db: i8) -> Self {
+        if db >= 0 {
+            return Self::FULL_SCALE;
+        }
+        if db == i8::MIN {
+            return Self::MUTE;
+        }
+
+        // Fixed-point multiplier for 10^(-1/20) (approximately -1 dB in amplitude).
+        const DB_STEP_Q15: i32 = 29_205;
+        const ONE_Q15: i32 = 32_768;
+        const ROUND_Q15: i32 = 16_384;
+
+        let attenuation_db_u8 = (-db) as u8;
+        let mut scale_q15_i32 = ONE_Q15;
+        let mut attenuation_index = 0_u8;
+        while attenuation_index < attenuation_db_u8 {
+            scale_q15_i32 = (scale_q15_i32 * DB_STEP_Q15 + ROUND_Q15) / ONE_Q15;
+            attenuation_index += 1;
+        }
+        let value_i32 = (MAX_VOLUME as i32 * scale_q15_i32 + ROUND_Q15) / ONE_Q15;
+        Self(value_i32 as i16)
+    }
+
+    #[must_use]
+    const fn linear(self) -> i16 {
+        self.0
+    }
+}
 
 /// Returns how many samples are needed for a duration in milliseconds.
 ///
@@ -45,17 +106,17 @@ pub const fn silence<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
 ///
 /// - `frequency_hz`: Tone frequency in Hz.
 /// - `duration` is represented by `SAMPLE_COUNT`.
-/// - `amplitude`: Peak sample value (0..=32767).
-/// - `sample_rate_hz`: Sample rate in Hz.
 #[must_use]
-pub const fn tone<const SAMPLE_COUNT: usize>(
+pub const fn tone<const SAMPLE_COUNT: usize>(frequency_hz: u32) -> [i16; SAMPLE_COUNT] {
+    tone_with_sample_rate::<SAMPLE_COUNT>(frequency_hz, SAMPLE_RATE_HZ)
+}
+
+#[must_use]
+const fn tone_with_sample_rate<const SAMPLE_COUNT: usize>(
     frequency_hz: u32,
-    amplitude: i16,
     sample_rate_hz: u32,
 ) -> [i16; SAMPLE_COUNT] {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
-    assert!(amplitude >= 0, "amplitude must be >= 0");
-    assert!(amplitude <= i16::MAX, "amplitude must be <= i16::MAX");
 
     let mut audio_sample_i16 = [0_i16; SAMPLE_COUNT];
     let phase_step_u64 = ((frequency_hz as u64) << 32) / sample_rate_hz as u64;
@@ -64,7 +125,7 @@ pub const fn tone<const SAMPLE_COUNT: usize>(
 
     let mut sample_index = 0_usize;
     while sample_index < SAMPLE_COUNT {
-        audio_sample_i16[sample_index] = sine_sample_from_phase(phase_u32, amplitude);
+        audio_sample_i16[sample_index] = sine_sample_from_phase(phase_u32);
         phase_u32 = phase_u32.wrapping_add(phase_step_u32);
         sample_index += 1;
     }
@@ -73,7 +134,7 @@ pub const fn tone<const SAMPLE_COUNT: usize>(
 }
 
 #[inline]
-const fn sine_sample_from_phase(phase_u32: u32, amplitude: i16) -> i16 {
+const fn sine_sample_from_phase(phase_u32: u32) -> i16 {
     let half_cycle_u64 = 1_u64 << 31;
     let one_q31_u64 = 1_u64 << 31;
     let phase_u64 = phase_u32 as u64;
@@ -89,8 +150,49 @@ const fn sine_sample_from_phase(phase_u32: u32, amplitude: i16) -> i16 {
     let denominator_q31_u64 = 5 * one_q31_u64 - 4 * product_q31_u64;
     let sine_q31_u64 = ((16 * product_q31_u64) << 31) / denominator_q31_u64;
 
-    let scaled_i64 = ((sine_q31_u64 as i64 * amplitude as i64) >> 31) * sign_i64;
-    scaled_i64 as i16
+    let sample_i64 = (sine_q31_u64 as i64 * sign_i64) >> 16;
+    clamp_i64_to_i16(sample_i64)
+}
+
+/// Returns a new clip with linear volume scaling applied.
+///
+/// This transform is pure and const-evaluable.
+#[must_use]
+pub const fn with_volume<const SAMPLE_COUNT: usize>(
+    audio_sample_i16: &[i16; SAMPLE_COUNT],
+    volume: Volume,
+) -> [i16; SAMPLE_COUNT] {
+    let mut volume_adjusted_audio_sample_i16 = [0_i16; SAMPLE_COUNT];
+    let mut sample_index = 0_usize;
+    while sample_index < SAMPLE_COUNT {
+        volume_adjusted_audio_sample_i16[sample_index] =
+            scale_sample(audio_sample_i16[sample_index], volume);
+        sample_index += 1;
+    }
+    volume_adjusted_audio_sample_i16
+}
+
+#[inline]
+const fn scale_sample(sample_i16: i16, volume: Volume) -> i16 {
+    if volume.linear() == 0 {
+        return 0;
+    }
+    // Use signed full-scale magnitude (32768) so i16::MIN is handled correctly.
+    // `Volume::FULL_SCALE` is 32767, so add one to map it to exact unity gain.
+    let unity_scaled_volume_i64 = volume.linear() as i64 + 1;
+    let scaled_i64 = (sample_i16 as i64 * unity_scaled_volume_i64) / I16_ABS_MAX_I64;
+    clamp_i64_to_i16(scaled_i64)
+}
+
+#[inline]
+const fn clamp_i64_to_i16(value_i64: i64) -> i16 {
+    if value_i64 > i16::MAX as i64 {
+        i16::MAX
+    } else if value_i64 < i16::MIN as i64 {
+        i16::MIN
+    } else {
+        value_i64 as i16
+    }
 }
 
 /// End-of-sequence behavior for playback.
@@ -374,9 +476,8 @@ async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize>(
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
-            // TODO0 should we preprocess all this? (moved from examples/audio.rs)
-            let scaled_sample = ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_768) as i16;
-            *sample_buffer_slot = stereo_sample(scaled_sample);
+            // TODO0 should we preprocess all this? (moved from examples/audio.rs) (may no longer apply)
+            *sample_buffer_slot = stereo_sample(sample_value);
         }
 
         sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));
@@ -688,13 +789,17 @@ macro_rules! __audio_player_impl {
                 #[must_use]
                 pub const fn tone<const SAMPLE_COUNT: usize>(
                     frequency_hz: u32,
-                    amplitude: i16,
                 ) -> [i16; SAMPLE_COUNT] {
-                    $crate::audio_player::tone::<SAMPLE_COUNT>(
-                        frequency_hz,
-                        amplitude,
-                        Self::SAMPLE_RATE_HZ,
-                    )
+                    $crate::audio_player::tone::<SAMPLE_COUNT>(frequency_hz)
+                }
+
+                /// Returns a new clip with linear volume scaling applied.
+                #[must_use]
+                pub const fn with_volume<const SAMPLE_COUNT: usize>(
+                    audio_sample_i16: &[i16; SAMPLE_COUNT],
+                    volume: $crate::audio_player::Volume,
+                ) -> [i16; SAMPLE_COUNT] {
+                    $crate::audio_player::with_volume(audio_sample_i16, volume)
                 }
 
                 pub fn new(

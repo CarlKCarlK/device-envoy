@@ -15,7 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, audio_player};
+use device_envoy::audio_player::{AtEnd, Volume, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -29,11 +29,12 @@ include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
 // TODO00 do pio and dma in macro
 // TODO00 use same AtEnd as servo_player
 // TODO00 preprocess samples at compile time
-// TODO00 think about moving some of the 4 constants (rate, bit depth, amplitude, buffer len) into the macro with defaults
+// TODO00 think about moving some of the 3 constants (rate, bit depth, buffer len) into the macro with defaults
 // TODO00 be sure new play commands (and stop) stops current playback immediately and doesn't just queue at the end of the current sequence
 // TODO00 make the macro documentation look good with a generated type.
 // TODO00 does the macro support vis
 // TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
+// TODO00 should with_volume be an extension method?
 audio_player! {
     AudioPlayer8 {
         din_pin: PIN_8,
@@ -63,8 +64,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!("Button on GP13 starts playback");
 
-    //todo0 amplitude 8_000 is arbitrary
-    const TONE_A4: [i16; AudioPlayer8::samples_ms(500)] = AudioPlayer8::tone(440, 8_000);
+    // TODO0 amplitude 8_000 is arbitrary (may no longer apply)
+    const TONE_A4: [i16; AudioPlayer8::samples_ms(500)] =
+        AudioPlayer8::with_volume(&AudioPlayer8::tone(440), Volume::db(-12));
     const SILENCE_100MS: [i16; AudioPlayer8::samples_ms(100)] = AudioPlayer8::silence();
     loop {
         button.wait_for_press().await;
@@ -74,7 +76,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         Timer::after(Duration::from_secs(3)).await;
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
-        // todo0 atend::atend is wrong
+        // TODO0 atend::atend is wrong (may no longer apply)
         audio_player8.play([&AUDIO_SAMPLE_I16], AtEnd::Stop);
     }
 }

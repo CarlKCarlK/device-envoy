@@ -42,9 +42,9 @@ pub mod pio_irqs;
 pub mod to_png;
 // These modules require embedded targets.
 #[cfg(target_os = "none")]
-pub mod button;
-#[cfg(target_os = "none")]
 pub mod audio_player;
+#[cfg(target_os = "none")]
+pub mod button;
 #[cfg(target_os = "none")]
 pub mod char_lcd;
 #[cfg(all(feature = "wifi", target_os = "none"))]

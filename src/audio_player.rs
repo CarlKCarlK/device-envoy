@@ -94,11 +94,13 @@ const fn sine_sample_from_phase(phase_u32: u32, amplitude: i16) -> i16 {
 }
 
 /// End-of-sequence behavior for playback.
+///
+/// `AudioPlayer` supports looping or stopping at the end of a clip sequence.
 pub enum AtEnd {
-    /// Replay the full clip sequence forever.
+    /// Repeat the full clip sequence forever.
     Loop,
     /// Stop after one full clip sequence pass.
-    AtEnd,
+    Stop,
 }
 
 /// Supported clip input types for [`AudioPlayer::play_iter`].
@@ -304,15 +306,6 @@ pub async fn device_loop<
                     at_end,
                 } => {
                     let next_audio_command = match at_end {
-                        AtEnd::AtEnd => {
-                            play_clip_sequence_once(
-                                &mut pio_i2s_out,
-                                &audio_clips,
-                                &mut sample_buffer,
-                                audio_player_static,
-                            )
-                            .await
-                        }
                         AtEnd::Loop => loop {
                             if let Some(next_audio_command) = play_clip_sequence_once(
                                 &mut pio_i2s_out,
@@ -325,6 +318,15 @@ pub async fn device_loop<
                                 break Some(next_audio_command);
                             }
                         },
+                        AtEnd::Stop => {
+                            play_clip_sequence_once(
+                                &mut pio_i2s_out,
+                                &audio_clips,
+                                &mut sample_buffer,
+                                audio_player_static,
+                            )
+                            .await
+                        }
                     };
 
                     if let Some(next_audio_command) = next_audio_command {

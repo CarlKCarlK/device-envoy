@@ -33,7 +33,7 @@ include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
 // TODO00 be sure new play commands (and stop) stops current playback immediately and doesn't just queue at the end of the current sequence
 // TODO00 make the macro documentation look good with a generated type.
 // TODO00 does the macro support vis
-
+// TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
 audio_player! {
     AudioPlayer8 {
         din_pin: PIN_8,
@@ -75,6 +75,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
         // todo0 atend::atend is wrong
-        audio_player8.play([&AUDIO_SAMPLE_I16], AtEnd::AtEnd);
+        audio_player8.play([&AUDIO_SAMPLE_I16], AtEnd::Stop);
     }
 }

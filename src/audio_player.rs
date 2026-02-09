@@ -4,7 +4,7 @@
 //! device pattern that pins down `PIO`, `DMA`, and `max_clips`.
 //TODO0 Review this code
 
-use core::{borrow::Borrow, ops::ControlFlow};
+use core::ops::ControlFlow;
 
 use embassy_rp::Peri;
 use embassy_rp::dma::Channel;
@@ -27,6 +27,12 @@ const SAMPLE_BUFFER_LEN: usize = 256;
 pub const fn samples_for_duration_ms(duration_ms: u32, sample_rate_hz: u32) -> usize {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
     ((duration_ms as u64 * sample_rate_hz as u64) / 1_000) as usize
+}
+
+/// Shorthand alias for [`samples_for_duration_ms`].
+#[must_use]
+pub const fn samples_ms(duration_ms: u32, sample_rate_hz: u32) -> usize {
+    samples_for_duration_ms(duration_ms, sample_rate_hz)
 }
 
 /// Generates a silent i16 PCM clip with `SAMPLE_COUNT` samples.
@@ -95,6 +101,24 @@ pub enum AtEnd {
     AtEnd,
 }
 
+/// Supported clip input types for [`AudioPlayer::play_iter`].
+pub trait AudioClip {
+    /// Converts this clip input into a static i16 PCM slice.
+    fn into_audio_clip(self) -> &'static [i16];
+}
+
+impl AudioClip for &'static [i16] {
+    fn into_audio_clip(self) -> &'static [i16] {
+        self
+    }
+}
+
+impl<const SAMPLE_COUNT: usize> AudioClip for &'static [i16; SAMPLE_COUNT] {
+    fn into_audio_clip(self) -> &'static [i16] {
+        self
+    }
+}
+
 enum AudioCommand<const MAX_CLIPS: usize> {
     Play {
         audio_clips: Vec<&'static [i16], MAX_CLIPS>,
@@ -150,18 +174,32 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
 
     /// Starts playback of one or more static PCM clips.
     ///
-    /// The iterator is copied into a fixed-capacity clip list defined by `MAX_CLIPS`.
+    /// This array-based API supports concise mixed-length clip literals like
+    /// `[&tone_a4, &silence_100ms, &tone_a4]`.
+    ///
+    /// The clips are copied into a fixed-capacity clip list defined by `MAX_CLIPS`.
     /// A newer call to [`Self::play`] interrupts current playback as soon as possible
     /// (at the next DMA chunk boundary).
-    pub fn play<I>(&self, audio_clips: I, at_end: AtEnd)
+    pub fn play<const CLIP_COUNT: usize>(
+        &self,
+        audio_clips: [&'static [i16]; CLIP_COUNT],
+        at_end: AtEnd,
+    ) {
+        self.play_iter(audio_clips, at_end);
+    }
+
+    /// Starts playback from a generic iterator of static clip-like values.
+    ///
+    /// This accepts iterators of `&'static [i16]` and `&'static [i16; N]`.
+    pub fn play_iter<I>(&self, audio_clips: I, at_end: AtEnd)
     where
         I: IntoIterator,
-        I::Item: Borrow<&'static [i16]>,
+        I::Item: AudioClip,
     {
         assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
         let mut audio_clip_sequence: Vec<&'static [i16], MAX_CLIPS> = Vec::new();
         for audio_clip in audio_clips {
-            let audio_clip = *audio_clip.borrow();
+            let audio_clip = audio_clip.into_audio_clip();
             audio_clip_sequence
                 .push(audio_clip)
                 .expect("play sequence fits within max_clips");
@@ -629,6 +667,12 @@ macro_rules! __audio_player_impl {
                 #[must_use]
                 pub const fn samples_for_duration_ms(duration_ms: u32) -> usize {
                     $crate::audio_player::samples_for_duration_ms(duration_ms, Self::SAMPLE_RATE_HZ)
+                }
+
+                /// Shorthand alias for [`Self::samples_for_duration_ms`].
+                #[must_use]
+                pub const fn samples_ms(duration_ms: u32) -> usize {
+                    Self::samples_for_duration_ms(duration_ms)
                 }
 
                 /// Generates a silent i16 PCM clip with `SAMPLE_COUNT` samples.

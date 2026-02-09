@@ -83,13 +83,14 @@ async fn play_full_sample_once<PioInstance: Instance>(
     audio_sample_i16: &[i16],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
 ) {
-    let mut audio_sample_i16 = audio_sample_i16.iter().copied();
+    let mut audio_sample_i16 = audio_sample_i16.iter();
 
     loop {
         let mut written_samples = 0_usize;
 
         for sample_buffer_slot in sample_buffer.iter_mut() {
-            if let Some(sample_value) = audio_sample_i16.next() {
+            if let Some(sample_value_ref) = audio_sample_i16.next() {
+                let sample_value = *sample_value_ref;
                 let scaled_sample =
                     ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_767) as i16;
                 *sample_buffer_slot = stereo_sample(scaled_sample);

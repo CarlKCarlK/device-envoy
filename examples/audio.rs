@@ -16,8 +16,10 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::Result;
 use device_envoy::button::{Button, PressedTo};
+use device_envoy::led_strip::LedStripPio;
 use embassy_executor::Spawner;
-use embassy_rp::pio::Pio;
+use embassy_rp::Peri;
+use embassy_rp::pio::{Instance, Pio};
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use {defmt_rtt as _, panic_probe as _};
 
@@ -39,7 +41,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
     let _ = spawner;
 
-    let mut pio = Pio::new(p.PIO1, device_envoy::pio_irqs::Pio1Irqs);
+    let pio = p.PIO0;
+    let mut pio = pio_new(pio);
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
     let mut pio_i2s_out = PioI2sOut::new(
         &mut pio.common,
@@ -59,7 +62,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut sample_buffer = [0_u32; SAMPLE_BUFFER_LEN];
 
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
-    info!("Loaded sample: {} bytes, 44.1kHz mono s16le", AUDIO_SAMPLE_BYTES.len());
+    info!(
+        "Loaded sample: {} bytes, 44.1kHz mono s16le",
+        AUDIO_SAMPLE_BYTES.len()
+    );
     info!("Button on GP13 plays the clip");
 
     loop {
@@ -70,8 +76,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
 }
 
-async fn play_full_sample_once(
-    pio_i2s_out: &mut PioI2sOut<'static, embassy_rp::peripherals::PIO1, 0>,
+fn pio_new<PioInstance: LedStripPio>(pio: Peri<'static, PioInstance>) -> Pio<'static, PioInstance> {
+    Pio::new(pio, PioInstance::irqs())
+}
+
+async fn play_full_sample_once<PioInstance: Instance>(
+    pio_i2s_out: &mut PioI2sOut<'static, PioInstance, 0>,
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
 ) {
     let mut audio_sample_byte_index = 0_usize;

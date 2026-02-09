@@ -83,33 +83,27 @@ async fn play_full_sample_once<PioInstance: Instance>(
     audio_sample_i16: &[i16],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
 ) {
-    let mut audio_sample_i16 = audio_sample_i16.iter();
-
-    loop {
-        let mut written_samples = 0_usize;
-
-        for sample_buffer_slot in sample_buffer.iter_mut() {
-            if let Some(sample_value_ref) = audio_sample_i16.next() {
-                let sample_value = *sample_value_ref;
-                let scaled_sample =
-                    ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_767) as i16;
-                *sample_buffer_slot = stereo_sample(scaled_sample);
-                written_samples += 1;
-            } else {
-                *sample_buffer_slot = stereo_sample(0);
-            }
+    // Stream source audio in fixed-size chunks matching the DMA buffer.
+    for audio_sample_chunk in audio_sample_i16.chunks(SAMPLE_BUFFER_LEN) {
+        // Fill converted samples first.
+        for (sample_buffer_slot, sample_value_ref) in
+            sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
+        {
+            let sample_value = *sample_value_ref;
+            let scaled_sample = ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_767) as i16;
+            *sample_buffer_slot = stereo_sample(scaled_sample);
         }
 
-        if written_samples == 0 {
-            break;
-        }
+        // Pad the tail with silence when the last chunk is short.
+        sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));
 
+        // Await DMA completion before reusing the buffer.
         pio_i2s_out.write(sample_buffer).await;
     }
 }
 
 #[inline]
-fn stereo_sample(sample: i16) -> u32 {
-    let sample_bits = u32::from(sample as u16);
+const fn stereo_sample(sample: i16) -> u32 {
+    let sample_bits = sample as u16 as u32;
     (sample_bits << 16) | sample_bits
 }

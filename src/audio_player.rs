@@ -14,7 +14,8 @@ use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use heapless::Vec;
 
-const SAMPLE_RATE_HZ: u32 = 22_050;
+/// Audio sample rate used by `AudioPlayer` playback.
+pub const SAMPLE_RATE_HZ: u32 = 22_050;
 const BIT_DEPTH_BITS: u32 = 16;
 const AMPLITUDE: i16 = 8_000;
 const SAMPLE_BUFFER_LEN: usize = 256;
@@ -30,7 +31,7 @@ pub const fn samples_for_duration_ms(duration_ms: u32, sample_rate_hz: u32) -> u
 
 /// Generates a silent i16 PCM clip with `SAMPLE_COUNT` samples.
 #[must_use]
-pub const fn silence_i16<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
+pub const fn silence<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
     [0; SAMPLE_COUNT]
 }
 
@@ -41,7 +42,7 @@ pub const fn silence_i16<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
 /// - `amplitude`: Peak sample value (0..=32767).
 /// - `sample_rate_hz`: Sample rate in Hz.
 #[must_use]
-pub const fn sinewave_i16<const SAMPLE_COUNT: usize>(
+pub const fn tone<const SAMPLE_COUNT: usize>(
     frequency_hz: u32,
     amplitude: i16,
     sample_rate_hz: u32,
@@ -620,6 +621,36 @@ macro_rules! __audio_player_impl {
             }
 
             impl $name {
+                /// Sample rate used for PCM playback by this generated player type.
+                pub const SAMPLE_RATE_HZ: u32 = $crate::audio_player::SAMPLE_RATE_HZ;
+
+                /// Returns how many samples are needed for a duration in milliseconds
+                /// at this player's sample rate.
+                #[must_use]
+                pub const fn samples_for_duration_ms(duration_ms: u32) -> usize {
+                    $crate::audio_player::samples_for_duration_ms(duration_ms, Self::SAMPLE_RATE_HZ)
+                }
+
+                /// Generates a silent i16 PCM clip with `SAMPLE_COUNT` samples.
+                #[must_use]
+                pub const fn silence<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
+                    $crate::audio_player::silence::<SAMPLE_COUNT>()
+                }
+
+                /// Generates an i16 PCM sine-wave clip with `SAMPLE_COUNT` samples
+                /// at this player's sample rate.
+                #[must_use]
+                pub const fn tone<const SAMPLE_COUNT: usize>(
+                    frequency_hz: u32,
+                    amplitude: i16,
+                ) -> [i16; SAMPLE_COUNT] {
+                    $crate::audio_player::tone::<SAMPLE_COUNT>(
+                        frequency_hz,
+                        amplitude,
+                        Self::SAMPLE_RATE_HZ,
+                    )
+                }
+
                 pub fn new(
                     din_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$din_pin>>,
                     bclk_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$bclk_pin>>,

@@ -63,20 +63,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!("Button on GP13 starts playback");
 
-    const SAMPLE_RATE_HZ: u32 = 22_050;
-    const TONE_LEN: usize =
-        device_envoy::audio_player::samples_for_duration_ms(500, SAMPLE_RATE_HZ);
-    const TONE_A4: [i16; TONE_LEN] =
-        device_envoy::audio_player::sinewave_i16::<TONE_LEN>(440, 8_000, SAMPLE_RATE_HZ);
-    const SILENCE_100MS_LEN: usize =
-        device_envoy::audio_player::samples_for_duration_ms(100, SAMPLE_RATE_HZ);
-    const SILENCE_100MS: [i16; SILENCE_100MS_LEN] =
-        device_envoy::audio_player::silence_i16::<SILENCE_100MS_LEN>();
+    //todo0 amplitude 8_000 is arbitrary
+    const TONE_LEN: usize = AudioPlayer8::samples_for_duration_ms(500);
+    const TONE_A4: [i16; TONE_LEN] = AudioPlayer8::tone(440, 8_000);
+    const SILENCE_100MS_LEN: usize = AudioPlayer8::samples_for_duration_ms(100);
+    const SILENCE_100MS: [i16; SILENCE_100MS_LEN] = AudioPlayer8::silence();
 
     loop {
         button.wait_for_press().await;
         audio_player8.play(
-            [TONE_A4.as_slice(), SILENCE_100MS.as_slice(), TONE_A4.as_slice()],
+            [
+                TONE_A4.as_slice(),
+                SILENCE_100MS.as_slice(),
+                TONE_A4.as_slice(),
+            ],
             AtEnd::Loop,
         );
         info!("Started static slice playback");

@@ -18,11 +18,12 @@ use device_envoy::Result;
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
-use embassy_rp::dma::{AnyChannel, Channel};
+use embassy_rp::dma::Channel;
+use embassy_rp::gpio::Pin;
 #[cfg(feature = "pico2")]
 use embassy_rp::peripherals::PIO2;
-use embassy_rp::peripherals::{PIN_8, PIN_9, PIN_10, PIO0, PIO1};
-use embassy_rp::pio::{Instance, Pio};
+use embassy_rp::peripherals::{PIO0, PIO1};
+use embassy_rp::pio::{Instance, Pio, PioPin, StateMachine};
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use {defmt_rtt as _, panic_probe as _};
@@ -102,11 +103,9 @@ trait AudioOutPio: Instance {
     fn spawn_task(
         spawner: Spawner,
         audio_out_static: &'static AudioOutStatic,
-        pio: Peri<'static, Self>,
-        dma: Peri<'static, AnyChannel>,
-        pin_8: Peri<'static, PIN_8>,
-        pin_9: Peri<'static, PIN_9>,
-        pin_10: Peri<'static, PIN_10>,
+        pio_i2s_out: PioI2sOut<'static, Self, 0>,
+        pio_i2s_out_program: PioI2sOutProgram<'static, Self>,
+        pio_sm1_keep_alive: StateMachine<'static, Self, 1>,
     ) -> Result<()>;
 }
 
@@ -120,13 +119,16 @@ impl AudioOutPio for PIO0 {
     fn spawn_task(
         spawner: Spawner,
         audio_out_static: &'static AudioOutStatic,
-        pio: Peri<'static, Self>,
-        dma: Peri<'static, AnyChannel>,
-        pin_8: Peri<'static, PIN_8>,
-        pin_9: Peri<'static, PIN_9>,
-        pin_10: Peri<'static, PIN_10>,
+        pio_i2s_out: PioI2sOut<'static, Self, 0>,
+        pio_i2s_out_program: PioI2sOutProgram<'static, Self>,
+        pio_sm1_keep_alive: StateMachine<'static, Self, 1>,
     ) -> Result<()> {
-        let token = audio_out_pio0_task(audio_out_static, pio, dma, pin_8, pin_9, pin_10);
+        let token = audio_out_pio0_task(
+            audio_out_static,
+            pio_i2s_out,
+            pio_i2s_out_program,
+            pio_sm1_keep_alive,
+        );
         spawner.spawn(token).map_err(device_envoy::Error::TaskSpawn)
     }
 }
@@ -141,13 +143,16 @@ impl AudioOutPio for PIO1 {
     fn spawn_task(
         spawner: Spawner,
         audio_out_static: &'static AudioOutStatic,
-        pio: Peri<'static, Self>,
-        dma: Peri<'static, AnyChannel>,
-        pin_8: Peri<'static, PIN_8>,
-        pin_9: Peri<'static, PIN_9>,
-        pin_10: Peri<'static, PIN_10>,
+        pio_i2s_out: PioI2sOut<'static, Self, 0>,
+        pio_i2s_out_program: PioI2sOutProgram<'static, Self>,
+        pio_sm1_keep_alive: StateMachine<'static, Self, 1>,
     ) -> Result<()> {
-        let token = audio_out_pio1_task(audio_out_static, pio, dma, pin_8, pin_9, pin_10);
+        let token = audio_out_pio1_task(
+            audio_out_static,
+            pio_i2s_out,
+            pio_i2s_out_program,
+            pio_sm1_keep_alive,
+        );
         spawner.spawn(token).map_err(device_envoy::Error::TaskSpawn)
     }
 }
@@ -163,13 +168,16 @@ impl AudioOutPio for PIO2 {
     fn spawn_task(
         spawner: Spawner,
         audio_out_static: &'static AudioOutStatic,
-        pio: Peri<'static, Self>,
-        dma: Peri<'static, AnyChannel>,
-        pin_8: Peri<'static, PIN_8>,
-        pin_9: Peri<'static, PIN_9>,
-        pin_10: Peri<'static, PIN_10>,
+        pio_i2s_out: PioI2sOut<'static, Self, 0>,
+        pio_i2s_out_program: PioI2sOutProgram<'static, Self>,
+        pio_sm1_keep_alive: StateMachine<'static, Self, 1>,
     ) -> Result<()> {
-        let token = audio_out_pio2_task(audio_out_static, pio, dma, pin_8, pin_9, pin_10);
+        let token = audio_out_pio2_task(
+            audio_out_static,
+            pio_i2s_out,
+            pio_i2s_out_program,
+            pio_sm1_keep_alive,
+        );
         spawner.spawn(token).map_err(device_envoy::Error::TaskSpawn)
     }
 }
@@ -179,23 +187,41 @@ impl AudioOut<'_> {
         AudioOutStatic::new_static()
     }
 
-    fn new<PIO: AudioOutPio, DMA: Channel>(
+    fn new<
+        PIO: AudioOutPio,
+        DMA: Channel,
+        DinPin: Pin + PioPin,
+        BclkPin: Pin + PioPin,
+        LrcPin: Pin + PioPin,
+    >(
         audio_out_static: &'static AudioOutStatic,
         pio: Peri<'static, PIO>,
         dma: Peri<'static, DMA>,
-        pin_8: Peri<'static, PIN_8>,
-        pin_9: Peri<'static, PIN_9>,
-        pin_10: Peri<'static, PIN_10>,
+        din_pin: Peri<'static, DinPin>,
+        bclk_pin: Peri<'static, BclkPin>,
+        lrc_pin: Peri<'static, LrcPin>,
         spawner: Spawner,
     ) -> Result<Self> {
+        let mut pio = Pio::new(pio, PIO::irqs());
+        let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
+        let pio_i2s_out = PioI2sOut::new(
+            &mut pio.common,
+            pio.sm0,
+            dma,
+            din_pin,
+            bclk_pin,
+            lrc_pin,
+            SAMPLE_RATE_HZ,
+            BIT_DEPTH_BITS,
+            &pio_i2s_out_program,
+        );
+        let pio_sm1_keep_alive = pio.sm1;
         PIO::spawn_task(
             spawner,
             audio_out_static,
-            pio,
-            dma.into(),
-            pin_8,
-            pin_9,
-            pin_10,
+            pio_i2s_out,
+            pio_i2s_out_program,
+            pio_sm1_keep_alive,
         )?;
 
         Ok(Self { audio_out_static })
@@ -227,63 +253,60 @@ enum AtEnd {
 #[embassy_executor::task]
 async fn audio_out_pio0_task(
     audio_out_static: &'static AudioOutStatic,
-    pio: Peri<'static, PIO0>,
-    dma: Peri<'static, AnyChannel>,
-    pin_8: Peri<'static, PIN_8>,
-    pin_9: Peri<'static, PIN_9>,
-    pin_10: Peri<'static, PIN_10>,
+    pio_i2s_out: PioI2sOut<'static, PIO0, 0>,
+    pio_i2s_out_program: PioI2sOutProgram<'static, PIO0>,
+    pio_sm1_keep_alive: StateMachine<'static, PIO0, 1>,
 ) -> ! {
-    audio_out_task_impl::<PIO0>(audio_out_static, pio, dma, pin_8, pin_9, pin_10).await
+    audio_out_task_impl(
+        audio_out_static,
+        pio_i2s_out,
+        pio_i2s_out_program,
+        pio_sm1_keep_alive,
+    )
+    .await
 }
 
 #[embassy_executor::task]
 async fn audio_out_pio1_task(
     audio_out_static: &'static AudioOutStatic,
-    pio: Peri<'static, PIO1>,
-    dma: Peri<'static, AnyChannel>,
-    pin_8: Peri<'static, PIN_8>,
-    pin_9: Peri<'static, PIN_9>,
-    pin_10: Peri<'static, PIN_10>,
+    pio_i2s_out: PioI2sOut<'static, PIO1, 0>,
+    pio_i2s_out_program: PioI2sOutProgram<'static, PIO1>,
+    pio_sm1_keep_alive: StateMachine<'static, PIO1, 1>,
 ) -> ! {
-    audio_out_task_impl::<PIO1>(audio_out_static, pio, dma, pin_8, pin_9, pin_10).await
+    audio_out_task_impl(
+        audio_out_static,
+        pio_i2s_out,
+        pio_i2s_out_program,
+        pio_sm1_keep_alive,
+    )
+    .await
 }
 
 #[cfg(feature = "pico2")]
 #[embassy_executor::task]
 async fn audio_out_pio2_task(
     audio_out_static: &'static AudioOutStatic,
-    pio: Peri<'static, PIO2>,
-    dma: Peri<'static, AnyChannel>,
-    pin_8: Peri<'static, PIN_8>,
-    pin_9: Peri<'static, PIN_9>,
-    pin_10: Peri<'static, PIN_10>,
+    pio_i2s_out: PioI2sOut<'static, PIO2, 0>,
+    pio_i2s_out_program: PioI2sOutProgram<'static, PIO2>,
+    pio_sm1_keep_alive: StateMachine<'static, PIO2, 1>,
 ) -> ! {
-    audio_out_task_impl::<PIO2>(audio_out_static, pio, dma, pin_8, pin_9, pin_10).await
+    audio_out_task_impl(
+        audio_out_static,
+        pio_i2s_out,
+        pio_i2s_out_program,
+        pio_sm1_keep_alive,
+    )
+    .await
 }
 
-async fn audio_out_task_impl<PIO: AudioOutPio>(
+async fn audio_out_task_impl<PIO: Instance>(
     audio_out_static: &'static AudioOutStatic,
-    pio: Peri<'static, PIO>,
-    dma: Peri<'static, AnyChannel>,
-    pin_8: Peri<'static, PIN_8>,
-    pin_9: Peri<'static, PIN_9>,
-    pin_10: Peri<'static, PIN_10>,
+    mut pio_i2s_out: PioI2sOut<'static, PIO, 0>,
+    pio_i2s_out_program: PioI2sOutProgram<'static, PIO>,
+    pio_sm1_keep_alive: StateMachine<'static, PIO, 1>,
 ) -> ! {
-    let mut pio = Pio::new(pio, PIO::irqs());
-    let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
-    let mut pio_i2s_out = PioI2sOut::new(
-        &mut pio.common,
-        pio.sm0,
-        dma,
-        pin_8,
-        pin_9,
-        pin_10,
-        SAMPLE_RATE_HZ,
-        BIT_DEPTH_BITS,
-        &pio_i2s_out_program,
-    );
-
     let _pio_i2s_out_program = pio_i2s_out_program;
+    let _pio_sm1_keep_alive = pio_sm1_keep_alive;
     let mut sample_buffer = [0_u32; SAMPLE_BUFFER_LEN];
 
     loop {

@@ -6,7 +6,7 @@
 //! - BCLK -> GP9
 //! - LRC  -> GP10
 //! - SD   -> 3V3 (enabled; commonly selects left channel depending on breakout)
-//! - Button -> GP13 to GND (queues playback)
+//! - Button -> GP13 to GND (starts playback)
 
 #![no_std]
 #![no_main]
@@ -18,6 +18,7 @@ use device_envoy::Result;
 use device_envoy::audio_player::{AtEnd, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
+use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
 include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
@@ -31,9 +32,10 @@ include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
 // TODO00 think about moving some of the 4 constants (rate, bit depth, amplitude, buffer len) into the macro with defaults
 // TODO00 be sure new play commands (and stop) stops current playback immediately and doesn't just queue at the end of the current sequence
 // TODO00 make the macro documentation look good with a generated type.
+// TODO00 does the macro support vis
 
 audio_player! {
-    AudioPlayerClip {
+    AudioPlayer8 {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
@@ -51,8 +53,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
     // TODO0 should pins or PIO come first? (moved from previous audio.rs revision)
-    let audio_player_clip =
-        AudioPlayerClip::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH7, spawner)?;
+    let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH0, spawner)?;
 
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
     info!(
@@ -60,11 +61,16 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         AUDIO_SAMPLE_I16.len(),
         AUDIO_SAMPLE_I16.len() * 2
     );
-    info!("Button on GP13 queues playback");
+    info!("Button on GP13 starts playback");
 
     loop {
         button.wait_for_press().await;
-        audio_player_clip.play([&AUDIO_SAMPLE_I16], AtEnd::AtEnd);
-        info!("Queued static slice playback");
+        audio_player8.play([AUDIO_SAMPLE_I16.as_slice()], AtEnd::AtEnd);
+        info!("Started static slice playback");
+        // wait for 1 second
+        Timer::after(Duration::from_secs(1)).await;
+        audio_player8.stop();
+        Timer::after(Duration::from_secs(1)).await;
+        audio_player8.play([AUDIO_SAMPLE_I16.as_slice()], AtEnd::AtEnd);
     }
 }

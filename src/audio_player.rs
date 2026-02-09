@@ -1,9 +1,10 @@
-//! A device abstraction for queued PCM clip playback over PIO I2S.
+//! A device abstraction for preemptive PCM clip playback over PIO I2S.
 //!
 //! See [`AudioPlayer`] for the core API and [`audio_player!`] for the generated
 //! device pattern that pins down `PIO`, `DMA`, and `max_clips`.
+//TODO0 Review this code
 
-use core::borrow::Borrow;
+use core::{borrow::Borrow, ops::ControlFlow};
 
 use embassy_rp::Peri;
 use embassy_rp::dma::Channel;
@@ -31,6 +32,7 @@ enum AudioCommand<const MAX_CLIPS: usize> {
         audio_clips: Vec<&'static [i16], MAX_CLIPS>,
         at_end: AtEnd,
     },
+    Stop,
 }
 
 /// Static resources for [`AudioPlayer`].
@@ -56,7 +58,7 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     }
 }
 
-/// Queues static PCM clips for playback by the background device task.
+/// Plays static PCM clips with preemptive command handling in the background device task.
 ///
 /// See the [`audio_player!`] macro for the normal construction pattern.
 pub struct AudioPlayer<const MAX_CLIPS: usize> {
@@ -73,12 +75,16 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     /// Creates a player handle. The device task must already be running.
     #[must_use]
     pub const fn new(audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>) -> Self {
-        Self { audio_player_static }
+        Self {
+            audio_player_static,
+        }
     }
 
-    /// Queues one or more static PCM clips for playback.
+    /// Starts playback of one or more static PCM clips.
     ///
-    /// The iterator is copied into a fixed-capacity queue defined by `MAX_CLIPS`.
+    /// The iterator is copied into a fixed-capacity clip list defined by `MAX_CLIPS`.
+    /// A newer call to [`Self::play`] interrupts current playback as soon as possible
+    /// (at the next DMA chunk boundary).
     pub fn play<I>(&self, audio_clips: I, at_end: AtEnd)
     where
         I: IntoIterator,
@@ -101,6 +107,13 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
             audio_clips: audio_clip_sequence,
             at_end,
         });
+    }
+
+    /// Stops current playback as soon as possible.
+    ///
+    /// If playback is active, it is interrupted at the next DMA chunk boundary.
+    pub fn stop(&self) {
+        self.audio_player_static.signal(AudioCommand::Stop);
     }
 }
 
@@ -176,37 +189,78 @@ pub async fn device_loop<
     let mut sample_buffer = [0_u32; SAMPLE_BUFFER_LEN];
 
     loop {
-        let audio_command = audio_player_static.wait().await;
-        audio_player_static.command_signal.reset();
+        let mut audio_command = audio_player_static.wait().await;
 
-        match audio_command {
-            AudioCommand::Play { audio_clips, at_end } => match at_end {
-                AtEnd::AtEnd => {
-                    play_clip_sequence_once(&mut pio_i2s_out, &audio_clips, &mut sample_buffer).await;
+        loop {
+            match audio_command {
+                AudioCommand::Play {
+                    audio_clips,
+                    at_end,
+                } => {
+                    let next_audio_command = match at_end {
+                        AtEnd::AtEnd => {
+                            play_clip_sequence_once(
+                                &mut pio_i2s_out,
+                                &audio_clips,
+                                &mut sample_buffer,
+                                audio_player_static,
+                            )
+                            .await
+                        }
+                        AtEnd::Loop => loop {
+                            if let Some(next_audio_command) = play_clip_sequence_once(
+                                &mut pio_i2s_out,
+                                &audio_clips,
+                                &mut sample_buffer,
+                                audio_player_static,
+                            )
+                            .await
+                            {
+                                break Some(next_audio_command);
+                            }
+                        },
+                    };
+
+                    if let Some(next_audio_command) = next_audio_command {
+                        audio_command = next_audio_command;
+                        continue;
+                    }
                 }
-                AtEnd::Loop => loop {
-                    play_clip_sequence_once(&mut pio_i2s_out, &audio_clips, &mut sample_buffer).await;
-                },
-            },
+                AudioCommand::Stop => {}
+            }
+
+            break;
         }
     }
 }
 
-async fn play_clip_sequence_once<PIO: Instance>(
+async fn play_clip_sequence_once<PIO: Instance, const MAX_CLIPS: usize>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
     audio_clips: &[&'static [i16]],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-) {
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
+) -> Option<AudioCommand<MAX_CLIPS>> {
     for audio_sample_i16 in audio_clips {
-        play_full_clip_once(pio_i2s_out, audio_sample_i16, sample_buffer).await;
+        if let ControlFlow::Break(next_audio_command) = play_full_clip_once(
+            pio_i2s_out,
+            audio_sample_i16,
+            sample_buffer,
+            audio_player_static,
+        )
+        .await
+        {
+            return Some(next_audio_command);
+        }
     }
+    None
 }
 
-async fn play_full_clip_once<PIO: Instance>(
+async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
     audio_sample_i16: &[i16],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-) {
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
+) -> ControlFlow<AudioCommand<MAX_CLIPS>, ()> {
     for audio_sample_chunk in audio_sample_i16.chunks(SAMPLE_BUFFER_LEN) {
         for (sample_buffer_slot, sample_value_ref) in
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
@@ -219,7 +273,13 @@ async fn play_full_clip_once<PIO: Instance>(
 
         sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));
         pio_i2s_out.write(sample_buffer).await;
+
+        if let Some(next_audio_command) = audio_player_static.command_signal.try_take() {
+            return ControlFlow::Break(next_audio_command);
+        }
     }
+
+    ControlFlow::Continue(())
 }
 
 #[inline]
@@ -254,7 +314,7 @@ macro_rules! __audio_player_impl {
             bclk_pin: _UNSET_,
             lrc_pin: _UNSET_,
             pio: PIO1,
-            dma: DMA_CH7,
+            dma: DMA_CH0,
             max_clips: 16,
             fields: [ $($fields)* ]
         }
@@ -273,7 +333,7 @@ macro_rules! __audio_player_impl {
             bclk_pin: _UNSET_,
             lrc_pin: _UNSET_,
             pio: PIO1,
-            dma: DMA_CH7,
+            dma: DMA_CH0,
             max_clips: 16,
             fields: [ $($fields)* ]
         }

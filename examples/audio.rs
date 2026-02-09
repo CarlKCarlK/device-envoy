@@ -86,11 +86,10 @@ async fn play_full_sample_once<PioInstance: Instance>(
     // Stream source audio in fixed-size chunks matching the DMA buffer.
     for audio_sample_chunk in audio_sample_i16.chunks(SAMPLE_BUFFER_LEN) {
         // Fill converted samples first.
-        for (sample_buffer_slot, sample_value_ref) in
+        for (sample_buffer_slot, sample_value) in
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
-            let sample_value = *sample_value_ref;
-            let scaled_sample = ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_767) as i16;
+            let scaled_sample = ((i32::from(*sample_value) * i32::from(AMPLITUDE)) / 32_768) as i16;
             *sample_buffer_slot = stereo_sample(scaled_sample);
         }
 

@@ -23,10 +23,10 @@ use embassy_rp::pio::{Instance, Pio};
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use {defmt_rtt as _, panic_probe as _};
 
+include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
+
 const SAMPLE_RATE_HZ: u32 = 44_100;
 const BIT_DEPTH_BITS: u32 = 16;
-const AUDIO_SAMPLE_BYTES: &[u8] =
-    include_bytes!("data/audio/computers_in_control_mono_s16le_44100.raw");
 const AMPLITUDE: i16 = 8_000;
 const SAMPLE_BUFFER_LEN: usize = 256;
 
@@ -56,22 +56,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         &pio_i2s_out_program,
     );
 
-    if (AUDIO_SAMPLE_BYTES.len() % 2) != 0 {
-        return Err(device_envoy::Error::FormatError);
-    }
     let mut sample_buffer = [0_u32; SAMPLE_BUFFER_LEN];
 
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
     info!(
-        "Loaded sample: {} bytes, 44.1kHz mono s16le",
-        AUDIO_SAMPLE_BYTES.len()
+        "Loaded sample: {} samples ({} bytes), 44.1kHz mono s16le",
+        AUDIO_SAMPLE_I16.len(),
+        AUDIO_SAMPLE_I16.len() * 2
     );
     info!("Button on GP13 plays the clip");
 
     loop {
         button.wait_for_press().await;
         info!("Playing sample...");
-        play_full_sample_once(&mut pio_i2s_out, &mut sample_buffer).await;
+        play_full_sample_once(&mut pio_i2s_out, &AUDIO_SAMPLE_I16, &mut sample_buffer).await;
         info!("Playback finished");
     }
 }
@@ -82,31 +80,30 @@ fn pio_new<PioInstance: LedStripPio>(pio: Peri<'static, PioInstance>) -> Pio<'st
 
 async fn play_full_sample_once<PioInstance: Instance>(
     pio_i2s_out: &mut PioI2sOut<'static, PioInstance, 0>,
+    audio_sample_i16: &[i16],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
 ) {
-    let mut audio_sample_byte_index = 0_usize;
+    let mut audio_sample_i16 = audio_sample_i16.iter().copied();
 
-    let mut sample_index = 0;
-    while audio_sample_byte_index < AUDIO_SAMPLE_BYTES.len() {
-        while sample_index < SAMPLE_BUFFER_LEN && audio_sample_byte_index < AUDIO_SAMPLE_BYTES.len()
-        {
-            let sample_value = i16::from_le_bytes([
-                AUDIO_SAMPLE_BYTES[audio_sample_byte_index],
-                AUDIO_SAMPLE_BYTES[audio_sample_byte_index + 1],
-            ]);
-            audio_sample_byte_index += 2;
-            let scaled_sample = ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_767) as i16;
-            sample_buffer[sample_index] = stereo_sample(scaled_sample);
-            sample_index += 1;
+    loop {
+        let mut written_samples = 0_usize;
+
+        for sample_buffer_slot in sample_buffer.iter_mut() {
+            if let Some(sample_value) = audio_sample_i16.next() {
+                let scaled_sample =
+                    ((i32::from(sample_value) * i32::from(AMPLITUDE)) / 32_767) as i16;
+                *sample_buffer_slot = stereo_sample(scaled_sample);
+                written_samples += 1;
+            } else {
+                *sample_buffer_slot = stereo_sample(0);
+            }
         }
 
-        while sample_index < SAMPLE_BUFFER_LEN {
-            sample_buffer[sample_index] = stereo_sample(0);
-            sample_index += 1;
+        if written_samples == 0 {
+            break;
         }
 
         pio_i2s_out.write(sample_buffer).await;
-        sample_index = 0;
     }
 }
 

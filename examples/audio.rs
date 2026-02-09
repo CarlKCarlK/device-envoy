@@ -15,7 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::AtEnd;
+use device_envoy::audio_player::{AtEnd, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -30,15 +30,13 @@ include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
 // TODO00 preprocess samples at compile time
 // TODO00 think about moving some of the 4 constants (rate, bit depth, amplitude, buffer len) into the macro with defaults
 // TODO00 be sure new play commands (and stop) stops current playback immediately and doesn't just queue at the end of the current sequence
+// TODO00 make the macro documentation look good with a generated type.
 
-device_envoy::audio_player! {
+audio_player! {
     AudioPlayerClip {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
-        pio: PIO1,
-        dma: DMA_CH7,
-        max_clips: 8,
     }
 }
 
@@ -53,14 +51,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
     // TODO0 should pins or PIO come first? (moved from previous audio.rs revision)
-    let audio_player_clip = AudioPlayerClip::new(
-        p.PIN_8,
-        p.PIN_9,
-        p.PIN_10,
-        p.PIO1,
-        p.DMA_CH7,
-        spawner,
-    )?;
+    let audio_player_clip =
+        AudioPlayerClip::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH7, spawner)?;
 
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
     info!(
@@ -72,7 +64,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     loop {
         button.wait_for_press().await;
-        audio_player_clip.play(core::iter::once(&AUDIO_SAMPLE_I16[..]), AtEnd::AtEnd);
+        audio_player_clip.play([&AUDIO_SAMPLE_I16], AtEnd::AtEnd);
         info!("Queued static slice playback");
     }
 }

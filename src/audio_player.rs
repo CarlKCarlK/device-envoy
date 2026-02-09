@@ -234,15 +234,253 @@ pub use paste;
 // TODO00 do pio and dma in macro (may no longer apply)
 #[macro_export]
 macro_rules! audio_player {
+    ($($tt:tt)*) => { $crate::__audio_player_impl! { $($tt)* } };
+}
+
+/// Internal implementation macro for [`audio_player!`].
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __audio_player_impl {
+    (
+        $name:ident {
+            $($fields:tt)*
+        }
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: pub,
+            name: $name,
+            din_pin: _UNSET_,
+            bclk_pin: _UNSET_,
+            lrc_pin: _UNSET_,
+            pio: PIO1,
+            dma: DMA_CH7,
+            max_clips: 16,
+            fields: [ $($fields)* ]
+        }
+    };
+
     (
         $vis:vis $name:ident {
-            din_pin: $din_pin:ident,
-            bclk_pin: $bclk_pin:ident,
-            lrc_pin: $lrc_pin:ident,
-            pio: $pio:ident,
-            dma: $dma:ident,
-            max_clips: $max_clips:expr $(,)?
+            $($fields:tt)*
         }
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: _UNSET_,
+            bclk_pin: _UNSET_,
+            lrc_pin: _UNSET_,
+            pio: PIO1,
+            dma: DMA_CH7,
+            max_clips: 16,
+            fields: [ $($fields)* ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ din_pin: $din_pin_value:ident $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin_value,
+            bclk_pin: $bclk_pin,
+            lrc_pin: $lrc_pin,
+            pio: $pio,
+            dma: $dma,
+            max_clips: $max_clips,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ bclk_pin: $bclk_pin_value:ident $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin,
+            bclk_pin: $bclk_pin_value,
+            lrc_pin: $lrc_pin,
+            pio: $pio,
+            dma: $dma,
+            max_clips: $max_clips,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ lrc_pin: $lrc_pin_value:ident $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin,
+            bclk_pin: $bclk_pin,
+            lrc_pin: $lrc_pin_value,
+            pio: $pio,
+            dma: $dma,
+            max_clips: $max_clips,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ pio: $pio_value:ident $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin,
+            bclk_pin: $bclk_pin,
+            lrc_pin: $lrc_pin,
+            pio: $pio_value,
+            dma: $dma,
+            max_clips: $max_clips,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ dma: $dma_value:ident $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin,
+            bclk_pin: $bclk_pin,
+            lrc_pin: $lrc_pin,
+            pio: $pio,
+            dma: $dma_value,
+            max_clips: $max_clips,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ max_clips: $max_clips_value:expr $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin,
+            bclk_pin: $bclk_pin,
+            lrc_pin: $lrc_pin,
+            pio: $pio,
+            dma: $dma,
+            max_clips: $max_clips_value,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: _UNSET_,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ ]
+    ) => {
+        compile_error!("audio_player! requires din_pin");
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:ident,
+        bclk_pin: _UNSET_,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ ]
+    ) => {
+        compile_error!("audio_player! requires bclk_pin");
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:ident,
+        bclk_pin: $bclk_pin:ident,
+        lrc_pin: _UNSET_,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ ]
+    ) => {
+        compile_error!("audio_player! requires lrc_pin");
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:ident,
+        bclk_pin: $bclk_pin:ident,
+        lrc_pin: $lrc_pin:ident,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        fields: [ ]
     ) => {
         $crate::audio_player::paste::paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]: $crate::audio_player::AudioPlayerStatic<$max_clips> =

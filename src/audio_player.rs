@@ -19,6 +19,73 @@ const BIT_DEPTH_BITS: u32 = 16;
 const AMPLITUDE: i16 = 8_000;
 const SAMPLE_BUFFER_LEN: usize = 256;
 
+/// Returns how many samples are needed for a duration in milliseconds.
+///
+/// Use this in const contexts to size static audio arrays.
+#[must_use]
+pub const fn samples_for_duration_ms(duration_ms: u32, sample_rate_hz: u32) -> usize {
+    assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
+    ((duration_ms as u64 * sample_rate_hz as u64) / 1_000) as usize
+}
+
+/// Generates a silent i16 PCM clip with `SAMPLE_COUNT` samples.
+#[must_use]
+pub const fn silence_i16<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
+    [0; SAMPLE_COUNT]
+}
+
+/// Generates an i16 PCM sine-wave clip with `SAMPLE_COUNT` samples.
+///
+/// - `frequency_hz`: Tone frequency in Hz.
+/// - `duration` is represented by `SAMPLE_COUNT`.
+/// - `amplitude`: Peak sample value (0..=32767).
+/// - `sample_rate_hz`: Sample rate in Hz.
+#[must_use]
+pub const fn sinewave_i16<const SAMPLE_COUNT: usize>(
+    frequency_hz: u32,
+    amplitude: i16,
+    sample_rate_hz: u32,
+) -> [i16; SAMPLE_COUNT] {
+    assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
+    assert!(amplitude >= 0, "amplitude must be >= 0");
+    assert!(amplitude <= i16::MAX, "amplitude must be <= i16::MAX");
+
+    let mut audio_sample_i16 = [0_i16; SAMPLE_COUNT];
+    let phase_step_u64 = ((frequency_hz as u64) << 32) / sample_rate_hz as u64;
+    let phase_step_u32 = phase_step_u64 as u32;
+    let mut phase_u32 = 0_u32;
+
+    let mut sample_index = 0_usize;
+    while sample_index < SAMPLE_COUNT {
+        audio_sample_i16[sample_index] = sine_sample_from_phase(phase_u32, amplitude);
+        phase_u32 = phase_u32.wrapping_add(phase_step_u32);
+        sample_index += 1;
+    }
+
+    audio_sample_i16
+}
+
+#[inline]
+const fn sine_sample_from_phase(phase_u32: u32, amplitude: i16) -> i16 {
+    let half_cycle_u64 = 1_u64 << 31;
+    let one_q31_u64 = 1_u64 << 31;
+    let phase_u64 = phase_u32 as u64;
+    let (half_phase_u64, sign_i64) = if phase_u64 < half_cycle_u64 {
+        (phase_u64, 1_i64)
+    } else {
+        (phase_u64 - half_cycle_u64, -1_i64)
+    };
+
+    // Bhaskara approximation on a normalized half-cycle:
+    // sin(pi * t) ~= 16 t (1 - t) / (5 - 4 t (1 - t)), for t in [0, 1].
+    let product_q31_u64 = (half_phase_u64 * (one_q31_u64 - half_phase_u64)) >> 31;
+    let denominator_q31_u64 = 5 * one_q31_u64 - 4 * product_q31_u64;
+    let sine_q31_u64 = ((16 * product_q31_u64) << 31) / denominator_q31_u64;
+
+    let scaled_i64 = ((sine_q31_u64 as i64 * amplitude as i64) >> 31) * sign_i64;
+    scaled_i64 as i16
+}
+
 /// End-of-sequence behavior for playback.
 pub enum AtEnd {
     /// Replay the full clip sequence forever.

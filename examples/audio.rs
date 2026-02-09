@@ -63,14 +63,28 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!("Button on GP13 starts playback");
 
+    const SAMPLE_RATE_HZ: u32 = 22_050;
+    const TONE_LEN: usize =
+        device_envoy::audio_player::samples_for_duration_ms(500, SAMPLE_RATE_HZ);
+    const TONE_A4: [i16; TONE_LEN] =
+        device_envoy::audio_player::sinewave_i16::<TONE_LEN>(440, 8_000, SAMPLE_RATE_HZ);
+    const SILENCE_100MS_LEN: usize =
+        device_envoy::audio_player::samples_for_duration_ms(100, SAMPLE_RATE_HZ);
+    const SILENCE_100MS: [i16; SILENCE_100MS_LEN] =
+        device_envoy::audio_player::silence_i16::<SILENCE_100MS_LEN>();
+
     loop {
         button.wait_for_press().await;
-        audio_player8.play([AUDIO_SAMPLE_I16.as_slice()], AtEnd::AtEnd);
+        audio_player8.play(
+            [TONE_A4.as_slice(), SILENCE_100MS.as_slice(), TONE_A4.as_slice()],
+            AtEnd::Loop,
+        );
         info!("Started static slice playback");
         // wait for 1 second
-        Timer::after(Duration::from_secs(1)).await;
+        Timer::after(Duration::from_secs(3)).await;
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
+        // todo0 atend::atend is wrong
         audio_player8.play([AUDIO_SAMPLE_I16.as_slice()], AtEnd::AtEnd);
     }
 }

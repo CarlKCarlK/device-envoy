@@ -21,20 +21,23 @@ const BIT_DEPTH_BITS: u32 = 16;
 const SAMPLE_BUFFER_LEN: usize = 256;
 /// Maximum linear volume scale value.
 pub const MAX_VOLUME: i16 = i16::MAX;
+const SPINAL_TAP_11_LINEAR: i32 = 36_765;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
 
 /// Linear volume scale used by [`AudioClipN::with_volume`].
 ///
 /// `Volume` is a value object, not device state.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Volume(i16);
+pub struct Volume(i32);
 
 impl Volume {
     /// Silence.
     pub const MUTE: Self = Self(0);
 
     /// Full-scale linear volume (no attenuation).
-    pub const FULL_SCALE: Self = Self(MAX_VOLUME);
+    pub const FULL_SCALE: Self = Self(MAX_VOLUME as i32);
+    /// Alias for [`Self::FULL_SCALE`].
+    pub const FULL: Self = Self::FULL_SCALE;
 
     /// Creates a volume from a percentage of full scale.
     ///
@@ -43,7 +46,7 @@ impl Volume {
     pub const fn percent(percent: u8) -> Self {
         let percent = if percent > 100 { 100 } else { percent };
         let value_i32 = (percent as i32 * MAX_VOLUME as i32) / 100;
-        Self(value_i32 as i16)
+        Self(value_i32)
     }
 
     /// Creates a volume from decibel attenuation.
@@ -73,16 +76,44 @@ impl Volume {
             attenuation_index += 1;
         }
         let value_i32 = (MAX_VOLUME as i32 * scale_q15_i32 + ROUND_Q15) / ONE_Q15;
-        Self(value_i32 as i16)
+        Self(value_i32)
+    }
+
+    /// Creates a humorous "goes to 11" demo volume scale.
+    ///
+    /// Range:
+    /// - `0` -> mute
+    /// - `10` -> full-scale
+    /// - `11` -> slight overdrive (+1 dB)
+    ///
+    /// Values above `11` saturate to `11`.
+    #[must_use]
+    pub const fn spinal_tap(spinal_tap: u8) -> Self {
+        let spinal_tap = if spinal_tap > 11 { 11 } else { spinal_tap };
+        match spinal_tap {
+            0 => Self::MUTE,
+            1 => Self::db(-40),
+            2 => Self::db(-30),
+            3 => Self::db(-24),
+            4 => Self::db(-18),
+            5 => Self::db(-12),
+            6 => Self::db(-9),
+            7 => Self::db(-6),
+            8 => Self::db(-3),
+            9 => Self::db(-1),
+            10 => Self::FULL_SCALE,
+            11 => Self::from_linear(SPINAL_TAP_11_LINEAR),
+            _ => Self::MUTE,
+        }
     }
 
     #[must_use]
-    const fn linear(self) -> i16 {
+    const fn linear(self) -> i32 {
         self.0
     }
 
     #[must_use]
-    const fn from_linear(linear: i16) -> Self {
+    const fn from_linear(linear: i32) -> Self {
         Self(linear)
     }
 }
@@ -102,19 +133,9 @@ pub const fn samples_ms(duration_ms: u32, sample_rate_hz: u32) -> usize {
     samples_for_duration_ms(duration_ms, sample_rate_hz)
 }
 
-/// Generates a silent i16 PCM clip with `SAMPLE_COUNT` samples.
 #[must_use]
-pub const fn silence<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
+const fn silence_samples<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
     [0; SAMPLE_COUNT]
-}
-
-/// Generates an i16 PCM sine-wave clip with `SAMPLE_COUNT` samples.
-///
-/// - `frequency_hz`: Tone frequency in Hz.
-/// - `duration` is represented by `SAMPLE_COUNT`.
-#[must_use]
-pub const fn tone<const SAMPLE_COUNT: usize>(frequency_hz: u32) -> [i16; SAMPLE_COUNT] {
-    tone_with_sample_rate::<SAMPLE_COUNT>(frequency_hz, SAMPLE_RATE_HZ)
 }
 
 #[must_use]
@@ -188,6 +209,15 @@ const fn scale_sample(sample_i16: i16, volume: Volume) -> i16 {
 }
 
 #[inline]
+const fn scale_linear(linear_i32: i32, volume: Volume) -> i32 {
+    if volume.linear() == 0 || linear_i32 == 0 {
+        return 0;
+    }
+    let unity_scaled_volume_i64 = volume.linear() as i64 + 1;
+    ((linear_i32 as i64 * unity_scaled_volume_i64) / I16_ABS_MAX_I64) as i32
+}
+
+#[inline]
 const fn clamp_i64_to_i16(value_i64: i64) -> i16 {
     if value_i64 > i16::MAX as i64 {
         i16::MAX
@@ -218,7 +248,10 @@ pub struct AudioClip<T: ?Sized = [i16]> {
     samples: T,
 }
 
-impl AudioClip<[i16]> {
+/// Unsized clip reference type used for playback.
+pub type AudioClipRef = AudioClip<[i16]>;
+
+impl AudioClipRef {
     /// Clip sample rate in hertz.
     #[must_use]
     pub const fn sample_rate_hz(&self) -> u32 {
@@ -227,8 +260,14 @@ impl AudioClip<[i16]> {
 
     /// Clip samples as an i16 PCM slice.
     #[must_use]
-    pub const fn samples(&self) -> &[i16] {
+    pub(crate) const fn samples(&self) -> &[i16] {
         &self.samples
+    }
+
+    /// Number of PCM samples in this clip.
+    #[must_use]
+    pub const fn sample_count(&self) -> usize {
+        self.samples.len()
     }
 }
 
@@ -238,7 +277,7 @@ pub type AudioClipN<const SAMPLE_COUNT: usize> = AudioClip<[i16; SAMPLE_COUNT]>;
 impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
     /// Creates a clip from sample rate and PCM samples.
     #[must_use]
-    pub const fn new(sample_rate_hz: u32, samples: [i16; SAMPLE_COUNT]) -> Self {
+    const fn new(sample_rate_hz: u32, samples: [i16; SAMPLE_COUNT]) -> Self {
         assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
         Self {
             sample_rate_hz,
@@ -252,15 +291,15 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
         self.sample_rate_hz
     }
 
-    /// Clip samples as a fixed-size PCM array reference.
+    /// Number of PCM samples in this clip.
     #[must_use]
-    pub const fn samples(&self) -> &[i16; SAMPLE_COUNT] {
-        &self.samples
+    pub const fn sample_count(&self) -> usize {
+        SAMPLE_COUNT
     }
 
     /// Returns this clip as an unsized clip view.
     #[must_use]
-    pub fn as_clip(&'static self) -> &'static AudioClip<[i16]> {
+    pub fn as_clip(&'static self) -> &'static AudioClipRef {
         self
     }
 
@@ -269,29 +308,70 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
     pub const fn with_volume(self, volume: Volume) -> Self {
         Self::new(self.sample_rate_hz, with_volume(&self.samples, volume))
     }
+
+    /// Creates a silent clip at `sample_rate_hz`.
+    #[must_use]
+    pub const fn silence(sample_rate_hz: u32) -> Self {
+        Self::new(sample_rate_hz, silence_samples::<SAMPLE_COUNT>())
+    }
+
+    /// Creates a sine-wave clip at `sample_rate_hz`.
+    #[must_use]
+    pub const fn tone(sample_rate_hz: u32, frequency_hz: u32) -> Self {
+        assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
+        Self::new(
+            sample_rate_hz,
+            tone_with_sample_rate::<SAMPLE_COUNT>(frequency_hz, sample_rate_hz),
+        )
+    }
+
+    /// Creates a clip from little-endian s16 PCM bytes.
+    ///
+    /// `AUDIO_SAMPLE_BYTES_LEN` must be exactly `SAMPLE_COUNT * 2`.
+    #[must_use]
+    pub const fn from_s16le_bytes<const AUDIO_SAMPLE_BYTES_LEN: usize>(
+        sample_rate_hz: u32,
+        audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN],
+    ) -> Self {
+        assert!(
+            AUDIO_SAMPLE_BYTES_LEN == SAMPLE_COUNT * 2,
+            "audio byte length must equal sample_count * 2"
+        );
+
+        let mut samples = [0_i16; SAMPLE_COUNT];
+        let mut sample_index = 0_usize;
+        while sample_index < SAMPLE_COUNT {
+            let byte_index = sample_index * 2;
+            samples[sample_index] =
+                i16::from_le_bytes([audio_sample_s16le[byte_index], audio_sample_s16le[byte_index + 1]]);
+            sample_index += 1;
+        }
+
+        Self::new(sample_rate_hz, samples)
+    }
 }
 
 /// Supported clip input types for [`AudioPlayer::play_iter`].
 pub trait IntoAudioClipRef {
     /// Converts this clip input into a static audio clip reference.
-    fn into_audio_clip(self) -> &'static AudioClip<[i16]>;
+    fn into_audio_clip(self) -> &'static AudioClipRef;
 }
 
-impl IntoAudioClipRef for &'static AudioClip<[i16]> {
-    fn into_audio_clip(self) -> &'static AudioClip<[i16]> {
+impl IntoAudioClipRef for &'static AudioClipRef {
+    fn into_audio_clip(self) -> &'static AudioClipRef {
         self
     }
 }
 
 impl<const SAMPLE_COUNT: usize> IntoAudioClipRef for &'static AudioClipN<SAMPLE_COUNT> {
-    fn into_audio_clip(self) -> &'static AudioClip<[i16]> {
+    fn into_audio_clip(self) -> &'static AudioClipRef {
         self
     }
 }
 
 enum AudioCommand<const MAX_CLIPS: usize> {
     Play {
-        audio_clips: Vec<&'static AudioClip<[i16]>, MAX_CLIPS>,
+        audio_clips: Vec<&'static AudioClipRef, MAX_CLIPS>,
         at_end: AtEnd,
     },
     Stop,
@@ -300,22 +380,37 @@ enum AudioCommand<const MAX_CLIPS: usize> {
 /// Static resources for [`AudioPlayer`].
 pub struct AudioPlayerStatic<const MAX_CLIPS: usize> {
     command_signal: Signal<CriticalSectionRawMutex, AudioCommand<MAX_CLIPS>>,
-    runtime_volume_linear: AtomicI32,
+    max_volume_linear: i32,
+    runtime_volume_relative_linear: AtomicI32,
 }
 
 impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     /// Creates static resources for a player.
     #[must_use]
     pub const fn new_static() -> Self {
-        Self::new_static_with_volume(Volume::FULL_SCALE)
+        Self::new_static_with_max_volume_and_initial_volume(
+            Volume::FULL_SCALE,
+            Volume::FULL_SCALE,
+        )
     }
 
-    /// Creates static resources for a player with an initial runtime volume.
+    /// Creates static resources for a player with a runtime volume ceiling.
     #[must_use]
-    pub const fn new_static_with_volume(initial_volume: Volume) -> Self {
+    pub const fn new_static_with_max_volume(max_volume: Volume) -> Self {
+        Self::new_static_with_max_volume_and_initial_volume(max_volume, Volume::FULL_SCALE)
+    }
+
+    /// Creates static resources for a player with a runtime volume ceiling
+    /// and an initial runtime volume relative to that ceiling.
+    #[must_use]
+    pub const fn new_static_with_max_volume_and_initial_volume(
+        max_volume: Volume,
+        initial_volume: Volume,
+    ) -> Self {
         Self {
             command_signal: Signal::new(),
-            runtime_volume_linear: AtomicI32::new(initial_volume.linear() as i32),
+            max_volume_linear: max_volume.linear(),
+            runtime_volume_relative_linear: AtomicI32::new(initial_volume.linear()),
         }
     }
 
@@ -328,12 +423,21 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     }
 
     fn set_runtime_volume(&self, volume: Volume) {
-        self.runtime_volume_linear
-            .store(volume.linear() as i32, Ordering::Relaxed);
+        self.runtime_volume_relative_linear
+            .store(volume.linear(), Ordering::Relaxed);
     }
 
     fn runtime_volume(&self) -> Volume {
-        Volume::from_linear(self.runtime_volume_linear.load(Ordering::Relaxed) as i16)
+        Volume::from_linear(self.runtime_volume_relative_linear.load(Ordering::Relaxed))
+    }
+
+    fn effective_runtime_volume(&self) -> Volume {
+        let runtime_volume_relative = self.runtime_volume();
+        Volume::from_linear(scale_linear(self.max_volume_linear, runtime_volume_relative))
+    }
+
+    fn max_volume(&self) -> Volume {
+        Volume::from_linear(self.max_volume_linear)
     }
 }
 
@@ -351,10 +455,20 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
         AudioPlayerStatic::new_static()
     }
 
-    /// Creates static resources for a player with an initial runtime volume.
+    /// Creates static resources for a player with a runtime volume ceiling.
     #[must_use]
-    pub const fn new_static_with_volume(initial_volume: Volume) -> AudioPlayerStatic<MAX_CLIPS> {
-        AudioPlayerStatic::new_static_with_volume(initial_volume)
+    pub const fn new_static_with_max_volume(max_volume: Volume) -> AudioPlayerStatic<MAX_CLIPS> {
+        AudioPlayerStatic::new_static_with_max_volume(max_volume)
+    }
+
+    /// Creates static resources for a player with a runtime volume ceiling
+    /// and an initial runtime volume relative to that ceiling.
+    #[must_use]
+    pub const fn new_static_with_max_volume_and_initial_volume(
+        max_volume: Volume,
+        initial_volume: Volume,
+    ) -> AudioPlayerStatic<MAX_CLIPS> {
+        AudioPlayerStatic::new_static_with_max_volume_and_initial_volume(max_volume, initial_volume)
     }
 
     /// Creates a player handle. The device task must already be running.
@@ -375,22 +489,20 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     /// (at the next DMA chunk boundary).
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static AudioClip<[i16]>; CLIP_COUNT],
+        audio_clips: [&'static AudioClipRef; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         self.play_iter(audio_clips, at_end);
     }
 
     /// Starts playback from a generic iterator of static clip-like values.
-    ///
-    /// This accepts iterators of `&'static [i16]` and `&'static [i16; N]`.
     pub fn play_iter<I>(&self, audio_clips: I, at_end: AtEnd)
     where
         I: IntoIterator,
         I::Item: IntoAudioClipRef,
     {
         assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
-        let mut audio_clip_sequence: Vec<&'static AudioClip<[i16]>, MAX_CLIPS> = Vec::new();
+        let mut audio_clip_sequence: Vec<&'static AudioClipRef, MAX_CLIPS> = Vec::new();
         for audio_clip in audio_clips {
             let audio_clip = audio_clip.into_audio_clip();
             assert!(
@@ -422,18 +534,27 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
         self.audio_player_static.signal(AudioCommand::Stop);
     }
 
-    /// Sets runtime playback volume.
+    /// Sets runtime playback volume relative to [`Self::max_volume`].
     ///
-    /// This scale is applied to all playback and composes multiplicatively
-    /// with any per-clip gain pre-applied via [`AudioClipN::with_volume`].
+    /// - `Volume::percent(100)` plays at exactly `max_volume`.
+    /// - `Volume::percent(50)` plays at half of `max_volume`.
+    ///
+    /// This relative scale composes multiplicatively with any per-clip gain
+    /// pre-applied via [`AudioClipN::with_volume`].
     pub fn set_volume(&self, volume: Volume) {
         self.audio_player_static.set_runtime_volume(volume);
     }
 
-    /// Returns the current runtime playback volume.
+    /// Returns the current runtime playback volume relative to [`Self::max_volume`].
     #[must_use]
     pub fn volume(&self) -> Volume {
         self.audio_player_static.runtime_volume()
+    }
+
+    /// Returns the configured runtime volume ceiling.
+    #[must_use]
+    pub fn max_volume(&self) -> Volume {
+        self.audio_player_static.max_volume()
     }
 }
 
@@ -556,7 +677,7 @@ pub async fn device_loop<
 
 async fn play_clip_sequence_once<PIO: Instance, const MAX_CLIPS: usize>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_clips: &[&'static AudioClip<[i16]>],
+    audio_clips: &[&'static AudioClipRef],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
 ) -> Option<AudioCommand<MAX_CLIPS>> {
@@ -577,12 +698,12 @@ async fn play_clip_sequence_once<PIO: Instance, const MAX_CLIPS: usize>(
 
 async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_clip: &AudioClip<[i16]>,
+    audio_clip: &AudioClipRef,
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
 ) -> ControlFlow<AudioCommand<MAX_CLIPS>, ()> {
     for audio_sample_chunk in audio_clip.samples().chunks(SAMPLE_BUFFER_LEN) {
-        let runtime_volume = audio_player_static.runtime_volume();
+        let runtime_volume = audio_player_static.effective_runtime_volume();
         for (sample_buffer_slot, sample_value_ref) in
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
@@ -637,6 +758,7 @@ macro_rules! __audio_player_impl {
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
+            max_volume: $crate::audio_player::Volume::FULL_SCALE,
             initial_volume: $crate::audio_player::Volume::FULL_SCALE,
             fields: [ $($fields)* ]
         }
@@ -657,6 +779,7 @@ macro_rules! __audio_player_impl {
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
+            max_volume: $crate::audio_player::Volume::FULL_SCALE,
             initial_volume: $crate::audio_player::Volume::FULL_SCALE,
             fields: [ $($fields)* ]
         }
@@ -671,6 +794,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ din_pin: $din_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -684,6 +808,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
+            max_volume: $max_volume,
             initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
@@ -698,6 +823,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ bclk_pin: $bclk_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -711,6 +837,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
+            max_volume: $max_volume,
             initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
@@ -725,6 +852,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ lrc_pin: $lrc_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -738,6 +866,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
+            max_volume: $max_volume,
             initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
@@ -752,6 +881,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ pio: $pio_value:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -765,6 +895,7 @@ macro_rules! __audio_player_impl {
             pio: $pio_value,
             dma: $dma,
             max_clips: $max_clips,
+            max_volume: $max_volume,
             initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
@@ -779,6 +910,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ dma: $dma_value:ident $(, $($rest:tt)* )? ]
     ) => {
@@ -792,6 +924,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma_value,
             max_clips: $max_clips,
+            max_volume: $max_volume,
             initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
@@ -806,6 +939,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ max_clips: $max_clips_value:expr $(, $($rest:tt)* )? ]
     ) => {
@@ -819,6 +953,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips_value,
+            max_volume: $max_volume,
             initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
@@ -833,8 +968,9 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        fields: [ volume: $initial_volume_value:expr $(, $($rest:tt)* )? ]
+        fields: [ max_volume: $max_volume_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
             @__fill_defaults
@@ -846,9 +982,55 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
+            max_volume: $max_volume_value,
+            initial_volume: $initial_volume,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
+        initial_volume: $initial_volume:expr,
+        fields: [ initial_volume: $initial_volume_value:expr $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin,
+            bclk_pin: $bclk_pin,
+            lrc_pin: $lrc_pin,
+            pio: $pio,
+            dma: $dma,
+            max_clips: $max_clips,
+            max_volume: $max_volume,
             initial_volume: $initial_volume_value,
             fields: [ $($($rest)*)? ]
         }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
+        initial_volume: $initial_volume:expr,
+        fields: [ volume: $volume_value:expr $(, $($rest:tt)* )? ]
+    ) => {
+        compile_error!("audio_player! field `volume` was renamed to `max_volume`");
     };
 
     (@__fill_defaults
@@ -860,6 +1042,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
@@ -875,6 +1058,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
@@ -890,6 +1074,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
@@ -905,12 +1090,16 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
         $crate::audio_player::paste::paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]: $crate::audio_player::AudioPlayerStatic<$max_clips> =
-                $crate::audio_player::AudioPlayer::<$max_clips>::new_static_with_volume($initial_volume);
+                $crate::audio_player::AudioPlayer::<$max_clips>::new_static_with_max_volume_and_initial_volume(
+                    $max_volume,
+                    $initial_volume,
+                );
             static [<$name:upper _AUDIO_PLAYER_CELL>]: ::static_cell::StaticCell<$name> =
                 ::static_cell::StaticCell::new();
 
@@ -935,48 +1124,30 @@ macro_rules! __audio_player_impl {
                     Self::samples_for_duration_ms(duration_ms)
                 }
 
-                /// Generates a silent i16 PCM clip with `SAMPLE_COUNT` samples.
-                #[must_use]
-                pub const fn silence<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
-                    $crate::audio_player::silence::<SAMPLE_COUNT>()
-                }
-
-                /// Generates an i16 PCM sine-wave clip with `SAMPLE_COUNT` samples
-                /// at this player's sample rate.
-                #[must_use]
-                pub const fn tone<const SAMPLE_COUNT: usize>(
-                    frequency_hz: u32,
-                ) -> [i16; SAMPLE_COUNT] {
-                    $crate::audio_player::tone::<SAMPLE_COUNT>(frequency_hz)
-                }
-
                 /// Creates a silent clip at this player's sample rate.
                 #[must_use]
-                pub const fn silence_clip<const SAMPLE_COUNT: usize>(
+                pub const fn silence<const SAMPLE_COUNT: usize>(
                 ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
-                    $crate::audio_player::AudioClipN::new(
-                        Self::SAMPLE_RATE_HZ,
-                        Self::silence::<SAMPLE_COUNT>(),
-                    )
+                    $crate::audio_player::AudioClipN::silence(Self::SAMPLE_RATE_HZ)
                 }
 
                 /// Creates a sine-wave clip at this player's sample rate.
                 #[must_use]
-                pub const fn tone_clip<const SAMPLE_COUNT: usize>(
+                pub const fn tone<const SAMPLE_COUNT: usize>(
                     frequency_hz: u32,
                 ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
-                    $crate::audio_player::AudioClipN::new(
-                        Self::SAMPLE_RATE_HZ,
-                        Self::tone::<SAMPLE_COUNT>(frequency_hz),
-                    )
+                    $crate::audio_player::AudioClipN::tone(Self::SAMPLE_RATE_HZ, frequency_hz)
                 }
 
-                /// Creates a clip from provided sample data at this player's sample rate.
+                /// Creates a clip from little-endian s16 PCM bytes at this player's sample rate.
                 #[must_use]
-                pub const fn clip_from_samples<const SAMPLE_COUNT: usize>(
-                    samples: [i16; SAMPLE_COUNT],
+                pub const fn clip_from_s16le_bytes<const SAMPLE_COUNT: usize, const AUDIO_SAMPLE_BYTES_LEN: usize>(
+                    audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN],
                 ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
-                    $crate::audio_player::AudioClipN::new(Self::SAMPLE_RATE_HZ, samples)
+                    $crate::audio_player::AudioClipN::from_s16le_bytes(
+                        Self::SAMPLE_RATE_HZ,
+                        audio_sample_s16le,
+                    )
                 }
 
                 pub fn new(

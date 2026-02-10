@@ -37,7 +37,7 @@ audio_player! {
         lrc_pin: PIN_10,
         pio: PIO1,
         dma: DMA_CH1,
-        volume: Volume::percent(10),
+        max_volume: Volume::percent(10),
     }
 }
 
@@ -71,25 +71,25 @@ pub async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static CAPTIVE_PORTAL_TONE: AudioClipN<{ AudioPlayer10::samples_ms(120) }> =
-        AudioPlayer10::tone_clip(330).with_volume(Volume::percent(20));
+        AudioPlayer10::tone(330).with_volume(Volume::percent(20));
     static CONNECTING_TONE: AudioClipN<{ AudioPlayer10::samples_ms(90) }> =
-        AudioPlayer10::tone_clip(550).with_volume(Volume::percent(20));
+        AudioPlayer10::tone(550).with_volume(Volume::percent(20));
     static CONNECTION_FAILED_TONE: AudioClipN<{ AudioPlayer10::samples_ms(150) }> =
-        AudioPlayer10::tone_clip(220).with_volume(Volume::percent(25));
+        AudioPlayer10::tone(220).with_volume(Volume::percent(25));
     static WIFI_CONNECTED_TONE: AudioClipN<{ AudioPlayer10::samples_ms(140) }> =
-        AudioPlayer10::tone_clip(880).with_volume(Volume::percent(20));
+        AudioPlayer10::tone(880).with_volume(Volume::percent(20));
     static TIME_SYNCED_TONE: AudioClipN<{ AudioPlayer10::samples_ms(90) }> =
-        AudioPlayer10::tone_clip(1047).with_volume(Volume::percent(20));
+        AudioPlayer10::tone(1047).with_volume(Volume::percent(20));
     static MODE_HH_MM_TONE: AudioClipN<{ AudioPlayer10::samples_ms(100) }> =
-        AudioPlayer10::tone_clip(698).with_volume(Volume::percent(18));
+        AudioPlayer10::tone(698).with_volume(Volume::percent(18));
     static MODE_MM_SS_TONE: AudioClipN<{ AudioPlayer10::samples_ms(100) }> =
-        AudioPlayer10::tone_clip(988).with_volume(Volume::percent(18));
+        AudioPlayer10::tone(988).with_volume(Volume::percent(18));
     static HH_MM_TICK_TONE: AudioClipN<{ AudioPlayer10::samples_ms(70) }> =
-        AudioPlayer10::tone_clip(784).with_volume(Volume::percent(15));
+        AudioPlayer10::tone(784).with_volume(Volume::percent(15));
     static MM_SS_TICK_TONE: AudioClipN<{ AudioPlayer10::samples_ms(40) }> =
-        AudioPlayer10::tone_clip(523).with_volume(Volume::percent(12));
+        AudioPlayer10::tone(523).with_volume(Volume::percent(12));
     static SILENCE_40MS: AudioClipN<{ AudioPlayer10::samples_ms(40) }> =
-        AudioPlayer10::silence_clip();
+        AudioPlayer10::silence();
 
     info!("Starting Clock Audio with WiFi");
 

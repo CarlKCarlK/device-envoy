@@ -21,8 +21,8 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-// TODO00 rename nasa clip
-include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
+// TODO00 rename nasa clip (may no longer apply)
+include!(concat!(env!("OUT_DIR"), "/nasa_clip.rs"));
 // Rebuild the source clip (s16le mono raw) with:
 // ffmpeg -i input.wav -ac 1 -ar 22050 -f s16le examples/data/audio/computers_in_control_mono_s16le_22050.raw
 // TODO00 min language of concatenation, fade in and out?
@@ -37,7 +37,8 @@ audio_player! {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
-        volume: Volume::percent(50),
+        max_volume: Volume::percent(25),
+        initial_volume: Volume::percent(100),
     }
 }
 
@@ -48,12 +49,10 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static AUDIO_SAMPLE_CLIP: AudioClipN<AUDIO_SAMPLE_COUNT> =
-        AudioPlayer8::clip_from_samples(audio_sample_i16()).with_volume(Volume::percent(25));
+    static NASA_CLIP: NasaClip = nasa_clip().with_volume(Volume::spinal_tap(5));
     static TONE_A4: AudioClipN<{ AudioPlayer8::samples_ms(500) }> =
-        AudioPlayer8::tone_clip(440).with_volume(Volume::percent(25));
-    static SILENCE_100MS: AudioClipN<{ AudioPlayer8::samples_ms(100) }> =
-        AudioPlayer8::silence_clip();
+        AudioPlayer8::tone(440).with_volume(Volume::percent(25));
+    static SILENCE_100MS: AudioClipN<{ AudioPlayer8::samples_ms(100) }> = AudioPlayer8::silence();
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -64,8 +63,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
-        AUDIO_SAMPLE_CLIP.samples().len(),
-        AUDIO_SAMPLE_CLIP.samples().len() * 2
+        NASA_CLIP.sample_count(),
+        NASA_CLIP.sample_count() * 2
     );
     info!("Button on GP13 starts playback");
 
@@ -73,7 +72,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     loop {
         button.wait_for_press().await;
         audio_player8.play(
-            [TONE_A4.as_clip(), SILENCE_100MS.as_clip(), TONE_A4.as_clip()],
+            [
+                TONE_A4.as_clip(),
+                SILENCE_100MS.as_clip(),
+                TONE_A4.as_clip(),
+            ],
             AtEnd::Loop,
         );
         info!("Started static slice playback");
@@ -85,6 +88,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
         audio_player8.set_volume(Volume::percent(100));
-        audio_player8.play([AUDIO_SAMPLE_CLIP.as_clip()], AtEnd::Stop);
+        audio_player8.play([NASA_CLIP.as_clip()], AtEnd::Stop);
     }
 }

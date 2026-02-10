@@ -1,0 +1,61 @@
+#![allow(missing_docs)]
+//! Play the opening phrase of "Mary Had a Little Lamb" on MAX98357A over I2S.
+//!
+//! Wiring:
+//! - DIN  -> GP8
+//! - BCLK -> GP9
+//! - LRC  -> GP10
+//! - SD   -> 3V3 (enabled; commonly selects left channel depending on breakout)
+//! - Button -> GP13 to GND (starts playback)
+
+#![no_std]
+#![no_main]
+
+use core::convert::Infallible;
+
+use defmt::info;
+use device_envoy::{
+    Result,
+    audio_player::{AtEnd, Volume, audio_player, samples_ms},
+};
+use embassy_executor::Spawner;
+use {defmt_rtt as _, panic_probe as _};
+
+audio_player! {
+    SongPlayer {
+        din_pin: PIN_8,
+        bclk_pin: PIN_9,
+        lrc_pin: PIN_10,
+        max_volume: Volume::percent(50),
+    }
+}
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    core::panic!("{err}");
+}
+
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+    static NOTE_E4: samples_ms! { SongPlayer, 220 } = SongPlayer::tone(330);
+    static NOTE_D4: samples_ms! { SongPlayer, 220 } = SongPlayer::tone(294);
+    static NOTE_C4: samples_ms! { SongPlayer, 220 } = SongPlayer::tone(262);
+    static REST_80MS: samples_ms! { SongPlayer, 80 } = SongPlayer::silence();
+
+    let p = embassy_rp::init(Default::default());
+    let song_player = SongPlayer::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH0, spawner)?;
+
+    info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
+    info!("Playing the Mary phrase once");
+
+    // Mary had a little lamb (opening phrase): E D C D E E E
+    song_player.play(
+        [
+            &NOTE_E4, &REST_80MS, &NOTE_D4, &REST_80MS, &NOTE_C4, &REST_80MS, &NOTE_D4, &REST_80MS,
+            &NOTE_E4, &REST_80MS, &NOTE_E4, &REST_80MS, &NOTE_E4,
+        ],
+        AtEnd::Stop,
+    );
+
+    core::future::pending().await
+}

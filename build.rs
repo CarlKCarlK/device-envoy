@@ -156,9 +156,7 @@ fn generate_audio_data_s16le(manifest_dir: &PathBuf, out_dir: &PathBuf) {
         "pub const NASA_CLIP_BYTES_LEN: usize = {};\n",
         audio_sample_bytes.len()
     ));
-    generated.push_str(
-        "pub const fn nasa_clip_s16le() -> [u8; NASA_CLIP_BYTES_LEN] {\n    [\n",
-    );
+    generated.push_str("pub const fn nasa_clip_s16le() -> [u8; NASA_CLIP_BYTES_LEN] {\n    [\n");
 
     for byte in audio_sample_bytes {
         generated.push_str(&format!("    {byte},\n"));

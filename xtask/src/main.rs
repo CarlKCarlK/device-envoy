@@ -2,6 +2,7 @@
 //!
 //! Run with: `cargo xtask <command>`
 
+mod audio_player_generated;
 mod led2d_generated;
 mod led_strip_generated;
 mod video_frames_gen;
@@ -233,6 +234,10 @@ fn check_compile_only() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
+        eprintln!("Error generating audio_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
         eprintln!("Error generating led2d_generated.rs: {}", err);
         return ExitCode::FAILURE;
@@ -513,6 +518,10 @@ fn check_all() -> ExitCode {
 
 fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
+        eprintln!("Error generating audio_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
         eprintln!("Error generating led2d_generated.rs: {}", err);
         return ExitCode::FAILURE;

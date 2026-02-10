@@ -30,7 +30,6 @@ include!(concat!(env!("OUT_DIR"), "/nasa_clip.rs"));
 // TODO00 make the macro documentation look good with a generated type.
 // TODO00 does the macro support vis
 // TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
-// TODO00 should with_gain be an extension method?
 // TODO00 verify that it can play sound while doing other things (like blinking an LED or reading a button) without stuttering
 audio_player! {
     AudioPlayer8 {
@@ -51,7 +50,6 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // todo0 we shouldn't use "clip" it should be audio_clip
     static NASA_CLIP: NasaClip = nasa_clip().with_gain(Gain::percent(25));
-    //todo0 can we make this type come from AudioPlayer8?
     static TONE_A4: samples_ms! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: samples_ms! { AudioPlayer8, 100 } = AudioPlayer8::silence();

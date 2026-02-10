@@ -89,8 +89,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         AudioPlayer10::tone(784).with_gain(Gain::percent(15));
     static MM_SS_TICK_TONE: samples_ms! { AudioPlayer10, 40 } =
         AudioPlayer10::tone(523).with_gain(Gain::percent(12));
-    static SILENCE_40MS: samples_ms! { AudioPlayer10, 40 } =
-        AudioPlayer10::silence();
+    static SILENCE_40MS: samples_ms! { AudioPlayer10, 40 } = AudioPlayer10::silence();
 
     info!("Starting Clock Audio with WiFi");
 
@@ -125,11 +124,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready");
                     audio_player10_ref.play(
-                        [
-                            &CAPTIVE_PORTAL_TONE,
-                            &SILENCE_40MS,
-                            &CAPTIVE_PORTAL_TONE,
-                        ],
+                        [&CAPTIVE_PORTAL_TONE, &SILENCE_40MS, &CAPTIVE_PORTAL_TONE],
                         AtEnd::Stop,
                     );
                 }
@@ -158,11 +153,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("WiFi connected");
     audio_player8.play(
-        [
-            &WIFI_CONNECTED_TONE,
-            &SILENCE_40MS,
-            &WIFI_CONNECTED_TONE,
-        ],
+        [&WIFI_CONNECTED_TONE, &SILENCE_40MS, &WIFI_CONNECTED_TONE],
         AtEnd::Stop,
     );
 

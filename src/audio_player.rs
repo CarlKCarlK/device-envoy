@@ -21,21 +21,20 @@ const BIT_DEPTH_BITS: u32 = 16;
 const SAMPLE_BUFFER_LEN: usize = 256;
 /// Maximum linear volume scale value.
 pub const MAX_VOLUME: i16 = i16::MAX;
-const SPINAL_TAP_11_LINEAR: i32 = 36_765;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
 
-/// Linear volume scale used by [`AudioClipN::with_volume`].
+/// Playback loudness control used by player-level APIs.
 ///
 /// `Volume` is a value object, not device state.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Volume(i32);
+pub struct Volume(i16);
 
 impl Volume {
     /// Silence.
     pub const MUTE: Self = Self(0);
 
     /// Full-scale linear volume (no attenuation).
-    pub const FULL_SCALE: Self = Self(MAX_VOLUME as i32);
+    pub const FULL_SCALE: Self = Self(MAX_VOLUME);
     /// Alias for [`Self::FULL_SCALE`].
     pub const FULL: Self = Self::FULL_SCALE;
 
@@ -46,65 +45,113 @@ impl Volume {
     pub const fn percent(percent: u8) -> Self {
         let percent = if percent > 100 { 100 } else { percent };
         let value_i32 = (percent as i32 * MAX_VOLUME as i32) / 100;
-        Self(value_i32)
-    }
-
-    /// Creates a volume from decibel attenuation.
-    ///
-    /// - `0 dB` is full-scale.
-    /// - Positive values map to full-scale.
-    /// - Negative values attenuate.
-    #[must_use]
-    pub const fn db(db: i8) -> Self {
-        if db >= 0 {
-            return Self::FULL_SCALE;
-        }
-        if db == i8::MIN {
-            return Self::MUTE;
-        }
-
-        // Fixed-point multiplier for 10^(-1/20) (approximately -1 dB in amplitude).
-        const DB_STEP_Q15: i32 = 29_205;
-        const ONE_Q15: i32 = 32_768;
-        const ROUND_Q15: i32 = 16_384;
-
-        let attenuation_db_u8 = (-db) as u8;
-        let mut scale_q15_i32 = ONE_Q15;
-        let mut attenuation_index = 0_u8;
-        while attenuation_index < attenuation_db_u8 {
-            scale_q15_i32 = (scale_q15_i32 * DB_STEP_Q15 + ROUND_Q15) / ONE_Q15;
-            attenuation_index += 1;
-        }
-        let value_i32 = (MAX_VOLUME as i32 * scale_q15_i32 + ROUND_Q15) / ONE_Q15;
-        Self(value_i32)
+        Self(value_i32 as i16)
     }
 
     /// Creates a humorous "goes to 11" demo volume scale.
     ///
-    /// Range:
-    /// - `0` -> mute
-    /// - `10` -> full-scale
-    /// - `11` -> slight overdrive (+1 dB)
+    /// `0..=11` maps logarithmically to `0..=100%`.
     ///
-    /// Values above `11` saturate to `11`.
+    /// Values above `11` clamp to `11`.
     #[must_use]
     pub const fn spinal_tap(spinal_tap: u8) -> Self {
         let spinal_tap = if spinal_tap > 11 { 11 } else { spinal_tap };
-        match spinal_tap {
-            0 => Self::MUTE,
-            1 => Self::db(-40),
-            2 => Self::db(-30),
-            3 => Self::db(-24),
-            4 => Self::db(-18),
-            5 => Self::db(-12),
-            6 => Self::db(-9),
-            7 => Self::db(-6),
-            8 => Self::db(-3),
-            9 => Self::db(-1),
-            10 => Self::FULL_SCALE,
-            11 => Self::from_linear(SPINAL_TAP_11_LINEAR),
-            _ => Self::MUTE,
+        let percent = match spinal_tap {
+            0 => 0,
+            1 => 1,
+            2 => 3,
+            3 => 6,
+            4 => 13,
+            5 => 25,
+            6 => 35,
+            7 => 50,
+            8 => 71,
+            9 => 89,
+            10 => 100,
+            11 => 100,
+            _ => 100,
+        };
+        Self::percent(percent)
+    }
+
+    #[must_use]
+    const fn to_i16(self) -> i16 {
+        self.0
+    }
+
+    #[must_use]
+    const fn from_i16(value_i16: i16) -> Self {
+        Self(value_i16)
+    }
+}
+
+/// Signal-domain gain used for clip transforms.
+///
+/// `Gain` is for multiplying PCM samples and is separate from player `Volume`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Gain(i32);
+
+impl Gain {
+    /// Silence.
+    pub const MUTE: Self = Self(0);
+
+    /// Unity gain (no change).
+    pub const UNITY: Self = Self(MAX_VOLUME as i32);
+
+    /// Creates a gain from percentage.
+    ///
+    /// `100` is unity gain. Values above `100` boost the signal.
+    #[must_use]
+    pub const fn percent(percent: u16) -> Self {
+        let value_i32 = (percent as i32 * MAX_VOLUME as i32) / 100;
+        Self(value_i32)
+    }
+
+    /// Creates gain from dB with a bounded boost range.
+    ///
+    /// Values above `+12 dB` clamp to `+12 dB`.
+    /// Values below `-96 dB` clamp to `-96 dB`.
+    #[must_use]
+    pub const fn db(db: i8) -> Self {
+        const DB_UPPER_LIMIT: i8 = 12;
+        const DB_LOWER_LIMIT: i8 = -96;
+        let db = if db > DB_UPPER_LIMIT {
+            DB_UPPER_LIMIT
+        } else if db < DB_LOWER_LIMIT {
+            DB_LOWER_LIMIT
+        } else {
+            db
+        };
+
+        if db == 0 {
+            return Self::UNITY;
         }
+
+        // Fixed-point multipliers for 10^(+/-1/20) (approximately +/-1 dB in amplitude).
+        const DB_STEP_DOWN_Q15: i32 = 29_205;
+        const DB_STEP_UP_Q15: i32 = 36_781;
+        const ONE_Q15: i32 = 32_768;
+        const ROUND_Q15: i32 = 16_384;
+        let step_q15_i32 = if db > 0 {
+            DB_STEP_UP_Q15
+        } else {
+            DB_STEP_DOWN_Q15
+        };
+        let db_steps_u8 = if db > 0 { db as u8 } else { (-db) as u8 };
+        let mut scale_q15_i32 = ONE_Q15;
+        let mut step_index = 0_u8;
+        while step_index < db_steps_u8 {
+            scale_q15_i32 = (scale_q15_i32 * step_q15_i32 + ROUND_Q15) / ONE_Q15;
+            step_index += 1;
+        }
+
+        let gain_i64 = (MAX_VOLUME as i64 * scale_q15_i32 as i64 + ROUND_Q15 as i64) / ONE_Q15 as i64;
+        let gain_i32 = if gain_i64 > i32::MAX as i64 {
+            i32::MAX
+        } else {
+            gain_i64 as i32
+        };
+        Self(gain_i32)
     }
 
     #[must_use]
@@ -112,10 +159,6 @@ impl Volume {
         self.0
     }
 
-    #[must_use]
-    const fn from_linear(linear: i32) -> Self {
-        Self(linear)
-    }
 }
 
 /// Returns how many samples are needed for a duration in milliseconds.
@@ -155,24 +198,29 @@ const fn sine_sample_from_phase(phase_u32: u32) -> i16 {
 }
 
 #[inline]
-const fn scale_sample(sample_i16: i16, volume: Volume) -> i16 {
-    if volume.linear() == 0 {
+const fn scale_sample_with_linear(sample_i16: i16, linear_i32: i32) -> i16 {
+    if linear_i32 == 0 {
         return 0;
     }
     // Use signed full-scale magnitude (32768) so i16::MIN is handled correctly.
-    // `Volume::FULL_SCALE` is 32767, so add one to map it to exact unity gain.
-    let unity_scaled_volume_i64 = volume.linear() as i64 + 1;
-    let scaled_i64 = (sample_i16 as i64 * unity_scaled_volume_i64) / I16_ABS_MAX_I64;
+    // Full-scale linear is 32767, so add one to map it to exact unity gain.
+    let unity_scaled_linear_i64 = linear_i32 as i64 + 1;
+    let scaled_i64 = (sample_i16 as i64 * unity_scaled_linear_i64) / I16_ABS_MAX_I64;
     clamp_i64_to_i16(scaled_i64)
 }
 
 #[inline]
 const fn scale_linear(linear_i32: i32, volume: Volume) -> i32 {
-    if volume.linear() == 0 || linear_i32 == 0 {
+    if volume.to_i16() == 0 || linear_i32 == 0 {
         return 0;
     }
-    let unity_scaled_volume_i64 = volume.linear() as i64 + 1;
+    let unity_scaled_volume_i64 = volume.to_i16() as i64 + 1;
     ((linear_i32 as i64 * unity_scaled_volume_i64) / I16_ABS_MAX_I64) as i32
+}
+
+#[inline]
+const fn scale_sample(sample_i16: i16, volume: Volume) -> i16 {
+    scale_sample_with_linear(sample_i16, volume.to_i16() as i32)
 }
 
 #[inline]
@@ -255,13 +303,16 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
         SAMPLE_COUNT
     }
 
-    /// Returns a new clip with linear volume scaling applied.
+    /// Returns a new clip with linear sample gain applied.
+    ///
+    /// Gain multiplication uses i32 math and saturates to i16 sample bounds.
     #[must_use]
-    pub const fn with_volume(self, volume: Volume) -> Self {
+    pub const fn with_gain(self, gain: Gain) -> Self {
         let mut scaled_samples = [0_i16; SAMPLE_COUNT];
         let mut sample_index = 0_usize;
         while sample_index < SAMPLE_COUNT {
-            scaled_samples[sample_index] = scale_sample(self.samples[sample_index], volume);
+            scaled_samples[sample_index] =
+                scale_sample_with_linear(self.samples[sample_index], gain.linear());
             sample_index += 1;
         }
         Self::new(self.sample_rate_hz, scaled_samples)
@@ -376,8 +427,8 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     ) -> Self {
         Self {
             command_signal: Signal::new(),
-            max_volume_linear: max_volume.linear(),
-            runtime_volume_relative_linear: AtomicI32::new(initial_volume.linear()),
+            max_volume_linear: max_volume.to_i16() as i32,
+            runtime_volume_relative_linear: AtomicI32::new(initial_volume.to_i16() as i32),
         }
     }
 
@@ -391,20 +442,20 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
 
     fn set_runtime_volume(&self, volume: Volume) {
         self.runtime_volume_relative_linear
-            .store(volume.linear(), Ordering::Relaxed);
+            .store(volume.to_i16() as i32, Ordering::Relaxed);
     }
 
     fn runtime_volume(&self) -> Volume {
-        Volume::from_linear(self.runtime_volume_relative_linear.load(Ordering::Relaxed))
+        Volume::from_i16(self.runtime_volume_relative_linear.load(Ordering::Relaxed) as i16)
     }
 
     fn effective_runtime_volume(&self) -> Volume {
         let runtime_volume_relative = self.runtime_volume();
-        Volume::from_linear(scale_linear(self.max_volume_linear, runtime_volume_relative))
+        Volume::from_i16(scale_linear(self.max_volume_linear, runtime_volume_relative) as i16)
     }
 
     fn max_volume(&self) -> Volume {
-        Volume::from_linear(self.max_volume_linear)
+        Volume::from_i16(self.max_volume_linear as i16)
     }
 }
 
@@ -507,7 +558,7 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     /// - `Volume::percent(50)` plays at half of `max_volume`.
     ///
     /// This relative scale composes multiplicatively with any per-clip gain
-    /// pre-applied via [`AudioClipN::with_volume`].
+    /// pre-applied via [`AudioClipN::with_gain`].
     pub fn set_volume(&self, volume: Volume) {
         self.audio_player_static.set_runtime_volume(volume);
     }

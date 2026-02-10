@@ -15,7 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, AudioClipN, Volume, audio_player};
+use device_envoy::audio_player::{AtEnd, AudioClipN, Gain, Volume, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -30,7 +30,7 @@ include!(concat!(env!("OUT_DIR"), "/nasa_clip.rs"));
 // TODO00 make the macro documentation look good with a generated type.
 // TODO00 does the macro support vis
 // TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
-// TODO00 should with_volume be an extension method?
+// TODO00 should with_gain be an extension method?
 //
 audio_player! {
     AudioPlayer8 {
@@ -49,9 +49,9 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA_CLIP: NasaClip = nasa_clip().with_volume(Volume::spinal_tap(5));
+    static NASA_CLIP: NasaClip = nasa_clip().with_gain(Gain::percent(25));
     static TONE_A4: AudioClipN<{ AudioPlayer8::samples_ms(500) }> =
-        AudioPlayer8::tone(440).with_volume(Volume::percent(25));
+        AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: AudioClipN<{ AudioPlayer8::samples_ms(100) }> = AudioPlayer8::silence();
 
     let p = embassy_rp::init(Default::default());

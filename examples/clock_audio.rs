@@ -18,7 +18,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::audio_player::{AtEnd, Gain, Volume, audio_player};
+use device_envoy::audio_player::{AtEnd, Gain, Volume, audio_player, VOICE_22050_HZ};
 use device_envoy::button::PressedTo;
 use device_envoy::clock_sync::{ClockSync, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_envoy::flash_array::FlashArray;
@@ -36,6 +36,7 @@ audio_player! {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
+        sample_rate_hz: VOICE_22050_HZ,
         pio: PIO1,
         dma: DMA_CH1,
         max_volume: Volume::percent(10),

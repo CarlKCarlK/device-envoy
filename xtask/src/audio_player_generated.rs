@@ -17,6 +17,7 @@ audio_player! {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
+        sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
     }
 }
 
@@ -35,12 +36,12 @@ pub struct AudioPlayerGenerated;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, AudioClip, AudioClipBuf, Volume};
+use crate::audio_player::{AtEnd, AudioClip, AudioClipBuf, Volume, VOICE_22050_HZ};
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
     /// Sample rate used for PCM playback by this generated player type.
-    pub const SAMPLE_RATE_HZ: u32 = 22_050;
+    pub const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
     /// Initial runtime volume relative to [`Self::MAX_VOLUME`].
     pub const INITIAL_VOLUME: Volume = Volume::MAX;
     /// Runtime volume ceiling for this generated player type.

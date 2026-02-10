@@ -36,13 +36,14 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{Result, audio_player::{AtEnd, Volume, audio_player, samples_ms}};
+//! use device_envoy::{Result, audio_player::{AtEnd, Volume, audio_player, samples_ms, VOICE_22050_HZ}};
 //!
 //! audio_player! {
 //!     AudioPlayer8 {
 //!         din_pin: PIN_8,
 //!         bclk_pin: PIN_9,
 //!         lrc_pin: PIN_10,
+//!         sample_rate_hz: VOICE_22050_HZ,
 //!         max_volume: Volume::percent(50),
 //!     }
 //! }
@@ -94,7 +95,7 @@
 //! # use core::result::Result::Ok;
 //! use device_envoy::{
 //!     Result,
-//!     audio_player::{AtEnd, Gain, Volume, audio_player, samples_ms},
+//!     audio_player::{AtEnd, Gain, Volume, audio_player, samples_ms, VOICE_22050_HZ},
 //!     button::{Button, PressedTo},
 //! };
 //! use embassy_futures::select::{Either, select};
@@ -105,6 +106,7 @@
 //!         din_pin: PIN_8,
 //!         bclk_pin: PIN_9,
 //!         lrc_pin: PIN_10,
+//!         sample_rate_hz: VOICE_22050_HZ,
 //!         pio: PIO1,                             // optional, defaults to PIO1
 //!         dma: DMA_CH1,                          // optional, defaults to DMA_CH0
 //!         max_clips: 8,                          // optional, defaults to 16
@@ -182,6 +184,18 @@ use heapless::Vec;
 const BIT_DEPTH_BITS: u32 = 16;
 const SAMPLE_BUFFER_LEN: usize = 256;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
+
+/// Common audio sample-rate constants in hertz.
+/// Narrowband telephony sample rate.
+pub const NARROWBAND_8000_HZ: u32 = 8_000;
+/// Wideband voice sample rate.
+pub const VOICE_16000_HZ: u32 = 16_000;
+/// Common low-memory voice/music sample rate.
+pub const VOICE_22050_HZ: u32 = 22_050;
+/// Compact-disc sample rate.
+pub const CD_44100_HZ: u32 = 44_100;
+/// Pro-audio sample rate.
+pub const PRO_48000_HZ: u32 = 48_000;
 
 /// Absolute playback loudness setting for the whole player.
 ///
@@ -1000,12 +1014,13 @@ macro_rules! samples_ms {
 /// - `din_pin` - GPIO pin carrying I2S data (`DIN`)
 /// - `bclk_pin` - GPIO pin carrying I2S bit clock (`BCLK`)
 /// - `lrc_pin` - GPIO pin carrying I2S word-select / LR clock (`LRC`)
+/// - `sample_rate_hz` - Playback sample rate in hertz (for example:
+///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
 ///
 /// **Optional fields:**
 ///
 /// - `pio` - PIO resource (default: `PIO1`)
 /// - `dma` - DMA channel (default: `DMA_CH0`)
-/// - `sample_rate_hz` - Playback sample rate in hertz (default: `22_050`)
 /// - `max_clips` - Maximum clips per queued play request (default: `16`)
 /// - `max_volume` - Runtime volume ceiling (default: [`Volume::MAX`])
 /// - `initial_volume` - Initial runtime volume relative to `max_volume`
@@ -1035,12 +1050,12 @@ macro_rules! __audio_player_impl {
             din_pin: _UNSET_,
             bclk_pin: _UNSET_,
             lrc_pin: _UNSET_,
+            sample_rate_hz: _UNSET_,
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
             max_volume: $crate::audio_player::Volume::MAX,
             initial_volume: $crate::audio_player::Volume::MAX,
-            sample_rate_hz: 22_050,
             fields: [ $($fields)* ]
         }
     };
@@ -1057,12 +1072,12 @@ macro_rules! __audio_player_impl {
             din_pin: _UNSET_,
             bclk_pin: _UNSET_,
             lrc_pin: _UNSET_,
+            sample_rate_hz: _UNSET_,
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
             max_volume: $crate::audio_player::Volume::MAX,
             initial_volume: $crate::audio_player::Volume::MAX,
-            sample_rate_hz: 22_050,
             fields: [ $($fields)* ]
         }
     };
@@ -1073,12 +1088,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ din_pin: $din_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1088,12 +1103,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin_value,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1104,12 +1119,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ sample_rate_hz: $sample_rate_hz_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1119,12 +1134,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz_value,
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz_value,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1135,12 +1150,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ bclk_pin: $bclk_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1150,12 +1165,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin_value,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1166,12 +1181,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ lrc_pin: $lrc_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1181,12 +1196,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin_value,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1197,12 +1212,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ pio: $pio_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1212,12 +1227,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio_value,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1228,12 +1243,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ dma: $dma_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1243,12 +1258,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma_value,
             max_clips: $max_clips,
             max_volume: $max_volume,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1259,12 +1274,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ max_clips: $max_clips_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1274,12 +1289,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips_value,
             max_volume: $max_volume,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1290,12 +1305,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ max_volume: $max_volume_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1305,12 +1320,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume_value,
             initial_volume: $initial_volume,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1321,12 +1336,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ initial_volume: $initial_volume_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -1336,12 +1351,12 @@ macro_rules! __audio_player_impl {
             din_pin: $din_pin,
             bclk_pin: $bclk_pin,
             lrc_pin: $lrc_pin,
+            sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
             initial_volume: $initial_volume_value,
-            sample_rate_hz: $sample_rate_hz,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -1352,12 +1367,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:tt,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ volume: $volume_value:expr $(, $($rest:tt)* )? ]
     ) => {
         compile_error!("audio_player! field `volume` was renamed to `max_volume`");
@@ -1369,12 +1384,12 @@ macro_rules! __audio_player_impl {
         din_pin: _UNSET_,
         bclk_pin: $bclk_pin:tt,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ ]
     ) => {
         compile_error!("audio_player! requires din_pin");
@@ -1386,12 +1401,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:ident,
         bclk_pin: _UNSET_,
         lrc_pin: $lrc_pin:tt,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ ]
     ) => {
         compile_error!("audio_player! requires bclk_pin");
@@ -1403,12 +1418,12 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:ident,
         bclk_pin: $bclk_pin:ident,
         lrc_pin: _UNSET_,
+        sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        sample_rate_hz: $sample_rate_hz:expr,
         fields: [ ]
     ) => {
         compile_error!("audio_player! requires lrc_pin");
@@ -1420,18 +1435,35 @@ macro_rules! __audio_player_impl {
         din_pin: $din_pin:ident,
         bclk_pin: $bclk_pin:ident,
         lrc_pin: $lrc_pin:ident,
+        sample_rate_hz: _UNSET_,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
+        fields: [ ]
+    ) => {
+        compile_error!("audio_player! requires sample_rate_hz");
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:ident,
+        bclk_pin: $bclk_pin:ident,
+        lrc_pin: $lrc_pin:ident,
         sample_rate_hz: $sample_rate_hz:expr,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
         $crate::audio_player::paste::paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]:
-                $crate::audio_player::AudioPlayerStatic<$max_clips, $sample_rate_hz> =
-                $crate::audio_player::AudioPlayer::<$max_clips, $sample_rate_hz>::new_static_with_max_volume_and_initial_volume(
+                $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }> =
+                $crate::audio_player::AudioPlayer::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
                     $max_volume,
                     $initial_volume,
                 );
@@ -1443,7 +1475,7 @@ macro_rules! __audio_player_impl {
                 "See the [audio_player module documentation](mod@crate::audio_player) for usage and examples."
             )]
             $vis struct $name {
-                player: $crate::audio_player::AudioPlayer<$max_clips, $sample_rate_hz>,
+                player: $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>,
             }
 
             impl $name {
@@ -1519,7 +1551,7 @@ macro_rules! __audio_player_impl {
             }
 
             impl ::core::ops::Deref for $name {
-                type Target = $crate::audio_player::AudioPlayer<$max_clips, $sample_rate_hz>;
+                type Target = $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>;
 
                 fn deref(&self) -> &Self::Target {
                     &self.player
@@ -1528,7 +1560,7 @@ macro_rules! __audio_player_impl {
 
             #[::embassy_executor::task]
             async fn [<$name:snake _audio_player_task>](
-                audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$max_clips, $sample_rate_hz>,
+                audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }>,
                 pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
                 din_pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$din_pin>,
@@ -1537,7 +1569,7 @@ macro_rules! __audio_player_impl {
             ) -> ! {
                 $crate::audio_player::device_loop::<
                     $max_clips,
-                    $sample_rate_hz,
+                    { $sample_rate_hz },
                     ::embassy_rp::peripherals::$pio,
                     ::embassy_rp::peripherals::$dma,
                     ::embassy_rp::peripherals::$din_pin,

@@ -16,7 +16,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Volume, audio_player, samples_ms},
+    audio_player::{AtEnd, Volume, audio_player, samples_ms, VOICE_22050_HZ},
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -26,6 +26,7 @@ audio_player! {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
+        sample_rate_hz: VOICE_22050_HZ,
         max_volume: Volume::percent(50),
     }
 }

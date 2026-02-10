@@ -15,7 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, Gain, Volume, audio_player};
+use device_envoy::audio_player::{AtEnd, Gain, Volume, audio_player, VOICE_22050_HZ};
 use device_envoy::button::{Button, PressedTo};
 use device_envoy::samples_ms;
 use embassy_executor::Spawner;
@@ -36,6 +36,7 @@ audio_player! {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
+        sample_rate_hz: VOICE_22050_HZ,
         max_volume: Volume::percent(50),
         initial_volume: Volume::percent(100),
     }

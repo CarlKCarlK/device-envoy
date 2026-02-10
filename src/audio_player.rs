@@ -23,7 +23,7 @@ const SAMPLE_BUFFER_LEN: usize = 256;
 pub const MAX_VOLUME: i16 = i16::MAX;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
 
-/// Linear volume scale used by [`with_volume`].
+/// Linear volume scale used by [`AudioClipN::with_volume`].
 ///
 /// `Volume` is a value object, not device state.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,11 +160,8 @@ const fn sine_sample_from_phase(phase_u32: u32) -> i16 {
     clamp_i64_to_i16(sample_i64)
 }
 
-/// Returns a new clip with linear volume scaling applied.
-///
-/// This transform is pure and const-evaluable.
 #[must_use]
-pub const fn with_volume<const SAMPLE_COUNT: usize>(
+const fn with_volume<const SAMPLE_COUNT: usize>(
     audio_sample_i16: &[i16; SAMPLE_COUNT],
     volume: Volume,
 ) -> [i16; SAMPLE_COUNT] {
@@ -211,27 +208,90 @@ pub enum AtEnd {
     Stop,
 }
 
-/// Supported clip input types for [`AudioPlayer::play_iter`].
-pub trait AudioClip {
-    /// Converts this clip input into a static i16 PCM slice.
-    fn into_audio_clip(self) -> &'static [i16];
+/// Self-describing PCM clip view used by playback APIs.
+///
+/// `AudioClip` is unsized so clips with different lengths can share one
+/// reference type (`&AudioClip`) in the same playback sequence.
+#[repr(C)]
+pub struct AudioClip<T: ?Sized = [i16]> {
+    sample_rate_hz: u32,
+    samples: T,
 }
 
-impl AudioClip for &'static [i16] {
-    fn into_audio_clip(self) -> &'static [i16] {
+impl AudioClip<[i16]> {
+    /// Clip sample rate in hertz.
+    #[must_use]
+    pub const fn sample_rate_hz(&self) -> u32 {
+        self.sample_rate_hz
+    }
+
+    /// Clip samples as an i16 PCM slice.
+    #[must_use]
+    pub const fn samples(&self) -> &[i16] {
+        &self.samples
+    }
+}
+
+/// Sized, const-friendly PCM clip storage.
+pub type AudioClipN<const SAMPLE_COUNT: usize> = AudioClip<[i16; SAMPLE_COUNT]>;
+
+impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
+    /// Creates a clip from sample rate and PCM samples.
+    #[must_use]
+    pub const fn new(sample_rate_hz: u32, samples: [i16; SAMPLE_COUNT]) -> Self {
+        assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
+        Self {
+            sample_rate_hz,
+            samples,
+        }
+    }
+
+    /// Clip sample rate in hertz.
+    #[must_use]
+    pub const fn sample_rate_hz(&self) -> u32 {
+        self.sample_rate_hz
+    }
+
+    /// Clip samples as a fixed-size PCM array reference.
+    #[must_use]
+    pub const fn samples(&self) -> &[i16; SAMPLE_COUNT] {
+        &self.samples
+    }
+
+    /// Returns this clip as an unsized clip view.
+    #[must_use]
+    pub fn as_clip(&'static self) -> &'static AudioClip<[i16]> {
+        self
+    }
+
+    /// Returns a new clip with linear volume scaling applied.
+    #[must_use]
+    pub const fn with_volume(self, volume: Volume) -> Self {
+        Self::new(self.sample_rate_hz, with_volume(&self.samples, volume))
+    }
+}
+
+/// Supported clip input types for [`AudioPlayer::play_iter`].
+pub trait IntoAudioClipRef {
+    /// Converts this clip input into a static audio clip reference.
+    fn into_audio_clip(self) -> &'static AudioClip<[i16]>;
+}
+
+impl IntoAudioClipRef for &'static AudioClip<[i16]> {
+    fn into_audio_clip(self) -> &'static AudioClip<[i16]> {
         self
     }
 }
 
-impl<const SAMPLE_COUNT: usize> AudioClip for &'static [i16; SAMPLE_COUNT] {
-    fn into_audio_clip(self) -> &'static [i16] {
+impl<const SAMPLE_COUNT: usize> IntoAudioClipRef for &'static AudioClipN<SAMPLE_COUNT> {
+    fn into_audio_clip(self) -> &'static AudioClip<[i16]> {
         self
     }
 }
 
 enum AudioCommand<const MAX_CLIPS: usize> {
     Play {
-        audio_clips: Vec<&'static [i16], MAX_CLIPS>,
+        audio_clips: Vec<&'static AudioClip<[i16]>, MAX_CLIPS>,
         at_end: AtEnd,
     },
     Stop,
@@ -315,7 +375,7 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     /// (at the next DMA chunk boundary).
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static [i16]; CLIP_COUNT],
+        audio_clips: [&'static AudioClip<[i16]>; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         self.play_iter(audio_clips, at_end);
@@ -327,15 +387,22 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     pub fn play_iter<I>(&self, audio_clips: I, at_end: AtEnd)
     where
         I: IntoIterator,
-        I::Item: AudioClip,
+        I::Item: IntoAudioClipRef,
     {
         assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
-        let mut audio_clip_sequence: Vec<&'static [i16], MAX_CLIPS> = Vec::new();
+        let mut audio_clip_sequence: Vec<&'static AudioClip<[i16]>, MAX_CLIPS> = Vec::new();
         for audio_clip in audio_clips {
             let audio_clip = audio_clip.into_audio_clip();
-            audio_clip_sequence
-                .push(audio_clip)
-                .expect("play sequence fits within max_clips");
+            assert!(
+                audio_clip.sample_rate_hz() == SAMPLE_RATE_HZ,
+                "clip sample rate ({}) must match player sample rate ({})",
+                audio_clip.sample_rate_hz(),
+                SAMPLE_RATE_HZ
+            );
+            assert!(
+                audio_clip_sequence.push(audio_clip).is_ok(),
+                "play sequence fits within max_clips"
+            );
         }
         assert!(
             !audio_clip_sequence.is_empty(),
@@ -358,7 +425,7 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     /// Sets runtime playback volume.
     ///
     /// This scale is applied to all playback and composes multiplicatively
-    /// with any per-clip gain pre-applied via [`with_volume`].
+    /// with any per-clip gain pre-applied via [`AudioClipN::with_volume`].
     pub fn set_volume(&self, volume: Volume) {
         self.audio_player_static.set_runtime_volume(volume);
     }
@@ -489,14 +556,14 @@ pub async fn device_loop<
 
 async fn play_clip_sequence_once<PIO: Instance, const MAX_CLIPS: usize>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_clips: &[&'static [i16]],
+    audio_clips: &[&'static AudioClip<[i16]>],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
 ) -> Option<AudioCommand<MAX_CLIPS>> {
-    for audio_sample_i16 in audio_clips {
+    for audio_clip in audio_clips {
         if let ControlFlow::Break(next_audio_command) = play_full_clip_once(
             pio_i2s_out,
-            audio_sample_i16,
+            audio_clip,
             sample_buffer,
             audio_player_static,
         )
@@ -510,11 +577,11 @@ async fn play_clip_sequence_once<PIO: Instance, const MAX_CLIPS: usize>(
 
 async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_sample_i16: &[i16],
+    audio_clip: &AudioClip<[i16]>,
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
 ) -> ControlFlow<AudioCommand<MAX_CLIPS>, ()> {
-    for audio_sample_chunk in audio_sample_i16.chunks(SAMPLE_BUFFER_LEN) {
+    for audio_sample_chunk in audio_clip.samples().chunks(SAMPLE_BUFFER_LEN) {
         let runtime_volume = audio_player_static.runtime_volume();
         for (sample_buffer_slot, sample_value_ref) in
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
@@ -883,13 +950,33 @@ macro_rules! __audio_player_impl {
                     $crate::audio_player::tone::<SAMPLE_COUNT>(frequency_hz)
                 }
 
-                /// Returns a new clip with linear volume scaling applied.
+                /// Creates a silent clip at this player's sample rate.
                 #[must_use]
-                pub const fn with_volume<const SAMPLE_COUNT: usize>(
-                    audio_sample_i16: &[i16; SAMPLE_COUNT],
-                    volume: $crate::audio_player::Volume,
-                ) -> [i16; SAMPLE_COUNT] {
-                    $crate::audio_player::with_volume(audio_sample_i16, volume)
+                pub const fn silence_clip<const SAMPLE_COUNT: usize>(
+                ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
+                    $crate::audio_player::AudioClipN::new(
+                        Self::SAMPLE_RATE_HZ,
+                        Self::silence::<SAMPLE_COUNT>(),
+                    )
+                }
+
+                /// Creates a sine-wave clip at this player's sample rate.
+                #[must_use]
+                pub const fn tone_clip<const SAMPLE_COUNT: usize>(
+                    frequency_hz: u32,
+                ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
+                    $crate::audio_player::AudioClipN::new(
+                        Self::SAMPLE_RATE_HZ,
+                        Self::tone::<SAMPLE_COUNT>(frequency_hz),
+                    )
+                }
+
+                /// Creates a clip from provided sample data at this player's sample rate.
+                #[must_use]
+                pub const fn clip_from_samples<const SAMPLE_COUNT: usize>(
+                    samples: [i16; SAMPLE_COUNT],
+                ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
+                    $crate::audio_player::AudioClipN::new(Self::SAMPLE_RATE_HZ, samples)
                 }
 
                 pub fn new(

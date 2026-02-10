@@ -28,9 +28,7 @@ static AUDIO_SAMPLE_I16: [i16; AUDIO_SAMPLE_COUNT] =
 // Rebuild the source clip (s16le mono raw) with:
 // ffmpeg -i input.wav -ac 1 -ar 22050 -f s16le examples/data/audio/computers_in_control_mono_s16le_22050.raw
 // TODO00 min language of concatenation, fade in and out?
-// TODO00 preprocess samples at compile time
 // TODO00 think about moving some of the 3 constants (rate, bit depth, buffer len) into the macro with defaults
-// TODO00 be sure new play commands (and stop) stops current playback immediately and doesn't just queue at the end of the current sequence
 // TODO00 make the macro documentation look good with a generated type.
 // TODO00 does the macro support vis
 // TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
@@ -41,6 +39,7 @@ audio_player! {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
+        volume: Volume::percent(50),
     }
 }
 

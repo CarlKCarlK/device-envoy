@@ -247,9 +247,15 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     /// Creates static resources for a player.
     #[must_use]
     pub const fn new_static() -> Self {
+        Self::new_static_with_volume(Volume::FULL_SCALE)
+    }
+
+    /// Creates static resources for a player with an initial runtime volume.
+    #[must_use]
+    pub const fn new_static_with_volume(initial_volume: Volume) -> Self {
         Self {
             command_signal: Signal::new(),
-            runtime_volume_linear: AtomicI32::new(MAX_VOLUME as i32),
+            runtime_volume_linear: AtomicI32::new(initial_volume.linear() as i32),
         }
     }
 
@@ -283,6 +289,12 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     #[must_use]
     pub const fn new_static() -> AudioPlayerStatic<MAX_CLIPS> {
         AudioPlayerStatic::new_static()
+    }
+
+    /// Creates static resources for a player with an initial runtime volume.
+    #[must_use]
+    pub const fn new_static_with_volume(initial_volume: Volume) -> AudioPlayerStatic<MAX_CLIPS> {
+        AudioPlayerStatic::new_static_with_volume(initial_volume)
     }
 
     /// Creates a player handle. The device task must already be running.
@@ -558,6 +570,7 @@ macro_rules! __audio_player_impl {
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
+            initial_volume: $crate::audio_player::Volume::FULL_SCALE,
             fields: [ $($fields)* ]
         }
     };
@@ -577,6 +590,7 @@ macro_rules! __audio_player_impl {
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
+            initial_volume: $crate::audio_player::Volume::FULL_SCALE,
             fields: [ $($fields)* ]
         }
     };
@@ -590,6 +604,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ din_pin: $din_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -602,6 +617,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
+            initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -615,6 +631,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ bclk_pin: $bclk_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -627,6 +644,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
+            initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -640,6 +658,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ lrc_pin: $lrc_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -652,6 +671,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips,
+            initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -665,6 +685,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ pio: $pio_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -677,6 +698,7 @@ macro_rules! __audio_player_impl {
             pio: $pio_value,
             dma: $dma,
             max_clips: $max_clips,
+            initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -690,6 +712,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ dma: $dma_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -702,6 +725,7 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma_value,
             max_clips: $max_clips,
+            initial_volume: $initial_volume,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -715,6 +739,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ max_clips: $max_clips_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
@@ -727,6 +752,34 @@ macro_rules! __audio_player_impl {
             pio: $pio,
             dma: $dma,
             max_clips: $max_clips_value,
+            initial_volume: $initial_volume,
+            fields: [ $($($rest)*)? ]
+        }
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        din_pin: $din_pin:tt,
+        bclk_pin: $bclk_pin:tt,
+        lrc_pin: $lrc_pin:tt,
+        pio: $pio:ident,
+        dma: $dma:ident,
+        max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
+        fields: [ volume: $initial_volume_value:expr $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__audio_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            din_pin: $din_pin,
+            bclk_pin: $bclk_pin,
+            lrc_pin: $lrc_pin,
+            pio: $pio,
+            dma: $dma,
+            max_clips: $max_clips,
+            initial_volume: $initial_volume_value,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -740,6 +793,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
         compile_error!("audio_player! requires din_pin");
@@ -754,6 +808,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
         compile_error!("audio_player! requires bclk_pin");
@@ -768,6 +823,7 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
         compile_error!("audio_player! requires lrc_pin");
@@ -782,11 +838,12 @@ macro_rules! __audio_player_impl {
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
+        initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
         $crate::audio_player::paste::paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]: $crate::audio_player::AudioPlayerStatic<$max_clips> =
-                $crate::audio_player::AudioPlayer::<$max_clips>::new_static();
+                $crate::audio_player::AudioPlayer::<$max_clips>::new_static_with_volume($initial_volume);
             static [<$name:upper _AUDIO_PLAYER_CELL>]: ::static_cell::StaticCell<$name> =
                 ::static_cell::StaticCell::new();
 

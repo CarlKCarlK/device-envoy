@@ -21,13 +21,13 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
+// TODO00 rename nasa clip
 include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
+static AUDIO_SAMPLE_I16: [i16; AUDIO_SAMPLE_COUNT] =
+    AudioPlayer8::with_volume(&audio_sample_i16(), Volume::percent(25));
 // Rebuild the source clip (s16le mono raw) with:
 // ffmpeg -i input.wav -ac 1 -ar 22050 -f s16le examples/data/audio/computers_in_control_mono_s16le_22050.raw
-// TODO00 rename audio player
-// TODO00 min language of tones, silence, concatenation, volume???
-// TODO00 do pio and dma in macro
-// TODO00 use same AtEnd as servo_player
+// TODO00 min language of concatenation, fade in and out?
 // TODO00 preprocess samples at compile time
 // TODO00 think about moving some of the 3 constants (rate, bit depth, buffer len) into the macro with defaults
 // TODO00 be sure new play commands (and stop) stops current playback immediately and doesn't just queue at the end of the current sequence
@@ -35,6 +35,7 @@ include!(concat!(env!("OUT_DIR"), "/audio_data.rs"));
 // TODO00 does the macro support vis
 // TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
 // TODO00 should with_volume be an extension method?
+//
 audio_player! {
     AudioPlayer8 {
         din_pin: PIN_8,
@@ -66,17 +67,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // TODO0 amplitude 8_000 is arbitrary (may no longer apply)
     const TONE_A4: [i16; AudioPlayer8::samples_ms(500)] =
-        AudioPlayer8::with_volume(&AudioPlayer8::tone(440), Volume::db(-12));
+        AudioPlayer8::with_volume(&AudioPlayer8::tone(440), Volume::percent(25));
     const SILENCE_100MS: [i16; AudioPlayer8::samples_ms(100)] = AudioPlayer8::silence();
     loop {
         button.wait_for_press().await;
         audio_player8.play([&TONE_A4, &SILENCE_100MS, &TONE_A4], AtEnd::Loop);
         info!("Started static slice playback");
-        // wait for 1 second
-        Timer::after(Duration::from_secs(3)).await;
+        for percent in [80, 60, 40, 20, 200] {
+            audio_player8.set_volume(Volume::percent(percent));
+            info!("Runtime volume set to {}%", percent);
+            Timer::after(Duration::from_secs(1)).await;
+        }
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
-        // TODO0 atend::atend is wrong (may no longer apply)
+        audio_player8.set_volume(Volume::percent(100));
         audio_player8.play([&AUDIO_SAMPLE_I16], AtEnd::Stop);
     }
 }

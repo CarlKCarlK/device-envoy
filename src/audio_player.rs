@@ -5,6 +5,7 @@
 //TODO0 Review this code
 
 use core::ops::ControlFlow;
+use core::sync::atomic::{AtomicI32, Ordering};
 
 use embassy_rp::Peri;
 use embassy_rp::dma::Channel;
@@ -78,6 +79,11 @@ impl Volume {
     #[must_use]
     const fn linear(self) -> i16 {
         self.0
+    }
+
+    #[must_use]
+    const fn from_linear(linear: i16) -> Self {
+        Self(linear)
     }
 }
 
@@ -234,6 +240,7 @@ enum AudioCommand<const MAX_CLIPS: usize> {
 /// Static resources for [`AudioPlayer`].
 pub struct AudioPlayerStatic<const MAX_CLIPS: usize> {
     command_signal: Signal<CriticalSectionRawMutex, AudioCommand<MAX_CLIPS>>,
+    runtime_volume_linear: AtomicI32,
 }
 
 impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
@@ -242,6 +249,7 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     pub const fn new_static() -> Self {
         Self {
             command_signal: Signal::new(),
+            runtime_volume_linear: AtomicI32::new(MAX_VOLUME as i32),
         }
     }
 
@@ -251,6 +259,15 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
 
     async fn wait(&self) -> AudioCommand<MAX_CLIPS> {
         self.command_signal.wait().await
+    }
+
+    fn set_runtime_volume(&self, volume: Volume) {
+        self.runtime_volume_linear
+            .store(volume.linear() as i32, Ordering::Relaxed);
+    }
+
+    fn runtime_volume(&self) -> Volume {
+        Volume::from_linear(self.runtime_volume_linear.load(Ordering::Relaxed) as i16)
     }
 }
 
@@ -324,6 +341,20 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     /// If playback is active, it is interrupted at the next DMA chunk boundary.
     pub fn stop(&self) {
         self.audio_player_static.signal(AudioCommand::Stop);
+    }
+
+    /// Sets runtime playback volume.
+    ///
+    /// This scale is applied to all playback and composes multiplicatively
+    /// with any per-clip gain pre-applied via [`with_volume`].
+    pub fn set_volume(&self, volume: Volume) {
+        self.audio_player_static.set_runtime_volume(volume);
+    }
+
+    /// Returns the current runtime playback volume.
+    #[must_use]
+    pub fn volume(&self) -> Volume {
+        self.audio_player_static.runtime_volume()
     }
 }
 
@@ -472,12 +503,14 @@ async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize>(
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
 ) -> ControlFlow<AudioCommand<MAX_CLIPS>, ()> {
     for audio_sample_chunk in audio_sample_i16.chunks(SAMPLE_BUFFER_LEN) {
+        let runtime_volume = audio_player_static.runtime_volume();
         for (sample_buffer_slot, sample_value_ref) in
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
             // TODO0 should we preprocess all this? (moved from examples/audio.rs) (may no longer apply)
-            *sample_buffer_slot = stereo_sample(sample_value);
+            let scaled_sample_value = scale_sample(sample_value, runtime_volume);
+            *sample_buffer_slot = stereo_sample(scaled_sample_value);
         }
 
         sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));

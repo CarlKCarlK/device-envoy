@@ -33,10 +33,8 @@ impl Volume {
     /// Silence.
     pub const MUTE: Self = Self(0);
 
-    /// Full-scale linear volume (no attenuation).
-    pub const FULL_SCALE: Self = Self(MAX_VOLUME);
-    /// Alias for [`Self::FULL_SCALE`].
-    pub const FULL: Self = Self::FULL_SCALE;
+    /// Maximum playback volume.
+    pub const MAX: Self = Self(MAX_VOLUME);
 
     /// Creates a volume from a percentage of full scale.
     ///
@@ -50,7 +48,8 @@ impl Volume {
 
     /// Creates a humorous "goes to 11" demo volume scale.
     ///
-    /// `0..=11` maps logarithmically to `0..=100%`.
+    /// `0..=11` maps to `0..=100%` using a perceptual curve
+    /// (roughly logarithmic, but not mathematically exact).
     ///
     /// Values above `11` clamp to `11`.
     #[must_use]
@@ -303,6 +302,7 @@ impl<const SAMPLE_COUNT: usize> AudioClipRef<[i16; SAMPLE_COUNT]> {
     /// Returns a new clip with linear sample gain applied.
     ///
     /// Gain multiplication uses i32 math and saturates to i16 sample bounds.
+    /// Boosting gain can hard-clip peaks and introduce distortion.
     #[must_use]
     pub const fn with_gain(self, gain: Gain) -> Self {
         let mut scaled_samples = [0_i16; SAMPLE_COUNT];
@@ -404,15 +404,15 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     #[must_use]
     pub const fn new_static() -> Self {
         Self::new_static_with_max_volume_and_initial_volume(
-            Volume::FULL_SCALE,
-            Volume::FULL_SCALE,
+            Volume::MAX,
+            Volume::MAX,
         )
     }
 
     /// Creates static resources for a player with a runtime volume ceiling.
     #[must_use]
     pub const fn new_static_with_max_volume(max_volume: Volume) -> Self {
-        Self::new_static_with_max_volume_and_initial_volume(max_volume, Volume::FULL_SCALE)
+        Self::new_static_with_max_volume_and_initial_volume(max_volume, Volume::MAX)
     }
 
     /// Creates static resources for a player with a runtime volume ceiling
@@ -773,8 +773,8 @@ macro_rules! __audio_player_impl {
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
-            max_volume: $crate::audio_player::Volume::FULL_SCALE,
-            initial_volume: $crate::audio_player::Volume::FULL_SCALE,
+            max_volume: $crate::audio_player::Volume::MAX,
+            initial_volume: $crate::audio_player::Volume::MAX,
             fields: [ $($fields)* ]
         }
     };
@@ -794,8 +794,8 @@ macro_rules! __audio_player_impl {
             pio: PIO1,
             dma: DMA_CH0,
             max_clips: 16,
-            max_volume: $crate::audio_player::Volume::FULL_SCALE,
-            initial_volume: $crate::audio_player::Volume::FULL_SCALE,
+            max_volume: $crate::audio_player::Volume::MAX,
+            initial_volume: $crate::audio_player::Volume::MAX,
             fields: [ $($fields)* ]
         }
     };

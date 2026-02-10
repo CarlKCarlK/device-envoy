@@ -15,8 +15,9 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, AudioClip, Gain, Volume, audio_player};
+use device_envoy::audio_player::{AtEnd, Gain, Volume, audio_player};
 use device_envoy::button::{Button, PressedTo};
+use device_envoy::samples_ms;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
@@ -37,7 +38,7 @@ audio_player! {
         din_pin: PIN_8,
         bclk_pin: PIN_9,
         lrc_pin: PIN_10,
-        max_volume: Volume::percent(25),
+        max_volume: Volume::percent(50),
         initial_volume: Volume::percent(100),
     }
 }
@@ -49,11 +50,12 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+    // todo0 we shouldn't use "clip" it should be audio_clip
     static NASA_CLIP: NasaClip = nasa_clip().with_gain(Gain::percent(25));
     //todo0 can we make this type come from AudioPlayer8?
-    static TONE_A4: AudioClip<{ AudioPlayer8::samples_ms(500) }> =
+    static TONE_A4: samples_ms! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
-    static SILENCE_100MS: AudioClip<{ AudioPlayer8::samples_ms(100) }> = AudioPlayer8::silence();
+    static SILENCE_100MS: samples_ms! { AudioPlayer8, 100 } = AudioPlayer8::silence();
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

@@ -747,6 +747,16 @@ const fn stereo_sample(sample: i16) -> u32 {
 
 pub use paste;
 
+/// Expands to an [`AudioClip`] type sized from a player type and milliseconds.
+///
+/// Example: `samples_ms!{AudioPlayer8, 500}`.
+#[macro_export]
+macro_rules! samples_ms {
+    ($player:ident, $duration_ms:expr) => {
+        $crate::audio_player::AudioClip<{ $player::samples_ms($duration_ms) }>
+    };
+}
+
 /// Generates a named audio player type with fixed PIO/DMA/pin resources.
 // TODO00 do pio and dma in macro (may no longer apply)
 #[macro_export]

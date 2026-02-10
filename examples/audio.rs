@@ -22,7 +22,6 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-// TODO00 rename nasa clip (may no longer apply)
 include!(concat!(env!("OUT_DIR"), "/nasa_clip.rs"));
 // Rebuild the source clip (s16le mono raw) with:
 // ffmpeg -i input.wav -ac 1 -ar 22050 -f s16le examples/data/audio/computers_in_control_mono_s16le_22050.raw
@@ -32,7 +31,7 @@ include!(concat!(env!("OUT_DIR"), "/nasa_clip.rs"));
 // TODO00 does the macro support vis
 // TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
 // TODO00 should with_gain be an extension method?
-//
+// TODO00 verify that it can play sound while doing other things (like blinking an LED or reading a button) without stuttering
 audio_player! {
     AudioPlayer8 {
         din_pin: PIN_8,
@@ -71,7 +70,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!("Button on GP13 starts playback");
 
-    // TODO0 amplitude 8_000 is arbitrary (may no longer apply)
     loop {
         button.wait_for_press().await;
         audio_player8.play([&TONE_A4, &SILENCE_100MS, &TONE_A4], AtEnd::Loop);

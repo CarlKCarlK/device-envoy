@@ -144,7 +144,8 @@ impl Gain {
             step_index += 1;
         }
 
-        let gain_i64 = (MAX_VOLUME as i64 * scale_q15_i32 as i64 + ROUND_Q15 as i64) / ONE_Q15 as i64;
+        let gain_i64 =
+            (MAX_VOLUME as i64 * scale_q15_i32 as i64 + ROUND_Q15 as i64) / ONE_Q15 as i64;
         let gain_i32 = if gain_i64 > i32::MAX as i64 {
             i32::MAX
         } else {
@@ -157,7 +158,6 @@ impl Gain {
     const fn linear(self) -> i32 {
         self.0
     }
-
 }
 
 /// Returns how many samples are needed for a duration in milliseconds.
@@ -357,8 +357,10 @@ impl<const SAMPLE_COUNT: usize> AudioClipRef<[i16; SAMPLE_COUNT]> {
         let mut sample_index = 0_usize;
         while sample_index < SAMPLE_COUNT {
             let byte_index = sample_index * 2;
-            samples[sample_index] =
-                i16::from_le_bytes([audio_sample_s16le[byte_index], audio_sample_s16le[byte_index + 1]]);
+            samples[sample_index] = i16::from_le_bytes([
+                audio_sample_s16le[byte_index],
+                audio_sample_s16le[byte_index + 1],
+            ]);
             sample_index += 1;
         }
 
@@ -403,10 +405,7 @@ impl<const MAX_CLIPS: usize> AudioPlayerStatic<MAX_CLIPS> {
     /// Creates static resources for a player.
     #[must_use]
     pub const fn new_static() -> Self {
-        Self::new_static_with_max_volume_and_initial_volume(
-            Volume::MAX,
-            Volume::MAX,
-        )
+        Self::new_static_with_max_volume_and_initial_volume(Volume::MAX, Volume::MAX)
     }
 
     /// Creates static resources for a player with a runtime volume ceiling.
@@ -697,13 +696,8 @@ async fn play_clip_sequence_once<PIO: Instance, const MAX_CLIPS: usize>(
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS>,
 ) -> Option<AudioCommand<MAX_CLIPS>> {
     for audio_clip in audio_clips {
-        if let ControlFlow::Break(next_audio_command) = play_full_clip_once(
-            pio_i2s_out,
-            audio_clip,
-            sample_buffer,
-            audio_player_static,
-        )
-        .await
+        if let ControlFlow::Break(next_audio_command) =
+            play_full_clip_once(pio_i2s_out, audio_clip, sample_buffer, audio_player_static).await
         {
             return Some(next_audio_command);
         }
@@ -723,7 +717,6 @@ async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize>(
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
-            // TODO0 should we preprocess all this? (moved from examples/audio.rs) (may no longer apply)
             let scaled_sample_value = scale_sample(sample_value, runtime_volume);
             *sample_buffer_slot = stereo_sample(scaled_sample_value);
         }
@@ -758,7 +751,6 @@ macro_rules! samples_ms {
 }
 
 /// Generates a named audio player type with fixed PIO/DMA/pin resources.
-// TODO00 do pio and dma in macro (may no longer apply)
 #[macro_export]
 macro_rules! audio_player {
     ($($tt:tt)*) => { $crate::__audio_player_impl! { $($tt)* } };

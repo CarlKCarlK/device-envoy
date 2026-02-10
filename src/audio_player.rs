@@ -13,6 +13,12 @@
 //! other work. Volume can be adjusted on the fly, and playback can be
 //! stopped or interrupted mid-clip.
 //!
+//! **Supported audio format**
+//!
+//! - Configurable sample rate (`sample_rate_hz`)
+//! - 16-bit signed little-endian PCM (`s16le`)
+//! - Mono (duplicated to left/right on I2S output)
+//!
 //! **After reading the examples below, see also:**
 //!
 //! - [`audio_player!`] - Macro to generate an audio player struct type

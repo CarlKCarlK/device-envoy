@@ -244,18 +244,15 @@ pub enum AtEnd {
     Stop,
 }
 
-/// Self-describing PCM clip view used by playback APIs.
+/// Self-describing PCM clip reference view used by playback APIs.
 ///
-/// `AudioClip` is unsized so clips with different lengths can share one
-/// reference type (`&AudioClip`) in the same playback sequence.
+/// `AudioClipRef` is unsized so clips with different lengths can share one
+/// reference type (`&AudioClipRef`) in the same playback sequence.
 #[repr(C)]
-pub struct AudioClip<T: ?Sized = [i16]> {
+pub struct AudioClipRef<T: ?Sized = [i16]> {
     sample_rate_hz: u32,
     samples: T,
 }
-
-/// Unsized clip reference type used for playback.
-pub type AudioClipRef = AudioClip<[i16]>;
 
 impl AudioClipRef {
     /// Clip sample rate in hertz.
@@ -278,9 +275,9 @@ impl AudioClipRef {
 }
 
 /// Sized, const-friendly PCM clip storage.
-pub type AudioClipN<const SAMPLE_COUNT: usize> = AudioClip<[i16; SAMPLE_COUNT]>;
+pub type AudioClip<const SAMPLE_COUNT: usize> = AudioClipRef<[i16; SAMPLE_COUNT]>;
 
-impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
+impl<const SAMPLE_COUNT: usize> AudioClipRef<[i16; SAMPLE_COUNT]> {
     /// Creates a clip from sample rate and PCM samples.
     #[must_use]
     const fn new(sample_rate_hz: u32, samples: [i16; SAMPLE_COUNT]) -> Self {
@@ -381,7 +378,7 @@ impl IntoAudioClipRef for &'static AudioClipRef {
     }
 }
 
-impl<const SAMPLE_COUNT: usize> IntoAudioClipRef for &'static AudioClipN<SAMPLE_COUNT> {
+impl<const SAMPLE_COUNT: usize> IntoAudioClipRef for &'static AudioClip<SAMPLE_COUNT> {
     fn into_audio_clip(self) -> &'static AudioClipRef {
         self
     }
@@ -558,7 +555,7 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
     /// - `Volume::percent(50)` plays at half of `max_volume`.
     ///
     /// This relative scale composes multiplicatively with any per-clip gain
-    /// pre-applied via [`AudioClipN::with_gain`].
+    /// pre-applied via [`AudioClip::with_gain`].
     pub fn set_volume(&self, volume: Volume) {
         self.audio_player_static.set_runtime_volume(volume);
     }
@@ -1149,24 +1146,24 @@ macro_rules! __audio_player_impl {
                 /// Creates a silent clip at this player's sample rate.
                 #[must_use]
                 pub const fn silence<const SAMPLE_COUNT: usize>(
-                ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
-                    $crate::audio_player::AudioClipN::silence(Self::SAMPLE_RATE_HZ)
+                ) -> $crate::audio_player::AudioClip<SAMPLE_COUNT> {
+                    $crate::audio_player::AudioClip::silence(Self::SAMPLE_RATE_HZ)
                 }
 
                 /// Creates a sine-wave clip at this player's sample rate.
                 #[must_use]
                 pub const fn tone<const SAMPLE_COUNT: usize>(
                     frequency_hz: u32,
-                ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
-                    $crate::audio_player::AudioClipN::tone(Self::SAMPLE_RATE_HZ, frequency_hz)
+                ) -> $crate::audio_player::AudioClip<SAMPLE_COUNT> {
+                    $crate::audio_player::AudioClip::tone(Self::SAMPLE_RATE_HZ, frequency_hz)
                 }
 
                 /// Creates a clip from little-endian s16 PCM bytes at this player's sample rate.
                 #[must_use]
                 pub const fn clip_from_s16le_bytes<const SAMPLE_COUNT: usize, const AUDIO_SAMPLE_BYTES_LEN: usize>(
                     audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN],
-                ) -> $crate::audio_player::AudioClipN<SAMPLE_COUNT> {
-                    $crate::audio_player::AudioClipN::from_s16le_bytes(
+                ) -> $crate::audio_player::AudioClip<SAMPLE_COUNT> {
+                    $crate::audio_player::AudioClip::from_s16le_bytes(
                         Self::SAMPLE_RATE_HZ,
                         audio_sample_s16le,
                     )

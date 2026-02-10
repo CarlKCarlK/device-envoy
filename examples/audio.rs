@@ -15,7 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, AudioClipN, Gain, Volume, audio_player};
+use device_envoy::audio_player::{AtEnd, AudioClip, Gain, Volume, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -50,9 +50,10 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static NASA_CLIP: NasaClip = nasa_clip().with_gain(Gain::percent(25));
-    static TONE_A4: AudioClipN<{ AudioPlayer8::samples_ms(500) }> =
+    //todo0 can we make this type come from AudioPlayer8?
+    static TONE_A4: AudioClip<{ AudioPlayer8::samples_ms(500) }> =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
-    static SILENCE_100MS: AudioClipN<{ AudioPlayer8::samples_ms(100) }> = AudioPlayer8::silence();
+    static SILENCE_100MS: AudioClip<{ AudioPlayer8::samples_ms(100) }> = AudioPlayer8::silence();
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -71,14 +72,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // TODO0 amplitude 8_000 is arbitrary (may no longer apply)
     loop {
         button.wait_for_press().await;
-        audio_player8.play(
-            [
-                &TONE_A4,
-                &SILENCE_100MS,
-                &TONE_A4,
-            ],
-            AtEnd::Loop,
-        );
+        audio_player8.play([&TONE_A4, &SILENCE_100MS, &TONE_A4], AtEnd::Loop);
         info!("Started static slice playback");
         for percent in [80, 60, 40, 20, 200] {
             audio_player8.set_volume(Volume::percent(percent));

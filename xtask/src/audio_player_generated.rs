@@ -61,16 +61,17 @@ impl AudioPlayerGenerated {
 
     /// Creates a silent clip at this player's sample rate.
     #[must_use]
-    pub const fn silence<const SAMPLE_COUNT: usize>() -> AudioClipBuf<SAMPLE_COUNT> {
-        AudioClipBuf::silence(Self::SAMPLE_RATE_HZ)
+    pub const fn silence<const SAMPLE_COUNT: usize>(
+    ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
+        AudioClipBuf::silence()
     }
 
     /// Creates a sine-wave clip at this player's sample rate.
     #[must_use]
     pub const fn tone<const SAMPLE_COUNT: usize>(
         frequency_hz: u32,
-    ) -> AudioClipBuf<SAMPLE_COUNT> {
-        AudioClipBuf::tone(Self::SAMPLE_RATE_HZ, frequency_hz)
+    ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
+        AudioClipBuf::tone(frequency_hz)
     }
 
     /// Creates a clip from little-endian s16 PCM bytes at this player's sample rate.
@@ -80,8 +81,8 @@ impl AudioPlayerGenerated {
         const AUDIO_SAMPLE_BYTES_LEN: usize,
     >(
         audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN],
-    ) -> AudioClipBuf<SAMPLE_COUNT> {
-        AudioClipBuf::from_s16le_bytes(Self::SAMPLE_RATE_HZ, audio_sample_s16le)
+    ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
+        AudioClipBuf::from_s16le_bytes(audio_sample_s16le)
     }
 
     /// Creates and spawns the generated audio player instance.
@@ -103,7 +104,7 @@ impl AudioPlayerGenerated {
     /// Starts playback of one or more static PCM clips.
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static AudioClip; CLIP_COUNT],
+        audio_clips: [&'static AudioClip<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         let _ = (audio_clips, at_end);

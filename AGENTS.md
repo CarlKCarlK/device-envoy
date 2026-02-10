@@ -258,6 +258,11 @@ let _ = something_that_returns_a_result()
 
 ## API Design Patterns
 
+**Avoid redundant API paths.** Prefer one clear way to do a thing unless there is a strong compatibility or interoperability reason.
+
+- Do not expose both an associated const and an equivalent getter by default.
+- If both are temporarily needed during migration, document the canonical one and plan to remove the duplicate.
+
 **Avoid the builder pattern.** Users find builder patterns hard to discover. Instead:
 
 - Use direct constructors with named parameters

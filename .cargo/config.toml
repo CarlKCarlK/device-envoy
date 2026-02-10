@@ -35,6 +35,8 @@ wifi-auto-w = "run --example wifi_auto --release --target thumbv6m-none-eabi --f
 wifi-auto-w-check = "check --example wifi_auto --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
 clock_console_w = "run --example clock_console --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
 clock_console_w_check = "check --example clock_console --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
+clock-audio-w = "run --example clock_audio --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
+clock-audio-w-check = "check --example clock_audio --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
 clock-led12x4-w = "run --example clock_led12x4 --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
 clock-led12x4-w-check = "check --example clock_led12x4 --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
 clock-led8x12-w = "run --example clock_led8x12 --release --target thumbv6m-none-eabi --features pico1,arm,wifi"
@@ -180,6 +182,8 @@ wifi-web-2w = "run --example wifi_web --release --target thumbv8m.main-none-eabi
 wifi-web-2w-check = "check --example wifi_web --release --target thumbv8m.main-none-eabihf --features pico2,arm,wifi --no-default-features"
 clock-console-2w = "run --example clock_console --release --target thumbv8m.main-none-eabihf --features pico2,arm,wifi --no-default-features"
 clock-console-2w-check = "check --example clock_console --release --target thumbv8m.main-none-eabihf --features pico2,arm,wifi --no-default-features"
+clock-audio-2w = "run --example clock_audio --release --target thumbv8m.main-none-eabihf --features pico2,arm,wifi --no-default-features"
+clock-audio-2w-check = "check --example clock_audio --release --target thumbv8m.main-none-eabihf --features pico2,arm,wifi --no-default-features"
 clock-led12x4-wifi-2w = "run --example clock_led12x4 --release --target thumbv8m.main-none-eabihf --features pico2,arm,wifi --no-default-features"
 clock-led12x4-wifi-2w-check = "check --example clock_led12x4 --release --target thumbv8m.main-none-eabihf --features pico2,arm,wifi --no-default-features"
 

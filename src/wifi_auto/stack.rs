@@ -636,11 +636,23 @@ async fn wifi_device_loop_client_impl<PIO: WifiPio>(
     }
 
     info!("WiFi connected! Waiting for DHCP...");
-    stack.wait_config_up().await;
-
-    if let Some(config) = stack.config_v4() {
-        info!("IP Address: {}", config.address);
-    }
+    let mut dhcp_wait_seconds = 0_u32;
+    let config = loop {
+        if let Some(config) = stack.config_v4() {
+            break config;
+        }
+        if dhcp_wait_seconds % 5 == 0 {
+            info!(
+                "DHCP wait {}s (link_up={} config_up={})",
+                dhcp_wait_seconds,
+                stack.is_link_up(),
+                stack.is_config_up()
+            );
+        }
+        Timer::after_secs(1).await;
+        dhcp_wait_seconds += 1;
+    };
+    info!("IP Address: {}", config.address);
 
     info!("WiFi client ready");
 

@@ -125,9 +125,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     info!("Captive portal ready");
                     audio_player10_ref.play(
                         [
-                            CAPTIVE_PORTAL_TONE.as_clip(),
-                            SILENCE_40MS.as_clip(),
-                            CAPTIVE_PORTAL_TONE.as_clip(),
+                            &CAPTIVE_PORTAL_TONE,
+                            &SILENCE_40MS,
+                            &CAPTIVE_PORTAL_TONE,
                         ],
                         AtEnd::Stop,
                     );
@@ -137,15 +137,15 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     try_count,
                 } => {
                     info!("Connecting (attempt {} of {})", try_index + 1, try_count);
-                    audio_player10_ref.play([CONNECTING_TONE.as_clip()], AtEnd::Stop);
+                    audio_player10_ref.play([&CONNECTING_TONE], AtEnd::Stop);
                 }
                 WifiAutoEvent::ConnectionFailed => {
                     info!("WiFi connection failed");
                     audio_player10_ref.play(
                         [
-                            CONNECTION_FAILED_TONE.as_clip(),
-                            SILENCE_40MS.as_clip(),
-                            CONNECTION_FAILED_TONE.as_clip(),
+                            &CONNECTION_FAILED_TONE,
+                            &SILENCE_40MS,
+                            &CONNECTION_FAILED_TONE,
                         ],
                         AtEnd::Stop,
                     );
@@ -158,9 +158,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("WiFi connected");
     audio_player8.play(
         [
-            WIFI_CONNECTED_TONE.as_clip(),
-            SILENCE_40MS.as_clip(),
-            WIFI_CONNECTED_TONE.as_clip(),
+            &WIFI_CONNECTED_TONE,
+            &SILENCE_40MS,
+            &WIFI_CONNECTED_TONE,
         ],
         AtEnd::Stop,
     );
@@ -182,7 +182,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // First tick confirms successful time sync.
     let first_tick = clock_sync.wait_for_tick().await;
     let (first_hours, first_minutes, first_seconds) = h12_m_s(&first_tick.local_time);
-    audio_player8.play([TIME_SYNCED_TONE.as_clip()], AtEnd::Stop);
+    audio_player8.play([&TIME_SYNCED_TONE], AtEnd::Stop);
     info!(
         "Time synced: {:02}:{:02}:{:02} (button toggles mode)",
         first_hours, first_minutes, first_seconds
@@ -198,11 +198,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
                 match clock_audio_mode {
                     ClockAudioMode::HoursMinutes => {
-                        audio_player8.play([MODE_HH_MM_TONE.as_clip()], AtEnd::Stop);
+                        audio_player8.play([&MODE_HH_MM_TONE], AtEnd::Stop);
                         info!("Mode changed: hh:mm (minute tick)");
                     }
                     ClockAudioMode::MinutesSeconds => {
-                        audio_player8.play([MODE_MM_SS_TONE.as_clip()], AtEnd::Stop);
+                        audio_player8.play([&MODE_MM_SS_TONE], AtEnd::Stop);
                         info!("Mode changed: mm:ss (second tick)");
                     }
                 }
@@ -211,7 +211,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 let (hours, minutes, seconds) = h12_m_s(&tick.local_time);
                 match clock_audio_mode {
                     ClockAudioMode::HoursMinutes => {
-                        audio_player8.play([HH_MM_TICK_TONE.as_clip()], AtEnd::Stop);
+                        audio_player8.play([&HH_MM_TICK_TONE], AtEnd::Stop);
                         info!(
                             "hh:mm {:02}:{:02} (since sync: {}s)",
                             hours,
@@ -220,7 +220,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                         );
                     }
                     ClockAudioMode::MinutesSeconds => {
-                        audio_player8.play([MM_SS_TICK_TONE.as_clip()], AtEnd::Stop);
+                        audio_player8.play([&MM_SS_TICK_TONE], AtEnd::Stop);
                         info!(
                             "mm:ss {:02}:{:02} (since sync: {}s)",
                             minutes,

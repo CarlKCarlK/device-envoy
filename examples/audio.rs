@@ -73,9 +73,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         button.wait_for_press().await;
         audio_player8.play(
             [
-                TONE_A4.as_clip(),
-                SILENCE_100MS.as_clip(),
-                TONE_A4.as_clip(),
+                &TONE_A4,
+                &SILENCE_100MS,
+                &TONE_A4,
             ],
             AtEnd::Loop,
         );
@@ -87,7 +87,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         }
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
-        audio_player8.set_volume(Volume::percent(100));
-        audio_player8.play([NASA_CLIP.as_clip()], AtEnd::Stop);
+        audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
+        audio_player8.play([&NASA_CLIP], AtEnd::Stop);
     }
 }

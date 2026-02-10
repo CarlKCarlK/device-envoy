@@ -133,33 +133,6 @@ pub const fn samples_ms(duration_ms: u32, sample_rate_hz: u32) -> usize {
     samples_for_duration_ms(duration_ms, sample_rate_hz)
 }
 
-#[must_use]
-const fn silence_samples<const SAMPLE_COUNT: usize>() -> [i16; SAMPLE_COUNT] {
-    [0; SAMPLE_COUNT]
-}
-
-#[must_use]
-const fn tone_with_sample_rate<const SAMPLE_COUNT: usize>(
-    frequency_hz: u32,
-    sample_rate_hz: u32,
-) -> [i16; SAMPLE_COUNT] {
-    assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
-
-    let mut audio_sample_i16 = [0_i16; SAMPLE_COUNT];
-    let phase_step_u64 = ((frequency_hz as u64) << 32) / sample_rate_hz as u64;
-    let phase_step_u32 = phase_step_u64 as u32;
-    let mut phase_u32 = 0_u32;
-
-    let mut sample_index = 0_usize;
-    while sample_index < SAMPLE_COUNT {
-        audio_sample_i16[sample_index] = sine_sample_from_phase(phase_u32);
-        phase_u32 = phase_u32.wrapping_add(phase_step_u32);
-        sample_index += 1;
-    }
-
-    audio_sample_i16
-}
-
 #[inline]
 const fn sine_sample_from_phase(phase_u32: u32) -> i16 {
     let half_cycle_u64 = 1_u64 << 31;
@@ -179,21 +152,6 @@ const fn sine_sample_from_phase(phase_u32: u32) -> i16 {
 
     let sample_i64 = (sine_q31_u64 as i64 * sign_i64) >> 16;
     clamp_i64_to_i16(sample_i64)
-}
-
-#[must_use]
-const fn with_volume<const SAMPLE_COUNT: usize>(
-    audio_sample_i16: &[i16; SAMPLE_COUNT],
-    volume: Volume,
-) -> [i16; SAMPLE_COUNT] {
-    let mut volume_adjusted_audio_sample_i16 = [0_i16; SAMPLE_COUNT];
-    let mut sample_index = 0_usize;
-    while sample_index < SAMPLE_COUNT {
-        volume_adjusted_audio_sample_i16[sample_index] =
-            scale_sample(audio_sample_i16[sample_index], volume);
-        sample_index += 1;
-    }
-    volume_adjusted_audio_sample_i16
 }
 
 #[inline]
@@ -297,32 +255,41 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
         SAMPLE_COUNT
     }
 
-    /// Returns this clip as an unsized clip view.
-    #[must_use]
-    pub fn as_clip(&'static self) -> &'static AudioClipRef {
-        self
-    }
-
     /// Returns a new clip with linear volume scaling applied.
     #[must_use]
     pub const fn with_volume(self, volume: Volume) -> Self {
-        Self::new(self.sample_rate_hz, with_volume(&self.samples, volume))
+        let mut scaled_samples = [0_i16; SAMPLE_COUNT];
+        let mut sample_index = 0_usize;
+        while sample_index < SAMPLE_COUNT {
+            scaled_samples[sample_index] = scale_sample(self.samples[sample_index], volume);
+            sample_index += 1;
+        }
+        Self::new(self.sample_rate_hz, scaled_samples)
     }
 
     /// Creates a silent clip at `sample_rate_hz`.
     #[must_use]
     pub const fn silence(sample_rate_hz: u32) -> Self {
-        Self::new(sample_rate_hz, silence_samples::<SAMPLE_COUNT>())
+        Self::new(sample_rate_hz, [0; SAMPLE_COUNT])
     }
 
     /// Creates a sine-wave clip at `sample_rate_hz`.
     #[must_use]
     pub const fn tone(sample_rate_hz: u32, frequency_hz: u32) -> Self {
         assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
-        Self::new(
-            sample_rate_hz,
-            tone_with_sample_rate::<SAMPLE_COUNT>(frequency_hz, sample_rate_hz),
-        )
+        let mut samples = [0_i16; SAMPLE_COUNT];
+        let phase_step_u64 = ((frequency_hz as u64) << 32) / sample_rate_hz as u64;
+        let phase_step_u32 = phase_step_u64 as u32;
+        let mut phase_u32 = 0_u32;
+
+        let mut sample_index = 0_usize;
+        while sample_index < SAMPLE_COUNT {
+            samples[sample_index] = sine_sample_from_phase(phase_u32);
+            phase_u32 = phase_u32.wrapping_add(phase_step_u32);
+            sample_index += 1;
+        }
+
+        Self::new(sample_rate_hz, samples)
     }
 
     /// Creates a clip from little-endian s16 PCM bytes.
@@ -1110,6 +1077,10 @@ macro_rules! __audio_player_impl {
             impl $name {
                 /// Sample rate used for PCM playback by this generated player type.
                 pub const SAMPLE_RATE_HZ: u32 = $crate::audio_player::SAMPLE_RATE_HZ;
+                /// Initial runtime volume relative to [`Self::MAX_VOLUME`].
+                pub const INITIAL_VOLUME: $crate::audio_player::Volume = $initial_volume;
+                /// Runtime volume ceiling for this generated player type.
+                pub const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;
 
                 /// Returns how many samples are needed for a duration in milliseconds
                 /// at this player's sample rate.

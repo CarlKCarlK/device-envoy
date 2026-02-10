@@ -183,13 +183,20 @@ use heapless::Vec;
 pub const SAMPLE_RATE_HZ: u32 = 22_050;
 const BIT_DEPTH_BITS: u32 = 16;
 const SAMPLE_BUFFER_LEN: usize = 256;
-/// Maximum linear volume scale value.
-pub const MAX_VOLUME: i16 = i16::MAX;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
 
-/// Playback loudness control used by player-level APIs.
+/// Absolute playback loudness setting for the whole player.
 ///
-/// `Volume` is a value object, not device state.
+/// `Volume` is used by the player-level controls
+/// [`max_volume`, `initial_volume`](macro@crate::audio_player), and
+/// [`set_volume`](audio_player_generated::AudioPlayerGenerated::set_volume),
+/// which set the absolute playback loudness behavior for the whole player.
+///
+/// This is different from [`Gain`] and [`AudioClipBuf::with_gain`], which
+/// adjust the relative loudness of individual clips.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Volume(i16);
 
@@ -198,15 +205,18 @@ impl Volume {
     pub const MUTE: Self = Self(0);
 
     /// Maximum playback volume.
-    pub const MAX: Self = Self(MAX_VOLUME);
+    pub const MAX: Self = Self(i16::MAX);
 
     /// Creates a volume from a percentage of full scale.
     ///
     /// Values above `100` are clamped to `100`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn percent(percent: u8) -> Self {
         let percent = if percent > 100 { 100 } else { percent };
-        let value_i32 = (percent as i32 * MAX_VOLUME as i32) / 100;
+        let value_i32 = (percent as i32 * i16::MAX as i32) / 100;
         Self(value_i32 as i16)
     }
 
@@ -216,6 +226,9 @@ impl Volume {
     /// (roughly logarithmic, but not mathematically exact).
     ///
     /// Values above `11` clamp to `11`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn spinal_tap(spinal_tap: u8) -> Self {
         let spinal_tap = if spinal_tap > 11 { 11 } else { spinal_tap };
@@ -248,9 +261,25 @@ impl Volume {
     }
 }
 
-/// Signal-domain gain used for clip transforms.
+/// Relative loudness adjustment for audio clips.
 ///
-/// `Gain` is for multiplying PCM samples and is separate from player `Volume`.
+/// Use `Gain` with [`AudioClipBuf::with_gain`] to make a clip louder or quieter
+/// before playback.
+///
+/// `with_gain` is intended for const clip definitions, so the adjusted samples
+/// are precomputed at compile time with no extra runtime work.
+///
+/// You can set gain by percent or by dB:
+/// - [`Gain::percent`] where `100` means unchanged and values above `100` are louder.
+/// - [`Gain::db`] where positive dB is louder and negative dB is quieter.
+///
+/// This is different from [`Volume`] used by
+/// [`max_volume`, `initial_volume`](macro@crate::audio_player), and
+/// [`set_volume`](audio_player_generated::AudioPlayerGenerated::set_volume),
+/// which set the absolute playback loudness behavior for the whole player.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Gain(i32);
 
@@ -259,14 +288,17 @@ impl Gain {
     pub const MUTE: Self = Self(0);
 
     /// Unity gain (no change).
-    pub const UNITY: Self = Self(MAX_VOLUME as i32);
+    pub const UNITY: Self = Self(i16::MAX as i32);
 
     /// Creates a gain from percentage.
     ///
     /// `100` is unity gain. Values above `100` boost the signal.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn percent(percent: u16) -> Self {
-        let value_i32 = (percent as i32 * MAX_VOLUME as i32) / 100;
+        let value_i32 = (percent as i32 * i16::MAX as i32) / 100;
         Self(value_i32)
     }
 
@@ -274,6 +306,9 @@ impl Gain {
     ///
     /// Values above `+12 dB` clamp to `+12 dB`.
     /// Values below `-96 dB` clamp to `-96 dB`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn db(db: i8) -> Self {
         const DB_UPPER_LIMIT: i8 = 12;
@@ -308,8 +343,7 @@ impl Gain {
             step_index += 1;
         }
 
-        let gain_i64 =
-            (MAX_VOLUME as i64 * scale_q15_i32 as i64 + ROUND_Q15 as i64) / ONE_Q15 as i64;
+        let gain_i64 = (i16::MAX as i64 * scale_q15_i32 as i64 + ROUND_Q15 as i64) / ONE_Q15 as i64;
         let gain_i32 = if gain_i64 > i32::MAX as i64 {
             i32::MAX
         } else {
@@ -327,7 +361,11 @@ impl Gain {
 /// Returns how many samples are needed for a duration in milliseconds.
 ///
 /// Use this in const contexts to size static audio arrays.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 #[must_use]
+#[doc(hidden)]
 pub const fn samples_for_duration_ms(duration_ms: u32, sample_rate_hz: u32) -> usize {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
     ((duration_ms as u64 * sample_rate_hz as u64) / 1_000) as usize
@@ -394,6 +432,9 @@ const fn clamp_i64_to_i16(value_i64: i64) -> i16 {
 /// End-of-sequence behavior for playback.
 ///
 /// `AudioPlayer` supports looping or stopping at the end of a clip sequence.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 pub enum AtEnd {
     /// Repeat the full clip sequence forever.
     Loop,
@@ -401,7 +442,10 @@ pub enum AtEnd {
     Stop,
 }
 
-/// Unsized view of static audio clip data. . `&AudioClip` (of varying lengths) can be sequenced together.
+/// Unsized view of static audio clip data. `&AudioClip` values of different lengths can be sequenced together.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 #[repr(C)]
 pub struct AudioClip<T: ?Sized = [i16]> {
     sample_rate_hz: u32,
@@ -410,6 +454,9 @@ pub struct AudioClip<T: ?Sized = [i16]> {
 
 impl AudioClip {
     /// Clip sample rate in hertz.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn sample_rate_hz(&self) -> u32 {
         self.sample_rate_hz
@@ -422,6 +469,9 @@ impl AudioClip {
     }
 
     /// Number of PCM samples in this clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn sample_count(&self) -> usize {
         self.samples.len()
@@ -430,6 +480,9 @@ impl AudioClip {
 
 //todo0 avoid all use of " PCM clip "
 /// Sized, const-friendly storage for static audio clip data.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 pub type AudioClipBuf<const SAMPLE_COUNT: usize> = AudioClip<[i16; SAMPLE_COUNT]>;
 
 impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
@@ -444,12 +497,18 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
     }
 
     /// Clip sample rate in hertz.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn sample_rate_hz(&self) -> u32 {
         self.sample_rate_hz
     }
 
     /// Number of PCM samples in this clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn sample_count(&self) -> usize {
         SAMPLE_COUNT
@@ -457,8 +516,14 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
 
     /// Returns a new clip with linear sample gain applied.
     ///
+    /// This is intended to be used in const clip definitions so the adjusted
+    /// samples are computed ahead of time.
+    ///
     /// Gain multiplication uses i32 math and saturates to i16 sample bounds.
-    /// Boosting gain can hard-clip peaks and introduce distortion.
+    /// Large boosts can hard-clip peaks and introduce distortion.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn with_gain(self, gain: Gain) -> Self {
         let mut scaled_samples = [0_i16; SAMPLE_COUNT];
@@ -472,12 +537,18 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
     }
 
     /// Creates a silent clip at `sample_rate_hz`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn silence(sample_rate_hz: u32) -> Self {
         Self::new(sample_rate_hz, [0; SAMPLE_COUNT])
     }
 
     /// Creates a sine-wave clip at `sample_rate_hz`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn tone(sample_rate_hz: u32, frequency_hz: u32) -> Self {
         assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
@@ -499,6 +570,9 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
     /// Creates a clip from little-endian s16 PCM bytes.
     ///
     /// `AUDIO_SAMPLE_BYTES_LEN` must be exactly `SAMPLE_COUNT * 2`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn from_s16le_bytes<const AUDIO_SAMPLE_BYTES_LEN: usize>(
         sample_rate_hz: u32,
@@ -526,6 +600,7 @@ impl<const SAMPLE_COUNT: usize> AudioClip<[i16; SAMPLE_COUNT]> {
 
 //todo0 hide?
 /// Supported clip input types for [`AudioPlayer::play_iter`].
+#[doc(hidden)]
 pub trait IntoAudioClip {
     /// Converts this clip input into a static audio clip reference.
     fn into_audio_clip(self) -> &'static AudioClip;
@@ -741,6 +816,7 @@ impl<const MAX_CLIPS: usize> AudioPlayer<MAX_CLIPS> {
 // todo0 hide?
 // todo0 does this really need to be different that other device abstraction traits?
 /// Trait mapping a PIO peripheral to its interrupt binding.
+#[doc(hidden)]
 pub trait AudioPlayerPio: Instance {
     /// Interrupt binding type for this PIO resource.
     type Irqs: embassy_rp::interrupt::typelevel::Binding<
@@ -914,6 +990,9 @@ pub use paste;
 /// Expands to an [`AudioClipBuf`] type sized from a player type and milliseconds.
 ///
 /// Example: `samples_ms!{AudioPlayer8, 500}`.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! samples_ms {

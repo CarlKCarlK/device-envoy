@@ -14,6 +14,14 @@
 - Always run `cargo check-all` before handing work back; xtask keeps doctests and examples in sync.
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 
+## Generated Files
+
+- Treat generated files under `src/**/_generated.rs` as build outputs, not source of truth.
+- When changing generated docs/examples, edit the corresponding generator template in `xtask/src/*_generated.rs` first.
+- If you must patch a generated file directly for an urgent fix, make the matching template change in the same PR so regeneration does not revert it.
+- Regenerate and verify with `cargo xtask check-docs` (or `cargo check-all`) before handing work back.
+- For this repo, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `led2d_generated`, `led_strip_generated`, and `servo_player_generated`.
+
 ## Const-Only APIs
 
 **The `LedLayout` type must remain fully const.** All methods on `LedLayout` must be `const fn`. This enables compile-time LED layout validation and zero-runtime-cost transformations. If you add a method to `LedLayout` that is not `const fn`, report this as an error. The existing doctests enforce const-ness by using methods in const contexts; removing `const` from any method will cause compilation to fail.

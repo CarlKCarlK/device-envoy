@@ -50,17 +50,13 @@ impl AudioPlayerGenerated {
     /// Returns how many samples are needed for a duration in milliseconds
     /// at this player's sample rate.
     #[must_use]
-    pub const fn samples_for_duration_ms(duration_ms: u32) -> usize {
+    pub const fn samples_ms(duration_ms: u32) -> usize {
         crate::audio_player::samples_for_duration_ms(duration_ms, Self::SAMPLE_RATE_HZ)
     }
 
-    /// Shorthand alias for [`Self::samples_for_duration_ms`].
-    #[must_use]
-    pub const fn samples_ms(duration_ms: u32) -> usize {
-        Self::samples_for_duration_ms(duration_ms)
-    }
-
     /// Creates a silent clip at this player's sample rate.
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     #[must_use]
     pub const fn silence<const SAMPLE_COUNT: usize>(
     ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
@@ -68,22 +64,13 @@ impl AudioPlayerGenerated {
     }
 
     /// Creates a sine-wave clip at this player's sample rate.
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     #[must_use]
     pub const fn tone<const SAMPLE_COUNT: usize>(
         frequency_hz: u32,
     ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
         AudioClipBuf::tone(frequency_hz)
-    }
-
-    /// Creates a clip from little-endian s16 PCM bytes at this player's sample rate.
-    #[must_use]
-    pub const fn clip_from_s16le_bytes<
-        const SAMPLE_COUNT: usize,
-        const AUDIO_SAMPLE_BYTES_LEN: usize,
-    >(
-        audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN],
-    ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
-        AudioClipBuf::from_s16le_bytes(audio_sample_s16le)
     }
 
     /// Creates and spawns the generated audio player instance.
@@ -102,7 +89,9 @@ impl AudioPlayerGenerated {
         Ok(&INSTANCE)
     }
 
-    /// Starts playback of one or more static PCM clips.
+    /// Starts playback of one or more static audio clips.
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn play<const CLIP_COUNT: usize>(
         &self,
         audio_clips: [&'static AudioClip<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
@@ -112,24 +101,25 @@ impl AudioPlayerGenerated {
     }
 
     /// Stops current playback as soon as possible.
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn stop(&self) {}
 
     /// Sets runtime playback volume relative to [`Self::MAX_VOLUME`].
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn set_volume(&self, volume: Volume) {
         let _ = volume;
     }
 
-    /// Returns the current runtime playback volume relative to [`Self::max_volume`].
+    /// Returns the current runtime playback volume relative to [`Self::MAX_VOLUME`].
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     #[must_use]
     pub fn volume(&self) -> Volume {
         Volume::MAX
     }
 
-    /// Returns the configured runtime volume ceiling.
-    #[must_use]
-    pub fn max_volume(&self) -> Volume {
-        Self::MAX_VOLUME
-    }
 }
 "#;
 

@@ -15,14 +15,13 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, Gain, Volume, audio_player, VOICE_22050_HZ};
+use device_envoy::audio_player::{AtEnd, AudioClipBuf, Gain, Volume, audio_player, VOICE_22050_HZ};
 use device_envoy::button::{Button, PressedTo};
 use device_envoy::samples_ms;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-include!(concat!(env!("OUT_DIR"), "/nasa_clip.rs"));
 // Rebuild the source clip (s16le mono raw) with:
 // ffmpeg -i input.wav -ac 1 -ar 22050 -f s16le examples/data/audio/computers_in_control_mono_s16le_22050.raw
 // TODO00 min language of concatenation, fade in and out?
@@ -42,6 +41,20 @@ audio_player! {
     }
 }
 
+const NASA_SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
+const NASA_BYTES: usize = 184_320;
+const NASA_SAMPLES: usize = NASA_BYTES / 2;
+
+const fn nasa_clip_s16le() -> AudioClipBuf<NASA_SAMPLE_RATE_HZ, NASA_SAMPLES> {
+    assert!(NASA_BYTES % 2 == 0, "nasa clip byte length must be even");
+    assert!(
+        NASA_SAMPLES * 2 == NASA_BYTES,
+        "nasa sample count must match byte length"
+    );
+    let bytes: &[u8; NASA_BYTES] = include_bytes!("../deldir/nasa_22k.s16");
+    AudioClipBuf::from_s16le_bytes(bytes)
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -50,7 +63,8 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // todo0 we shouldn't use "clip" it should be audio_clip
-    static NASA_CLIP: NasaClip = nasa_clip().with_gain(Gain::percent(25));
+    static NASA: AudioClipBuf<NASA_SAMPLE_RATE_HZ, NASA_SAMPLES> =
+        nasa_clip_s16le().with_gain(Gain::percent(25));
     static TONE_A4: samples_ms! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: samples_ms! { AudioPlayer8, 100 } = AudioPlayer8::silence();
@@ -64,8 +78,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
-        NASA_CLIP.sample_count(),
-        NASA_CLIP.sample_count() * 2
+        NASA.sample_count(),
+        NASA.sample_count() * 2
     );
     info!("Button on GP13 starts playback");
 
@@ -81,6 +95,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
         audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
-        audio_player8.play([&NASA_CLIP], AtEnd::Stop);
+        audio_player8.play([&NASA], AtEnd::Stop);
     }
 }

@@ -7,3 +7,5 @@ target-tmp/
 rustc-ice-*.txt
 DOC_CONSISTENCY_SURVEY.md
 all_docs.txt
+deldir/
+

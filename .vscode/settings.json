@@ -35,6 +35,7 @@
         "CMSIS",
         "creds",
         "DCIM",
+        "docsrs",
         "iface",
         "INTERBIT",
         "LWSS",

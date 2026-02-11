@@ -44,7 +44,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static REST_80MS: samples_ms! { SongPlayer, 80 } = SongPlayer::silence();
 
     let p = embassy_rp::init(Default::default());
-    let song_player = SongPlayer::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH0, spawner)?;
+    let song_player = SongPlayer::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!(
         "I2S ready: GP8 data pin (DIN), GP9 bit clock pin (BCLK), GP10 word select pin (LRC/LRCLK)"

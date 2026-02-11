@@ -15,8 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_clip;
-use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player};
+use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use device_envoy::samples_ms;
 use embassy_executor::Spawner;

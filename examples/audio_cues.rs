@@ -16,7 +16,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, samples_ms},
+    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player, samples_ms},
     button::{Button, PressedTo},
 };
 use embassy_executor::Spawner;
@@ -38,6 +38,13 @@ audio_player! {
     }
 }
 
+audio_clip! {
+    Nasa {
+        sample_rate_hz: VOICE_22050_HZ,
+        file: "data/audio/nasa_22k.s16",
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -45,9 +52,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static TICK: samples_ms! { AudioPlayer10, 30 } =
-        AudioPlayer10::tone(440).with_gain(Gain::percent(50));
-    static TOCK: samples_ms! { AudioPlayer10, 40 } = AudioPlayer10::tone(392);
+    static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
     static GAP: samples_ms! { AudioPlayer10, 80 } = AudioPlayer10::silence();
 
     let p = embassy_rp::init(Default::default());
@@ -60,8 +65,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         info!("Audio cues ready. Press the button to start playback.");
         button.wait_for_press().await;
 
-        audio_player8.play([&TICK, &GAP, &TOCK, &GAP], AtEnd::Loop);
-        info!("Started looping cues at initial volume (press the button to restart)");
+        audio_player8.play([&NASA, &GAP], AtEnd::Loop);
+        info!("Started looping NASA clip at initial volume (press the button to restart)");
 
         for volume_percent in VOLUME_STEPS_PERCENT {
             match select(

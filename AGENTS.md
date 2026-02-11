@@ -22,6 +22,8 @@
 
 This project uses a specific module structure pattern. Do NOT create `mod.rs` files.
 
+- Macros related to a specific submodule should generally live in that submodule (for example, audio macros in `audio_player`) rather than in the top-level module.
+
 Correct pattern:
 
 - `src/foo.rs` or `examples/foo.rs` (main module file)

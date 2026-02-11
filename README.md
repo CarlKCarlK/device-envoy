@@ -163,9 +163,9 @@ Examples use conventional pin assignments for consistency:
 - **PIN_4**: Extended LED panel (12×8, 96 pixels)
 - **PIN_5**: Long LED strip (160 pixels, broadway/marquee effects)
 - **PIN_6**: Large LED panel (16×16, 256 pixels)
-- **PIN_8**: I2S audio output DIN
-- **PIN_9**: I2S audio output BCLK
-- **PIN_10**: I2S audio output LRC
+- **PIN_8**: I2S audio output data pin (`DIN`)
+- **PIN_9**: I2S audio output bit clock pin (`BCLK`)
+- **PIN_10**: I2S audio output word select pin (`LRC` / `LRCLK`)
 - **PIN_13**: Button (active-low)
 - **PIN_11, PIN_12**: Servo signals
 

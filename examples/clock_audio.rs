@@ -5,9 +5,9 @@
 //! toggle to `mm:ss` mode (second ticks), then press again to switch back.
 //!
 //! Audio wiring (MAX98357A):
-//! - DIN  -> GP8
-//! - BCLK -> GP9
-//! - LRC  -> GP10
+//! - Data pin (`DIN`) -> GP8
+//! - Bit clock pin (`BCLK`) -> GP9
+//! - Word select pin (`LRC` / `LRCLK`) -> GP10
 
 #![cfg(feature = "wifi")]
 #![no_std]
@@ -33,9 +33,9 @@ use panic_probe as _;
 
 audio_player! {
     AudioPlayer10 {
-        din_pin: PIN_8,
-        bclk_pin: PIN_9,
-        lrc_pin: PIN_10,
+        data_pin: PIN_8,
+        bit_clock_pin: PIN_9,
+        word_select_pin: PIN_10,
         sample_rate_hz: VOICE_22050_HZ,
         pio: PIO1,
         dma: DMA_CH1,

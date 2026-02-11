@@ -2,9 +2,9 @@
 //! MAX98357A sample playback example using PIO I2S.
 //!
 //! Wiring:
-//! - DIN  -> GP8
-//! - BCLK -> GP9
-//! - LRC  -> GP10
+//! - Data pin (`DIN`) -> GP8
+//! - Bit clock pin (`BCLK`) -> GP9
+//! - Word select pin (`LRC` / `LRCLK`) -> GP10
 //! - SD   -> 3V3 (enabled; commonly selects left channel depending on breakout)
 //! - Button -> GP13 to GND (starts playback)
 
@@ -32,9 +32,9 @@ use {defmt_rtt as _, panic_probe as _};
 // TODO00 verify that it can play sound while doing other things (like blinking an LED or reading a button) without stuttering
 audio_player! {
     AudioPlayer8 {
-        din_pin: PIN_8,
-        bclk_pin: PIN_9,
-        lrc_pin: PIN_10,
+        data_pin: PIN_8,
+        bit_clock_pin: PIN_9,
+        word_select_pin: PIN_10,
         sample_rate_hz: VOICE_22050_HZ,
         max_volume: Volume::percent(50),
         initial_volume: Volume::percent(100),
@@ -65,7 +65,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH0, spawner)?;
 
-    info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");
+    info!(
+        "I2S ready: GP8 data pin (DIN), GP9 bit clock pin (BCLK), GP10 word select pin (LRC/LRCLK)"
+    );
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
         NASA.sample_count(),

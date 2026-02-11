@@ -55,9 +55,9 @@
 //!
 //! audio_player! {
 //!     AudioPlayer8 {
-//!         din_pin: PIN_8,
-//!         bclk_pin: PIN_9,
-//!         lrc_pin: PIN_10,
+//!         data_pin: PIN_8,
+//!         bit_clock_pin: PIN_9,
+//!         word_select_pin: PIN_10,
 //!         sample_rate_hz: VOICE_22050_HZ,
 //!         max_volume: Volume::percent(50),
 //!     }
@@ -121,9 +121,9 @@
 //!
 //! audio_player! {
 //!     AudioPlayer10 {
-//!         din_pin: PIN_8,
-//!         bclk_pin: PIN_9,
-//!         lrc_pin: PIN_10,
+//!         data_pin: PIN_8,
+//!         bit_clock_pin: PIN_9,
+//!         word_select_pin: PIN_10,
 //!         sample_rate_hz: VOICE_22050_HZ,
 //!         pio: PIO1,                             // optional, defaults to PIO1
 //!         dma: DMA_CH1,                          // optional, defaults to DMA_CH0
@@ -911,9 +911,9 @@ pub async fn device_loop<
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
     pio: Peri<'static, PIO>,
     dma: Peri<'static, DMA>,
-    din_pin: Peri<'static, DinPin>,
-    bclk_pin: Peri<'static, BclkPin>,
-    lrc_pin: Peri<'static, LrcPin>,
+    data_pin: Peri<'static, DinPin>,
+    bit_clock_pin: Peri<'static, BclkPin>,
+    word_select_pin: Peri<'static, LrcPin>,
 ) -> ! {
     let mut pio = Pio::new(pio, PIO::irqs());
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
@@ -921,9 +921,9 @@ pub async fn device_loop<
         &mut pio.common,
         pio.sm0,
         dma,
-        din_pin,
-        bclk_pin,
-        lrc_pin,
+        data_pin,
+        bit_clock_pin,
+        word_select_pin,
         SAMPLE_RATE_HZ,
         BIT_DEPTH_BITS,
         &pio_i2s_out_program,
@@ -1309,9 +1309,9 @@ macro_rules! samples_ms {
 /// ```text
 /// audio_player! {
 ///     [<visibility>] <Name> {
-///         din_pin: <pin_ident>,
-///         bclk_pin: <pin_ident>,
-///         lrc_pin: <pin_ident>,
+///         data_pin: <pin_ident>,
+///         bit_clock_pin: <pin_ident>,
+///         word_select_pin: <pin_ident>,
 ///         sample_rate_hz: <sample_rate_expr>,
 ///         pio: <pio_ident>,                 // optional
 ///         dma: <dma_ident>,                 // optional
@@ -1330,9 +1330,9 @@ macro_rules! samples_ms {
 ///
 /// **Required fields:**
 ///
-/// - `din_pin` - GPIO pin carrying I2S data (`DIN`)
-/// - `bclk_pin` - GPIO pin carrying I2S bit clock (`BCLK`)
-/// - `lrc_pin` - GPIO pin carrying I2S word-select / LR clock (`LRC`)
+/// - `data_pin` - GPIO pin carrying I2S data (`DIN`)
+/// - `bit_clock_pin` - GPIO pin carrying I2S bit clock (`BCLK`)
+/// - `word_select_pin` - GPIO pin carrying I2S word-select / LR clock (`LRC` / `LRCLK`)
 /// - `sample_rate_hz` - Playback sample rate in hertz (for example:
 ///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
 ///
@@ -1366,9 +1366,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: pub,
             name: $name,
-            din_pin: _UNSET_,
-            bclk_pin: _UNSET_,
-            lrc_pin: _UNSET_,
+            data_pin: _UNSET_,
+            bit_clock_pin: _UNSET_,
+            word_select_pin: _UNSET_,
             sample_rate_hz: _UNSET_,
             pio: PIO1,
             dma: DMA_CH0,
@@ -1388,9 +1388,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: _UNSET_,
-            bclk_pin: _UNSET_,
-            lrc_pin: _UNSET_,
+            data_pin: _UNSET_,
+            bit_clock_pin: _UNSET_,
+            word_select_pin: _UNSET_,
             sample_rate_hz: _UNSET_,
             pio: PIO1,
             dma: DMA_CH0,
@@ -1404,24 +1404,24 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        fields: [ din_pin: $din_pin_value:ident $(, $($rest:tt)* )? ]
+        fields: [ data_pin: $din_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin_value,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin,
+            data_pin: $din_pin_value,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
@@ -1435,9 +1435,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1450,9 +1450,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin,
+            data_pin: $data_pin,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz_value,
             pio: $pio,
             dma: $dma,
@@ -1466,24 +1466,24 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        fields: [ bclk_pin: $bclk_pin_value:ident $(, $($rest:tt)* )? ]
+        fields: [ bit_clock_pin: $bclk_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin_value,
-            lrc_pin: $lrc_pin,
+            data_pin: $data_pin,
+            bit_clock_pin: $bclk_pin_value,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
@@ -1497,24 +1497,24 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        fields: [ lrc_pin: $lrc_pin_value:ident $(, $($rest:tt)* )? ]
+        fields: [ word_select_pin: $lrc_pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin_value,
+            data_pin: $data_pin,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $lrc_pin_value,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
@@ -1528,9 +1528,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1543,9 +1543,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin,
+            data_pin: $data_pin,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio_value,
             dma: $dma,
@@ -1559,9 +1559,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1574,9 +1574,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin,
+            data_pin: $data_pin,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma_value,
@@ -1590,9 +1590,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1605,9 +1605,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin,
+            data_pin: $data_pin,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
@@ -1621,9 +1621,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1636,9 +1636,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin,
+            data_pin: $data_pin,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
@@ -1652,9 +1652,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1667,9 +1667,9 @@ macro_rules! __audio_player_impl {
             @__fill_defaults
             vis: $vis,
             name: $name,
-            din_pin: $din_pin,
-            bclk_pin: $bclk_pin,
-            lrc_pin: $lrc_pin,
+            data_pin: $data_pin,
+            bit_clock_pin: $bit_clock_pin,
+            word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
             pio: $pio,
             dma: $dma,
@@ -1683,9 +1683,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:tt,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:tt,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1700,9 +1700,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: _UNSET_,
-        bclk_pin: $bclk_pin:tt,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: _UNSET_,
+        bit_clock_pin: $bit_clock_pin:tt,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1711,15 +1711,15 @@ macro_rules! __audio_player_impl {
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
-        compile_error!("audio_player! requires din_pin");
+        compile_error!("audio_player! requires data_pin");
     };
 
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:ident,
-        bclk_pin: _UNSET_,
-        lrc_pin: $lrc_pin:tt,
+        data_pin: $data_pin:ident,
+        bit_clock_pin: _UNSET_,
+        word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1728,15 +1728,15 @@ macro_rules! __audio_player_impl {
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
-        compile_error!("audio_player! requires bclk_pin");
+        compile_error!("audio_player! requires bit_clock_pin");
     };
 
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:ident,
-        bclk_pin: $bclk_pin:ident,
-        lrc_pin: _UNSET_,
+        data_pin: $data_pin:ident,
+        bit_clock_pin: $bit_clock_pin:ident,
+        word_select_pin: _UNSET_,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1745,15 +1745,15 @@ macro_rules! __audio_player_impl {
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
-        compile_error!("audio_player! requires lrc_pin");
+        compile_error!("audio_player! requires word_select_pin");
     };
 
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:ident,
-        bclk_pin: $bclk_pin:ident,
-        lrc_pin: $lrc_pin:ident,
+        data_pin: $data_pin:ident,
+        bit_clock_pin: $bit_clock_pin:ident,
+        word_select_pin: $word_select_pin:ident,
         sample_rate_hz: _UNSET_,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1768,9 +1768,9 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        din_pin: $din_pin:ident,
-        bclk_pin: $bclk_pin:ident,
-        lrc_pin: $lrc_pin:ident,
+        data_pin: $data_pin:ident,
+        bit_clock_pin: $bit_clock_pin:ident,
+        word_select_pin: $word_select_pin:ident,
         sample_rate_hz: $sample_rate_hz:expr,
         pio: $pio:ident,
         dma: $dma:ident,
@@ -1847,9 +1847,9 @@ macro_rules! __audio_player_impl {
                 /// See the [audio_player module documentation](mod@crate::audio_player)
                 /// for example usage.
                 pub fn new(
-                    din_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$din_pin>>,
-                    bclk_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$bclk_pin>>,
-                    lrc_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$lrc_pin>>,
+                    data_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$data_pin>>,
+                    bit_clock_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$bit_clock_pin>>,
+                    word_select_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$word_select_pin>>,
                     pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>>,
                     dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
                     spawner: ::embassy_executor::Spawner,
@@ -1858,9 +1858,9 @@ macro_rules! __audio_player_impl {
                         &[<$name:upper _AUDIO_PLAYER_STATIC>],
                         pio.into(),
                         dma.into(),
-                        din_pin.into(),
-                        bclk_pin.into(),
-                        lrc_pin.into(),
+                        data_pin.into(),
+                        bit_clock_pin.into(),
+                        word_select_pin.into(),
                     );
                     spawner.spawn(token)?;
                     let player =
@@ -1882,19 +1882,19 @@ macro_rules! __audio_player_impl {
                 audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }>,
                 pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
                 dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
-                din_pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$din_pin>,
-                bclk_pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$bclk_pin>,
-                lrc_pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$lrc_pin>,
+                data_pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$data_pin>,
+                bit_clock_pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$bit_clock_pin>,
+                word_select_pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$word_select_pin>,
             ) -> ! {
                 $crate::audio_player::device_loop::<
                     $max_clips,
                     { $sample_rate_hz },
                     ::embassy_rp::peripherals::$pio,
                     ::embassy_rp::peripherals::$dma,
-                    ::embassy_rp::peripherals::$din_pin,
-                    ::embassy_rp::peripherals::$bclk_pin,
-                    ::embassy_rp::peripherals::$lrc_pin,
-                >(audio_player_static, pio, dma, din_pin, bclk_pin, lrc_pin).await
+                    ::embassy_rp::peripherals::$data_pin,
+                    ::embassy_rp::peripherals::$bit_clock_pin,
+                    ::embassy_rp::peripherals::$word_select_pin,
+                >(audio_player_static, pio, dma, data_pin, bit_clock_pin, word_select_pin).await
             }
         }
     };

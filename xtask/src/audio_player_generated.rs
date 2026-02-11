@@ -14,9 +14,9 @@ use crate::audio_player;
 #[cfg(all(not(doc), not(feature = "host")))]
 audio_player! {
     AudioPlayerGenerated {
-        din_pin: PIN_8,
-        bclk_pin: PIN_9,
-        lrc_pin: PIN_10,
+        data_pin: PIN_8,
+        bit_clock_pin: PIN_9,
+        word_select_pin: PIN_10,
         sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
     }
 }
@@ -90,15 +90,15 @@ impl AudioPlayerGenerated {
     ///
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn new(
-        din_pin: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_8>,
-        bclk_pin: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_9>,
-        lrc_pin: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_10>,
+        data_pin: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_8>,
+        bit_clock_pin: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_9>,
+        word_select_pin: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_10>,
         pio: embassy_rp::Peri<'static, embassy_rp::peripherals::PIO1>,
         dma: embassy_rp::Peri<'static, embassy_rp::peripherals::DMA_CH0>,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
         static INSTANCE: AudioPlayerGenerated = AudioPlayerGenerated;
-        let _ = (din_pin, bclk_pin, lrc_pin, pio, dma, spawner);
+        let _ = (data_pin, bit_clock_pin, word_select_pin, pio, dma, spawner);
         Ok(&INSTANCE)
     }
 

@@ -2,9 +2,9 @@
 //! Audio cues demo with looping playback, runtime volume ramp-down, and button restart.
 //!
 //! Wiring:
-//! - DIN  -> GP8
-//! - BCLK -> GP9
-//! - LRC  -> GP10
+//! - Data pin (`DIN`) -> GP8
+//! - Bit clock pin (`BCLK`) -> GP9
+//! - Word select pin (`LRC` / `LRCLK`) -> GP10
 //! - SD   -> 3V3 (enabled; commonly selects left channel depending on breakout)
 //! - Button -> the button to GND (restarts the loop)
 
@@ -26,9 +26,9 @@ use {defmt_rtt as _, panic_probe as _};
 
 audio_player! {
     AudioPlayer10 {
-        din_pin: PIN_8,
-        bclk_pin: PIN_9,
-        lrc_pin: PIN_10,
+        data_pin: PIN_8,
+        bit_clock_pin: PIN_9,
+        word_select_pin: PIN_10,
         sample_rate_hz: VOICE_22050_HZ,
         pio: PIO1,
         dma: DMA_CH1,

@@ -37,7 +37,8 @@
 //!   expose `Name::AudioClip` without relying on unstable inherent associated
 //!   types.
 //! - [`AudioClipBuf`] - Sized, const-friendly storage for static audio clip
-//!   data.
+//!   data. You can write your own compile-time (`const fn`) clip transforms
+//!   using [`AudioClipBuf::new`] and [`AudioClipBuf::samples`].
 //! - [`AudioClip`] - Unsized view of static audio clip data. `&AudioClip` (of varying lengths) can be sequenced together.
 //!
 //! # Example: Play "Mary Had a Little Lamb" (Phrase) Once
@@ -493,7 +494,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> AudioClip<SAMPLE_RATE_HZ, T> {
 impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
     /// Clip samples as an i16 PCM slice.
     #[must_use]
-    pub(crate) const fn samples(&self) -> &[i16] {
+    pub const fn samples(&self) -> &[i16] {
         &self.samples
     }
 
@@ -510,6 +511,10 @@ impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
 //todo0 avoid all use of " PCM clip "
 /// Sized, const-friendly storage for static audio clip data.
 ///
+/// Use [`AudioClipBuf::new`] and [`AudioClipBuf::samples`] to build your own
+/// compile-time clip transforms as `const fn` (for example: trim, fade, or
+/// resample helpers).
+///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
 pub type AudioClipBuf<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> =
@@ -519,10 +524,21 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>
 {
     /// Creates a clip from i16 samples.
+    ///
+    /// This is the primary constructor for custom clip-generation and
+    /// transform helpers written as `const fn`.
     #[must_use]
-    const fn new(samples: [i16; SAMPLE_COUNT]) -> Self {
+    pub const fn new(samples: [i16; SAMPLE_COUNT]) -> Self {
         assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
         Self { samples }
+    }
+
+    /// Returns the clip samples as a fixed-size array reference.
+    ///
+    /// This is intended for custom clip-transform helpers written as `const fn`.
+    #[must_use]
+    pub const fn samples(&self) -> &[i16; SAMPLE_COUNT] {
+        &self.samples
     }
 
     /// Number of PCM samples in this clip.
@@ -538,6 +554,10 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     ///
     /// This is intended to be used in const clip definitions so the adjusted
     /// samples are computed ahead of time.
+    ///
+    /// You can also write your own compile-time clip transforms by reading
+    /// samples with [`AudioClipBuf::samples`] and building a new clip with
+    /// [`AudioClipBuf::new`].
     ///
     /// Gain multiplication uses i32 math and saturates to i16 sample bounds.
     /// Large boosts can hard-clip peaks and introduce distortion.
@@ -1068,14 +1088,88 @@ pub enum AudioFormat {
 /// - `AudioClip` - concrete clip type alias (`AudioClipBuf<SR, N>`)
 /// - `audio_clip()` - const constructor that decodes bytes into `AudioClip`
 ///
-/// The generated items are in a module (not a struct type) so stable Rust can
-/// expose `Name::AudioClip` without relying on unstable inherent associated
-/// types.
-///
 /// # Example
 ///
 /// See [`AudioClipGenerated`](crate::audio_player::audio_clip_generated::AudioClipGenerated)
 /// and the [audio_player module documentation](mod@crate::audio_player).
+///
+/// # Preparing audio files for `audio_clip!`
+///
+/// This macro expects audio in a simple raw format:
+///
+/// - mono
+/// - 16-bit signed samples
+/// - little-endian
+/// - a fixed sample rate (for example, 22050 Hz)
+///
+/// The easiest way to produce that format is with `ffmpeg`.
+///
+/// ## 1) Download an example clip (NASA)
+///
+/// Download the MP3:
+///
+/// ```bash
+/// curl -L -o nasa.mp3 \
+///   "https://www.nasa.gov/wp-content/uploads/2015/01/640149main_Computers20are20in20Control.mp3"
+/// ```
+///
+/// (Windows 10/11 includes `curl` by default.)
+///
+/// ## 2) Install `ffmpeg` (or confirm it is installed)
+///
+/// General: see the official download page:
+///
+/// ```text
+/// https://ffmpeg.org/download.html
+/// ```
+///
+/// ### Ubuntu / Debian
+///
+/// ```bash
+/// sudo apt update
+/// sudo apt install ffmpeg
+/// ffmpeg -version
+/// ```
+///
+/// ### Windows (recommended: `pixi`)
+///
+/// 1. Install `pixi`:
+///
+/// ```text
+/// https://pixi.sh
+/// ```
+///
+/// 2. Install `ffmpeg` globally:
+///
+/// ```powershell
+/// pixi global install ffmpeg
+/// ffmpeg -version
+/// ```
+///
+/// ## 3) Convert to raw PCM (`.s16`) for `audio_clip!`
+///
+/// This produces a file you can embed and process at compile time:
+///
+/// ```bash
+/// ffmpeg -y -i nasa.mp3 \
+///   -vn \
+///   -ac 1 \
+///   -ar 22050 \
+///   -f s16le \
+///   nasa_22k.s16
+/// ```
+///
+/// What the arguments mean:
+///
+/// - `-i nasa.mp3` - input file
+/// - `-vn` - ignore any video track (safe even for audio-only inputs)
+/// - `-ac 1` - force mono
+/// - `-ar 22050` - set the sample rate (Hz)
+/// - `-f s16le` - write raw 16-bit little-endian PCM (no WAV header)
+/// - `nasa_22k.s16` - output file (ready for `audio_clip!`)
+///
+/// Tip: keep the sample rate consistent with the `sample_rate_hz:` passed to
+/// `audio_clip! { ... }`.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! audio_clip {

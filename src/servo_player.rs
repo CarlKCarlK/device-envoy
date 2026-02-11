@@ -479,7 +479,7 @@ macro_rules! __servo_player_impl {
     ) => {
         $crate::__servo_player_impl! {
             @__fill_defaults
-            vis: pub,
+            vis: pub(self),
             name: $name,
             pin: _UNSET_,
             slice: _UNSET_,
@@ -1327,7 +1327,7 @@ macro_rules! __servo_player_impl {
     ) => {
         $crate::__servo_player_impl! {
             @__fill_defaults
-            vis: pub,
+            vis: pub(self),
             name: ServoPlayerGenerated,
             pin: _UNSET_,
             slice: _UNSET_,

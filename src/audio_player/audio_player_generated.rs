@@ -9,7 +9,7 @@ use crate::audio_player;
 
 #[cfg(all(not(doc), not(feature = "host")))]
 audio_player! {
-    AudioPlayerGenerated {
+    pub AudioPlayerGenerated {
         data_pin: PIN_8,
         bit_clock_pin: PIN_9,
         word_select_pin: PIN_10,

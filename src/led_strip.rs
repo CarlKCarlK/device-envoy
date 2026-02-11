@@ -1469,6 +1469,7 @@ macro_rules! __led_strips_impl {
     (@__with_frame_alias
         frame_alias: $frame_alias:tt,
         pio: $pio:ident,
+        vis: $vis:vis,
         $group:ident {
             $( $label:ident: { $($fields:tt)* } ),+ $(,)?
         }
@@ -1477,7 +1478,7 @@ macro_rules! __led_strips_impl {
             @__with_defaults
             frame_alias: $frame_alias,
             pio: $pio,
-            vis: pub,
+            vis: $vis,
             group: $group,
             sm_counter: 0,
             strips_out: [],
@@ -2715,7 +2716,7 @@ macro_rules! __led_strip_impl {
     ) => {
         $crate::__led_strip_impl! {
             @__fill_defaults
-            vis: pub,
+            vis: pub(self),
             pio: PIO0,
             name: $name,
             pin: _UNSET_,

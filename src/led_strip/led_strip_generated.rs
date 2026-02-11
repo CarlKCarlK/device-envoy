@@ -9,7 +9,7 @@ use crate::led_strip;
 
 #[cfg(all(not(doc), not(feature = "host")))]
 led_strip! {
-    LedStripGenerated {
+    pub LedStripGenerated {
         pin: PIN_3,
         len: 48,
     }

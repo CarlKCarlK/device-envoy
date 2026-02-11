@@ -484,6 +484,8 @@ pub enum AtEnd {
 
 /// Unsized view of static audio clip data. `&AudioClip` values of different lengths can be sequenced together.
 ///
+/// For fixed-size, const-friendly storage, see [`AudioClipBuf`].
+///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
 pub struct AudioClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [i16]> {
@@ -515,6 +517,9 @@ impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
 //todo0 avoid all use of low-level format jargon in user-facing docs
 /// Sized, const-friendly storage for static audio clip data.
 ///
+/// For unsized clip references (for sequencing different clip lengths), see
+/// [`AudioClip`].
+///
 /// Use [`AudioClipBuf::new`] and [`AudioClipBuf::samples`] to build your own
 /// compile-time clip transforms as `const fn` (for example: trim, fade, or
 /// resample helpers).
@@ -524,6 +529,11 @@ impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
 pub type AudioClipBuf<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> =
     AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>;
 
+/// Implementation for fixed-size clips (`AudioClipBuf`).
+///
+/// This impl applies to [`AudioClip`] with array-backed storage:
+/// `AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>`
+/// (which is what [`AudioClipBuf`] aliases).
 impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>
 {
@@ -548,11 +558,8 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     /// Number of samples in this clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    #[must_use]
-    pub const fn sample_count(&self) -> usize {
-        SAMPLE_COUNT
-    }
+    /// clip usage examples.
+    pub const SAMPLE_COUNT: usize = SAMPLE_COUNT;
 
     /// Returns a new clip with linear sample gain applied.
     ///
@@ -611,34 +618,6 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         Self::new(samples)
     }
 
-    /// Creates a clip from little-endian s16 bytes.
-    ///
-    /// `AUDIO_SAMPLE_BYTES_LEN` must be exactly `SAMPLE_COUNT * 2`.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    #[must_use]
-    pub const fn from_s16le_bytes<const AUDIO_SAMPLE_BYTES_LEN: usize>(
-        audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN],
-    ) -> Self {
-        assert!(
-            AUDIO_SAMPLE_BYTES_LEN == SAMPLE_COUNT * 2,
-            "audio byte length must equal sample_count * 2"
-        );
-
-        let mut samples = [0_i16; SAMPLE_COUNT];
-        let mut sample_index = 0_usize;
-        while sample_index < SAMPLE_COUNT {
-            let byte_index = sample_index * 2;
-            samples[sample_index] = i16::from_le_bytes([
-                audio_sample_s16le[byte_index],
-                audio_sample_s16le[byte_index + 1],
-            ]);
-            sample_index += 1;
-        }
-
-        Self::new(samples)
-    }
 }
 
 //todo0 hide?
@@ -733,7 +712,6 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>
         let runtime_volume_relative = self.runtime_volume();
         Volume::from_i16(scale_linear(self.max_volume_linear, runtime_volume_relative) as i16)
     }
-
 }
 
 /// Plays static audio clips with preemptive command handling in the background device task.
@@ -862,7 +840,6 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     pub fn volume(&self) -> Volume {
         self.audio_player_static.runtime_volume()
     }
-
 }
 
 // todo0 hide?
@@ -1043,7 +1020,7 @@ const fn stereo_sample(sample: i16) -> u32 {
 #[doc(hidden)]
 pub use paste;
 
-/// Audio clip source formats for [`audio_clip!`].
+/// Audio clip source formats for [`audio_clip!`]. Currently, only one format is supported.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AudioFormat {
     /// 16-bit signed little-endian mono PCM bytes (`s16le`).
@@ -1059,8 +1036,8 @@ pub enum AudioFormat {
 /// usage examples.**
 ///
 /// The generated clip can be modified at compile time (for example with
-/// [`Gain`](crate::audio_player::Gain) via `with_gain(...)`) and only takes
-/// program space when you store it in a `static`.
+/// [`Gain`](crate::audio_player::Gain) via `with_gain(...)`) and only
+/// increases binary size when you store it in a `static`.
 ///
 /// **Syntax:**
 ///
@@ -1077,15 +1054,15 @@ pub enum AudioFormat {
 /// **Inputs:**
 ///
 /// - `$vis` - Optional module visibility for the generated namespace (for
-///   example: `pub`, `pub(crate)`, `pub(self)`). Defaults to `pub` when
-///   omitted.
+///   example: `pub`, `pub(crate)`, `pub(self)`). Defaults to private visibility
+///   when omitted.
 /// - `$name` - Module name for the generated namespace (for example: `Nasa`)
 ///
 /// **Required fields:**
 ///
 /// - `sample_rate_hz` - Sample rate in hertz (for example:
 ///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
-/// - `file` - Path to a raw PCM file included with `include_bytes!`
+/// - `file` - Path to an external audio file (for example: `"nasa_22k.s16"`)
 ///
 /// **Optional fields:**
 ///
@@ -1093,8 +1070,8 @@ pub enum AudioFormat {
 ///
 /// **Generated items:**
 ///
-/// - `AudioClip` - concrete clip type alias (`AudioClipBuf<SR, N>`)
-/// - `audio_clip()` - const constructor that decodes bytes into `AudioClip`
+/// - `audio_clip()` - `const` function that returns the generated audio clip
+/// - `AudioClip` - concrete return type of `audio_clip()`
 ///
 /// # Example
 ///
@@ -1279,8 +1256,20 @@ macro_rules! __audio_clip_impl {
                         AUDIO_SAMPLE_BYTES_LEN % 2 == 0,
                         "audio byte length must be even for s16le"
                     );
+
+                    const SAMPLE_COUNT: usize = AUDIO_SAMPLE_BYTES_LEN / 2;
                     let audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN] = include_bytes!($file);
-                    AudioClip::from_s16le_bytes(audio_sample_s16le)
+                    let mut samples = [0_i16; SAMPLE_COUNT];
+                    let mut sample_index = 0_usize;
+                    while sample_index < SAMPLE_COUNT {
+                        let byte_index = sample_index * 2;
+                        samples[sample_index] = i16::from_le_bytes([
+                            audio_sample_s16le[byte_index],
+                            audio_sample_s16le[byte_index + 1],
+                        ]);
+                        sample_index += 1;
+                    }
+                    AudioClip::new(samples)
                 }
             }
         }
@@ -1333,7 +1322,7 @@ macro_rules! samples_ms {
 /// **Inputs:**
 ///
 /// - `$vis` - Optional generated type visibility (for example: `pub`,
-///   `pub(crate)`, `pub(self)`). Defaults to `pub` when omitted.
+///   `pub(crate)`, `pub(self)`). Defaults to private visibility when omitted.
 /// - `$name` - Generated type name (for example: `AudioPlayer10`)
 ///
 /// **Required fields:**
@@ -1372,7 +1361,7 @@ macro_rules! __audio_player_impl {
     ) => {
         $crate::__audio_player_impl! {
             @__fill_defaults
-            vis: pub,
+            vis: pub(self),
             name: $name,
             data_pin: _UNSET_,
             bit_clock_pin: _UNSET_,

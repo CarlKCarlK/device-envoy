@@ -22,7 +22,7 @@ const LED_LAYOUT: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 
 #[cfg(all(not(doc), not(feature = "host")))]
 led2d! {
-    Led2dGenerated {
+    pub Led2dGenerated {
         // PIO resource (default: PIO0)
         pio: PIO0,
         // GPIO pin for LED data signal

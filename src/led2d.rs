@@ -1239,6 +1239,7 @@ macro_rules! __led2d_impl {
                 @__with_frame_alias
                 frame_alias: __SKIP_FRAME_ALIAS__,
                 pio: $pio,
+                vis: $vis,
                 [<$name Strips>] {
                     [<$name LedStrip>]: {
                         dma: $dma,

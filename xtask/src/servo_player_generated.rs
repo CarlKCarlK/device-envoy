@@ -13,7 +13,7 @@ use crate::servo_player;
 
 #[cfg(all(not(doc), not(feature = "host")))]
 servo_player! {
-    ServoPlayerGenerated {
+    pub ServoPlayerGenerated {
         pin: PIN_11,
     }
 }
@@ -133,4 +133,3 @@ fn write_if_changed(path: &Path, contents: &str) -> Result<(), Box<dyn Error>> {
         }
     }
 }
-

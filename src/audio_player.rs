@@ -1027,11 +1027,43 @@ pub enum AudioFormat {
 /// [`AudioClipGenerated`](crate::audio_player::audio_clip_generated::AudioClipGenerated)
 /// for a sample of generated items.
 ///
+/// **See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.**
+///
 /// The generated clip can be modified at compile time (for example with
 /// [`Gain`](crate::audio_player::Gain) via `with_gain(...)`) and only takes
 /// program space when you store it in a `static`.
 ///
-/// The generated items include:
+/// **Syntax:**
+///
+/// ```text
+/// audio_clip! {
+///     [<visibility>] <Name> {
+///         sample_rate_hz: <sample_rate_expr>,
+///         file: <file_path_expr>,
+///         format: <AudioFormat_expr>, // optional
+///     }
+/// }
+/// ```
+///
+/// **Inputs:**
+///
+/// - `$vis` - Optional module visibility for the generated namespace (for
+///   example: `pub`, `pub(crate)`, `pub(self)`). Defaults to `pub` when
+///   omitted.
+/// - `$name` - Module name for the generated namespace (for example: `Nasa`)
+///
+/// **Required fields:**
+///
+/// - `sample_rate_hz` - Sample rate in hertz (for example:
+///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
+/// - `file` - Path to a raw PCM file included with `include_bytes!`
+///
+/// **Optional fields:**
+///
+/// - `format` - Audio format (default: [`AudioFormat::S16le`])
+///
+/// **Generated items:**
 ///
 /// - `AudioClip` - concrete clip type alias (`AudioClipBuf<SR, N>`)
 /// - `audio_clip()` - const constructor that decodes bytes into `AudioClip`
@@ -1040,10 +1072,10 @@ pub enum AudioFormat {
 /// expose `Name::AudioClip` without relying on unstable inherent associated
 /// types.
 ///
+/// # Example
+///
 /// See [`AudioClipGenerated`](crate::audio_player::audio_clip_generated::AudioClipGenerated)
-/// for a sample of generated items.
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
+/// and the [audio_player module documentation](mod@crate::audio_player).
 #[macro_export]
 macro_rules! audio_clip {
     ($($tt:tt)*) => { $crate::__audio_clip_parse! { $($tt)* } };
@@ -1176,6 +1208,30 @@ macro_rules! samples_ms {
 ///
 /// **See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// audio_player! {
+///     [<visibility>] <Name> {
+///         din_pin: <pin_ident>,
+///         bclk_pin: <pin_ident>,
+///         lrc_pin: <pin_ident>,
+///         sample_rate_hz: <sample_rate_expr>,
+///         pio: <pio_ident>,                 // optional
+///         dma: <dma_ident>,                 // optional
+///         max_clips: <usize_expr>,          // optional
+///         max_volume: <Volume_expr>,        // optional
+///         initial_volume: <Volume_expr>,    // optional
+///     }
+/// }
+/// ```
+///
+/// **Inputs:**
+///
+/// - `$vis` - Optional generated type visibility (for example: `pub`,
+///   `pub(crate)`, `pub(self)`). Defaults to `pub` when omitted.
+/// - `$name` - Generated type name (for example: `AudioPlayer10`)
 ///
 /// **Required fields:**
 ///

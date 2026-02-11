@@ -150,6 +150,14 @@ Use `cargo run --bin <name> --target <target> --features <features>` as the stan
 - Keep example shape consistent: show an async function that receives `Peripherals`/`Spawner` (or other handles) and constructs the device with `new_static`/`new`; avoid mixing inline examples without that pattern next to function-based ones.
 - Examples must show the actual `use` statements for the module being documented (bring types into scope explicitly rather than relying on hidden imports).
 - In examples, keep `use` statements limited to `device_envoy::...` items; refer to other crates/modules with fully qualified paths inline.
+- For style macros (for example `audio_clip!`, `audio_player!`, `led_strip!`), document them with a consistent structure:
+  1) one-line summary,
+  2) compact syntax block,
+  3) inputs (`$vis`, `$name`, etc.) including which are optional,
+  4) required fields,
+  5) optional fields/defaults,
+  6) link to the module documentation for full usage examples.
+- Whenever a style macro implementation or its docs change, verify that macro docs and behavior stay in sync (accepted fields, defaults, optional inputs, generated items, and linked examples).
 
 - Parsing into a stronger type:
 

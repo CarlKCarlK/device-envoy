@@ -15,7 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_clip_s16le;
+use device_envoy::audio_clip;
 use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use device_envoy::samples_ms;
@@ -42,11 +42,11 @@ audio_player! {
     }
 }
 
-audio_clip_s16le! {
-    fn_name: nasa_clip_s16le,
-    type_name: NasaClip,
-    sample_rate_hz: VOICE_22050_HZ,
-    audio_sample_s16le: "../deldir/nasa_22k.s16",
+audio_clip! {
+    Nasa {
+        sample_rate_hz: VOICE_22050_HZ,
+        file: "../deldir/nasa_22k.s16",
+    }
 }
 
 #[embassy_executor::main]
@@ -56,8 +56,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    // todo0 we shouldn't use "clip" it should be audio_clip
-    static NASA: NasaClip = nasa_clip_s16le().with_gain(Gain::percent(25));
+    static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
     static TONE_A4: samples_ms! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: samples_ms! { AudioPlayer8, 100 } = AudioPlayer8::silence();
@@ -65,7 +64,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
 
-    // TODO0 should pins or PIO come first? (moved from previous audio.rs revision)
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH0, spawner)?;
 
     info!("I2S ready on GP8 (DIN), GP9 (BCLK), GP10 (LRC)");

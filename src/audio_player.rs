@@ -998,10 +998,19 @@ const fn stereo_sample(sample: i16) -> u32 {
 #[doc(hidden)]
 pub use paste;
 
-/// Generates a const clip type alias and const constructor function from an s16le file.
+/// Audio clip source format markers for [`audio_clip!`].
+pub mod audio_format {
+    /// 16-bit signed little-endian mono PCM bytes (`s16le`).
+    pub mod s16le {}
+}
+
+//todo0 document this macro better
+/// Generates a namespaced audio clip definition from a raw audio file.
 ///
-/// This macro infers the byte and sample counts from `include_bytes!`, so callers
-/// provide only names, file path, and sample rate.
+/// The generated namespace contains:
+///
+/// - `AudioClip` - concrete clip type alias (`AudioClipBuf<SR, N>`)
+/// - `audio_clip()` - const constructor that decodes bytes into `AudioClip`
 ///
 /// # Example
 ///
@@ -1009,40 +1018,88 @@ pub use paste;
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_envoy::audio_clip_s16le;
+/// use device_envoy::{audio_clip, audio_format};
 /// use device_envoy::audio_player::{Gain, VOICE_22050_HZ};
 ///
-/// audio_clip_s16le! {
-///     fn_name: nasa_clip_s16le,
-///     type_name: NasaClip,
-///     sample_rate_hz: VOICE_22050_HZ,
-///     audio_sample_s16le: "../deldir/nasa_22k.s16",
+/// audio_clip! {
+///     pub(self) Nasa {
+///         sample_rate_hz: VOICE_22050_HZ,
+///         file: "../deldir/nasa_22k.s16",
+///         format: audio_format::s16le,
+///     }
 /// }
 ///
-/// static NASA: NasaClip = nasa_clip_s16le().with_gain(Gain::percent(25));
+/// static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
 /// ```
 #[macro_export]
-macro_rules! audio_clip_s16le {
+macro_rules! audio_clip {
     (
-        fn_name: $fn_name:ident,
-        type_name: $type_name:ident,
-        sample_rate_hz: $sample_rate_hz:expr,
-        audio_sample_s16le: $audio_sample_s16le:expr $(,)?
+        $vis:vis $name:ident {
+            sample_rate_hz: $sample_rate_hz:expr,
+            file: $file:expr,
+            format: $format:path $(,)?
+        }
     ) => {
-        type $type_name = $crate::audio_player::AudioClipBuf<
-            { $sample_rate_hz },
-            { include_bytes!($audio_sample_s16le).len() / 2 },
-        >;
+        $crate::__audio_clip_impl! {
+            vis: $vis,
+            name: $name,
+            sample_rate_hz: $sample_rate_hz,
+            file: $file,
+            format: $format,
+        }
+    };
+    (
+        $vis:vis $name:ident {
+            sample_rate_hz: $sample_rate_hz:expr,
+            file: $file:expr $(,)?
+        }
+    ) => {
+        $crate::__audio_clip_impl! {
+            vis: $vis,
+            name: $name,
+            sample_rate_hz: $sample_rate_hz,
+            file: $file,
+            format: $crate::audio_player::audio_format::s16le,
+        }
+    };
+}
 
-        const fn $fn_name() -> $type_name {
-            const AUDIO_SAMPLE_BYTES_LEN: usize = include_bytes!($audio_sample_s16le).len();
-            assert!(
-                AUDIO_SAMPLE_BYTES_LEN % 2 == 0,
-                "audio byte length must be even for s16le"
-            );
-            let audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN] =
-                include_bytes!($audio_sample_s16le);
-            $type_name::from_s16le_bytes(audio_sample_s16le)
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __audio_clip_impl {
+    (
+        vis: $vis:vis,
+        name: $name:ident,
+        sample_rate_hz: $sample_rate_hz:expr,
+        file: $file:expr,
+        format: $format:path $(,)?
+    ) => {
+        // Format marker must resolve at compile time (currently only s16le is supported).
+        use $format as _;
+
+        $crate::audio_player::paste::paste! {
+            const [<$name:upper _SAMPLE_RATE_HZ>]: u32 = $sample_rate_hz;
+
+            #[allow(non_snake_case)]
+            $vis mod $name {
+                const SAMPLE_RATE_HZ: u32 = super::[<$name:upper _SAMPLE_RATE_HZ>];
+                const AUDIO_SAMPLE_BYTES_LEN: usize = include_bytes!($file).len();
+
+                pub type AudioClip = $crate::audio_player::AudioClipBuf<
+                    { SAMPLE_RATE_HZ },
+                    { AUDIO_SAMPLE_BYTES_LEN / 2 },
+                >;
+
+                #[must_use]
+                pub const fn audio_clip() -> AudioClip {
+                    assert!(
+                        AUDIO_SAMPLE_BYTES_LEN % 2 == 0,
+                        "audio byte length must be even for s16le"
+                    );
+                    let audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN] = include_bytes!($file);
+                    AudioClip::from_s16le_bytes(audio_sample_s16le)
+                }
+            }
         }
     };
 }
@@ -1645,7 +1702,7 @@ macro_rules! __audio_player_impl {
 }
 
 #[doc(inline)]
-pub use audio_clip_s16le;
+pub use audio_clip;
 #[doc(inline)]
 pub use audio_player;
 #[doc(inline)]

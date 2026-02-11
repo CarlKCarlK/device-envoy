@@ -15,7 +15,8 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, AudioClipBuf, Gain, Volume, audio_player, VOICE_22050_HZ};
+use device_envoy::audio_clip_s16le;
+use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use device_envoy::samples_ms;
 use embassy_executor::Spawner;
@@ -41,18 +42,11 @@ audio_player! {
     }
 }
 
-const NASA_SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
-const NASA_BYTES: usize = 184_320;
-const NASA_SAMPLES: usize = NASA_BYTES / 2;
-
-const fn nasa_clip_s16le() -> AudioClipBuf<NASA_SAMPLE_RATE_HZ, NASA_SAMPLES> {
-    assert!(NASA_BYTES % 2 == 0, "nasa clip byte length must be even");
-    assert!(
-        NASA_SAMPLES * 2 == NASA_BYTES,
-        "nasa sample count must match byte length"
-    );
-    let bytes: &[u8; NASA_BYTES] = include_bytes!("../deldir/nasa_22k.s16");
-    AudioClipBuf::from_s16le_bytes(bytes)
+audio_clip_s16le! {
+    fn_name: nasa_clip_s16le,
+    type_name: NasaClip,
+    sample_rate_hz: VOICE_22050_HZ,
+    audio_sample_s16le: "../deldir/nasa_22k.s16",
 }
 
 #[embassy_executor::main]
@@ -63,8 +57,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // todo0 we shouldn't use "clip" it should be audio_clip
-    static NASA: AudioClipBuf<NASA_SAMPLE_RATE_HZ, NASA_SAMPLES> =
-        nasa_clip_s16le().with_gain(Gain::percent(25));
+    static NASA: NasaClip = nasa_clip_s16le().with_gain(Gain::percent(25));
     static TONE_A4: samples_ms! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: samples_ms! { AudioPlayer8, 100 } = AudioPlayer8::silence();

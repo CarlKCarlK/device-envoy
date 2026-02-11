@@ -18,7 +18,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::audio_player::{AtEnd, Gain, Volume, audio_player, VOICE_22050_HZ};
+use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player};
 use device_envoy::button::PressedTo;
 use device_envoy::clock_sync::{ClockSync, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_envoy::flash_array::FlashArray;

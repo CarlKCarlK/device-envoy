@@ -16,7 +16,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Volume, audio_player, samples_ms, VOICE_22050_HZ},
+    audio_player::{AtEnd, VOICE_22050_HZ, Volume, audio_player, samples_ms},
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};

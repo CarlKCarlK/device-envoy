@@ -16,7 +16,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Gain, Volume, audio_player, samples_ms, VOICE_22050_HZ},
+    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, samples_ms},
     button::{Button, PressedTo},
 };
 use embassy_executor::Spawner;

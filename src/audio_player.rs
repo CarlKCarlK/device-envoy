@@ -608,7 +608,9 @@ pub trait IntoAudioClip<const SAMPLE_RATE_HZ: u32> {
     fn into_audio_clip(self) -> &'static AudioClip<SAMPLE_RATE_HZ>;
 }
 
-impl<const SAMPLE_RATE_HZ: u32> IntoAudioClip<SAMPLE_RATE_HZ> for &'static AudioClip<SAMPLE_RATE_HZ> {
+impl<const SAMPLE_RATE_HZ: u32> IntoAudioClip<SAMPLE_RATE_HZ>
+    for &'static AudioClip<SAMPLE_RATE_HZ>
+{
     fn into_audio_clip(self) -> &'static AudioClip<SAMPLE_RATE_HZ> {
         self
     }
@@ -640,7 +642,9 @@ pub struct AudioPlayerStatic<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> 
     runtime_volume_relative_linear: AtomicI32,
 }
 
-impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>
+    AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>
+{
     /// Creates static resources for a player.
     #[must_use]
     pub const fn new_static() -> Self {
@@ -937,7 +941,11 @@ pub async fn device_loop<
     }
 }
 
-async fn play_clip_sequence_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+async fn play_clip_sequence_once<
+    PIO: Instance,
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
     audio_clips: &[&'static AudioClip<SAMPLE_RATE_HZ>],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
@@ -989,6 +997,55 @@ const fn stereo_sample(sample: i16) -> u32 {
 // Must be `pub` so macro expansion works in downstream crates.
 #[doc(hidden)]
 pub use paste;
+
+/// Generates a const clip type alias and const constructor function from an s16le file.
+///
+/// This macro infers the byte and sample counts from `include_bytes!`, so callers
+/// provide only names, file path, and sample rate.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use panic_probe as _;
+/// use device_envoy::audio_clip_s16le;
+/// use device_envoy::audio_player::{Gain, VOICE_22050_HZ};
+///
+/// audio_clip_s16le! {
+///     fn_name: nasa_clip_s16le,
+///     type_name: NasaClip,
+///     sample_rate_hz: VOICE_22050_HZ,
+///     audio_sample_s16le: "../deldir/nasa_22k.s16",
+/// }
+///
+/// static NASA: NasaClip = nasa_clip_s16le().with_gain(Gain::percent(25));
+/// ```
+#[macro_export]
+macro_rules! audio_clip_s16le {
+    (
+        fn_name: $fn_name:ident,
+        type_name: $type_name:ident,
+        sample_rate_hz: $sample_rate_hz:expr,
+        audio_sample_s16le: $audio_sample_s16le:expr $(,)?
+    ) => {
+        type $type_name = $crate::audio_player::AudioClipBuf<
+            { $sample_rate_hz },
+            { include_bytes!($audio_sample_s16le).len() / 2 },
+        >;
+
+        const fn $fn_name() -> $type_name {
+            const AUDIO_SAMPLE_BYTES_LEN: usize = include_bytes!($audio_sample_s16le).len();
+            assert!(
+                AUDIO_SAMPLE_BYTES_LEN % 2 == 0,
+                "audio byte length must be even for s16le"
+            );
+            let audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN] =
+                include_bytes!($audio_sample_s16le);
+            $type_name::from_s16le_bytes(audio_sample_s16le)
+        }
+    };
+}
 
 //todo0 make better example
 /// Expands to an [`AudioClipBuf`] type sized from a player type and milliseconds.
@@ -1587,6 +1644,8 @@ macro_rules! __audio_player_impl {
     };
 }
 
+#[doc(inline)]
+pub use audio_clip_s16le;
 #[doc(inline)]
 pub use audio_player;
 #[doc(inline)]

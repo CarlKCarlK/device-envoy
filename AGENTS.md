@@ -23,6 +23,8 @@
 This project uses a specific module structure pattern. Do NOT create `mod.rs` files.
 
 - Macros related to a specific submodule should generally live in that submodule (for example, audio macros in `audio_player`) rather than in the top-level module.
+- For exported `macro_rules!` macros that conceptually belong to a submodule, keep the user-facing docs/re-export in that submodule and avoid cluttering top-level macro docs. Prefer the existing pattern used in this repo: `#[doc(hidden)]` on the `#[macro_export]` definition plus an in-module re-export (`pub use macro_name;`) with the full docs on that re-export.
+- If you change macro visibility/export style, verify rustdoc placement still matches intent (submodule-focused docs, no unintended top-level macro listing).
 
 Correct pattern:
 

@@ -244,6 +244,17 @@ pub async fn button_watch_task_from_input(
 ///     }
 /// }
 /// ```
+///
+/// **Syntax:**
+///
+/// ```text
+/// button_watch! {
+///     [<attributes>]
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///     }
+/// }
+/// ```
 #[doc(hidden)]
 #[macro_export]
 macro_rules! button_watch {

@@ -786,6 +786,23 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
 ///
 /// **See the [led2d module](mod@crate::led2d) for usage examples.**
 ///
+/// **Syntax:**
+///
+/// ```text
+/// led2d! {
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///         led_layout: <LedLayout_expr>,
+///         font: <Led2dFont_expr>,
+///         pio: <pio_ident>,               // optional
+///         dma: <dma_ident>,               // optional
+///         max_current: <Current_expr>,    // optional
+///         gamma: <Gamma_expr>,            // optional
+///         max_frames: <usize_expr>,       // optional
+///     }
+/// }
+/// ```
+///
 /// # Fields
 ///
 /// **Required fields:**

@@ -268,6 +268,14 @@ pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
 ///
 /// This macro allows combining any number of const arrays with a clean syntax.
 ///
+/// **Syntax:**
+///
+/// ```text
+/// combine!()
+/// combine!(<steps_expr>)
+/// combine!(<first_steps_expr>, <second_steps_expr>, ... )
+/// ```
+///
 /// See the [servo_player module documentation](mod@crate::servo_player) for usage.
 #[doc(hidden)]
 #[macro_export]
@@ -418,6 +426,20 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
 /// Use this macro when your project has a servo that needs scripted animation control.
 /// The macro generates a struct type and spawns a background
 /// task to execute animation sequences.
+///
+/// **Syntax:**
+///
+/// ```text
+/// servo_player! {
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///         min_us: <u16_expr>,         // optional
+///         max_us: <u16_expr>,         // optional
+///         max_degrees: <u16_expr>,    // optional
+///         max_steps: <usize_expr>,    // optional
+///     }
+/// }
+/// ```
 ///
 /// # Configuration
 ///

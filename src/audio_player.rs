@@ -1076,6 +1076,7 @@ pub enum AudioFormat {
 ///
 /// See [`AudioClipGenerated`](crate::audio_player::audio_clip_generated::AudioClipGenerated)
 /// and the [audio_player module documentation](mod@crate::audio_player).
+#[doc(hidden)]
 #[macro_export]
 macro_rules! audio_clip {
     ($($tt:tt)*) => { $crate::__audio_clip_parse! { $($tt)* } };

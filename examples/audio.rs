@@ -45,7 +45,7 @@ audio_player! {
 audio_clip! {
     Nasa {
         sample_rate_hz: VOICE_22050_HZ,
-        file: "../deldir/nasa_22k.s16",
+        file: "data/audio/nasa_22k.s16",
     }
 }
 

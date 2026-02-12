@@ -19,6 +19,21 @@ pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 
 /// Create a servo with keyword arguments and default pulse widths.
 ///
+/// **Syntax:**
+///
+/// ```text
+/// servo! {
+///     pin: <pin_expr>,
+///     slice: <pwm_slice_expr>,
+///     channel: A | B,             // optional
+///     odd: <bool_expr>,           // optional
+///     even: <bool_expr>,          // optional
+///     min_us: <u16_expr>,         // optional
+///     max_us: <u16_expr>,         // optional
+///     max_degrees: <u16_expr>,    // optional
+/// }
+/// ```
+///
 /// Required fields: `pin`, `slice`.
 ///
 /// Optional fields: `min_us`, `max_us`, `max_degrees` (defaults to

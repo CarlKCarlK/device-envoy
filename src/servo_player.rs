@@ -268,6 +268,14 @@ pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
 ///
 /// This macro allows combining any number of const arrays with a clean syntax.
 ///
+/// **Syntax:**
+///
+/// ```text
+/// combine!()
+/// combine!(<steps_expr>)
+/// combine!(<first_steps_expr>, <second_steps_expr>, ... )
+/// ```
+///
 /// See the [servo_player module documentation](mod@crate::servo_player) for usage.
 #[doc(hidden)]
 #[macro_export]
@@ -419,6 +427,20 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
 /// The macro generates a struct type and spawns a background
 /// task to execute animation sequences.
 ///
+/// **Syntax:**
+///
+/// ```text
+/// servo_player! {
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///         min_us: <u16_expr>,         // optional
+///         max_us: <u16_expr>,         // optional
+///         max_degrees: <u16_expr>,    // optional
+///         max_steps: <usize_expr>,    // optional
+///     }
+/// }
+/// ```
+///
 /// # Configuration
 ///
 /// ## Required Fields
@@ -457,7 +479,7 @@ macro_rules! __servo_player_impl {
     ) => {
         $crate::__servo_player_impl! {
             @__fill_defaults
-            vis: pub,
+            vis: pub(self),
             name: $name,
             pin: _UNSET_,
             slice: _UNSET_,
@@ -1305,7 +1327,7 @@ macro_rules! __servo_player_impl {
     ) => {
         $crate::__servo_player_impl! {
             @__fill_defaults
-            vis: pub,
+            vis: pub(self),
             name: ServoPlayerGenerated,
             pin: _UNSET_,
             slice: _UNSET_,

@@ -14,6 +14,14 @@
 - Always run `cargo check-all` before handing work back; xtask keeps doctests and examples in sync.
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 
+## Generated Files
+
+- Treat generated files under `src/**/_generated.rs` as build outputs, not source of truth.
+- When changing generated docs/examples, edit the corresponding generator template in `xtask/src/*_generated.rs` first.
+- If you must patch a generated file directly for an urgent fix, make the matching template change in the same PR so regeneration does not revert it.
+- Regenerate and verify with `cargo xtask check-docs` (or `cargo check-all`) before handing work back.
+- For this repo, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `led2d_generated`, `led_strip_generated`, and `servo_player_generated`.
+
 ## Const-Only APIs
 
 **The `LedLayout` type must remain fully const.** All methods on `LedLayout` must be `const fn`. This enables compile-time LED layout validation and zero-runtime-cost transformations. If you add a method to `LedLayout` that is not `const fn`, report this as an error. The existing doctests enforce const-ness by using methods in const contexts; removing `const` from any method will cause compilation to fail.
@@ -21,6 +29,10 @@
 ## Module Structure Convention
 
 This project uses a specific module structure pattern. Do NOT create `mod.rs` files.
+
+- Macros related to a specific submodule should generally live in that submodule (for example, audio macros in `audio_player`) rather than in the top-level module.
+- For exported `macro_rules!` macros that conceptually belong to a submodule, keep the user-facing docs/re-export in that submodule and avoid cluttering top-level macro docs. Prefer the existing pattern used in this repo: `#[doc(hidden)]` on the `#[macro_export]` definition plus an in-module re-export (`pub use macro_name;`) with the full docs on that re-export.
+- If you change macro visibility/export style, verify rustdoc placement still matches intent (submodule-focused docs, no unintended top-level macro listing).
 
 Correct pattern:
 
@@ -148,6 +160,14 @@ Use `cargo run --bin <name> --target <target> --features <features>` as the stan
 - Keep example shape consistent: show an async function that receives `Peripherals`/`Spawner` (or other handles) and constructs the device with `new_static`/`new`; avoid mixing inline examples without that pattern next to function-based ones.
 - Examples must show the actual `use` statements for the module being documented (bring types into scope explicitly rather than relying on hidden imports).
 - In examples, keep `use` statements limited to `device_envoy::...` items; refer to other crates/modules with fully qualified paths inline.
+- For style macros (for example `audio_clip!`, `audio_player!`, `led_strip!`), document them with a consistent structure:
+  1) one-line summary,
+  2) compact syntax block,
+  3) inputs (`$vis`, `$name`, etc.) including which are optional,
+  4) required fields,
+  5) optional fields/defaults,
+  6) link to the module documentation for full usage examples.
+- Whenever a style macro implementation or its docs change, verify that macro docs and behavior stay in sync (accepted fields, defaults, optional inputs, generated items, and linked examples).
 
 - Parsing into a stronger type:
 
@@ -257,6 +277,11 @@ let _ = something_that_returns_a_result()
 ```
 
 ## API Design Patterns
+
+**Avoid redundant API paths.** Prefer one clear way to do a thing unless there is a strong compatibility or interoperability reason.
+
+- Do not expose both an associated const and an equivalent getter by default.
+- If both are temporarily needed during migration, document the canonical one and plan to remove the duplicate.
 
 **Avoid the builder pattern.** Users find builder patterns hard to discover. Instead:
 

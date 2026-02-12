@@ -770,6 +770,29 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 /// This page provides the primary documentation and examples for configuring strip/panel
 /// groups that share a PIO resource.
 ///
+/// **Syntax:**
+///
+/// ```text
+/// led_strips! {
+///     pio: <pio_ident>, // optional
+///     [<visibility>] <GroupName> {
+///         <MemberName>: {
+///             pin: <pin_ident>,
+///             len: <usize_expr>,
+///             max_current: <Current_expr>,
+///             gamma: <Gamma_expr>,          // optional
+///             max_frames: <usize_expr>,     // optional
+///             dma: <dma_ident>,             // optional
+///             led2d: {                      // optional (panel mode)
+///                 led_layout: <LedLayout_expr>,
+///                 font: <Led2dFont_expr>,
+///             }
+///         },
+///         // ...more members...
+///     }
+/// }
+/// ```
+///
 /// **After reading the examples below, see also:**
 ///
 /// - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) — Sample LED **strip** type showing all methods and associated constants
@@ -1446,6 +1469,7 @@ macro_rules! __led_strips_impl {
     (@__with_frame_alias
         frame_alias: $frame_alias:tt,
         pio: $pio:ident,
+        vis: $vis:vis,
         $group:ident {
             $( $label:ident: { $($fields:tt)* } ),+ $(,)?
         }
@@ -1454,7 +1478,7 @@ macro_rules! __led_strips_impl {
             @__with_defaults
             frame_alias: $frame_alias,
             pio: $pio,
-            vis: pub,
+            vis: $vis,
             group: $group,
             sm_counter: 0,
             strips_out: [],
@@ -2634,6 +2658,22 @@ macro_rules! __led_strips_impl {
 ///
 /// **See the [led_strip module documentation](mod@crate::led_strip) for usage examples.**
 ///
+/// **Syntax:**
+///
+/// ```text
+/// led_strip! {
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///         len: <usize_expr>,
+///         pio: <pio_ident>,               // optional
+///         dma: <dma_ident>,               // optional
+///         max_current: <Current_expr>,    // optional
+///         gamma: <Gamma_expr>,            // optional
+///         max_frames: <usize_expr>,       // optional
+///     }
+/// }
+/// ```
+///
 /// **Required fields:**
 ///
 /// - `pin` — GPIO pin for LED data
@@ -2676,7 +2716,7 @@ macro_rules! __led_strip_impl {
     ) => {
         $crate::__led_strip_impl! {
             @__fill_defaults
-            vis: pub,
+            vis: pub(self),
             pio: PIO0,
             name: $name,
             pin: _UNSET_,

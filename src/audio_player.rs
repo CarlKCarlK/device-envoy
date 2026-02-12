@@ -2,16 +2,18 @@
 //todo0 where is the example
 //todo0 tell standard wiring for i2s
 //todo0 need to give example of getting voice or mp3 etc into system.
-//! A device abstraction for background playback and looping of audio clips
-//! on I2S audio hardware.
+//! A device abstraction for playing audio clips over I2S hardware.
 //!
 //! This page provides the primary documentation for generated audio player
 //! types and clip utilities.
 //!
-//! Audio clips are predeclared as static values. Clip order is selected
-//! at runtime and played in the background while the application does
-//! other work. Volume can be adjusted on the fly, and playback can be
-//! stopped or interrupted mid-clip.
+//! Audio clip sample data is defined at compile time as static values.
+//! At runtime, you select which clips to play and in what order.
+//! Playback runs in the background while the application does other work.
+//! Volume can be adjusted on the fly, and playback can be stopped or
+//! interrupted mid-clip.
+//! Audio samples are stored in flash. Only a small DMA buffer is used at
+//! runtime.
 //!
 //! **Supported audio formats**
 //!
@@ -57,7 +59,7 @@
 //!         data_pin: PIN_8,
 //!         bit_clock_pin: PIN_9,
 //!         word_select_pin: PIN_10,
-//!         sample_rate_hz: VOICE_22050_HZ,
+//!         sample_rate_hz: VOICE_22050_HZ, // Convenience constant for this example; any hardware-supported sample rate can be used.
 //!         max_volume: Volume::percent(50),
 //!     }
 //! }
@@ -138,7 +140,7 @@
 //! // Define a `const` function that, if called, will return the audio from this file.
 //! audio_clip! {
 //!     Nasa {
-//!         sample_rate_hz: VOICE_22050_HZ,
+//!         sample_rate_hz: VOICE_22050_HZ,  // To avoid a compiler error, this must match the player sample rate.
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 //!     }
 //! }
@@ -219,6 +221,9 @@ pub const NARROWBAND_8000_HZ: u32 = 8_000;
 /// Wideband voice sample rate.
 pub const VOICE_16000_HZ: u32 = 16_000;
 /// Common low-memory voice/music sample rate.
+///
+/// Convenience constant: any sample rate supported by your hardware setup may
+/// be used.
 pub const VOICE_22050_HZ: u32 = 22_050;
 /// Compact-disc sample rate.
 pub const CD_44100_HZ: u32 = 44_100;
@@ -327,9 +332,6 @@ impl Gain {
     /// Silence.
     pub const MUTE: Self = Self(0);
 
-    /// Unity gain (no change).
-    pub const UNITY: Self = Self(i16::MAX as i32);
-
     /// Creates a gain from percentage.
     ///
     /// `100` is unity gain. Values above `100` boost the signal.
@@ -347,8 +349,7 @@ impl Gain {
     /// Values above `+12 dB` clamp to `+12 dB`.
     /// Values below `-96 dB` clamp to `-96 dB`.
     ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
+    /// See [`AudioClipBuf::with_gain`] for usage.
     #[must_use]
     pub const fn db(db: i8) -> Self {
         const DB_UPPER_LIMIT: i8 = 12;
@@ -362,7 +363,7 @@ impl Gain {
         };
 
         if db == 0 {
-            return Self::UNITY;
+            return Self::percent(100);
         }
 
         // Fixed-point multipliers for 10^(+/-1/20) (approximately +/-1 dB in amplitude).
@@ -617,7 +618,6 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
 
         Self::new(samples)
     }
-
 }
 
 //todo0 hide?
@@ -1020,7 +1020,12 @@ const fn stereo_sample(sample: i16) -> u32 {
 #[doc(hidden)]
 pub use paste;
 
-/// Audio clip source formats for [`audio_clip!`]. Currently, only one format is supported.
+/// Audio clip source formats for [`audio_clip!`]. Currently, only one format
+/// is supported.
+///
+/// For ffmpeg conversion directions, see
+/// [`audio_clip!`](macro@crate::audio_player::audio_clip) (the "Preparing
+/// audio files for `audio_clip!`" section).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AudioFormat {
     /// 16-bit signed little-endian mono PCM bytes (`s16le`).
@@ -1072,6 +1077,20 @@ pub enum AudioFormat {
 ///
 /// - `audio_clip()` - `const` function that returns the generated audio clip
 /// - `AudioClip` - concrete return type of `audio_clip()`
+///
+/// **Mental model (lifecycle):**
+///
+/// Each `audio_clip!` invocation generates:
+///
+/// - a module namespace
+/// - a concrete clip type
+/// - a `const fn audio_clip()` constructor
+///
+/// Audio bytes are embedded in program flash via `include_bytes!`.
+/// The clip value can be constructed at compile time when used in `const` or
+/// `static` definitions.
+/// When you take `&Name::audio_clip()` in a `static` context, the compiler
+/// promotes that clip value into flash storage.
 ///
 /// # Example
 ///

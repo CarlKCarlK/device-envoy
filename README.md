@@ -39,7 +39,7 @@ todo000 add audio-player
 - **[RFID Reader](https://docs.rs/device-envoy/latest/device_envoy/rfid/)** - Card detection and reading (MFRC522)
 - **[Clock Sync](https://docs.rs/device-envoy/latest/device_envoy/clock_sync/)** - Network time synchronization utilities
 - **[LED4 Display](https://docs.rs/device-envoy/latest/device_envoy/led4/)** - 4-digit, 7-segment LED display control with optional animation and blinking
-- **[Single LED](https://docs.rs/device-envoy/latest/device_envoy/led/)** - Single digital LED control with animation support
+- **[Single LED](https://docs.rs/device-envoy/latest/device_envoy/led/)** - Single LED control with animation support
 
 ## Forum
 

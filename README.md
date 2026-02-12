@@ -26,11 +26,9 @@ The API is actively evolving. Not recommended for production use, but excellent 
 
 ## Features
 
-todo000 add audio-player
-
 - **[LED Strips](https://docs.rs/device-envoy/latest/device_envoy/led_strip/) & [Panels](https://docs.rs/device-envoy/latest/device_envoy/led2d/)**  - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, embedded-graphics support. Provides efficient options for power limiting and color correction.
 - **[WiFi (Pico W)](https://docs.rs/device-envoy/latest/device_envoy/wifi_auto/)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to a stored network. Requires Pico W; WiFi is not supported on non-W boards.
-- **[Audio Player](https://docs.rs/device-envoy/latest/device_envoy/audio_player/)** - Play audio clips over I2S hardware with runtime volume control.
+- **[Audio Player](https://docs.rs/device-envoy/latest/device_envoy/audio_player/)** - Play audio clips over I²S hardware with runtime sequencing and volume control.
 - **[Button Input](https://docs.rs/device-envoy/latest/device_envoy/button/)** - Button handling with debouncing
 - **[Servo Control](https://docs.rs/device-envoy/latest/device_envoy/servo/)** - Servo positioning and animation
 - **[Flash Storage](https://docs.rs/device-envoy/latest/device_envoy/flash_array/)** - Type-safe, on-board persist storage
@@ -163,9 +161,9 @@ Examples use conventional pin assignments for consistency:
 - **PIN_4**: Extended LED panel (12×8, 96 pixels)
 - **PIN_5**: Long LED strip (160 pixels, broadway/marquee effects)
 - **PIN_6**: Large LED panel (16×16, 256 pixels)
-- **PIN_8**: I2S audio output data pin (`DIN`)
-- **PIN_9**: I2S audio output bit clock pin (`BCLK`)
-- **PIN_10**: I2S audio output word select pin (`LRC` / `LRCLK`)
+- **PIN_8**: I²S audio output data pin (`DIN`)
+- **PIN_9**: I²S audio output bit clock pin (`BCLK`)
+- **PIN_10**: I²S audio output word select pin (`LRC` / `LRCLK`)
 - **PIN_13**: Button (active-low)
 - **PIN_11, PIN_12**: Servo signals
 

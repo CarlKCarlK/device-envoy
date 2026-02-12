@@ -1,8 +1,5 @@
-//todo0 search and avoid almost every use of low-level format jargon
-//todo0 where is the example
-//todo0 tell standard wiring for i2s
-//todo0 need to give example of getting voice or mp3 etc into system.
-//! A device abstraction for playing audio clips over I2S hardware.
+//! A device abstraction for playing audio clips over I²S hardware,
+//! with runtime sequencing and volume control.
 //!
 //! This page provides the primary documentation for generated audio player
 //! types and clip utilities.
@@ -19,7 +16,7 @@
 //!
 //! - Any sample rate
 //! - 16-bit signed little-endian PCM audio data (`s16le`)
-//! - Mono input audio (duplicated to left/right on I2S output)
+//! - Mono input audio (duplicated to left/right on I²S output)
 //!
 //! **After reading the examples below, see also:**
 //!
@@ -195,8 +192,6 @@
 //!     core::future::pending().await // run forever
 //! }
 //! ```
-//TODO0 Review this code
-
 pub mod audio_clip_generated;
 pub mod audio_player_generated;
 
@@ -515,7 +510,6 @@ impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
     }
 }
 
-//todo0 avoid all use of low-level format jargon in user-facing docs
 /// Sized, const-friendly storage for static audio clip data.
 ///
 /// For unsized clip references (for sequencing different clip lengths), see
@@ -620,7 +614,6 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     }
 }
 
-//todo0 hide?
 /// Supported clip input types for [`AudioPlayer::play_iter`].
 #[doc(hidden)]
 pub trait IntoAudioClip<const SAMPLE_RATE_HZ: u32> {
@@ -652,7 +645,6 @@ enum AudioCommand<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
     Stop,
 }
 
-//todo0 hide?
 /// Static resources for [`AudioPlayer`].
 // Must be `pub` so `audio_player!` expansions in downstream crates can reference this type.
 #[doc(hidden)]
@@ -842,45 +834,12 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     }
 }
 
-// todo0 hide?
 // todo0 does this really need to be different that other device abstraction traits?
 /// Trait mapping a PIO peripheral to its interrupt binding.
 #[doc(hidden)]
-pub trait AudioPlayerPio: Instance {
-    /// Interrupt binding type for this PIO resource.
-    type Irqs: embassy_rp::interrupt::typelevel::Binding<
-            <Self as Instance>::Interrupt,
-            embassy_rp::pio::InterruptHandler<Self>,
-        >;
+pub trait AudioPlayerPio: crate::pio_irqs::PioIrqMap {}
 
-    /// Returns interrupt bindings for this PIO resource.
-    fn irqs() -> Self::Irqs;
-}
-
-impl AudioPlayerPio for embassy_rp::peripherals::PIO0 {
-    type Irqs = crate::pio_irqs::Pio0Irqs;
-
-    fn irqs() -> Self::Irqs {
-        crate::pio_irqs::Pio0Irqs
-    }
-}
-
-impl AudioPlayerPio for embassy_rp::peripherals::PIO1 {
-    type Irqs = crate::pio_irqs::Pio1Irqs;
-
-    fn irqs() -> Self::Irqs {
-        crate::pio_irqs::Pio1Irqs
-    }
-}
-
-#[cfg(feature = "pico2")]
-impl AudioPlayerPio for embassy_rp::peripherals::PIO2 {
-    type Irqs = crate::pio_irqs::Pio2Irqs;
-
-    fn irqs() -> Self::Irqs {
-        crate::pio_irqs::Pio2Irqs
-    }
-}
+impl<PioResource: crate::pio_irqs::PioIrqMap> AudioPlayerPio for PioResource {}
 
 // Called by macro-generated code in downstream crates; must be public.
 #[doc(hidden)]
@@ -900,7 +859,7 @@ pub async fn device_loop<
     bit_clock_pin: Peri<'static, BclkPin>,
     word_select_pin: Peri<'static, LrcPin>,
 ) -> ! {
-    let mut pio = Pio::new(pio, PIO::irqs());
+    let mut pio = Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
     let mut pio_i2s_out = PioI2sOut::new(
         &mut pio.common,
@@ -1032,7 +991,6 @@ pub enum AudioFormat {
     S16le,
 }
 
-//todo0 document this macro better
 /// Macro to "compile in" an audio clip from an external file (includes syntax details). See
 /// [`AudioClipGenerated`](crate::audio_player::audio_clip_generated::AudioClipGenerated)
 /// for a sample of generated items.
@@ -1295,7 +1253,6 @@ macro_rules! __audio_clip_impl {
     };
 }
 
-//todo0 make better example
 /// Macro that expands to an [`AudioClipBuf`] type sized from a player type and milliseconds.
 ///
 /// Example: `samples_ms!{AudioPlayer8, 500}`.
@@ -1346,9 +1303,9 @@ macro_rules! samples_ms {
 ///
 /// **Required fields:**
 ///
-/// - `data_pin` - GPIO pin carrying I2S data (`DIN`)
-/// - `bit_clock_pin` - GPIO pin carrying I2S bit clock (`BCLK`)
-/// - `word_select_pin` - GPIO pin carrying I2S word-select / LR clock (`LRC` / `LRCLK`)
+/// - `data_pin` - GPIO pin carrying I²S data (`DIN`)
+/// - `bit_clock_pin` - GPIO pin carrying I²S bit clock (`BCLK`)
+/// - `word_select_pin` - GPIO pin carrying I²S word-select / LR clock (`LRC` / `LRCLK`)
 /// - `sample_rate_hz` - Playback sample rate in hertz (for example:
 ///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
 ///

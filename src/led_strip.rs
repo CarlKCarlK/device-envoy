@@ -468,20 +468,14 @@ impl<const N: usize> Default for Frame1d<N> {
 
 /// Trait for PIO peripherals that can be used with LED strips.
 ///
-/// This trait is automatically implemented by the `led_strips!` macro
-/// for the PIO peripheral specified in the macro invocation.
+/// This trait is implemented for any PIO resource that implements
+/// [`crate::pio_irqs::PioIrqMap`].
 #[cfg(not(feature = "host"))]
 #[doc(hidden)] // Required pub for macro expansion in downstream crates
-pub trait LedStripPio: Instance {
-    /// The interrupt binding type for this PIO
-    type Irqs: embassy_rp::interrupt::typelevel::Binding<
-            <Self as Instance>::Interrupt,
-            embassy_rp::pio::InterruptHandler<Self>,
-        >;
+pub trait LedStripPio: crate::pio_irqs::PioIrqMap {}
 
-    /// Get the interrupt configuration
-    fn irqs() -> Self::Irqs;
-}
+#[cfg(not(feature = "host"))]
+impl<PioResource: crate::pio_irqs::PioIrqMap> LedStripPio for PioResource {}
 /// A state machine bundled with its PIO bus.
 ///
 /// This is returned by `pio_split!` and passed to strip constructors.
@@ -1056,7 +1050,10 @@ macro_rules! __led_strips_impl {
                 $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 3>,
             ) {
                 let ::embassy_rp::pio::Pio { common, sm0, sm1, sm2, sm3, .. } =
-                    ::embassy_rp::pio::Pio::new(pio, <::embassy_rp::peripherals::$pio as $crate::led_strip::LedStripPio>::irqs());
+                    ::embassy_rp::pio::Pio::new(
+                        pio,
+                        <::embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                    );
                 let pio_bus = [<$pio _BUS>].init_with(|| {
                     $crate::led_strip::PioBus::new(common)
                 });
@@ -1124,7 +1121,10 @@ macro_rules! __led_strips_impl {
                     // Inline PIO splitting
                     let pio_peri = pio.into();
                     let ::embassy_rp::pio::Pio { common, sm0, sm1, sm2, sm3, .. } =
-                        ::embassy_rp::pio::Pio::new(pio_peri, <::embassy_rp::peripherals::$pio as $crate::led_strip::LedStripPio>::irqs());
+                        ::embassy_rp::pio::Pio::new(
+                            pio_peri,
+                            <::embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                        );
                     let pio_bus = [<$pio _BUS>].init_with(|| {
                         $crate::led_strip::PioBus::new(common)
                     });
@@ -3030,7 +3030,10 @@ macro_rules! __led_strip_impl {
                 pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
             ) -> $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 0> {
                 let ::embassy_rp::pio::Pio { common, sm0, .. } =
-                    ::embassy_rp::pio::Pio::new(pio, <::embassy_rp::peripherals::$pio as $crate::led_strip::LedStripPio>::irqs());
+                    ::embassy_rp::pio::Pio::new(
+                        pio,
+                        <::embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                    );
                 let pio_bus = [<$name:snake _ $pio _BUS>].init_with(|| {
                     $crate::led_strip::PioBus::new(common)
                 });
@@ -3175,34 +3178,6 @@ macro_rules! pio_split {
 
 #[cfg(not(feature = "host"))]
 pub use pio_split;
-
-// Implement LedStripPio for all PIO peripherals
-#[cfg(not(feature = "host"))]
-impl LedStripPio for embassy_rp::peripherals::PIO0 {
-    type Irqs = crate::pio_irqs::Pio0Irqs;
-
-    fn irqs() -> Self::Irqs {
-        crate::pio_irqs::Pio0Irqs
-    }
-}
-
-#[cfg(not(feature = "host"))]
-impl LedStripPio for embassy_rp::peripherals::PIO1 {
-    type Irqs = crate::pio_irqs::Pio1Irqs;
-
-    fn irqs() -> Self::Irqs {
-        crate::pio_irqs::Pio1Irqs
-    }
-}
-
-#[cfg(all(feature = "pico2", not(feature = "host")))]
-impl LedStripPio for embassy_rp::peripherals::PIO2 {
-    type Irqs = crate::pio_irqs::Pio2Irqs;
-
-    fn irqs() -> Self::Irqs {
-        crate::pio_irqs::Pio2Irqs
-    }
-}
 
 #[cfg(not(feature = "host"))]
 #[doc(inline)]

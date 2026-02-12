@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-//! MAX98357A sample playback example using PIO I2S.
+//! MAX98357A sample playback example using PIO I²S.
 //!
 //! Wiring:
 //! - Data pin (`DIN`) -> GP8
@@ -22,14 +22,7 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-// Rebuild the source clip (s16le mono raw) with:
-// ffmpeg -i input.wav -ac 1 -ar 22050 -f s16le examples/data/audio/computers_in_control_mono_s16le_22050.raw
-// TODO00 min language of concatenation, fade in and out?
-// TODO00 think about moving some of the 3 constants (rate, bit depth, buffer len) into the macro with defaults
-// TODO00 make the macro documentation look good with a generated type.
-// TODO00 does the macro support vis
-// TODO00 If you want one small extra “pro” touch: add a fade-out on stop (even 5–10 ms) to avoid clicks when you stop mid-waveform. But that’s optional.
-// TODO00 verify that it can play sound while doing other things (like blinking an LED or reading a button) without stuttering
+// TODO add concatenation, fade in and out, trim, and resample.
 audio_player! {
     AudioPlayer8 {
         data_pin: PIN_8,
@@ -66,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!(
-        "I2S ready: GP8 data pin (DIN), GP9 bit clock pin (BCLK), GP10 word select pin (LRC/LRCLK)"
+        "I²S ready: GP8 data pin (DIN), GP9 bit clock pin (BCLK), GP10 word select pin (LRC/LRCLK)"
     );
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",

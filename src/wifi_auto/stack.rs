@@ -14,9 +14,8 @@ use cyw43_pio::{DEFAULT_CLOCK_DIVIDER, PioSpi};
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_net::{Config, Stack, StackResources};
-use embassy_rp::interrupt::typelevel::Binding;
 use embassy_rp::peripherals;
-use embassy_rp::pio::{Instance, InterruptHandler, Pio};
+use embassy_rp::pio::Pio;
 use embassy_rp::{
     Peri,
     dma::{AnyChannel, Channel},
@@ -128,11 +127,7 @@ pub type WifiEvents = Signal<CriticalSectionRawMutex, WifiEvent>;
 
 /// PIO peripheral used by the WiFi driver.
 #[doc(hidden)]
-pub trait WifiPio: Instance {
-    type Irqs: Binding<Self::Interrupt, InterruptHandler<Self>>;
-
-    fn irqs() -> Self::Irqs;
-
+pub trait WifiPio: crate::pio_irqs::PioIrqMap {
     fn spawn_wifi_task(
         spawner: Spawner,
         runner: cyw43::Runner<'static, Output<'static>, PioSpi<'static, Self, 0, AnyChannel>>,
@@ -422,7 +417,7 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
 
     let pwr = Output::new(pin_23, Level::Low);
     let cs = Output::new(pin_25, Level::High);
-    let mut pio = Pio::new(pio, PIO::irqs());
+    let mut pio = Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
     let spi = PioSpi::new(
         &mut pio.common,
         pio.sm0,
@@ -570,7 +565,7 @@ async fn wifi_device_loop_client_impl<PIO: WifiPio>(
 
     let pwr = Output::new(pin_23, Level::Low);
     let cs = Output::new(pin_25, Level::High);
-    let mut pio = Pio::new(pio, PIO::irqs());
+    let mut pio = Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
     let spi = PioSpi::new(
         &mut pio.common,
         pio.sm0,
@@ -676,15 +671,9 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 // ============================================================================
 
 macro_rules! impl_wifi_pio {
-    ($pio:ident, $irqs:ident, $suffix:ident) => {
+    ($pio:ident, $suffix:ident) => {
         paste::paste! {
             impl WifiPio for peripherals::$pio {
-                type Irqs = crate::pio_irqs::$irqs;
-
-                fn irqs() -> Self::Irqs {
-                    crate::pio_irqs::$irqs
-                }
-
                 fn spawn_wifi_task(
                     spawner: Spawner,
                     runner: cyw43::Runner<
@@ -769,7 +758,7 @@ macro_rules! impl_wifi_pio {
     };
 }
 
-impl_wifi_pio!(PIO0, Pio0Irqs, pio0);
-impl_wifi_pio!(PIO1, Pio1Irqs, pio1);
+impl_wifi_pio!(PIO0, pio0);
+impl_wifi_pio!(PIO1, pio1);
 #[cfg(feature = "pico2")]
-impl_wifi_pio!(PIO2, Pio2Irqs, pio2);
+impl_wifi_pio!(PIO2, pio2);

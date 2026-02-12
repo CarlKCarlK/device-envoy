@@ -112,6 +112,11 @@ When capturing variables in closures or creating references, append `_ref`:
 
 - **PIO resource** (not "PIO block") — Use "PIO resource" or just "PIO" when referring to the PIO peripheral.
 
+## PIO IRQ Mapping
+
+- Use the shared `crate::pio_irqs::PioIrqMap` trait when a module only needs to map a PIO resource to `Irqs` + `irqs()`.
+- If a module needs extra PIO-specific behavior (for example task spawning hooks), define a module-local trait that extends `PioIrqMap` and only add the extra methods there.
+
 ## Comment Conventions
 
 Use `TODO0`/`TODO00` prefix for TODO items (`TODO` + priority):
@@ -126,6 +131,7 @@ Preserving comments: When changing code, generally don't remove TODO's in commen
 
 - **Debug code policy**: Do not remove debug/test code, commented debugging blocks, or "THIS WORKS" / "THIS DOESN'T" comparison code until the bug is proven fixed. Leave diagnostic code in place even after identifying issues so the user can verify fixes work correctly before cleanup. This includes removing such comparisons when making edits—preserve them until explicit confirmation the fix is working.
 - **Commit messages**: Always suggest a concise 1-2 line commit message when completing work (no bullet points, just 1-2 lines maximum).
+- **Publishing policy**: Agents must not run the real `cargo publish`. Prepare release notes/versioning/commands, but the actual publish step must be run by the person.
 - Preserve comments: keep `TODO00`/`TODO0`/`TODO`, etc. comments. If they seem obsolete, append `(may no longer apply)` rather than deleting.
 
 ## Documentation Conventions

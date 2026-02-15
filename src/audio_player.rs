@@ -639,11 +639,11 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
                 let right_sample_i128 = self.samples[src_index + 1] as i128;
                 let sample_delta_i128 = right_sample_i128 - left_sample_i128;
                 let denom_i128 = DST_HZ as i128;
-                let numer_i128 = sample_delta_i128 * src_frac_num_u128 as i128;
-                let rounded_i128 = if numer_i128 >= 0 {
-                    (numer_i128 + (denom_i128 / 2)) / denom_i128
+                let numerator_i128 = sample_delta_i128 * src_frac_num_u128 as i128;
+                let rounded_i128 = if numerator_i128 >= 0 {
+                    (numerator_i128 + (denom_i128 / 2)) / denom_i128
                 } else {
-                    (numer_i128 - (denom_i128 / 2)) / denom_i128
+                    (numerator_i128 - (denom_i128 / 2)) / denom_i128
                 };
                 clamp_i64_to_i16((left_sample_i128 + rounded_i128) as i64)
             };

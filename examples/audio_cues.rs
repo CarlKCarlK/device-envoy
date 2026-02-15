@@ -16,7 +16,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player, samples_ms},
+    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player, samples_ms_type},
     button::{Button, PressedTo},
 };
 use embassy_executor::Spawner;
@@ -53,7 +53,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
-    static GAP: samples_ms! { AudioPlayer10, 80 } = AudioPlayer10::silence();
+    static GAP: samples_ms_type! { AudioPlayer10, 80 } = AudioPlayer10::silence();
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

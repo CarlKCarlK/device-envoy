@@ -83,7 +83,10 @@ fn with_resampled_changes_timeline_as_expected() -> Result<(), Box<dyn Error>> {
     let tone22k_retimed_audio_clip: Tone22kRetimed =
         Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
 
-    assert_clip_file_matches_expected("tone_440hz_32_resampled_16000hz_23.s16", &tone16k_audio_clip)?;
+    assert_clip_file_matches_expected(
+        "tone_440hz_32_resampled_16000hz_23.s16",
+        &tone16k_audio_clip,
+    )?;
     assert_clip_file_matches_expected(
         "tone_440hz_32_resampled_22050hz_16.s16",
         &tone22k_retimed_audio_clip,

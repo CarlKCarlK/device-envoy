@@ -22,7 +22,7 @@ use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_play
 use device_envoy::button::PressedTo;
 use device_envoy::clock_sync::{ClockSync, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_envoy::flash_array::FlashArray;
-use device_envoy::samples_ms;
+use device_envoy::samples_ms_type;
 use device_envoy::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
 use device_envoy::{Error, Result};
@@ -72,25 +72,25 @@ pub async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static CAPTIVE_PORTAL_TONE: samples_ms! { AudioPlayer10, 120 } =
+    static CAPTIVE_PORTAL_TONE: samples_ms_type! { AudioPlayer10, 120 } =
         AudioPlayer10::tone(330).with_gain(Gain::percent(20));
-    static CONNECTING_TONE: samples_ms! { AudioPlayer10, 90 } =
+    static CONNECTING_TONE: samples_ms_type! { AudioPlayer10, 90 } =
         AudioPlayer10::tone(550).with_gain(Gain::percent(20));
-    static CONNECTION_FAILED_TONE: samples_ms! { AudioPlayer10, 150 } =
+    static CONNECTION_FAILED_TONE: samples_ms_type! { AudioPlayer10, 150 } =
         AudioPlayer10::tone(220).with_gain(Gain::percent(25));
-    static WIFI_CONNECTED_TONE: samples_ms! { AudioPlayer10, 140 } =
+    static WIFI_CONNECTED_TONE: samples_ms_type! { AudioPlayer10, 140 } =
         AudioPlayer10::tone(880).with_gain(Gain::percent(20));
-    static TIME_SYNCED_TONE: samples_ms! { AudioPlayer10, 90 } =
+    static TIME_SYNCED_TONE: samples_ms_type! { AudioPlayer10, 90 } =
         AudioPlayer10::tone(1047).with_gain(Gain::percent(20));
-    static MODE_HH_MM_TONE: samples_ms! { AudioPlayer10, 100 } =
+    static MODE_HH_MM_TONE: samples_ms_type! { AudioPlayer10, 100 } =
         AudioPlayer10::tone(698).with_gain(Gain::percent(18));
-    static MODE_MM_SS_TONE: samples_ms! { AudioPlayer10, 100 } =
+    static MODE_MM_SS_TONE: samples_ms_type! { AudioPlayer10, 100 } =
         AudioPlayer10::tone(988).with_gain(Gain::percent(18));
-    static HH_MM_TICK_TONE: samples_ms! { AudioPlayer10, 70 } =
+    static HH_MM_TICK_TONE: samples_ms_type! { AudioPlayer10, 70 } =
         AudioPlayer10::tone(784).with_gain(Gain::percent(15));
-    static MM_SS_TICK_TONE: samples_ms! { AudioPlayer10, 40 } =
+    static MM_SS_TICK_TONE: samples_ms_type! { AudioPlayer10, 40 } =
         AudioPlayer10::tone(523).with_gain(Gain::percent(12));
-    static SILENCE_40MS: samples_ms! { AudioPlayer10, 40 } = AudioPlayer10::silence();
+    static SILENCE_40MS: samples_ms_type! { AudioPlayer10, 40 } = AudioPlayer10::silence();
 
     info!("Starting Clock Audio with WiFi");
 

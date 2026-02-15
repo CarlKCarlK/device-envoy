@@ -17,7 +17,7 @@ use defmt::info;
 use device_envoy::Result;
 use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player};
 use device_envoy::button::{Button, PressedTo};
-use device_envoy::samples_ms;
+use device_envoy::samples_ms_type;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
@@ -49,9 +49,9 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
-    static TONE_A4: samples_ms! { AudioPlayer8, 500 } =
+    static TONE_A4: samples_ms_type! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
-    static SILENCE_100MS: samples_ms! { AudioPlayer8, 100 } = AudioPlayer8::silence();
+    static SILENCE_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

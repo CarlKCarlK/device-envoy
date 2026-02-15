@@ -604,6 +604,56 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         Self::new(scaled_samples)
     }
 
+    /// Returns a new clip resampled to a destination timeline.
+    ///
+    /// This resamples waveform data to a new timeline defined by `DST_HZ` and
+    /// `DST_COUNT`.
+    ///
+    /// Duration changes unless `DST_COUNT / DST_HZ == SRC_COUNT / SRC_HZ`.
+    ///
+    /// Keeping `DST_HZ` the same and changing `DST_COUNT` changes speed/pitch.
+    ///
+    /// Resampling uses linear interpolation in integer math.
+    #[must_use]
+    pub const fn with_resampled<const DST_HZ: u32, const DST_COUNT: usize>(
+        self,
+    ) -> AudioClipBuf<DST_HZ, DST_COUNT> {
+        assert!(SAMPLE_COUNT > 0, "source sample count must be > 0");
+        assert!(DST_HZ > 0, "destination sample_rate_hz must be > 0");
+
+        let mut resampled_samples = [0_i16; DST_COUNT];
+        let mut sample_index = 0_usize;
+
+        while sample_index < DST_COUNT {
+            let src_position_num_u128 = sample_index as u128 * SAMPLE_RATE_HZ as u128;
+            let src_index_u128 = src_position_num_u128 / DST_HZ as u128;
+            let src_frac_num_u128 = src_position_num_u128 % DST_HZ as u128;
+            let src_index = src_index_u128 as usize;
+
+            resampled_samples[sample_index] = if src_index + 1 >= SAMPLE_COUNT {
+                self.samples[SAMPLE_COUNT - 1]
+            } else if src_frac_num_u128 == 0 {
+                self.samples[src_index]
+            } else {
+                let left_sample_i128 = self.samples[src_index] as i128;
+                let right_sample_i128 = self.samples[src_index + 1] as i128;
+                let sample_delta_i128 = right_sample_i128 - left_sample_i128;
+                let denom_i128 = DST_HZ as i128;
+                let numer_i128 = sample_delta_i128 * src_frac_num_u128 as i128;
+                let rounded_i128 = if numer_i128 >= 0 {
+                    (numer_i128 + (denom_i128 / 2)) / denom_i128
+                } else {
+                    (numer_i128 - (denom_i128 / 2)) / denom_i128
+                };
+                clamp_i64_to_i16((left_sample_i128 + rounded_i128) as i64)
+            };
+
+            sample_index += 1;
+        }
+
+        AudioClip::new(resampled_samples)
+    }
+
     /// Creates a silent clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for

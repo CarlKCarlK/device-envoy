@@ -61,6 +61,36 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
     Ok(())
 }
 
+#[test]
+fn with_resampled_same_rate_same_count_is_identity() {
+    let tone_audio_clip: AudioClipTone = AudioClipTone::tone(TONE_FREQUENCY_HZ);
+    let tone_resampled_audio_clip: AudioClipTone =
+        AudioClipTone::tone(TONE_FREQUENCY_HZ).with_resampled();
+    assert_eq!(
+        tone_audio_clip.samples(),
+        tone_resampled_audio_clip.samples(),
+        "resampling to same rate and sample count must be identity"
+    );
+}
+
+#[test]
+fn with_resampled_changes_timeline_as_expected() -> Result<(), Box<dyn Error>> {
+    type Tone22k = AudioClipBuf<VOICE_22050_HZ, 32>;
+    type Tone16k = AudioClipBuf<16_000, 23>;
+    type Tone22kRetimed = AudioClipBuf<VOICE_22050_HZ, 16>;
+
+    let tone16k_audio_clip: Tone16k = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
+    let tone22k_retimed_audio_clip: Tone22kRetimed =
+        Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
+
+    assert_clip_file_matches_expected("tone_440hz_32_resampled_16000hz_23.s16", &tone16k_audio_clip)?;
+    assert_clip_file_matches_expected(
+        "tone_440hz_32_resampled_22050hz_16.s16",
+        &tone22k_retimed_audio_clip,
+    )?;
+    Ok(())
+}
+
 fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     filename: &str,
     audio_clip: &AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,

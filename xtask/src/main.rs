@@ -258,6 +258,10 @@ fn check_all() -> ExitCode {
         eprintln!("Error generating servo_player_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
+    if let Err(err) = check_generated_doc_stubs(&workspace_root) {
+        eprintln!("Generated doc stub consistency check failed:\n{}", err);
+        return ExitCode::FAILURE;
+    }
     let examples = discover_examples(&workspace_root);
     let demos = discover_demo_bins(&workspace_root);
     let no_wifi_demos: Vec<_> = demos.iter().filter(|demo| !demo.wifi_required).collect();
@@ -551,6 +555,10 @@ fn check_docs() -> ExitCode {
     }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
         eprintln!("Error generating servo_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = check_generated_doc_stubs(&workspace_root) {
+        eprintln!("Generated doc stub consistency check failed:\n{}", err);
         return ExitCode::FAILURE;
     }
     let arch = Arch::Arm;
@@ -1028,6 +1036,103 @@ fn build_features(board: Board, arch: Arch, wifi: bool) -> String {
         features.push("wifi".to_string());
     }
     features.join(",")
+}
+
+struct GeneratedDocStubExpectation {
+    relative_path: &'static str,
+    required_fragments: &'static [&'static str],
+}
+
+fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
+    let generated_doc_stub_expectations = [
+        GeneratedDocStubExpectation {
+            relative_path: "src/audio_player/audio_clip_generated.rs",
+            required_fragments: &[
+                "pub const SAMPLE_RATE_HZ: u32",
+                "pub const SAMPLE_COUNT: usize",
+                "pub const fn resampled_sample_count(",
+                "pub type AudioClip = AudioClipBuf<",
+                "pub const fn audio_clip() -> AudioClip",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/audio_player/audio_player_generated.rs",
+            required_fragments: &[
+                "pub type AudioPlayerGeneratedAudioClip = AudioClip<VOICE_22050_HZ>;",
+                "pub const SAMPLE_RATE_HZ: u32",
+                "pub const INITIAL_VOLUME: Volume",
+                "pub const MAX_VOLUME: Volume",
+                "pub const fn samples_ms(duration_ms: u32) -> usize",
+                "pub fn play<const CLIP_COUNT: usize>(",
+                "pub fn set_volume(&self, volume: Volume)",
+                "pub fn volume(&self) -> Volume",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/led_strip/led_strip_generated.rs",
+            required_fragments: &[
+                "pub const LEN: usize",
+                "pub const MAX_BRIGHTNESS: u8",
+                "pub const MAX_FRAMES: usize",
+                "pub const fn new_static() -> LedStripGeneratedStatic",
+                "pub fn write_frame(",
+                "pub fn animate<const N: usize>(",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/led2d/led2d_generated.rs",
+            required_fragments: &[
+                "pub const WIDTH: usize",
+                "pub const HEIGHT: usize",
+                "pub const LEN: usize",
+                "pub fn write_frame(",
+                "pub async fn write_text(&self, text: &str, colors: &[RGB8]) -> Result<()>",
+                "pub fn animate<const N: usize>(",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/servo_player/servo_player_generated.rs",
+            required_fragments: &[
+                "pub const MAX_STEPS: usize",
+                "pub fn set_degrees(&self, degrees: u16)",
+                "pub fn hold(&self)",
+                "pub fn relax(&self)",
+                "pub fn animate<I>(&self, steps: I, at_end: AtEnd)",
+            ],
+        },
+    ];
+
+    let mut failure_messages = Vec::new();
+    for generated_doc_stub_expectation in generated_doc_stub_expectations {
+        let generated_doc_stub_path = workspace_root.join(generated_doc_stub_expectation.relative_path);
+        let generated_doc_stub_source = match fs::read_to_string(&generated_doc_stub_path) {
+            Ok(source) => source,
+            Err(read_error) => {
+                failure_messages.push(format!(
+                    "{}: failed to read ({})",
+                    generated_doc_stub_path.display(),
+                    read_error
+                ));
+                continue;
+            }
+        };
+
+        for required_fragment in generated_doc_stub_expectation.required_fragments {
+            if !generated_doc_stub_source.contains(required_fragment) {
+                failure_messages.push(format!(
+                    "{}: missing required fragment `{}`",
+                    generated_doc_stub_path.display(),
+                    required_fragment
+                ));
+            }
+        }
+    }
+
+    if failure_messages.is_empty() {
+        Ok(())
+    } else {
+        Err(failure_messages.join("\n"))
+    }
 }
 
 fn workspace_root() -> PathBuf {

@@ -151,6 +151,8 @@
 //!     // After lower its loudness (at compile time), materialize the clip as a static value.
 //!     static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
 //!     static GAP: samples_ms_type! { AudioPlayer10, 80 } = AudioPlayer10::silence();
+//!     let _nasa_source_sample_rate_hz = Nasa::SAMPLE_RATE_HZ;
+//!     let _nasa_source_sample_count = Nasa::SAMPLE_COUNT;
 //!
 //!     let p = embassy_rp::init(Default::default());
 //!     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -288,6 +290,8 @@
 //!         spawner,
 //!     )?;
 //!
+//!     let _digit0_source_sample_rate_hz = Digit0::SAMPLE_RATE_HZ;
+//!     let _digit0_source_sample_count = Digit0::SAMPLE_COUNT;
 //!     let _nasa_sample_count = NASA_8K.sample_count();
 //!     let _digit_sample_count = DIGITS[0].sample_count();
 //!
@@ -1590,6 +1594,14 @@ macro_rules! resampled_type {
 /// - `max_volume` - Runtime volume ceiling (default: [`Volume::MAX`])
 /// - `initial_volume` - Initial runtime volume relative to `max_volume`
 ///   (default: [`Volume::MAX`])
+///
+/// **Generated items:**
+///
+/// - `<Name>` - generated player struct type
+/// - `<Name>AudioClip` - unsized clip alias at this player's sample rate
+/// - associated constants and methods on `<Name>` (for example:
+///   `SAMPLE_RATE_HZ`, `samples_ms(...)`, `silence(...)`, `tone(...)`,
+///   `new(...)`, `play(...)`, and runtime volume controls)
 ///
 /// The generated type contains static resources and spawns its background device
 /// task from `new(...)`.

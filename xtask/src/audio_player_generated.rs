@@ -28,10 +28,22 @@ audio_player! {
 /// This page serves as the reference for what a generated audio player type
 /// provides. For first-time readers, start with the
 /// [`audio_player`](mod@crate::audio_player) module documentation, then return
-/// here for a complete list of available methods and associated constants.
+/// here for a complete list of available methods, associated constants, and
+/// generated type aliases.
+///
+/// The macro also generates [`AudioPlayerGeneratedAudioClip`], a type alias for
+/// [`AudioClip`] at
+/// [`AudioPlayerGenerated::SAMPLE_RATE_HZ`].
 ///
 /// Auto-generated.
 pub struct AudioPlayerGenerated;
+
+#[cfg(doc)]
+/// Unsized clip type at [`AudioPlayerGenerated::SAMPLE_RATE_HZ`].
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
+pub type AudioPlayerGeneratedAudioClip = AudioClip<VOICE_22050_HZ>;
 
 #[cfg(doc)]
 use crate::Result;

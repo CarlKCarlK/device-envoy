@@ -34,15 +34,23 @@ pub mod AudioClipGenerated {
     use crate::audio_player::{AudioClipBuf, VOICE_22050_HZ};
 
     /// Sample rate in hertz for this generated clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
 
     /// Number of i16 PCM samples in this generated clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub const SAMPLE_COUNT: usize = 92_160;
 
     /// Concrete return type of `audio_clip()`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub type AudioClip = AudioClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>;
 
     /// Returns the duration-preserving destination sample count for a new sample rate.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
     pub const fn resampled_sample_count(destination_sample_rate_hz: u32) -> usize {
         crate::audio_player::resampled_sample_count(
@@ -53,6 +61,8 @@ pub mod AudioClipGenerated {
     }
 
     /// `const` function that returns the generated audio clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
     pub const fn audio_clip() -> AudioClip {
         AudioClip::silence()

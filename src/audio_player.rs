@@ -754,7 +754,9 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     ///
     /// The destination sample count must preserve clip duration:
     /// `DST_COUNT == resampled_sample_count(SRC_COUNT, SRC_HZ, DST_HZ)`.
-    /// If `DST_COUNT` does not match, this function panics.
+    /// If `DST_COUNT` does not match:
+    /// - in `const`/`static` contexts, compilation fails during const evaluation
+    /// - in runtime contexts, this function panics
     ///
     /// Resampling uses linear interpolation in integer math.
     ///

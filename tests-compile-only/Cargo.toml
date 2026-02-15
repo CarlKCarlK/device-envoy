@@ -93,3 +93,8 @@ required-features = ["pico1"]
 name = "led_strip_two_one"
 path = "led_strip_two_one.rs"
 required-features = ["pico1"]
+
+[[bin]]
+name = "audio_player_with_resampled_wrong_count_should_fail"
+path = "audio_player_with_resampled_wrong_count_should_fail.rs"
+required-features = ["pico1"]

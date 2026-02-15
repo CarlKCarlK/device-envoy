@@ -40,8 +40,8 @@ pub mod pio_irqs;
 #[cfg(feature = "host")]
 /// Utilities for converting frames to PNG images (host testing only).
 pub mod to_png;
-// These modules require embedded targets.
-#[cfg(target_os = "none")]
+// Embedded-only in normal builds, but compiled for host unit tests.
+#[cfg(any(target_os = "none", all(test, feature = "host")))]
 pub mod audio_player;
 #[cfg(target_os = "none")]
 pub mod button;

@@ -192,21 +192,33 @@
 //!     core::future::pending().await // run forever
 //! }
 //! ```
+#![cfg_attr(all(test, feature = "host"), allow(dead_code))]
+
 pub mod audio_clip_generated;
 pub mod audio_player_generated;
+#[cfg(all(test, feature = "host"))]
+mod host_tests;
 
+#[cfg(target_os = "none")]
 use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicI32, Ordering};
 
+#[cfg(target_os = "none")]
 use embassy_rp::Peri;
+#[cfg(target_os = "none")]
 use embassy_rp::dma::Channel;
+#[cfg(target_os = "none")]
 use embassy_rp::gpio::Pin;
+#[cfg(target_os = "none")]
 use embassy_rp::pio::{Instance, Pio, PioPin};
+#[cfg(target_os = "none")]
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use heapless::Vec;
 
+#[cfg(target_os = "none")]
 const BIT_DEPTH_BITS: u32 = 16;
+#[cfg(target_os = "none")]
 const SAMPLE_BUFFER_LEN: usize = 256;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
 
@@ -518,6 +530,16 @@ impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
 /// Use [`AudioClipBuf::new`] and [`AudioClipBuf::samples`] to build your own
 /// compile-time clip transforms as `const fn` (for example: trim, fade, or
 /// resample helpers).
+///
+/// Sample rate is part of the type, so clips with different sample rates are
+/// not assignment-compatible:
+///
+/// ```rust,compile_fail
+/// use device_envoy::audio_player::AudioClipBuf;
+///
+/// let clip22050: AudioClipBuf<22_050, 4> = AudioClipBuf::silence();
+/// let _clip16000: AudioClipBuf<16_000, 4> = clip22050;
+/// ```
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
@@ -836,12 +858,15 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
 
 // todo0 does this really need to be different that other device abstraction traits?
 /// Trait mapping a PIO peripheral to its interrupt binding.
+#[cfg(target_os = "none")]
 #[doc(hidden)]
 pub trait AudioPlayerPio: crate::pio_irqs::PioIrqMap {}
 
+#[cfg(target_os = "none")]
 impl<PioResource: crate::pio_irqs::PioIrqMap> AudioPlayerPio for PioResource {}
 
 // Called by macro-generated code in downstream crates; must be public.
+#[cfg(target_os = "none")]
 #[doc(hidden)]
 pub async fn device_loop<
     const MAX_CLIPS: usize,
@@ -922,6 +947,7 @@ pub async fn device_loop<
     }
 }
 
+#[cfg(target_os = "none")]
 async fn play_clip_sequence_once<
     PIO: Instance,
     const MAX_CLIPS: usize,
@@ -942,6 +968,7 @@ async fn play_clip_sequence_once<
     None
 }
 
+#[cfg(target_os = "none")]
 async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
     audio_clip: &AudioClip<SAMPLE_RATE_HZ>,
@@ -970,6 +997,7 @@ async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE
 }
 
 #[inline]
+#[cfg(target_os = "none")]
 const fn stereo_sample(sample: i16) -> u32 {
     let sample_bits = sample as u16 as u32;
     (sample_bits << 16) | sample_bits

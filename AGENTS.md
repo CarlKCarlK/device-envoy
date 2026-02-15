@@ -127,6 +127,9 @@ Use `TODO0`/`TODO00` prefix for TODO items (`TODO` + priority):
 // TODO lowest standard todo for general items
 ```
 
+- For code that uses a stable workaround where a clearly better nightly feature exists, add:
+  `// TODO_NIGHTLY When nightly feature <feature_name> becomes stable, change this code by <specific change>.`
+
 Preserving comments: When changing code, generally don't remove TODO's in comments. Just move the comments if needed. If you think they no longer apply, add `(may no longer apply)` to the comment rather than deleting it.
 
 - **Debug code policy**: Do not remove debug/test code, commented debugging blocks, or "THIS WORKS" / "THIS DOESN'T" comparison code until the bug is proven fixed. Leave diagnostic code in place even after identifying issues so the user can verify fixes work correctly before cleanup. This includes removing such comparisons when making edits—preserve them until explicit confirmation the fix is working.

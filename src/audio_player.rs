@@ -48,7 +48,7 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{Result, audio_player::{AtEnd, Volume, audio_player, samples_ms, VOICE_22050_HZ}};
+//! use device_envoy::{Result, audio_player::{AtEnd, Volume, audio_player, samples_ms_type, VOICE_22050_HZ}};
 //!
 //! // Generate `AudioPlayer8`, a struct type with the specified configuration.
 //! audio_player! {
@@ -68,11 +68,11 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     // Define REST_MS as a static clip of silence, 80 milliseconds long.
-//!     static REST_MS: samples_ms! { AudioPlayer8, 80 } = AudioPlayer8::silence();
+//!     static REST_MS: samples_ms_type! { AudioPlayer8, 80 } = AudioPlayer8::silence();
 //!     // Define each note as a static clip of a sine wave at the appropriate frequency, 220 ms long.
-//!     static NOTE_E4: samples_ms! { AudioPlayer8, 220 } = AudioPlayer8::tone(330);
-//!     static NOTE_D4: samples_ms! { AudioPlayer8, 220 } = AudioPlayer8::tone(294);
-//!     static NOTE_C4: samples_ms! { AudioPlayer8, 220 } = AudioPlayer8::tone(262);
+//!     static NOTE_E4: samples_ms_type! { AudioPlayer8, 220 } = AudioPlayer8::tone(330);
+//!     static NOTE_D4: samples_ms_type! { AudioPlayer8, 220 } = AudioPlayer8::tone(294);
+//!     static NOTE_C4: samples_ms_type! { AudioPlayer8, 220 } = AudioPlayer8::tone(262);
 //!
 //!     let p = embassy_rp::init(Default::default());
 //!     // Create an `AudioPlayer8` instance with the specified pins and resources.
@@ -113,7 +113,7 @@
 //! use device_envoy::{
 //!     Result,
 //!     audio_player::{
-//!         AtEnd, Gain, Volume, audio_clip, audio_player, samples_ms, VOICE_22050_HZ,
+//!         AtEnd, Gain, Volume, audio_clip, audio_player, samples_ms_type, VOICE_22050_HZ,
 //!     },
 //!     button::{Button, PressedTo},
 //! };
@@ -150,7 +150,9 @@
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     // After lower its loudness (at compile time), materialize the clip as a static value.
 //!     static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
-//!     static GAP: samples_ms! { AudioPlayer10, 80 } = AudioPlayer10::silence();
+//!     static GAP: samples_ms_type! { AudioPlayer10, 80 } = AudioPlayer10::silence();
+//!     let _nasa_source_sample_rate_hz = Nasa::SAMPLE_RATE_HZ;
+//!     let _nasa_source_sample_count = Nasa::SAMPLE_COUNT;
 //!
 //!     let p = embassy_rp::init(Default::default());
 //!     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -192,21 +194,138 @@
 //!     core::future::pending().await // run forever
 //! }
 //! ```
+//!
+//! # Example: Resample and Play Countdown Once
+//!
+//! This example compiles in four 22.05 kHz clips (`3`, `2`, `1`, and NASA),
+//! resamples them to narrowband 8 kHz at compile time, and plays the sequence
+//! once.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use core::convert::Infallible;
+//! # use core::result::Result::Ok;
+//! use device_envoy::{
+//!     Result,
+//!     audio_player::{
+//!         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_clip, audio_player,
+//!         resampled_type,
+//!     },
+//! };
+//!
+//! audio_player! {
+//!     AudioPlayer8 {
+//!         data_pin: PIN_8,
+//!         bit_clock_pin: PIN_9,
+//!         word_select_pin: PIN_10,
+//!         sample_rate_hz: NARROWBAND_8000_HZ,
+//!         max_volume: Volume::percent(50),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit0 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/0_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit1 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/1_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit2 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/2_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit3 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/3_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Nasa {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::audio_clip()
+//!         .with_resampled()
+//!         .with_gain(Gain::percent(25));
+//!     static DIGITS: [&AudioPlayer8AudioClip; 4] = [
+//!         &Digit0::audio_clip()
+//!             .with_resampled::<_, { Digit0::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!         &Digit1::audio_clip()
+//!             .with_resampled::<_, { Digit1::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!         &Digit2::audio_clip()
+//!             .with_resampled::<_, { Digit2::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!         &Digit3::audio_clip()
+//!             .with_resampled::<_, { Digit3::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!     ];
+//!
+//!     let p = embassy_rp::init(Default::default());
+//!     let audio_player8 = AudioPlayer8::new(
+//!         p.PIN_8,
+//!         p.PIN_9,
+//!         p.PIN_10,
+//!         p.PIO0,
+//!         p.DMA_CH0,
+//!         spawner,
+//!     )?;
+//!
+//!     let _digit0_source_sample_rate_hz = Digit0::SAMPLE_RATE_HZ;
+//!     let _digit0_source_sample_count = Digit0::SAMPLE_COUNT;
+//!     let _nasa_sample_count = NASA_8K.sample_count();
+//!     let _digit_sample_count = DIGITS[0].sample_count();
+//!
+//!     audio_player8.play([DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K], AtEnd::Stop);
+//!     core::future::pending().await // run forever
+//! }
+//! ```
+#![cfg_attr(all(test, feature = "host"), allow(dead_code))]
+
 pub mod audio_clip_generated;
 pub mod audio_player_generated;
+#[cfg(all(test, feature = "host"))]
+mod host_tests;
 
+#[cfg(target_os = "none")]
 use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicI32, Ordering};
 
+#[cfg(target_os = "none")]
 use embassy_rp::Peri;
+#[cfg(target_os = "none")]
 use embassy_rp::dma::Channel;
+#[cfg(target_os = "none")]
 use embassy_rp::gpio::Pin;
+#[cfg(target_os = "none")]
 use embassy_rp::pio::{Instance, Pio, PioPin};
+#[cfg(target_os = "none")]
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use heapless::Vec;
 
+#[cfg(target_os = "none")]
 const BIT_DEPTH_BITS: u32 = 16;
+#[cfg(target_os = "none")]
 const SAMPLE_BUFFER_LEN: usize = 256;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
 
@@ -407,6 +526,37 @@ pub const fn samples_for_duration_ms(duration_ms: u32, sample_rate_hz: u32) -> u
     ((duration_ms as u64 * sample_rate_hz as u64) / 1_000) as usize
 }
 
+/// Returns the destination sample count that preserves clip duration when
+/// changing sample rate.
+///
+/// This computes
+/// `source_sample_count * destination_sample_rate_hz / source_sample_rate_hz`
+/// using nearest-integer rounding.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
+#[must_use]
+pub const fn resampled_sample_count(
+    source_sample_count: usize,
+    source_sample_rate_hz: u32,
+    destination_sample_rate_hz: u32,
+) -> usize {
+    assert!(source_sample_count > 0, "source_sample_count must be > 0");
+    assert!(source_sample_rate_hz > 0, "source_sample_rate_hz must be > 0");
+    assert!(
+        destination_sample_rate_hz > 0,
+        "destination_sample_rate_hz must be > 0"
+    );
+    let destination_sample_count = ((source_sample_count as u64 * destination_sample_rate_hz as u64)
+        + (source_sample_rate_hz as u64 / 2))
+        / source_sample_rate_hz as u64;
+    assert!(
+        destination_sample_count > 0,
+        "destination sample count must be > 0"
+    );
+    destination_sample_count as usize
+}
+
 #[inline]
 const fn sine_sample_from_phase(phase_u32: u32) -> i16 {
     let half_cycle_u64 = 1_u64 << 31;
@@ -519,12 +669,22 @@ impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
 /// compile-time clip transforms as `const fn` (for example: trim, fade, or
 /// resample helpers).
 ///
+/// Sample rate is part of the type, so clips with different sample rates are
+/// not assignment-compatible:
+///
+/// ```rust,compile_fail
+/// use device_envoy::audio_player::AudioClipBuf;
+///
+/// let clip22050: AudioClipBuf<22_050, 4> = AudioClipBuf::silence();
+/// let _clip16000: AudioClipBuf<16_000, 4> = clip22050;
+/// ```
+///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
 pub type AudioClipBuf<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> =
     AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>;
 
-/// Implementation for fixed-size clips (`AudioClipBuf`).
+/// **Implementation for fixed-size clips (`AudioClipBuf`).**
 ///
 /// This impl applies to [`AudioClip`] with array-backed storage:
 /// `AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>`
@@ -556,6 +716,15 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     /// clip usage examples.
     pub const SAMPLE_COUNT: usize = SAMPLE_COUNT;
 
+    /// Number of samples in this clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
+    #[must_use]
+    pub const fn sample_count(&self) -> usize {
+        SAMPLE_COUNT
+    }
+
     /// Returns a new clip with linear sample gain applied.
     ///
     /// This is intended to be used in const clip definitions so the adjusted
@@ -580,6 +749,67 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
             sample_index += 1;
         }
         Self::new(scaled_samples)
+    }
+
+    /// Returns a new clip resampled to a destination timeline.
+    ///
+    /// This resamples waveform data to a new timeline defined by `DST_HZ` and
+    /// `DST_COUNT`.
+    ///
+    /// The destination sample count must preserve clip duration:
+    /// `DST_COUNT == resampled_sample_count(SRC_COUNT, SRC_HZ, DST_HZ)`.
+    /// If `DST_COUNT` does not match:
+    /// - in `const`/`static` contexts, compilation fails during const evaluation
+    /// - in runtime contexts, this function panics
+    ///
+    /// Resampling uses linear interpolation in integer math.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
+    #[must_use]
+    pub const fn with_resampled<const DST_HZ: u32, const DST_COUNT: usize>(
+        self,
+    ) -> AudioClipBuf<DST_HZ, DST_COUNT> {
+        assert!(SAMPLE_COUNT > 0, "source sample count must be > 0");
+        assert!(DST_HZ > 0, "destination sample_rate_hz must be > 0");
+        let expected_destination_sample_count =
+            resampled_sample_count(SAMPLE_COUNT, SAMPLE_RATE_HZ, DST_HZ);
+        assert!(
+            DST_COUNT == expected_destination_sample_count,
+            "destination sample count must preserve duration"
+        );
+
+        let mut resampled_samples = [0_i16; DST_COUNT];
+        let mut sample_index = 0_usize;
+
+        while sample_index < DST_COUNT {
+            let source_position_numerator_u128 = sample_index as u128 * SAMPLE_RATE_HZ as u128;
+            let source_index_u128 = source_position_numerator_u128 / DST_HZ as u128;
+            let source_fraction_numerator_u128 = source_position_numerator_u128 % DST_HZ as u128;
+            let source_index = source_index_u128 as usize;
+
+            resampled_samples[sample_index] = if source_index + 1 >= SAMPLE_COUNT {
+                self.samples[SAMPLE_COUNT - 1]
+            } else if source_fraction_numerator_u128 == 0 {
+                self.samples[source_index]
+            } else {
+                let left_sample_i128 = self.samples[source_index] as i128;
+                let right_sample_i128 = self.samples[source_index + 1] as i128;
+                let sample_delta_i128 = right_sample_i128 - left_sample_i128;
+                let denom_i128 = DST_HZ as i128;
+                let numerator_i128 = sample_delta_i128 * source_fraction_numerator_u128 as i128;
+                let rounded_i128 = if numerator_i128 >= 0 {
+                    (numerator_i128 + (denom_i128 / 2)) / denom_i128
+                } else {
+                    (numerator_i128 - (denom_i128 / 2)) / denom_i128
+                };
+                clamp_i64_to_i16((left_sample_i128 + rounded_i128) as i64)
+            };
+
+            sample_index += 1;
+        }
+
+        AudioClip::new(resampled_samples)
     }
 
     /// Creates a silent clip.
@@ -836,12 +1066,15 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
 
 // todo0 does this really need to be different that other device abstraction traits?
 /// Trait mapping a PIO peripheral to its interrupt binding.
+#[cfg(target_os = "none")]
 #[doc(hidden)]
 pub trait AudioPlayerPio: crate::pio_irqs::PioIrqMap {}
 
+#[cfg(target_os = "none")]
 impl<PioResource: crate::pio_irqs::PioIrqMap> AudioPlayerPio for PioResource {}
 
 // Called by macro-generated code in downstream crates; must be public.
+#[cfg(target_os = "none")]
 #[doc(hidden)]
 pub async fn device_loop<
     const MAX_CLIPS: usize,
@@ -922,6 +1155,7 @@ pub async fn device_loop<
     }
 }
 
+#[cfg(target_os = "none")]
 async fn play_clip_sequence_once<
     PIO: Instance,
     const MAX_CLIPS: usize,
@@ -942,6 +1176,7 @@ async fn play_clip_sequence_once<
     None
 }
 
+#[cfg(target_os = "none")]
 async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
     audio_clip: &AudioClip<SAMPLE_RATE_HZ>,
@@ -970,6 +1205,7 @@ async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE
 }
 
 #[inline]
+#[cfg(target_os = "none")]
 const fn stereo_sample(sample: i16) -> u32 {
     let sample_bits = sample as u16 as u32;
     (sample_bits << 16) | sample_bits
@@ -1209,19 +1445,38 @@ macro_rules! __audio_clip_impl {
             #[allow(non_snake_case)]
             #[doc = concat!(
                 "Audio clip namespace generated by [`audio_clip!`](macro@crate::audio_player::audio_clip).\n\n",
-                "Contains [`AudioClip`](Self::AudioClip) and [`audio_clip`](Self::audio_clip)."
+                "Contains [`AudioClip`](Self::AudioClip), [`SAMPLE_RATE_HZ`](Self::SAMPLE_RATE_HZ), ",
+                "[`SAMPLE_COUNT`](Self::SAMPLE_COUNT), ",
+                "[`resampled_sample_count`](Self::resampled_sample_count), ",
+                "and [`audio_clip`](Self::audio_clip)."
             )]
             $vis mod $name {
-                const SAMPLE_RATE_HZ: u32 = super::[<$name:upper _SAMPLE_RATE_HZ>];
+                #[doc = "Sample rate in hertz for this generated clip."]
+                #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
+                pub const SAMPLE_RATE_HZ: u32 = super::[<$name:upper _SAMPLE_RATE_HZ>];
                 const AUDIO_SAMPLE_BYTES_LEN: usize = include_bytes!($file).len();
+                #[doc = "Number of i16 PCM samples in this generated clip."]
+                #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
+                pub const SAMPLE_COUNT: usize = AUDIO_SAMPLE_BYTES_LEN / 2;
                 const AUDIO_FORMAT: $crate::audio_player::AudioFormat =
                     super::[<$name:upper _AUDIO_FORMAT>];
 
                 #[doc = "Concrete clip type generated by [`audio_clip!`](macro@crate::audio_player::audio_clip)."]
                 pub type AudioClip = $crate::audio_player::AudioClipBuf<
                     { SAMPLE_RATE_HZ },
-                    { AUDIO_SAMPLE_BYTES_LEN / 2 },
+                    { SAMPLE_COUNT },
                 >;
+
+                #[doc = "Returns the duration-preserving destination sample count for a new sample rate."]
+                #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
+                #[must_use]
+                pub const fn resampled_sample_count(destination_sample_rate_hz: u32) -> usize {
+                    $crate::audio_player::resampled_sample_count(
+                        SAMPLE_COUNT,
+                        SAMPLE_RATE_HZ,
+                        destination_sample_rate_hz,
+                    )
+                }
 
                 #[doc = "Const constructor generated by [`audio_clip!`](macro@crate::audio_player::audio_clip)."]
                 #[must_use]
@@ -1234,7 +1489,6 @@ macro_rules! __audio_clip_impl {
                         "audio byte length must be even for s16le"
                     );
 
-                    const SAMPLE_COUNT: usize = AUDIO_SAMPLE_BYTES_LEN / 2;
                     let audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN] = include_bytes!($file);
                     let mut samples = [0_i16; SAMPLE_COUNT];
                     let mut sample_index = 0_usize;
@@ -1255,17 +1509,40 @@ macro_rules! __audio_clip_impl {
 
 /// Macro that expands to an [`AudioClipBuf`] type sized from a player type and milliseconds.
 ///
-/// Example: `samples_ms!{AudioPlayer8, 500}`.
+/// Example: `samples_ms_type!{AudioPlayer8, 500}`.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! samples_ms {
+macro_rules! samples_ms_type {
     ($player:ident, $duration_ms:expr) => {
         $crate::audio_player::AudioClipBuf<
             { $player::SAMPLE_RATE_HZ },
             { $player::samples_ms($duration_ms) },
+        >
+    };
+}
+
+/// Macro that expands to a duration-preserving resampled [`AudioClipBuf`] type.
+///
+/// Example: `resampled_type!{Nasa, NARROWBAND_8000_HZ}`.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! resampled_type {
+    ($namespace:ident, $destination_sample_rate_hz:expr) => {
+        $crate::audio_player::AudioClipBuf<
+            { $destination_sample_rate_hz },
+            {
+                $crate::audio_player::resampled_sample_count(
+                    $namespace::SAMPLE_COUNT,
+                    $namespace::SAMPLE_RATE_HZ,
+                    { $destination_sample_rate_hz },
+                )
+            },
         >
     };
 }
@@ -1317,6 +1594,14 @@ macro_rules! samples_ms {
 /// - `max_volume` - Runtime volume ceiling (default: [`Volume::MAX`])
 /// - `initial_volume` - Initial runtime volume relative to `max_volume`
 ///   (default: [`Volume::MAX`])
+///
+/// **Generated items:**
+///
+/// - `<Name>` - generated player struct type
+/// - `<Name>AudioClip` - unsized clip alias at this player's sample rate
+/// - associated constants and methods on `<Name>` (for example:
+///   `SAMPLE_RATE_HZ`, `samples_ms(...)`, `silence(...)`, `tone(...)`,
+///   `new(...)`, `play(...)`, and runtime volume controls)
 ///
 /// The generated type contains static resources and spawns its background device
 /// task from `new(...)`.
@@ -1770,6 +2055,16 @@ macro_rules! __audio_player_impl {
                 player: $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>,
             }
 
+            #[doc = concat!(
+                "Unsized clip type at [`",
+                stringify!($name),
+                "::SAMPLE_RATE_HZ`](struct@",
+                stringify!($name),
+                ").\n\n",
+                "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."
+            )]
+            $vis type [<$name AudioClip>] = $crate::audio_player::AudioClip<{ $sample_rate_hz }>;
+
             impl $name {
                 /// Sample rate used for audio playback by this generated player type.
                 pub const SAMPLE_RATE_HZ: u32 = $sample_rate_hz;
@@ -1869,4 +2164,6 @@ pub use audio_clip;
 #[doc(inline)]
 pub use audio_player;
 #[doc(inline)]
-pub use samples_ms;
+pub use resampled_type;
+#[doc(inline)]
+pub use samples_ms_type;

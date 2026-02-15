@@ -1,5 +1,6 @@
 {
     "editor.formatOnSave": true,
+    "python.defaultInterpreterPath": "/usr/bin/python3",
     "files.watcherExclude": {
         "**/target/**": true
     },

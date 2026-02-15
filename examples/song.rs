@@ -16,7 +16,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, VOICE_22050_HZ, Volume, audio_player, samples_ms},
+    audio_player::{AtEnd, VOICE_22050_HZ, Volume, audio_player, samples_ms_type},
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -38,10 +38,10 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NOTE_E4: samples_ms! { SongPlayer, 220 } = SongPlayer::tone(330);
-    static NOTE_D4: samples_ms! { SongPlayer, 220 } = SongPlayer::tone(294);
-    static NOTE_C4: samples_ms! { SongPlayer, 220 } = SongPlayer::tone(262);
-    static REST_80MS: samples_ms! { SongPlayer, 80 } = SongPlayer::silence();
+    static NOTE_E4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(330);
+    static NOTE_D4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(294);
+    static NOTE_C4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(262);
+    static REST_80MS: samples_ms_type! { SongPlayer, 80 } = SongPlayer::silence();
 
     let p = embassy_rp::init(Default::default());
     let song_player = SongPlayer::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;

@@ -192,6 +192,109 @@
 //!     core::future::pending().await // run forever
 //! }
 //! ```
+//!
+//! # Example: Resample and Play Countdown Once
+//!
+//! This example compiles in four 22.05 kHz clips (`3`, `2`, `1`, and NASA),
+//! resamples them to narrowband 8 kHz at compile time, and plays the sequence
+//! once.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use core::convert::Infallible;
+//! # use core::result::Result::Ok;
+//! use device_envoy::{
+//!     Result,
+//!     audio_player::{
+//!         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_clip, audio_player,
+//!         resampled_type,
+//!     },
+//! };
+//!
+//! audio_player! {
+//!     AudioPlayer8 {
+//!         data_pin: PIN_8,
+//!         bit_clock_pin: PIN_9,
+//!         word_select_pin: PIN_10,
+//!         sample_rate_hz: NARROWBAND_8000_HZ,
+//!         max_volume: Volume::percent(50),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit0 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/0_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit1 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/1_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit2 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/2_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Digit3 {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/3_22050.s16"),
+//!     }
+//! }
+//!
+//! audio_clip! {
+//!     Nasa {
+//!         sample_rate_hz: VOICE_22050_HZ,
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::audio_clip()
+//!         .with_resampled()
+//!         .with_gain(Gain::percent(25));
+//!     static DIGITS: [&AudioPlayer8AudioClip; 4] = [
+//!         &Digit0::audio_clip()
+//!             .with_resampled::<_, { Digit0::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!         &Digit1::audio_clip()
+//!             .with_resampled::<_, { Digit1::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!         &Digit2::audio_clip()
+//!             .with_resampled::<_, { Digit2::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!         &Digit3::audio_clip()
+//!             .with_resampled::<_, { Digit3::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+//!     ];
+//!
+//!     let p = embassy_rp::init(Default::default());
+//!     let audio_player8 = AudioPlayer8::new(
+//!         p.PIN_8,
+//!         p.PIN_9,
+//!         p.PIN_10,
+//!         p.PIO0,
+//!         p.DMA_CH0,
+//!         spawner,
+//!     )?;
+//!
+//!     let _nasa_sample_count = NASA_8K.sample_count();
+//!     let _digit_sample_count = DIGITS[0].sample_count();
+//!
+//!     audio_player8.play([DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K], AtEnd::Stop);
+//!     core::future::pending().await // run forever
+//! }
+//! ```
 #![cfg_attr(all(test, feature = "host"), allow(dead_code))]
 
 pub mod audio_clip_generated;
@@ -425,6 +528,9 @@ pub const fn samples_for_duration_ms(duration_ms: u32, sample_rate_hz: u32) -> u
 /// This computes
 /// `source_sample_count * destination_sample_rate_hz / source_sample_rate_hz`
 /// using nearest-integer rounding.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
 #[must_use]
 pub const fn resampled_sample_count(
     source_sample_count: usize,
@@ -531,12 +637,6 @@ pub struct AudioClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [i16]> {
 impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> AudioClip<SAMPLE_RATE_HZ, T> {
     /// Clip sample rate in hertz.
     pub const SAMPLE_RATE_HZ: u32 = SAMPLE_RATE_HZ;
-
-    /// Clip sample rate in hertz.
-    #[must_use]
-    pub const fn sample_rate_hz(&self) -> u32 {
-        SAMPLE_RATE_HZ
-    }
 }
 
 impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
@@ -580,7 +680,7 @@ impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
 pub type AudioClipBuf<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> =
     AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>;
 
-/// Implementation for fixed-size clips (`AudioClipBuf`).
+/// **Implementation for fixed-size clips (`AudioClipBuf`).**
 ///
 /// This impl applies to [`AudioClip`] with array-backed storage:
 /// `AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>`
@@ -657,6 +757,9 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     /// If `DST_COUNT` does not match, this function panics.
     ///
     /// Resampling uses linear interpolation in integer math.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn with_resampled<const DST_HZ: u32, const DST_COUNT: usize>(
         self,
@@ -1343,9 +1446,11 @@ macro_rules! __audio_clip_impl {
             )]
             $vis mod $name {
                 #[doc = "Sample rate in hertz for this generated clip."]
+                #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
                 pub const SAMPLE_RATE_HZ: u32 = super::[<$name:upper _SAMPLE_RATE_HZ>];
                 const AUDIO_SAMPLE_BYTES_LEN: usize = include_bytes!($file).len();
                 #[doc = "Number of i16 PCM samples in this generated clip."]
+                #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
                 pub const SAMPLE_COUNT: usize = AUDIO_SAMPLE_BYTES_LEN / 2;
                 const AUDIO_FORMAT: $crate::audio_player::AudioFormat =
                     super::[<$name:upper _AUDIO_FORMAT>];
@@ -1357,6 +1462,7 @@ macro_rules! __audio_clip_impl {
                 >;
 
                 #[doc = "Returns the duration-preserving destination sample count for a new sample rate."]
+                #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
                 #[must_use]
                 pub const fn resampled_sample_count(destination_sample_rate_hz: u32) -> usize {
                     $crate::audio_player::resampled_sample_count(
@@ -1940,7 +2046,8 @@ macro_rules! __audio_player_impl {
                 stringify!($name),
                 "::SAMPLE_RATE_HZ`](struct@",
                 stringify!($name),
-                ")."
+                ").\n\n",
+                "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."
             )]
             $vis type [<$name AudioClip>] = $crate::audio_player::AudioClip<{ $sample_rate_hz }>;
 

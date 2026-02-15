@@ -40,6 +40,13 @@ audio_clip! {
 }
 
 audio_clip! {
+    Digit0 {
+        sample_rate_hz: VOICE_22050_HZ,
+        file: "data/audio/0_22050.s16",
+    }
+}
+
+audio_clip! {
     Digit1 {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/1_22050.s16",
@@ -67,17 +74,19 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static DIGIT3_8K: resampled_type!(Digit3, NARROWBAND_8000_HZ) =
-        Digit3::audio_clip().with_resampled();
-    static DIGIT2_8K: resampled_type!(Digit2, NARROWBAND_8000_HZ) =
-        Digit2::audio_clip().with_resampled();
-    static DIGIT1_8K: resampled_type!(Digit1, NARROWBAND_8000_HZ) =
-        Digit1::audio_clip().with_resampled();
+    static DIGITS: [&AudioResamplePlayerAudioClip; 4] = [
+        &Digit0::audio_clip()
+            .with_resampled::<_, { Digit0::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+        &Digit1::audio_clip()
+            .with_resampled::<_, { Digit1::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+        &Digit2::audio_clip()
+            .with_resampled::<_, { Digit2::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+        &Digit3::audio_clip()
+            .with_resampled::<_, { Digit3::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+    ];
     static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::audio_clip()
         .with_resampled()
         .with_gain(Gain::percent(25));
-    static COUNTDOWN_AND_NASA: [&AudioResamplePlayerAudioClip; 4] =
-        [&DIGIT3_8K, &DIGIT2_8K, &DIGIT1_8K, &NASA_8K];
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -91,13 +100,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!(
         "NASA resampled clip: {} Hz, {} samples",
-        NASA_8K.sample_rate_hz(),
+        AudioResamplePlayerAudioClip::SAMPLE_RATE_HZ,
         NASA_8K.sample_count()
     );
-    info!("Press GP13 button to play countdown 3,2,1 then NASA (8 kHz)");
+    info!("Press GP13 button to play countdown 3,2,1,0 then NASA (8 kHz)");
 
     loop {
         button.wait_for_press().await;
-        audio_resample_player.play(COUNTDOWN_AND_NASA, AtEnd::Stop);
+        audio_resample_player.play([DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K], AtEnd::Stop);
     }
 }

@@ -422,15 +422,29 @@ pub const fn samples_for_duration_ms(duration_ms: u32, sample_rate_hz: u32) -> u
 /// Returns the destination sample count that preserves clip duration when
 /// changing sample rate.
 ///
-/// This computes `src_count * dst_hz / src_hz` using nearest-integer rounding.
+/// This computes
+/// `source_sample_count * destination_sample_rate_hz / source_sample_rate_hz`
+/// using nearest-integer rounding.
 #[must_use]
-pub const fn resampled_sample_count(src_count: usize, src_hz: u32, dst_hz: u32) -> usize {
-    assert!(src_count > 0, "src_count must be > 0");
-    assert!(src_hz > 0, "src_hz must be > 0");
-    assert!(dst_hz > 0, "dst_hz must be > 0");
-    let dst_count = ((src_count as u64 * dst_hz as u64) + (src_hz as u64 / 2)) / src_hz as u64;
-    assert!(dst_count > 0, "destination sample count must be > 0");
-    dst_count as usize
+pub const fn resampled_sample_count(
+    source_sample_count: usize,
+    source_sample_rate_hz: u32,
+    destination_sample_rate_hz: u32,
+) -> usize {
+    assert!(source_sample_count > 0, "source_sample_count must be > 0");
+    assert!(source_sample_rate_hz > 0, "source_sample_rate_hz must be > 0");
+    assert!(
+        destination_sample_rate_hz > 0,
+        "destination_sample_rate_hz must be > 0"
+    );
+    let destination_sample_count = ((source_sample_count as u64 * destination_sample_rate_hz as u64)
+        + (source_sample_rate_hz as u64 / 2))
+        / source_sample_rate_hz as u64;
+    assert!(
+        destination_sample_count > 0,
+        "destination sample count must be > 0"
+    );
+    destination_sample_count as usize
 }
 
 #[inline]
@@ -660,21 +674,21 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         let mut sample_index = 0_usize;
 
         while sample_index < DST_COUNT {
-            let src_position_num_u128 = sample_index as u128 * SAMPLE_RATE_HZ as u128;
-            let src_index_u128 = src_position_num_u128 / DST_HZ as u128;
-            let src_frac_num_u128 = src_position_num_u128 % DST_HZ as u128;
-            let src_index = src_index_u128 as usize;
+            let source_position_numerator_u128 = sample_index as u128 * SAMPLE_RATE_HZ as u128;
+            let source_index_u128 = source_position_numerator_u128 / DST_HZ as u128;
+            let source_fraction_numerator_u128 = source_position_numerator_u128 % DST_HZ as u128;
+            let source_index = source_index_u128 as usize;
 
-            resampled_samples[sample_index] = if src_index + 1 >= SAMPLE_COUNT {
+            resampled_samples[sample_index] = if source_index + 1 >= SAMPLE_COUNT {
                 self.samples[SAMPLE_COUNT - 1]
-            } else if src_frac_num_u128 == 0 {
-                self.samples[src_index]
+            } else if source_fraction_numerator_u128 == 0 {
+                self.samples[source_index]
             } else {
-                let left_sample_i128 = self.samples[src_index] as i128;
-                let right_sample_i128 = self.samples[src_index + 1] as i128;
+                let left_sample_i128 = self.samples[source_index] as i128;
+                let right_sample_i128 = self.samples[source_index + 1] as i128;
                 let sample_delta_i128 = right_sample_i128 - left_sample_i128;
                 let denom_i128 = DST_HZ as i128;
-                let numerator_i128 = sample_delta_i128 * src_frac_num_u128 as i128;
+                let numerator_i128 = sample_delta_i128 * source_fraction_numerator_u128 as i128;
                 let rounded_i128 = if numerator_i128 >= 0 {
                     (numerator_i128 + (denom_i128 / 2)) / denom_i128
                 } else {

@@ -39,6 +39,27 @@ audio_clip! {
     }
 }
 
+audio_clip! {
+    Digit1 {
+        sample_rate_hz: VOICE_22050_HZ,
+        file: "data/audio/1_22050.s16",
+    }
+}
+
+audio_clip! {
+    Digit2 {
+        sample_rate_hz: VOICE_22050_HZ,
+        file: "data/audio/2_22050.s16",
+    }
+}
+
+audio_clip! {
+    Digit3 {
+        sample_rate_hz: VOICE_22050_HZ,
+        file: "data/audio/3_22050.s16",
+    }
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -46,9 +67,17 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+    static DIGIT3_8K: resampled_type!(Digit3, NARROWBAND_8000_HZ) =
+        Digit3::audio_clip().with_resampled();
+    static DIGIT2_8K: resampled_type!(Digit2, NARROWBAND_8000_HZ) =
+        Digit2::audio_clip().with_resampled();
+    static DIGIT1_8K: resampled_type!(Digit1, NARROWBAND_8000_HZ) =
+        Digit1::audio_clip().with_resampled();
     static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::audio_clip()
         .with_resampled()
         .with_gain(Gain::percent(25));
+    static COUNTDOWN_AND_NASA: [&AudioResamplePlayerAudioClip; 4] =
+        [&DIGIT3_8K, &DIGIT2_8K, &DIGIT1_8K, &NASA_8K];
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -65,10 +94,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         NASA_8K.sample_rate_hz(),
         NASA_8K.sample_count()
     );
-    info!("Press GP13 button to play the resampled narrowband clip");
+    info!("Press GP13 button to play countdown 3,2,1 then NASA (8 kHz)");
 
     loop {
         button.wait_for_press().await;
-        audio_resample_player.play([&NASA_8K], AtEnd::Stop);
+        audio_resample_player.play(COUNTDOWN_AND_NASA, AtEnd::Stop);
     }
 }

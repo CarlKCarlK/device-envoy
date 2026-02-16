@@ -48,7 +48,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA: Nasa::PcmClip = Nasa::pcm_clip().with_gain(Gain::percent(25));
+    const NASA: &AudioPlayer8AudioClipSource = &Nasa::pcm_clip().with_gain(Gain::percent(25));
     static TONE_A4: samples_ms_type! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
@@ -80,6 +80,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
         audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
-        audio_player8.play([&NASA], AtEnd::Stop);
+        audio_player8.play([NASA], AtEnd::Stop);
     }
 }

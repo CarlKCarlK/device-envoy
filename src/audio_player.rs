@@ -310,6 +310,7 @@ mod host_tests;
 
 #[cfg(target_os = "none")]
 use core::ops::ControlFlow;
+use core::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use core::sync::atomic::{AtomicI32, Ordering};
 
 #[cfg(target_os = "none")]
@@ -1367,6 +1368,9 @@ enum AudioCommand<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
 #[doc(hidden)]
 pub struct AudioPlayerStatic<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
     command_signal: Signal<CriticalSectionRawMutex, AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>>,
+    stopped_signal: Signal<CriticalSectionRawMutex, ()>,
+    is_playing: AtomicBool,
+    has_pending_play: AtomicBool,
     max_volume_linear: i32,
     runtime_volume_relative_linear: AtomicI32,
 }
@@ -1395,6 +1399,9 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>
     ) -> Self {
         Self {
             command_signal: Signal::new(),
+            stopped_signal: Signal::new(),
+            is_playing: AtomicBool::new(false),
+            has_pending_play: AtomicBool::new(false),
             max_volume_linear: max_volume.to_i16() as i32,
             runtime_volume_relative_linear: AtomicI32::new(initial_volume.to_i16() as i32),
         }
@@ -1404,8 +1411,34 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>
         self.command_signal.signal(audio_command);
     }
 
+    fn mark_pending_play(&self) {
+        self.has_pending_play.store(true, AtomicOrdering::Relaxed);
+    }
+
     async fn wait(&self) -> AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ> {
         self.command_signal.wait().await
+    }
+
+    fn mark_playing(&self) {
+        self.has_pending_play.store(false, AtomicOrdering::Relaxed);
+        self.is_playing.store(true, AtomicOrdering::Relaxed);
+    }
+
+    fn mark_stopped(&self) {
+        self.has_pending_play.store(false, AtomicOrdering::Relaxed);
+        self.is_playing.store(false, AtomicOrdering::Relaxed);
+        self.stopped_signal.signal(());
+    }
+
+    fn is_idle(&self) -> bool {
+        !self.has_pending_play.load(AtomicOrdering::Relaxed)
+            && !self.is_playing.load(AtomicOrdering::Relaxed)
+    }
+
+    async fn wait_until_stopped(&self) {
+        while !self.is_idle() {
+            self.stopped_signal.wait().await;
+        }
     }
 
     fn set_runtime_volume(&self, volume: Volume) {
@@ -1510,6 +1543,7 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
             "play requires at least one clip"
         );
 
+        self.audio_player_static.mark_pending_play();
         self.audio_player_static.signal(AudioCommand::Play {
             audio_clips: audio_clip_sequence,
             at_end,
@@ -1524,6 +1558,16 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     /// usage examples.
     pub fn stop(&self) {
         self.audio_player_static.signal(AudioCommand::Stop);
+    }
+
+    /// Waits until playback is stopped.
+    ///
+    /// If playback is currently stopped, this returns immediately.
+    /// If playback is active, this waits until the player reaches the stopped
+    /// state (natural end with [`AtEnd::Stop`] or a processed [`Self::stop`]).
+    // TODO0 add fuller docs for stop-state semantics and examples.
+    pub async fn wait_until_stopped(&self) {
+        self.audio_player_static.wait_until_stopped().await;
     }
 
     /// Sets runtime playback volume relative to [`Self::MAX_VOLUME`].
@@ -1604,6 +1648,7 @@ pub async fn device_loop<
                     audio_clips,
                     at_end,
                 } => {
+                    audio_player_static.mark_playing();
                     let next_audio_command = match at_end {
                         AtEnd::Loop => loop {
                             if let Some(next_audio_command) = play_clip_sequence_once(
@@ -1632,8 +1677,10 @@ pub async fn device_loop<
                         audio_command = next_audio_command;
                         continue;
                     }
+
+                    audio_player_static.mark_stopped();
                 }
-                AudioCommand::Stop => {}
+                AudioCommand::Stop => audio_player_static.mark_stopped(),
             }
 
             break;

@@ -92,8 +92,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     audio_player8.play([&NASA_ADPCM_GAIN_STEP], AtEnd::Stop);
     Timer::after(Duration::from_secs(4)).await;
 
-    // Section 6: TODO00 read ADPCM, change sample rate in one step, save as static ADPCM, and play.
-    // read adpcm, change sample rate in one step, save as static adpcm (and play)
+    // read adpcm, convert to pcm, change gain and sample rate to 8K,   convert back to adpcm, and play.
 
     pending().await
 }

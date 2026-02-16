@@ -2264,6 +2264,9 @@ macro_rules! __audio_clip_impl {
 /// - `<Name>::pcm_clip()`
 /// - `<Name>::adpcm_clip_from(...)`
 /// - `<Name>::with_gain(...)`
+// TODO00 Review `adpcm_clip!` generated docs and explicitly call out that
+// `with_gain(...)` is a decode+reencode path and can be more lossy than
+// applying gain in PCM before a single ADPCM encode.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
 pub use crate::adpcm_clip;
@@ -2334,6 +2337,10 @@ macro_rules! adpcm_clip {
                     pcm_clip.with_adpcm_block_align::<DATA_LEN>(BLOCK_ALIGN)
                 }
 
+                #[doc = "Returns this ADPCM clip with gain applied."]
+                #[doc = ""]
+                #[doc = "This operation decodes ADPCM to PCM, applies gain, then re-encodes ADPCM."]
+                #[doc = "That extra encode pass can be more lossy than applying gain on PCM once and encoding once."]
                 #[must_use]
                 pub const fn with_gain(gain: $crate::audio_player::Gain) -> AdpcmClip {
                     adpcm_clip_from(pcm_clip().with_gain(gain))
@@ -2363,6 +2370,8 @@ macro_rules! samples_ms_type {
 /// Macro that expands to a duration-preserving resampled [`PcmClipBuf`] type.
 ///
 /// Example: `resampled_type!{Nasa, NARROWBAND_8000_HZ}`.
+// TODO0 Revisit `DST`/`destination` naming in resample APIs for consistency
+// with user-facing `target_*` terminology.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.

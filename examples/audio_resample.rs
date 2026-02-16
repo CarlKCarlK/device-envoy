@@ -15,8 +15,8 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::Result;
 use device_envoy::audio_player::{
-    AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip, audio_player,
-    resampled_type,
+    AtEnd, AudioClipSource, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player,
+    pcm_clip, resampled_type,
 };
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
@@ -74,16 +74,18 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static DIGITS: [&AudioResamplePlayerPcmClip; 4] = [
-        &Digit0::pcm_clip()
-            .with_resampled::<_, { Digit0::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit1::pcm_clip()
-            .with_resampled::<_, { Digit1::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit2::pcm_clip()
-            .with_resampled::<_, { Digit2::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit3::pcm_clip()
-            .with_resampled::<_, { Digit3::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-    ];
+    // TODO00 can do static array again?
+    static DIGIT0_8K: resampled_type!(Digit0, NARROWBAND_8000_HZ) =
+        Digit0::pcm_clip().with_resampled();
+    static DIGIT1_8K: resampled_type!(Digit1, NARROWBAND_8000_HZ) =
+        Digit1::pcm_clip().with_resampled();
+    static DIGIT2_8K: resampled_type!(Digit2, NARROWBAND_8000_HZ) =
+        Digit2::pcm_clip().with_resampled();
+    static DIGIT3_8K: resampled_type!(Digit3, NARROWBAND_8000_HZ) =
+        Digit3::pcm_clip().with_resampled();
+    // TODO00 shorten this type?
+    let digits: [&'static dyn AudioClipSource<{ AudioResamplePlayer::SAMPLE_RATE_HZ }>; 4] =
+        [&DIGIT0_8K, &DIGIT1_8K, &DIGIT2_8K, &DIGIT3_8K];
     static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::pcm_clip()
         .with_resampled()
         .with_gain(Gain::percent(25));
@@ -108,7 +110,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     loop {
         button.wait_for_press().await;
         audio_resample_player.play(
-            [DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K],
+            [digits[3], digits[2], digits[1], digits[0], &NASA_8K],
             AtEnd::Stop,
         );
     }

@@ -212,8 +212,8 @@
 //! use device_envoy::{
 //!     Result,
 //!     audio_player::{
-//!         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip, audio_player,
-//!         resampled_type,
+//!         AtEnd, AudioClipSource, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip,
+//!         audio_player, resampled_type,
 //!     },
 //! };
 //!
@@ -271,16 +271,17 @@
 //!     static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::pcm_clip()
 //!         .with_resampled()
 //!         .with_gain(Gain::percent(25));
-//!     static DIGITS: [&AudioPlayer8PcmClip; 4] = [
-//!         &Digit0::pcm_clip()
-//!             .with_resampled::<_, { Digit0::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-//!         &Digit1::pcm_clip()
-//!             .with_resampled::<_, { Digit1::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-//!         &Digit2::pcm_clip()
-//!             .with_resampled::<_, { Digit2::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-//!         &Digit3::pcm_clip()
-//!             .with_resampled::<_, { Digit3::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-//!     ];
+//!     static DIGIT0_8K: resampled_type!(Digit0, NARROWBAND_8000_HZ) =
+//!         Digit0::pcm_clip().with_resampled();
+//!     static DIGIT1_8K: resampled_type!(Digit1, NARROWBAND_8000_HZ) =
+//!         Digit1::pcm_clip().with_resampled();
+//!     static DIGIT2_8K: resampled_type!(Digit2, NARROWBAND_8000_HZ) =
+//!         Digit2::pcm_clip().with_resampled();
+//!     static DIGIT3_8K: resampled_type!(Digit3, NARROWBAND_8000_HZ) =
+//!         Digit3::pcm_clip().with_resampled();
+//!     // TODO00 shorten this type?
+//!     let digits: [&'static dyn AudioClipSource<{ AudioPlayer8::SAMPLE_RATE_HZ }>; 4] =
+//!         [&DIGIT0_8K, &DIGIT1_8K, &DIGIT2_8K, &DIGIT3_8K];
 //!
 //!     let p = embassy_rp::init(Default::default());
 //!     let audio_player8 = AudioPlayer8::new(
@@ -295,9 +296,9 @@
 //!     let _digit0_source_sample_rate_hz = Digit0::SAMPLE_RATE_HZ;
 //!     let _digit0_source_sample_count = Digit0::SAMPLE_COUNT;
 //!     let _nasa_sample_count = NASA_8K.sample_count();
-//!     let _digit_sample_count = DIGITS[0].sample_count();
+//!     let _digit_sample_count = DIGIT0_8K.sample_count();
 //!
-//!     audio_player8.play([DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K], AtEnd::Stop);
+//!     audio_player8.play([digits[3], digits[2], digits[1], digits[0], &NASA_8K], AtEnd::Stop);
 //!     core::future::pending().await // run forever
 //! }
 //! ```
@@ -866,30 +867,62 @@ const fn read_u32_le_const(bytes: &[u8], byte_offset: usize) -> u32 {
     ])
 }
 
-/// A static clip source accepted by [`AudioPlayer::play_mixed`].
-///
-/// This allows one playback sequence to combine PCM clips (from
-/// [`pcm_clip!`](macro@crate::audio_player::pcm_clip)) and ADPCM clips
-/// (from [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip)) as long as
-/// both decode to the same `SAMPLE_RATE_HZ`.
-pub enum AudioClip<const SAMPLE_RATE_HZ: u32> {
-    /// Pre-decoded 16-bit PCM clip.
+pub(crate) enum PlaybackClip<const SAMPLE_RATE_HZ: u32> {
     Pcm(&'static PcmClip<SAMPLE_RATE_HZ>),
-    /// ADPCM clip decoded during playback.
     Adpcm(&'static AdpcmClip<SAMPLE_RATE_HZ>),
 }
 
-impl<const SAMPLE_RATE_HZ: u32> AudioClip<SAMPLE_RATE_HZ> {
-    /// Creates a mixed-source entry from a PCM clip.
-    #[must_use]
-    pub const fn pcm(audio_clip: &'static PcmClip<SAMPLE_RATE_HZ>) -> Self {
-        Self::Pcm(audio_clip)
+// TODO00 better name?
+/// A statically stored clip source used for mixed playback without enum wrappers at call sites.
+///
+/// This trait is object-safe, so you can pass heterogeneous static clips as:
+/// `&'static dyn AudioClipSource<SAMPLE_RATE_HZ>`.
+#[allow(private_bounds)]
+pub trait AudioClipSource<const SAMPLE_RATE_HZ: u32>:
+    sealed::AudioClipSourceSealed<SAMPLE_RATE_HZ>
+{
+}
+
+impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> AudioClipSource<SAMPLE_RATE_HZ> for T where
+    T: sealed::AudioClipSourceSealed<SAMPLE_RATE_HZ>
+{
+}
+
+mod sealed {
+    use super::{AdpcmClip, PcmClip, PlaybackClip};
+
+    pub(crate) trait AudioClipSourceSealed<const SAMPLE_RATE_HZ: u32> {
+        fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ>;
     }
 
-    /// Creates a mixed-source entry from an ADPCM clip.
-    #[must_use]
-    pub const fn adpcm(adpcm_clip: &'static AdpcmClip<SAMPLE_RATE_HZ>) -> Self {
-        Self::Adpcm(adpcm_clip)
+    impl<const SAMPLE_RATE_HZ: u32> AudioClipSourceSealed<SAMPLE_RATE_HZ> for PcmClip<SAMPLE_RATE_HZ> {
+        fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
+            PlaybackClip::Pcm(self)
+        }
+    }
+
+    impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> AudioClipSourceSealed<SAMPLE_RATE_HZ>
+        for PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>
+    {
+        fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
+            PlaybackClip::Pcm(self)
+        }
+    }
+
+    impl<const SAMPLE_RATE_HZ: u32> AudioClipSourceSealed<SAMPLE_RATE_HZ>
+        for AdpcmClip<SAMPLE_RATE_HZ>
+    {
+        fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
+            PlaybackClip::Adpcm(self)
+        }
+    }
+
+    impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AudioClipSourceSealed<SAMPLE_RATE_HZ>
+        for AdpcmClip<SAMPLE_RATE_HZ, [u8; DATA_LEN]>
+    {
+        fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
+            PlaybackClip::Adpcm(self)
+        }
     }
 }
 
@@ -1109,73 +1142,9 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     }
 }
 
-/// Supported clip input types for [`AudioPlayer::play_iter`].
-#[doc(hidden)]
-pub trait IntoPcmClip<const SAMPLE_RATE_HZ: u32> {
-    /// Converts this clip input into a static PCM clip reference.
-    fn into_pcm_clip(self) -> &'static PcmClip<SAMPLE_RATE_HZ>;
-}
-
-impl<const SAMPLE_RATE_HZ: u32> IntoPcmClip<SAMPLE_RATE_HZ> for &'static PcmClip<SAMPLE_RATE_HZ> {
-    fn into_pcm_clip(self) -> &'static PcmClip<SAMPLE_RATE_HZ> {
-        self
-    }
-}
-
-impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> IntoPcmClip<SAMPLE_RATE_HZ>
-    for &'static PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>
-{
-    fn into_pcm_clip(self) -> &'static PcmClip<SAMPLE_RATE_HZ> {
-        self
-    }
-}
-
-/// Supported clip input types for [`AudioPlayer::play_mixed_iter`].
-#[doc(hidden)]
-pub trait IntoAudioClip<const SAMPLE_RATE_HZ: u32> {
-    /// Converts this input into a static mixed-source clip entry.
-    fn into_audio_clip(self) -> AudioClip<SAMPLE_RATE_HZ>;
-}
-
-impl<const SAMPLE_RATE_HZ: u32> IntoAudioClip<SAMPLE_RATE_HZ> for AudioClip<SAMPLE_RATE_HZ> {
-    fn into_audio_clip(self) -> AudioClip<SAMPLE_RATE_HZ> {
-        self
-    }
-}
-
-impl<const SAMPLE_RATE_HZ: u32> IntoAudioClip<SAMPLE_RATE_HZ> for &'static PcmClip<SAMPLE_RATE_HZ> {
-    fn into_audio_clip(self) -> AudioClip<SAMPLE_RATE_HZ> {
-        AudioClip::Pcm(self)
-    }
-}
-
-impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> IntoAudioClip<SAMPLE_RATE_HZ>
-    for &'static PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>
-{
-    fn into_audio_clip(self) -> AudioClip<SAMPLE_RATE_HZ> {
-        AudioClip::Pcm(self)
-    }
-}
-
-impl<const SAMPLE_RATE_HZ: u32> IntoAudioClip<SAMPLE_RATE_HZ>
-    for &'static AdpcmClip<SAMPLE_RATE_HZ>
-{
-    fn into_audio_clip(self) -> AudioClip<SAMPLE_RATE_HZ> {
-        AudioClip::Adpcm(self)
-    }
-}
-
-impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> IntoAudioClip<SAMPLE_RATE_HZ>
-    for &'static AdpcmClipBuf<SAMPLE_RATE_HZ, DATA_LEN>
-{
-    fn into_audio_clip(self) -> AudioClip<SAMPLE_RATE_HZ> {
-        AudioClip::Adpcm(self)
-    }
-}
-
 enum AudioCommand<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
     Play {
-        audio_clips: Vec<AudioClip<SAMPLE_RATE_HZ>, MAX_CLIPS>,
+        audio_clips: Vec<PlaybackClip<SAMPLE_RATE_HZ>, MAX_CLIPS>,
         at_end: AtEnd,
     },
     Stop,
@@ -1288,8 +1257,8 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
 
     /// Starts playback of one or more statically defined audio clips.
     ///
-    /// This array-based API supports concise mixed-length clip literals like
-    /// `[&tone_a4, &silence_100ms, &tone_a4]`.
+    /// This supports mixed PCM + ADPCM literals like
+    /// `[&adpcm_clip, &silence_100ms, &tone_a4]`.
     ///
     /// Clip samples are predeclared static data, but sequence order is chosen
     /// at runtime and copied into a fixed-capacity clip list defined by `MAX_CLIPS`.
@@ -1300,55 +1269,27 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     /// usage examples.
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static PcmClip<SAMPLE_RATE_HZ>; CLIP_COUNT],
+        audio_clips: [&'static dyn AudioClipSource<SAMPLE_RATE_HZ>; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         self.play_iter(audio_clips, at_end);
     }
 
-    /// Starts playback from a generic iterator of static clip-like values.
+    /// Starts playback from a generic iterator of static clip sources.
     ///
     /// This allows runtime-selected sequencing while still requiring static
     /// clip sample storage.
     pub fn play_iter<I>(&self, audio_clips: I, at_end: AtEnd)
     where
-        I: IntoIterator,
-        I::Item: IntoPcmClip<SAMPLE_RATE_HZ>,
-    {
-        self.play_mixed_iter(
-            audio_clips
-                .into_iter()
-                .map(|audio_clip| AudioClip::Pcm(audio_clip.into_pcm_clip())),
-            at_end,
-        );
-    }
-
-    /// Starts playback from one or more mixed-source static clips.
-    ///
-    /// This supports sequences that combine PCM and ADPCM sources at the same
-    /// sample rate.
-    pub fn play_mixed<const CLIP_COUNT: usize>(
-        &self,
-        audio_clips: [AudioClip<SAMPLE_RATE_HZ>; CLIP_COUNT],
-        at_end: AtEnd,
-    ) {
-        self.play_mixed_iter(audio_clips, at_end);
-    }
-
-    /// Starts playback from a generic iterator of mixed-source clip-like values.
-    ///
-    /// This allows runtime-selected sequencing across PCM and ADPCM clips.
-    pub fn play_mixed_iter<I>(&self, audio_clips: I, at_end: AtEnd)
-    where
-        I: IntoIterator,
-        I::Item: IntoAudioClip<SAMPLE_RATE_HZ>,
+        I: IntoIterator<Item = &'static dyn AudioClipSource<SAMPLE_RATE_HZ>>,
     {
         assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
-        let mut audio_clip_sequence: Vec<AudioClip<SAMPLE_RATE_HZ>, MAX_CLIPS> = Vec::new();
+        let mut audio_clip_sequence: Vec<PlaybackClip<SAMPLE_RATE_HZ>, MAX_CLIPS> = Vec::new();
         for audio_clip in audio_clips {
-            let audio_clip = audio_clip.into_audio_clip();
             assert!(
-                audio_clip_sequence.push(audio_clip).is_ok(),
+                audio_clip_sequence
+                    .push(sealed::AudioClipSourceSealed::playback_clip(audio_clip))
+                    .is_ok(),
                 "play sequence fits within max_clips"
             );
         }
@@ -1495,15 +1436,16 @@ async fn play_clip_sequence_once<
     const SAMPLE_RATE_HZ: u32,
 >(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_clips: &[AudioClip<SAMPLE_RATE_HZ>],
+    audio_clips: &[PlaybackClip<SAMPLE_RATE_HZ>],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
 ) -> Option<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>> {
     for audio_clip in audio_clips {
         match audio_clip {
-            AudioClip::Pcm(audio_clip) => {
+            PlaybackClip::Pcm(audio_clip) => {
                 if let ControlFlow::Break(next_audio_command) = play_full_pcm_clip_once(
-                    pio_i2s_out, audio_clip,
+                    pio_i2s_out,
+                    audio_clip,
                     sample_buffer,
                     audio_player_static,
                 )
@@ -1512,7 +1454,7 @@ async fn play_clip_sequence_once<
                     return Some(next_audio_command);
                 }
             }
-            AudioClip::Adpcm(adpcm_clip) => {
+            PlaybackClip::Adpcm(adpcm_clip) => {
                 if let ControlFlow::Break(next_audio_command) = play_full_adpcm_clip_once(
                     pio_i2s_out,
                     adpcm_clip,

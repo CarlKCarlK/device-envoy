@@ -48,7 +48,7 @@ pub type AudioPlayerGeneratedPcmClip = PcmClip<VOICE_22050_HZ>;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, PcmClip, PcmClipBuf, Volume, VOICE_22050_HZ};
+use crate::audio_player::{AtEnd, AudioClipSource, PcmClip, PcmClipBuf, Volume, VOICE_22050_HZ};
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
@@ -106,7 +106,7 @@ impl AudioPlayerGenerated {
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static PcmClip<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
+        audio_clips: [&'static dyn AudioClipSource<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         let _ = (audio_clips, at_end);

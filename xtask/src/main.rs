@@ -2,6 +2,8 @@
 //!
 //! Run with: `cargo xtask <command>`
 
+mod adpcm_clip_generated;
+mod adpcm_player_generated;
 mod audio_clip_generated;
 mod audio_player_generated;
 mod led2d_generated;
@@ -238,6 +240,14 @@ fn check_compile_only() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_player_generated::generate_adpcm_player_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
         eprintln!("Error generating audio_clip_generated.rs: {}", err);
         return ExitCode::FAILURE;
@@ -537,6 +547,14 @@ fn check_all() -> ExitCode {
 
 fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_player_generated::generate_adpcm_player_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
         eprintln!("Error generating audio_clip_generated.rs: {}", err);
         return ExitCode::FAILURE;
@@ -1045,6 +1063,28 @@ struct GeneratedDocStubExpectation {
 
 fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
     let generated_doc_stub_expectations = [
+        GeneratedDocStubExpectation {
+            relative_path: "src/adpcm_player/adpcm_clip_generated.rs",
+            required_fragments: &[
+                "pub const SAMPLE_RATE_HZ: u32",
+                "pub const SAMPLE_COUNT: usize",
+                "pub const DATA_LEN: usize",
+                "pub type AdpcmClip = AdpcmClipBuf<",
+                "pub const fn adpcm_clip() -> AdpcmClip",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/adpcm_player/adpcm_player_generated.rs",
+            required_fragments: &[
+                "pub type AdpcmPlayerGeneratedAdpcmClip =",
+                "pub const SAMPLE_RATE_HZ: u32",
+                "pub const INITIAL_VOLUME: Volume",
+                "pub const MAX_VOLUME: Volume",
+                "pub fn play<const CLIP_COUNT: usize>(",
+                "pub fn set_volume(&self, volume: Volume)",
+                "pub fn volume(&self) -> Volume",
+            ],
+        },
         GeneratedDocStubExpectation {
             relative_path: "src/audio_player/audio_clip_generated.rs",
             required_fragments: &[

@@ -28,7 +28,8 @@ pcm_clip! {
 /// This page serves as the reference for what a generated audio clip namespace
 /// provides. For first-time readers, start with the
 /// [`audio_player`](mod@crate::audio_player) module documentation, then return
-/// here for the generated `PcmClip`/`AdpcmClip` and `pcm_clip()`/`adpcm_clip()` items.
+/// here for the generated `PcmClip`/`AdpcmClip` and
+/// `pcm_clip()`/`adpcm_clip()`/`adpcm_clip_from(...)` items.
 ///
 /// The generated items are in a module (not a struct type) because stable Rust
 /// does not support inherent associated types on structs.
@@ -88,6 +89,14 @@ pub mod AudioClipGenerated {
     #[must_use]
     pub const fn adpcm_clip() -> AdpcmClip {
         pcm_clip().with_adpcm::<ADPCM_DATA_LEN>()
+    }
+
+    /// `const` function that ADPCM-encodes a provided PCM clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
+    #[must_use]
+    pub const fn adpcm_clip_from(pcm_clip: PcmClip) -> AdpcmClip {
+        pcm_clip.with_adpcm::<ADPCM_DATA_LEN>()
     }
 }
 "#;

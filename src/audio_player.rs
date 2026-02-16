@@ -712,6 +712,81 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
     pub const fn as_adpcm_clip(&self) -> &AdpcmClip<SAMPLE_RATE_HZ> {
         self
     }
+
+    /// Returns this ADPCM clip decoded to PCM samples.
+    ///
+    /// `SAMPLE_COUNT` must match the decoded sample count implied by this
+    /// clip's block structure.
+    #[must_use]
+    pub const fn with_pcm<const SAMPLE_COUNT: usize>(
+        &self,
+    ) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
+        let block_align = self.block_align as usize;
+        assert!(block_align >= 5, "block_align must be >= 5");
+        assert!(
+            DATA_LEN % block_align == 0,
+            "adpcm data length must be block aligned"
+        );
+
+        let samples_per_block = self.samples_per_block as usize;
+        assert!(samples_per_block > 0, "samples_per_block must be > 0");
+        let expected_sample_count = (DATA_LEN / block_align) * samples_per_block;
+        assert!(
+            SAMPLE_COUNT == expected_sample_count,
+            "sample count must match decoded ADPCM length"
+        );
+
+        let mut samples = [0_i16; SAMPLE_COUNT];
+        if SAMPLE_COUNT == 0 {
+            return PcmClip::new(samples);
+        }
+
+        let mut sample_index = 0usize;
+        let mut block_start = 0usize;
+        while block_start < DATA_LEN {
+            let mut predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
+            let mut step_index_i32 = self.data[block_start + 2] as i32;
+            assert!(step_index_i32 >= 0, "ADPCM step_index must be >= 0");
+            assert!(step_index_i32 <= 88, "ADPCM step_index must be <= 88");
+
+            samples[sample_index] = predictor_i32 as i16;
+            sample_index += 1;
+            let mut decoded_in_block = 1usize;
+
+            let mut adpcm_byte_offset = block_start + 4;
+            let adpcm_block_end = block_start + block_align;
+            while adpcm_byte_offset < adpcm_block_end {
+                let adpcm_byte = self.data[adpcm_byte_offset];
+                let adpcm_nibble_low = adpcm_byte & 0x0F;
+                let adpcm_nibble_high = adpcm_byte >> 4;
+
+                if decoded_in_block < samples_per_block {
+                    samples[sample_index] = decode_adpcm_nibble_const(
+                        adpcm_nibble_low,
+                        &mut predictor_i32,
+                        &mut step_index_i32,
+                    );
+                    sample_index += 1;
+                    decoded_in_block += 1;
+                }
+                if decoded_in_block < samples_per_block {
+                    samples[sample_index] = decode_adpcm_nibble_const(
+                        adpcm_nibble_high,
+                        &mut predictor_i32,
+                        &mut step_index_i32,
+                    );
+                    sample_index += 1;
+                    decoded_in_block += 1;
+                }
+
+                adpcm_byte_offset += 1;
+            }
+
+            block_start += block_align;
+        }
+
+        PcmClip::new(samples)
+    }
 }
 
 /// Parsed ADPCM WAV metadata used by [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip).
@@ -890,6 +965,13 @@ const fn read_u16_le_const(bytes: &[u8], byte_offset: usize) -> u16 {
         panic!("read_u16_le_const out of bounds");
     }
     u16::from_le_bytes([bytes[byte_offset], bytes[byte_offset + 1]])
+}
+
+const fn read_i16_le_const(bytes: &[u8], byte_offset: usize) -> i16 {
+    if byte_offset > bytes.len().saturating_sub(2) {
+        panic!("read_i16_le_const out of bounds");
+    }
+    i16::from_le_bytes([bytes[byte_offset], bytes[byte_offset + 1]])
 }
 
 const fn read_u32_le_const(bytes: &[u8], byte_offset: usize) -> u32 {
@@ -1716,6 +1798,14 @@ fn read_i16_le(bytes: &[u8], byte_offset: usize) -> crate::Result<i16> {
 
 #[cfg(target_os = "none")]
 fn decode_adpcm_nibble(adpcm_nibble: u8, predictor_i32: &mut i32, step_index_i32: &mut i32) -> i16 {
+    decode_adpcm_nibble_const(adpcm_nibble, predictor_i32, step_index_i32)
+}
+
+const fn decode_adpcm_nibble_const(
+    adpcm_nibble: u8,
+    predictor_i32: &mut i32,
+    step_index_i32: &mut i32,
+) -> i16 {
     let step = ADPCM_STEP_TABLE[*step_index_i32 as usize];
     let mut delta = step >> 3;
 
@@ -1735,9 +1825,17 @@ fn decode_adpcm_nibble(adpcm_nibble: u8, predictor_i32: &mut i32, step_index_i32
         *predictor_i32 += delta;
     }
 
-    *predictor_i32 = (*predictor_i32).clamp(i16::MIN as i32, i16::MAX as i32);
+    if *predictor_i32 < i16::MIN as i32 {
+        *predictor_i32 = i16::MIN as i32;
+    } else if *predictor_i32 > i16::MAX as i32 {
+        *predictor_i32 = i16::MAX as i32;
+    }
     *step_index_i32 += ADPCM_INDEX_TABLE[adpcm_nibble as usize];
-    *step_index_i32 = (*step_index_i32).clamp(0, 88);
+    if *step_index_i32 < 0 {
+        *step_index_i32 = 0;
+    } else if *step_index_i32 > 88 {
+        *step_index_i32 = 88;
+    }
 
     *predictor_i32 as i16
 }
@@ -1861,6 +1959,8 @@ pub enum AudioFormat {
 /// - `ADPCM_DATA_LEN` - ADPCM byte length for encoding this clip
 /// - `AdpcmClip` - concrete ADPCM clip type for this namespace
 /// - `adpcm_clip()` - `const` function that returns the generated clip encoded as ADPCM
+/// - `adpcm_clip_from(...)` - `const` function that ADPCM-encodes a provided `PcmClip`
+// TODO00 Review and refine generated docs for `AdpcmClip` and `adpcm_clip_from(...)`.
 ///
 /// **Mental model (lifecycle):**
 ///
@@ -2109,6 +2209,12 @@ macro_rules! __audio_clip_impl {
                 pub const fn adpcm_clip() -> AdpcmClip {
                     pcm_clip().with_adpcm::<ADPCM_DATA_LEN>()
                 }
+
+                #[doc = "Const ADPCM constructor generated by [`pcm_clip!`](macro@crate::audio_player::pcm_clip) for a provided PCM clip."]
+                #[must_use]
+                pub const fn adpcm_clip_from(pcm_clip: PcmClip) -> AdpcmClip {
+                    pcm_clip.with_adpcm::<ADPCM_DATA_LEN>()
+                }
             }
         }
     };
@@ -2141,7 +2247,9 @@ macro_rules! __audio_clip_impl {
 /// - `<Name>::SAMPLE_COUNT`
 /// - `<Name>::DATA_LEN`
 /// - `<Name>::AdpcmClip`
+/// - `<Name>::PcmClip`
 /// - `<Name>::adpcm_clip()`
+/// - `<Name>::pcm_clip()`
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
 pub use crate::adpcm_clip;
@@ -2175,6 +2283,7 @@ macro_rules! adpcm_clip {
                 pub const DATA_LEN: usize = PARSED_WAV.data_chunk_len;
 
                 pub type AdpcmClip = $crate::audio_player::AdpcmClipBuf<SAMPLE_RATE_HZ, DATA_LEN>;
+                pub type PcmClip = $crate::audio_player::PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>;
 
                 #[must_use]
                 pub const fn adpcm_clip() -> AdpcmClip {
@@ -2198,6 +2307,11 @@ macro_rules! adpcm_clip {
                         parsed_wav.samples_per_block as u16,
                         adpcm_data,
                     )
+                }
+
+                #[must_use]
+                pub const fn pcm_clip() -> PcmClip {
+                    adpcm_clip().with_pcm::<SAMPLE_COUNT>()
                 }
             }
         }

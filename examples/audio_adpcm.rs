@@ -67,10 +67,18 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     audio_player8.play([&NASA_22K_ADPCM, &GAP_100MS], AtEnd::Stop);
     Timer::after(Duration::from_secs(4)).await;
 
-    static NASA_22K_ADPCM_CONVERTED: Nasa22kPcm::AdpcmClip = Nasa22kPcm::pcm_clip()
-        .with_gain(Gain::percent(100))
-        .with_adpcm::<{ Nasa22kPcm::ADPCM_DATA_LEN }>();
+    static NASA_22K_ADPCM_CONVERTED: Nasa22kPcm::AdpcmClip =
+        Nasa22kPcm::adpcm_clip_from(Nasa22kPcm::pcm_clip().with_gain(Gain::percent(100)));
     audio_player8.play([&NASA_22K_ADPCM_CONVERTED], AtEnd::Stop);
+    Timer::after(Duration::from_secs(4)).await;
+
+    static NASA_22K_PCM_FROM_EXTERNAL_ADPCM: Nasa22kAdpcm::PcmClip = Nasa22kAdpcm::pcm_clip();
+    audio_player8.play([&NASA_22K_PCM_FROM_EXTERNAL_ADPCM], AtEnd::Stop);
+    Timer::after(Duration::from_secs(4)).await;
+
+    // read adpcm, convert to PCM, change volume, save as static adpcm (and play)
+    // read adpcm, change volume in one step, save as static adpcm (and play)
+    // read adpcm, change sample rate in one step, save as static adpcm (and play)
 
     pending().await
 }

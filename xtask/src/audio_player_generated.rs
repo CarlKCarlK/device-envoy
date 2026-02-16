@@ -31,8 +31,8 @@ audio_player! {
 /// here for a complete list of available methods, associated constants, and
 /// generated type aliases.
 ///
-/// The macro also generates [`AudioPlayerGeneratedAudioClip`], a type alias for
-/// [`AudioClip`] at
+/// The macro also generates [`AudioPlayerGeneratedPcmClip`], a type alias for
+/// [`PcmClip`] at
 /// [`AudioPlayerGenerated::SAMPLE_RATE_HZ`].
 ///
 /// Auto-generated.
@@ -43,12 +43,12 @@ pub struct AudioPlayerGenerated;
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
-pub type AudioPlayerGeneratedAudioClip = AudioClip<VOICE_22050_HZ>;
+pub type AudioPlayerGeneratedPcmClip = PcmClip<VOICE_22050_HZ>;
 
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, AudioClip, AudioClipBuf, Volume, VOICE_22050_HZ};
+use crate::audio_player::{AtEnd, PcmClip, PcmClipBuf, Volume, VOICE_22050_HZ};
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
@@ -71,8 +71,8 @@ impl AudioPlayerGenerated {
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     #[must_use]
     pub const fn silence<const SAMPLE_COUNT: usize>(
-    ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
-        AudioClipBuf::silence()
+    ) -> PcmClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
+        PcmClipBuf::silence()
     }
 
     /// Creates a sine-wave clip at this player's sample rate.
@@ -81,8 +81,8 @@ impl AudioPlayerGenerated {
     #[must_use]
     pub const fn tone<const SAMPLE_COUNT: usize>(
         frequency_hz: u32,
-    ) -> AudioClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
-        AudioClipBuf::tone(frequency_hz)
+    ) -> PcmClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
+        PcmClipBuf::tone(frequency_hz)
     }
 
     /// Creates and spawns the generated audio player instance.
@@ -106,7 +106,7 @@ impl AudioPlayerGenerated {
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static AudioClip<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
+        audio_clips: [&'static PcmClip<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         let _ = (audio_clips, at_end);

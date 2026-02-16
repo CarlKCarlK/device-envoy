@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use super::{AudioClip, AudioClipBuf, Gain, VOICE_22050_HZ};
+use super::{Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ};
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const TONE_SAMPLE_COUNT: usize = 32;
 const TONE_FREQUENCY_HZ: u32 = 440;
-type AudioClipTone = AudioClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
+type AudioClipTone = PcmClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
 
 #[test]
 fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
@@ -75,8 +75,8 @@ fn with_resampled_same_rate_same_count_is_identity() {
 
 #[test]
 fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<(), Box<dyn Error>> {
-    type Tone22k = AudioClipBuf<VOICE_22050_HZ, 32>;
-    type Tone16k = AudioClipBuf<16_000, 23>;
+    type Tone22k = PcmClipBuf<VOICE_22050_HZ, 32>;
+    type Tone16k = PcmClipBuf<16_000, 23>;
 
     let tone16k_audio_clip: Tone16k = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
 
@@ -90,8 +90,8 @@ fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<()
 #[test]
 #[should_panic(expected = "destination sample count must preserve duration")]
 fn with_resampled_panics_on_non_duration_preserving_count() {
-    type Tone22k = AudioClipBuf<VOICE_22050_HZ, 32>;
-    let _: AudioClipBuf<VOICE_22050_HZ, 16> = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
+    type Tone22k = PcmClipBuf<VOICE_22050_HZ, 32>;
+    let _: PcmClipBuf<VOICE_22050_HZ, 16> = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
 }
 
 #[test]
@@ -102,7 +102,7 @@ fn resampled_sample_count_is_duration_preserving() {
 
 fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     filename: &str,
-    audio_clip: &AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
+    audio_clip: &PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
 ) -> Result<(), Box<dyn Error>> {
     let expected_path = audio_with_gain_path(filename);
     let actual_bytes = clip_to_s16le_bytes(audio_clip);
@@ -132,7 +132,7 @@ fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COU
 }
 
 fn clip_to_s16le_bytes<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
-    audio_clip: &AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
+    audio_clip: &PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
 ) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(SAMPLE_COUNT * 2);
     for sample in audio_clip.samples() {

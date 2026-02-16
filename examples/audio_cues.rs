@@ -16,7 +16,9 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player, samples_ms_type},
+    audio_player::{
+        AtEnd, Gain, VOICE_22050_HZ, Volume, pcm_clip, audio_player, samples_ms_type,
+    },
     button::{Button, PressedTo},
 };
 use embassy_executor::Spawner;
@@ -38,7 +40,7 @@ audio_player! {
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Nasa {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/nasa_22k.s16",
@@ -52,7 +54,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
+    static NASA: Nasa::PcmClip = Nasa::pcm_clip().with_gain(Gain::percent(25));
     static GAP: samples_ms_type! { AudioPlayer10, 80 } = AudioPlayer10::silence();
 
     let p = embassy_rp::init(Default::default());

@@ -1051,14 +1051,14 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const SAMPLE_COUNT: usize",
                 "pub const fn resampled_sample_count(",
-                "pub type AudioClip = AudioClipBuf<",
-                "pub const fn audio_clip() -> AudioClip",
+                "pub type PcmClip = PcmClipBuf<",
+                "pub const fn pcm_clip() -> PcmClip",
             ],
         },
         GeneratedDocStubExpectation {
             relative_path: "src/audio_player/audio_player_generated.rs",
             required_fragments: &[
-                "pub type AudioPlayerGeneratedAudioClip = AudioClip<VOICE_22050_HZ>;",
+                "pub type AudioPlayerGeneratedPcmClip = PcmClip<VOICE_22050_HZ>;",
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const INITIAL_VOLUME: Volume",
                 "pub const MAX_VOLUME: Volume",

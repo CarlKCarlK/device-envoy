@@ -15,7 +15,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player};
+use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, pcm_clip, audio_player};
 use device_envoy::button::{Button, PressedTo};
 use device_envoy::samples_ms_type;
 use embassy_executor::Spawner;
@@ -34,7 +34,7 @@ audio_player! {
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Nasa {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/nasa_22k.s16",
@@ -48,7 +48,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
+    static NASA: Nasa::PcmClip = Nasa::pcm_clip().with_gain(Gain::percent(25));
     static TONE_A4: samples_ms_type! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
@@ -63,8 +63,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
-        Nasa::AudioClip::SAMPLE_COUNT,
-        Nasa::AudioClip::SAMPLE_COUNT * 2
+        Nasa::PcmClip::SAMPLE_COUNT,
+        Nasa::PcmClip::SAMPLE_COUNT * 2
     );
     info!("Button on GP13 starts playback");
 

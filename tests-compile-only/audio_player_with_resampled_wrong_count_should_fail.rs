@@ -7,11 +7,11 @@
 #![no_std]
 #![no_main]
 
-use device_envoy::audio_player::AudioClipBuf;
+use device_envoy::audio_player::PcmClipBuf;
 use embassy_executor::Spawner;
 
-static SOURCE_CLIP: AudioClipBuf<4, 4> = AudioClipBuf::new([100, 200, 300, 400]);
-static BAD_RESAMPLED_CLIP: AudioClipBuf<8, 7> = SOURCE_CLIP.with_resampled();
+static SOURCE_CLIP: PcmClipBuf<4, 4> = PcmClipBuf::new([100, 200, 300, 400]);
+static BAD_RESAMPLED_CLIP: PcmClipBuf<8, 7> = SOURCE_CLIP.with_resampled();
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {

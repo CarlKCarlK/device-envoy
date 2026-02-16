@@ -14,7 +14,7 @@ use core::convert::Infallible;
 use core::future::pending;
 
 use device_envoy::audio_player::{
-    AtEnd, AudioPlaybackClip, VOICE_22050_HZ, Volume, adpcm_clip, audio_player,
+    AtEnd, AudioClip, VOICE_22050_HZ, Volume, adpcm_clip, audio_player,
 };
 use device_envoy::{Result, samples_ms_type};
 use embassy_executor::Spawner;
@@ -48,15 +48,15 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static NASA_22K_ADPCM: Nasa22kAdpcm::AdpcmClip = Nasa22kAdpcm::adpcm_clip();
-    static GAP_100MS: samples_ms_type! { AudioPlayer8, 100 } =
-        AudioPlayer8::silence();
+    // todo00 shouldn't silence and tone be Adpcm Clips.
+    static GAP_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
 
     let p = embassy_rp::init(Default::default());
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
     audio_player8.play_mixed(
         [
-            AudioPlaybackClip::adpcm(&NASA_22K_ADPCM),
-            AudioPlaybackClip::pcm(&GAP_100MS),
+            AudioClip::adpcm(&NASA_22K_ADPCM),
+            AudioClip::pcm(&GAP_100MS),
         ],
         AtEnd::Stop,
     );

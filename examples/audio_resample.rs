@@ -15,7 +15,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::Result;
 use device_envoy::audio_player::{
-    AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_clip, audio_player,
+    AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip, audio_player,
     resampled_type,
 };
 use device_envoy::button::{Button, PressedTo};
@@ -32,35 +32,35 @@ audio_player! {
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Nasa {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/nasa_22k.s16",
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit0 {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/0_22050.s16",
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit1 {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/1_22050.s16",
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit2 {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/2_22050.s16",
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit3 {
         sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/3_22050.s16",
@@ -74,17 +74,17 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static DIGITS: [&AudioResamplePlayerAudioClip; 4] = [
-        &Digit0::audio_clip()
+    static DIGITS: [&AudioResamplePlayerPcmClip; 4] = [
+        &Digit0::pcm_clip()
             .with_resampled::<_, { Digit0::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit1::audio_clip()
+        &Digit1::pcm_clip()
             .with_resampled::<_, { Digit1::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit2::audio_clip()
+        &Digit2::pcm_clip()
             .with_resampled::<_, { Digit2::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit3::audio_clip()
+        &Digit3::pcm_clip()
             .with_resampled::<_, { Digit3::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
     ];
-    static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::audio_clip()
+    static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::pcm_clip()
         .with_resampled()
         .with_gain(Gain::percent(25));
 
@@ -100,13 +100,16 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!(
         "NASA resampled clip: {} Hz, {} samples",
-        AudioResamplePlayerAudioClip::SAMPLE_RATE_HZ,
+        AudioResamplePlayerPcmClip::SAMPLE_RATE_HZ,
         NASA_8K.sample_count()
     );
     info!("Press GP13 button to play countdown 3,2,1,0 then NASA (8 kHz)");
 
     loop {
         button.wait_for_press().await;
-        audio_resample_player.play([DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K], AtEnd::Stop);
+        audio_resample_player.play(
+            [DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K],
+            AtEnd::Stop,
+        );
     }
 }

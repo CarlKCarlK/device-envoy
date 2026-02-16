@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-//! Minimal ADPCM playback example using the `adpcm_player` module.
+//! Minimal ADPCM playback example using the unified `audio_player` module.
 //!
 //! Wiring (MAX98357A):
 //! - Data pin (`DIN`) -> GP8
@@ -13,12 +13,13 @@
 use core::convert::Infallible;
 use core::future::pending;
 
-use device_envoy::adpcm_player::{AtEnd, Volume, adpcm_clip, adpcm_player};
+use device_envoy::adpcm_player::adpcm_clip;
+use device_envoy::audio_player::{AtEnd, AudioPlaybackClip, Volume, audio_player};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
-adpcm_player! {
-    AdpcmPlayer8 {
+audio_player! {
+    AudioPlayer8 {
         data_pin: PIN_8,
         bit_clock_pin: PIN_9,
         word_select_pin: PIN_10,
@@ -46,10 +47,17 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> device_envoy::Result<Infallible> {
     static NASA_22K_ADPCM: Nasa22kAdpcm::AdpcmClip = Nasa22kAdpcm::adpcm_clip();
+    static GAP_100MS: device_envoy::samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
 
     let p = embassy_rp::init(Default::default());
-    let adpcm_player8 = AdpcmPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
-    adpcm_player8.play([&NASA_22K_ADPCM], AtEnd::Stop);
+    let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
+    audio_player8.play_mixed(
+        [
+            AudioPlaybackClip::adpcm(&NASA_22K_ADPCM),
+            AudioPlaybackClip::pcm(&GAP_100MS),
+        ],
+        AtEnd::Stop,
+    );
 
     pending().await
 }

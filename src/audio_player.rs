@@ -306,6 +306,8 @@ pub mod audio_player_generated;
 #[cfg(all(test, feature = "host"))]
 mod host_tests;
 
+pub use crate::adpcm_player::{AdpcmClip, AdpcmClipBuf};
+
 #[cfg(target_os = "none")]
 use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicI32, Ordering};
@@ -638,6 +640,33 @@ pub enum AtEnd {
     Stop,
 }
 
+/// A static clip source accepted by [`AudioPlayer::play_mixed`].
+///
+/// This allows one playback sequence to combine PCM clips (from
+/// [`audio_clip!`](macro@crate::audio_player::audio_clip)) and ADPCM clips
+/// (from [`adpcm_clip!`](macro@crate::adpcm_player::adpcm_clip)) as long as
+/// both decode to the same `SAMPLE_RATE_HZ`.
+pub enum AudioPlaybackClip<const SAMPLE_RATE_HZ: u32> {
+    /// Pre-decoded 16-bit PCM clip.
+    Pcm(&'static AudioClip<SAMPLE_RATE_HZ>),
+    /// ADPCM clip decoded during playback.
+    Adpcm(&'static crate::adpcm_player::AdpcmClip<SAMPLE_RATE_HZ>),
+}
+
+impl<const SAMPLE_RATE_HZ: u32> AudioPlaybackClip<SAMPLE_RATE_HZ> {
+    /// Creates a mixed-source entry from a PCM clip.
+    #[must_use]
+    pub const fn pcm(audio_clip: &'static AudioClip<SAMPLE_RATE_HZ>) -> Self {
+        Self::Pcm(audio_clip)
+    }
+
+    /// Creates a mixed-source entry from an ADPCM clip.
+    #[must_use]
+    pub const fn adpcm(adpcm_clip: &'static crate::adpcm_player::AdpcmClip<SAMPLE_RATE_HZ>) -> Self {
+        Self::Adpcm(adpcm_clip)
+    }
+}
+
 /// Unsized view of static audio clip data. `&AudioClip` values of different lengths can be sequenced together.
 ///
 /// For fixed-size, const-friendly storage, see [`AudioClipBuf`].
@@ -869,6 +898,53 @@ impl<const SAMPLE_RATE_HZ: u32> IntoAudioClip<SAMPLE_RATE_HZ>
     }
 }
 
+/// Supported clip input types for [`AudioPlayer::play_mixed_iter`].
+#[doc(hidden)]
+pub trait IntoAudioPlaybackClip<const SAMPLE_RATE_HZ: u32> {
+    /// Converts this input into a static playback clip entry.
+    fn into_audio_playback_clip(self) -> AudioPlaybackClip<SAMPLE_RATE_HZ>;
+}
+
+impl<const SAMPLE_RATE_HZ: u32> IntoAudioPlaybackClip<SAMPLE_RATE_HZ>
+    for AudioPlaybackClip<SAMPLE_RATE_HZ>
+{
+    fn into_audio_playback_clip(self) -> AudioPlaybackClip<SAMPLE_RATE_HZ> {
+        self
+    }
+}
+
+impl<const SAMPLE_RATE_HZ: u32> IntoAudioPlaybackClip<SAMPLE_RATE_HZ>
+    for &'static AudioClip<SAMPLE_RATE_HZ>
+{
+    fn into_audio_playback_clip(self) -> AudioPlaybackClip<SAMPLE_RATE_HZ> {
+        AudioPlaybackClip::Pcm(self)
+    }
+}
+
+impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> IntoAudioPlaybackClip<SAMPLE_RATE_HZ>
+    for &'static AudioClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>
+{
+    fn into_audio_playback_clip(self) -> AudioPlaybackClip<SAMPLE_RATE_HZ> {
+        AudioPlaybackClip::Pcm(self)
+    }
+}
+
+impl<const SAMPLE_RATE_HZ: u32> IntoAudioPlaybackClip<SAMPLE_RATE_HZ>
+    for &'static crate::adpcm_player::AdpcmClip<SAMPLE_RATE_HZ>
+{
+    fn into_audio_playback_clip(self) -> AudioPlaybackClip<SAMPLE_RATE_HZ> {
+        AudioPlaybackClip::Adpcm(self)
+    }
+}
+
+impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> IntoAudioPlaybackClip<SAMPLE_RATE_HZ>
+    for &'static crate::adpcm_player::AdpcmClipBuf<SAMPLE_RATE_HZ, DATA_LEN>
+{
+    fn into_audio_playback_clip(self) -> AudioPlaybackClip<SAMPLE_RATE_HZ> {
+        AudioPlaybackClip::Adpcm(self)
+    }
+}
+
 impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> IntoAudioClip<SAMPLE_RATE_HZ>
     for &'static AudioClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>
 {
@@ -879,7 +955,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> IntoAudioClip<SAMPLE_
 
 enum AudioCommand<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
     Play {
-        audio_clips: Vec<&'static AudioClip<SAMPLE_RATE_HZ>, MAX_CLIPS>,
+        audio_clips: Vec<AudioPlaybackClip<SAMPLE_RATE_HZ>, MAX_CLIPS>,
         at_end: AtEnd,
     },
     Stop,
@@ -1019,11 +1095,36 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
         I: IntoIterator,
         I::Item: IntoAudioClip<SAMPLE_RATE_HZ>,
     {
+        self.play_mixed_iter(audio_clips.into_iter().map(|audio_clip| {
+            AudioPlaybackClip::Pcm(audio_clip.into_audio_clip())
+        }), at_end);
+    }
+
+    /// Starts playback from one or more mixed-source static clips.
+    ///
+    /// This supports sequences that combine PCM and ADPCM sources at the same
+    /// sample rate.
+    pub fn play_mixed<const CLIP_COUNT: usize>(
+        &self,
+        audio_clips: [AudioPlaybackClip<SAMPLE_RATE_HZ>; CLIP_COUNT],
+        at_end: AtEnd,
+    ) {
+        self.play_mixed_iter(audio_clips, at_end);
+    }
+
+    /// Starts playback from a generic iterator of mixed-source clip-like values.
+    ///
+    /// This allows runtime-selected sequencing across PCM and ADPCM clips.
+    pub fn play_mixed_iter<I>(&self, audio_clips: I, at_end: AtEnd)
+    where
+        I: IntoIterator,
+        I::Item: IntoAudioPlaybackClip<SAMPLE_RATE_HZ>,
+    {
         assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
-        let mut audio_clip_sequence: Vec<&'static AudioClip<SAMPLE_RATE_HZ>, MAX_CLIPS> =
+        let mut audio_clip_sequence: Vec<AudioPlaybackClip<SAMPLE_RATE_HZ>, MAX_CLIPS> =
             Vec::new();
         for audio_clip in audio_clips {
-            let audio_clip = audio_clip.into_audio_clip();
+            let audio_clip = audio_clip.into_audio_playback_clip();
             assert!(
                 audio_clip_sequence.push(audio_clip).is_ok(),
                 "play sequence fits within max_clips"
@@ -1172,22 +1273,45 @@ async fn play_clip_sequence_once<
     const SAMPLE_RATE_HZ: u32,
 >(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_clips: &[&'static AudioClip<SAMPLE_RATE_HZ>],
+    audio_clips: &[AudioPlaybackClip<SAMPLE_RATE_HZ>],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
 ) -> Option<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>> {
     for audio_clip in audio_clips {
-        if let ControlFlow::Break(next_audio_command) =
-            play_full_clip_once(pio_i2s_out, audio_clip, sample_buffer, audio_player_static).await
-        {
-            return Some(next_audio_command);
+        match audio_clip {
+            AudioPlaybackClip::Pcm(audio_clip) => {
+                if let ControlFlow::Break(next_audio_command) =
+                    play_full_pcm_clip_once(
+                        pio_i2s_out,
+                        audio_clip,
+                        sample_buffer,
+                        audio_player_static,
+                    )
+                    .await
+                {
+                    return Some(next_audio_command);
+                }
+            }
+            AudioPlaybackClip::Adpcm(adpcm_clip) => {
+                if let ControlFlow::Break(next_audio_command) =
+                    play_full_adpcm_clip_once(
+                        pio_i2s_out,
+                        adpcm_clip,
+                        sample_buffer,
+                        audio_player_static,
+                    )
+                    .await
+                {
+                    return Some(next_audio_command);
+                }
+            }
         }
     }
     None
 }
 
 #[cfg(target_os = "none")]
-async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+async fn play_full_pcm_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
     audio_clip: &AudioClip<SAMPLE_RATE_HZ>,
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
@@ -1212,6 +1336,135 @@ async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE
     }
 
     ControlFlow::Continue(())
+}
+
+#[cfg(target_os = "none")]
+async fn play_full_adpcm_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+    pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
+    adpcm_clip: &crate::adpcm_player::AdpcmClip<SAMPLE_RATE_HZ>,
+    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
+    let mut sample_buffer_len = 0usize;
+
+    for adpcm_block in adpcm_clip.data().chunks_exact(adpcm_clip.block_align()) {
+        if adpcm_block.len() < 4 {
+            return ControlFlow::Continue(());
+        }
+
+        let runtime_volume = audio_player_static.effective_runtime_volume();
+        let mut predictor_i32 = match read_i16_le(adpcm_block, 0) {
+            Ok(value) => value as i32,
+            Err(_) => return ControlFlow::Continue(()),
+        };
+        let mut step_index_i32 = adpcm_block[2] as i32;
+        if !(0..=88).contains(&step_index_i32) {
+            return ControlFlow::Continue(());
+        }
+
+        sample_buffer[sample_buffer_len] = stereo_sample(scale(predictor_i32 as i16, runtime_volume));
+        sample_buffer_len += 1;
+        if sample_buffer_len == SAMPLE_BUFFER_LEN {
+            pio_i2s_out.write(sample_buffer).await;
+            sample_buffer_len = 0;
+            if let Some(next_audio_command) = audio_player_static.command_signal.try_take() {
+                return ControlFlow::Break(next_audio_command);
+            }
+        }
+
+        let mut samples_decoded_in_block = 1usize;
+        let samples_per_block = adpcm_clip.samples_per_block();
+
+        for adpcm_byte in &adpcm_block[4..] {
+            for adpcm_nibble in [adpcm_byte & 0x0F, adpcm_byte >> 4] {
+                if samples_decoded_in_block >= samples_per_block {
+                    break;
+                }
+
+                let decoded_sample_i16 =
+                    decode_adpcm_nibble(adpcm_nibble, &mut predictor_i32, &mut step_index_i32);
+                sample_buffer[sample_buffer_len] =
+                    stereo_sample(scale(decoded_sample_i16, runtime_volume));
+                sample_buffer_len += 1;
+                samples_decoded_in_block += 1;
+
+                if sample_buffer_len == SAMPLE_BUFFER_LEN {
+                    pio_i2s_out.write(sample_buffer).await;
+                    sample_buffer_len = 0;
+                    if let Some(next_audio_command) = audio_player_static.command_signal.try_take() {
+                        return ControlFlow::Break(next_audio_command);
+                    }
+                }
+            }
+        }
+
+        if let Some(next_audio_command) = audio_player_static.command_signal.try_take() {
+            return ControlFlow::Break(next_audio_command);
+        }
+    }
+
+    if sample_buffer_len != 0 {
+        sample_buffer[sample_buffer_len..].fill(stereo_sample(0));
+        pio_i2s_out.write(sample_buffer).await;
+        if let Some(next_audio_command) = audio_player_static.command_signal.try_take() {
+            return ControlFlow::Break(next_audio_command);
+        }
+    }
+
+    ControlFlow::Continue(())
+}
+
+#[cfg(target_os = "none")]
+fn read_i16_le(bytes: &[u8], byte_offset: usize) -> crate::Result<i16> {
+    let Some(end_offset) = byte_offset.checked_add(2) else {
+        return Err(crate::Error::FormatError);
+    };
+    if end_offset > bytes.len() {
+        return Err(crate::Error::FormatError);
+    }
+    Ok(i16::from_le_bytes([
+        bytes[byte_offset],
+        bytes[byte_offset + 1],
+    ]))
+}
+
+#[cfg(target_os = "none")]
+fn decode_adpcm_nibble(adpcm_nibble: u8, predictor_i32: &mut i32, step_index_i32: &mut i32) -> i16 {
+    const ADPCM_INDEX_TABLE: [i32; 16] =
+        [-1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8];
+    const ADPCM_STEP_TABLE: [i32; 89] = [
+        7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55,
+        60, 66, 73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337,
+        371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552,
+        1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894,
+        6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350,
+        22385, 24623, 27086, 29794, 32767,
+    ];
+
+    let step = ADPCM_STEP_TABLE[*step_index_i32 as usize];
+    let mut delta = step >> 3;
+
+    if (adpcm_nibble & 0x01) != 0 {
+        delta += step >> 2;
+    }
+    if (adpcm_nibble & 0x02) != 0 {
+        delta += step >> 1;
+    }
+    if (adpcm_nibble & 0x04) != 0 {
+        delta += step;
+    }
+
+    if (adpcm_nibble & 0x08) != 0 {
+        *predictor_i32 -= delta;
+    } else {
+        *predictor_i32 += delta;
+    }
+
+    *predictor_i32 = (*predictor_i32).clamp(i16::MIN as i32, i16::MAX as i32);
+    *step_index_i32 += ADPCM_INDEX_TABLE[adpcm_nibble as usize];
+    *step_index_i32 = (*step_index_i32).clamp(0, 88);
+
+    *predictor_i32 as i16
 }
 
 #[inline]

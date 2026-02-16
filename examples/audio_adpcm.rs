@@ -55,7 +55,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA_22K_ADPCM: Nasa22kAdpcm::AdpcmClip = Nasa22kAdpcm::adpcm_clip();
+    static NASA_ADPCM: Nasa22kAdpcm::AdpcmClip = Nasa22kAdpcm::adpcm_clip();
     // todo00 shouldn't silence and tone be Adpcm Clips.
     // todo00 should samples_ms_type have a pcm in name
     static GAP_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
@@ -64,20 +64,31 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // todo00 should clips know their duration.
     let p = embassy_rp::init(Default::default());
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
-    audio_player8.play([&NASA_22K_ADPCM, &GAP_100MS], AtEnd::Stop);
+
+    // Section 1: Play external ADPCM clip directly.
+    audio_player8.play([&NASA_ADPCM, &GAP_100MS], AtEnd::Stop);
     Timer::after(Duration::from_secs(4)).await;
 
-    static NASA_22K_ADPCM_CONVERTED: Nasa22kPcm::AdpcmClip =
-        Nasa22kPcm::adpcm_clip_from(Nasa22kPcm::pcm_clip().with_gain(Gain::percent(100)));
-    audio_player8.play([&NASA_22K_ADPCM_CONVERTED], AtEnd::Stop);
+    // Section 2: Read external PCM clip, change gain, encode to ADPCM, and play.
+    static NASA_ADPCM256: Nasa22kPcm::Adpcm256Clip =
+        Nasa22kPcm::adpcm256_clip_from(Nasa22kPcm::pcm_clip().with_gain(Gain::percent(100)));
+    audio_player8.play([&NASA_ADPCM256], AtEnd::Stop);
     Timer::after(Duration::from_secs(4)).await;
 
-    static NASA_22K_PCM_FROM_EXTERNAL_ADPCM: Nasa22kAdpcm::PcmClip = Nasa22kAdpcm::pcm_clip();
-    audio_player8.play([&NASA_22K_PCM_FROM_EXTERNAL_ADPCM], AtEnd::Stop);
+    // Section 3: Read external ADPCM clip, decode to PCM, and play.
+    static NASA_PCM: Nasa22kAdpcm::PcmClip = Nasa22kAdpcm::pcm_clip();
+    audio_player8.play([&NASA_PCM], AtEnd::Stop);
     Timer::after(Duration::from_secs(4)).await;
 
-    // read adpcm, convert to PCM, change volume, save as static adpcm (and play)
+    // Section 4: Read external ADPCM clip, decode to PCM, change gain, encode to ADPCM, and play.
+    static NASA_ADPCM_GAIN: Nasa22kAdpcm::AdpcmClip =
+        Nasa22kAdpcm::adpcm_clip_from(Nasa22kAdpcm::pcm_clip().with_gain(Gain::percent(60)));
+    audio_player8.play([&NASA_ADPCM_GAIN], AtEnd::Stop);
+    Timer::after(Duration::from_secs(4)).await;
+
+    // Section 5: TODO00 read ADPCM, change volume in one step, save as static ADPCM, and play.
     // read adpcm, change volume in one step, save as static adpcm (and play)
+    // Section 6: TODO00 read ADPCM, change sample rate in one step, save as static ADPCM, and play.
     // read adpcm, change sample rate in one step, save as static adpcm (and play)
 
     pending().await

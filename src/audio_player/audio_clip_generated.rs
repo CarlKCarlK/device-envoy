@@ -24,8 +24,8 @@ pcm_clip! {
 /// This page serves as the reference for what a generated audio clip namespace
 /// provides. For first-time readers, start with the
 /// [`audio_player`](mod@crate::audio_player) module documentation, then return
-/// here for the generated `PcmClip`/`AdpcmClip` and
-/// `pcm_clip()`/`adpcm_clip()`/`adpcm_clip_from(...)` items.
+/// here for the generated `PcmClip`/`Adpcm256Clip` and
+/// `pcm_clip()`/`adpcm256_clip()`/`adpcm256_clip_from(...)` items.
 ///
 /// The generated items are in a module (not a struct type) because stable Rust
 /// does not support inherent associated types on structs.
@@ -54,10 +54,10 @@ pub mod AudioClipGenerated {
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub const ADPCM_DATA_LEN: usize = adpcm_data_len_for_pcm_samples(SAMPLE_COUNT);
 
-    /// Concrete return type of `adpcm_clip()`.
+    /// Concrete return type of `adpcm256_clip()`.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
-    pub type AdpcmClip = AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN>;
+    pub type Adpcm256Clip = AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN>;
 
     /// Returns the duration-preserving destination sample count for a new sample rate.
     ///
@@ -79,19 +79,20 @@ pub mod AudioClipGenerated {
         PcmClip::silence()
     }
 
-    /// `const` function that returns the generated audio clip encoded as ADPCM.
+    /// `const` function that returns the generated audio clip encoded as ADPCM
+    /// with 256-byte blocks.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
-    pub const fn adpcm_clip() -> AdpcmClip {
+    pub const fn adpcm256_clip() -> Adpcm256Clip {
         pcm_clip().with_adpcm::<ADPCM_DATA_LEN>()
     }
 
-    /// `const` function that ADPCM-encodes a provided PCM clip.
+    /// `const` function that ADPCM-encodes a provided PCM clip with 256-byte blocks.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
-    pub const fn adpcm_clip_from(pcm_clip: PcmClip) -> AdpcmClip {
+    pub const fn adpcm256_clip_from(pcm_clip: PcmClip) -> Adpcm256Clip {
         pcm_clip.with_adpcm::<ADPCM_DATA_LEN>()
     }
 }

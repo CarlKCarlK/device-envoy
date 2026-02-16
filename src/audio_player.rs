@@ -2012,7 +2012,6 @@ macro_rules! __audio_clip_impl {
 /// ```text
 /// adpcm_clip! {
 ///     [<visibility>] <Name> {
-///         sample_rate_hz: <sample_rate_expr>,
 ///         file: <path_expr>,
 ///     }
 /// }
@@ -2025,7 +2024,6 @@ macro_rules! __audio_clip_impl {
 ///
 /// **Required fields:**
 ///
-/// - `sample_rate_hz` - Expected WAV sample rate in hertz.
 /// - `file` - Path to an ADPCM WAV file.
 ///
 /// **Generated items:**
@@ -2048,14 +2046,21 @@ macro_rules! adpcm_clip {
             file: $file:expr $(,)?
         }
     ) => {
+        compile_error!("adpcm_clip! infers sample_rate_hz from the WAV file; remove the sample_rate_hz field");
+    };
+
+    (
+        $vis:vis $name:ident {
+            file: $file:expr $(,)?
+        }
+    ) => {
         $crate::audio_player::paste::paste! {
             #[allow(non_snake_case)]
             #[allow(missing_docs)]
             $vis mod $name {
-                pub const SAMPLE_RATE_HZ: u32 = $sample_rate_hz;
-
                 const PARSED_WAV: $crate::audio_player::ParsedAdpcmWavHeader =
                     $crate::audio_player::parse_adpcm_wav_header(include_bytes!($file));
+                pub const SAMPLE_RATE_HZ: u32 = PARSED_WAV.sample_rate_hz;
 
                 pub const SAMPLE_COUNT: usize = PARSED_WAV.sample_count;
                 pub const DATA_LEN: usize = PARSED_WAV.data_chunk_len;
@@ -2066,10 +2071,6 @@ macro_rules! adpcm_clip {
                 pub const fn adpcm_clip() -> AdpcmClip {
                     let wav_bytes = include_bytes!($file);
                     let parsed_wav = $crate::audio_player::parse_adpcm_wav_header(wav_bytes);
-                    assert!(
-                        parsed_wav.sample_rate_hz == SAMPLE_RATE_HZ,
-                        "clip sample_rate_hz must match declared sample_rate_hz"
-                    );
                     assert!(parsed_wav.block_align <= u16::MAX as usize, "block_align too large");
                     assert!(
                         parsed_wav.samples_per_block <= u16::MAX as usize,

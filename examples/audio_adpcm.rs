@@ -36,7 +36,6 @@ audio_player! {
 
 adpcm_clip! {
     Nasa22kAdpcm {
-        sample_rate_hz: crate::VOICE_22050_HZ,
         file: "data/audio/nasa_22k_adpcm.wav",
     }
 }

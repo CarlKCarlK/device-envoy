@@ -12,11 +12,13 @@
 #![no_main]
 
 use core::convert::Infallible;
+use core::time::Duration;
 
 use defmt::info;
 use device_envoy::{
     Result,
     audio_player::{AtEnd, VOICE_22050_HZ, Volume, audio_player, samples_ms_type},
+    silence,
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -41,7 +43,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static NOTE_E4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(330);
     static NOTE_D4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(294);
     static NOTE_C4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(262);
-    static REST_80MS: samples_ms_type! { SongPlayer, 80 } = SongPlayer::silence();
+    const REST_80MS: &SongPlayerPlayable =
+        &silence!(SongPlayer::SAMPLE_RATE_HZ, Duration::from_millis(80));
 
     let p = embassy_rp::init(Default::default());
     let song_player = SongPlayer::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
@@ -54,8 +57,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Mary had a little lamb (opening phrase): E D C D E E E
     song_player.play(
         [
-            &NOTE_E4, &REST_80MS, &NOTE_D4, &REST_80MS, &NOTE_C4, &REST_80MS, &NOTE_D4, &REST_80MS,
-            &NOTE_E4, &REST_80MS, &NOTE_E4, &REST_80MS, &NOTE_E4,
+            &NOTE_E4, REST_80MS, &NOTE_D4, REST_80MS, &NOTE_C4, REST_80MS, &NOTE_D4, REST_80MS,
+            &NOTE_E4, REST_80MS, &NOTE_E4, REST_80MS, &NOTE_E4,
         ],
         AtEnd::Stop,
     );

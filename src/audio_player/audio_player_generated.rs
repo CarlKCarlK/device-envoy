@@ -53,6 +53,8 @@ pub type AudioPlayerGeneratedPlayable = dyn AudioClipSource<VOICE_22050_HZ>;
 use crate::Result;
 #[cfg(doc)]
 use crate::audio_player::{AtEnd, AudioClipSource, PcmClip, PcmClipBuf, Volume, VOICE_22050_HZ};
+#[cfg(doc)]
+use core::time::Duration;
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
@@ -63,20 +65,11 @@ impl AudioPlayerGenerated {
     /// Runtime volume ceiling for this generated player type.
     pub const MAX_VOLUME: Volume = Volume::MAX;
 
-    /// Returns how many samples are needed for a duration in milliseconds
+    /// Returns how many samples are needed for a duration
     /// at this player's sample rate.
     #[must_use]
-    pub const fn samples_ms(duration_ms: u32) -> usize {
-        crate::audio_player::samples_for_duration_ms(duration_ms, Self::SAMPLE_RATE_HZ)
-    }
-
-    /// Creates a silent clip at this player's sample rate.
-    ///
-    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
-    #[must_use]
-    pub const fn silence<const SAMPLE_COUNT: usize>(
-    ) -> PcmClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
-        PcmClipBuf::silence()
+    pub const fn samples(duration: Duration) -> usize {
+        crate::audio_player::samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
     }
 
     /// Creates a sine-wave clip at this player's sample rate.

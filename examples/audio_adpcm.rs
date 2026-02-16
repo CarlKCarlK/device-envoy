@@ -12,11 +12,12 @@
 
 use core::convert::Infallible;
 use core::future::pending;
+use core::time::Duration;
 
 use device_envoy::audio_player::{
     AtEnd, Gain, VOICE_22050_HZ, Volume, adpcm_clip, audio_player, pcm_clip,
 };
-use device_envoy::{Result, samples_ms_type};
+use device_envoy::{Result, silence};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -57,7 +58,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const JABBER_ADPCM: &AudioPlayer8Playable = &Jabber22kAdpcm::adpcm_clip();
     // todo00 shouldn't silence and tone be Adpcm Clips.
     // todo00 should samples_ms_type have a pcm in name
-    static GAP_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
+    const GAP_100MS: &AudioPlayer8Playable =
+        &silence!(AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(100));
 
     // todo00 should we add a block_play
     // todo00 should clips know their duration.
@@ -65,7 +67,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Section 1: Play external ADPCM clip directly.
-    audio_player8.play([JABBER_ADPCM, &GAP_100MS], AtEnd::Stop);
+    audio_player8.play([JABBER_ADPCM, GAP_100MS], AtEnd::Stop);
     audio_player8.wait_until_stopped().await;
 
     // Section 2: Read external PCM clip, change gain, encode to ADPCM, and play.

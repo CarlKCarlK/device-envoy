@@ -12,12 +12,14 @@
 #![no_main]
 
 use core::convert::Infallible;
+use core::time::Duration as StdDuration;
 
 use defmt::info;
 use device_envoy::{
     Result,
     audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, pcm_clip, samples_ms_type},
     button::{Button, PressedTo},
+    silence,
 };
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -53,7 +55,8 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NASA: &AudioPlayer10Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
-    static GAP: samples_ms_type! { AudioPlayer10, 80 } = AudioPlayer10::silence();
+    const GAP: &AudioPlayer10Playable =
+        &silence!(AudioPlayer10::SAMPLE_RATE_HZ, StdDuration::from_millis(80));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -65,7 +68,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         info!("Audio cues ready. Press the button to start playback.");
         button.wait_for_press().await;
 
-        audio_player8.play([NASA, &GAP], AtEnd::Loop);
+        audio_player8.play([NASA, GAP], AtEnd::Loop);
         info!("Started looping NASA clip at initial volume (press the button to restart)");
 
         for volume_percent in VOLUME_STEPS_PERCENT {

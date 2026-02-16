@@ -15,6 +15,7 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use core::convert::Infallible;
+use core::time::Duration as StdDuration;
 
 use defmt::info;
 use defmt_rtt as _;
@@ -25,7 +26,7 @@ use device_envoy::flash_array::FlashArray;
 use device_envoy::samples_ms_type;
 use device_envoy::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
-use device_envoy::{Error, Result};
+use device_envoy::{Error, Result, silence};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::Duration;
@@ -90,7 +91,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         AudioPlayer10::tone(784).with_gain(Gain::percent(15));
     static MM_SS_TICK_TONE: samples_ms_type! { AudioPlayer10, 40 } =
         AudioPlayer10::tone(523).with_gain(Gain::percent(12));
-    static SILENCE_40MS: samples_ms_type! { AudioPlayer10, 40 } = AudioPlayer10::silence();
+    const SILENCE_40MS: &AudioPlayer10Playable =
+        &silence!(AudioPlayer10::SAMPLE_RATE_HZ, StdDuration::from_millis(40));
 
     info!("Starting Clock Audio with WiFi");
 
@@ -125,7 +127,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready");
                     audio_player10_ref.play(
-                        [&CAPTIVE_PORTAL_TONE, &SILENCE_40MS, &CAPTIVE_PORTAL_TONE],
+                        [&CAPTIVE_PORTAL_TONE, SILENCE_40MS, &CAPTIVE_PORTAL_TONE],
                         AtEnd::Stop,
                     );
                 }
@@ -141,7 +143,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     audio_player10_ref.play(
                         [
                             &CONNECTION_FAILED_TONE,
-                            &SILENCE_40MS,
+                            SILENCE_40MS,
                             &CONNECTION_FAILED_TONE,
                         ],
                         AtEnd::Stop,
@@ -154,7 +156,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("WiFi connected");
     audio_player8.play(
-        [&WIFI_CONNECTED_TONE, &SILENCE_40MS, &WIFI_CONNECTED_TONE],
+        [&WIFI_CONNECTED_TONE, SILENCE_40MS, &WIFI_CONNECTED_TONE],
         AtEnd::Stop,
     );
 

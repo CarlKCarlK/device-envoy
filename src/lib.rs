@@ -43,8 +43,6 @@ pub mod to_png;
 // Embedded-only in normal builds, but compiled for host unit tests.
 #[cfg(any(target_os = "none", all(test, feature = "host")))]
 pub mod audio_player;
-#[cfg(any(target_os = "none", all(test, feature = "host")))]
-pub mod adpcm_player;
 #[cfg(target_os = "none")]
 pub mod button;
 #[cfg(target_os = "none")]

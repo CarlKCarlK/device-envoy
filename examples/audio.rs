@@ -48,7 +48,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    const NASA: &AudioPlayer8AudioClipSource = &Nasa::pcm_clip().with_gain(Gain::percent(25));
+    const NASA: &AudioPlayer8Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
     static TONE_A4: samples_ms_type! { AudioPlayer8, 500 } =
         AudioPlayer8::tone(440).with_gain(Gain::percent(25));
     static SILENCE_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
@@ -63,8 +63,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
-        Nasa::PcmClip::SAMPLE_COUNT,
-        Nasa::PcmClip::SAMPLE_COUNT * 2
+        Nasa::SAMPLE_COUNT,
+        Nasa::SAMPLE_COUNT * 2
     );
     info!("Button on GP13 starts playback");
 

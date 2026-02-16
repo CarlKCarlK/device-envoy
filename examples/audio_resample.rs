@@ -79,14 +79,14 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // TODO00 can do static array again? (may no longer apply)
-    const DIGITS: [&'static AudioPlayer8KAudioClipSource; 4] = [
+    const DIGITS: [&'static AudioPlayer8KPlayable; 4] = [
         &Digit0::pcm_clip(),
         &Digit1::pcm_clip(),
         &Digit2::pcm_clip(),
         &Digit3::pcm_clip(),
     ];
 
-    static NASA_8K: Nasa::PcmClip = Nasa::pcm_clip().with_gain(Gain::percent(25));
+    const NASA_8K: &AudioPlayer8KPlayable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -101,14 +101,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!(
         "NASA resampled clip: {} Hz, {} samples",
         AudioPlayer8KPcmClip::SAMPLE_RATE_HZ,
-        NASA_8K.sample_count()
+        Nasa::SAMPLE_COUNT
     );
     info!("Press GP13 button to play countdown 3,2,1,0 then NASA (8 kHz)");
 
     loop {
         button.wait_for_press().await;
         audio_player8k.play(
-            [DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K],
+            [DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], NASA_8K],
             AtEnd::Stop,
         );
     }

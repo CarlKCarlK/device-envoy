@@ -29,7 +29,7 @@ audio_player! {
 ///
 /// The macro also generates [`AudioPlayerGeneratedPcmClip`], a type alias for
 /// [`PcmClip`] at [`AudioPlayerGenerated::SAMPLE_RATE_HZ`], and
-/// [`AudioPlayerGeneratedAudioClipSource`], a trait-object alias for clip
+/// [`AudioPlayerGeneratedPlayable`], a trait-object alias for clip
 /// sources at the same sample rate.
 ///
 /// Auto-generated.
@@ -47,7 +47,7 @@ pub type AudioPlayerGeneratedPcmClip = PcmClip<VOICE_22050_HZ>;
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
-pub type AudioPlayerGeneratedAudioClipSource = dyn AudioClipSource<VOICE_22050_HZ>;
+pub type AudioPlayerGeneratedPlayable = dyn AudioClipSource<VOICE_22050_HZ>;
 
 #[cfg(doc)]
 use crate::Result;

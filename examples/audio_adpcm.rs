@@ -54,7 +54,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static JABBER_ADPCM: Jabber22kAdpcm::AdpcmClip = Jabber22kAdpcm::adpcm_clip();
+    const JABBER_ADPCM: &AudioPlayer8Playable = &Jabber22kAdpcm::adpcm_clip();
     // todo00 shouldn't silence and tone be Adpcm Clips.
     // todo00 should samples_ms_type have a pcm in name
     static GAP_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
@@ -65,30 +65,30 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Section 1: Play external ADPCM clip directly.
-    audio_player8.play([&JABBER_ADPCM, &GAP_100MS], AtEnd::Stop);
+    audio_player8.play([JABBER_ADPCM, &GAP_100MS], AtEnd::Stop);
     audio_player8.wait_until_stopped().await;
 
     // Section 2: Read external PCM clip, change gain, encode to ADPCM, and play.
-    static JABBER_ADPCM256: Jabber22kPcm::Adpcm256Clip =
-        Jabber22kPcm::adpcm256_clip_from(Jabber22kPcm::pcm_clip().with_gain(Gain::percent(50)));
-    audio_player8.play([&JABBER_ADPCM256], AtEnd::Stop);
+    const JABBER_ADPCM256: &AudioPlayer8Playable =
+        &Jabber22kPcm::adpcm256_clip_from(Jabber22kPcm::pcm_clip().with_gain(Gain::percent(50)));
+    audio_player8.play([JABBER_ADPCM256], AtEnd::Stop);
     audio_player8.wait_until_stopped().await;
 
     // Section 3: Read external ADPCM clip, decode to PCM, and play.
-    static JABBER_PCM: Jabber22kAdpcm::PcmClip = Jabber22kAdpcm::pcm_clip();
-    audio_player8.play([&JABBER_PCM], AtEnd::Stop);
+    const JABBER_PCM: &AudioPlayer8Playable = &Jabber22kAdpcm::pcm_clip();
+    audio_player8.play([JABBER_PCM], AtEnd::Stop);
     audio_player8.wait_until_stopped().await;
 
     // Section 4: Read external ADPCM clip, decode to PCM, change gain, encode to ADPCM, and play.
-    static JABBER_ADPCM_GAIN: Jabber22kAdpcm::AdpcmClip =
-        Jabber22kAdpcm::adpcm_clip_from(Jabber22kAdpcm::pcm_clip().with_gain(Gain::percent(60)));
-    audio_player8.play([&JABBER_ADPCM_GAIN], AtEnd::Stop);
+    const JABBER_ADPCM_GAIN: &AudioPlayer8Playable =
+        &Jabber22kAdpcm::adpcm_clip_from(Jabber22kAdpcm::pcm_clip().with_gain(Gain::percent(60)));
+    audio_player8.play([JABBER_ADPCM_GAIN], AtEnd::Stop);
     audio_player8.wait_until_stopped().await;
 
     // Section 5: Read ADPCM, change volume in one step, save as static ADPCM, and play.
-    static JABBER_ADPCM_GAIN_STEP: Jabber22kAdpcm::AdpcmClip =
-        Jabber22kAdpcm::with_gain(Gain::percent(35));
-    audio_player8.play([&JABBER_ADPCM_GAIN_STEP], AtEnd::Stop);
+    const JABBER_ADPCM_GAIN_STEP: &AudioPlayer8Playable =
+        &Jabber22kAdpcm::with_gain(Gain::percent(35));
+    audio_player8.play([JABBER_ADPCM_GAIN_STEP], AtEnd::Stop);
     audio_player8.wait_until_stopped().await;
 
     // read adpcm, convert to pcm, change gain and sample rate to 8K,   convert back to adpcm, and play.

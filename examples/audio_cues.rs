@@ -52,7 +52,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA: Nasa::PcmClip = Nasa::pcm_clip().with_gain(Gain::percent(25));
+    const NASA: &AudioPlayer10Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
     static GAP: samples_ms_type! { AudioPlayer10, 80 } = AudioPlayer10::silence();
 
     let p = embassy_rp::init(Default::default());
@@ -65,7 +65,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         info!("Audio cues ready. Press the button to start playback.");
         button.wait_for_press().await;
 
-        audio_player8.play([&NASA, &GAP], AtEnd::Loop);
+        audio_player8.play([NASA, &GAP], AtEnd::Loop);
         info!("Started looping NASA clip at initial volume (press the button to restart)");
 
         for volume_percent in VOLUME_STEPS_PERCENT {

@@ -1051,8 +1051,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const SAMPLE_COUNT: usize",
                 "pub const fn resampled_sample_count(",
-                "pub type PcmClip = PcmClipBuf<",
-                "pub const fn pcm_clip() -> PcmClip",
+                "pub const fn pcm_clip() -> PcmClipBuf<",
             ],
         },
         GeneratedDocStubExpectation {

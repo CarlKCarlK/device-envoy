@@ -46,14 +46,14 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static JABBER_8K_ADPCM: Jabber8kAdpcm::AdpcmClip = Jabber8kAdpcm::adpcm_clip();
+    const JABBER_8K_ADPCM: &AudioPlayer8KPlayable = &Jabber8kAdpcm::adpcm_clip();
 
     let p = embassy_rp::init(Default::default());
 
     let audio_player8k =
         AudioPlayer8K::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
-    audio_player8k.play([&JABBER_8K_ADPCM], AtEnd::Stop);
+    audio_player8k.play([JABBER_8K_ADPCM], AtEnd::Stop);
 
     pending().await
 }

@@ -49,7 +49,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy::Result<Infallible> {
 
     let p = embassy_rp::init(Default::default());
     let adpcm_player8 = AdpcmPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
-    adpcm_player8.play([NASA_22K_ADPCM.as_adpcm_clip()], AtEnd::Stop);
+    adpcm_player8.play([&NASA_22K_ADPCM], AtEnd::Stop);
 
     pending().await
 }

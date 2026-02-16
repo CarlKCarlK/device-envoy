@@ -86,8 +86,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     audio_player8.play([&NASA_ADPCM_GAIN], AtEnd::Stop);
     Timer::after(Duration::from_secs(4)).await;
 
-    // Section 5: TODO00 read ADPCM, change volume in one step, save as static ADPCM, and play.
-    // read adpcm, change volume in one step, save as static adpcm (and play)
+    // Section 5: Read ADPCM, change volume in one step, save as static ADPCM, and play.
+    static NASA_ADPCM_GAIN_STEP: Nasa22kAdpcm::AdpcmClip =
+        Nasa22kAdpcm::with_gain(Gain::percent(35));
+    audio_player8.play([&NASA_ADPCM_GAIN_STEP], AtEnd::Stop);
+    Timer::after(Duration::from_secs(4)).await;
+
     // Section 6: TODO00 read ADPCM, change sample rate in one step, save as static ADPCM, and play.
     // read adpcm, change sample rate in one step, save as static adpcm (and play)
 

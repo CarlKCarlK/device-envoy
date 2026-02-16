@@ -2263,6 +2263,7 @@ macro_rules! __audio_clip_impl {
 /// - `<Name>::adpcm_clip()`
 /// - `<Name>::pcm_clip()`
 /// - `<Name>::adpcm_clip_from(...)`
+/// - `<Name>::with_gain(...)`
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
 pub use crate::adpcm_clip;
@@ -2331,6 +2332,11 @@ macro_rules! adpcm_clip {
                 #[must_use]
                 pub const fn adpcm_clip_from(pcm_clip: PcmClip) -> AdpcmClip {
                     pcm_clip.with_adpcm_block_align::<DATA_LEN>(BLOCK_ALIGN)
+                }
+
+                #[must_use]
+                pub const fn with_gain(gain: $crate::audio_player::Gain) -> AdpcmClip {
+                    adpcm_clip_from(pcm_clip().with_gain(gain))
                 }
             }
         }

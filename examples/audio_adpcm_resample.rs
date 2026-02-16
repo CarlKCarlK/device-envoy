@@ -1,6 +1,5 @@
 #![allow(missing_docs)]
-//! ADPCM resample demo: decode external ADPCM, apply gain, resample to 8 kHz,
-//! re-encode to ADPCM, and play at 8 kHz.
+//! ADPCM demo using external Jabberwocky audio at 8 kHz.
 //!
 //! Wiring (MAX98357A):
 //! - Data pin (`DIN`) -> GP8
@@ -15,14 +14,12 @@ use core::convert::Infallible;
 use core::future::pending;
 
 use device_envoy::Result;
-use device_envoy::audio_player::{
-    AtEnd, Gain, NARROWBAND_8000_HZ, Volume, adpcm_clip, audio_player,
-};
+use device_envoy::audio_player::{AtEnd, NARROWBAND_8000_HZ, Volume, adpcm_clip, audio_player};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
 audio_player! {
-    AudioPlayer8k {
+    AudioPlayer8K {
         data_pin: PIN_8,
         bit_clock_pin: PIN_9,
         word_select_pin: PIN_10,
@@ -36,9 +33,9 @@ audio_player! {
 }
 
 adpcm_clip! {
-    Nasa22kAdpcm {
-        target_sample_rate_hz: AudioPlayer8k::SAMPLE_RATE_HZ,
-        file: "data/audio/nasa_22k_adpcm.wav",
+    Jabber8kAdpcm {
+        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
+        file: "data/audio/jabberwocky_22k_adpcm.wav",
     }
 }
 
@@ -49,14 +46,14 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA_8K_ADPCM: Nasa22kAdpcm::AdpcmClip = Nasa22kAdpcm::with_gain(Gain::percent(60));
+    static JABBER_8K_ADPCM: Jabber8kAdpcm::AdpcmClip = Jabber8kAdpcm::adpcm_clip();
 
     let p = embassy_rp::init(Default::default());
 
     let audio_player8k =
-        AudioPlayer8k::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
+        AudioPlayer8K::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
-    audio_player8k.play([&NASA_8K_ADPCM], AtEnd::Stop);
+    audio_player8k.play([&JABBER_8K_ADPCM], AtEnd::Stop);
 
     pending().await
 }

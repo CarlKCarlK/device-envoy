@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-//! Compile-only negative test: with_resampled must reject a wrong destination sample count.
+//! Compile-only negative test: resample helper must reject a wrong destination sample count.
 //!
 //! This file is expected to fail compilation and is validated by `cargo check-all`.
 
@@ -7,11 +7,11 @@
 #![no_std]
 #![no_main]
 
-use device_envoy::audio_player::PcmClipBuf;
+use device_envoy::audio_player::{PcmClipBuf, resample_pcm_clip};
 use embassy_executor::Spawner;
 
-static SOURCE_CLIP: PcmClipBuf<4, 4> = PcmClipBuf::new([100, 200, 300, 400]);
-static BAD_RESAMPLED_CLIP: PcmClipBuf<8, 7> = SOURCE_CLIP.with_resampled();
+static BAD_RESAMPLED_CLIP: PcmClipBuf<8, 7> =
+    resample_pcm_clip::<4, 4, 8, 7>(PcmClipBuf::new([100, 200, 300, 400]));
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {

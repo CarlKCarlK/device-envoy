@@ -1175,70 +1175,6 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         Self::new(scaled_samples)
     }
 
-    /// Returns a new clip resampled to a destination timeline.
-    ///
-    // TODO000 If macro-only resampling becomes final API policy, deprecate or
-    // hide this method and keep it as macro backend implementation detail.
-    //
-    /// This resamples waveform data to a new timeline defined by `DST_HZ` and
-    /// `DST_COUNT`.
-    ///
-    /// The destination sample count must preserve clip duration:
-    /// `DST_COUNT == resampled_sample_count(SRC_COUNT, SRC_HZ, DST_HZ)`.
-    /// If `DST_COUNT` does not match:
-    /// - in `const`/`static` contexts, compilation fails during const evaluation
-    /// - in runtime contexts, this function panics
-    ///
-    /// Resampling uses linear interpolation in integer math.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    #[must_use]
-    pub const fn with_resampled<const DST_HZ: u32, const DST_COUNT: usize>(
-        self,
-    ) -> PcmClipBuf<DST_HZ, DST_COUNT> {
-        assert!(SAMPLE_COUNT > 0, "source sample count must be > 0");
-        assert!(DST_HZ > 0, "destination sample_rate_hz must be > 0");
-        let expected_destination_sample_count =
-            resampled_sample_count(SAMPLE_COUNT, SAMPLE_RATE_HZ, DST_HZ);
-        assert!(
-            DST_COUNT == expected_destination_sample_count,
-            "destination sample count must preserve duration"
-        );
-
-        let mut resampled_samples = [0_i16; DST_COUNT];
-        let mut sample_index = 0_usize;
-
-        while sample_index < DST_COUNT {
-            let source_position_numerator_u128 = sample_index as u128 * SAMPLE_RATE_HZ as u128;
-            let source_index_u128 = source_position_numerator_u128 / DST_HZ as u128;
-            let source_fraction_numerator_u128 = source_position_numerator_u128 % DST_HZ as u128;
-            let source_index = source_index_u128 as usize;
-
-            resampled_samples[sample_index] = if source_index + 1 >= SAMPLE_COUNT {
-                self.samples[SAMPLE_COUNT - 1]
-            } else if source_fraction_numerator_u128 == 0 {
-                self.samples[source_index]
-            } else {
-                let left_sample_i128 = self.samples[source_index] as i128;
-                let right_sample_i128 = self.samples[source_index + 1] as i128;
-                let sample_delta_i128 = right_sample_i128 - left_sample_i128;
-                let denom_i128 = DST_HZ as i128;
-                let numerator_i128 = sample_delta_i128 * source_fraction_numerator_u128 as i128;
-                let rounded_i128 = if numerator_i128 >= 0 {
-                    (numerator_i128 + (denom_i128 / 2)) / denom_i128
-                } else {
-                    (numerator_i128 - (denom_i128 / 2)) / denom_i128
-                };
-                clamp_i64_to_i16((left_sample_i128 + rounded_i128) as i64)
-            };
-
-            sample_index += 1;
-        }
-
-        PcmClip::new(resampled_samples)
-    }
-
     /// Returns this clip encoded as mono 4-bit IMA ADPCM.
     ///
     /// Uses a fixed ADPCM block size of 256 bytes. `DATA_LEN` must match
@@ -1356,6 +1292,66 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
 
         Self::new(samples)
     }
+}
+
+/// Const backend helper that resamples a PCM clip to a destination timeline.
+///
+/// This is intentionally `#[doc(hidden)]` because resampling is configured by
+/// `pcm_clip!`/`adpcm_clip!` inputs (`target_sample_rate_hz`) rather than by a
+/// direct clip method.
+// TODO000 If macro-only resampling is final, keep this helper hidden and avoid
+// reintroducing direct public resample methods.
+#[must_use]
+#[doc(hidden)]
+pub const fn resample_pcm_clip<
+    const SOURCE_HZ: u32,
+    const SOURCE_COUNT: usize,
+    const TARGET_HZ: u32,
+    const TARGET_COUNT: usize,
+>(
+    source_pcm_clip: PcmClipBuf<SOURCE_HZ, SOURCE_COUNT>,
+) -> PcmClipBuf<TARGET_HZ, TARGET_COUNT> {
+    assert!(SOURCE_COUNT > 0, "source sample count must be > 0");
+    assert!(TARGET_HZ > 0, "destination sample_rate_hz must be > 0");
+    let expected_destination_sample_count =
+        resampled_sample_count(SOURCE_COUNT, SOURCE_HZ, TARGET_HZ);
+    assert!(
+        TARGET_COUNT == expected_destination_sample_count,
+        "destination sample count must preserve duration"
+    );
+
+    let source_samples = source_pcm_clip.samples();
+    let mut resampled_samples = [0_i16; TARGET_COUNT];
+    let mut sample_index = 0_usize;
+
+    while sample_index < TARGET_COUNT {
+        let source_position_numerator_u128 = sample_index as u128 * SOURCE_HZ as u128;
+        let source_index_u128 = source_position_numerator_u128 / TARGET_HZ as u128;
+        let source_fraction_numerator_u128 = source_position_numerator_u128 % TARGET_HZ as u128;
+        let source_index = source_index_u128 as usize;
+
+        resampled_samples[sample_index] = if source_index + 1 >= SOURCE_COUNT {
+            source_samples[SOURCE_COUNT - 1]
+        } else if source_fraction_numerator_u128 == 0 {
+            source_samples[source_index]
+        } else {
+            let left_sample_i128 = source_samples[source_index] as i128;
+            let right_sample_i128 = source_samples[source_index + 1] as i128;
+            let sample_delta_i128 = right_sample_i128 - left_sample_i128;
+            let denom_i128 = TARGET_HZ as i128;
+            let numerator_i128 = sample_delta_i128 * source_fraction_numerator_u128 as i128;
+            let rounded_i128 = if numerator_i128 >= 0 {
+                (numerator_i128 + (denom_i128 / 2)) / denom_i128
+            } else {
+                (numerator_i128 - (denom_i128 / 2)) / denom_i128
+            };
+            clamp_i64_to_i16((left_sample_i128 + rounded_i128) as i64)
+        };
+
+        sample_index += 1;
+    }
+
+    PcmClip::new(resampled_samples)
 }
 
 enum AudioCommand<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
@@ -2351,8 +2347,12 @@ macro_rules! __audio_clip_impl {
                         ]);
                         sample_index += 1;
                     }
-                    SourcePcmClip::new(samples)
-                        .with_resampled::<TARGET_SAMPLE_RATE_HZ, SAMPLE_COUNT>()
+                    $crate::audio_player::resample_pcm_clip::<
+                        SOURCE_SAMPLE_RATE_HZ,
+                        SOURCE_SAMPLE_COUNT,
+                        TARGET_SAMPLE_RATE_HZ,
+                        SAMPLE_COUNT,
+                    >(SourcePcmClip::new(samples))
                 }
 
                 #[doc = "Const ADPCM (256-byte block) constructor generated by [`pcm_clip!`](macro@crate::audio_player::pcm_clip)."]
@@ -2496,9 +2496,12 @@ macro_rules! adpcm_clip {
 
                 #[must_use]
                 pub const fn pcm_clip() -> PcmClip {
-                    source_adpcm_clip()
-                        .with_pcm::<SOURCE_SAMPLE_COUNT>()
-                        .with_resampled::<TARGET_SAMPLE_RATE_HZ, SAMPLE_COUNT>()
+                    $crate::audio_player::resample_pcm_clip::<
+                        SOURCE_SAMPLE_RATE_HZ,
+                        SOURCE_SAMPLE_COUNT,
+                        TARGET_SAMPLE_RATE_HZ,
+                        SAMPLE_COUNT,
+                    >(source_adpcm_clip().with_pcm::<SOURCE_SAMPLE_COUNT>())
                 }
 
                 #[must_use]

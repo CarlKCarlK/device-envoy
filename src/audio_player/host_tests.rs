@@ -65,7 +65,7 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
 fn with_resampled_same_rate_same_count_is_identity() {
     let tone_audio_clip: AudioClipTone = AudioClipTone::tone(TONE_FREQUENCY_HZ);
     let tone_resampled_audio_clip: AudioClipTone =
-        AudioClipTone::tone(TONE_FREQUENCY_HZ).with_resampled();
+        super::resample_pcm_clip(AudioClipTone::tone(TONE_FREQUENCY_HZ));
     assert_eq!(
         tone_audio_clip.samples(),
         tone_resampled_audio_clip.samples(),
@@ -78,7 +78,7 @@ fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<()
     type Tone22k = PcmClipBuf<VOICE_22050_HZ, 32>;
     type Tone16k = PcmClipBuf<16_000, 23>;
 
-    let tone16k_audio_clip: Tone16k = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
+    let tone16k_audio_clip: Tone16k = super::resample_pcm_clip(Tone22k::tone(TONE_FREQUENCY_HZ));
 
     assert_clip_file_matches_expected(
         "tone_440hz_32_resampled_16000hz_23.s16",
@@ -91,7 +91,8 @@ fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<()
 #[should_panic(expected = "destination sample count must preserve duration")]
 fn with_resampled_panics_on_non_duration_preserving_count() {
     type Tone22k = PcmClipBuf<VOICE_22050_HZ, 32>;
-    let _: PcmClipBuf<VOICE_22050_HZ, 16> = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
+    let _: PcmClipBuf<VOICE_22050_HZ, 16> =
+        super::resample_pcm_clip(Tone22k::tone(TONE_FREQUENCY_HZ));
 }
 
 #[test]

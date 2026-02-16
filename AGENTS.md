@@ -13,6 +13,7 @@
 - Prefer `const` values defined in the local context (inside the function/example) rather than at module scope when they're only used there.
 - Always run `cargo check-all` before handing work back; xtask keeps doctests and examples in sync.
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
+- For `cargo` aliases that target embedded triples (`thumbv6m-none-eabi`, `thumbv8m.main-none-eabihf`, or `riscv32imac-unknown-none-elf`), include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
 
 ## Generated Files
 

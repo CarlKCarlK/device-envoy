@@ -16,8 +16,7 @@ use core::future::pending;
 
 use device_envoy::Result;
 use device_envoy::audio_player::{
-    AdpcmClipBuf, AtEnd, Gain, NARROWBAND_8000_HZ, Volume, adpcm_clip,
-    adpcm_data_len_for_pcm_samples, audio_player, resampled_sample_count,
+    AtEnd, Gain, NARROWBAND_8000_HZ, Volume, adpcm_clip, audio_player,
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -38,6 +37,7 @@ audio_player! {
 
 adpcm_clip! {
     Nasa22kAdpcm {
+        target_sample_rate_hz: AudioPlayer8k::SAMPLE_RATE_HZ,
         file: "data/audio/nasa_22k_adpcm.wav",
     }
 }
@@ -49,20 +49,9 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA_8K_ADPCM: Nasa8kAdpcm = Nasa22kAdpcm::pcm_clip()
-        .with_gain(Gain::percent(60))
-        .with_resampled::<NARROWBAND_8000_HZ, NASA_8K_SAMPLE_COUNT>()
-        .with_adpcm::<NASA_8K_ADPCM_LEN>();
+    static NASA_8K_ADPCM: Nasa22kAdpcm::AdpcmClip = Nasa22kAdpcm::with_gain(Gain::percent(60));
 
     let p = embassy_rp::init(Default::default());
-
-    const NASA_8K_SAMPLE_COUNT: usize = resampled_sample_count(
-        Nasa22kAdpcm::SAMPLE_COUNT,
-        Nasa22kAdpcm::SAMPLE_RATE_HZ,
-        NARROWBAND_8000_HZ,
-    );
-    const NASA_8K_ADPCM_LEN: usize = adpcm_data_len_for_pcm_samples(NASA_8K_SAMPLE_COUNT);
-    type Nasa8kAdpcm = AdpcmClipBuf<NARROWBAND_8000_HZ, NASA_8K_ADPCM_LEN>;
 
     let audio_player8k =
         AudioPlayer8k::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;

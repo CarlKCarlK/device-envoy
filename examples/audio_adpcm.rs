@@ -43,7 +43,7 @@ adpcm_clip! {
 
 pcm_clip! {
     Nasa22kPcm {
-        sample_rate_hz: VOICE_22050_HZ,
+        source_sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/nasa_22k.s16",
     }
 }

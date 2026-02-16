@@ -36,7 +36,7 @@ audio_player! {
 
 pcm_clip! {
     Nasa {
-        sample_rate_hz: VOICE_22050_HZ,
+        source_sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/nasa_22k.s16",
     }
 }

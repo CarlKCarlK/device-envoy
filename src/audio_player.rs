@@ -513,6 +513,21 @@ impl Gain {
     }
 }
 
+/// Scales a single signed 16-bit PCM sample by [`Volume`].
+///
+/// This helper is useful when decoding or generating samples outside of
+/// [`AudioPlayer`](audio_player_generated::AudioPlayerGenerated) and you want
+/// volume behavior consistent with the player.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
+// TODO0 Review this function name and documentation for long-term API clarity.
+#[inline]
+#[must_use]
+pub const fn scale(sample_i16: i16, volume: Volume) -> i16 {
+    scale_sample_with_linear(sample_i16, volume.to_i16() as i32)
+}
+
 /// Returns how many samples are needed for a duration in milliseconds.
 ///
 /// Use this in const contexts to size static audio arrays.
@@ -597,11 +612,6 @@ const fn scale_linear(linear_i32: i32, volume: Volume) -> i32 {
     }
     let unity_scaled_volume_i64 = volume.to_i16() as i64 + 1;
     ((linear_i32 as i64 * unity_scaled_volume_i64) / I16_ABS_MAX_I64) as i32
-}
-
-#[inline]
-const fn scale_sample(sample_i16: i16, volume: Volume) -> i16 {
-    scale_sample_with_linear(sample_i16, volume.to_i16() as i32)
 }
 
 #[inline]
@@ -1189,7 +1199,7 @@ async fn play_full_clip_once<PIO: Instance, const MAX_CLIPS: usize, const SAMPLE
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
-            let scaled_sample_value = scale_sample(sample_value, runtime_volume);
+            let scaled_sample_value = scale(sample_value, runtime_volume);
             *sample_buffer_slot = stereo_sample(scaled_sample_value);
         }
 

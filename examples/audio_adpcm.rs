@@ -13,10 +13,10 @@
 use core::convert::Infallible;
 
 use defmt::info;
+use device_envoy::audio_player::{Volume, scale};
+use device_envoy::pio_irqs::Pio0Irqs;
 use embassy_executor::Spawner;
-use embassy_rp::bind_interrupts;
 use embassy_rp::peripherals::PIO0;
-use embassy_rp::pio::InterruptHandler;
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
@@ -26,22 +26,15 @@ const I2S_BUFFER_LEN: usize = 256;
 const NASA_22K_ADPCM_IMA_WAV: &[u8] = include_bytes!("data/audio/nasa_22k_adpcm_ima.wav");
 type AdpcmResult<T> = core::result::Result<T, &'static str>;
 
-const IMA_INDEX_TABLE: [i32; 16] = [
-    -1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8,
-];
+const IMA_INDEX_TABLE: [i32; 16] = [-1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8];
 
 const IMA_STEP_TABLE: [i32; 89] = [
-    7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60,
-    66, 73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371,
-    408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878,
-    2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845,
-    8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086,
-    29794, 32767,
+    7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60, 66,
+    73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449,
+    494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066, 2272,
+    2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493,
+    10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767,
 ];
-
-bind_interrupts!(struct Irqs {
-    PIO0_IRQ_0 => InterruptHandler<PIO0>;
-});
 
 struct ImaAdpcmWav<'a> {
     sample_rate_hz: u32,
@@ -60,7 +53,7 @@ async fn inner_main() -> AdpcmResult<Infallible> {
     let p = embassy_rp::init(Default::default());
     let ima_adpcm_wav = parse_ima_adpcm_wav(NASA_22K_ADPCM_IMA_WAV)?;
 
-    let mut pio = embassy_rp::pio::Pio::new(p.PIO0, Irqs);
+    let mut pio = embassy_rp::pio::Pio::new(p.PIO0, Pio0Irqs);
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
     let mut pio_i2s_out = PioI2sOut::new(
         &mut pio.common,
@@ -78,9 +71,7 @@ async fn inner_main() -> AdpcmResult<Infallible> {
 
     info!(
         "Starting ADPCM playback: {} Hz, block_align={}, samples_per_block={}",
-        ima_adpcm_wav.sample_rate_hz,
-        ima_adpcm_wav.block_align,
-        ima_adpcm_wav.samples_per_block
+        ima_adpcm_wav.sample_rate_hz, ima_adpcm_wav.block_align, ima_adpcm_wav.samples_per_block
     );
 
     play_ima_adpcm_wav_once(&mut pio_i2s_out, &ima_adpcm_wav).await?;
@@ -95,10 +86,14 @@ async fn play_ima_adpcm_wav_once(
     pio_i2s_out: &mut PioI2sOut<'static, PIO0, 0>,
     ima_adpcm_wav: &ImaAdpcmWav<'_>,
 ) -> AdpcmResult<()> {
+    let volume = Volume::percent(10);
     let mut sample_buffer = [0_u32; I2S_BUFFER_LEN];
     let mut sample_buffer_len = 0usize;
 
-    for adpcm_block in ima_adpcm_wav.data_chunk.chunks_exact(ima_adpcm_wav.block_align) {
+    for adpcm_block in ima_adpcm_wav
+        .data_chunk
+        .chunks_exact(ima_adpcm_wav.block_align)
+    {
         if adpcm_block.len() < 4 {
             return Err("IMA ADPCM block too small");
         }
@@ -109,7 +104,8 @@ async fn play_ima_adpcm_wav_once(
             return Err("IMA ADPCM step index out of range");
         }
 
-        sample_buffer[sample_buffer_len] = stereo_sample(predictor_i32 as i16);
+        let predictor_sample_i16 = scale(predictor_i32 as i16, volume);
+        sample_buffer[sample_buffer_len] = stereo_sample(predictor_sample_i16);
         sample_buffer_len += 1;
         if sample_buffer_len == I2S_BUFFER_LEN {
             pio_i2s_out.write(&sample_buffer).await;
@@ -121,12 +117,10 @@ async fn play_ima_adpcm_wav_once(
             let high_nibble = adpcm_byte >> 4;
 
             for adpcm_nibble in [low_nibble, high_nibble] {
-                let decoded_sample_i16 = decode_ima_nibble(
-                    adpcm_nibble,
-                    &mut predictor_i32,
-                    &mut step_index_i32,
-                );
-                sample_buffer[sample_buffer_len] = stereo_sample(decoded_sample_i16);
+                let decoded_sample_i16 =
+                    decode_ima_nibble(adpcm_nibble, &mut predictor_i32, &mut step_index_i32);
+                let volume_adjusted_sample_i16 = scale(decoded_sample_i16, volume);
+                sample_buffer[sample_buffer_len] = stereo_sample(volume_adjusted_sample_i16);
                 sample_buffer_len += 1;
 
                 if sample_buffer_len == I2S_BUFFER_LEN {
@@ -284,7 +278,10 @@ fn read_u16_le(bytes: &[u8], byte_offset: usize) -> AdpcmResult<u16> {
     if end_offset > bytes.len() {
         return Err("read_u16_le out of bounds");
     }
-    Ok(u16::from_le_bytes([bytes[byte_offset], bytes[byte_offset + 1]]))
+    Ok(u16::from_le_bytes([
+        bytes[byte_offset],
+        bytes[byte_offset + 1],
+    ]))
 }
 
 fn read_i16_le(bytes: &[u8], byte_offset: usize) -> AdpcmResult<i16> {
@@ -294,7 +291,10 @@ fn read_i16_le(bytes: &[u8], byte_offset: usize) -> AdpcmResult<i16> {
     if end_offset > bytes.len() {
         return Err("read_i16_le out of bounds");
     }
-    Ok(i16::from_le_bytes([bytes[byte_offset], bytes[byte_offset + 1]]))
+    Ok(i16::from_le_bytes([
+        bytes[byte_offset],
+        bytes[byte_offset + 1],
+    ]))
 }
 
 fn read_u32_le(bytes: &[u8], byte_offset: usize) -> AdpcmResult<u32> {

@@ -24,14 +24,14 @@ pcm_clip! {
 /// This page serves as the reference for what a generated audio clip namespace
 /// provides. For first-time readers, start with the
 /// [`audio_player`](mod@crate::audio_player) module documentation, then return
-/// here for the generated `PcmClip` and `pcm_clip()` items.
+/// here for the generated `PcmClip`/`AdpcmClip` and `pcm_clip()`/`adpcm_clip()` items.
 ///
 /// The generated items are in a module (not a struct type) because stable Rust
 /// does not support inherent associated types on structs.
 ///
 /// Auto-generated.
 pub mod AudioClipGenerated {
-    use crate::audio_player::{PcmClipBuf, VOICE_22050_HZ};
+    use crate::audio_player::{AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples};
 
     /// Sample rate in hertz for this generated clip.
     ///
@@ -47,6 +47,16 @@ pub mod AudioClipGenerated {
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub type PcmClip = PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>;
+
+    /// Byte length of ADPCM data for this clip.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
+    pub const ADPCM_DATA_LEN: usize = adpcm_data_len_for_pcm_samples(SAMPLE_COUNT);
+
+    /// Concrete return type of `adpcm_clip()`.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
+    pub type AdpcmClip = AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN>;
 
     /// Returns the duration-preserving destination sample count for a new sample rate.
     ///
@@ -66,5 +76,13 @@ pub mod AudioClipGenerated {
     #[must_use]
     pub const fn pcm_clip() -> PcmClip {
         PcmClip::silence()
+    }
+
+    /// `const` function that returns the generated audio clip encoded as ADPCM.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
+    #[must_use]
+    pub const fn adpcm_clip() -> AdpcmClip {
+        pcm_clip().with_adpcm::<ADPCM_DATA_LEN>()
     }
 }

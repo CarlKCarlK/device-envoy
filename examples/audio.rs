@@ -18,8 +18,7 @@ use defmt::info;
 use device_envoy::Result;
 use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, pcm_clip};
 use device_envoy::button::{Button, PressedTo};
-use device_envoy::samples_ms_type;
-use device_envoy::silence;
+use device_envoy::{silence, tone};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
@@ -51,8 +50,12 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NASA: &AudioPlayer8Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
-    static TONE_A4: samples_ms_type! { AudioPlayer8, 500 } =
-        AudioPlayer8::tone(440).with_gain(Gain::percent(25));
+    const TONE_A4: &AudioPlayer8Playable = &tone!(
+        440,
+        AudioPlayer8::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(500)
+    )
+    .with_gain(Gain::percent(25));
     const SILENCE_100MS: &AudioPlayer8Playable =
         &silence!(AudioPlayer8::SAMPLE_RATE_HZ, StdDuration::from_millis(100));
 
@@ -73,7 +76,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     loop {
         button.wait_for_press().await;
-        audio_player8.play([&TONE_A4, SILENCE_100MS, &TONE_A4], AtEnd::Loop);
+        audio_player8.play([TONE_A4, SILENCE_100MS, TONE_A4], AtEnd::Loop);
         info!("Started static slice playback");
         for percent in [80, 60, 40, 20, 200] {
             audio_player8.set_volume(Volume::percent(percent));

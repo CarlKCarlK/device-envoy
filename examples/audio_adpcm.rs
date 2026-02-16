@@ -57,7 +57,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const JABBER_ADPCM: &AudioPlayer8Playable = &Jabber22kAdpcm::adpcm_clip();
     // todo00 shouldn't silence and tone be Adpcm Clips.
-    // todo00 should samples_ms_type have a pcm in name
+    // todo00 should samples_ms_type have a pcm in name (may no longer apply)
     const GAP_100MS: &AudioPlayer8Playable =
         &silence!(AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(100));
 

@@ -17,7 +17,7 @@ use core::time::Duration;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, VOICE_22050_HZ, Volume, audio_player, samples_ms_type},
+    audio_player::{AtEnd, PRO_48000_HZ, PcmClipBuf, audio_player, samples_for_duration},
     silence,
 };
 use embassy_executor::Spawner;
@@ -28,8 +28,8 @@ audio_player! {
         data_pin: PIN_8,
         bit_clock_pin: PIN_9,
         word_select_pin: PIN_10,
-        sample_rate_hz: VOICE_22050_HZ,
-        max_volume: Volume::percent(50),
+        sample_rate_hz: PRO_48000_HZ,
+        // max_volume: Volume::percent(50),
     }
 }
 
@@ -40,9 +40,14 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NOTE_E4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(330);
-    static NOTE_D4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(294);
-    static NOTE_C4: samples_ms_type! { SongPlayer, 220 } = SongPlayer::tone(262);
+    const NOTE_SAMPLE_COUNT: usize =
+        samples_for_duration(Duration::from_millis(220), SongPlayer::SAMPLE_RATE_HZ);
+    const NOTE_E4: &SongPlayerPlayable =
+        &PcmClipBuf::<{ SongPlayer::SAMPLE_RATE_HZ }, NOTE_SAMPLE_COUNT>::tone(330);
+    const NOTE_D4: &SongPlayerPlayable =
+        &PcmClipBuf::<{ SongPlayer::SAMPLE_RATE_HZ }, NOTE_SAMPLE_COUNT>::tone(294);
+    const NOTE_C4: &SongPlayerPlayable =
+        &PcmClipBuf::<{ SongPlayer::SAMPLE_RATE_HZ }, NOTE_SAMPLE_COUNT>::tone(262);
     const REST_80MS: &SongPlayerPlayable =
         &silence!(SongPlayer::SAMPLE_RATE_HZ, Duration::from_millis(80));
 
@@ -57,8 +62,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Mary had a little lamb (opening phrase): E D C D E E E
     song_player.play(
         [
-            &NOTE_E4, REST_80MS, &NOTE_D4, REST_80MS, &NOTE_C4, REST_80MS, &NOTE_D4, REST_80MS,
-            &NOTE_E4, REST_80MS, &NOTE_E4, REST_80MS, &NOTE_E4,
+            NOTE_E4, REST_80MS, NOTE_D4, REST_80MS, NOTE_C4, REST_80MS, NOTE_D4, REST_80MS,
+            NOTE_E4, REST_80MS, NOTE_E4, REST_80MS, NOTE_E4,
         ],
         AtEnd::Stop,
     );

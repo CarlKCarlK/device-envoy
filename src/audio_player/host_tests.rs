@@ -1,6 +1,8 @@
 #![allow(missing_docs)]
 
-use super::{Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ};
+use super::{
+    AdpcmClipBuf, Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples,
+};
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -12,7 +14,7 @@ type AudioClipTone = PcmClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
 
 #[test]
 fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
-    let silence_audio_clip: AudioClipTone = AudioClipTone::silence();
+    let silence_audio_clip: AudioClipTone = AudioClipTone::new([0; TONE_SAMPLE_COUNT]);
     assert!(
         silence_audio_clip
             .samples()
@@ -59,6 +61,28 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
     assert_clip_file_matches_expected("tone_440hz_32_gain_50.s16", &tone_gain50_audio_clip)?;
     assert_clip_file_matches_expected("tone_440hz_32_gain_200.s16", &tone_gain200_audio_clip)?;
     Ok(())
+}
+
+#[test]
+fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
+    type ToneAdpcm =
+        AdpcmClipBuf<VOICE_22050_HZ, { adpcm_data_len_for_pcm_samples(TONE_SAMPLE_COUNT) }>;
+
+    let tone_adpcm: ToneAdpcm = AudioClipTone::tone(TONE_FREQUENCY_HZ).with_adpcm();
+    let tone_adpcm_gain50: ToneAdpcm = AudioClipTone::tone(TONE_FREQUENCY_HZ)
+        .with_adpcm()
+        .with_gain(Gain::percent(50));
+
+    assert_eq!(
+        tone_adpcm.as_adpcm_clip().sample_count(),
+        tone_adpcm_gain50.as_adpcm_clip().sample_count(),
+        "ADPCM gain must preserve decoded sample count"
+    );
+    assert_ne!(
+        tone_adpcm.as_adpcm_clip().data(),
+        tone_adpcm_gain50.as_adpcm_clip().data(),
+        "ADPCM gain must change encoded data at 50%"
+    );
 }
 
 #[test]

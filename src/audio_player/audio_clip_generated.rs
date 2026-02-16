@@ -66,7 +66,7 @@ pub mod AudioClipGenerated {
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
     pub const fn pcm_clip() -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
-        PcmClipBuf::silence()
+        PcmClipBuf::new([0; SAMPLE_COUNT])
     }
 
     /// `const` function that returns the generated audio clip encoded as ADPCM

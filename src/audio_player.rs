@@ -51,7 +51,8 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{Result, audio_player::{AtEnd, Volume, audio_player, samples_ms_type, VOICE_22050_HZ}};
+//! use device_envoy::{Result, audio_player::{AtEnd, Volume, audio_player, VOICE_22050_HZ}, tone};
+//! use core::time::Duration;
 //!
 //! // Generate `AudioPlayer8`, a struct type with the specified configuration.
 //! audio_player! {
@@ -72,11 +73,14 @@
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     // Define REST_MS as a static clip of silence, 80 milliseconds long.
 //!     const REST_MS: &AudioPlayer8Playable =
-//!         &device_envoy::silence!(AudioPlayer8::SAMPLE_RATE_HZ, core::time::Duration::from_millis(80));
+//!         &device_envoy::silence!(AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(80));
 //!     // Define each note as a static clip of a sine wave at the appropriate frequency, 220 ms long.
-//!     static NOTE_E4: samples_ms_type! { AudioPlayer8, 220 } = AudioPlayer8::tone(330);
-//!     static NOTE_D4: samples_ms_type! { AudioPlayer8, 220 } = AudioPlayer8::tone(294);
-//!     static NOTE_C4: samples_ms_type! { AudioPlayer8, 220 } = AudioPlayer8::tone(262);
+//!     const NOTE_E4: &AudioPlayer8Playable =
+//!         &tone!(330, AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(220));
+//!     const NOTE_D4: &AudioPlayer8Playable =
+//!         &tone!(294, AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(220));
+//!     const NOTE_C4: &AudioPlayer8Playable =
+//!         &tone!(262, AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(220));
 //!
 //!     let p = embassy_rp::init(Default::default());
 //!     // Create an `AudioPlayer8` instance with the specified pins and resources.
@@ -84,13 +88,13 @@
 //!
 //!     audio_player8.play(
 //!         [
-//!             &NOTE_E4, REST_MS,
-//!             &NOTE_D4, REST_MS,
-//!             &NOTE_C4, REST_MS,
-//!             &NOTE_D4, REST_MS,
-//!             &NOTE_E4, REST_MS,
-//!             &NOTE_E4, REST_MS,
-//!             &NOTE_E4,
+//!             NOTE_E4, REST_MS,
+//!             NOTE_D4, REST_MS,
+//!             NOTE_C4, REST_MS,
+//!             NOTE_D4, REST_MS,
+//!             NOTE_E4, REST_MS,
+//!             NOTE_E4, REST_MS,
+//!             NOTE_E4,
 //!         ],
 //!         AtEnd::Stop,
 //!     );
@@ -117,10 +121,12 @@
 //! use device_envoy::{
 //!     Result,
 //!     audio_player::{
-//!         AtEnd, Gain, Volume, pcm_clip, audio_player, samples_ms_type, VOICE_22050_HZ,
+//!         AtEnd, Gain, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
 //!     button::{Button, PressedTo},
+//!     tone,
 //! };
+//! use core::time::Duration as StdDuration;
 //! use embassy_futures::select::{Either, select};
 //! use embassy_time::{Duration, Timer};
 //!
@@ -155,7 +161,10 @@
 //!     // After lower its loudness (at compile time), materialize the clip as a static value.
 //!     const NASA: &AudioPlayer10Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
 //!     const GAP: &AudioPlayer10Playable =
-//!         &device_envoy::silence!(AudioPlayer10::SAMPLE_RATE_HZ, core::time::Duration::from_millis(80));
+//!         &device_envoy::silence!(AudioPlayer10::SAMPLE_RATE_HZ, StdDuration::from_millis(80));
+//!     const CHIME: &AudioPlayer10Playable =
+//!         &tone!(880, AudioPlayer10::SAMPLE_RATE_HZ, StdDuration::from_millis(100))
+//!             .with_gain(Gain::percent(20));
 //!     let _nasa_source_sample_rate_hz = Nasa::SAMPLE_RATE_HZ;
 //!     let _nasa_source_sample_count = Nasa::SAMPLE_COUNT;
 //!
@@ -171,7 +180,7 @@
 //!         button.wait_for_press().await;
 //!
 //!         // Start playing the NASA clip, over and over.
-//!         audio_player10.play([NASA, GAP], AtEnd::Loop);
+//!         audio_player10.play([CHIME, NASA, GAP], AtEnd::Loop);
 //!
 //!         // Lower runtime volume over time, unless the button is pressed.
 //!         for volume_percent in VOLUME_STEPS_PERCENT {
@@ -798,6 +807,96 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         }
 
         PcmClip::new(samples)
+    }
+
+    /// Returns this ADPCM clip with linear sample gain applied.
+    ///
+    /// This operation decodes ADPCM to PCM, applies gain, then re-encodes ADPCM
+    /// using the same block structure (`block_align` and `samples_per_block`).
+    /// The extra ADPCM encode pass can be more lossy than applying gain once on
+    /// PCM before a single ADPCM encode.
+    #[must_use]
+    pub const fn with_gain(self, gain: Gain) -> Self {
+        let block_align = self.block_align as usize;
+        assert!(block_align >= 5, "block_align must be >= 5");
+        assert!(
+            DATA_LEN % block_align == 0,
+            "adpcm data length must be block aligned"
+        );
+
+        let samples_per_block = self.samples_per_block as usize;
+        assert!(samples_per_block > 0, "samples_per_block must be > 0");
+        let max_samples_per_block = adpcm_samples_per_block(block_align);
+        assert!(
+            samples_per_block <= max_samples_per_block,
+            "samples_per_block exceeds block_align capacity"
+        );
+
+        let mut gained_data = [0_u8; DATA_LEN];
+        let mut block_start = 0usize;
+        while block_start < DATA_LEN {
+            let mut source_predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
+            let mut source_step_index_i32 = self.data[block_start + 2] as i32;
+            assert!(
+                source_step_index_i32 >= 0 && source_step_index_i32 <= 88,
+                "ADPCM step_index must be in 0..=88"
+            );
+
+            let scaled_first_sample_i16 =
+                scale_sample_with_linear(source_predictor_i32 as i16, gain.linear());
+            let mut destination_predictor_i32 = scaled_first_sample_i16 as i32;
+            let mut destination_step_index_i32 = source_step_index_i32;
+
+            let scaled_first_sample_bytes = scaled_first_sample_i16.to_le_bytes();
+            gained_data[block_start] = scaled_first_sample_bytes[0];
+            gained_data[block_start + 1] = scaled_first_sample_bytes[1];
+            gained_data[block_start + 2] = destination_step_index_i32 as u8;
+            gained_data[block_start + 3] = 0;
+
+            let mut decoded_in_block = 1usize;
+            let mut source_byte_offset = block_start + 4;
+            let mut destination_byte_offset = block_start + 4;
+            let block_end = block_start + block_align;
+
+            while source_byte_offset < block_end {
+                let source_byte = self.data[source_byte_offset];
+                let mut destination_byte = 0_u8;
+
+                let mut nibble_index = 0usize;
+                while nibble_index < 2 {
+                    if decoded_in_block < samples_per_block {
+                        let source_nibble = if nibble_index == 0 {
+                            source_byte & 0x0F
+                        } else {
+                            source_byte >> 4
+                        };
+                        let decoded_sample_i16 = decode_adpcm_nibble_const(
+                            source_nibble,
+                            &mut source_predictor_i32,
+                            &mut source_step_index_i32,
+                        );
+                        let scaled_sample_i32 =
+                            scale_sample_with_linear(decoded_sample_i16, gain.linear()) as i32;
+                        let destination_nibble = encode_adpcm_nibble(
+                            scaled_sample_i32,
+                            &mut destination_predictor_i32,
+                            &mut destination_step_index_i32,
+                        );
+                        destination_byte |= destination_nibble << (nibble_index * 4);
+                        decoded_in_block += 1;
+                    }
+                    nibble_index += 1;
+                }
+
+                gained_data[destination_byte_offset] = destination_byte;
+                source_byte_offset += 1;
+                destination_byte_offset += 1;
+            }
+
+            block_start += block_align;
+        }
+
+        Self::new(self.block_align, self.samples_per_block, gained_data)
     }
 }
 
@@ -2607,28 +2706,11 @@ macro_rules! adpcm_clip {
     };
 }
 
-/// Macro that expands to an [`PcmClipBuf`] type sized from a player type and milliseconds.
-///
-/// Example: `samples_ms_type!{AudioPlayer8, 500}`.
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! samples_ms_type {
-    ($player:ident, $duration_ms:expr) => {
-        $crate::audio_player::PcmClipBuf<
-            { $player::SAMPLE_RATE_HZ },
-            { $player::samples(core::time::Duration::from_millis($duration_ms as u64)) },
-        >
-    };
-}
-
 /// Macro that expands to an ADPCM silence clip expression for a sample rate and duration.
 ///
 /// Examples:
-/// - `silence!(VOICE_22050_HZ, core::time::Duration::from_millis(100))`
-/// - `silence!(AudioPlayer8, core::time::Duration::from_millis(100))`
+/// - `silence!(VOICE_22050_HZ, Duration::from_millis(100))`
+/// - `silence!(AudioPlayer8, Duration::from_millis(100))`
 ///
 /// The result is a `PcmClipBuf` silence clip encoded as ADPCM using the
 /// default ADPCM block size.
@@ -2638,6 +2720,10 @@ macro_rules! samples_ms_type {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! silence {
+    ($player:ident, $duration:expr) => {
+        $crate::silence!($player::SAMPLE_RATE_HZ, $duration)
+    };
+
     ($sample_rate_hz:expr, $duration:expr) => {
         $crate::audio_player::PcmClipBuf::<
             { $sample_rate_hz },
@@ -2649,9 +2735,33 @@ macro_rules! silence {
             )
         }>()
     };
+}
 
-    ($player:ident, $duration:expr) => {
-        $crate::silence!($player::SAMPLE_RATE_HZ, $duration)
+/// Macro that expands to an ADPCM tone clip expression for frequency,
+/// sample rate, and duration.
+///
+/// Examples:
+/// - `tone!(440, VOICE_22050_HZ, Duration::from_millis(500))`
+/// - `tone!(440, AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(500))`
+///
+/// The result is a `PcmClipBuf` tone clip encoded as ADPCM using the default
+/// ADPCM block size.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! tone {
+    ($frequency_hz:expr, $sample_rate_hz:expr, $duration:expr) => {
+        $crate::audio_player::PcmClipBuf::<
+            { $sample_rate_hz },
+            { $crate::audio_player::samples_for_duration($duration, $sample_rate_hz) },
+        >::tone($frequency_hz)
+        .with_adpcm::<{
+            $crate::audio_player::adpcm_data_len_for_pcm_samples(
+                $crate::audio_player::samples_for_duration($duration, $sample_rate_hz),
+            )
+        }>()
     };
 }
 
@@ -3306,4 +3416,4 @@ pub use pcm_clip;
 #[doc(inline)]
 pub use resampled_type;
 #[doc(inline)]
-pub use samples_ms_type;
+pub use tone;

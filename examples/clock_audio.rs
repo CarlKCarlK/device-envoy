@@ -23,10 +23,9 @@ use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_play
 use device_envoy::button::PressedTo;
 use device_envoy::clock_sync::{ClockSync, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_envoy::flash_array::FlashArray;
-use device_envoy::samples_ms_type;
 use device_envoy::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
-use device_envoy::{Error, Result, silence};
+use device_envoy::{Error, Result, silence, tone};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::Duration;
@@ -73,24 +72,60 @@ pub async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static CAPTIVE_PORTAL_TONE: samples_ms_type! { AudioPlayer10, 120 } =
-        AudioPlayer10::tone(330).with_gain(Gain::percent(20));
-    static CONNECTING_TONE: samples_ms_type! { AudioPlayer10, 90 } =
-        AudioPlayer10::tone(550).with_gain(Gain::percent(20));
-    static CONNECTION_FAILED_TONE: samples_ms_type! { AudioPlayer10, 150 } =
-        AudioPlayer10::tone(220).with_gain(Gain::percent(25));
-    static WIFI_CONNECTED_TONE: samples_ms_type! { AudioPlayer10, 140 } =
-        AudioPlayer10::tone(880).with_gain(Gain::percent(20));
-    static TIME_SYNCED_TONE: samples_ms_type! { AudioPlayer10, 90 } =
-        AudioPlayer10::tone(1047).with_gain(Gain::percent(20));
-    static MODE_HH_MM_TONE: samples_ms_type! { AudioPlayer10, 100 } =
-        AudioPlayer10::tone(698).with_gain(Gain::percent(18));
-    static MODE_MM_SS_TONE: samples_ms_type! { AudioPlayer10, 100 } =
-        AudioPlayer10::tone(988).with_gain(Gain::percent(18));
-    static HH_MM_TICK_TONE: samples_ms_type! { AudioPlayer10, 70 } =
-        AudioPlayer10::tone(784).with_gain(Gain::percent(15));
-    static MM_SS_TICK_TONE: samples_ms_type! { AudioPlayer10, 40 } =
-        AudioPlayer10::tone(523).with_gain(Gain::percent(12));
+    const CAPTIVE_PORTAL_TONE: &AudioPlayer10Playable = &tone!(
+        330,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(120)
+    )
+    .with_gain(Gain::percent(20));
+    const CONNECTING_TONE: &AudioPlayer10Playable = &tone!(
+        550,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(90)
+    )
+    .with_gain(Gain::percent(20));
+    const CONNECTION_FAILED_TONE: &AudioPlayer10Playable = &tone!(
+        220,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(150)
+    )
+    .with_gain(Gain::percent(25));
+    const WIFI_CONNECTED_TONE: &AudioPlayer10Playable = &tone!(
+        880,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(140)
+    )
+    .with_gain(Gain::percent(20));
+    const TIME_SYNCED_TONE: &AudioPlayer10Playable = &tone!(
+        1047,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(90)
+    )
+    .with_gain(Gain::percent(20));
+    const MODE_HH_MM_TONE: &AudioPlayer10Playable = &tone!(
+        698,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(100)
+    )
+    .with_gain(Gain::percent(18));
+    const MODE_MM_SS_TONE: &AudioPlayer10Playable = &tone!(
+        988,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(100)
+    )
+    .with_gain(Gain::percent(18));
+    const HH_MM_TICK_TONE: &AudioPlayer10Playable = &tone!(
+        784,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(70)
+    )
+    .with_gain(Gain::percent(15));
+    const MM_SS_TICK_TONE: &AudioPlayer10Playable = &tone!(
+        523,
+        AudioPlayer10::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(40)
+    )
+    .with_gain(Gain::percent(12));
     const SILENCE_40MS: &AudioPlayer10Playable =
         &silence!(AudioPlayer10::SAMPLE_RATE_HZ, StdDuration::from_millis(40));
 
@@ -127,7 +162,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready");
                     audio_player10_ref.play(
-                        [&CAPTIVE_PORTAL_TONE, SILENCE_40MS, &CAPTIVE_PORTAL_TONE],
+                        [CAPTIVE_PORTAL_TONE, SILENCE_40MS, CAPTIVE_PORTAL_TONE],
                         AtEnd::Stop,
                     );
                 }
@@ -136,16 +171,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     try_count,
                 } => {
                     info!("Connecting (attempt {} of {})", try_index + 1, try_count);
-                    audio_player10_ref.play([&CONNECTING_TONE], AtEnd::Stop);
+                    audio_player10_ref.play([CONNECTING_TONE], AtEnd::Stop);
                 }
                 WifiAutoEvent::ConnectionFailed => {
                     info!("WiFi connection failed");
                     audio_player10_ref.play(
-                        [
-                            &CONNECTION_FAILED_TONE,
-                            SILENCE_40MS,
-                            &CONNECTION_FAILED_TONE,
-                        ],
+                        [CONNECTION_FAILED_TONE, SILENCE_40MS, CONNECTION_FAILED_TONE],
                         AtEnd::Stop,
                     );
                 }
@@ -156,7 +187,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("WiFi connected");
     audio_player8.play(
-        [&WIFI_CONNECTED_TONE, SILENCE_40MS, &WIFI_CONNECTED_TONE],
+        [WIFI_CONNECTED_TONE, SILENCE_40MS, WIFI_CONNECTED_TONE],
         AtEnd::Stop,
     );
 
@@ -177,7 +208,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // First tick confirms successful time sync.
     let first_tick = clock_sync.wait_for_tick().await;
     let (first_hours, first_minutes, first_seconds) = h12_m_s(&first_tick.local_time);
-    audio_player8.play([&TIME_SYNCED_TONE], AtEnd::Stop);
+    audio_player8.play([TIME_SYNCED_TONE], AtEnd::Stop);
     info!(
         "Time synced: {:02}:{:02}:{:02} (button toggles mode)",
         first_hours, first_minutes, first_seconds
@@ -193,11 +224,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
                 match clock_audio_mode {
                     ClockAudioMode::HoursMinutes => {
-                        audio_player8.play([&MODE_HH_MM_TONE], AtEnd::Stop);
+                        audio_player8.play([MODE_HH_MM_TONE], AtEnd::Stop);
                         info!("Mode changed: hh:mm (minute tick)");
                     }
                     ClockAudioMode::MinutesSeconds => {
-                        audio_player8.play([&MODE_MM_SS_TONE], AtEnd::Stop);
+                        audio_player8.play([MODE_MM_SS_TONE], AtEnd::Stop);
                         info!("Mode changed: mm:ss (second tick)");
                     }
                 }
@@ -206,7 +237,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 let (hours, minutes, seconds) = h12_m_s(&tick.local_time);
                 match clock_audio_mode {
                     ClockAudioMode::HoursMinutes => {
-                        audio_player8.play([&HH_MM_TICK_TONE], AtEnd::Stop);
+                        audio_player8.play([HH_MM_TICK_TONE], AtEnd::Stop);
                         info!(
                             "hh:mm {:02}:{:02} (since sync: {}s)",
                             hours,
@@ -215,7 +246,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                         );
                     }
                     ClockAudioMode::MinutesSeconds => {
-                        audio_player8.play([&MM_SS_TICK_TONE], AtEnd::Stop);
+                        audio_player8.play([MM_SS_TICK_TONE], AtEnd::Stop);
                         info!(
                             "mm:ss {:02}:{:02} (since sync: {}s)",
                             minutes,

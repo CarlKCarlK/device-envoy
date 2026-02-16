@@ -17,7 +17,7 @@ use core::time::Duration as StdDuration;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, pcm_clip, samples_ms_type},
+    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
     button::{Button, PressedTo},
     silence,
 };

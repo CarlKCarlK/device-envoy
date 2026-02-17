@@ -72,7 +72,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Section 2: Read external PCM clip, change gain, encode to ADPCM, and play.
     const JABBER_ADPCM256: &AudioPlayer8Playable =
-        &Jabber22kPcm::adpcm256_clip_from(Jabber22kPcm::pcm_clip().with_gain(Gain::percent(50)));
+        &Jabber22kPcm::pcm_clip()
+            .with_gain(Gain::percent(50))
+            .with_adpcm::<{ Jabber22kPcm::ADPCM_DATA_LEN }>();
     audio_player8.play([JABBER_ADPCM256], AtEnd::Stop);
     audio_player8.wait_until_stopped().await;
 

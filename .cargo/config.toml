@@ -8,6 +8,7 @@ xtask-check = "check --manifest-path xtask/Cargo.toml"
 
 # High-level checks via xtask
 check-all = "xtask check-all"
+check-quick = "xtask check-quick"
 check-examples = "xtask check-examples"
 check-demos = "xtask check-demos"
 check-compile-only = "xtask check-compile-only"

@@ -25,14 +25,14 @@ pcm_clip! {
 /// provides. For first-time readers, start with the
 /// [`audio_player`](mod@crate::audio_player) module documentation, then return
 /// here for the generated
-/// `pcm_clip()`/`adpcm256_clip()`/`adpcm256_clip_from(...)` items.
+/// `pcm_clip()`/`pcm_clip_from(...)`/`adpcm_clip()` items.
 ///
 /// The generated items are in a module (not a struct type) because stable Rust
 /// does not support inherent associated types on structs.
 ///
 /// Auto-generated.
 pub mod AudioClipGenerated {
-    use crate::audio_player::{AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples};
+    use crate::audio_player::{__pcm_clip_from_samples, AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples};
 
     /// Sample rate in hertz for this generated clip.
     ///
@@ -42,12 +42,15 @@ pub mod AudioClipGenerated {
     /// Number of i16 PCM samples in this generated clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
-    pub const SAMPLE_COUNT: usize = 92_160;
+    pub const PCM_SAMPLE_COUNT: usize = 92_160;
+
+    /// Legacy alias of [`PCM_SAMPLE_COUNT`].
+    pub const SAMPLE_COUNT: usize = PCM_SAMPLE_COUNT;
 
     /// Byte length of ADPCM data for this clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
-    pub const ADPCM_DATA_LEN: usize = adpcm_data_len_for_pcm_samples(SAMPLE_COUNT);
+    pub const ADPCM_DATA_LEN: usize = adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
 
     /// Returns the duration-preserving destination sample count for a new sample rate.
     ///
@@ -55,7 +58,7 @@ pub mod AudioClipGenerated {
     #[must_use]
     pub const fn resampled_sample_count(destination_sample_rate_hz: u32) -> usize {
         crate::audio_player::resampled_sample_count(
-            SAMPLE_COUNT,
+            PCM_SAMPLE_COUNT,
             SAMPLE_RATE_HZ,
             destination_sample_rate_hz,
         )
@@ -66,7 +69,7 @@ pub mod AudioClipGenerated {
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
     pub const fn pcm_clip() -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
-        PcmClipBuf::new([0; SAMPLE_COUNT])
+        __pcm_clip_from_samples([0; SAMPLE_COUNT])
     }
 
     /// `const` function that returns the generated audio clip encoded as ADPCM
@@ -74,17 +77,18 @@ pub mod AudioClipGenerated {
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
-    pub const fn adpcm256_clip() -> AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN> {
+    pub const fn adpcm_clip() -> AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN> {
         pcm_clip().with_adpcm::<ADPCM_DATA_LEN>()
     }
 
-    /// `const` function that ADPCM-encodes a provided PCM clip with 256-byte blocks.
+    /// `const` function that PCM-decodes a provided ADPCM clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
-    pub const fn adpcm256_clip_from(
-        pcm_clip: PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>,
-    ) -> AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN> {
-        pcm_clip.with_adpcm::<ADPCM_DATA_LEN>()
+    pub const fn pcm_clip_from(
+        adpcm_clip: AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN>,
+    ) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
+        adpcm_clip.with_pcm::<SAMPLE_COUNT>()
     }
+
 }

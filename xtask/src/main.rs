@@ -29,6 +29,8 @@ struct Cli {
 enum Commands {
     /// Run all checks: build lib, examples, run tests, generate docs
     CheckAll,
+    /// Run compile-only validation (no test execution)
+    CheckQuick,
     /// Check compile-only tests (tests-compile-only)
     CheckCompileOnly,
     /// Check all examples (pico1 + pico2, with and without wifi)
@@ -124,6 +126,7 @@ fn main() -> ExitCode {
 
     match cli.command {
         Commands::CheckAll => check_all(),
+        Commands::CheckQuick => check_quick(),
         Commands::CheckCompileOnly => check_compile_only(),
         Commands::CheckExamples => check_examples(),
         Commands::CheckDemos => check_demos(),
@@ -174,6 +177,93 @@ fn main() -> ExitCode {
             wifi,
         } => build_uf2(&name, board, arch, wifi),
     }
+}
+
+fn check_quick() -> ExitCode {
+    let workspace_root = workspace_root();
+    if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
+        eprintln!("Error generating audio_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
+        eprintln!("Error generating audio_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
+        eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
+        eprintln!("Error generating led_strip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
+        eprintln!("Error generating servo_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = check_generated_doc_stubs(&workspace_root) {
+        eprintln!("Generated doc stub consistency check failed:\n{}", err);
+        return ExitCode::FAILURE;
+    }
+
+    let arch = Arch::Arm;
+    let board_pico2 = Board::Pico2;
+    let target_pico2 = arch.target(board_pico2);
+    let features_no_wifi = build_features(board_pico2, arch, false);
+    let features_wifi_pico2 = build_features(board_pico2, arch, true);
+
+    println!(
+        "{}",
+        "==> Running quick compile checks (no test execution)...".cyan()
+    );
+
+    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        "build",
+        "--lib",
+        "--target",
+        target_pico2,
+        "--features",
+        features_no_wifi.as_str(),
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+
+    if check_examples() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+    if check_demos() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+    if check_compile_only() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+
+    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        "doc",
+        "--target",
+        target_pico2,
+        "--no-deps",
+        "--features",
+        features_wifi_pico2.as_str(),
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        "doc",
+        "--target",
+        arch.target(Board::Pico1),
+        "--no-deps",
+        "--features",
+        "embedded,wifi,doc-images",
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+
+    println!("\n{}", "==> Quick checks passed! 🎉".green().bold());
+    ExitCode::SUCCESS
 }
 
 fn check_compile_only() -> ExitCode {
@@ -1049,6 +1139,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             relative_path: "src/audio_player/audio_clip_generated.rs",
             required_fragments: &[
                 "pub const SAMPLE_RATE_HZ: u32",
+                "pub const PCM_SAMPLE_COUNT: usize",
                 "pub const SAMPLE_COUNT: usize",
                 "pub const fn resampled_sample_count(",
                 "pub const fn pcm_clip() -> PcmClipBuf<",

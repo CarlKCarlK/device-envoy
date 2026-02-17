@@ -14,10 +14,11 @@ type AudioClipTone = PcmClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
 
 #[test]
 fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
-    let silence_audio_clip: AudioClipTone = AudioClipTone::new([0; TONE_SAMPLE_COUNT]);
+    let silence_audio_clip: AudioClipTone =
+        super::__pcm_clip_from_samples([0; TONE_SAMPLE_COUNT]);
     assert!(
         silence_audio_clip
-            .samples()
+            .samples
             .iter()
             .all(|sample_value_ref| *sample_value_ref == 0),
         "silence clip must contain only zero samples"
@@ -31,7 +32,7 @@ fn tone_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
         super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
     assert!(
         tone_audio_clip
-            .samples()
+            .samples
             .iter()
             .any(|sample_value_ref| *sample_value_ref != 0),
         "tone clip must contain non-zero samples"
@@ -51,13 +52,13 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
             .with_gain(Gain::percent(200));
 
     assert_ne!(
-        tone_audio_clip.samples(),
-        tone_gain50_audio_clip.samples(),
+        tone_audio_clip.samples,
+        tone_gain50_audio_clip.samples,
         "50% gain must change sample data"
     );
     assert_ne!(
-        tone_audio_clip.samples(),
-        tone_gain200_audio_clip.samples(),
+        tone_audio_clip.samples,
+        tone_gain200_audio_clip.samples,
         "200% gain must change sample data"
     );
 
@@ -99,8 +100,8 @@ fn with_resampled_same_rate_same_count_is_identity() {
         super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ),
     );
     assert_eq!(
-        tone_audio_clip.samples(),
-        tone_resampled_audio_clip.samples(),
+        tone_audio_clip.samples,
+        tone_resampled_audio_clip.samples,
         "resampling to same rate and sample count must be identity"
     );
 }
@@ -171,7 +172,7 @@ fn clip_to_s16le_bytes<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     audio_clip: &PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
 ) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(SAMPLE_COUNT * 2);
-    for sample in audio_clip.samples() {
+    for sample in &audio_clip.samples {
         bytes.extend_from_slice(&sample.to_le_bytes());
     }
     bytes

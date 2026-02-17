@@ -466,16 +466,6 @@ impl<const N: usize> Default for Frame1d<N> {
 // PIO Bus - Shared PIO resource for multiple LED strips
 // ============================================================================
 
-/// Trait for PIO peripherals that can be used with LED strips.
-///
-/// This trait is implemented for any PIO resource that implements
-/// [`crate::pio_irqs::PioIrqMap`].
-#[cfg(not(feature = "host"))]
-#[doc(hidden)] // Required pub for macro expansion in downstream crates
-pub trait LedStripPio: crate::pio_irqs::PioIrqMap {}
-
-#[cfg(not(feature = "host"))]
-impl<PioResource: crate::pio_irqs::PioIrqMap> LedStripPio for PioResource {}
 /// A state machine bundled with its PIO bus.
 ///
 /// This is returned by `pio_split!` and passed to strip constructors.

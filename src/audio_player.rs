@@ -326,6 +326,8 @@ use embassy_rp::gpio::Pin;
 use embassy_rp::pio::{Instance, Pio, PioPin};
 #[cfg(target_os = "none")]
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
+#[cfg(target_os = "none")]
+use crate::pio_irqs::PioIrqMap;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use heapless::Vec;
 
@@ -1675,22 +1677,13 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     }
 }
 
-// todo0 does this really need to be different that other device abstraction traits?
-/// Trait mapping a PIO peripheral to its interrupt binding.
-#[cfg(target_os = "none")]
-#[doc(hidden)]
-pub trait AudioPlayerPio: crate::pio_irqs::PioIrqMap {}
-
-#[cfg(target_os = "none")]
-impl<PioResource: crate::pio_irqs::PioIrqMap> AudioPlayerPio for PioResource {}
-
 // Called by macro-generated code in downstream crates; must be public.
 #[cfg(target_os = "none")]
 #[doc(hidden)]
 pub async fn device_loop<
     const MAX_CLIPS: usize,
     const SAMPLE_RATE_HZ: u32,
-    PIO: AudioPlayerPio,
+    PIO: PioIrqMap,
     DMA: Channel,
     DinPin: Pin + PioPin,
     BclkPin: Pin + PioPin,
@@ -1703,7 +1696,7 @@ pub async fn device_loop<
     bit_clock_pin: Peri<'static, BclkPin>,
     word_select_pin: Peri<'static, LrcPin>,
 ) -> ! {
-    let mut pio = Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let mut pio = Pio::new(pio, <PIO as PioIrqMap>::irqs());
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
     let mut pio_i2s_out = PioI2sOut::new(
         &mut pio.common,

@@ -29,9 +29,7 @@ adpcm_clip! {
 ///
 /// Auto-generated.
 pub mod AdpcmClipGenerated {
-    use crate::audio_player::{
-        AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples,
-    };
+    use crate::audio_player::{AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples};
 
     /// Sample rate in hertz for this generated clip.
     ///
@@ -63,4 +61,5 @@ pub mod AdpcmClipGenerated {
     pub const fn pcm_clip() -> PcmClipBuf<SAMPLE_RATE_HZ, PCM_SAMPLE_COUNT> {
         adpcm_clip().with_pcm::<PCM_SAMPLE_COUNT>()
     }
+
 }

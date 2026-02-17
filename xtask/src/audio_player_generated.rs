@@ -56,7 +56,7 @@ pub type AudioPlayerGeneratedPlayable = dyn AudioClipSource<VOICE_22050_HZ>;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, AudioClipSource, PcmClip, PcmClipBuf, Volume, VOICE_22050_HZ};
+use crate::audio_player::{AtEnd, AudioClipSource, PcmClip, Volume, VOICE_22050_HZ};
 #[cfg(doc)]
 use core::time::Duration;
 
@@ -73,17 +73,7 @@ impl AudioPlayerGenerated {
     /// at this player's sample rate.
     #[must_use]
     pub const fn samples(duration: Duration) -> usize {
-        crate::audio_player::samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
-    }
-
-    /// Creates a sine-wave clip at this player's sample rate.
-    ///
-    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
-    #[must_use]
-    pub const fn tone<const SAMPLE_COUNT: usize>(
-        frequency_hz: u32,
-    ) -> PcmClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
-        PcmClipBuf::tone(frequency_hz)
+        crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
     }
 
     /// Creates and spawns the generated audio player instance.

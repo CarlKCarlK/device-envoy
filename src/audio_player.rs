@@ -540,15 +540,9 @@ pub const fn scale(sample_i16: i16, volume: Volume) -> i16 {
     scale_sample_with_linear(sample_i16, volume.to_i16() as i32)
 }
 
-/// Returns how many samples are needed for a duration.
-///
-/// Use this in const contexts to size static audio arrays.
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
 #[must_use]
 #[doc(hidden)]
-pub const fn samples_for_duration(duration: Duration, sample_rate_hz: u32) -> usize {
+pub const fn __samples_for_duration(duration: Duration, sample_rate_hz: u32) -> usize {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
     let sample_rate_hz_u64 = sample_rate_hz as u64;
     let samples_from_seconds_u64 = duration.as_secs() * sample_rate_hz_u64;
@@ -1370,28 +1364,53 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
 
         AdpcmClip::new(block_align as u16, samples_per_block as u16, adpcm_data)
     }
+}
 
-    /// Creates a sine-wave clip.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    #[must_use]
-    pub const fn tone(frequency_hz: u32) -> Self {
-        assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
-        let mut samples = [0_i16; SAMPLE_COUNT];
-        let phase_step_u64 = ((frequency_hz as u64) << 32) / SAMPLE_RATE_HZ as u64;
-        let phase_step_u32 = phase_step_u64 as u32;
-        let mut phase_u32 = 0_u32;
+/// Const backend helper that creates a PCM sine-wave clip.
+///
+/// This is intentionally `#[doc(hidden)]` because user-facing construction
+/// should prefer [`tone!`](macro@crate::tone).
+#[must_use]
+#[doc(hidden)]
+pub const fn tone_pcm_clip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
+    frequency_hz: u32,
+) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
+    assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
+    let mut samples = [0_i16; SAMPLE_COUNT];
+    let phase_step_u64 = ((frequency_hz as u64) << 32) / SAMPLE_RATE_HZ as u64;
+    let phase_step_u32 = phase_step_u64 as u32;
+    let mut phase_u32 = 0_u32;
 
-        let mut sample_index = 0_usize;
-        while sample_index < SAMPLE_COUNT {
-            samples[sample_index] = sine_sample_from_phase(phase_u32);
-            phase_u32 = phase_u32.wrapping_add(phase_step_u32);
-            sample_index += 1;
-        }
-
-        Self::new(samples)
+    let mut sample_index = 0usize;
+    while sample_index < SAMPLE_COUNT {
+        samples[sample_index] = sine_sample_from_phase(phase_u32);
+        phase_u32 = phase_u32.wrapping_add(phase_step_u32);
+        sample_index += 1;
     }
+
+    // Apply a short attack/release envelope to avoid clicks from discontinuities
+    // at note boundaries (especially obvious on pure sine tones).
+    let mut fade_samples = (SAMPLE_RATE_HZ as usize * 4) / 1000;
+    if fade_samples * 2 > SAMPLE_COUNT {
+        fade_samples = SAMPLE_COUNT / 2;
+    }
+    if fade_samples > 0 {
+        let fade_samples_i32 = fade_samples as i32;
+        let mut fade_index = 0usize;
+        while fade_index < fade_samples {
+            let fade_numerator = fade_index as i32;
+            let leading_scaled = (samples[fade_index] as i32 * fade_numerator) / fade_samples_i32;
+            samples[fade_index] = leading_scaled as i16;
+
+            let trailing_index = SAMPLE_COUNT - 1 - fade_index;
+            let trailing_scaled =
+                (samples[trailing_index] as i32 * fade_numerator) / fade_samples_i32;
+            samples[trailing_index] = trailing_scaled as i16;
+            fade_index += 1;
+        }
+    }
+
+    PcmClip::new(samples)
 }
 
 /// Const backend helper that resamples a PCM clip to a destination timeline.
@@ -2706,14 +2725,13 @@ macro_rules! adpcm_clip {
     };
 }
 
-/// Macro that expands to an ADPCM silence clip expression for a sample rate and duration.
+/// Macro that expands to a PCM silence clip expression for a sample rate and duration.
 ///
 /// Examples:
 /// - `silence!(VOICE_22050_HZ, Duration::from_millis(100))`
 /// - `silence!(AudioPlayer8, Duration::from_millis(100))`
 ///
-/// The result is a `PcmClipBuf` silence clip encoded as ADPCM using the
-/// default ADPCM block size.
+/// The result is a `PcmClipBuf` silence clip.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
@@ -2727,25 +2745,19 @@ macro_rules! silence {
     ($sample_rate_hz:expr, $duration:expr) => {
         $crate::audio_player::PcmClipBuf::<
             { $sample_rate_hz },
-            { $crate::audio_player::samples_for_duration($duration, $sample_rate_hz) },
-        >::new([0; { $crate::audio_player::samples_for_duration($duration, $sample_rate_hz) }])
-        .with_adpcm::<{
-            $crate::audio_player::adpcm_data_len_for_pcm_samples(
-                $crate::audio_player::samples_for_duration($duration, $sample_rate_hz),
-            )
-        }>()
+            { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) },
+        >::new([0; { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) }])
     };
 }
 
-/// Macro that expands to an ADPCM tone clip expression for frequency,
+/// Macro that expands to a PCM tone clip expression for frequency,
 /// sample rate, and duration.
 ///
 /// Examples:
 /// - `tone!(440, VOICE_22050_HZ, Duration::from_millis(500))`
 /// - `tone!(440, AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(500))`
 ///
-/// The result is a `PcmClipBuf` tone clip encoded as ADPCM using the default
-/// ADPCM block size.
+/// The result is a `PcmClipBuf` sine-wave clip.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
@@ -2753,15 +2765,10 @@ macro_rules! silence {
 #[macro_export]
 macro_rules! tone {
     ($frequency_hz:expr, $sample_rate_hz:expr, $duration:expr) => {
-        $crate::audio_player::PcmClipBuf::<
+        $crate::audio_player::tone_pcm_clip::<
             { $sample_rate_hz },
-            { $crate::audio_player::samples_for_duration($duration, $sample_rate_hz) },
-        >::tone($frequency_hz)
-        .with_adpcm::<{
-            $crate::audio_player::adpcm_data_len_for_pcm_samples(
-                $crate::audio_player::samples_for_duration($duration, $sample_rate_hz),
-            )
-        }>()
+            { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) },
+        >($frequency_hz)
     };
 }
 
@@ -2845,7 +2852,7 @@ macro_rules! resampled_type {
 /// - `<Name>` - generated player struct type
 /// - `<Name>PcmClip` - unsized PCM clip alias at this player's sample rate
 /// - associated constants and methods on `<Name>` (for example:
-///   `SAMPLE_RATE_HZ`, `samples(...)`, `tone(...)`,
+///   `SAMPLE_RATE_HZ`, `samples(...)`,
 ///   `new(...)`, `play(...)`, and runtime volume controls)
 ///
 /// The generated type contains static resources and spawns its background device
@@ -2853,6 +2860,9 @@ macro_rules! resampled_type {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! audio_player {
+    // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
+    // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
+    // so macro visibility and helper exposure can be controlled more precisely.
     ($($tt:tt)*) => { $crate::__audio_player_impl! { $($tt)* } };
 }
 
@@ -3337,18 +3347,7 @@ macro_rules! __audio_player_impl {
                 /// at this player's sample rate.
                 #[must_use]
                 pub const fn samples(duration: core::time::Duration) -> usize {
-                    $crate::audio_player::samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
-                }
-
-                /// Creates a sine-wave clip at this player's sample rate.
-                ///
-                /// See the [audio_player module documentation](mod@crate::audio_player)
-                /// for usage examples.
-                #[must_use]
-                pub const fn tone<const SAMPLE_COUNT: usize>(
-                    frequency_hz: u32,
-                ) -> $crate::audio_player::PcmClipBuf<{ Self::SAMPLE_RATE_HZ }, SAMPLE_COUNT> {
-                    $crate::audio_player::PcmClipBuf::tone(frequency_hz)
+                    $crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
                 }
 
                 /// Creates and spawns the generated audio player instance.

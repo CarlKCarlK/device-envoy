@@ -24,18 +24,13 @@ adpcm_clip! {
 
 - `target_sample_rate_hz` - Output sample rate in hertz for generated clips (default: the WAV file sample rate).
 
-**Generated items:**
+**Generated items:** todo000 is the order good here and in other?
 
-- `<Name>::SOURCE_SAMPLE_RATE_HZ`
-- `<Name>::TARGET_SAMPLE_RATE_HZ`
-- `<Name>::SAMPLE_RATE_HZ`
-- `<Name>::PCM_SAMPLE_COUNT`
-- `<Name>::ADPCM_DATA_LEN`
 - `<Name>::adpcm_clip()`
 - `<Name>::pcm_clip()`
-- `<Name>::pcm_clip_from(...)`
-- `<Name>::adpcm_clip_from(...)`
-- `<Name>::with_gain(...)`
+- `<Name>::SAMPLE_RATE_HZ`
+- `<Name>::ADPCM_DATA_LEN`
+- `<Name>::PCM_SAMPLE_COUNT`
 
 See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
 

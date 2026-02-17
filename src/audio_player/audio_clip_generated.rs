@@ -24,7 +24,7 @@ pcm_clip! {
 /// provides. For first-time readers, start with the
 /// [`audio_player`](mod@crate::audio_player) module documentation, then return
 /// here for the generated
-/// `pcm_clip()`/`pcm_clip_from(...)`/`adpcm_clip()` items.
+/// `pcm_clip()`/`adpcm_clip()` items.
 ///
 /// The generated items are in a module (not a struct type) because stable Rust
 /// does not support inherent associated types on structs.
@@ -75,16 +75,6 @@ pub mod PcmClipGenerated {
     #[must_use]
     pub const fn adpcm_clip() -> AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN> {
         pcm_clip().with_adpcm::<ADPCM_DATA_LEN>()
-    }
-
-    /// `const` function that PCM-decodes a provided ADPCM clip.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
-    #[must_use]
-    pub const fn pcm_clip_from(
-        adpcm_clip: AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN>,
-    ) -> PcmClipBuf<SAMPLE_RATE_HZ, PCM_SAMPLE_COUNT> {
-        adpcm_clip.with_pcm::<PCM_SAMPLE_COUNT>()
     }
 
 }

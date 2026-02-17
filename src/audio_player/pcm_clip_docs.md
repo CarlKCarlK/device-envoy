@@ -32,14 +32,11 @@ pcm_clip! {
 
 **Generated items:**
 
-- `SOURCE_SAMPLE_RATE_HZ` - source sample rate for input bytes
-- `TARGET_SAMPLE_RATE_HZ` - output sample rate for generated clips
-- `SAMPLE_RATE_HZ` - alias of `TARGET_SAMPLE_RATE_HZ`
-- `PCM_SAMPLE_COUNT` - number of i16 PCM samples in the generated clip
 - `pcm_clip()` - `const` function that returns the generated audio clip
-- `ADPCM_DATA_LEN` - ADPCM byte length for encoding this clip
-- `pcm_clip_from(...)` - `const` function that PCM-decodes a provided ADPCM clip
 - `adpcm_clip()` - `const` function that returns the generated clip encoded as ADPCM (256-byte blocks)
+- `SAMPLE_RATE_HZ` - sample rate for generated clips
+- `PCM_SAMPLE_COUNT` - number of i16 PCM samples in the generated clip
+- `ADPCM_DATA_LEN` - ADPCM byte length for encoding this clip
 
 **Mental model (lifecycle):**
 

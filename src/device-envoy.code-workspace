@@ -1,0 +1,32 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../ir-voice"
+		}
+	],
+	"settings": {
+		"rust-analyzer.cargo.allTargets": false,
+		"rust-analyzer.cargo.features": [
+			"pico1",
+			"arm",
+			"wifi"
+		],
+		"rust-analyzer.cargo.noDefaultFeatures": true,
+		"rust-analyzer.cargo.target": "thumbv6m-none-eabi",
+		"rust-analyzer.check.overrideCommand": [
+			"cargo",
+			"check",
+			"--package",
+			"device-envoy",
+			"--features",
+			"pico1,arm,wifi",
+			"--no-default-features",
+			"--target",
+			"thumbv6m-none-eabi"
+		],
+		"terminal.integrated.shellIntegration.enabled": true
+	}
+}

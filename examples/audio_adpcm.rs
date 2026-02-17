@@ -12,7 +12,7 @@
 
 use core::convert::Infallible;
 use core::future::pending;
-use core::time::Duration;
+use core::time::Duration as StdDuration;
 
 use device_envoy::audio_player::{
     AtEnd, Gain, VOICE_22050_HZ, Volume, adpcm_clip, audio_player, pcm_clip,
@@ -59,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // todo00 shouldn't silence and tone be Adpcm Clips.
     // todo00 keep naming consistent between PCM helpers and ADPCM helpers.
     const GAP_100MS: &AudioPlayer8Playable =
-        &silence!(AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(100));
+        &silence!(AudioPlayer8::SAMPLE_RATE_HZ, StdDuration::from_millis(100));
 
     // todo00 should we add a block_play
     // todo00 should clips know their duration.

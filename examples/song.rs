@@ -12,7 +12,7 @@
 #![no_main]
 
 use core::convert::Infallible;
-use core::time::Duration;
+use core::time::Duration as StdDuration;
 
 use defmt::info;
 use device_envoy::{
@@ -41,13 +41,13 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NOTE_E4: &SongPlayerPlayable =
-        &tone!(330, SongPlayer::SAMPLE_RATE_HZ, Duration::from_millis(220));
+        &tone!(330, SongPlayer::SAMPLE_RATE_HZ, StdDuration::from_millis(220));
     const NOTE_D4: &SongPlayerPlayable =
-        &tone!(294, SongPlayer::SAMPLE_RATE_HZ, Duration::from_millis(220));
+        &tone!(294, SongPlayer::SAMPLE_RATE_HZ, StdDuration::from_millis(220));
     const NOTE_C4: &SongPlayerPlayable =
-        &tone!(262, SongPlayer::SAMPLE_RATE_HZ, Duration::from_millis(220));
+        &tone!(262, SongPlayer::SAMPLE_RATE_HZ, StdDuration::from_millis(220));
     const REST_80MS: &SongPlayerPlayable =
-        &silence!(SongPlayer::SAMPLE_RATE_HZ, Duration::from_millis(80));
+        &silence!(SongPlayer::SAMPLE_RATE_HZ, StdDuration::from_millis(80));
 
     let p = embassy_rp::init(Default::default());
     let song_player = SongPlayer::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;

@@ -1153,7 +1153,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const INITIAL_VOLUME: Volume",
                 "pub const MAX_VOLUME: Volume",
-                "pub const fn samples(duration: Duration) -> usize",
+                "pub const fn samples(duration: StdDuration) -> usize",
                 "pub fn play<const CLIP_COUNT: usize>(",
                 "pub fn set_volume(&self, volume: Volume)",
                 "pub fn volume(&self) -> Volume",

@@ -50,8 +50,12 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{Result, audio_player::{AtEnd, Volume, audio_player, VOICE_22050_HZ}, tone};
-//! use core::time::Duration;
+//! use device_envoy::{
+//!     Result,
+//!     audio_player::{AtEnd, VOICE_22050_HZ, Volume, audio_player},
+//!     silence, tone,
+//! };
+//! use core::time::Duration as StdDuration;
 //!
 //! // Generate `AudioPlayer8`, a struct type with the specified configuration.
 //! audio_player! {
@@ -72,9 +76,9 @@
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     // Define REST_MS as a static clip of silence, 80 milliseconds long.
 //!     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
-//!     const REST_MS: &AudioPlayer8Playable = &device_envoy::silence!((SAMPLE_RATE_HZ), Duration::from_millis(80));
+//!     const REST_MS: &AudioPlayer8Playable = &silence!((SAMPLE_RATE_HZ), StdDuration::from_millis(80));
 //!     // Define each note as a static clip of a sine wave at the appropriate frequency, 220 ms long.
-//!     const NOTE_DURATION: Duration = Duration::from_millis(220);
+//!     const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
 //!     const NOTE_E4: &AudioPlayer8Playable = &tone!(330, SAMPLE_RATE_HZ, NOTE_DURATION);
 //!     const NOTE_D4: &AudioPlayer8Playable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
 //!     const NOTE_C4: &AudioPlayer8Playable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
@@ -106,7 +110,7 @@
 //! # Example: Compiling in an External Audio Clip and Runtime Volume Changes
 //!
 //! This example shows how to "compile in" an audio clip from an external file,
-//! adjust its loudness at compile time, and then play it in a loop while changing the volume
+//! compress it at compile time, and then play it in a loop while changing the volume
 //! while it plays. This also demonstrates how to stop playback and reset the volume.
 //!
 //! ```rust,no_run
@@ -121,7 +125,7 @@
 //!         AtEnd, Gain, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
 //!     button::{Button, PressedTo},
-//!     tone,
+//!     silence, tone,
 //! };
 //! use core::time::Duration as StdDuration;
 //! use embassy_futures::select::{Either, select};
@@ -141,8 +145,7 @@
 //!     }
 //! }
 //!
-//! // Define a `const` function that, if called, will return the audio from this file.
-//! // todo000 shouldn't we list the file first?
+//! // Define a `const` function that, if called, will return the audio from this PCM audio file.
 //! pcm_clip! {
 //!     Nasa {
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
@@ -156,16 +159,21 @@
 //! #     core::panic!("{err}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     // After lower its loudness (at compile time), materialize the clip as a static value.
-//!     const NASA: &AudioPlayer8Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
-//!     // todo000 import silence!
-//!     // shorten sample rate and perhaps ms
+//!     const fn ms(milliseconds: u64) -> StdDuration {
+//!         StdDuration::from_millis(milliseconds)
+//!     }
+//!
 //!     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
-//!     const GAP: &AudioPlayer8Playable = &device_envoy::silence!((SAMPLE_RATE_HZ), StdDuration::from_millis(80));
-//!     const CHIME: &AudioPlayer8Playable = &tone!(880, SAMPLE_RATE_HZ, StdDuration::from_millis(100)).with_gain(Gain::percent(20));
-//!     // todo000 kill these, but may need examples elsewhere.
-//!     let _nasa_source_sample_rate_hz = Nasa::SAMPLE_RATE_HZ;
-//!     let _nasa_source_sample_count = Nasa::PCM_SAMPLE_COUNT;
+//!
+//!     // The three final clips are promoted to implicit 'static storage in flash.
+//!
+//!     // Read the uncompressed (PCM) NASA clip in compressed (ADPCM) format.
+//!     const NASA: &AudioPlayer8Playable = &Nasa::adpcm_clip();
+//!     // 80ms of silence
+//!     const GAP: &AudioPlayer8Playable = &silence!(SAMPLE_RATE_HZ, ms(80));
+//!     // 100ms of a pure 880Hz tone, at 20% loudness.
+//!     const CHIME: &AudioPlayer8Playable =
+//!         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
 //!
 //!     let p = embassy_rp::init(Default::default());
 //!     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -203,17 +211,15 @@
 //!         audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
 //!
 //!     }
-//!
-//!     core::future::pending().await // run forever
 //! }
 //! ```
 //!
 //! todo000 and convert to compressed format.
 //! # Example: Resample and Play Countdown Once
 //!
-//! This example compiles in four 22.05 kHz clips (`3`, `2`, `1`, and NASA),
-//! resamples them to narrowband 8 kHz at compile time, and plays the sequence
-//! once.
+//! This example compiles in three 22.05 kHz clips (`2`, `1`, `0`) and NASA,
+//! resamples them to narrowband 8 kHz at compile time, compresses them,
+//! and plays the sequence once.
 //!
 //! ```rust,no_run
 //! # #![no_std]
@@ -224,11 +230,12 @@
 //! use device_envoy::{
 //!     Result,
 //!     audio_player::{
-//!         AtEnd, AudioClipSource, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip,
+//!         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip,
 //!         audio_player,
 //!     },
 //! };
 //!
+//! // To save memory, we use a lower sample rate.
 //! audio_player! {
 //!     AudioPlayer8 {
 //!         data_pin: PIN_8,
@@ -239,13 +246,12 @@
 //!     }
 //! }
 //!
-//! // todo000 file first (may no longer apply)
-//! // todo000 get target hz from the player
+//! // We resample each clip from the original 22KHz to the 8KHz sample rate of our audio player.
 //! pcm_clip! {
 //!     Digit0 {
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/0_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
-//!         target_sample_rate_hz: NARROWBAND_8000_HZ,
+//!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
 //! }
 //!
@@ -253,7 +259,7 @@
 //!     Digit1 {
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/1_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
-//!         target_sample_rate_hz: NARROWBAND_8000_HZ,
+//!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
 //! }
 //!
@@ -261,15 +267,7 @@
 //!     Digit2 {
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/2_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
-//!         target_sample_rate_hz: NARROWBAND_8000_HZ,
-//!     }
-//! }
-//!
-//! pcm_clip! {
-//!     Digit3 {
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/3_22050.s16"),
-//!         source_sample_rate_hz: VOICE_22050_HZ,
-//!         target_sample_rate_hz: NARROWBAND_8000_HZ,
+//!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
 //! }
 //!
@@ -277,7 +275,7 @@
 //!     Nasa {
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
-//!         target_sample_rate_hz: NARROWBAND_8000_HZ,
+//!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
 //! }
 //!
@@ -287,28 +285,22 @@
 //! #     core::panic!("{err}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     const NASA_8K: &AudioPlayer8Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
-//!     // TODO00 shorten this type?
-//!     const DIGITS: [&'static dyn AudioClipSource<{ AudioPlayer8::SAMPLE_RATE_HZ }>; 4] =
-//!         [&Digit0::pcm_clip(), &Digit1::pcm_clip(), &Digit2::pcm_clip(), &Digit3::pcm_clip()];
+//!     // We read the compressed version of the digits.
+//!     const DIGITS: [&AudioPlayer8Playable; 3] = [
+//!         &Digit0::adpcm_clip(),
+//!         &Digit1::adpcm_clip(),
+//!         &Digit2::adpcm_clip(),
+//!     ];
+//!
+//!     // We read the uncompressed (PCM) NASA clip, change its loudness, and then convert it to compressed (ADPCM) format.
+//!     const NASA: &AudioPlayer8Playable = &Nasa::pcm_clip()
+//!         .with_gain(Gain::percent(25))
+//!         .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
 //!
 //!     let p = embassy_rp::init(Default::default());
-//!     let audio_player8 = AudioPlayer8::new(
-//!         p.PIN_8,
-//!         p.PIN_9,
-//!         p.PIN_10,
-//!         p.PIO0,
-//!         p.DMA_CH0,
-//!         spawner,
-//!     )?;
+//!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 //!
-//!     // todo000 kill these, but may need examples elsewhere.
-//!     let _digit0_source_sample_rate_hz = Digit0::SAMPLE_RATE_HZ;
-//!     let _digit0_source_sample_count = Digit0::PCM_SAMPLE_COUNT;
-//!     let _nasa_sample_count = Nasa::PCM_SAMPLE_COUNT;
-//!     let _digit_sample_count = Digit0::PCM_SAMPLE_COUNT;
-//!
-//!     audio_player8.play([DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], NASA_8K], AtEnd::Stop);
+//!     audio_player8.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);
 //!     core::future::pending().await // run forever
 //! }
 //! ```
@@ -323,7 +315,7 @@ mod host_tests;
 use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use core::sync::atomic::{AtomicI32, Ordering};
-use core::time::Duration;
+pub use core::time::Duration as StdDuration;
 
 #[cfg(target_os = "none")]
 use embassy_rp::Peri;
@@ -545,7 +537,7 @@ pub const fn scale(sample_i16: i16, volume: Volume) -> i16 {
 
 #[must_use]
 #[doc(hidden)]
-pub const fn __samples_for_duration(duration: Duration, sample_rate_hz: u32) -> usize {
+pub const fn __samples_for_duration(duration: StdDuration, sample_rate_hz: u32) -> usize {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
     let sample_rate_hz_u64 = sample_rate_hz as u64;
     let samples_from_seconds_u64 = duration.as_secs() * sample_rate_hz_u64;
@@ -1112,32 +1104,29 @@ pub(crate) enum PlaybackClip<const SAMPLE_RATE_HZ: u32> {
 /// A statically stored clip source used for mixed playback without enum wrappers at call sites.
 ///
 /// This trait is object-safe, so you can pass heterogeneous static clips as:
-/// `&'static dyn AudioClipSource<SAMPLE_RATE_HZ>`.
+/// `&'static dyn Playable<SAMPLE_RATE_HZ>`.
 #[allow(private_bounds)]
-pub trait AudioClipSource<const SAMPLE_RATE_HZ: u32>:
-    sealed::AudioClipSourceSealed<SAMPLE_RATE_HZ>
-{
-}
+pub trait Playable<const SAMPLE_RATE_HZ: u32>: sealed::PlayableSealed<SAMPLE_RATE_HZ> {}
 
-impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> AudioClipSource<SAMPLE_RATE_HZ> for T where
-    T: sealed::AudioClipSourceSealed<SAMPLE_RATE_HZ>
+impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
+    T: sealed::PlayableSealed<SAMPLE_RATE_HZ>
 {
 }
 
 mod sealed {
     use super::{AdpcmClip, PcmClip, PlaybackClip};
 
-    pub(crate) trait AudioClipSourceSealed<const SAMPLE_RATE_HZ: u32> {
+    pub(crate) trait PlayableSealed<const SAMPLE_RATE_HZ: u32> {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ>;
     }
 
-    impl<const SAMPLE_RATE_HZ: u32> AudioClipSourceSealed<SAMPLE_RATE_HZ> for PcmClip<SAMPLE_RATE_HZ> {
+    impl<const SAMPLE_RATE_HZ: u32> PlayableSealed<SAMPLE_RATE_HZ> for PcmClip<SAMPLE_RATE_HZ> {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
             PlaybackClip::Pcm(self)
         }
     }
 
-    impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> AudioClipSourceSealed<SAMPLE_RATE_HZ>
+    impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> PlayableSealed<SAMPLE_RATE_HZ>
         for PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>
     {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
@@ -1145,15 +1134,13 @@ mod sealed {
         }
     }
 
-    impl<const SAMPLE_RATE_HZ: u32> AudioClipSourceSealed<SAMPLE_RATE_HZ>
-        for AdpcmClip<SAMPLE_RATE_HZ>
-    {
+    impl<const SAMPLE_RATE_HZ: u32> PlayableSealed<SAMPLE_RATE_HZ> for AdpcmClip<SAMPLE_RATE_HZ> {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
             PlaybackClip::Adpcm(self)
         }
     }
 
-    impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AudioClipSourceSealed<SAMPLE_RATE_HZ>
+    impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> PlayableSealed<SAMPLE_RATE_HZ>
         for AdpcmClip<SAMPLE_RATE_HZ, [u8; DATA_LEN]>
     {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
@@ -1635,7 +1622,7 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     /// usage examples.
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static dyn AudioClipSource<SAMPLE_RATE_HZ>; CLIP_COUNT],
+        audio_clips: [&'static dyn Playable<SAMPLE_RATE_HZ>; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         self.play_iter(audio_clips, at_end);
@@ -1647,14 +1634,14 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     /// clip sample storage.
     pub fn play_iter<I>(&self, audio_clips: I, at_end: AtEnd)
     where
-        I: IntoIterator<Item = &'static dyn AudioClipSource<SAMPLE_RATE_HZ>>,
+        I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>,
     {
         assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
         let mut audio_clip_sequence: Vec<PlaybackClip<SAMPLE_RATE_HZ>, MAX_CLIPS> = Vec::new();
         for audio_clip in audio_clips {
             assert!(
                 audio_clip_sequence
-                    .push(sealed::AudioClipSourceSealed::playback_clip(audio_clip))
+                    .push(sealed::PlayableSealed::playback_clip(audio_clip))
                     .is_ok(),
                 "play sequence fits within max_clips"
             );
@@ -2149,6 +2136,9 @@ pub enum AudioFormat {
 /// - `ADPCM_DATA_LEN` - ADPCM byte length for encoding this clip
 /// - `pcm_clip_from(...)` - `const` function that PCM-decodes a provided ADPCM clip
 /// - `adpcm_clip()` - `const` function that returns the generated clip encoded as ADPCM (256-byte blocks)
+// TODO0 Add explicit examples focused on generated constants
+// (`SOURCE_SAMPLE_RATE_HZ`, `TARGET_SAMPLE_RATE_HZ`, `SAMPLE_RATE_HZ`,
+// `PCM_SAMPLE_COUNT`, `ADPCM_DATA_LEN`) and when to use each one.
 // TODO00 Review and refine generated docs for `adpcm_clip(...)`.
 ///
 /// **Mental model (lifecycle):**
@@ -2751,7 +2741,7 @@ macro_rules! adpcm_clip {
 ///
 /// Examples:
 /// - `silence!(VOICE_22050_HZ, Duration::from_millis(100))`
-/// - `silence!(AudioPlayer8, Duration::from_millis(100))`
+/// - `silence!(AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(100))`
 ///
 /// The result is a `PcmClipBuf` silence clip.
 ///
@@ -2760,10 +2750,6 @@ macro_rules! adpcm_clip {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! silence {
-    ($player:ident, $duration:expr) => {
-        $crate::silence!($player::SAMPLE_RATE_HZ, $duration)
-    };
-
     ($sample_rate_hz:expr, $duration:expr) => {
         $crate::audio_player::__pcm_clip_from_samples::<
             { $sample_rate_hz },
@@ -3350,12 +3336,12 @@ macro_rules! __audio_player_impl {
                 ").\n\n",
                 "Use this in signatures like `&'static ",
                 stringify!([<$name Playable>]),
-                "` instead of repeating `dyn AudioClipSource<{ ",
+                "` instead of repeating `dyn Playable<{ ",
                 stringify!($name),
                 "::SAMPLE_RATE_HZ }>`."
             )]
             $vis type [<$name Playable>] =
-                dyn $crate::audio_player::AudioClipSource<{ $sample_rate_hz }>;
+                dyn $crate::audio_player::Playable<{ $sample_rate_hz }>;
 
             impl $name {
                 /// Sample rate used for audio playback by this generated player type.
@@ -3368,7 +3354,7 @@ macro_rules! __audio_player_impl {
                 /// Returns how many samples are needed for a duration
                 /// at this player's sample rate.
                 #[must_use]
-                pub const fn samples(duration: core::time::Duration) -> usize {
+                pub const fn samples(duration: $crate::audio_player::StdDuration) -> usize {
                     $crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
                 }
 

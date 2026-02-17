@@ -51,14 +51,14 @@ pub type AudioPlayerGeneratedPcmClip = PcmClip<VOICE_22050_HZ>;
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
-pub type AudioPlayerGeneratedPlayable = dyn AudioClipSource<VOICE_22050_HZ>;
+pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;
 
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, AudioClipSource, PcmClip, Volume, VOICE_22050_HZ};
+use crate::audio_player::{AtEnd, PcmClip, Playable, Volume, VOICE_22050_HZ};
 #[cfg(doc)]
-use core::time::Duration;
+use core::time::Duration as StdDuration;
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
@@ -72,7 +72,7 @@ impl AudioPlayerGenerated {
     /// Returns how many samples are needed for a duration
     /// at this player's sample rate.
     #[must_use]
-    pub const fn samples(duration: Duration) -> usize {
+    pub const fn samples(duration: StdDuration) -> usize {
         crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
     }
 
@@ -97,7 +97,7 @@ impl AudioPlayerGenerated {
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn play<const CLIP_COUNT: usize>(
         &self,
-        audio_clips: [&'static dyn AudioClipSource<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
+        audio_clips: [&'static dyn Playable<{ Self::SAMPLE_RATE_HZ }>; CLIP_COUNT],
         at_end: AtEnd,
     ) {
         let _ = (audio_clips, at_end);

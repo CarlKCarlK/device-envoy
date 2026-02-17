@@ -2,6 +2,8 @@
 //!
 //! Run with: `cargo xtask <command>`
 
+// todo000 pcm_clip and adpcm_clip. remove all reference
+// todo000 remove all references to audio_clip
 mod audio_clip_generated;
 mod audio_player_generated;
 mod led2d_generated;

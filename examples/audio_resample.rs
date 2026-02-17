@@ -96,12 +96,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!(
         "NASA source clip: {} Hz, {} samples",
         Nasa::SAMPLE_RATE_HZ,
-        Nasa::SAMPLE_COUNT
+        Nasa::PCM_SAMPLE_COUNT
     );
     info!(
         "NASA resampled clip: {} Hz, {} samples",
         AudioPlayer8KPcmClip::SAMPLE_RATE_HZ,
-        Nasa::SAMPLE_COUNT
+        Nasa::PCM_SAMPLE_COUNT
     );
     info!("Press GP13 button to play countdown 3,2,1,0 then NASA (8 kHz)");
 

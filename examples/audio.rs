@@ -69,8 +69,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
-        Nasa::SAMPLE_COUNT,
-        Nasa::SAMPLE_COUNT * 2
+        Nasa::PCM_SAMPLE_COUNT,
+        Nasa::PCM_SAMPLE_COUNT * 2
     );
     info!("Button on GP13 starts playback");
 

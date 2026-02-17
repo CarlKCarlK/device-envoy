@@ -1140,7 +1140,6 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             required_fragments: &[
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const PCM_SAMPLE_COUNT: usize",
-                "pub const SAMPLE_COUNT: usize",
                 "pub const fn resampled_sample_count(",
                 "pub const fn pcm_clip() -> PcmClipBuf<",
             ],

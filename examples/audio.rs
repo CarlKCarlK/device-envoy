@@ -23,7 +23,7 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-// TODO add concatenation, fade in and out, trim, and resample.
+// TODO in the future think about adding concatenation, fade in and out, trim, and resample.
 audio_player! {
     AudioPlayer8 {
         data_pin: PIN_8,

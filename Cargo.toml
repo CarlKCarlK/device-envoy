@@ -169,18 +169,16 @@ required-features = ["host"]
 # `#[expect(unsafe_code)]`'s on an as needed basis.
 bare_trait_objects = "forbid"
 rust_2018_idioms = { level = "warn", priority = -2 }
-# TODO: Remove when this is stabilized and/or works better. It's giving many false positives at time of writing (2024-08).
-unfulfilled_lint_expectations = "warn"
+unfulfilled_lint_expectations = "deny"
 unknown_lints = "warn"
 unsafe_code = "deny"
 unused_variables = "warn"
 non_snake_case = "warn"
 non_camel_case_types = "warn"
 non_upper_case_globals = "warn"
-# TODO: Determine why `#[expect(unexpected_cfgs)]` at the site of the problem
-#       (`target_pointer_width = 128`) is ineffective; the setting below is overly broad
-unexpected_cfgs = "warn"
-
+unexpected_cfgs = { level = "deny", check-cfg = [
+    'cfg(target_pointer_width, values("128"))',
+] }
 missing_docs = "warn"
 warnings = "deny"
 
@@ -202,8 +200,8 @@ nursery = { level = "warn", priority = -2 }
 
 allow_attributes = "warn"
 allow_attributes_without_reason = "deny"
-# TODO cargo_common_metadata = { level = "warn", priority = -1 }
-# TODO doc_markdown = "warn"
+cargo_common_metadata = { level = "warn", priority = -1 }
+doc_markdown = "warn"
 enum_glob_use = "forbid"
 enum_variant_names = "warn"
 equatable_if_let = "warn"

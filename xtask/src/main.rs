@@ -2,12 +2,11 @@
 //!
 //! Run with: `cargo xtask <command>`
 
-// todo000 pcm_clip and adpcm_clip. remove all reference
-// todo000 remove all references to audio_clip
-mod audio_clip_generated;
+mod adpcm_clip_generated;
 mod audio_player_generated;
 mod led2d_generated;
 mod led_strip_generated;
+mod pcm_clip_generated;
 mod servo_player_generated;
 mod video_frames_gen;
 
@@ -183,8 +182,12 @@ fn main() -> ExitCode {
 
 fn check_quick() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
-        eprintln!("Error generating audio_clip_generated.rs: {}", err);
+    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
@@ -330,8 +333,12 @@ fn check_compile_only() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
-        eprintln!("Error generating audio_clip_generated.rs: {}", err);
+    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
@@ -629,8 +636,12 @@ fn check_all() -> ExitCode {
 
 fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
-        eprintln!("Error generating audio_clip_generated.rs: {}", err);
+    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
@@ -1138,11 +1149,20 @@ struct GeneratedDocStubExpectation {
 fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
     let generated_doc_stub_expectations = [
         GeneratedDocStubExpectation {
-            relative_path: "src/audio_player/audio_clip_generated.rs",
+            relative_path: "src/audio_player/pcm_clip_generated.rs",
             required_fragments: &[
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const PCM_SAMPLE_COUNT: usize",
-                "pub const fn resampled_sample_count(",
+                "pub const fn pcm_clip() -> PcmClipBuf<",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/audio_player/adpcm_clip_generated.rs",
+            required_fragments: &[
+                "pub const SAMPLE_RATE_HZ: u32",
+                "pub const PCM_SAMPLE_COUNT: usize",
+                "pub const ADPCM_DATA_LEN: usize",
+                "pub const fn adpcm_clip() -> AdpcmClipBuf<",
                 "pub const fn pcm_clip() -> PcmClipBuf<",
             ],
         },

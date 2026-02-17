@@ -1,4 +1,4 @@
-Macro to define an ADPCM clip namespace from a WAV file.
+Macro to define an ADPCM clip namespace from a WAV file. See [`AdpcmClipGenerated`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated) for a sample of generated items.
 
 **Syntax:**
 
@@ -24,7 +24,7 @@ adpcm_clip! {
 
 - `target_sample_rate_hz` - Output sample rate in hertz for generated clips (default: the WAV file sample rate).
 
-**Generated items:** todo000 is the order good here and in other?
+**Generated items:**
 
 - `<Name>::adpcm_clip()`
 - `<Name>::pcm_clip()`

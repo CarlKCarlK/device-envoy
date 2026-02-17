@@ -1,4 +1,4 @@
-Macro to "compile in" an audio clip from an external file (includes syntax details). See [`PcmClipGenerated`](crate::audio_player::audio_clip_generated::PcmClipGenerated) for a sample of generated items.
+Macro to "compile in" an audio clip from an external file (includes syntax details). See [`PcmClipGenerated`](crate::audio_player::pcm_clip_generated::PcmClipGenerated) for a sample of generated items.
 
 **See the [audio_player module documentation](mod@crate::audio_player) for usage examples.**
 
@@ -51,7 +51,7 @@ When you take `&Name::pcm_clip()` in a `static` context, the compiler promotes t
 
 # Example
 
-See [`PcmClipGenerated`](crate::audio_player::audio_clip_generated::PcmClipGenerated) and the [audio_player module documentation](mod@crate::audio_player).
+See [`PcmClipGenerated`](crate::audio_player::pcm_clip_generated::PcmClipGenerated) and the [audio_player module documentation](mod@crate::audio_player).
 
 # Preparing audio files for `pcm_clip!`
 

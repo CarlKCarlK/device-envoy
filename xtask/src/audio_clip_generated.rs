@@ -16,7 +16,6 @@ pcm_clip! {
     pub PcmClipGenerated {
         file: "../../examples/data/audio/nasa_22k.s16",
         source_sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
-        format: crate::audio_player::AudioFormat::S16le,
     }
 }
 

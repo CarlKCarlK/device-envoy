@@ -17,8 +17,8 @@
 //! - Any sample rate supported by your hardware
 //! // todo000 need to define these and say loss-less and good for voice and 3.5 times smaller.
 //! - Either:
-//!   - 16-bit signed little-endian PCM audio (`s16le`)
-//!   - 4-bit IMA ADPCM WAV data (`.wav`, mono)
+//!   - uncompressed 16-bit PCM (s16le)
+//!   - 4:1 compressed 4-bit IMA ADPCM WAV (`.wav`, mono) for voice-like audio
 //! - Mono input audio (duplicated to left/right on I²S output)
 //!
 //! **After reading the examples below, see also:**
@@ -214,7 +214,6 @@
 //! }
 //! ```
 //!
-//! todo000 and convert to compressed format.
 //! # Example: Resample and Play Countdown Once
 //!
 //! This example compiles in three 22.05 kHz clips (`2`, `1`, `0`) and NASA,
@@ -551,19 +550,10 @@ pub const fn __samples_for_duration(duration: StdDuration, sample_rate_hz: u32) 
     total_samples_u64 as usize
 }
 
-// todo000 hide or remove
-/// Returns the destination sample count that preserves clip duration when
-/// changing sample rate.
-///
-/// This computes
-/// `source_sample_count * destination_sample_rate_hz / source_sample_rate_hz`
-/// using nearest-integer rounding.
-//
-// TODO000 If resampling is only configured via `pcm_clip!`/`adpcm_clip!`,
-// demote this to an implementation helper rather than user-facing API.
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
+// Must remain `pub` because exported macros (for example `pcm_clip!` and
+// `adpcm_clip!`) expand in downstream crates and reference this helper via
+// `$crate::...`.
+#[doc(hidden)]
 #[must_use]
 pub const fn resampled_sample_count(
     source_sample_count: usize,
@@ -1037,6 +1027,9 @@ const ADPCM_STEP_TABLE: [i32; 89] = [
 
 // todo000 hide or remove
 /// Returns decoded samples per IMA ADPCM block for mono 4-bit data.
+// Must remain `pub` because exported macros/constants can reference this via
+// `$crate::audio_player::...` in downstream crates.
+#[doc(hidden)]
 #[must_use]
 pub const fn adpcm_samples_per_block(block_align: usize) -> usize {
     if block_align < 5 {
@@ -1047,6 +1040,7 @@ pub const fn adpcm_samples_per_block(block_align: usize) -> usize {
 
 // todo000 hide or remove
 /// Returns ADPCM byte length needed to encode `sample_count` mono PCM samples.
+#[doc(hidden)]
 #[must_use]
 pub const fn adpcm_data_len_for_pcm_samples(sample_count: usize) -> usize {
     adpcm_data_len_for_pcm_samples_with_block_align(sample_count, ADPCM_ENCODE_BLOCK_ALIGN)
@@ -1055,6 +1049,7 @@ pub const fn adpcm_data_len_for_pcm_samples(sample_count: usize) -> usize {
 // todo000 hide or remove
 /// Returns ADPCM byte length needed to encode `sample_count` mono PCM samples
 /// with a specific ADPCM `block_align`.
+#[doc(hidden)]
 #[must_use]
 pub const fn adpcm_data_len_for_pcm_samples_with_block_align(
     sample_count: usize,
@@ -2070,172 +2065,13 @@ const fn stereo_sample(sample: i16) -> u32 {
 #[doc(hidden)]
 pub use paste;
 
-/// Audio clip source formats for [`pcm_clip!`]. Currently, only one format
-/// is supported.
-///
-/// For ffmpeg conversion directions, see
-/// [`pcm_clip!`](macro@crate::audio_player::pcm_clip) (the "Preparing
-/// audio files for `pcm_clip!`" section).
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum AudioFormat {
-    /// 16-bit signed little-endian mono PCM bytes (`s16le`).
-    S16le,
-}
-
-/// Macro to "compile in" an audio clip from an external file (includes syntax details). See
-/// [`PcmClipGenerated`](crate::audio_player::audio_clip_generated::PcmClipGenerated)
-/// for a sample of generated items.
-///
-/// **See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.**
-///
-/// The generated clip can be modified at compile time (for example with
-/// [`Gain`](crate::audio_player::Gain) via `with_gain(...)`) and only
-/// increases binary size when you store it in a `static`.
-///
-/// **Syntax:**
-///
-/// ```text
-/// pcm_clip! {
-///     [<visibility>] <Name> {
-///         file: <file_path_expr>,
-///         source_sample_rate_hz: <sample_rate_expr>,
-///         target_sample_rate_hz: <sample_rate_expr>, // optional, defaults to source_sample_rate_hz
-///         format: <AudioFormat_expr>, // optional
-///     }
-/// }
-/// ```
-///
-/// **Inputs:**
-///
-/// - `$vis` - Optional module visibility for the generated namespace (for
-///   example: `pub`, `pub(crate)`, `pub(self)`). Defaults to private visibility
-///   when omitted.
-/// - `$name` - Module name for the generated namespace (for example: `Nasa`)
-///
-/// **Required fields:**
-///
-/// - `file` - Path to an external audio file (for example: `"nasa_22k.s16"`)
-/// - `source_sample_rate_hz` - Source sample rate in hertz for the input file
-///   (for example:
-///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
-///
-/// **Optional fields:**
-///
-/// - `target_sample_rate_hz` - Output sample rate in hertz for generated clips
-///   (default: `source_sample_rate_hz`)
-/// - `format` - Audio format (default: [`AudioFormat::S16le`])
-///
-/// **Generated items:**
-///
-/// - `SOURCE_SAMPLE_RATE_HZ` - source sample rate for input bytes
-/// - `TARGET_SAMPLE_RATE_HZ` - output sample rate for generated clips
-/// - `SAMPLE_RATE_HZ` - alias of `TARGET_SAMPLE_RATE_HZ`
-/// - `PCM_SAMPLE_COUNT` - number of i16 PCM samples in the generated clip
-/// - `pcm_clip()` - `const` function that returns the generated audio clip
-/// - `ADPCM_DATA_LEN` - ADPCM byte length for encoding this clip
-/// - `pcm_clip_from(...)` - `const` function that PCM-decodes a provided ADPCM clip
-/// - `adpcm_clip()` - `const` function that returns the generated clip encoded as ADPCM (256-byte blocks)
 // TODO0 Add explicit examples focused on generated constants
 // (`SOURCE_SAMPLE_RATE_HZ`, `TARGET_SAMPLE_RATE_HZ`, `SAMPLE_RATE_HZ`,
 // `PCM_SAMPLE_COUNT`, `ADPCM_DATA_LEN`) and when to use each one.
 // TODO00 Review and refine generated docs for `adpcm_clip(...)`.
-///
-/// **Mental model (lifecycle):**
-///
-/// Each `pcm_clip!` invocation generates:
-///
-/// - a module namespace
-/// - a `const fn pcm_clip()` constructor
-///
-/// Audio bytes are embedded in program flash via `include_bytes!`.
-/// The clip value can be constructed at compile time when used in `const` or
-/// `static` definitions.
-/// When you take `&Name::pcm_clip()` in a `static` context, the compiler
-/// promotes that clip value into flash storage.
-///
-/// # Example
-///
-/// See [`PcmClipGenerated`](crate::audio_player::audio_clip_generated::PcmClipGenerated)
-/// and the [audio_player module documentation](mod@crate::audio_player).
-///
-/// # Preparing audio files for `pcm_clip!`
-///
-/// This macro expects audio in a simple raw format:
-///
-/// - mono
-/// - 16-bit signed samples
-/// - little-endian
-/// - a fixed sample rate (for example, 22050 Hz)
-///
-/// The easiest way to produce that format is with `ffmpeg`.
-///
-/// ## 1) Download an example clip (NASA)
-///
-/// Download the MP3:
-///
-/// ```bash
-/// curl -L -o nasa.mp3 \
-///   "https://www.nasa.gov/wp-content/uploads/2015/01/640149main_Computers20are20in20Control.mp3"
-/// ```
-///
-/// (Windows 10/11 includes `curl` by default.)
-///
-/// ## 2) Install `ffmpeg` (or confirm it is installed)
-///
-/// General: see the official download page:
-///
-/// ```text
-/// https://ffmpeg.org/download.html
-/// ```
-///
-/// ### Ubuntu / Debian
-///
-/// ```bash
-/// sudo apt update
-/// sudo apt install ffmpeg
-/// ffmpeg -version
-/// ```
-///
-/// ### Windows (recommended: `pixi`)
-///
-/// 1. Install `pixi`:
-///
-/// ```text
-/// https://pixi.sh
-/// ```
-///
-/// 2. Install `ffmpeg` globally:
-///
-/// ```powershell
-/// pixi global install ffmpeg
-/// ffmpeg -version
-/// ```
-///
-/// ## 3) Convert to raw PCM (`.s16`) for `pcm_clip!`
-///
-/// This produces a file you can embed and process at compile time:
-///
-/// ```bash
-/// ffmpeg -y -i nasa.mp3 \
-///   -vn \
-///   -ac 1 \
-///   -ar 22050 \
-///   -f s16le \
-///   nasa_22k.s16
-/// ```
-///
-/// What the arguments mean:
-///
-/// - `-i nasa.mp3` - input file
-/// - `-vn` - ignore any video track (safe even for audio-only inputs)
-/// - `-ac 1` - force mono
-/// - `-ar 22050` - set the sample rate (Hz)
-/// - `-f s16le` - write raw 16-bit little-endian PCM (no WAV header)
-/// - `nasa_22k.s16` - output file (ready for `pcm_clip!`)
-///
-/// Tip: pass the file's native rate as `source_sample_rate_hz:` and optionally
-/// resample at compile time with `target_sample_rate_hz:`.
+#[doc = include_str!("audio_player/pcm_clip_docs.md")]
+#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
+#[doc = include_str!("audio_player/pcm_clip_step_3.md")]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! pcm_clip {
@@ -2249,8 +2085,7 @@ macro_rules! __audio_clip_parse {
         $vis:vis $name:ident {
             file: $file:expr,
             source_sample_rate_hz: $source_sample_rate_hz:expr,
-            target_sample_rate_hz: $target_sample_rate_hz:expr,
-            format: $format:expr $(,)?
+            target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
@@ -2259,7 +2094,6 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            format: $format,
         }
     };
     (
@@ -2276,14 +2110,12 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            format: $crate::audio_player::AudioFormat::S16le,
         }
     };
     (
         $vis:vis $name:ident {
             file: $file:expr,
-            source_sample_rate_hz: $source_sample_rate_hz:expr,
-            format: $format:expr $(,)?
+            source_sample_rate_hz: $source_sample_rate_hz:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
@@ -2292,7 +2124,6 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $source_sample_rate_hz,
-            format: $format,
         }
     };
     (
@@ -2308,7 +2139,6 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $source_sample_rate_hz,
-            format: $crate::audio_player::AudioFormat::S16le,
         }
     };
 
@@ -2317,8 +2147,7 @@ macro_rules! __audio_clip_parse {
         $vis:vis $name:ident {
             file: $file:expr,
             sample_rate_hz: $sample_rate_hz:expr,
-            target_sample_rate_hz: $target_sample_rate_hz:expr,
-            format: $format:expr $(,)?
+            target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
@@ -2327,7 +2156,6 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            format: $format,
         }
     };
     (
@@ -2344,14 +2172,12 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            format: $crate::audio_player::AudioFormat::S16le,
         }
     };
     (
         $vis:vis $name:ident {
             file: $file:expr,
-            sample_rate_hz: $sample_rate_hz:expr,
-            format: $format:expr $(,)?
+            sample_rate_hz: $sample_rate_hz:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
@@ -2360,7 +2186,6 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $sample_rate_hz,
-            format: $format,
         }
     };
     (
@@ -2376,7 +2201,6 @@ macro_rules! __audio_clip_parse {
             file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $sample_rate_hz,
-            format: $crate::audio_player::AudioFormat::S16le,
         }
     };
 }
@@ -2389,8 +2213,7 @@ macro_rules! __audio_clip_dispatch {
         name: $name:ident,
         file: $file:expr,
         source_sample_rate_hz: $source_sample_rate_hz:expr,
-        target_sample_rate_hz: $target_sample_rate_hz:expr,
-        format: $format:expr $(,)?
+        target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
     ) => {
         $crate::__audio_clip_impl! {
             vis: $vis,
@@ -2398,7 +2221,6 @@ macro_rules! __audio_clip_dispatch {
             file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            format: $format,
         }
     };
 }
@@ -2411,13 +2233,11 @@ macro_rules! __audio_clip_impl {
         name: $name:ident,
         file: $file:expr,
         source_sample_rate_hz: $source_sample_rate_hz:expr,
-        target_sample_rate_hz: $target_sample_rate_hz:expr,
-        format: $format:expr $(,)?
+        target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
     ) => {
         $crate::audio_player::paste::paste! {
             const [<$name:upper _SOURCE_SAMPLE_RATE_HZ>]: u32 = $source_sample_rate_hz;
             const [<$name:upper _TARGET_SAMPLE_RATE_HZ>]: u32 = $target_sample_rate_hz;
-            const [<$name:upper _AUDIO_FORMAT>]: $crate::audio_player::AudioFormat = $format;
 
             #[allow(non_snake_case)]
             #[doc = concat!(
@@ -2454,8 +2274,6 @@ macro_rules! __audio_clip_impl {
                 #[doc = "Byte length of the ADPCM data when encoding this clip."]
                 pub const ADPCM_DATA_LEN: usize =
                     $crate::audio_player::adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
-                const AUDIO_FORMAT: $crate::audio_player::AudioFormat =
-                    super::[<$name:upper _AUDIO_FORMAT>];
 
                 #[allow(dead_code)]
                 type SourcePcmClip = $crate::audio_player::PcmClipBuf<
@@ -2480,9 +2298,6 @@ macro_rules! __audio_clip_impl {
                     { SAMPLE_RATE_HZ },
                     { PCM_SAMPLE_COUNT },
                 > {
-                    match AUDIO_FORMAT {
-                        $crate::audio_player::AudioFormat::S16le => {}
-                    }
                     assert!(
                         AUDIO_SAMPLE_BYTES_LEN % 2 == 0,
                         "audio byte length must be even for s16le"
@@ -2538,65 +2353,18 @@ macro_rules! __audio_clip_impl {
     };
 }
 
-/// Macro to define an ADPCM clip namespace from a WAV file.
-///
-/// **Syntax:**
-///
-/// ```text
-/// adpcm_clip! {
-///     [<visibility>] <Name> {
-///         file: <path_expr>,
-///         target_sample_rate_hz: <sample_rate_expr>, // optional, defaults to WAV sample_rate_hz
-///     }
-/// }
-/// ```
-///
-/// **Inputs:**
-///
-/// - `$vis` - Optional generated module visibility.
-/// - `$name` - Module name for the generated namespace.
-///
-/// **Required fields:**
-///
-/// - `file` - Path to an ADPCM WAV file.
-///
-/// **Optional fields:**
-///
-/// - `target_sample_rate_hz` - Output sample rate in hertz for generated clips
-///   (default: the WAV file sample rate).
-///
-/// **Generated items:**
-///
-/// - `<Name>::SOURCE_SAMPLE_RATE_HZ`
-/// - `<Name>::TARGET_SAMPLE_RATE_HZ`
-/// - `<Name>::SAMPLE_RATE_HZ`
-/// - `<Name>::PCM_SAMPLE_COUNT`
-/// - `<Name>::ADPCM_DATA_LEN`
-/// - `<Name>::adpcm_clip()`
-/// - `<Name>::pcm_clip()`
-/// - `<Name>::pcm_clip_from(...)`
-/// - `<Name>::adpcm_clip_from(...)`
-/// - `<Name>::with_gain(...)`
 // TODO00 Review `adpcm_clip!` generated docs and explicitly call out that
 // `with_gain(...)` is a decode+reencode path and can be more lossy than
 // applying gain in PCM before a single ADPCM encode.
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
+#[doc = include_str!("audio_player/adpcm_clip_docs.md")]
+#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
+#[doc = include_str!("audio_player/adpcm_clip_step_3.md")]
 #[doc(inline)]
 pub use crate::adpcm_clip;
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! adpcm_clip {
-    (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            sample_rate_hz: $sample_rate_hz:expr $(,)?
-        }
-    ) => {
-        compile_error!("adpcm_clip! infers sample_rate_hz from the WAV file; remove the sample_rate_hz field");
-    };
-
     (
         $vis:vis $name:ident {
             file: $file:expr,
@@ -2777,33 +2545,6 @@ macro_rules! tone {
             { $sample_rate_hz },
             { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) },
         >($frequency_hz)
-    };
-}
-
-/// Macro that expands to a duration-preserving resampled [`PcmClipBuf`] type.
-///
-/// Example: `resampled_type!{Nasa, NARROWBAND_8000_HZ}`.
-// TODO0 Revisit `DST`/`destination` naming in resample APIs for consistency
-// with user-facing `target_*` terminology.
-// TODO000 If resampling is macro-input-only (`pcm_clip!` / `adpcm_clip!`),
-// remove this helper macro after call sites migrate.
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! resampled_type {
-    ($namespace:ident, $destination_sample_rate_hz:expr) => {
-        $crate::audio_player::PcmClipBuf<
-            { $destination_sample_rate_hz },
-            {
-                $crate::audio_player::resampled_sample_count(
-                    $namespace::PCM_SAMPLE_COUNT,
-                    $namespace::SAMPLE_RATE_HZ,
-                    { $destination_sample_rate_hz },
-                )
-            },
-        >
     };
 }
 
@@ -3204,23 +2945,6 @@ macro_rules! __audio_player_impl {
     (@__fill_defaults
         vis: $vis:vis,
         name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ volume: $volume_value:expr $(, $($rest:tt)* )? ]
-    ) => {
-        compile_error!("audio_player! field `volume` was renamed to `max_volume`");
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
         data_pin: _UNSET_,
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
@@ -3422,7 +3146,6 @@ pub use audio_player;
 pub use pcm_clip;
 //todo000 needed?
 #[doc(inline)]
-pub use resampled_type;
 #[doc(inline)]
 pub use tone;
 //todo000 where is silence!?

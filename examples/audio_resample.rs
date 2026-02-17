@@ -78,8 +78,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    // TODO00 can do static array again? (may no longer apply)
-    const DIGITS: [&'static AudioPlayer8KPlayable; 4] = [
+    const DIGITS: [&AudioPlayer8KPlayable; 4] = [
         &Digit0::pcm_clip(),
         &Digit1::pcm_clip(),
         &Digit2::pcm_clip(),

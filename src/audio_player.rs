@@ -15,7 +15,6 @@
 //! **Supported audio formats**
 //!
 //! - Any sample rate supported by your hardware
-//! // todo000 need to define these and say loss-less and good for voice and 3.5 times smaller.
 //! - Either:
 //!   - uncompressed 16-bit PCM (s16le)
 //!   - 4:1 compressed 4-bit IMA ADPCM WAV (`.wav`, mono) for voice-like audio
@@ -518,21 +517,6 @@ impl Gain {
     const fn linear(self) -> i32 {
         self.0
     }
-}
-
-/// Scales a single signed 16-bit PCM sample by [`Volume`].
-///
-/// This helper is useful when decoding or generating samples outside of
-/// [`AudioPlayer`](audio_player_generated::AudioPlayerGenerated) and you want
-/// volume behavior consistent with the player.
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
-// TODO0 Review this function name and documentation for long-term API clarity.
-#[inline]
-#[must_use]
-pub const fn scale(sample_i16: i16, volume: Volume) -> i16 {
-    scale_sample_with_linear(sample_i16, volume.to_i16() as i32)
 }
 
 #[must_use]
@@ -1093,7 +1077,6 @@ pub(crate) enum PlaybackClip<const SAMPLE_RATE_HZ: u32> {
     Adpcm(&'static AdpcmClip<SAMPLE_RATE_HZ>),
 }
 
-// TODO00 better name?
 /// A statically stored clip source used for mixed playback without enum wrappers at call sites.
 ///
 /// This trait is object-safe, so you can pass heterogeneous static clips as:
@@ -1664,7 +1647,6 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
     /// If playback is currently stopped, this returns immediately.
     /// If playback is active, this waits until the player reaches the stopped
     /// state (natural end with [`AtEnd::Stop`] or a processed [`Self::stop`]).
-    // TODO0 add fuller docs for stop-state semantics and examples.
     pub async fn wait_until_stopped(&self) {
         self.audio_player_static.wait_until_stopped().await;
     }
@@ -1846,7 +1828,8 @@ async fn play_full_pcm_clip_once<
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
-            let scaled_sample_value = scale(sample_value, runtime_volume);
+            let scaled_sample_value =
+                scale_sample_with_linear(sample_value, runtime_volume.to_i16() as i32);
             *sample_buffer_slot = stereo_sample(scaled_sample_value);
         }
 
@@ -1889,8 +1872,10 @@ async fn play_full_adpcm_clip_once<
             return ControlFlow::Continue(());
         }
 
-        sample_buffer[sample_buffer_len] =
-            stereo_sample(scale(predictor_i32 as i16, runtime_volume));
+        sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_linear(
+            predictor_i32 as i16,
+            runtime_volume.to_i16() as i32,
+        ));
         sample_buffer_len += 1;
         if sample_buffer_len == SAMPLE_BUFFER_LEN {
             pio_i2s_out.write(sample_buffer).await;
@@ -1911,8 +1896,10 @@ async fn play_full_adpcm_clip_once<
 
                 let decoded_sample_i16 =
                     decode_adpcm_nibble(adpcm_nibble, &mut predictor_i32, &mut step_index_i32);
-                sample_buffer[sample_buffer_len] =
-                    stereo_sample(scale(decoded_sample_i16, runtime_volume));
+                sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_linear(
+                    decoded_sample_i16,
+                    runtime_volume.to_i16() as i32,
+                ));
                 sample_buffer_len += 1;
                 samples_decoded_in_block += 1;
 
@@ -2061,10 +2048,6 @@ const fn stereo_sample(sample: i16) -> u32 {
 #[doc(hidden)]
 pub use paste;
 
-// TODO0 Add explicit examples focused on generated constants
-// (`SAMPLE_RATE_HZ`, `PCM_SAMPLE_COUNT`, `ADPCM_DATA_LEN`) and when to use each
-// one.
-// TODO00 Review and refine generated docs for `adpcm_clip(...)`.
 #[doc = include_str!("audio_player/pcm_clip_docs.md")]
 #[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
 #[doc = include_str!("audio_player/pcm_clip_step_3.md")]
@@ -2314,8 +2297,6 @@ macro_rules! __audio_clip_impl {
     };
 }
 
-// TODO00 Review `adpcm_clip!` generated docs and explicitly call out decode
-// and re-encode tradeoffs for ADPCM conversion paths.
 #[doc = include_str!("audio_player/adpcm_clip_docs.md")]
 #[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
 #[doc = include_str!("audio_player/adpcm_clip_step_3.md")]

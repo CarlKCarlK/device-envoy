@@ -33,41 +33,41 @@ audio_player! {
 
 pcm_clip! {
     Nasa {
+        file: "data/audio/nasa_22k.s16",
         source_sample_rate_hz: VOICE_22050_HZ,
         target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
-        file: "data/audio/nasa_22k.s16",
     }
 }
 
 pcm_clip! {
     Digit0 {
+        file: "data/audio/0_22050.s16",
         source_sample_rate_hz: VOICE_22050_HZ,
         target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
-        file: "data/audio/0_22050.s16",
     }
 }
 
 pcm_clip! {
     Digit1 {
+        file: "data/audio/1_22050.s16",
         source_sample_rate_hz: VOICE_22050_HZ,
         target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
-        file: "data/audio/1_22050.s16",
     }
 }
 
 pcm_clip! {
     Digit2 {
+        file: "data/audio/2_22050.s16",
         source_sample_rate_hz: VOICE_22050_HZ,
         target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
-        file: "data/audio/2_22050.s16",
     }
 }
 
 pcm_clip! {
     Digit3 {
+        file: "data/audio/3_22050.s16",
         source_sample_rate_hz: VOICE_22050_HZ,
         target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
-        file: "data/audio/3_22050.s16",
     }
 }
 

@@ -34,8 +34,8 @@ audio_player! {
 
 adpcm_clip! {
     Jabber8kAdpcm {
-        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
         file: "data/audio/jabberwocky_22k_adpcm.wav",
+        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
     }
 }
 

@@ -10,8 +10,8 @@ use crate::audio_player::pcm_clip;
 #[cfg(all(not(doc), not(feature = "host")))]
 pcm_clip! {
     pub PcmClipGenerated {
-        source_sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
         file: "../../examples/data/audio/nasa_22k.s16",
+        source_sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
         format: crate::audio_player::AudioFormat::S16le,
     }
 }

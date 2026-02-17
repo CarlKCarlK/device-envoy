@@ -43,8 +43,8 @@ adpcm_clip! {
 
 pcm_clip! {
     Jabber22kPcm {
-        source_sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/jabberwocky_22k.s16",
+        source_sample_rate_hz: VOICE_22050_HZ,
     }
 }
 

@@ -128,8 +128,7 @@
 //! use embassy_time::{Duration, Timer};
 //!
 //! audio_player! {
-//!     // todo000 player 8
-//!     AudioPlayer10 {
+//!     AudioPlayer8 {
 //!         data_pin: PIN_8,
 //!         bit_clock_pin: PIN_9,
 //!         word_select_pin: PIN_10,
@@ -146,8 +145,8 @@
 //! // todo000 shouldn't we list the file first?
 //! pcm_clip! {
 //!     Nasa {
-//!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
+//!         source_sample_rate_hz: VOICE_22050_HZ,
 //!     }
 //! }
 //!
@@ -158,20 +157,20 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     // After lower its loudness (at compile time), materialize the clip as a static value.
-//!     const NASA: &AudioPlayer10Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
+//!     const NASA: &AudioPlayer8Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
 //!     // todo000 import silence!
 //!     // shorten sample rate and perhaps ms
-//!     const SAMPLE_RATE_HZ: u32 = AudioPlayer10::SAMPLE_RATE_HZ;
-//!     const GAP: &AudioPlayer10Playable = &device_envoy::silence!((SAMPLE_RATE_HZ), StdDuration::from_millis(80));
-//!     const CHIME: &AudioPlayer10Playable = &tone!(880, SAMPLE_RATE_HZ, StdDuration::from_millis(100)).with_gain(Gain::percent(20));
+//!     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
+//!     const GAP: &AudioPlayer8Playable = &device_envoy::silence!((SAMPLE_RATE_HZ), StdDuration::from_millis(80));
+//!     const CHIME: &AudioPlayer8Playable = &tone!(880, SAMPLE_RATE_HZ, StdDuration::from_millis(100)).with_gain(Gain::percent(20));
 //!     // todo000 kill these, but may need examples elsewhere.
 //!     let _nasa_source_sample_rate_hz = Nasa::SAMPLE_RATE_HZ;
 //!     let _nasa_source_sample_count = Nasa::PCM_SAMPLE_COUNT;
 //!
 //!     let p = embassy_rp::init(Default::default());
 //!     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
-//!     let audio_player10 =
-//!         AudioPlayer10::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner)?;
+//!     let audio_player8 =
+//!         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner)?;
 //!
 //!     const VOLUME_STEPS_PERCENT: [u8; 7] = [50, 25, 12, 6, 3, 1, 0];
 //!
@@ -180,7 +179,7 @@
 //!         button.wait_for_press().await;
 //!
 //!         // Start playing the NASA clip, over and over.
-//!         audio_player10.play([CHIME, NASA, GAP], AtEnd::Loop);
+//!         audio_player8.play([CHIME, NASA, GAP], AtEnd::Loop);
 //!
 //!         // Lower runtime volume over time, unless the button is pressed.
 //!         for volume_percent in VOLUME_STEPS_PERCENT {
@@ -196,12 +195,12 @@
 //!                 }
 //!                 Either::Second(()) => {
 //!                     // Timer elapsed: lower volume and keep looping.
-//!                     audio_player10.set_volume(Volume::percent(volume_percent));
+//!                     audio_player8.set_volume(Volume::percent(volume_percent));
 //!                 }
 //!             }
 //!         }
-//!         audio_player10.stop();
-//!         audio_player10.set_volume(AudioPlayer10::INITIAL_VOLUME);
+//!         audio_player8.stop();
+//!         audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
 //!
 //!     }
 //!
@@ -240,45 +239,45 @@
 //!     }
 //! }
 //!
-//! // todo000 file first
+//! // todo000 file first (may no longer apply)
 //! // todo000 get target hz from the player
 //! pcm_clip! {
 //!     Digit0 {
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/0_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: NARROWBAND_8000_HZ,
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/0_22050.s16"),
 //!     }
 //! }
 //!
 //! pcm_clip! {
 //!     Digit1 {
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/1_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: NARROWBAND_8000_HZ,
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/1_22050.s16"),
 //!     }
 //! }
 //!
 //! pcm_clip! {
 //!     Digit2 {
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/2_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: NARROWBAND_8000_HZ,
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/2_22050.s16"),
 //!     }
 //! }
 //!
 //! pcm_clip! {
 //!     Digit3 {
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/3_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: NARROWBAND_8000_HZ,
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/3_22050.s16"),
 //!     }
 //! }
 //!
 //! pcm_clip! {
 //!     Nasa {
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: NARROWBAND_8000_HZ,
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 //!     }
 //! }
 //!
@@ -2112,9 +2111,9 @@ pub enum AudioFormat {
 /// ```text
 /// pcm_clip! {
 ///     [<visibility>] <Name> {
+///         file: <file_path_expr>,
 ///         source_sample_rate_hz: <sample_rate_expr>,
 ///         target_sample_rate_hz: <sample_rate_expr>, // optional, defaults to source_sample_rate_hz
-///         file: <file_path_expr>,
 ///         format: <AudioFormat_expr>, // optional
 ///     }
 /// }
@@ -2129,10 +2128,10 @@ pub enum AudioFormat {
 ///
 /// **Required fields:**
 ///
+/// - `file` - Path to an external audio file (for example: `"nasa_22k.s16"`)
 /// - `source_sample_rate_hz` - Source sample rate in hertz for the input file
 ///   (for example:
 ///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
-/// - `file` - Path to an external audio file (for example: `"nasa_22k.s16"`)
 ///
 /// **Optional fields:**
 ///
@@ -2258,65 +2257,67 @@ macro_rules! pcm_clip {
 macro_rules! __audio_clip_parse {
     (
         $vis:vis $name:ident {
+            file: $file:expr,
             source_sample_rate_hz: $source_sample_rate_hz:expr,
             target_sample_rate_hz: $target_sample_rate_hz:expr,
-            file: $file:expr,
             format: $format:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            file: $file,
             format: $format,
         }
     };
     (
         $vis:vis $name:ident {
+            file: $file:expr,
             source_sample_rate_hz: $source_sample_rate_hz:expr,
             target_sample_rate_hz: $target_sample_rate_hz:expr,
-            file: $file:expr $(,)?
+            $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            file: $file,
             format: $crate::audio_player::AudioFormat::S16le,
         }
     };
     (
         $vis:vis $name:ident {
-            source_sample_rate_hz: $source_sample_rate_hz:expr,
             file: $file:expr,
+            source_sample_rate_hz: $source_sample_rate_hz:expr,
             format: $format:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $source_sample_rate_hz,
-            file: $file,
             format: $format,
         }
     };
     (
         $vis:vis $name:ident {
+            file: $file:expr,
             source_sample_rate_hz: $source_sample_rate_hz:expr,
-            file: $file:expr $(,)?
+            $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $source_sample_rate_hz,
-            file: $file,
             format: $crate::audio_player::AudioFormat::S16le,
         }
     };
@@ -2324,65 +2325,67 @@ macro_rules! __audio_clip_parse {
     // TODO000 Remove legacy `sample_rate_hz` input after downstream code migrates.
     (
         $vis:vis $name:ident {
+            file: $file:expr,
             sample_rate_hz: $sample_rate_hz:expr,
             target_sample_rate_hz: $target_sample_rate_hz:expr,
-            file: $file:expr,
             format: $format:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            file: $file,
             format: $format,
         }
     };
     (
         $vis:vis $name:ident {
+            file: $file:expr,
             sample_rate_hz: $sample_rate_hz:expr,
             target_sample_rate_hz: $target_sample_rate_hz:expr,
-            file: $file:expr $(,)?
+            $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            file: $file,
             format: $crate::audio_player::AudioFormat::S16le,
         }
     };
     (
         $vis:vis $name:ident {
-            sample_rate_hz: $sample_rate_hz:expr,
             file: $file:expr,
+            sample_rate_hz: $sample_rate_hz:expr,
             format: $format:expr $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $sample_rate_hz,
-            file: $file,
             format: $format,
         }
     };
     (
         $vis:vis $name:ident {
+            file: $file:expr,
             sample_rate_hz: $sample_rate_hz:expr,
-            file: $file:expr $(,)?
+            $(,)?
         }
     ) => {
         $crate::__audio_clip_dispatch! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $sample_rate_hz,
             target_sample_rate_hz: $sample_rate_hz,
-            file: $file,
             format: $crate::audio_player::AudioFormat::S16le,
         }
     };
@@ -2394,17 +2397,17 @@ macro_rules! __audio_clip_dispatch {
     (
         vis: $vis:vis,
         name: $name:ident,
+        file: $file:expr,
         source_sample_rate_hz: $source_sample_rate_hz:expr,
         target_sample_rate_hz: $target_sample_rate_hz:expr,
-        file: $file:expr,
         format: $format:expr $(,)?
     ) => {
         $crate::__audio_clip_impl! {
             vis: $vis,
             name: $name,
+            file: $file,
             source_sample_rate_hz: $source_sample_rate_hz,
             target_sample_rate_hz: $target_sample_rate_hz,
-            file: $file,
             format: $format,
         }
     };
@@ -2416,9 +2419,9 @@ macro_rules! __audio_clip_impl {
     (
         vis: $vis:vis,
         name: $name:ident,
+        file: $file:expr,
         source_sample_rate_hz: $source_sample_rate_hz:expr,
         target_sample_rate_hz: $target_sample_rate_hz:expr,
-        file: $file:expr,
         format: $format:expr $(,)?
     ) => {
         $crate::audio_player::paste::paste! {
@@ -2552,8 +2555,8 @@ macro_rules! __audio_clip_impl {
 /// ```text
 /// adpcm_clip! {
 ///     [<visibility>] <Name> {
-///         target_sample_rate_hz: <sample_rate_expr>, // optional, defaults to WAV sample_rate_hz
 ///         file: <path_expr>,
+///         target_sample_rate_hz: <sample_rate_expr>, // optional, defaults to WAV sample_rate_hz
 ///     }
 /// }
 /// ```
@@ -2597,8 +2600,8 @@ pub use crate::adpcm_clip;
 macro_rules! adpcm_clip {
     (
         $vis:vis $name:ident {
-            sample_rate_hz: $sample_rate_hz:expr,
-            file: $file:expr $(,)?
+            file: $file:expr,
+            sample_rate_hz: $sample_rate_hz:expr $(,)?
         }
     ) => {
         compile_error!("adpcm_clip! infers sample_rate_hz from the WAV file; remove the sample_rate_hz field");
@@ -2606,8 +2609,8 @@ macro_rules! adpcm_clip {
 
     (
         $vis:vis $name:ident {
-            target_sample_rate_hz: $target_sample_rate_hz:expr,
-            file: $file:expr $(,)?
+            file: $file:expr,
+            target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
         }
     ) => {
         $crate::audio_player::paste::paste! {
@@ -2737,8 +2740,8 @@ macro_rules! adpcm_clip {
     ) => {
         $crate::adpcm_clip! {
             $vis $name {
-                target_sample_rate_hz: $crate::audio_player::parse_adpcm_wav_header(include_bytes!($file)).sample_rate_hz,
                 file: $file,
+                target_sample_rate_hz: $crate::audio_player::parse_adpcm_wav_header(include_bytes!($file)).sample_rate_hz,
             }
         }
     };

@@ -2487,8 +2487,8 @@ macro_rules! tone {
 /// - `<Name>` - generated player struct type
 /// - `<Name>Playable` - trait-object clip source alias at this player's sample rate
 /// - associated constants and methods on `<Name>` (for example:
-///   `SAMPLE_RATE_HZ`, `samples(...)`,
-///   `new(...)`, `play(...)`, and runtime volume controls)
+///   `SAMPLE_RATE_HZ`, `new(...)`, `play(...)`,
+///   `wait_until_stopped(...)`, and runtime volume controls)
 ///
 /// The generated type contains static resources and spawns its background device
 /// task from `new(...)`.
@@ -2951,13 +2951,6 @@ macro_rules! __audio_player_impl {
                 /// Runtime volume ceiling for this generated player type.
                 pub const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;
 
-                /// Returns how many samples are needed for a duration
-                /// at this player's sample rate.
-                #[must_use]
-                pub const fn samples(duration: core::time::Duration) -> usize {
-                    $crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
-                }
-
                 /// Creates and spawns the generated audio player instance.
                 ///
                 /// See the [audio_player module documentation](mod@crate::audio_player)
@@ -2982,6 +2975,14 @@ macro_rules! __audio_player_impl {
                     let player =
                         $crate::audio_player::AudioPlayer::new(&[<$name:upper _AUDIO_PLAYER_STATIC>]);
                     Ok([<$name:upper _AUDIO_PLAYER_CELL>].init(Self { player }))
+                }
+
+                /// Waits until current playback has fully stopped.
+                ///
+                /// See the [audio_player module documentation](mod@crate::audio_player)
+                /// for example usage.
+                pub async fn wait_until_stopped(&self) {
+                    self.player.wait_until_stopped().await;
                 }
             }
 

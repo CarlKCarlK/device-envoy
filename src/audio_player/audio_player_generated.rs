@@ -53,13 +53,6 @@ impl AudioPlayerGenerated {
     /// Runtime volume ceiling for this generated player type.
     pub const MAX_VOLUME: Volume = Volume::MAX;
 
-    /// Returns how many samples are needed for a duration
-    /// at this player's sample rate.
-    #[must_use]
-    pub const fn samples(duration: core::time::Duration) -> usize {
-        crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
-    }
-
     /// Creates and spawns the generated audio player instance.
     ///
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
@@ -75,6 +68,11 @@ impl AudioPlayerGenerated {
         let _ = (data_pin, bit_clock_pin, word_select_pin, pio, dma, spawner);
         Ok(&INSTANCE)
     }
+
+    /// Waits until current playback has fully stopped.
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
+    pub async fn wait_until_stopped(&self) {}
 
     /// Starts playback of one or more static audio clips.
     ///

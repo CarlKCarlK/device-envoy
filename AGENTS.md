@@ -22,6 +22,7 @@
 - If you must patch a generated file directly for an urgent fix, make the matching template change in the same PR so regeneration does not revert it.
 - Regenerate and verify with `cargo xtask check-docs` (or `cargo check-all`) before handing work back.
 - For this repo, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `led2d_generated`, `led_strip_generated`, and `servo_player_generated`.
+- When changing generated API surface/docs for macro-backed types, update all four in the same PR: (1) macro source in `src/*.rs`, (2) generator template in `xtask/src/*_generated.rs`, (3) generated stub in `src/**/_generated.rs`, and (4) `xtask/src/main.rs` `check_generated_doc_stubs` expectations.
 
 ## Const-Only APIs
 

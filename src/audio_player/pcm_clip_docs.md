@@ -1,4 +1,6 @@
-Macro to "compile in" an audio clip from an external file (includes syntax details). See [`PcmClipGenerated`](crate::audio_player::pcm_clip_generated::PcmClipGenerated) for a sample of generated items.
+<!-- markdownlint-disable MD041 -->
+
+See [`PcmClipGenerated`](crate::audio_player::pcm_clip_generated::PcmClipGenerated) for a sample of generated items.
 
 **See the [audio_player module documentation](mod@crate::audio_player) for usage examples.**
 

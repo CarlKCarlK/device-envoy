@@ -64,7 +64,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn example(spawner: Spawner) -> Result<Infallible> {
-    // We convert, at compile-time, to compressed format.
+    // We convert, at compile-time, to compressed (ADPCM) format.
     const DIGITS: [&AudioPlayer8Playable; 3] = [
         &Digit0::adpcm_clip(),
         &Digit1::adpcm_clip(),

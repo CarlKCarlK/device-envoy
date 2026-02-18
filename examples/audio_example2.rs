@@ -30,7 +30,8 @@ audio_player! {
     }
 }
 
-// Define a `const` function that returns audio from this PCM file; if unused, it adds nothing to the firmware image.
+// Define a `const` function that returns audio from this PCM file.
+// If unused, it adds nothing to the firmware image.
 pcm_clip! {
     Nasa {
         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),

@@ -19,8 +19,8 @@
 //!   - Uncompressed: 16-bit PCM (s16le)
 //!   - Compressed: IMA ADPCM in WAV (mono; ~25% the size of PCM; ideal for speech)
 //! - Mono input audio (duplicated to left/right on I²S output)
-//! - For ffmpeg conversion commands, see [`pcm_clip!`] (s16le) and
-//!   [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip) (IMA ADPCM WAV).
+//! - For ffmpeg conversion commands, see "Preparing audio files" at [`pcm_clip!`] and
+//!   [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip).
 //!
 //! **After reading the examples below, see also:**
 //!
@@ -28,18 +28,18 @@
 //!   (includes syntax details). See
 //!   [`AudioPlayerGenerated`](audio_player_generated::AudioPlayerGenerated)
 //!   for sample generated methods and associated constants.
-//! - [`pcm_clip!`] - Macro to "compile in" a PCM clip from an external file
+//! - [`pcm_clip!`] - Macro to "compile in" an uncompressed (PCM) clip from an external file
 //!   (includes syntax details). See
 //!   [`PcmClipGenerated`](pcm_clip_generated::PcmClipGenerated)
 //!   for sample generated items.
-//! - [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip) - Macro to "compile in" an ADPCM WAV clip from an external file
+//! - [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip) - Macro to "compile in" a compressed (ADPCM) WAV clip from an external file
 //!   (includes syntax details).
 //!   See [`AdpcmClipGenerated`](adpcm_clip_generated::AdpcmClipGenerated) for
 //!   sample generated items.
 //! - [`tone!`](macro@crate::tone) - Macro to generate tone audio clips.
-//! - [`PcmClip`] and [`PcmClipBuf`] - Unsized and sized const-friendly PCM clip types.
-//! - [`AdpcmClip`] and [`AdpcmClipBuf`] - Unsized and sized const-friendly ADPCM clip types.
-//! - [`SilenceClip`] - Duration-based silence clip type usable at any playback sample rate.
+//! - [`SilenceClip`] - An audio clip of silence for a specific duration. Memory-efficient because it stores no audio sample data.
+//! - [`PcmClip`] and [`PcmClipBuf`] - Unsized and sized const-friendly uncompressed (PCM) clip types.
+//! - [`AdpcmClip`] and [`AdpcmClipBuf`] - Unsized and sized const-friendly compressed (ADPCM) clip types.
 //!
 //! # Example: Play "Mary Had a Little Lamb" (Phrase) Once
 //!
@@ -142,7 +142,8 @@
 //!     }
 //! }
 //!
-//! // Define a `const` function that returns audio from this PCM file; if unused, it adds nothing to the firmware image.
+//! // Define a `const` function that returns audio from this PCM file.
+//! // If unused, it adds nothing to the firmware image.
 //! pcm_clip! {
 //!     Nasa {
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
@@ -213,13 +214,13 @@
 //!
 //! # Example: Resample and Play Countdown Once
 //!
-//! This example compiles in three 22.05 kHz clips (`2`, `1`, `0`) and NASA.
+//! This example "compiles in" three 22.05 kHz clips (`2`, `1`, `0`) and NASA.
 //! It changes them to 8 kHz at compile time (`resample` means changing how many
 //! audio samples are stored per second), compresses them, and plays them once.
 //!
 //! Only the final 8 kHz compressed clips are stored in flash.
 //!
-//! `sample_rate` means samples per second. The clip sample rate is part of the
+//! `sample_rate_hz` means samples per second. The clip sample rate is part of the
 //! clip type, so using the wrong rate is a compile-time error.
 //!
 //! ```rust,no_run
@@ -286,7 +287,7 @@
 //! #     core::panic!("{err}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     // We convert, at compile-time, to compressed format.
+//!     // We convert, at compile-time, to compressed (ADPCM) format.
 //!     const DIGITS: [&AudioPlayer8Playable; 3] = [
 //!         &Digit0::adpcm_clip(),
 //!         &Digit1::adpcm_clip(),
@@ -342,7 +343,8 @@ const BIT_DEPTH_BITS: u32 = 16;
 const SAMPLE_BUFFER_LEN: usize = 256;
 const I16_ABS_MAX_I64: i64 = -(i16::MIN as i64);
 
-/// Common audio sample-rate constants in hertz.
+// Common audio sample-rate constants in hertz.
+
 /// Narrowband telephony sample rate.
 pub const NARROWBAND_8000_HZ: u32 = 8_000;
 /// Wideband voice sample rate.
@@ -648,7 +650,7 @@ pub enum AtEnd {
     Stop,
 }
 
-/// Unsized view of ADPCM clip data.
+/// Unsized view of static compressed (ADPCM) clip data.
 ///
 /// For fixed-size, const-friendly storage, see [`AdpcmClipBuf`].
 pub struct AdpcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [u8]> {
@@ -657,7 +659,7 @@ pub struct AdpcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [u8]> {
     data: T,
 }
 
-/// Sized, const-friendly storage for ADPCM clip data.
+/// Sized, const-friendly storage for compressed (ADPCM) clip data.
 pub type AdpcmClipBuf<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> =
     AdpcmClip<SAMPLE_RATE_HZ, [u8; DATA_LEN]>;
 
@@ -1066,7 +1068,7 @@ pub(crate) enum PlaybackClip<const SAMPLE_RATE_HZ: u32> {
     Silence(Duration),
 }
 
-/// Duration-only silence clip source.
+/// An audio clip of silence for a specific duration. Memory-efficient because it stores no audio sample data.
 ///
 /// This clip type is sample-rate agnostic. It can be used with any generated
 /// player sample rate because silence is rendered at playback time.
@@ -1092,9 +1094,12 @@ impl SilenceClip {
     }
 }
 
-/// A statically stored clip source used for mixed playback without enum wrappers at call sites.
+/// A clip source trait for [`AudioPlayer::play`](crate::audio_player::AudioPlayer::play).
 ///
-/// This trait is object-safe, so you can pass heterogeneous static clips as:
+/// Use this to mix different clip kinds (PCM, ADPCM, and [`SilenceClip`]) in one
+/// `play` call without manual enum wrapping.
+///
+/// This trait is object-safe, so mixed clips are passed as:
 /// `&'static dyn Playable<SAMPLE_RATE_HZ>`.
 #[allow(private_bounds)]
 pub trait Playable<const SAMPLE_RATE_HZ: u32>: sealed::PlayableSealed<SAMPLE_RATE_HZ> {}
@@ -1146,7 +1151,7 @@ mod sealed {
     }
 }
 
-/// Unsized view of static PCM clip data. `&PcmClip` values of different lengths can be sequenced together.
+/// Unsized view of static uncompressed (PCM) audio clip data.
 ///
 /// For fixed-size, const-friendly storage, see [`PcmClipBuf`].
 ///
@@ -1156,7 +1161,7 @@ pub struct PcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [i16]> {
     samples: T,
 }
 
-/// Sized, const-friendly storage for static audio clip data.
+/// Sized, const-friendly storage for uncompressed (PCM) audio clip data.
 ///
 /// For unsized clip references (for sequencing different clip lengths), see
 /// [`PcmClip`].
@@ -2163,14 +2168,18 @@ const fn stereo_sample(sample: i16) -> u32 {
 #[doc(hidden)]
 pub use paste;
 
-#[doc = include_str!("audio_player/pcm_clip_docs.md")]
-#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
-#[doc = include_str!("audio_player/pcm_clip_step_3.md")]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! pcm_clip {
     ($($tt:tt)*) => { $crate::__audio_clip_parse! { $($tt)* } };
 }
+
+#[doc = "Macro to \"compile in\" an uncompressed (PCM) clip from an external file (includes syntax details)."]
+#[doc = include_str!("audio_player/pcm_clip_docs.md")]
+#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
+#[doc = include_str!("audio_player/pcm_clip_step_3.md")]
+#[doc(inline)]
+pub use crate::pcm_clip;
 
 #[doc(hidden)]
 #[macro_export]
@@ -2412,6 +2421,7 @@ macro_rules! __audio_clip_impl {
     };
 }
 
+#[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file (includes syntax details)."]
 #[doc = include_str!("audio_player/adpcm_clip_docs.md")]
 #[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
 #[doc = include_str!("audio_player/adpcm_clip_step_3.md")]
@@ -2421,6 +2431,12 @@ pub use crate::adpcm_clip;
 #[doc(hidden)]
 #[macro_export]
 macro_rules! adpcm_clip {
+    ($($tt:tt)*) => { $crate::__adpcm_clip_parse! { $($tt)* } };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __adpcm_clip_parse {
     (
         $vis:vis $name:ident {
             file: $file:expr,
@@ -2531,7 +2547,7 @@ macro_rules! adpcm_clip {
             file: $file:expr $(,)?
         }
     ) => {
-        $crate::adpcm_clip! {
+        $crate::__adpcm_clip_parse! {
             $vis $name {
                 file: $file,
                 target_sample_rate_hz: $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file)).sample_rate_hz,
@@ -2540,17 +2556,14 @@ macro_rules! adpcm_clip {
     };
 }
 
-// todo000 don't say PCM in 1st line
-/// Macro that expands to a PCM tone clip expression for frequency,
-/// sample rate, and duration.
-///
-/// TODO000 why not adpcm
+/// Macro to create an audio clip of a musical tone.
 ///
 /// Examples:
 /// - `tone!(440, VOICE_22050_HZ, Duration::from_millis(500))`
 /// - `tone!(440, AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(500))`
 ///
-/// The result is a `PcmClipBuf` sine-wave clip.
+/// The result is an uncompressed (PCM) clip.
+/// (It does not use compressed because ADPCM sounds poor for pure sine tones.)
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
@@ -2565,8 +2578,9 @@ macro_rules! tone {
     };
 }
 
-/// Macro to generate an audio player struct type (includes syntax details). See
-/// [`AudioPlayerGenerated`](crate::audio_player::audio_player_generated::AudioPlayerGenerated)
+/// Macro to generate an audio player struct type (includes syntax details).
+///
+/// See [`AudioPlayerGenerated`](crate::audio_player::audio_player_generated::AudioPlayerGenerated)
 /// for a sample of a generated type.
 ///
 /// **See the [audio_player module documentation](mod@crate::audio_player) for
@@ -3150,7 +3164,5 @@ macro_rules! __audio_player_impl {
 
 #[doc(inline)]
 pub use audio_player;
-#[doc(inline)]
-pub use pcm_clip;
 #[doc(inline)]
 pub use tone;

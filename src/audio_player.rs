@@ -644,37 +644,6 @@ pub struct AdpcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [u8]> {
     data: T,
 }
 
-impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> AdpcmClip<SAMPLE_RATE_HZ, T> {
-    /// Clip sample rate in hertz.
-    pub const SAMPLE_RATE_HZ: u32 = SAMPLE_RATE_HZ;
-}
-
-impl<const SAMPLE_RATE_HZ: u32> AdpcmClip<SAMPLE_RATE_HZ> {
-    /// Returns ADPCM bytes.
-    #[must_use]
-    pub const fn data(&self) -> &[u8] {
-        &self.data
-    }
-
-    /// Returns ADPCM block size in bytes.
-    #[must_use]
-    pub const fn block_align(&self) -> usize {
-        self.block_align as usize
-    }
-
-    /// Returns decoded sample count per ADPCM block.
-    #[must_use]
-    pub const fn samples_per_block(&self) -> usize {
-        self.samples_per_block as usize
-    }
-
-    /// Returns decoded sample count for this clip.
-    #[must_use]
-    pub const fn sample_count(&self) -> usize {
-        (self.data.len() / self.block_align as usize) * self.samples_per_block as usize
-    }
-}
-
 /// Sized, const-friendly storage for ADPCM clip data.
 pub type AdpcmClipBuf<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> =
     AdpcmClip<SAMPLE_RATE_HZ, [u8; DATA_LEN]>;
@@ -704,30 +673,6 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
             samples_per_block,
             data,
         }
-    }
-
-    /// Returns ADPCM bytes.
-    #[must_use]
-    pub const fn data(&self) -> &[u8] {
-        &self.data
-    }
-
-    /// Returns ADPCM block size in bytes.
-    #[must_use]
-    pub const fn block_align(&self) -> usize {
-        self.block_align as usize
-    }
-
-    /// Returns decoded sample count per ADPCM block.
-    #[must_use]
-    pub const fn samples_per_block(&self) -> usize {
-        self.samples_per_block as usize
-    }
-
-    /// Returns decoded sample count for this clip.
-    #[must_use]
-    pub const fn sample_count(&self) -> usize {
-        (DATA_LEN / self.block_align as usize) * self.samples_per_block as usize
     }
 
     /// Returns this ADPCM clip decoded to PCM samples.
@@ -1165,28 +1110,6 @@ pub struct PcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [i16]> {
     samples: T,
 }
 
-impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> PcmClip<SAMPLE_RATE_HZ, T> {
-    /// Clip sample rate in hertz.
-    pub const SAMPLE_RATE_HZ: u32 = SAMPLE_RATE_HZ;
-}
-
-impl<const SAMPLE_RATE_HZ: u32> PcmClip<SAMPLE_RATE_HZ> {
-    /// Clip samples as an `i16` slice.
-    #[must_use]
-    pub const fn samples(&self) -> &[i16] {
-        &self.samples
-    }
-
-    /// Number of samples in this clip.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    #[must_use]
-    pub const fn sample_count(&self) -> usize {
-        self.samples.len()
-    }
-}
-
 /// Sized, const-friendly storage for static audio clip data.
 ///
 /// For unsized clip references (for sequencing different clip lengths), see
@@ -1219,21 +1142,6 @@ const ADPCM_ENCODE_BLOCK_ALIGN: usize = 256;
 impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>
 {
-    /// Number of samples in this clip.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// clip usage examples.
-    pub const SAMPLE_COUNT: usize = SAMPLE_COUNT;
-
-    /// Number of samples in this clip.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    #[must_use]
-    pub const fn sample_count(&self) -> usize {
-        SAMPLE_COUNT
-    }
-
     /// Returns a new clip with linear sample gain applied.
     ///
     /// This is intended to be used in const clip definitions so the adjusted
@@ -1276,7 +1184,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     /// `DATA_LEN` must match the encoded length implied by this clip's sample
     /// count and `block_align`.
     #[must_use]
-    pub const fn with_adpcm_block_align<const DATA_LEN: usize>(
+    pub(crate) const fn with_adpcm_block_align<const DATA_LEN: usize>(
         &self,
         block_align: usize,
     ) -> AdpcmClipBuf<SAMPLE_RATE_HZ, DATA_LEN> {
@@ -1420,6 +1328,23 @@ pub const fn __adpcm_clip_from_parts<const SAMPLE_RATE_HZ: u32, const DATA_LEN: 
     data: [u8; DATA_LEN],
 ) -> AdpcmClipBuf<SAMPLE_RATE_HZ, DATA_LEN> {
     AdpcmClip::new(block_align, samples_per_block, data)
+}
+
+/// Const backend helper that encodes PCM into ADPCM with an explicit block size.
+///
+/// This helper must be `pub` because macro expansions in downstream crates call
+/// it at the call site, but it is not a user-facing API.
+#[must_use]
+#[doc(hidden)]
+pub const fn __pcm_with_adpcm_block_align<
+    const SAMPLE_RATE_HZ: u32,
+    const SAMPLE_COUNT: usize,
+    const DATA_LEN: usize,
+>(
+    source_pcm_clip: &PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT>,
+    block_align: usize,
+) -> AdpcmClipBuf<SAMPLE_RATE_HZ, DATA_LEN> {
+    source_pcm_clip.with_adpcm_block_align::<DATA_LEN>(block_align)
 }
 
 /// Const backend helper that resamples a PCM clip to a destination timeline.
@@ -1858,7 +1783,7 @@ async fn play_full_pcm_clip_once<
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
 ) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
-    for audio_sample_chunk in audio_clip.samples().chunks(SAMPLE_BUFFER_LEN) {
+    for audio_sample_chunk in audio_clip.samples.chunks(SAMPLE_BUFFER_LEN) {
         let runtime_volume = audio_player_static.effective_runtime_volume();
         for (sample_buffer_slot, sample_value_ref) in
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
@@ -1893,7 +1818,8 @@ async fn play_full_adpcm_clip_once<
 ) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
     let mut sample_buffer_len = 0usize;
 
-    for adpcm_block in adpcm_clip.data().chunks_exact(adpcm_clip.block_align()) {
+    let block_align = adpcm_clip.block_align as usize;
+    for adpcm_block in adpcm_clip.data.chunks_exact(block_align) {
         if adpcm_block.len() < 4 {
             return ControlFlow::Continue(());
         }
@@ -1922,7 +1848,7 @@ async fn play_full_adpcm_clip_once<
         }
 
         let mut samples_decoded_in_block = 1usize;
-        let samples_per_block = adpcm_clip.samples_per_block();
+        let samples_per_block = adpcm_clip.samples_per_block as usize;
 
         for adpcm_byte in &adpcm_block[4..] {
             for adpcm_nibble in [adpcm_byte & 0x0F, adpcm_byte >> 4] {
@@ -2435,7 +2361,11 @@ macro_rules! adpcm_clip {
                             adpcm_data,
                         )
                     } else {
-                        pcm_clip().with_adpcm_block_align::<ADPCM_DATA_LEN>(BLOCK_ALIGN)
+                        $crate::audio_player::__pcm_with_adpcm_block_align::<
+                            SAMPLE_RATE_HZ,
+                            PCM_SAMPLE_COUNT,
+                            ADPCM_DATA_LEN,
+                        >(&pcm_clip(), BLOCK_ALIGN)
                     }
                 }
 

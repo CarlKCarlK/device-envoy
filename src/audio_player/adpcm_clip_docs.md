@@ -1,4 +1,5 @@
 Macro to define an ADPCM clip namespace from a WAV file. See [`AdpcmClipGenerated`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated) for a sample of generated items.
+todo000 make more like the other one
 
 **Syntax:**
 

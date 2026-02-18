@@ -1,5 +1,5 @@
 //! A device abstraction for playing audio clips over I²S hardware,
-//! with runtime sequencing and volume control.
+//! with runtime sequencing, volume control, and compression.
 //!
 //! This page provides the primary documentation for generated audio player
 //! types and clip utilities.
@@ -9,16 +9,17 @@
 //! Playback runs in the background while the application does other work.
 //! Volume can be adjusted on the fly, and playback can be stopped or
 //! interrupted mid-clip.
-//! Audio samples are stored in flash. Only a small DMA buffer is used at
+//! Audio samples can be compressed and are stored in flash. Only a small DMA buffer is used at
 //! runtime.
 //!
 //! **Supported audio formats**
 //!
 //! - Any sample rate supported by your hardware
 //! - Either:
-//!   - uncompressed 16-bit PCM (s16le)
-//!   - 4:1 compressed 4-bit IMA ADPCM WAV (`.wav`, mono) for voice-like audio
+//!   - Uncompressed: 16-bit PCM (s16le)
+//!   - Compressed: IMA ADPCM in WAV (mono; ~25% the size of PCM; ideal for speech)
 //! - Mono input audio (duplicated to left/right on I²S output)
+//! todo000 add link to compression directions
 //!
 //! **After reading the examples below, see also:**
 //!
@@ -144,7 +145,7 @@
 //!     }
 //! }
 //!
-//! // Define a `const` function that, if called, will return the audio from this PCM audio file.
+//! // Define a `const` function that returns audio from this PCM file; if unused, it adds nothing to the firmware image.
 //! pcm_clip! {
 //!     Nasa {
 //!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
@@ -161,10 +162,10 @@
 //!     const fn ms(milliseconds: u64) -> StdDuration {
 //!         StdDuration::from_millis(milliseconds)
 //!     }
-//!
 //!     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
 //!
-//!     // The three final clips are promoted to implicit 'static storage in flash.
+//!     // Only the final transformed clips are stored in flash.
+//!     // Intermediate compile-time temporaries (such as compression and gain steps) are not stored.
 //!
 //!     // Read the uncompressed (PCM) NASA clip in compressed (ADPCM) format.
 //!     const NASA: &AudioPlayer8Playable = &Nasa::adpcm_clip();
@@ -283,7 +284,7 @@
 //! #     core::panic!("{err}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     // We read the compressed version of the digits.
+//!     // We convert, at compile-time, to compressed format.
 //!     const DIGITS: [&AudioPlayer8Playable; 3] = [
 //!         &Digit0::adpcm_clip(),
 //!         &Digit1::adpcm_clip(),
@@ -317,6 +318,8 @@ use core::sync::atomic::{AtomicI32, Ordering};
 pub use core::time::Duration as StdDuration;
 
 #[cfg(target_os = "none")]
+use crate::pio_irqs::PioIrqMap;
+#[cfg(target_os = "none")]
 use embassy_rp::Peri;
 #[cfg(target_os = "none")]
 use embassy_rp::dma::Channel;
@@ -326,8 +329,6 @@ use embassy_rp::gpio::Pin;
 use embassy_rp::pio::{Instance, Pio, PioPin};
 #[cfg(target_os = "none")]
 use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
-#[cfg(target_os = "none")]
-use crate::pio_irqs::PioIrqMap;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use heapless::Vec;
 
@@ -2437,6 +2438,8 @@ macro_rules! silence {
 
 /// Macro that expands to a PCM tone clip expression for frequency,
 /// sample rate, and duration.
+///
+/// TODO000 why not adpcm
 ///
 /// Examples:
 /// - `tone!(440, VOICE_22050_HZ, Duration::from_millis(500))`

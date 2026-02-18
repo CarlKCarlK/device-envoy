@@ -30,7 +30,7 @@ audio_player! {
     }
 }
 
-// Define a `const` function that, if called, will return the audio from this PCM audio file.
+// Define a `const` function that returns audio from this PCM file; if unused, it adds nothing to the firmware image.
 pcm_clip! {
     Nasa {
         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
@@ -48,10 +48,10 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
     const fn ms(milliseconds: u64) -> StdDuration {
         StdDuration::from_millis(milliseconds)
     }
-
     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
 
-    // The three final clips are promoted to implicit 'static storage in flash.
+    // Only the final transformed clips are stored in flash.
+    // Intermediate compile-time temporaries (such as compression and gain steps) are not stored.
 
     // Read the uncompressed (PCM) NASA clip in compressed (ADPCM) format.
     const NASA: &AudioPlayer8Playable = &Nasa::adpcm_clip();

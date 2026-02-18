@@ -544,7 +544,7 @@ pub const fn __samples_for_duration(duration: StdDuration, sample_rate_hz: u32) 
 // `$crate::...`.
 #[doc(hidden)]
 #[must_use]
-pub const fn resampled_sample_count(
+pub const fn __resampled_sample_count(
     source_sample_count: usize,
     source_sample_rate_hz: u32,
     destination_sample_rate_hz: u32,
@@ -768,7 +768,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
 
         let samples_per_block = self.samples_per_block as usize;
         assert!(samples_per_block > 0, "samples_per_block must be > 0");
-        let max_samples_per_block = adpcm_samples_per_block(block_align);
+        let max_samples_per_block = __adpcm_samples_per_block(block_align);
         assert!(
             samples_per_block <= max_samples_per_block,
             "samples_per_block exceeds block_align capacity"
@@ -863,7 +863,7 @@ pub struct ParsedAdpcmWavHeader {
 /// Parses ADPCM WAV header metadata in a `const` context.
 #[must_use]
 #[doc(hidden)]
-pub const fn parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader {
+pub const fn __parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader {
     if wav_bytes.len() < 12 {
         panic!("WAV file too small");
     }
@@ -990,7 +990,7 @@ const ADPCM_STEP_TABLE: [i32; 89] = [
 // `$crate::audio_player::...` in downstream crates.
 #[doc(hidden)]
 #[must_use]
-pub const fn adpcm_samples_per_block(block_align: usize) -> usize {
+pub const fn __adpcm_samples_per_block(block_align: usize) -> usize {
     if block_align < 5 {
         panic!("block_align must be >= 5 for ADPCM");
     }
@@ -1000,19 +1000,19 @@ pub const fn adpcm_samples_per_block(block_align: usize) -> usize {
 /// Returns ADPCM byte length needed to encode `sample_count` mono PCM samples.
 #[doc(hidden)]
 #[must_use]
-pub const fn adpcm_data_len_for_pcm_samples(sample_count: usize) -> usize {
-    adpcm_data_len_for_pcm_samples_with_block_align(sample_count, ADPCM_ENCODE_BLOCK_ALIGN)
+pub const fn __adpcm_data_len_for_pcm_samples(sample_count: usize) -> usize {
+    __adpcm_data_len_for_pcm_samples_with_block_align(sample_count, ADPCM_ENCODE_BLOCK_ALIGN)
 }
 
 /// Returns ADPCM byte length needed to encode `sample_count` mono PCM samples
 /// with a specific ADPCM `block_align`.
 #[doc(hidden)]
 #[must_use]
-pub const fn adpcm_data_len_for_pcm_samples_with_block_align(
+pub const fn __adpcm_data_len_for_pcm_samples_with_block_align(
     sample_count: usize,
     block_align: usize,
 ) -> usize {
-    let samples_per_block = adpcm_samples_per_block(block_align);
+    let samples_per_block = __adpcm_samples_per_block(block_align);
     let block_count = if sample_count == 0 {
         0
     } else {
@@ -1170,7 +1170,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     /// Returns this clip encoded as mono 4-bit IMA ADPCM.
     ///
     /// Uses a fixed ADPCM block size of 256 bytes. `DATA_LEN` must match
-    /// [`adpcm_data_len_for_pcm_samples`]
+    /// [`__adpcm_data_len_for_pcm_samples`]
     /// for this clip's sample count.
     #[must_use]
     pub const fn with_adpcm<const DATA_LEN: usize>(
@@ -1193,13 +1193,13 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
             block_align <= u16::MAX as usize,
             "block_align must fit in u16"
         );
-        let samples_per_block = adpcm_samples_per_block(block_align);
+        let samples_per_block = __adpcm_samples_per_block(block_align);
         assert!(
             samples_per_block <= u16::MAX as usize,
             "samples_per_block must fit in u16"
         );
         assert!(
-            DATA_LEN == adpcm_data_len_for_pcm_samples_with_block_align(SAMPLE_COUNT, block_align),
+            DATA_LEN == __adpcm_data_len_for_pcm_samples_with_block_align(SAMPLE_COUNT, block_align),
             "adpcm data length must match sample count and block_align"
         );
         if SAMPLE_COUNT == 0 {
@@ -1261,7 +1261,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
 /// should prefer [`tone!`](macro@crate::tone).
 #[must_use]
 #[doc(hidden)]
-pub const fn tone_pcm_clip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
+pub const fn __tone_pcm_clip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     frequency_hz: u32,
 ) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
     assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
@@ -1354,7 +1354,7 @@ pub const fn __pcm_with_adpcm_block_align<
 /// direct clip method.
 #[must_use]
 #[doc(hidden)]
-pub const fn resample_pcm_clip<
+pub const fn __resample_pcm_clip<
     const SOURCE_HZ: u32,
     const SOURCE_COUNT: usize,
     const TARGET_HZ: u32,
@@ -1365,7 +1365,7 @@ pub const fn resample_pcm_clip<
     assert!(SOURCE_COUNT > 0, "source sample count must be > 0");
     assert!(TARGET_HZ > 0, "destination sample_rate_hz must be > 0");
     let expected_destination_sample_count =
-        resampled_sample_count(SOURCE_COUNT, SOURCE_HZ, TARGET_HZ);
+        __resampled_sample_count(SOURCE_COUNT, SOURCE_HZ, TARGET_HZ);
     assert!(
         TARGET_COUNT == expected_destination_sample_count,
         "destination sample count must preserve duration"
@@ -2197,14 +2197,14 @@ macro_rules! __audio_clip_impl {
                 const SOURCE_SAMPLE_COUNT: usize = AUDIO_SAMPLE_BYTES_LEN / 2;
                 #[doc = "Number of i16 PCM samples in this generated clip."]
                 #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
-                pub const PCM_SAMPLE_COUNT: usize = $crate::audio_player::resampled_sample_count(
+                pub const PCM_SAMPLE_COUNT: usize = $crate::audio_player::__resampled_sample_count(
                     SOURCE_SAMPLE_COUNT,
                     SOURCE_SAMPLE_RATE_HZ,
                     TARGET_SAMPLE_RATE_HZ,
                 );
                 #[doc = "Byte length of the ADPCM data when encoding this clip."]
                 pub const ADPCM_DATA_LEN: usize =
-                    $crate::audio_player::adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
+                    $crate::audio_player::__adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
 
                 #[allow(dead_code)]
                 type SourcePcmClip = $crate::audio_player::PcmClipBuf<
@@ -2234,7 +2234,7 @@ macro_rules! __audio_clip_impl {
                         ]);
                         sample_index += 1;
                     }
-                    $crate::audio_player::resample_pcm_clip::<
+                    $crate::audio_player::__resample_pcm_clip::<
                         SOURCE_SAMPLE_RATE_HZ,
                         SOURCE_SAMPLE_COUNT,
                         TARGET_SAMPLE_RATE_HZ,
@@ -2281,13 +2281,13 @@ macro_rules! adpcm_clip {
             #[allow(missing_docs)]
             $vis mod $name {
                 const PARSED_WAV: $crate::audio_player::ParsedAdpcmWavHeader =
-                    $crate::audio_player::parse_adpcm_wav_header(include_bytes!($file));
+                    $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file));
                 const SOURCE_SAMPLE_RATE_HZ: u32 = PARSED_WAV.sample_rate_hz;
                 const TARGET_SAMPLE_RATE_HZ: u32 = super::[<$name:upper _TARGET_SAMPLE_RATE_HZ>];
                 pub const SAMPLE_RATE_HZ: u32 = TARGET_SAMPLE_RATE_HZ;
 
                 const SOURCE_SAMPLE_COUNT: usize = PARSED_WAV.sample_count;
-                pub const PCM_SAMPLE_COUNT: usize = $crate::audio_player::resampled_sample_count(
+                pub const PCM_SAMPLE_COUNT: usize = $crate::audio_player::__resampled_sample_count(
                     SOURCE_SAMPLE_COUNT,
                     SOURCE_SAMPLE_RATE_HZ,
                     TARGET_SAMPLE_RATE_HZ,
@@ -2297,7 +2297,7 @@ macro_rules! adpcm_clip {
                 pub const ADPCM_DATA_LEN: usize = if TARGET_SAMPLE_RATE_HZ == SOURCE_SAMPLE_RATE_HZ {
                     SOURCE_DATA_LEN
                 } else {
-                    $crate::audio_player::adpcm_data_len_for_pcm_samples_with_block_align(
+                    $crate::audio_player::__adpcm_data_len_for_pcm_samples_with_block_align(
                         PCM_SAMPLE_COUNT,
                         BLOCK_ALIGN,
                     )
@@ -2307,7 +2307,7 @@ macro_rules! adpcm_clip {
                 #[must_use]
                 const fn source_adpcm_clip() -> SourceAdpcmClip {
                     let wav_bytes = include_bytes!($file);
-                    let parsed_wav = $crate::audio_player::parse_adpcm_wav_header(wav_bytes);
+                    let parsed_wav = $crate::audio_player::__parse_adpcm_wav_header(wav_bytes);
                     assert!(parsed_wav.block_align <= u16::MAX as usize, "block_align too large");
                     assert!(
                         parsed_wav.samples_per_block <= u16::MAX as usize,
@@ -2330,7 +2330,7 @@ macro_rules! adpcm_clip {
 
                 #[must_use]
                 pub const fn pcm_clip() -> $crate::audio_player::PcmClipBuf<SAMPLE_RATE_HZ, PCM_SAMPLE_COUNT> {
-                    $crate::audio_player::resample_pcm_clip::<
+                    $crate::audio_player::__resample_pcm_clip::<
                         SOURCE_SAMPLE_RATE_HZ,
                         SOURCE_SAMPLE_COUNT,
                         TARGET_SAMPLE_RATE_HZ,
@@ -2342,7 +2342,7 @@ macro_rules! adpcm_clip {
                 pub const fn adpcm_clip() -> $crate::audio_player::AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN> {
                     if TARGET_SAMPLE_RATE_HZ == SOURCE_SAMPLE_RATE_HZ {
                         let wav_bytes = include_bytes!($file);
-                        let parsed_wav = $crate::audio_player::parse_adpcm_wav_header(wav_bytes);
+                        let parsed_wav = $crate::audio_player::__parse_adpcm_wav_header(wav_bytes);
                         assert!(parsed_wav.block_align <= u16::MAX as usize, "block_align too large");
                         assert!(
                             parsed_wav.samples_per_block <= u16::MAX as usize,
@@ -2381,7 +2381,7 @@ macro_rules! adpcm_clip {
         $crate::adpcm_clip! {
             $vis $name {
                 file: $file,
-                target_sample_rate_hz: $crate::audio_player::parse_adpcm_wav_header(include_bytes!($file)).sample_rate_hz,
+                target_sample_rate_hz: $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file)).sample_rate_hz,
             }
         }
     };
@@ -2425,7 +2425,7 @@ macro_rules! silence {
 #[macro_export]
 macro_rules! tone {
     ($frequency_hz:expr, $sample_rate_hz:expr, $duration:expr) => {
-        $crate::audio_player::tone_pcm_clip::<
+        $crate::audio_player::__tone_pcm_clip::<
             { $sample_rate_hz },
             { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) },
         >($frequency_hz)

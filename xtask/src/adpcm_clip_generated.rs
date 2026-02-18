@@ -33,7 +33,7 @@ adpcm_clip! {
 ///
 /// Auto-generated.
 pub mod AdpcmClipGenerated {
-    use crate::audio_player::{AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples};
+    use crate::audio_player::{AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ, __adpcm_data_len_for_pcm_samples};
 
     /// Sample rate in hertz for this generated clip.
     ///
@@ -48,7 +48,7 @@ pub mod AdpcmClipGenerated {
     /// Byte length of ADPCM data for this clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
-    pub const ADPCM_DATA_LEN: usize = adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
+    pub const ADPCM_DATA_LEN: usize = __adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
 
     /// `const` function that returns the generated audio clip encoded as ADPCM.
     ///

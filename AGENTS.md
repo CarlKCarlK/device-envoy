@@ -396,6 +396,8 @@ pub fn helper_for_macro() { ... }  // Called by macro expansion in user code
 
 When using `#[doc(hidden)]` for this reason, always add a comment explaining why it must be public despite being an implementation detail.
 
+For this macro-helper exception, prefix helper names with `__` to clearly signal internal-only usage (for example, `__helper_for_macro`).
+
 ## LED Hardware Configuration
 
 Examples use the following standard PIO resource and pin assignments:

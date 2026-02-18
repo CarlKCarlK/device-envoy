@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use super::{
-    AdpcmClipBuf, Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ, adpcm_data_len_for_pcm_samples,
+    AdpcmClipBuf, Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ, __adpcm_data_len_for_pcm_samples,
 };
 use std::error::Error;
 use std::fs;
@@ -29,7 +29,7 @@ fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
 #[test]
 fn tone_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
     let tone_audio_clip: AudioClipTone =
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
     assert!(
         tone_audio_clip
             .samples
@@ -43,12 +43,12 @@ fn tone_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
 #[test]
 fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Error>> {
     let tone_audio_clip: AudioClipTone =
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
     let tone_gain50_audio_clip: AudioClipTone =
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
             .with_gain(Gain::percent(50));
     let tone_gain200_audio_clip: AudioClipTone =
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
             .with_gain(Gain::percent(200));
 
     assert_ne!(
@@ -71,12 +71,12 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
 #[test]
 fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
     type ToneAdpcm =
-        AdpcmClipBuf<VOICE_22050_HZ, { adpcm_data_len_for_pcm_samples(TONE_SAMPLE_COUNT) }>;
+        AdpcmClipBuf<VOICE_22050_HZ, { __adpcm_data_len_for_pcm_samples(TONE_SAMPLE_COUNT) }>;
 
     let tone_adpcm: ToneAdpcm =
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ).with_adpcm();
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ).with_adpcm();
     let tone_adpcm_gain50: ToneAdpcm =
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
             .with_adpcm()
             .with_gain(Gain::percent(50));
 
@@ -96,9 +96,9 @@ fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
 #[test]
 fn with_resampled_same_rate_same_count_is_identity() {
     let tone_audio_clip: AudioClipTone =
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
-    let tone_resampled_audio_clip: AudioClipTone = super::resample_pcm_clip(
-        super::tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ),
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
+    let tone_resampled_audio_clip: AudioClipTone = super::__resample_pcm_clip(
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ),
     );
     assert_eq!(
         tone_audio_clip.samples,
@@ -111,7 +111,7 @@ fn with_resampled_same_rate_same_count_is_identity() {
 fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<(), Box<dyn Error>> {
     type Tone16k = PcmClipBuf<16_000, 23>;
 
-    let tone16k_audio_clip: Tone16k = super::resample_pcm_clip(super::tone_pcm_clip::<
+    let tone16k_audio_clip: Tone16k = super::__resample_pcm_clip(super::__tone_pcm_clip::<
         VOICE_22050_HZ,
         32,
     >(TONE_FREQUENCY_HZ));
@@ -126,7 +126,7 @@ fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<()
 #[test]
 #[should_panic(expected = "destination sample count must preserve duration")]
 fn with_resampled_panics_on_non_duration_preserving_count() {
-    let _: PcmClipBuf<VOICE_22050_HZ, 16> = super::resample_pcm_clip(super::tone_pcm_clip::<
+    let _: PcmClipBuf<VOICE_22050_HZ, 16> = super::__resample_pcm_clip(super::__tone_pcm_clip::<
         VOICE_22050_HZ,
         32,
     >(TONE_FREQUENCY_HZ));
@@ -134,7 +134,7 @@ fn with_resampled_panics_on_non_duration_preserving_count() {
 
 #[test]
 fn resampled_sample_count_is_duration_preserving() {
-    let sample_count = super::resampled_sample_count(90_000, 22_500, 8_000);
+    let sample_count = super::__resampled_sample_count(90_000, 22_500, 8_000);
     assert_eq!(sample_count, 32_000);
 }
 

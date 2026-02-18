@@ -81,13 +81,13 @@ fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
             .with_gain(Gain::percent(50));
 
     assert_eq!(
-        tone_adpcm.as_adpcm_clip().sample_count(),
-        tone_adpcm_gain50.as_adpcm_clip().sample_count(),
+        tone_adpcm.sample_count(),
+        tone_adpcm_gain50.sample_count(),
         "ADPCM gain must preserve decoded sample count"
     );
     assert_ne!(
-        tone_adpcm.as_adpcm_clip().data(),
-        tone_adpcm_gain50.as_adpcm_clip().data(),
+        tone_adpcm.data(),
+        tone_adpcm_gain50.data(),
         "ADPCM gain must change encoded data at 50%"
     );
 }

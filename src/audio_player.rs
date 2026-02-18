@@ -316,7 +316,6 @@ pub mod pcm_clip_generated;
 use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use core::sync::atomic::{AtomicI32, Ordering};
-pub use core::time::Duration as StdDuration;
 
 #[cfg(target_os = "none")]
 use crate::pio_irqs::PioIrqMap;
@@ -525,7 +524,7 @@ impl Gain {
 
 #[must_use]
 #[doc(hidden)]
-pub const fn __samples_for_duration(duration: StdDuration, sample_rate_hz: u32) -> usize {
+pub const fn __samples_for_duration(duration: core::time::Duration, sample_rate_hz: u32) -> usize {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
     let sample_rate_hz_u64 = sample_rate_hz as u64;
     let samples_from_seconds_u64 = duration.as_secs() * sample_rate_hz_u64;
@@ -1199,7 +1198,8 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
             "samples_per_block must fit in u16"
         );
         assert!(
-            DATA_LEN == __adpcm_data_len_for_pcm_samples_with_block_align(SAMPLE_COUNT, block_align),
+            DATA_LEN
+                == __adpcm_data_len_for_pcm_samples_with_block_align(SAMPLE_COUNT, block_align),
             "adpcm data length must match sample count and block_align"
         );
         if SAMPLE_COUNT == 0 {
@@ -2387,6 +2387,7 @@ macro_rules! adpcm_clip {
     };
 }
 
+// todo000 don't say PCM in 1st line
 /// Macro that expands to a PCM silence clip expression for a sample rate and duration.
 ///
 /// Examples:
@@ -2408,6 +2409,7 @@ macro_rules! silence {
     };
 }
 
+// todo000 don't say PCM in 1st line
 /// Macro that expands to a PCM tone clip expression for frequency,
 /// sample rate, and duration.
 ///
@@ -2952,7 +2954,7 @@ macro_rules! __audio_player_impl {
                 /// Returns how many samples are needed for a duration
                 /// at this player's sample rate.
                 #[must_use]
-                pub const fn samples(duration: $crate::audio_player::StdDuration) -> usize {
+                pub const fn samples(duration: core::time::Duration) -> usize {
                     $crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
                 }
 

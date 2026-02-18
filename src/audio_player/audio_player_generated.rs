@@ -43,8 +43,6 @@ pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;
 use crate::Result;
 #[cfg(doc)]
 use crate::audio_player::{AtEnd, Playable, Volume, VOICE_22050_HZ};
-#[cfg(doc)]
-use core::time::Duration as StdDuration;
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
@@ -58,7 +56,7 @@ impl AudioPlayerGenerated {
     /// Returns how many samples are needed for a duration
     /// at this player's sample rate.
     #[must_use]
-    pub const fn samples(duration: StdDuration) -> usize {
+    pub const fn samples(duration: core::time::Duration) -> usize {
         crate::audio_player::__samples_for_duration(duration, Self::SAMPLE_RATE_HZ)
     }
 

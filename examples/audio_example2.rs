@@ -56,7 +56,7 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
     // Read the uncompressed (PCM) NASA clip in compressed (ADPCM) format.
     const NASA: &AudioPlayer8Playable = &Nasa::adpcm_clip();
     // 80ms of silence
-    const GAP: &AudioPlayer8Playable = &silence!(SAMPLE_RATE_HZ, ms(80));
+    const GAP: &AudioPlayer8Playable = &silence!(ms(80));
     // 100ms of a pure 880Hz tone, at 20% loudness.
     const CHIME: &AudioPlayer8Playable =
         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));

@@ -55,8 +55,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NASA: &AudioPlayer10Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
-    const GAP: &AudioPlayer10Playable =
-        &silence!(AudioPlayer10::SAMPLE_RATE_HZ, StdDuration::from_millis(80));
+    const GAP: &AudioPlayer10Playable = &silence!(StdDuration::from_millis(80));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

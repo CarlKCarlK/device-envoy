@@ -56,8 +56,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const JABBER_ADPCM: &AudioPlayer8Playable = &Jabber22kAdpcm::adpcm_clip();
-    const GAP_100MS: &AudioPlayer8Playable =
-        &silence!(AudioPlayer8::SAMPLE_RATE_HZ, StdDuration::from_millis(100));
+    const GAP_100MS: &AudioPlayer8Playable = &silence!(StdDuration::from_millis(100));
 
     let p = embassy_rp::init(Default::default());
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;

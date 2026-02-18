@@ -126,8 +126,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         StdDuration::from_millis(40)
     )
     .with_gain(Gain::percent(12));
-    const SILENCE_40MS: &AudioPlayer10Playable =
-        &silence!(AudioPlayer10::SAMPLE_RATE_HZ, StdDuration::from_millis(40));
+    const SILENCE_40MS: &AudioPlayer10Playable = &silence!(StdDuration::from_millis(40));
 
     info!("Starting Clock Audio with WiFi");
 

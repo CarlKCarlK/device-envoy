@@ -40,6 +40,7 @@
 //!   tone and silence audio clips.
 //! - [`PcmClip`] and [`PcmClipBuf`] - Unsized and sized const-friendly PCM clip types.
 //! - [`AdpcmClip`] and [`AdpcmClipBuf`] - Unsized and sized const-friendly ADPCM clip types.
+//! - [`SilenceClip`] - Duration-based silence clip type usable at any playback sample rate.
 //!
 //! # Example: Play "Mary Had a Little Lamb" (Phrase) Once
 //!
@@ -75,10 +76,11 @@
 //! #     core::panic!("{err}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     // Define REST_MS as a static clip of silence, 80 milliseconds long.
-//!     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
-//!     const REST_MS: &AudioPlayer8Playable = &silence!((SAMPLE_RATE_HZ), StdDuration::from_millis(80));
+//!     // REST_MS is 80 ms of silence. It stores only duration
+//!     // (no PCM/ADPCM sample data in flash).
+//!     const REST_MS: &AudioPlayer8Playable = &silence!(StdDuration::from_millis(80));
 //!     // Define each note as a static clip of a sine wave at the appropriate frequency, 220 ms long.
+//!     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
 //!     const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
 //!     const NOTE_E4: &AudioPlayer8Playable = &tone!(330, SAMPLE_RATE_HZ, NOTE_DURATION);
 //!     const NOTE_D4: &AudioPlayer8Playable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
@@ -90,13 +92,8 @@
 //!
 //!     audio_player8.play(
 //!         [
-//!             NOTE_E4, REST_MS,
-//!             NOTE_D4, REST_MS,
-//!             NOTE_C4, REST_MS,
-//!             NOTE_D4, REST_MS,
-//!             NOTE_E4, REST_MS,
-//!             NOTE_E4, REST_MS,
-//!             NOTE_E4,
+//!             NOTE_E4, REST_MS, NOTE_D4, REST_MS, NOTE_C4, REST_MS, NOTE_D4, REST_MS, NOTE_E4,
+//!             REST_MS, NOTE_E4, REST_MS, NOTE_E4,
 //!         ],
 //!         AtEnd::Stop,
 //!     );
@@ -171,7 +168,7 @@
 //!     // Read the uncompressed (PCM) NASA clip in compressed (ADPCM) format.
 //!     const NASA: &AudioPlayer8Playable = &Nasa::adpcm_clip();
 //!     // 80ms of silence
-//!     const GAP: &AudioPlayer8Playable = &silence!(SAMPLE_RATE_HZ, ms(80));
+//!     const GAP: &AudioPlayer8Playable = &silence!(ms(80));
 //!     // 100ms of a pure 880Hz tone, at 20% loudness.
 //!     const CHIME: &AudioPlayer8Playable =
 //!         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
@@ -321,6 +318,7 @@ pub mod pcm_clip_generated;
 use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use core::sync::atomic::{AtomicI32, Ordering};
+use core::time::Duration;
 
 #[cfg(target_os = "none")]
 use crate::pio_irqs::PioIrqMap;
@@ -529,7 +527,7 @@ impl Gain {
 
 #[must_use]
 #[doc(hidden)]
-pub const fn __samples_for_duration(duration: core::time::Duration, sample_rate_hz: u32) -> usize {
+pub const fn __samples_for_duration(duration: Duration, sample_rate_hz: u32) -> usize {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
     let sample_rate_hz_u64 = sample_rate_hz as u64;
     let samples_from_seconds_u64 = duration.as_secs() * sample_rate_hz_u64;
@@ -1054,6 +1052,33 @@ const fn read_u32_le_const(bytes: &[u8], byte_offset: usize) -> u32 {
 pub(crate) enum PlaybackClip<const SAMPLE_RATE_HZ: u32> {
     Pcm(&'static PcmClip<SAMPLE_RATE_HZ>),
     Adpcm(&'static AdpcmClip<SAMPLE_RATE_HZ>),
+    Silence(Duration),
+}
+
+/// Duration-only silence clip source.
+///
+/// This clip type is sample-rate agnostic. It can be used with any generated
+/// player sample rate because silence is rendered at playback time.
+///
+/// See the [audio_player module documentation](mod@crate::audio_player) for
+/// usage examples.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SilenceClip {
+    duration: Duration,
+}
+
+impl SilenceClip {
+    /// Creates a silence clip for a specific duration.
+    #[must_use]
+    pub const fn new(duration: Duration) -> Self {
+        Self { duration }
+    }
+
+    /// Returns the silence duration.
+    #[must_use]
+    pub const fn duration(self) -> Duration {
+        self.duration
+    }
 }
 
 /// A statically stored clip source used for mixed playback without enum wrappers at call sites.
@@ -1069,7 +1094,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 }
 
 mod sealed {
-    use super::{AdpcmClip, PcmClip, PlaybackClip};
+    use super::{AdpcmClip, PcmClip, PlaybackClip, SilenceClip};
 
     pub(crate) trait PlayableSealed<const SAMPLE_RATE_HZ: u32> {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ>;
@@ -1100,6 +1125,12 @@ mod sealed {
     {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
             PlaybackClip::Adpcm(self)
+        }
+    }
+
+    impl<const SAMPLE_RATE_HZ: u32> PlayableSealed<SAMPLE_RATE_HZ> for SilenceClip {
+        fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
+            PlaybackClip::Silence(self.duration())
         }
     }
 }
@@ -1167,6 +1198,66 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         }
         Self {
             samples: scaled_samples,
+        }
+    }
+
+    /// Returns this clip with a linear attack and release envelope.
+    ///
+    /// This is useful when you want explicit control over click reduction at
+    /// the start/end of generated tones.
+    ///
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
+    #[must_use]
+    pub const fn with_attack_release(self, attack: Duration, release: Duration) -> Self {
+        assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
+        let attack_sample_count = __samples_for_duration(attack, SAMPLE_RATE_HZ);
+        let release_sample_count = __samples_for_duration(release, SAMPLE_RATE_HZ);
+        assert!(
+            attack_sample_count <= SAMPLE_COUNT,
+            "attack duration must fit within clip duration"
+        );
+        assert!(
+            release_sample_count <= SAMPLE_COUNT,
+            "release duration must fit within clip duration"
+        );
+        assert!(
+            attack_sample_count + release_sample_count <= SAMPLE_COUNT,
+            "attack + release must fit within clip duration"
+        );
+
+        let mut shaped_samples = self.samples;
+
+        if attack_sample_count > 0 {
+            let attack_sample_count_i32 = attack_sample_count as i32;
+            let mut sample_index = 0usize;
+            while sample_index < attack_sample_count {
+                let envelope_numerator_i32 = sample_index as i32;
+                shaped_samples[sample_index] = scale_sample_with_linear(
+                    shaped_samples[sample_index],
+                    (envelope_numerator_i32 * i16::MAX as i32) / attack_sample_count_i32,
+                );
+                sample_index += 1;
+            }
+        }
+
+        if release_sample_count > 0 {
+            let release_sample_count_i32 = release_sample_count as i32;
+            let release_start_index = SAMPLE_COUNT - release_sample_count;
+            let mut release_index = 0usize;
+            while release_index < release_sample_count {
+                let sample_index = release_start_index + release_index;
+                let envelope_numerator_i32 = (release_sample_count - release_index) as i32;
+                shaped_samples[sample_index] = scale_sample_with_linear(
+                    shaped_samples[sample_index],
+                    (envelope_numerator_i32 * i16::MAX as i32) / release_sample_count_i32,
+                );
+                release_index += 1;
+            }
+        }
+
+        Self {
+            samples: shaped_samples,
         }
     }
 
@@ -1281,29 +1372,17 @@ pub const fn __tone_pcm_clip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usiz
         sample_index += 1;
     }
 
-    // Apply a short attack/release envelope to avoid clicks from discontinuities
-    // at note boundaries (especially obvious on pure sine tones).
-    let mut fade_samples = (SAMPLE_RATE_HZ as usize * 4) / 1000;
-    if fade_samples * 2 > SAMPLE_COUNT {
-        fade_samples = SAMPLE_COUNT / 2;
-    }
-    if fade_samples > 0 {
-        let fade_samples_i32 = fade_samples as i32;
-        let mut fade_index = 0usize;
-        while fade_index < fade_samples {
-            let fade_numerator = fade_index as i32;
-            let leading_scaled = (samples[fade_index] as i32 * fade_numerator) / fade_samples_i32;
-            samples[fade_index] = leading_scaled as i16;
-
-            let trailing_index = SAMPLE_COUNT - 1 - fade_index;
-            let trailing_scaled =
-                (samples[trailing_index] as i32 * fade_numerator) / fade_samples_i32;
-            samples[trailing_index] = trailing_scaled as i16;
-            fade_index += 1;
-        }
-    }
-
     PcmClip { samples }
+}
+
+/// Const backend helper that creates a duration-based silence clip.
+///
+/// This helper must be `pub` because macro expansions in downstream crates call
+/// it at the call site, but it is not a user-facing API.
+#[must_use]
+#[doc(hidden)]
+pub const fn __silence_clip(duration: Duration) -> SilenceClip {
+    SilenceClip::new(duration)
 }
 
 /// Builds a fixed-size PCM clip from samples.
@@ -1558,7 +1637,7 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, S
 
     /// Starts playback of one or more statically defined audio clips.
     ///
-    /// This supports mixed PCM + ADPCM literals like
+    /// This supports mixed PCM + ADPCM + silence literals like
     /// `[&adpcm_clip, &silence_100ms, &tone_a4]`.
     ///
     /// Clip samples are predeclared static data, but sequence order is chosen
@@ -1771,6 +1850,18 @@ async fn play_clip_sequence_once<
                     return Some(next_audio_command);
                 }
             }
+            PlaybackClip::Silence(duration) => {
+                if let ControlFlow::Break(next_audio_command) = play_silence_duration_once(
+                    pio_i2s_out,
+                    *duration,
+                    sample_buffer,
+                    audio_player_static,
+                )
+                .await
+                {
+                    return Some(next_audio_command);
+                }
+            }
         }
     }
     None
@@ -1888,6 +1979,34 @@ async fn play_full_adpcm_clip_once<
     if sample_buffer_len != 0 {
         sample_buffer[sample_buffer_len..].fill(stereo_sample(0));
         pio_i2s_out.write(sample_buffer).await;
+        if let Some(next_audio_command) = audio_player_static.command_signal.try_take() {
+            return ControlFlow::Break(next_audio_command);
+        }
+    }
+
+    ControlFlow::Continue(())
+}
+
+#[cfg(target_os = "none")]
+async fn play_silence_duration_once<
+    PIO: Instance,
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
+    pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
+    duration: Duration,
+    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
+    let silence_sample_count = __samples_for_duration(duration, SAMPLE_RATE_HZ);
+    let mut remaining_sample_count = silence_sample_count;
+    let zero_stereo_sample = stereo_sample(0);
+    sample_buffer.fill(zero_stereo_sample);
+
+    while remaining_sample_count > 0 {
+        let chunk_sample_count = remaining_sample_count.min(SAMPLE_BUFFER_LEN);
+        pio_i2s_out.write(sample_buffer).await;
+        remaining_sample_count -= chunk_sample_count;
         if let Some(next_audio_command) = audio_player_static.command_signal.try_take() {
             return ControlFlow::Break(next_audio_command);
         }
@@ -2391,25 +2510,21 @@ macro_rules! adpcm_clip {
     };
 }
 
-// todo000 don't say PCM in 1st line
-/// Macro that expands to a PCM silence clip expression for a sample rate and duration.
+// todo000 don't say PCM in 1st line (may no longer apply)
+/// Macro that expands to a silence clip expression for a duration.
 ///
 /// Examples:
-/// - `silence!(VOICE_22050_HZ, Duration::from_millis(100))`
-/// - `silence!(AudioPlayer8::SAMPLE_RATE_HZ, Duration::from_millis(100))`
+/// - `silence!(Duration::from_millis(100))`
 ///
-/// The result is a `PcmClipBuf` silence clip.
+/// The result is a sample-rate agnostic [`SilenceClip`].
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! silence {
-    ($sample_rate_hz:expr, $duration:expr) => {
-        $crate::audio_player::__pcm_clip_from_samples::<
-            { $sample_rate_hz },
-            { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) },
-        >([0; { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) }])
+    ($duration:expr) => {
+        $crate::audio_player::__silence_clip($duration)
     };
 }
 

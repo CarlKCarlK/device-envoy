@@ -56,8 +56,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         StdDuration::from_millis(500)
     )
     .with_gain(Gain::percent(25));
-    const SILENCE_100MS: &AudioPlayer8Playable =
-        &silence!(AudioPlayer8::SAMPLE_RATE_HZ, StdDuration::from_millis(100));
+    const SILENCE_100MS: &AudioPlayer8Playable = &silence!(StdDuration::from_millis(100));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

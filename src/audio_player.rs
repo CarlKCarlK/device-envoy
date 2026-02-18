@@ -2511,7 +2511,7 @@ macro_rules! tone {
 /// **Generated items:**
 ///
 /// - `<Name>` - generated player struct type
-/// - `<Name>PcmClip` - unsized PCM clip alias at this player's sample rate
+/// - `<Name>Playable` - trait-object clip source alias at this player's sample rate
 /// - associated constants and methods on `<Name>` (for example:
 ///   `SAMPLE_RATE_HZ`, `samples(...)`,
 ///   `new(...)`, `play(...)`, and runtime volume controls)
@@ -2953,16 +2953,6 @@ macro_rules! __audio_player_impl {
             $vis struct $name {
                 player: $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>,
             }
-
-            #[doc = concat!(
-                "Unsized clip type at [`",
-                stringify!($name),
-                "::SAMPLE_RATE_HZ`](struct@",
-                stringify!($name),
-                ").\n\n",
-                "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."
-            )]
-            $vis type [<$name PcmClip>] = $crate::audio_player::PcmClip<{ $sample_rate_hz }>;
 
             #[doc = concat!(
                 "Trait-object clip source type at [`",

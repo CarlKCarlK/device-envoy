@@ -28,23 +28,13 @@ audio_player! {
 /// This page serves as the reference for what a generated audio player type
 /// provides. For first-time readers, start with the
 /// [`audio_player`](mod@crate::audio_player) module documentation, then return
-/// here for a complete list of available methods, associated constants, and
-/// generated type aliases.
+/// here for a complete list of available methods and associated constants.
 ///
-/// The macro also generates [`AudioPlayerGeneratedPcmClip`], a type alias for
-/// [`PcmClip`] at [`AudioPlayerGenerated::SAMPLE_RATE_HZ`], and
-/// [`AudioPlayerGeneratedPlayable`], a trait-object alias for clip
-/// sources at the same sample rate.
+/// The macro also generates [`AudioPlayerGeneratedPlayable`], a trait-object
+/// alias for clip sources at the same sample rate.
 ///
 /// Auto-generated.
 pub struct AudioPlayerGenerated;
-
-#[cfg(doc)]
-/// Unsized clip type at [`AudioPlayerGenerated::SAMPLE_RATE_HZ`].
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
-pub type AudioPlayerGeneratedPcmClip = PcmClip<VOICE_22050_HZ>;
 
 #[cfg(doc)]
 /// Trait-object clip source type at [`AudioPlayerGenerated::SAMPLE_RATE_HZ`].
@@ -56,7 +46,7 @@ pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, PcmClip, Playable, Volume, VOICE_22050_HZ};
+use crate::audio_player::{AtEnd, Playable, Volume, VOICE_22050_HZ};
 #[cfg(doc)]
 use core::time::Duration as StdDuration;
 

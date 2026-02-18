@@ -1169,7 +1169,6 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
         GeneratedDocStubExpectation {
             relative_path: "src/audio_player/audio_player_generated.rs",
             required_fragments: &[
-                "pub type AudioPlayerGeneratedPcmClip = PcmClip<VOICE_22050_HZ>;",
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const INITIAL_VOLUME: Volume",
                 "pub const MAX_VOLUME: Volume",

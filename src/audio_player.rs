@@ -541,6 +541,16 @@ pub const fn __samples_for_duration(duration: Duration, sample_rate_hz: u32) -> 
     total_samples_u64 as usize
 }
 
+const fn duration_for_sample_count(sample_count: usize, sample_rate_hz: u32) -> Duration {
+    assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
+    let sample_rate_hz_usize = sample_rate_hz as usize;
+    let whole_seconds = sample_count / sample_rate_hz_usize;
+    let subsecond_sample_count = sample_count % sample_rate_hz_usize;
+    let subsecond_nanos =
+        ((subsecond_sample_count as u64) * 1_000_000_000_u64) / sample_rate_hz as u64;
+    Duration::new(whole_seconds as u64, subsecond_nanos as u32)
+}
+
 // Must remain `pub` because exported macros (for example `pcm_clip!` and
 // `adpcm_clip!`) expand in downstream crates and reference this helper via
 // `$crate::...`.
@@ -1209,10 +1219,19 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
     /// See the [audio_player module documentation](mod@crate::audio_player) for
     /// usage examples.
     #[must_use]
-    pub const fn with_attack_release(self, attack: Duration, release: Duration) -> Self {
+    pub(crate) const fn with_attack_release(self, attack: Duration, release: Duration) -> Self {
         assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
         let attack_sample_count = __samples_for_duration(attack, SAMPLE_RATE_HZ);
         let release_sample_count = __samples_for_duration(release, SAMPLE_RATE_HZ);
+        self.with_attack_release_sample_count(attack_sample_count, release_sample_count)
+    }
+
+    #[must_use]
+    const fn with_attack_release_sample_count(
+        self,
+        attack_sample_count: usize,
+        release_sample_count: usize,
+    ) -> Self {
         assert!(
             attack_sample_count <= SAMPLE_COUNT,
             "attack duration must fit within clip duration"
@@ -1359,6 +1378,20 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
 pub const fn __tone_pcm_clip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     frequency_hz: u32,
 ) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
+    __tone_pcm_clip_with_duration::<SAMPLE_RATE_HZ, SAMPLE_COUNT>(
+        frequency_hz,
+        duration_for_sample_count(SAMPLE_COUNT, SAMPLE_RATE_HZ),
+    )
+}
+
+/// Const backend helper that creates a PCM sine-wave clip with explicit
+/// duration metadata used for built-in shaping.
+#[must_use]
+#[doc(hidden)]
+pub const fn __tone_pcm_clip_with_duration<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
+    frequency_hz: u32,
+    duration: Duration,
+) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
     assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
     let mut samples = [0_i16; SAMPLE_COUNT];
     let phase_step_u64 = ((frequency_hz as u64) << 32) / SAMPLE_RATE_HZ as u64;
@@ -1372,7 +1405,14 @@ pub const fn __tone_pcm_clip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usiz
         sample_index += 1;
     }
 
-    PcmClip { samples }
+    // Add an attack and release duration to reduce clicks. It is min(50ms, 1/4 of total duration)
+    let max_duration = Duration::from_millis(50);
+    assert!(max_duration.as_secs() == 0, "50ms cap must be sub-second");
+    let attack_release_duration = match (duration.as_secs(), duration.subsec_nanos()) {
+        (0, nanos) if nanos / 4 < max_duration.subsec_nanos() => Duration::new(0, nanos / 4),
+        (_, _) => max_duration,
+    };
+    PcmClip { samples }.with_attack_release(attack_release_duration, attack_release_duration)
 }
 
 /// Const backend helper that creates a duration-based silence clip.
@@ -2546,10 +2586,10 @@ macro_rules! silence {
 #[macro_export]
 macro_rules! tone {
     ($frequency_hz:expr, $sample_rate_hz:expr, $duration:expr) => {
-        $crate::audio_player::__tone_pcm_clip::<
+        $crate::audio_player::__tone_pcm_clip_with_duration::<
             { $sample_rate_hz },
             { $crate::audio_player::__samples_for_duration($duration, $sample_rate_hz) },
-        >($frequency_hz)
+        >($frequency_hz, $duration)
     };
 }
 

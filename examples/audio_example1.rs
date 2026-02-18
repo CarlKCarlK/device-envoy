@@ -31,20 +31,15 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn example(spawner: Spawner) -> Result<Infallible> {
-    // Keep original note/rest timing, but use strong attack/release shaping.
+    // Keep original note/rest timing. tone! applies internal attack/release shaping.
     const INTER_NOTE_SILENCE: &AudioPlayer8Playable =
         &SilenceClip::new(StdDuration::from_millis(80));
-    // Define each note as a static clip of a sine wave, then apply attack/release shaping.
+    // Define each note as a static clip of a sine wave.
     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
     const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
-    const ATTACK: StdDuration = StdDuration::from_millis(50);
-    const RELEASE: StdDuration = StdDuration::from_millis(50);
-    const NOTE_E4: &AudioPlayer8Playable =
-        &tone!(330, SAMPLE_RATE_HZ, NOTE_DURATION).with_attack_release(ATTACK, RELEASE);
-    const NOTE_D4: &AudioPlayer8Playable =
-        &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION).with_attack_release(ATTACK, RELEASE);
-    const NOTE_C4: &AudioPlayer8Playable =
-        &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION).with_attack_release(ATTACK, RELEASE);
+    const NOTE_E4: &AudioPlayer8Playable = &tone!(330, SAMPLE_RATE_HZ, NOTE_DURATION);
+    const NOTE_D4: &AudioPlayer8Playable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
+    const NOTE_C4: &AudioPlayer8Playable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
 
     let p = embassy_rp::init(Default::default());
     // Create an `AudioPlayer8` instance with the specified pins and resources.

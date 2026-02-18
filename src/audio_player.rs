@@ -1,4 +1,3 @@
-//TODO000 should I add __ to all doc hidden items.
 //! A device abstraction for playing audio clips over I²S hardware,
 //! with runtime sequencing, volume control, and compression.
 //!
@@ -20,7 +19,8 @@
 //!   - Uncompressed: 16-bit PCM (s16le)
 //!   - Compressed: IMA ADPCM in WAV (mono; ~25% the size of PCM; ideal for speech)
 //! - Mono input audio (duplicated to left/right on I²S output)
-//! todo000 add link to compression directions
+//! - For ffmpeg conversion commands, see [`pcm_clip!`] (s16le) and
+//!   [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip) (IMA ADPCM WAV).
 //!
 //! **After reading the examples below, see also:**
 //!
@@ -217,9 +217,14 @@
 //!
 //! # Example: Resample and Play Countdown Once
 //!
-//! This example compiles in three 22.05 kHz clips (`2`, `1`, `0`) and NASA,
-//! resamples them to narrowband 8 kHz at compile time, compresses them,
-//! and plays the sequence once.
+//! This example compiles in three 22.05 kHz clips (`2`, `1`, `0`) and NASA.
+//! It changes them to 8 kHz at compile time (`resample` means changing how many
+//! audio samples are stored per second), compresses them, and plays them once.
+//!
+//! Only the final 8 kHz compressed clips are stored in flash.
+//!
+//! `sample_rate` means samples per second. The clip sample rate is part of the
+//! clip type, so using the wrong rate is a compile-time error.
 //!
 //! ```rust,no_run
 //! # #![no_std]
@@ -1114,7 +1119,6 @@ pub struct PcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [i16]> {
 /// For unsized clip references (for sequencing different clip lengths), see
 /// [`PcmClip`].
 ///
-/// todo000 say this somewhere more conspicuous.
 /// Sample rate is part of the type, so clips with different sample rates are
 /// not assignment-compatible:
 ///

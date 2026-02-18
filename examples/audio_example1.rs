@@ -32,8 +32,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn example(spawner: Spawner) -> Result<Infallible> {
     // Keep original note/rest timing. tone! applies internal attack/release shaping.
-    const INTER_NOTE_SILENCE: &AudioPlayer8Playable =
-        &SilenceClip::new(StdDuration::from_millis(80));
+    const REST: &AudioPlayer8Playable = &SilenceClip::new(StdDuration::from_millis(80));
     // Define each note as a static clip of a sine wave.
     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
     const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
@@ -47,19 +46,8 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
 
     audio_player8.play(
         [
-            NOTE_E4,
-            INTER_NOTE_SILENCE,
-            NOTE_D4,
-            INTER_NOTE_SILENCE,
-            NOTE_C4,
-            INTER_NOTE_SILENCE,
-            NOTE_D4,
-            INTER_NOTE_SILENCE,
-            NOTE_E4,
-            INTER_NOTE_SILENCE,
-            NOTE_E4,
-            INTER_NOTE_SILENCE,
-            NOTE_E4,
+            NOTE_E4, REST, NOTE_D4, REST, NOTE_C4, REST, NOTE_D4, REST, NOTE_E4, REST, NOTE_E4,
+            REST, NOTE_E4,
         ],
         AtEnd::Stop,
     );

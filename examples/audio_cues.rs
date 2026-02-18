@@ -17,9 +17,8 @@ use core::time::Duration as StdDuration;
 use defmt::info;
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
+    audio_player::{AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
     button::{Button, PressedTo},
-    silence,
 };
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -55,7 +54,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NASA: &AudioPlayer10Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
-    const GAP: &AudioPlayer10Playable = &silence!(StdDuration::from_millis(80));
+    const GAP: &AudioPlayer10Playable = &SilenceClip::new(StdDuration::from_millis(80));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

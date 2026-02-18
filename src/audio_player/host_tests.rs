@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use super::{
-    AdpcmClipBuf, Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ, __adpcm_data_len_for_pcm_samples,
+    __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ,
 };
 use std::error::Error;
 use std::fs;
@@ -14,8 +14,7 @@ type AudioClipTone = PcmClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
 
 #[test]
 fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
-    let silence_audio_clip: AudioClipTone =
-        super::__pcm_clip_from_samples([0; TONE_SAMPLE_COUNT]);
+    let silence_audio_clip: AudioClipTone = super::__pcm_clip_from_samples([0; TONE_SAMPLE_COUNT]);
     assert!(
         silence_audio_clip
             .samples
@@ -52,13 +51,11 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
             .with_gain(Gain::percent(200));
 
     assert_ne!(
-        tone_audio_clip.samples,
-        tone_gain50_audio_clip.samples,
+        tone_audio_clip.samples, tone_gain50_audio_clip.samples,
         "50% gain must change sample data"
     );
     assert_ne!(
-        tone_audio_clip.samples,
-        tone_gain200_audio_clip.samples,
+        tone_audio_clip.samples, tone_gain200_audio_clip.samples,
         "200% gain must change sample data"
     );
 
@@ -81,14 +78,14 @@ fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
             .with_gain(Gain::percent(50));
 
     assert_eq!(
-        (tone_adpcm.data.len() / tone_adpcm.block_align as usize) * tone_adpcm.samples_per_block as usize,
+        (tone_adpcm.data.len() / tone_adpcm.block_align as usize)
+            * tone_adpcm.samples_per_block as usize,
         (tone_adpcm_gain50.data.len() / tone_adpcm_gain50.block_align as usize)
             * tone_adpcm_gain50.samples_per_block as usize,
         "ADPCM gain must preserve decoded sample count"
     );
     assert_ne!(
-        tone_adpcm.data,
-        tone_adpcm_gain50.data,
+        tone_adpcm.data, tone_adpcm_gain50.data,
         "ADPCM gain must change encoded data at 50%"
     );
 }
@@ -101,8 +98,7 @@ fn with_resampled_same_rate_same_count_is_identity() {
         super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ),
     );
     assert_eq!(
-        tone_audio_clip.samples,
-        tone_resampled_audio_clip.samples,
+        tone_audio_clip.samples, tone_resampled_audio_clip.samples,
         "resampling to same rate and sample count must be identity"
     );
 }

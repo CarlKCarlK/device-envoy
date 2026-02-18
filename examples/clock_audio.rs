@@ -19,13 +19,14 @@ use core::time::Duration as StdDuration;
 
 use defmt::info;
 use defmt_rtt as _;
+use device_envoy::audio_player::SilenceClip;
 use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player};
 use device_envoy::button::PressedTo;
 use device_envoy::clock_sync::{ClockSync, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_envoy::flash_array::FlashArray;
 use device_envoy::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
-use device_envoy::{Error, Result, silence, tone};
+use device_envoy::{Error, Result, tone};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::Duration;
@@ -126,7 +127,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         StdDuration::from_millis(40)
     )
     .with_gain(Gain::percent(12));
-    const SILENCE_40MS: &AudioPlayer10Playable = &silence!(StdDuration::from_millis(40));
+    const SILENCE_40MS: &AudioPlayer10Playable = &SilenceClip::new(StdDuration::from_millis(40));
 
     info!("Starting Clock Audio with WiFi");
 

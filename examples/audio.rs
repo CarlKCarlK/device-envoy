@@ -16,9 +16,11 @@ use core::time::Duration as StdDuration;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, pcm_clip};
+use device_envoy::audio_player::{
+    AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
+};
 use device_envoy::button::{Button, PressedTo};
-use device_envoy::{silence, tone};
+use device_envoy::tone;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
@@ -56,7 +58,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         StdDuration::from_millis(500)
     )
     .with_gain(Gain::percent(25));
-    const SILENCE_100MS: &AudioPlayer8Playable = &silence!(StdDuration::from_millis(100));
+    const SILENCE_100MS: &AudioPlayer8Playable = &SilenceClip::new(StdDuration::from_millis(100));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);

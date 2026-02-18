@@ -36,8 +36,7 @@
 //!   (includes syntax details).
 //!   See [`AdpcmClipGenerated`](adpcm_clip_generated::AdpcmClipGenerated) for
 //!   sample generated items.
-//! - [`tone!`](macro@crate::tone) and [`silence!`](macro@crate::silence) - Macros to generate
-//!   tone and silence audio clips.
+//! - [`tone!`](macro@crate::tone) - Macro to generate tone audio clips.
 //! - [`PcmClip`] and [`PcmClipBuf`] - Unsized and sized const-friendly PCM clip types.
 //! - [`AdpcmClip`] and [`AdpcmClipBuf`] - Unsized and sized const-friendly ADPCM clip types.
 //! - [`SilenceClip`] - Duration-based silence clip type usable at any playback sample rate.
@@ -54,8 +53,8 @@
 //! # use core::result::Result::Ok;
 //! use device_envoy::{
 //!     Result,
-//!     audio_player::{AtEnd, VOICE_22050_HZ, Volume, audio_player},
-//!     silence, tone,
+//!     audio_player::{AtEnd, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
+//!     tone,
 //! };
 //! use core::time::Duration as StdDuration;
 //!
@@ -76,9 +75,9 @@
 //! #     core::panic!("{err}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     // REST_MS is 80 ms of silence. It stores only duration
+//!     // REST is 80 ms of silence. It stores only duration
 //!     // (no PCM/ADPCM sample data in flash).
-//!     const REST_MS: &AudioPlayer8Playable = &silence!(StdDuration::from_millis(80));
+//!     const REST: &AudioPlayer8Playable = &SilenceClip::new(StdDuration::from_millis(80));
 //!     // Define each note as a static clip of a sine wave at the appropriate frequency, 220 ms long.
 //!     const SAMPLE_RATE_HZ: u32 = AudioPlayer8::SAMPLE_RATE_HZ;
 //!     const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
@@ -92,8 +91,8 @@
 //!
 //!     audio_player8.play(
 //!         [
-//!             NOTE_E4, REST_MS, NOTE_D4, REST_MS, NOTE_C4, REST_MS, NOTE_D4, REST_MS, NOTE_E4,
-//!             REST_MS, NOTE_E4, REST_MS, NOTE_E4,
+//!             NOTE_E4, REST, NOTE_D4, REST, NOTE_C4, REST, NOTE_D4, REST, NOTE_E4, REST,
+//!             NOTE_E4, REST, NOTE_E4,
 //!         ],
 //!         AtEnd::Stop,
 //!     );
@@ -120,10 +119,10 @@
 //! use device_envoy::{
 //!     Result,
 //!     audio_player::{
-//!         AtEnd, Gain, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
+//!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
 //!     button::{Button, PressedTo},
-//!     silence, tone,
+//!     tone,
 //! };
 //! use core::time::Duration as StdDuration;
 //! use embassy_futures::select::{Either, select};
@@ -168,7 +167,7 @@
 //!     // Read the uncompressed (PCM) NASA clip in compressed (ADPCM) format.
 //!     const NASA: &AudioPlayer8Playable = &Nasa::adpcm_clip();
 //!     // 80ms of silence
-//!     const GAP: &AudioPlayer8Playable = &silence!(ms(80));
+//!     const GAP: &AudioPlayer8Playable = &SilenceClip::new(ms(80));
 //!     // 100ms of a pure 880Hz tone, at 20% loudness.
 //!     const CHIME: &AudioPlayer8Playable =
 //!         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
@@ -307,6 +306,8 @@
 //! }
 //! ```
 #![cfg_attr(all(test, feature = "host"), allow(dead_code))]
+
+// TODO Add a realtime tone Playable (sine + ASR envelope) that uses parameter-only storage and matches ADPCM playback performance.
 
 pub mod adpcm_clip_generated;
 pub mod audio_player_generated;
@@ -1415,21 +1416,10 @@ pub const fn __tone_pcm_clip_with_duration<const SAMPLE_RATE_HZ: u32, const SAMP
     PcmClip { samples }.with_attack_release(attack_release_duration, attack_release_duration)
 }
 
-/// Const backend helper that creates a duration-based silence clip.
-///
-/// This helper must be `pub` because macro expansions in downstream crates call
-/// it at the call site, but it is not a user-facing API.
-#[must_use]
-#[doc(hidden)]
-pub const fn __silence_clip(duration: Duration) -> SilenceClip {
-    SilenceClip::new(duration)
-}
-
 /// Builds a fixed-size PCM clip from samples.
 ///
 /// This is intentionally `#[doc(hidden)]` because user-facing clip
-/// construction should prefer `pcm_clip!`, `adpcm_clip!`, `tone!`, and
-/// `silence!`.
+/// construction should prefer `pcm_clip!`, `adpcm_clip!`, and `tone!`.
 #[must_use]
 #[doc(hidden)]
 pub const fn __pcm_clip_from_samples<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
@@ -2550,24 +2540,6 @@ macro_rules! adpcm_clip {
     };
 }
 
-// todo000 don't say PCM in 1st line (may no longer apply)
-/// Macro that expands to a silence clip expression for a duration.
-///
-/// Examples:
-/// - `silence!(Duration::from_millis(100))`
-///
-/// The result is a sample-rate agnostic [`SilenceClip`].
-///
-/// See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! silence {
-    ($duration:expr) => {
-        $crate::audio_player::__silence_clip($duration)
-    };
-}
-
 // todo000 don't say PCM in 1st line
 /// Macro that expands to a PCM tone clip expression for frequency,
 /// sample rate, and duration.
@@ -3180,7 +3152,5 @@ macro_rules! __audio_player_impl {
 pub use audio_player;
 #[doc(inline)]
 pub use pcm_clip;
-#[doc(inline)]
-pub use silence;
 #[doc(inline)]
 pub use tone;

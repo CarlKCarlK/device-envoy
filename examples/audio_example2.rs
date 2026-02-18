@@ -7,9 +7,9 @@ use core::time::Duration as StdDuration;
 
 use device_envoy::{
     Result,
-    audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
+    audio_player::{AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
     button::{Button, PressedTo},
-    silence, tone,
+    tone,
 };
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -56,7 +56,7 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
     // Read the uncompressed (PCM) NASA clip in compressed (ADPCM) format.
     const NASA: &AudioPlayer8Playable = &Nasa::adpcm_clip();
     // 80ms of silence
-    const GAP: &AudioPlayer8Playable = &silence!(ms(80));
+    const GAP: &AudioPlayer8Playable = &SilenceClip::new(ms(80));
     // 100ms of a pure 880Hz tone, at 20% loudness.
     const CHIME: &AudioPlayer8Playable =
         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));

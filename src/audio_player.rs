@@ -697,10 +697,11 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         }
     }
 
-    /// Returns this ADPCM clip decoded to PCM samples.
+    /// Returns the uncompressed (PCM) version of this clip.
     ///
-    /// `SAMPLE_COUNT` must match the decoded sample count implied by this
-    /// clip's block structure.
+    /// `SAMPLE_COUNT` is the number of samples in the resulting PCM clip.
+    /// Typically, use the generated clip-module constant:
+    /// [`AdpcmClipGenerated::PCM_SAMPLE_COUNT`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::PCM_SAMPLE_COUNT).
     #[must_use]
     pub const fn with_pcm<const SAMPLE_COUNT: usize>(
         &self,
@@ -1105,8 +1106,7 @@ impl SilenceClip {
 
 /// A clip source trait for [`AudioPlayer::play`](crate::audio_player::AudioPlayer::play).
 ///
-/// Use this to mix different clip kinds (PCM, ADPCM, and [`SilenceClip`]) in one
-/// `play` call without manual enum wrapping.
+/// This trait let's us pass audio clips of different types (PCM, ADPCM, or silence) in a single heterogeneous sequence to `play`.
 ///
 /// This trait is object-safe, so mixed clips are passed as:
 /// `&'static dyn Playable<SAMPLE_RATE_HZ>`.
@@ -1172,19 +1172,10 @@ pub struct PcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [i16]> {
 
 /// Sized, const-friendly storage for uncompressed (PCM) audio clip data.
 ///
-/// For unsized clip references (for sequencing different clip lengths), see
-/// [`PcmClip`].
+/// For unsized clip references, see [`PcmClip`].
 ///
 /// Sample rate is part of the type, so clips with different sample rates are
-/// not assignment-compatible:
-///
-/// ```rust,compile_fail
-/// use device_envoy::audio_player::PcmClipBuf;
-///
-/// let clip22050: PcmClipBuf<22_050, 4> =
-///     device_envoy::audio_player::__pcm_clip_from_samples([0; 4]);
-/// let _clip16000: PcmClipBuf<16_000, 4> = clip22050;
-/// ```
+/// not assignment-compatible.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
@@ -1295,11 +1286,10 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         }
     }
 
-    /// Returns this clip encoded as mono 4-bit IMA ADPCM.
+    /// Returns the compressed (ADPCM) encoding for this clip.
     ///
-    /// Uses a fixed ADPCM block size of 256 bytes. `DATA_LEN` must match
-    /// [`__adpcm_data_len_for_pcm_samples`]
-    /// for this clip's sample count.
+    /// See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.
     #[must_use]
     pub const fn with_adpcm<const DATA_LEN: usize>(
         &self,
@@ -1307,10 +1297,6 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         self.with_adpcm_block_align::<DATA_LEN>(ADPCM_ENCODE_BLOCK_ALIGN)
     }
 
-    /// Returns this clip encoded as mono 4-bit IMA ADPCM with a requested block size.
-    ///
-    /// `DATA_LEN` must match the encoded length implied by this clip's sample
-    /// count and `block_align`.
     #[must_use]
     pub(crate) const fn with_adpcm_block_align<const DATA_LEN: usize>(
         &self,
@@ -2368,7 +2354,6 @@ macro_rules! __audio_clip_impl {
                 const AUDIO_SAMPLE_BYTES_LEN: usize = include_bytes!($file).len();
                 const SOURCE_SAMPLE_COUNT: usize = AUDIO_SAMPLE_BYTES_LEN / 2;
                 #[doc = "Number of samples for uncompressed (PCM) version of this clip."]
-                #[doc = "See the [audio_player module documentation](mod@crate::audio_player) for usage examples."]
                 pub const PCM_SAMPLE_COUNT: usize = $crate::audio_player::__resampled_sample_count(
                     SOURCE_SAMPLE_COUNT,
                     SOURCE_SAMPLE_RATE_HZ,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.4-alpha.0
+
+- Added first-class support for compressed audio clips (IMA ADPCM WAV) via `adpcm_clip!`.
+- `AudioPlayer` now supports mixed playback of PCM clips, ADPCM clips, tones, and silence in a single `play(...)` call.
+- Added `AdpcmClip`/`AdpcmClipBuf` and const conversion paths between PCM and ADPCM clip forms.
+- Split clip generation into explicit `pcm_clip!` and `adpcm_clip!` flows, with generated constants including `SAMPLE_RATE_HZ`, `PCM_SAMPLE_COUNT`, and `ADPCM_DATA_LEN`.
+- Improved generated docs for audio player and clip modules, including clearer generated API references.
+- Added/expanded compile-only validation around resampling and sample-count invariants.
+
 ## 0.0.3-alpha.3
 
 - Added compile-time audio resampling via `AudioClipBuf::with_resampled`.

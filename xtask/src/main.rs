@@ -15,7 +15,7 @@ use owo_colors::OwoColorize;
 use rayon::prelude::*;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
+use std::process::{Command, ExitCode, Stdio};
 use std::sync::Mutex;
 
 #[derive(Parser)]
@@ -301,7 +301,8 @@ fn check_compile_only() -> ExitCode {
     let failures = Mutex::new(Vec::new());
     compile_tests.par_iter().for_each(|test| {
         let is_should_fail_test = test.ends_with("_should_fail");
-        let passed = run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(&workspace_root).args([
             "check",
             "-p",
             "device-envoy-compile-only",
@@ -312,7 +313,12 @@ fn check_compile_only() -> ExitCode {
             "--features",
             "pico1,arm,wifi",
             "--no-default-features",
-        ]));
+        ]);
+        let passed = if is_should_fail_test {
+            run_command_quiet(&mut cmd)
+        } else {
+            run_command(&mut cmd)
+        };
         if (is_should_fail_test && passed) || (!is_should_fail_test && !passed) {
             failures.lock().unwrap().push(test.clone());
         }
@@ -562,8 +568,8 @@ fn check_all() -> ExitCode {
                 compile_tests.sort();
                 compile_tests.par_iter().for_each(|test| {
                     let is_should_fail_test = test.ends_with("_should_fail");
-                    let passed =
-                        run_command(Command::new("cargo").current_dir(&workspace_root).args([
+                    let mut cmd = Command::new("cargo");
+                    cmd.current_dir(&workspace_root).args([
                             "check",
                             "-p",
                             "device-envoy-compile-only",
@@ -574,7 +580,12 @@ fn check_all() -> ExitCode {
                             "--features",
                             "pico1,arm,wifi",
                             "--no-default-features",
-                        ]));
+                        ]);
+                    let passed = if is_should_fail_test {
+                        run_command_quiet(&mut cmd)
+                    } else {
+                        run_command(&mut cmd)
+                    };
                     if (is_should_fail_test && passed) || (!is_should_fail_test && !passed) {
                         failures.lock().unwrap().push("compile-only tests");
                     }
@@ -1268,6 +1279,17 @@ fn host_target() -> Option<String> {
 }
 
 fn run_command(cmd: &mut Command) -> bool {
+    match cmd.status() {
+        Ok(status) => status.success(),
+        Err(e) => {
+            eprintln!("{}", format!("Failed to execute command: {e}").red());
+            false
+        }
+    }
+}
+
+fn run_command_quiet(cmd: &mut Command) -> bool {
+    cmd.stdout(Stdio::null()).stderr(Stdio::null());
     match cmd.status() {
         Ok(status) => status.success(),
         Err(e) => {

@@ -46,7 +46,6 @@ pub mod PcmClipGenerated {
 
     /// Number of samples for uncompressed (PCM) version of this clip.
     ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub const PCM_SAMPLE_COUNT: usize = 92_160;
 
     /// Byte length for compressed (ADPCM) encoding this clip.

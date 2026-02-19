@@ -12,17 +12,20 @@
 #![no_main]
 
 use core::convert::Infallible;
+use core::time::Duration as StdDuration;
 
 use defmt::info;
 use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_clip, audio_player};
+use device_envoy::audio_player::{
+    AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
+};
 use device_envoy::button::{Button, PressedTo};
-use device_envoy::samples_ms_type;
+use device_envoy::tone;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-// TODO add concatenation, fade in and out, trim, and resample.
+// TODO in the future think about adding concatenation, fade in and out, trim, and resample.
 audio_player! {
     AudioPlayer8 {
         data_pin: PIN_8,
@@ -34,10 +37,10 @@ audio_player! {
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Nasa {
-        sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/nasa_22k.s16",
+        source_sample_rate_hz: VOICE_22050_HZ,
     }
 }
 
@@ -48,10 +51,14 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static NASA: Nasa::AudioClip = Nasa::audio_clip().with_gain(Gain::percent(25));
-    static TONE_A4: samples_ms_type! { AudioPlayer8, 500 } =
-        AudioPlayer8::tone(440).with_gain(Gain::percent(25));
-    static SILENCE_100MS: samples_ms_type! { AudioPlayer8, 100 } = AudioPlayer8::silence();
+    const NASA: &AudioPlayer8Playable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
+    const TONE_A4: &AudioPlayer8Playable = &tone!(
+        440,
+        AudioPlayer8::SAMPLE_RATE_HZ,
+        StdDuration::from_millis(500)
+    )
+    .with_gain(Gain::percent(25));
+    const SILENCE_100MS: &AudioPlayer8Playable = &SilenceClip::new(StdDuration::from_millis(100));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
@@ -63,14 +70,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
-        Nasa::AudioClip::SAMPLE_COUNT,
-        Nasa::AudioClip::SAMPLE_COUNT * 2
+        Nasa::PCM_SAMPLE_COUNT,
+        Nasa::PCM_SAMPLE_COUNT * 2
     );
     info!("Button on GP13 starts playback");
 
     loop {
         button.wait_for_press().await;
-        audio_player8.play([&TONE_A4, &SILENCE_100MS, &TONE_A4], AtEnd::Loop);
+        audio_player8.play([TONE_A4, SILENCE_100MS, TONE_A4], AtEnd::Loop);
         info!("Started static slice playback");
         for percent in [80, 60, 40, 20, 200] {
             audio_player8.set_volume(Volume::percent(percent));
@@ -80,6 +87,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         audio_player8.stop();
         Timer::after(Duration::from_secs(1)).await;
         audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
-        audio_player8.play([&NASA], AtEnd::Stop);
+        audio_player8.play([NASA], AtEnd::Stop);
     }
 }

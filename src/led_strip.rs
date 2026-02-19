@@ -466,16 +466,6 @@ impl<const N: usize> Default for Frame1d<N> {
 // PIO Bus - Shared PIO resource for multiple LED strips
 // ============================================================================
 
-/// Trait for PIO peripherals that can be used with LED strips.
-///
-/// This trait is implemented for any PIO resource that implements
-/// [`crate::pio_irqs::PioIrqMap`].
-#[cfg(not(feature = "host"))]
-#[doc(hidden)] // Required pub for macro expansion in downstream crates
-pub trait LedStripPio: crate::pio_irqs::PioIrqMap {}
-
-#[cfg(not(feature = "host"))]
-impl<PioResource: crate::pio_irqs::PioIrqMap> LedStripPio for PioResource {}
 /// A state machine bundled with its PIO bus.
 ///
 /// This is returned by `pio_split!` and passed to strip constructors.
@@ -644,11 +634,12 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// Returns immediately; the animation runs in the background until interrupted
     /// by a new `animate` call or `write_frame`.
     ///
+    /// This uses [`embassy_time::Duration`] for frame timing.
     /// See the [led_strip module documentation](mod@crate::led_strip) for example usage.
     pub fn animate<I>(&self, frames: I) -> Result<()>
     where
         I: IntoIterator,
-        I::Item: Borrow<(Frame1d<N>, Duration)>,
+        I::Item: Borrow<(Frame1d<N>, embassy_time::Duration)>,
     {
         if MAX_FRAMES == 0 {
             return Err(crate::Error::AnimationDisabled(MAX_FRAMES));
@@ -2700,6 +2691,9 @@ macro_rules! __led_strips_impl {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! led_strip {
+    // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
+    // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
+    // so macro visibility and helper exposure can be controlled more precisely.
     ($($tt:tt)*) => { $crate::__led_strip_impl! { $($tt)* } };
 }
 

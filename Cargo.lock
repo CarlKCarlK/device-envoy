@@ -538,7 +538,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy"
-version = "0.0.3-alpha.4"
+version = "0.0.4-alpha.0"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",

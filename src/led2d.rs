@@ -162,6 +162,7 @@ use core::{
     convert::Infallible,
     ops::{Deref, DerefMut, Index, IndexMut},
 };
+#[cfg(feature = "host")]
 use embassy_time::Duration;
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::{
@@ -770,10 +771,11 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
     ///
     /// Returns immediately; the animation runs in the background until interrupted
     /// by a new `animate` call or `write_frame`.
+    /// This uses [`embassy_time::Duration`] for frame timing.
     pub fn animate<const W: usize, const H: usize, I>(&self, frames: I) -> Result<()>
     where
         I: IntoIterator,
-        I::Item: Borrow<(Frame2d<W, H>, Duration)>,
+        I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
     {
         self.led_strip.animate(frames.into_iter().map(|frame| {
             let (frame, duration) = *frame.borrow();

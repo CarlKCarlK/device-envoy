@@ -149,13 +149,14 @@ impl Led<'_> {
     ///
     /// Accepts any iterator yielding (Level, Duration) pairs or references, up to 32 frames.
     /// The animation will loop continuously until replaced by another command.
+    /// This uses [`embassy_time::Duration`] for frame timing.
     /// See [Led struct example](Self) for usage.
     pub fn animate<I>(&self, frames: I)
     where
         I: IntoIterator,
-        I::Item: Borrow<(Level, Duration)>,
+        I::Item: Borrow<(Level, embassy_time::Duration)>,
     {
-        let mut animation: Vec<(Level, Duration), MAX_FRAMES> = Vec::new();
+        let mut animation: Vec<(Level, embassy_time::Duration), MAX_FRAMES> = Vec::new();
         for frame in frames {
             let frame = *frame.borrow();
             animation

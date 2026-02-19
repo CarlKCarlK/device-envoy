@@ -15,15 +15,14 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy::Result;
 use device_envoy::audio_player::{
-    AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_clip, audio_player,
-    resampled_type,
+    AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
 use device_envoy::button::{Button, PressedTo};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
 audio_player! {
-    AudioResamplePlayer {
+    AudioPlayer8K {
         data_pin: PIN_8,
         bit_clock_pin: PIN_9,
         word_select_pin: PIN_10,
@@ -32,38 +31,43 @@ audio_player! {
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Nasa {
-        sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/nasa_22k.s16",
+        source_sample_rate_hz: VOICE_22050_HZ,
+        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit0 {
-        sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/0_22050.s16",
+        source_sample_rate_hz: VOICE_22050_HZ,
+        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit1 {
-        sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/1_22050.s16",
+        source_sample_rate_hz: VOICE_22050_HZ,
+        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit2 {
-        sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/2_22050.s16",
+        source_sample_rate_hz: VOICE_22050_HZ,
+        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
     }
 }
 
-audio_clip! {
+pcm_clip! {
     Digit3 {
-        sample_rate_hz: VOICE_22050_HZ,
         file: "data/audio/3_22050.s16",
+        source_sample_rate_hz: VOICE_22050_HZ,
+        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
     }
 }
 
@@ -74,39 +78,37 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    static DIGITS: [&AudioResamplePlayerAudioClip; 4] = [
-        &Digit0::audio_clip()
-            .with_resampled::<_, { Digit0::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit1::audio_clip()
-            .with_resampled::<_, { Digit1::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit2::audio_clip()
-            .with_resampled::<_, { Digit2::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
-        &Digit3::audio_clip()
-            .with_resampled::<_, { Digit3::resampled_sample_count(NARROWBAND_8000_HZ) }>(),
+    const DIGITS: [&AudioPlayer8KPlayable; 4] = [
+        &Digit0::pcm_clip(),
+        &Digit1::pcm_clip(),
+        &Digit2::pcm_clip(),
+        &Digit3::pcm_clip(),
     ];
-    static NASA_8K: resampled_type!(Nasa, NARROWBAND_8000_HZ) = Nasa::audio_clip()
-        .with_resampled()
-        .with_gain(Gain::percent(25));
+
+    const NASA_8K: &AudioPlayer8KPlayable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
 
     let p = embassy_rp::init(Default::default());
     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
-    let audio_resample_player =
-        AudioResamplePlayer::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
+    let audio_player8k =
+        AudioPlayer8K::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!(
         "NASA source clip: {} Hz, {} samples",
         Nasa::SAMPLE_RATE_HZ,
-        Nasa::SAMPLE_COUNT
+        Nasa::PCM_SAMPLE_COUNT
     );
     info!(
         "NASA resampled clip: {} Hz, {} samples",
-        AudioResamplePlayerAudioClip::SAMPLE_RATE_HZ,
-        NASA_8K.sample_count()
+        AudioPlayer8K::SAMPLE_RATE_HZ,
+        Nasa::PCM_SAMPLE_COUNT
     );
     info!("Press GP13 button to play countdown 3,2,1,0 then NASA (8 kHz)");
 
     loop {
         button.wait_for_press().await;
-        audio_resample_player.play([DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], &NASA_8K], AtEnd::Stop);
+        audio_player8k.play(
+            [DIGITS[3], DIGITS[2], DIGITS[1], DIGITS[0], NASA_8K],
+            AtEnd::Stop,
+        );
     }
 }

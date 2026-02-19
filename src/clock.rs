@@ -112,10 +112,11 @@ impl Clock {
     }
 
     /// Create a new Clock device and spawn its task. See [`Clock`] docs for a full example.
+    /// The `tick_interval` parameter uses [`embassy_time::Duration`].
     pub fn new(
         clock_static: &'static ClockStatic,
         offset_minutes: i32,
-        tick_interval: Option<Duration>,
+        tick_interval: Option<embassy_time::Duration>,
         spawner: Spawner,
     ) -> Self {
         clock_static.set_offset_minutes(offset_minutes);
@@ -217,7 +218,8 @@ impl Clock {
 
     /// Set the tick interval (e.g., `Some(clock_sync::ONE_SECOND)`).
     /// Use `None` to disable periodic ticks (only emit on time/offset changes). See [`Clock`].
-    pub async fn set_tick_interval(&self, interval: Option<Duration>) {
+    /// This uses [`embassy_time::Duration`] for interval timing.
+    pub async fn set_tick_interval(&self, interval: Option<embassy_time::Duration>) {
         // Update the atomic immediately
         let interval_ms = interval.map(|d| d.as_millis()).unwrap_or(0);
         self.tick_interval_ms.store(interval_ms, Ordering::Relaxed);

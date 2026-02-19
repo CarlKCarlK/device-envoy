@@ -33,8 +33,6 @@ pub struct ServoPlayerGenerated;
 use crate::Result;
 #[cfg(doc)]
 use crate::servo_player::AtEnd;
-#[cfg(doc)]
-use embassy_time::Duration;
 
 #[cfg(doc)]
 // Must be public for macro expansion in downstream crates, but not user-facing API.
@@ -107,11 +105,13 @@ impl ServoPlayerGenerated {
     /// Each step is a tuple `(degrees, duration)`. Accepts both owned iterators and
     /// references to collections.
     ///
+    /// This uses [`embassy_time::Duration`] for step timing.
+    ///
     /// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
     pub fn animate<I>(&self, steps: I, at_end: AtEnd)
     where
         I: IntoIterator,
-        I::Item: core::borrow::Borrow<(u16, Duration)>,
+        I::Item: core::borrow::Borrow<(u16, embassy_time::Duration)>,
     {
         let _ = (steps, at_end);
     }

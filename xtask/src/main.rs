@@ -2,10 +2,11 @@
 //!
 //! Run with: `cargo xtask <command>`
 
-mod audio_clip_generated;
+mod adpcm_clip_generated;
 mod audio_player_generated;
 mod led2d_generated;
 mod led_strip_generated;
+mod pcm_clip_generated;
 mod servo_player_generated;
 mod video_frames_gen;
 
@@ -14,7 +15,7 @@ use owo_colors::OwoColorize;
 use rayon::prelude::*;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
+use std::process::{Command, ExitCode, Stdio};
 use std::sync::Mutex;
 
 #[derive(Parser)]
@@ -29,6 +30,8 @@ struct Cli {
 enum Commands {
     /// Run all checks: build lib, examples, run tests, generate docs
     CheckAll,
+    /// Run compile-only validation (no test execution)
+    CheckQuick,
     /// Check compile-only tests (tests-compile-only)
     CheckCompileOnly,
     /// Check all examples (pico1 + pico2, with and without wifi)
@@ -124,6 +127,7 @@ fn main() -> ExitCode {
 
     match cli.command {
         Commands::CheckAll => check_all(),
+        Commands::CheckQuick => check_quick(),
         Commands::CheckCompileOnly => check_compile_only(),
         Commands::CheckExamples => check_examples(),
         Commands::CheckDemos => check_demos(),
@@ -176,6 +180,97 @@ fn main() -> ExitCode {
     }
 }
 
+fn check_quick() -> ExitCode {
+    let workspace_root = workspace_root();
+    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
+        eprintln!("Error generating audio_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
+        eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
+        eprintln!("Error generating led_strip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
+        eprintln!("Error generating servo_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = check_generated_doc_stubs(&workspace_root) {
+        eprintln!("Generated doc stub consistency check failed:\n{}", err);
+        return ExitCode::FAILURE;
+    }
+
+    let arch = Arch::Arm;
+    let board_pico2 = Board::Pico2;
+    let target_pico2 = arch.target(board_pico2);
+    let features_no_wifi = build_features(board_pico2, arch, false);
+    let features_wifi_pico2 = build_features(board_pico2, arch, true);
+
+    println!(
+        "{}",
+        "==> Running quick compile checks (no test execution)...".cyan()
+    );
+
+    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        "build",
+        "--lib",
+        "--target",
+        target_pico2,
+        "--features",
+        features_no_wifi.as_str(),
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+
+    if check_examples() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+    if check_demos() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+    if check_compile_only() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+
+    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        "doc",
+        "--target",
+        target_pico2,
+        "--no-deps",
+        "--features",
+        features_wifi_pico2.as_str(),
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        "doc",
+        "--target",
+        arch.target(Board::Pico1),
+        "--no-deps",
+        "--features",
+        "embedded,wifi,doc-images",
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+
+    println!("\n{}", "==> Quick checks passed! 🎉".green().bold());
+    ExitCode::SUCCESS
+}
+
 fn check_compile_only() -> ExitCode {
     let workspace_root = workspace_root();
     let arch = Arch::Arm;
@@ -206,7 +301,8 @@ fn check_compile_only() -> ExitCode {
     let failures = Mutex::new(Vec::new());
     compile_tests.par_iter().for_each(|test| {
         let is_should_fail_test = test.ends_with("_should_fail");
-        let passed = run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(&workspace_root).args([
             "check",
             "-p",
             "device-envoy-compile-only",
@@ -217,7 +313,12 @@ fn check_compile_only() -> ExitCode {
             "--features",
             "pico1,arm,wifi",
             "--no-default-features",
-        ]));
+        ]);
+        let passed = if is_should_fail_test {
+            run_command_quiet(&mut cmd)
+        } else {
+            run_command(&mut cmd)
+        };
         if (is_should_fail_test && passed) || (!is_should_fail_test && !passed) {
             failures.lock().unwrap().push(test.clone());
         }
@@ -238,8 +339,12 @@ fn check_compile_only() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
-        eprintln!("Error generating audio_clip_generated.rs: {}", err);
+    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
@@ -463,19 +568,24 @@ fn check_all() -> ExitCode {
                 compile_tests.sort();
                 compile_tests.par_iter().for_each(|test| {
                     let is_should_fail_test = test.ends_with("_should_fail");
-                    let passed =
-                        run_command(Command::new("cargo").current_dir(&workspace_root).args([
-                        "check",
-                        "-p",
-                        "device-envoy-compile-only",
-                        "--bin",
-                        test,
-                        "--target",
-                        target_pico1,
-                        "--features",
-                        "pico1,arm,wifi",
-                        "--no-default-features",
-                    ]));
+                    let mut cmd = Command::new("cargo");
+                    cmd.current_dir(&workspace_root).args([
+                            "check",
+                            "-p",
+                            "device-envoy-compile-only",
+                            "--bin",
+                            test,
+                            "--target",
+                            target_pico1,
+                            "--features",
+                            "pico1,arm,wifi",
+                            "--no-default-features",
+                        ]);
+                    let passed = if is_should_fail_test {
+                        run_command_quiet(&mut cmd)
+                    } else {
+                        run_command(&mut cmd)
+                    };
                     if (is_should_fail_test && passed) || (!is_should_fail_test && !passed) {
                         failures.lock().unwrap().push("compile-only tests");
                     }
@@ -537,8 +647,12 @@ fn check_all() -> ExitCode {
 
 fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = audio_clip_generated::generate_audio_clip_generated(&workspace_root) {
-        eprintln!("Error generating audio_clip_generated.rs: {}", err);
+    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
+        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
@@ -1046,24 +1160,31 @@ struct GeneratedDocStubExpectation {
 fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
     let generated_doc_stub_expectations = [
         GeneratedDocStubExpectation {
-            relative_path: "src/audio_player/audio_clip_generated.rs",
+            relative_path: "src/audio_player/pcm_clip_generated.rs",
             required_fragments: &[
                 "pub const SAMPLE_RATE_HZ: u32",
-                "pub const SAMPLE_COUNT: usize",
-                "pub const fn resampled_sample_count(",
-                "pub type AudioClip = AudioClipBuf<",
-                "pub const fn audio_clip() -> AudioClip",
+                "pub const PCM_SAMPLE_COUNT: usize",
+                "pub const fn pcm_clip() -> PcmClipBuf<",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/audio_player/adpcm_clip_generated.rs",
+            required_fragments: &[
+                "pub const SAMPLE_RATE_HZ: u32",
+                "pub const PCM_SAMPLE_COUNT: usize",
+                "pub const ADPCM_DATA_LEN: usize",
+                "pub const fn adpcm_clip() -> AdpcmClipBuf<",
+                "pub const fn pcm_clip() -> PcmClipBuf<",
             ],
         },
         GeneratedDocStubExpectation {
             relative_path: "src/audio_player/audio_player_generated.rs",
             required_fragments: &[
-                "pub type AudioPlayerGeneratedAudioClip = AudioClip<VOICE_22050_HZ>;",
                 "pub const SAMPLE_RATE_HZ: u32",
                 "pub const INITIAL_VOLUME: Volume",
                 "pub const MAX_VOLUME: Volume",
-                "pub const fn samples_ms(duration_ms: u32) -> usize",
-                "pub fn play<const CLIP_COUNT: usize>(",
+                "pub fn play<I>(",
+                "pub async fn wait_until_stopped(&self)",
                 "pub fn set_volume(&self, volume: Volume)",
                 "pub fn volume(&self) -> Volume",
             ],
@@ -1104,7 +1225,8 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
 
     let mut failure_messages = Vec::new();
     for generated_doc_stub_expectation in generated_doc_stub_expectations {
-        let generated_doc_stub_path = workspace_root.join(generated_doc_stub_expectation.relative_path);
+        let generated_doc_stub_path =
+            workspace_root.join(generated_doc_stub_expectation.relative_path);
         let generated_doc_stub_source = match fs::read_to_string(&generated_doc_stub_path) {
             Ok(source) => source,
             Err(read_error) => {
@@ -1157,6 +1279,17 @@ fn host_target() -> Option<String> {
 }
 
 fn run_command(cmd: &mut Command) -> bool {
+    match cmd.status() {
+        Ok(status) => status.success(),
+        Err(e) => {
+            eprintln!("{}", format!("Failed to execute command: {e}").red());
+            false
+        }
+    }
+}
+
+fn run_command_quiet(cmd: &mut Command) -> bool {
+    cmd.stdout(Stdio::null()).stderr(Stdio::null());
     match cmd.status() {
         Ok(status) => status.success(),
         Err(e) => {

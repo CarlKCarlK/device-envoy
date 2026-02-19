@@ -22,6 +22,7 @@
 - If you must patch a generated file directly for an urgent fix, make the matching template change in the same PR so regeneration does not revert it.
 - Regenerate and verify with `cargo xtask check-docs` (or `cargo check-all`) before handing work back.
 - For this repo, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `led2d_generated`, `led_strip_generated`, and `servo_player_generated`.
+- When changing generated API surface/docs for macro-backed types, update all four in the same PR: (1) macro source in `src/*.rs`, (2) generator template in `xtask/src/*_generated.rs`, (3) generated stub in `src/**/_generated.rs`, and (4) `xtask/src/main.rs` `check_generated_doc_stubs` expectations.
 
 ## Const-Only APIs
 
@@ -164,6 +165,7 @@ Use `cargo run --bin <name> --target <target> --features <features>` as the stan
 - Each module should have exactly one full, compilable example placed on the primary struct; keep other docs free of extra examples.
 - Other public items (constructors, helper methods, type aliases) should point back to the primary struct's example rather than adding new snippets.
 - **API completeness**: Every public method must either (1) have its own doc test, OR (2) be used in the struct's main example AND have a link from its doc comment pointing to that example (e.g., `See the [WifiAuto struct example](Self) for usage.`). This ensures all functionality is documented and discoverable.
+- **Duration clarity in public APIs**: For any public function/method that takes or returns a duration, write the type explicitly in the signature as `embassy_time::Duration`, `core::time::Duration`, or `std::time::Duration` (do not use bare `Duration`). In that function/method's doc comment, include a short sentence that explicitly states which duration type it uses.
 - Examples should use the module's real constructors (e.g., `new_static`, `new`) and follow the device/static pair pattern shown elsewhere in the repo.
 - Avoid unnecessary public type aliases; prefer private or newtype wrappers when exposing resources so internal types stay hidden.
 - In examples, prefer importing the types you need (`use crate::foo::{Device, DeviceStatic};`) instead of fully-qualified paths for statics.
@@ -198,6 +200,7 @@ Use American over British spelling
 When making up variable notes for examples and elsewhere, never use the prefix "My". Avoid this prefix.
 
 - If an item comes from `crate`, `core`, `std`, or `alloc`, import it with `use` instead of using a fully-qualified `crate::`, `core::`, `std::`, or `alloc::` path in code. (Fully-qualified paths are fine in docs or comments.)
+- Exception: for public function/method signatures with duration parameters/returns, use fully-qualified duration types per the Duration clarity policy above.
 - In all demos, examples, and doctests, prefer condensed `use` statements (group related imports on a single `use` line where it stays readable).
 
 Yes, in Rust the get_ prefix is generally discouraged for getters. The Rust API guidelines specifically recommend against it.
@@ -395,6 +398,8 @@ pub fn helper_for_macro() { ... }  // Called by macro expansion in user code
 ```
 
 When using `#[doc(hidden)]` for this reason, always add a comment explaining why it must be public despite being an implementation detail.
+
+For this macro-helper exception, prefix helper names with `__` to clearly signal internal-only usage (for example, `__helper_for_macro`).
 
 ## LED Hardware Configuration
 

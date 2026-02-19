@@ -1,6 +1,9 @@
 #![allow(missing_docs)]
 
-use super::{AudioClip, AudioClipBuf, Gain, VOICE_22050_HZ};
+use super::{
+    __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, AtEnd, AudioPlayer, Gain, PcmClip, PcmClipBuf,
+    Playable, SilenceClip, VOICE_22050_HZ,
+};
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -8,14 +11,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const TONE_SAMPLE_COUNT: usize = 32;
 const TONE_FREQUENCY_HZ: u32 = 440;
-type AudioClipTone = AudioClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
+type AudioClipTone = PcmClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
 
 #[test]
 fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
-    let silence_audio_clip: AudioClipTone = AudioClipTone::silence();
+    let silence_audio_clip: AudioClipTone = super::__pcm_clip_from_samples([0; TONE_SAMPLE_COUNT]);
     assert!(
         silence_audio_clip
-            .samples()
+            .samples
             .iter()
             .all(|sample_value_ref| *sample_value_ref == 0),
         "silence clip must contain only zero samples"
@@ -25,10 +28,11 @@ fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn tone_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
-    let tone_audio_clip: AudioClipTone = AudioClipTone::tone(TONE_FREQUENCY_HZ);
+    let tone_audio_clip: AudioClipTone =
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
     assert!(
         tone_audio_clip
-            .samples()
+            .samples
             .iter()
             .any(|sample_value_ref| *sample_value_ref != 0),
         "tone clip must contain non-zero samples"
@@ -38,20 +42,21 @@ fn tone_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Error>> {
-    let tone_audio_clip: AudioClipTone = AudioClipTone::tone(TONE_FREQUENCY_HZ);
+    let tone_audio_clip: AudioClipTone =
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
     let tone_gain50_audio_clip: AudioClipTone =
-        AudioClipTone::tone(TONE_FREQUENCY_HZ).with_gain(Gain::percent(50));
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
+            .with_gain(Gain::percent(50));
     let tone_gain200_audio_clip: AudioClipTone =
-        AudioClipTone::tone(TONE_FREQUENCY_HZ).with_gain(Gain::percent(200));
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
+            .with_gain(Gain::percent(200));
 
     assert_ne!(
-        tone_audio_clip.samples(),
-        tone_gain50_audio_clip.samples(),
+        tone_audio_clip.samples, tone_gain50_audio_clip.samples,
         "50% gain must change sample data"
     );
     assert_ne!(
-        tone_audio_clip.samples(),
-        tone_gain200_audio_clip.samples(),
+        tone_audio_clip.samples, tone_gain200_audio_clip.samples,
         "200% gain must change sample data"
     );
 
@@ -62,23 +67,51 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
 }
 
 #[test]
-fn with_resampled_same_rate_same_count_is_identity() {
-    let tone_audio_clip: AudioClipTone = AudioClipTone::tone(TONE_FREQUENCY_HZ);
-    let tone_resampled_audio_clip: AudioClipTone =
-        AudioClipTone::tone(TONE_FREQUENCY_HZ).with_resampled();
+fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
+    type ToneAdpcm =
+        AdpcmClipBuf<VOICE_22050_HZ, { __adpcm_data_len_for_pcm_samples(TONE_SAMPLE_COUNT) }>;
+
+    let tone_adpcm: ToneAdpcm =
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ).with_adpcm();
+    let tone_adpcm_gain50: ToneAdpcm =
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ)
+            .with_adpcm()
+            .with_gain(Gain::percent(50));
+
     assert_eq!(
-        tone_audio_clip.samples(),
-        tone_resampled_audio_clip.samples(),
+        (tone_adpcm.data.len() / tone_adpcm.block_align as usize)
+            * tone_adpcm.samples_per_block as usize,
+        (tone_adpcm_gain50.data.len() / tone_adpcm_gain50.block_align as usize)
+            * tone_adpcm_gain50.samples_per_block as usize,
+        "ADPCM gain must preserve decoded sample count"
+    );
+    assert_ne!(
+        tone_adpcm.data, tone_adpcm_gain50.data,
+        "ADPCM gain must change encoded data at 50%"
+    );
+}
+
+#[test]
+fn with_resampled_same_rate_same_count_is_identity() {
+    let tone_audio_clip: AudioClipTone =
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ);
+    let tone_resampled_audio_clip: AudioClipTone = super::__resample_pcm_clip(
+        super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ),
+    );
+    assert_eq!(
+        tone_audio_clip.samples, tone_resampled_audio_clip.samples,
         "resampling to same rate and sample count must be identity"
     );
 }
 
 #[test]
 fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<(), Box<dyn Error>> {
-    type Tone22k = AudioClipBuf<VOICE_22050_HZ, 32>;
-    type Tone16k = AudioClipBuf<16_000, 23>;
+    type Tone16k = PcmClipBuf<16_000, 23>;
 
-    let tone16k_audio_clip: Tone16k = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
+    let tone16k_audio_clip: Tone16k = super::__resample_pcm_clip(super::__tone_pcm_clip::<
+        VOICE_22050_HZ,
+        32,
+    >(TONE_FREQUENCY_HZ));
 
     assert_clip_file_matches_expected(
         "tone_440hz_32_resampled_16000hz_23.s16",
@@ -90,19 +123,35 @@ fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<()
 #[test]
 #[should_panic(expected = "destination sample count must preserve duration")]
 fn with_resampled_panics_on_non_duration_preserving_count() {
-    type Tone22k = AudioClipBuf<VOICE_22050_HZ, 32>;
-    let _: AudioClipBuf<VOICE_22050_HZ, 16> = Tone22k::tone(TONE_FREQUENCY_HZ).with_resampled();
+    let _: PcmClipBuf<VOICE_22050_HZ, 16> = super::__resample_pcm_clip(super::__tone_pcm_clip::<
+        VOICE_22050_HZ,
+        32,
+    >(TONE_FREQUENCY_HZ));
 }
 
 #[test]
 fn resampled_sample_count_is_duration_preserving() {
-    let sample_count = super::resampled_sample_count(90_000, 22_500, 8_000);
+    let sample_count = super::__resampled_sample_count(90_000, 22_500, 8_000);
     assert_eq!(sample_count, 32_000);
+}
+
+#[test]
+fn play_accepts_iterator_inputs() {
+    type AudioPlayer4 = AudioPlayer<4, VOICE_22050_HZ>;
+    static AUDIO_PLAYER_STATIC: super::AudioPlayerStatic<4, VOICE_22050_HZ> =
+        AudioPlayer4::new_static();
+    static SILENCE_1MS: SilenceClip = SilenceClip::new(std::time::Duration::from_millis(1));
+
+    let audio_player4 = AudioPlayer4::new(&AUDIO_PLAYER_STATIC);
+    let audio_clip_iterator =
+        core::iter::once(&SILENCE_1MS as &'static dyn Playable<VOICE_22050_HZ>);
+
+    audio_player4.play(audio_clip_iterator, AtEnd::Stop);
 }
 
 fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     filename: &str,
-    audio_clip: &AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
+    audio_clip: &PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
 ) -> Result<(), Box<dyn Error>> {
     let expected_path = audio_with_gain_path(filename);
     let actual_bytes = clip_to_s16le_bytes(audio_clip);
@@ -132,10 +181,10 @@ fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COU
 }
 
 fn clip_to_s16le_bytes<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
-    audio_clip: &AudioClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
+    audio_clip: &PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
 ) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(SAMPLE_COUNT * 2);
-    for sample in audio_clip.samples() {
+    for sample in &audio_clip.samples {
         bytes.extend_from_slice(&sample.to_le_bytes());
     }
     bytes

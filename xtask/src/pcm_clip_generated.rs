@@ -42,17 +42,17 @@ pub mod PcmClipGenerated {
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
 
-    /// Number of i16 PCM samples in this generated clip.
+    /// Number of samples for uncompressed (PCM) version of this clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub const PCM_SAMPLE_COUNT: usize = 92_160;
 
-    /// Byte length of ADPCM data for this clip.
+    /// Byte length for compressed (ADPCM) encoding this clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     pub const ADPCM_DATA_LEN: usize = __adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
 
-    /// `const` function that returns the generated audio clip.
+    /// `const` function that returns the uncompressed (PCM) version of this clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]
@@ -60,8 +60,7 @@ pub mod PcmClipGenerated {
         __pcm_clip_from_samples([0; PCM_SAMPLE_COUNT])
     }
 
-    /// `const` function that returns the generated audio clip encoded as ADPCM
-    /// with 256-byte blocks.
+    /// `const` function that returns the compressed (ADPCM) encoding for this clip.
     ///
     /// See the [audio_player module documentation](mod@crate::audio_player) for usage examples.
     #[must_use]

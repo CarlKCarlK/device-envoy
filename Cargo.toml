@@ -57,6 +57,7 @@ riscv = [
 host = [
     "dep:png",
     "dep:tempfile",
+    "critical-section/std",
 ] # For testing on host platform without hardware dependencies
 doc-images = ["dep:embed-doc-image"]
 wifi = ["dep:cyw43", "dep:cyw43-pio", "dep:cyw43-firmware", "dep:embassy-net"]

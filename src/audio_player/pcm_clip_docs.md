@@ -4,7 +4,16 @@ See [`PcmClipGenerated`](crate::audio_player::pcm_clip_generated::PcmClipGenerat
 
 **See the [audio_player module documentation](mod@crate::audio_player) for usage examples.**
 
-The generated clip can be modified at compile time (for example with [`Gain`](crate::audio_player::Gain) via `with_gain(...)`) and only increases binary size when you store it in a `static`.
+At compile time, you can read the clip as uncompressed PCM with
+[`Name::pcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::pcm_clip)
+or compressed ADPCM with
+[`Name::adpcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::adpcm_clip).
+You can also modify the PCM data at compile time (for example with
+[`Gain`](crate::audio_player::Gain) via `with_gain(...)`), and only the final
+transformed clip is stored in firmware.
+Additionally, you can process PCM first and still store the final clip in
+compressed ADPCM form with
+[`with_adpcm`](crate::audio_player::PcmClip::with_adpcm).
 
 **Syntax:**
 
@@ -34,24 +43,11 @@ pcm_clip! {
 
 **Generated items:**
 
-- `pcm_clip()` - `const` function that returns the generated audio clip
-- `adpcm_clip()` - `const` function that returns the generated clip encoded as ADPCM (256-byte blocks)
-- `SAMPLE_RATE_HZ` - sample rate for generated clips
-- `PCM_SAMPLE_COUNT` - number of i16 PCM samples in the generated clip
-- `ADPCM_DATA_LEN` - ADPCM byte length for encoding this clip
-
-**Mental model (lifecycle):**
-
-Each `pcm_clip!` invocation generates:
-
-- a module namespace
-- a `const fn pcm_clip()` constructor
-
-Audio bytes are embedded in program flash via `include_bytes!`.
-The clip value can be constructed at compile time when used in `const` or `static` definitions.
-When you take `&Name::pcm_clip()` in a `static` context, the compiler promotes that clip value into flash storage.
-
-# Example
+- [`Name::pcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::pcm_clip) - const function that returns the generated uncompressed (PCM) audio clip
+- [`Name::adpcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::adpcm_clip) - const function that returns the generated clip encoded as ADPCM
+- [`Name::SAMPLE_RATE_HZ`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::SAMPLE_RATE_HZ) - sample rate for generated clips
+- [`Name::PCM_SAMPLE_COUNT`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::PCM_SAMPLE_COUNT) - number of samples for uncompressed (PCM) version of this clip
+- [`Name::ADPCM_DATA_LEN`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::ADPCM_DATA_LEN) - byte length for compressed (ADPCM) encoding this clip
 
 See [`PcmClipGenerated`](crate::audio_player::pcm_clip_generated::PcmClipGenerated) and the [audio_player module documentation](mod@crate::audio_player).
 

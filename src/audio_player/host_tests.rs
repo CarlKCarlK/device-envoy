@@ -1,7 +1,8 @@
 #![allow(missing_docs)]
 
 use super::{
-    __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, Gain, PcmClip, PcmClipBuf, VOICE_22050_HZ,
+    __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, AtEnd, AudioPlayer, Gain, PcmClip, PcmClipBuf,
+    Playable, SilenceClip, VOICE_22050_HZ,
 };
 use std::error::Error;
 use std::fs;
@@ -132,6 +133,20 @@ fn with_resampled_panics_on_non_duration_preserving_count() {
 fn resampled_sample_count_is_duration_preserving() {
     let sample_count = super::__resampled_sample_count(90_000, 22_500, 8_000);
     assert_eq!(sample_count, 32_000);
+}
+
+#[test]
+fn play_accepts_iterator_inputs() {
+    type AudioPlayer4 = AudioPlayer<4, VOICE_22050_HZ>;
+    static AUDIO_PLAYER_STATIC: super::AudioPlayerStatic<4, VOICE_22050_HZ> =
+        AudioPlayer4::new_static();
+    static SILENCE_1MS: SilenceClip = SilenceClip::new(std::time::Duration::from_millis(1));
+
+    let audio_player4 = AudioPlayer4::new(&AUDIO_PLAYER_STATIC);
+    let audio_clip_iterator =
+        core::iter::once(&SILENCE_1MS as &'static dyn Playable<VOICE_22050_HZ>);
+
+    audio_player4.play(audio_clip_iterator, AtEnd::Stop);
 }
 
 fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(

@@ -28,7 +28,7 @@ adpcm_clip! {
 **Inputs:**
 
 - `$vis` - Optional generated module visibility.
-- `$name` - Module name for the generated namespace.
+- `$name` - Module name for the generated module.
 
 **Required fields:**
 
@@ -40,8 +40,8 @@ adpcm_clip! {
 
 **Generated items:**
 
-- [`Name::pcm_clip()`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::pcm_clip) - const function that returns the generated audio clip
-- [`Name::adpcm_clip()`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::adpcm_clip) - const function that returns the generated clip encoded as ADPCM
+- [`Name::pcm_clip()`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::pcm_clip) - `const` function that returns the uncompressed (PCM) version of this clip.
+- [`Name::adpcm_clip()`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::adpcm_clip) - `const` function that returns the compressed (ADPCM) encoding for this clip.
 - [`Name::SAMPLE_RATE_HZ`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::SAMPLE_RATE_HZ) - sample rate for generated clips
 - [`Name::ADPCM_DATA_LEN`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::ADPCM_DATA_LEN) - byte length for compressed (ADPCM) encoding this clip
 - [`Name::PCM_SAMPLE_COUNT`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::PCM_SAMPLE_COUNT) - number of samples for uncompressed (PCM) version of this clip

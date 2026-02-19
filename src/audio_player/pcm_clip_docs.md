@@ -29,8 +29,8 @@ pcm_clip! {
 
 **Inputs:**
 
-- `$vis` - Optional module visibility for the generated namespace (for example: `pub`, `pub(crate)`, `pub(self)`). Defaults to private visibility when omitted.
-- `$name` - Module name for the generated namespace (for example: `Nasa`)
+- `$vis` - Optional module visibility for the generated module (for example: `pub`, `pub(crate)`, `pub(self)`). Defaults to private visibility when omitted.
+- `$name` - Module name for the generated module (for example: `Nasa`)
 
 **Required fields:**
 
@@ -43,8 +43,8 @@ pcm_clip! {
 
 **Generated items:**
 
-- [`Name::pcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::pcm_clip) - const function that returns the generated uncompressed (PCM) audio clip
-- [`Name::adpcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::adpcm_clip) - const function that returns the generated clip encoded as ADPCM
+- [`Name::pcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::pcm_clip) - `const` function that returns the uncompressed (PCM) version of this clip.
+- [`Name::adpcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::adpcm_clip) - `const` function that returns the compressed (ADPCM) encoding for this clip.
 - [`Name::SAMPLE_RATE_HZ`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::SAMPLE_RATE_HZ) - sample rate for generated clips
 - [`Name::PCM_SAMPLE_COUNT`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::PCM_SAMPLE_COUNT) - number of samples for uncompressed (PCM) version of this clip
 - [`Name::ADPCM_DATA_LEN`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::ADPCM_DATA_LEN) - byte length for compressed (ADPCM) encoding this clip

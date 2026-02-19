@@ -200,12 +200,14 @@ pub enum AtEnd {
 /// - `start_degrees` — Starting angle in degrees
 /// - `end_degrees` — Ending angle in degrees
 /// - `total_duration` — Total time for the entire sequence
+///
+/// This uses [`embassy_time::Duration`] for step timing.
 #[must_use]
 pub const fn linear<const N: usize>(
     start_degrees: u16,
     end_degrees: u16,
-    total_duration: Duration,
-) -> [(u16, Duration); N] {
+    total_duration: embassy_time::Duration,
+) -> [(u16, embassy_time::Duration); N] {
     assert!(N > 0, "at least one step required");
     let step_duration = Duration::from_micros(total_duration.as_micros() / (N as u64));
     let delta = end_degrees as i32 - start_degrees as i32;
@@ -242,12 +244,13 @@ pub const fn linear<const N: usize>(
 /// const HOLD: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
 /// const COMBINED: [(u16, Duration); 20] = combine(SWEEP_UP, HOLD);
 /// ```
+/// This uses [`embassy_time::Duration`] for step timing.
 #[must_use]
 #[doc(hidden)]
 pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
-    first: [(u16, Duration); N1],
-    second: [(u16, Duration); N2],
-) -> [(u16, Duration); OUT_N] {
+    first: [(u16, embassy_time::Duration); N1],
+    second: [(u16, embassy_time::Duration); N2],
+) -> [(u16, embassy_time::Duration); OUT_N] {
     assert!(OUT_N == N1 + N2, "OUT_N must equal N1 + N2");
 
     let mut result = [(0u16, Duration::from_micros(0)); OUT_N];
@@ -380,12 +383,14 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
     /// Each step is a tuple `(degrees, duration)`. Accepts both owned iterators and
     /// references to collections.
     ///
+    /// This uses [`embassy_time::Duration`] for step timing.
+    ///
     /// See the [servo_player module documentation](mod@crate::servo_player) for
     /// usage.
     pub fn animate<I>(&self, steps: I, at_end: AtEnd)
     where
         I: IntoIterator,
-        I::Item: Borrow<(u16, Duration)>,
+        I::Item: Borrow<(u16, embassy_time::Duration)>,
     {
         assert!(MAX_STEPS > 0, "animate disabled: max_steps is 0");
         let mut sequence: Vec<(u16, Duration), MAX_STEPS> = Vec::new();

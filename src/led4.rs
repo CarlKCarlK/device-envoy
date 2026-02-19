@@ -95,8 +95,9 @@ pub struct AnimationFrame {
 
 impl AnimationFrame {
     /// Creates a new animation frame with text and duration.
+    /// This uses [`embassy_time::Duration`] for frame timing.
     #[must_use]
-    pub const fn new(text: [char; CELL_COUNT], duration: Duration) -> Self {
+    pub const fn new(text: [char; CELL_COUNT], duration: embassy_time::Duration) -> Self {
         Self { text, duration }
     }
 }

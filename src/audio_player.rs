@@ -536,7 +536,8 @@ impl Gain {
 
 #[must_use]
 #[doc(hidden)]
-pub const fn __samples_for_duration(duration: Duration, sample_rate_hz: u32) -> usize {
+/// This uses [`core::time::Duration`] for clip timing.
+pub const fn __samples_for_duration(duration: core::time::Duration, sample_rate_hz: u32) -> usize {
     assert!(sample_rate_hz > 0, "sample_rate_hz must be > 0");
     let sample_rate_hz_u64 = sample_rate_hz as u64;
     let samples_from_seconds_u64 = duration.as_secs() * sample_rate_hz_u64;
@@ -1088,14 +1089,16 @@ pub struct SilenceClip {
 
 impl SilenceClip {
     /// Creates a silence clip for a specific duration.
+    /// This uses [`core::time::Duration`].
     #[must_use]
-    pub const fn new(duration: Duration) -> Self {
+    pub const fn new(duration: core::time::Duration) -> Self {
         Self { duration }
     }
 
     /// Returns the silence duration.
+    /// This returns [`core::time::Duration`].
     #[must_use]
-    pub const fn duration(self) -> Duration {
+    pub const fn duration(self) -> core::time::Duration {
         self.duration
     }
 }
@@ -1398,11 +1401,12 @@ pub const fn __tone_pcm_clip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usiz
 
 /// Const backend helper that creates a PCM sine-wave clip with explicit
 /// duration metadata used for built-in shaping.
+/// This uses [`core::time::Duration`] for tone duration.
 #[must_use]
 #[doc(hidden)]
 pub const fn __tone_pcm_clip_with_duration<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     frequency_hz: u32,
-    duration: Duration,
+    duration: core::time::Duration,
 ) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
     assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
     let mut samples = [0_i16; SAMPLE_COUNT];

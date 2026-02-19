@@ -634,11 +634,12 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
     /// Returns immediately; the animation runs in the background until interrupted
     /// by a new `animate` call or `write_frame`.
     ///
+    /// This uses [`embassy_time::Duration`] for frame timing.
     /// See the [led_strip module documentation](mod@crate::led_strip) for example usage.
     pub fn animate<I>(&self, frames: I) -> Result<()>
     where
         I: IntoIterator,
-        I::Item: Borrow<(Frame1d<N>, Duration)>,
+        I::Item: Borrow<(Frame1d<N>, embassy_time::Duration)>,
     {
         if MAX_FRAMES == 0 {
             return Err(crate::Error::AnimationDisabled(MAX_FRAMES));

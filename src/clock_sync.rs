@@ -181,11 +181,12 @@ impl ClockSync {
     /// Create a [`ClockSync`] using an existing network stack.
     ///
     /// See the [ClockSync struct example](Self) for usage.
+    /// The `tick_interval` parameter uses [`embassy_time::Duration`].
     pub fn new(
         clock_sync_static: &'static ClockSyncStatic,
         stack: &'static Stack<'static>,
         offset_minutes: i32,
-        tick_interval: Option<Duration>,
+        tick_interval: Option<embassy_time::Duration>,
         spawner: Spawner,
     ) -> Self {
         let clock = Clock::new(
@@ -244,7 +245,8 @@ impl ClockSync {
     }
 
     /// Set the tick interval. Use `None` to disable periodic ticks.
-    pub async fn set_tick_interval(&self, interval: Option<Duration>) {
+    /// This uses [`embassy_time::Duration`] for interval timing.
+    pub async fn set_tick_interval(&self, interval: Option<embassy_time::Duration>) {
         self.clock.set_tick_interval(interval).await;
     }
 

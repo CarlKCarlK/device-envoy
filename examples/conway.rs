@@ -82,9 +82,10 @@ enum Pattern {
     Beacon,
     LWSS,
     Block,
-    Wall,
+    Pentadecathlon,
     Random,
     Cross,
+    Custom9,
 }
 
 const PATTERNS: &[Pattern] = &[
@@ -95,8 +96,9 @@ const PATTERNS: &[Pattern] = &[
     Pattern::Beacon,
     Pattern::LWSS,
     Pattern::Block,
-    Pattern::Wall,
+    Pattern::Pentadecathlon,
     Pattern::Cross,
+    Pattern::Custom9,
 ];
 
 const ALIVE_COLORS: &[RGB8] = &[
@@ -347,9 +349,10 @@ impl<const H: usize, const W: usize> Board<H, W> {
             Pattern::Beacon => self.add_beacon(4, 4),
             Pattern::LWSS => self.add_lwss(5, 6),
             Pattern::Block => self.add_block(5, 4),
-            Pattern::Wall => self.add_wall(5),
+            Pattern::Pentadecathlon => self.add_pentadecathlon(),
             Pattern::Random => self.add_random(),
             Pattern::Cross => self.add_cross(7, 7),
+            Pattern::Custom9 => self.add_custom9(),
         }
     }
 
@@ -439,6 +442,78 @@ impl<const H: usize, const W: usize> Board<H, W> {
             for x_index in 0..W {
                 seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
                 self.cells[y_index][x_index] = (seed & 0x100) != 0;
+            }
+        }
+    }
+
+    /// Penta-decathlon (period 15) style seed centered for the 16x16 torus.
+    fn add_pentadecathlon(&mut self) {
+        const PENTADECATHLON_ROWS: [&str; 16] = [
+            "................",
+            "................",
+            "................",
+            "......###.......",
+            ".....#...#......",
+            "................",
+            "....#.....#.....",
+            "....#.....#.....",
+            "................",
+            ".....#...#......",
+            "......###.......",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+        ];
+        assert!(H == 16);
+        assert!(W == 16);
+
+        for row_index in 0..H {
+            let row = PENTADECATHLON_ROWS[row_index].as_bytes();
+            assert!(row.len() == W);
+            for col_index in 0..W {
+                self.cells[row_index][col_index] = match row[col_index] {
+                    b'#' => true,
+                    b'.' => false,
+                    _ => panic!("invalid pentadecathlon character"),
+                };
+            }
+        }
+    }
+
+    /// Custom pattern mapped to number button 9.
+    fn add_custom9(&mut self) {
+        const CUSTOM9_ROWS: [&str; 16] = [
+            "................",
+            "...##.....##....",
+            "....##...##.....",
+            ".#..#.#.#.#..#..",
+            ".###.##.##.###..",
+            "..#.#.#.#.#.#...",
+            "...###...###....",
+            "................",
+            "...###...###....",
+            "..#.#.#.#.#.#...",
+            ".###.##.##.###..",
+            ".#..#.#.#.#..#..",
+            "....##...##.....",
+            "...##.....##....",
+            "................",
+            "................",
+        ];
+        assert!(H == 16);
+        assert!(W == 16);
+
+        for row_index in 0..H {
+            let row = CUSTOM9_ROWS[row_index].as_bytes();
+            assert!(row.len() == W);
+            for col_index in 0..W {
+                self.cells[row_index][col_index] = match row[col_index] {
+                    b'#' => true,
+                    b'.' => false,
+                    _ => panic!("invalid custom9 character"),
+                };
             }
         }
     }

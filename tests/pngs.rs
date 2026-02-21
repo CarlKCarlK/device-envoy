@@ -24,6 +24,11 @@ include!(concat!(
     "/examples/data/frame-data/video_frames_data.rs"
 ));
 
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/examples/data/conway_board.rs"
+));
+
 type Frame = Frame2d<12, 8>;
 type Led12x4Frame = Frame2d<12, 4>;
 type Led8x12Frame = Frame2d<8, 12>;
@@ -191,115 +196,14 @@ fn build_conway_custom9_frames() -> Vec<ConwayFrame> {
         "................",
     ];
 
-    let mut conway = Conway::new(CONWAY_CUSTOM9_ROWS, colors::LIME);
+    let mut board = Board::<16, 16>::new();
+    board.load_rows(CONWAY_CUSTOM9_ROWS);
     let mut conway_frames = Vec::with_capacity(CONWAY_FRAME_COUNT);
     for _frame_index in 0..CONWAY_FRAME_COUNT {
-        conway_frames.push(conway.frame());
-        conway.step();
+        conway_frames.push(board.to_frame(colors::LIME));
+        board.step();
     }
     conway_frames
-}
-
-struct Conway {
-    board: ConwayBoard<16, 16>,
-    alive_color: RGB8,
-}
-
-impl Conway {
-    fn new(rows: [&str; 16], alive_color: RGB8) -> Self {
-        let mut conway_board = ConwayBoard::new();
-        conway_board.load_rows(rows);
-        Self {
-            board: conway_board,
-            alive_color,
-        }
-    }
-
-    fn frame(&self) -> ConwayFrame {
-        self.board.to_frame(self.alive_color)
-    }
-
-    fn step(&mut self) {
-        self.board.step();
-    }
-}
-
-#[derive(Clone, Copy)]
-struct ConwayBoard<const H: usize, const W: usize> {
-    cells: [[bool; W]; H],
-}
-
-impl<const H: usize, const W: usize> ConwayBoard<H, W> {
-    fn new() -> Self {
-        Self {
-            cells: [[false; W]; H],
-        }
-    }
-
-    fn load_rows(&mut self, rows: [&str; H]) {
-        for row_index in 0..H {
-            let row_bytes = rows[row_index].as_bytes();
-            assert!(row_bytes.len() == W, "row width must match board width");
-            for col_index in 0..W {
-                self.cells[row_index][col_index] = match row_bytes[col_index] {
-                    b'#' => true,
-                    b'.' => false,
-                    _ => panic!("pattern rows may only contain '.' or '#'"),
-                };
-            }
-        }
-    }
-
-    fn step(&mut self) {
-        let mut next_cells = [[false; W]; H];
-        for row_index in 0..H {
-            for col_index in 0..W {
-                let live_neighbors = self.count_live_neighbors(row_index, col_index);
-                let is_alive = self.cells[row_index][col_index];
-                next_cells[row_index][col_index] = match (is_alive, live_neighbors) {
-                    (true, 2) | (true, 3) => true,
-                    (false, 3) => true,
-                    _ => false,
-                };
-            }
-        }
-        self.cells = next_cells;
-    }
-
-    fn count_live_neighbors(&self, row_index: usize, col_index: usize) -> u8 {
-        let row_prev = if row_index == 0 { H - 1 } else { row_index - 1 };
-        let row_next = (row_index + 1) % H;
-        let col_prev = if col_index == 0 { W - 1 } else { col_index - 1 };
-        let col_next = (col_index + 1) % W;
-        let neighbor_rows = [row_prev, row_index, row_next];
-        let neighbor_cols = [col_prev, col_index, col_next];
-        let mut live_count = 0u8;
-
-        for neighbor_row in neighbor_rows {
-            for neighbor_col in neighbor_cols {
-                if neighbor_row == row_index && neighbor_col == col_index {
-                    continue;
-                }
-                if self.cells[neighbor_row][neighbor_col] {
-                    live_count += 1;
-                }
-            }
-        }
-
-        live_count
-    }
-
-    fn to_frame(&self, alive_color: RGB8) -> Frame2d<W, H> {
-        let mut frame2d = Frame2d::new();
-        for row_index in 0..H {
-            for col_index in 0..W {
-                if self.cells[row_index][col_index] {
-                    frame2d[(col_index, row_index)] = alive_color;
-                }
-            }
-        }
-        frame2d
-    }
 }
 
 fn assert_santa_apng_matches_expected(

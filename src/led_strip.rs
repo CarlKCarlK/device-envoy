@@ -360,6 +360,7 @@ pub const fn generate_combo_table(gamma: Gamma, max_brightness: u8) -> [u8; 256]
     };
     let mut result = [0u8; 256];
     let mut index = 0;
+    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
     while index < 256 {
         let gamma_corrected = gamma_table[index];
         // Apply brightness scaling: (value * brightness) / 255

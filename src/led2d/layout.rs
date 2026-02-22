@@ -118,6 +118,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let mut mapping = [None; N];
 
         let mut led_index = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while led_index < N {
             let (col, row) = self.map[led_index];
             let col = col as usize;
@@ -138,6 +139,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
 
         let mut finalized = [0u16; N];
         let mut i = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
             finalized[i] = mapping[i].expect("xy_to_index requires every (col,row) to be covered");
             i += 1;
@@ -169,6 +171,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     #[must_use]
     pub const fn equals(&self, other: &Self) -> bool {
         let mut i = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
             if self.map[i].0 != other.map[i].0 || self.map[i].1 != other.map[i].1 {
                 return false;
@@ -226,6 +229,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let mut seen = [false; N];
 
         let mut i = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
             let (c, r) = map[i];
             let c = c as usize;
@@ -242,6 +246,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         }
 
         let mut k = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while k < N {
             assert!(seen[k], "mapping does not cover every cell");
             k += 1;
@@ -276,6 +281,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
 
         let mut mapping = [(0_u16, 0_u16); N];
         let mut x_index = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while x_index < W {
             mapping[x_index] = (x_index as u16, 0);
             x_index += 1;
@@ -314,6 +320,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
 
         let mut mapping = [(0_u16, 0_u16); N];
         let mut y_index = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while y_index < H {
             mapping[y_index] = (0, y_index as u16);
             y_index += 1;
@@ -348,6 +355,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
 
         let mut mapping = [(0_u16, 0_u16); N];
         let mut y_index = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while y_index < H {
             let mut x_index = 0;
             while x_index < W {
@@ -393,6 +401,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
 
         let mut mapping = [(0_u16, 0_u16); N];
         let mut y_index = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while y_index < H {
             let mut x_index = 0;
             while x_index < W {
@@ -434,6 +443,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     pub const fn rotate_cw(self) -> LedLayout<N, H, W> {
         let mut out = [(0u16, 0u16); N];
         let mut i = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
             let (c, r) = self.map[i];
             let c = c as usize;
@@ -468,6 +478,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     pub const fn flip_h(self) -> Self {
         let mut out = [(0u16, 0u16); N];
         let mut i = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
             let (c, r) = self.map[i];
             let c = c as usize;
@@ -596,6 +607,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let mut out = [(0u16, 0u16); OUT_N];
 
         let mut i = 0;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while i < N {
             out[i] = self.map[i];
             i += 1;

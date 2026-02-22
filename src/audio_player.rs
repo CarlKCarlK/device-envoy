@@ -732,6 +732,9 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         let mut block_start = 0usize;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while block_start < DATA_LEN {
+            let mut predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
+            let mut step_index_i32 = self.data[block_start + 2] as i32;
+            assert!(step_index_i32 >= 0, "ADPCM step_index must be >= 0");
             assert!(step_index_i32 <= 88, "ADPCM step_index must be <= 88");
 
             samples[sample_index] = predictor_i32 as i16;
@@ -1413,6 +1416,7 @@ pub const fn __tone_pcm_clip_with_duration<const SAMPLE_RATE_HZ: u32, const SAMP
     let mut sample_index = 0usize;
     // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
     while sample_index < SAMPLE_COUNT {
+        samples[sample_index] = sine_sample_from_phase(phase_u32);
         phase_u32 = phase_u32.wrapping_add(phase_step_u32);
         sample_index += 1;
     }

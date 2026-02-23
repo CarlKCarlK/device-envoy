@@ -135,7 +135,12 @@ Use `TODO0`/`TODO00` prefix for TODO items (`TODO` + priority):
 Preserving comments: When changing code, generally don't remove TODO's in comments. Just move the comments if needed. If you think they no longer apply, add `(may no longer apply)` to the comment rather than deleting it.
 
 - **Debug code policy**: Do not remove debug/test code, commented debugging blocks, or "THIS WORKS" / "THIS DOESN'T" comparison code until the bug is proven fixed. Leave diagnostic code in place even after identifying issues so the user can verify fixes work correctly before cleanup. This includes removing such comparisons when making edits—preserve them until explicit confirmation the fix is working.
-- **Commit messages**: Always suggest a concise 1-2 line commit message when completing work (no bullet points, just 1-2 lines maximum).
+- **Commit messages**: Always suggest a concise 1-2 line commit message when completing work (no bullet points, just 1-2 lines maximum). Present it in a fenced code block so it is easy to copy, for example:
+
+  ```
+  Fix serpentine layout off-by-one in rotate_cw
+  ```
+
 - **Publishing policy**: Agents must not run the real `cargo publish`. Prepare release notes/versioning/commands, but the actual publish step must be run by the person.
 - Preserve comments: keep `TODO00`/`TODO0`/`TODO`, etc. comments. If they seem obsolete, append `(may no longer apply)` rather than deleting.
 

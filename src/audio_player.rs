@@ -514,6 +514,7 @@ impl Gain {
         let db_steps_u8 = if db > 0 { db as u8 } else { (-db) as u8 };
         let mut scale_q15_i32 = ONE_Q15;
         let mut step_index = 0_u8;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while step_index < db_steps_u8 {
             scale_q15_i32 = (scale_q15_i32 * step_q15_i32 + ROUND_Q15) / ONE_Q15;
             step_index += 1;
@@ -729,6 +730,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
 
         let mut sample_index = 0usize;
         let mut block_start = 0usize;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while block_start < DATA_LEN {
             let mut predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
             let mut step_index_i32 = self.data[block_start + 2] as i32;
@@ -741,6 +743,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
 
             let mut adpcm_byte_offset = block_start + 4;
             let adpcm_block_end = block_start + block_align;
+            // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
             while adpcm_byte_offset < adpcm_block_end {
                 let adpcm_byte = self.data[adpcm_byte_offset];
                 let adpcm_nibble_low = adpcm_byte & 0x0F;
@@ -799,6 +802,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
 
         let mut gained_data = [0_u8; DATA_LEN];
         let mut block_start = 0usize;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while block_start < DATA_LEN {
             let mut source_predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
             let mut source_step_index_i32 = self.data[block_start + 2] as i32;
@@ -823,11 +827,13 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
             let mut destination_byte_offset = block_start + 4;
             let block_end = block_start + block_align;
 
+            // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
             while source_byte_offset < block_end {
                 let source_byte = self.data[source_byte_offset];
                 let mut destination_byte = 0_u8;
 
                 let mut nibble_index = 0usize;
+                // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
                 while nibble_index < 2 {
                     if decoded_in_block < samples_per_block {
                         let source_nibble = if nibble_index == 0 {
@@ -906,6 +912,7 @@ pub const fn __parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader 
     let mut data_chunk_end = 0usize;
     let mut data_found = false;
 
+    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
     while chunk_offset + 8 <= wav_bytes.len() {
         let chunk_size = read_u32_le_const(wav_bytes, chunk_offset + 4) as usize;
         let chunk_data_start = chunk_offset + 8;
@@ -1207,6 +1214,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
         let mut scaled_samples = [0_i16; SAMPLE_COUNT];
         let mut sample_index = 0_usize;
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while sample_index < SAMPLE_COUNT {
             scaled_samples[sample_index] =
                 scale_sample_with_linear(self.samples[sample_index], gain.linear());
@@ -1256,6 +1264,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         if attack_sample_count > 0 {
             let attack_sample_count_i32 = attack_sample_count as i32;
             let mut sample_index = 0usize;
+            // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
             while sample_index < attack_sample_count {
                 let envelope_numerator_i32 = sample_index as i32;
                 shaped_samples[sample_index] = scale_sample_with_linear(
@@ -1270,6 +1279,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
             let release_sample_count_i32 = release_sample_count as i32;
             let release_start_index = SAMPLE_COUNT - release_sample_count;
             let mut release_index = 0usize;
+            // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
             while release_index < release_sample_count {
                 let sample_index = release_start_index + release_index;
                 let envelope_numerator_i32 = (release_sample_count - release_index) as i32;
@@ -1326,6 +1336,7 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
         let mut data_index = 0usize;
         let payload_len_per_block = block_align - 4;
 
+        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while sample_index < SAMPLE_COUNT {
             let mut predictor_i32 = self.samples[sample_index] as i32;
             let mut step_index_i32 = 0_i32;
@@ -1340,10 +1351,12 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
             sample_index += 1;
 
             let mut payload_byte_index = 0usize;
+            // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
             while payload_byte_index < payload_len_per_block {
                 let mut adpcm_byte = 0_u8;
 
                 let mut nibble_index = 0usize;
+                // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
                 while nibble_index < 2 {
                     let target_sample_i32 = if sample_index < SAMPLE_COUNT {
                         self.samples[sample_index] as i32
@@ -1401,6 +1414,7 @@ pub const fn __tone_pcm_clip_with_duration<const SAMPLE_RATE_HZ: u32, const SAMP
     let mut phase_u32 = 0_u32;
 
     let mut sample_index = 0usize;
+    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
     while sample_index < SAMPLE_COUNT {
         samples[sample_index] = sine_sample_from_phase(phase_u32);
         phase_u32 = phase_u32.wrapping_add(phase_step_u32);
@@ -1489,6 +1503,7 @@ pub const fn __resample_pcm_clip<
     let mut resampled_samples = [0_i16; TARGET_COUNT];
     let mut sample_index = 0_usize;
 
+    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
     while sample_index < TARGET_COUNT {
         let source_position_numerator_u128 = sample_index as u128 * SOURCE_HZ as u128;
         let source_index_u128 = source_position_numerator_u128 / TARGET_HZ as u128;

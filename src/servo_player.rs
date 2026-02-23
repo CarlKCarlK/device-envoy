@@ -215,6 +215,7 @@ pub const fn linear<const N: usize>(
 
     let mut result = [(0u16, Duration::from_micros(0)); N];
     let mut step_index = 0;
+    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
     while step_index < N {
         let degrees = if N == 1 {
             start_degrees
@@ -255,6 +256,7 @@ pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
 
     let mut result = [(0u16, Duration::from_micros(0)); OUT_N];
     let mut i = 0;
+    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
     while i < N1 {
         result[i] = first[i];
         i += 1;

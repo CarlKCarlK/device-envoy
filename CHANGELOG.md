@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.4-alpha.1
+
+- Added new Conway's Game of Life pattern (`examples/conway.rs`).
+- Added video link to README.
+
 ## 0.0.4-alpha.0
 
 - Added first-class support for compressed audio clips (IMA ADPCM WAV) via `adpcm_clip!`.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.4-alpha.2
+
+- Added article link to README: "device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions".
+
 ## 0.0.4-alpha.1
 
 - Added new Conway's Game of Life pattern (`examples/conway.rs`).

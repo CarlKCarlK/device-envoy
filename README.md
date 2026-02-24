@@ -47,7 +47,7 @@ The API is actively evolving. Not recommended for production use, but excellent 
 
 ## Videos and Articles
 
-- &#91;video&#93; [device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions](https://www.youtube.com/watch?v=iUu6hvJLVOU) (Seattle Rust User Group)
+- [device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) -- versions: [article](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) or [video](https://www.youtube.com/watch?v=iUu6hvJLVOU)
 - [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson.
 - [More Rust articles](https://medium.com/@carlmkadie)
 
@@ -58,6 +58,7 @@ The project includes **examples** (single-device tests) in `examples/` and **dem
 ### Example: animated LED strip
 
 This example cycles a 96-LED strip through red, green, and blue frames.
+
 ![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_animated.png)
 
 It shows how device-envoy generates a struct (device abstraction) for an LED strip and then animates a sequence of frames.

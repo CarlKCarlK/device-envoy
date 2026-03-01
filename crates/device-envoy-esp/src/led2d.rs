@@ -438,7 +438,7 @@ macro_rules! led2d {
             $(,)?
         }
     ) => {
-        $crate::led_strip::esp32_spi::__led_strip_spi_inner!{
+        $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
             $len,
             $max_current,
@@ -460,7 +460,7 @@ macro_rules! led2d {
             $(,)?
         }
     ) => {
-        $crate::led_strip::esp32_spi::__led_strip_spi_inner!{
+        $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
             $len,
             $max_current,
@@ -482,7 +482,7 @@ macro_rules! led2d {
             $(,)?
         }
     ) => {
-        $crate::led_strip::esp32_spi::__led_strip_spi_inner!{
+        $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
             $len,
             $max_current,
@@ -504,7 +504,7 @@ macro_rules! led2d {
             $(,)?
         }
     ) => {
-        $crate::led_strip::esp32::__led_strip_inner!{
+        $crate::led_strip::__led_strip_inner!{
             $name,
             $len,
             $max_current,
@@ -526,7 +526,7 @@ macro_rules! led2d {
             $(,)?
         }
     ) => {
-        $crate::led_strip::esp32::__led_strip_inner!{
+        $crate::led_strip::__led_strip_inner!{
             $name,
             $len,
             $max_current,
@@ -548,7 +548,7 @@ macro_rules! led2d {
             $(,)?
         }
     ) => {
-        $crate::led_strip::esp32::__led_strip_inner!{
+        $crate::led_strip::__led_strip_inner!{
             $name,
             $len,
             $max_current,
@@ -583,7 +583,7 @@ macro_rules! led2d {
             $(,)?
         }
     ) => {
-        $crate::led_strip::esp32::__led_strip_inner!{
+        $crate::led_strip::__led_strip_inner!{
             $name,
             $len,
             $max_current,

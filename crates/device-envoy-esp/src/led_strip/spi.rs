@@ -191,7 +191,7 @@ macro_rules! __led_strip_spi_impl {
         ::paste::paste! {
             mod [<$name:snake _consts>] {
                 pub const LEDS: usize = $len;
-                pub const BYTES: usize = LEDS * 9 + $crate::led_strip::esp32_spi::RESET_BYTES;
+                pub const BYTES: usize = LEDS * 9 + $crate::led_strip::spi::RESET_BYTES;
                 pub const WORST_CASE_MA: u32 = LEDS as u32 * 60;
             }
 
@@ -249,7 +249,7 @@ macro_rules! __led_strip_spi_impl {
                     let combo_ref: &'static [u8; 256] = COMBO.init(<$name>::COMBO_TABLE);
 
                     let driver =
-                        $crate::led_strip::esp32_spi::SpiWs2812::<
+                        $crate::led_strip::spi::SpiWs2812::<
                             { [<$name:snake _consts>]::LEDS },
                             { [<$name:snake _consts>]::BYTES },
                         >::new(spi, mosi_pin)?;
@@ -269,7 +269,7 @@ macro_rules! __led_strip_spi_impl {
 
             #[::embassy_executor::task]
             async fn [<$name:snake _device_task>](
-                driver: $crate::led_strip::esp32_spi::SpiWs2812<
+                driver: $crate::led_strip::spi::SpiWs2812<
                     'static,
                     { [<$name:snake _consts>]::LEDS },
                     { [<$name:snake _consts>]::BYTES },
@@ -280,7 +280,7 @@ macro_rules! __led_strip_spi_impl {
                 >,
                 combo_table: &'static [u8; 256],
             ) {
-                $crate::led_strip::esp32_spi::led_strip_spi_device_loop(
+                $crate::led_strip::spi::led_strip_spi_device_loop(
                     driver,
                     strip_static.command_signal(),
                     combo_table,
@@ -291,5 +291,5 @@ macro_rules! __led_strip_spi_impl {
     };
 }
 
-// Re-export macros so they are visible from the `esp32_spi` module path.
+// Re-export macros so they are visible from the `spi` module path.
 pub use crate::{__led_strip_spi_impl, __led_strip_spi_inner};

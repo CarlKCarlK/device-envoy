@@ -1,0 +1,11 @@
+error[E0080]: evaluation panicked: duplicate (col,row) in mapping
+ --> tests/ui/layout_duplicate_cell.rs:3:37
+  |
+3 | const INVALID: LedLayout<3, 3, 1> = LedLayout::new([(0, 0), (1, 0), (1, 0)]);
+  |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `INVALID` failed inside this call
+  |
+note: inside `LedLayout::<3, 3, 1>::new`
+ --> src/led2d/layout.rs
+  |
+  |             assert!(!seen[cell], "duplicate (col,row) in mapping");
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the failure occurred here

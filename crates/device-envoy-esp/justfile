@@ -1,0 +1,43 @@
+set shell := ["bash", "-cu"]
+
+blinky-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features
+
+blinky-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features
+
+led2d-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led2d --target xtensa-esp32s3-none-elf --release --no-default-features
+
+led2d-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led2d --target xtensa-esp32s3-none-elf --release --no-default-features
+
+button-read-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features
+
+button-read-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features
+
+clock-led8x12-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features
+
+clock-led8x12-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features
+
+wifi-scan-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features
+
+wifi-scan-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features
+
+audio-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example audio --target xtensa-esp32s3-none-elf --release --no-default-features
+
+audio-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example audio --target xtensa-esp32s3-none-elf --release --no-default-features
+
+audio-example1-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example audio_example1 --target xtensa-esp32s3-none-elf --release --no-default-features
+
+audio-example1-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example audio_example1 --target xtensa-esp32s3-none-elf --release --no-default-features

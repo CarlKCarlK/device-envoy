@@ -1,0 +1,73 @@
+[package]
+name = "device-envoy-esp32"
+version = "0.0.1-alpha"
+edition = "2021"
+
+[features]
+host = []
+
+[dependencies]
+embassy-executor = { version = "0.9.0" }
+embassy-time   = { version = "0.5.0" }
+embassy-sync   = { version = "0.7.2" }
+embassy-futures = { version = "0.1.2" }
+smart-leds     = { version = "0.4.0" }
+embedded-graphics = { version = "0.8", default-features = false }
+heapless       = { version = "0.8.0", features = ["serde"] }
+static_cell    = { version = "2.1.0" }
+paste          = { version = "1.0" }
+embedded-storage = "0.3.1"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+postcard = { version = "1.1.3", default-features = false }
+crc32fast = { version = "1.5.0", default-features = false }
+time = { version = "0.3", default-features = false }
+portable-atomic = { version = "1.11.1", features = ["critical-section"] }
+
+[target.'cfg(all(target_os = "none", target_arch = "riscv32"))'.dependencies]
+esp-hal = { version = "1.0.0", features = ["esp32c6", "unstable"] }
+esp-rtos = { version = "0.2.0", features = ["esp32c6", "embassy", "esp-radio", "esp-alloc"] }
+esp-storage = { version = "0.8.1", features = ["esp32c6"] }
+esp-alloc = { version = "0.9.0", features = ["esp32c6"] }
+esp-radio = { version = "0.17.0", default-features = false, features = ["esp32c6", "wifi", "esp-alloc", "log-04", "unstable"] }
+embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
+log = { version = "0.4", default-features = false }
+
+[target.'cfg(all(target_os = "none", target_arch = "xtensa"))'.dependencies]
+esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable"] }
+esp-rtos = { version = "0.2.0", features = ["esp32s3", "embassy", "esp-radio", "esp-alloc"] }
+esp-storage = { version = "0.8.1", features = ["esp32s3"] }
+esp-alloc = { version = "0.9.0", features = ["esp32s3"] }
+esp-radio = { version = "0.17.0", default-features = false, features = ["esp32s3", "wifi", "esp-alloc", "log-04", "unstable"] }
+embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
+log = { version = "0.4", default-features = false }
+
+[dev-dependencies]
+
+[target.'cfg(not(target_os = "none"))'.dev-dependencies]
+png = { version = "0.17" }
+trybuild = { version = "1.0" }
+
+[target.'cfg(all(target_os = "none", target_arch = "riscv32"))'.dev-dependencies]
+esp-backtrace = { version = "0.18.1", features = [
+    "esp32c6",
+    "panic-handler",
+    "halt-cores",
+    "println",
+] }
+esp-println = { version = "0.16.1", default-features = false, features = ["esp32c6", "uart", "log-04"] }
+log = { version = "0.4", default-features = false }
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32c6"] }
+
+[target.'cfg(all(target_os = "none", target_arch = "xtensa"))'.dev-dependencies]
+esp-backtrace = { version = "0.18.1", features = [
+    "esp32s3",
+    "panic-handler",
+    "halt-cores",
+    "println",
+] }
+esp-println = { version = "0.16.1", default-features = false, features = ["esp32s3", "uart", "log-04"] }
+log = { version = "0.4", default-features = false }
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32s3"] }
+
+[profile.dev.package.esp-radio]
+opt-level = 3

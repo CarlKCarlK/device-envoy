@@ -4,7 +4,7 @@
 #![cfg(not(feature = "host"))]
 
 use core::{convert::Infallible, panic};
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     button::{Button, PressDuration, PressedTo},
     servo,

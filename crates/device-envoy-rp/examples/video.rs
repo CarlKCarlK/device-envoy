@@ -83,14 +83,14 @@
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::Result;
-use device_envoy::button::{Button, PressedTo};
-use device_envoy::led_strip::Current;
-use device_envoy::led_strip::Gamma;
-use device_envoy::led2d;
-use device_envoy::led2d::Frame2d;
-use device_envoy::led2d::Led2dFont;
-use device_envoy::led2d::layout::LedLayout;
+use device_envoy_rp::Result;
+use device_envoy_rp::button::{Button, PressedTo};
+use device_envoy_rp::led_strip::Current;
+use device_envoy_rp::led_strip::Gamma;
+use device_envoy_rp::led2d;
+use device_envoy_rp::led2d::Frame2d;
+use device_envoy_rp::led2d::Led2dFont;
+use device_envoy_rp::led2d::layout::LedLayout;
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use panic_probe as _;

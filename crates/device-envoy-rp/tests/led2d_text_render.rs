@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 #![cfg(feature = "host")]
 
-use device_envoy::led2d::{Frame2d, Led2dFont, render_text_to_frame};
+use device_envoy_rp::led2d::{Frame2d, Led2dFont, render_text_to_frame};
 use png::{BitDepth, ColorType, Decoder, Encoder};
 use smart_leds::{RGB8, colors};
 use std::fs::File;

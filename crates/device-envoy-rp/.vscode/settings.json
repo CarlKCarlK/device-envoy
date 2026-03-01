@@ -20,7 +20,7 @@
         "cargo",
         "check",
         "--package",
-        "device-envoy",
+        "device-envoy-rp",
         "--features",
         "pico1,arm,wifi",
         "--no-default-features",

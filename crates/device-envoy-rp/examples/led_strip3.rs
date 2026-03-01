@@ -6,7 +6,7 @@ use core::{convert::Infallible, future};
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     led_strip::{Current, Frame1d, Gamma, colors, led_strips},
     led2d::{Frame2d, Led2dFont, layout::LedLayout},

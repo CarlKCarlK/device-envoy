@@ -45,12 +45,12 @@ pub type RfidStatic = EmbassyChannel<CriticalSectionRawMutex, RfidEvent, 4>;
 /// # #![no_std]
 /// # use panic_probe as _;
 /// # fn main() {}
-/// use device_envoy::rfid::{Rfid, RfidEvent, RfidStatic};
+/// use device_envoy_rp::rfid::{Rfid, RfidEvent, RfidStatic};
 ///
 /// async fn example(
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
-/// ) -> device_envoy::Result<()> {
+/// ) -> device_envoy_rp::Result<()> {
 ///     static RFID_STATIC: RfidStatic = Rfid::new_static();
 ///     let rfid = Rfid::new(
 ///         &RFID_STATIC,

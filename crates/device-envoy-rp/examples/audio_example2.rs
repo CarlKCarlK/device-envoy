@@ -5,7 +5,7 @@
 use core::convert::Infallible;
 use core::time::Duration as StdDuration;
 
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     audio_player::{AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
     button::{Button, PressedTo},

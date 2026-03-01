@@ -5,7 +5,7 @@
 
 use core::{convert::Infallible, future, panic};
 
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     led_strip::{ToRgb888, colors},
     led2d,

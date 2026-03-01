@@ -6,7 +6,7 @@
 use core::convert::Infallible;
 
 use defmt_rtt as _;
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     led::{Led, LedStatic, OnLevel},
 };

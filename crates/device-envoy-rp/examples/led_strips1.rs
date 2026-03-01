@@ -7,8 +7,8 @@ use core::future;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::Result;
-use device_envoy::led_strip::{Current, Frame1d, Gamma, colors, led_strips};
+use device_envoy_rp::Result;
+use device_envoy_rp::led_strip::{Current, Frame1d, Gamma, colors, led_strips};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use panic_probe as _;

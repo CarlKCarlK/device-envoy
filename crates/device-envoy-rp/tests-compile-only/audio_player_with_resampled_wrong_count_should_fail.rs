@@ -7,7 +7,7 @@
 #![no_std]
 #![no_main]
 
-use device_envoy::audio_player::{__pcm_clip_from_samples, __resample_pcm_clip, PcmClipBuf};
+use device_envoy_rp::audio_player::{__pcm_clip_from_samples, __resample_pcm_clip, PcmClipBuf};
 use embassy_executor::Spawner;
 
 static BAD_RESAMPLED_CLIP: PcmClipBuf<8, 7> =

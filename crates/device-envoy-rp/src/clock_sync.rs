@@ -71,7 +71,7 @@ pub struct ClockSyncStatic {
 /// # #![no_main]
 /// # use defmt_rtt as _;
 /// # use panic_probe as _;
-/// use device_envoy::{
+/// use device_envoy_rp::{
 ///     Error,
 ///     Result,
 ///     button::PressedTo,
@@ -85,7 +85,7 @@ pub struct ClockSyncStatic {
 /// async fn run(
 ///     spawner: embassy_executor::Spawner,
 ///     p: embassy_rp::Peripherals,
-/// ) -> Result<(), device_envoy::Error> {
+/// ) -> Result<(), device_envoy_rp::Error> {
 ///     let [wifi_credentials_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
 ///
 ///     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();

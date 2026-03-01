@@ -57,7 +57,7 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{
+//! use device_envoy_rp::{
 //!     Result,
 //!     audio_player::{AtEnd, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
 //!     tone,
@@ -122,7 +122,7 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{
+//! use device_envoy_rp::{
 //!     Result,
 //!     audio_player::{
 //!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
@@ -235,7 +235,7 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{
+//! use device_envoy_rp::{
 //!     Result,
 //!     audio_player::{
 //!         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip,

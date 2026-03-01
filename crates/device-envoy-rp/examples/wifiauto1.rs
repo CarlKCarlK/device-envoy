@@ -10,7 +10,7 @@ extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
 use core::convert::Infallible;
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     button::PressedTo,
     flash_array::FlashArray,

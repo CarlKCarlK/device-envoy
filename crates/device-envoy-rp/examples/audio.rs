@@ -15,12 +15,12 @@ use core::convert::Infallible;
 use core::time::Duration as StdDuration;
 
 use defmt::info;
-use device_envoy::Result;
-use device_envoy::audio_player::{
+use device_envoy_rp::Result;
+use device_envoy_rp::audio_player::{
     AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
-use device_envoy::button::{Button, PressedTo};
-use device_envoy::tone;
+use device_envoy_rp::button::{Button, PressedTo};
+use device_envoy_rp::tone;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};

@@ -5,8 +5,8 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::Result;
-use device_envoy::ir::{Ir, IrEvent, IrStatic};
+use device_envoy_rp::Result;
+use device_envoy_rp::ir::{Ir, IrEvent, IrStatic};
 use embassy_executor::Spawner;
 use panic_probe as _;
 

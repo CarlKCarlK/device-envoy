@@ -29,6 +29,6 @@ jobs:
       - name: Check device-envoy-blinky against this branch
         run: |
           git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-blinky.git ../device-envoy-blinky
-          sed -i 's#device-envoy = { version = ".*", default-features = false, features = \["arm"\] }#device-envoy = { path = "../device-envoy", default-features = false, features = ["arm"] }#' ../device-envoy-blinky/Cargo.toml
+          sed -i 's#device-envoy = { version = ".*", default-features = false, features = \["arm"\] }#device-envoy = { package = "device-envoy-rp", path = "../device-envoy/crates/device-envoy-rp", default-features = false, features = ["arm"] }#' ../device-envoy-blinky/Cargo.toml
           cd ../device-envoy-blinky
           cargo blinky-2-check

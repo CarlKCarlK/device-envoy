@@ -5,7 +5,7 @@
 
 use core::{convert::Infallible, panic};
 
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     led_strip::{Frame1d, colors, led_strip},
 };

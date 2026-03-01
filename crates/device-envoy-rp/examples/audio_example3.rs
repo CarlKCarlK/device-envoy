@@ -4,7 +4,7 @@
 
 use core::convert::Infallible;
 
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     audio_player::{
         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player, pcm_clip,

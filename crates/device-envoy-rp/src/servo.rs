@@ -673,7 +673,7 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy::{servo, servo::Servo};
+/// use device_envoy_rp::{servo, servo::Servo};
 /// use embassy_time::{Duration, Timer};
 /// # use core::panic::PanicInfo;
 /// # #[panic_handler]

@@ -71,7 +71,7 @@ pub(crate) enum LedCommand {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy::{Result, led::{Led, LedStatic, OnLevel}};
+/// use device_envoy_rp::{Result, led::{Led, LedStatic, OnLevel}};
 /// use embassy_time::Duration;
 /// use embassy_rp::gpio::Level;
 /// # #[panic_handler]

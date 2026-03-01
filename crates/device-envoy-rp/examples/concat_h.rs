@@ -5,12 +5,12 @@
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::Result;
-use device_envoy::led_strip::Current;
-use device_envoy::led_strip::Gamma;
-use device_envoy::led2d::Led2dFont;
-use device_envoy::led2d::layout::LedLayout;
-use device_envoy::led2d::led2d;
+use device_envoy_rp::Result;
+use device_envoy_rp::led_strip::Current;
+use device_envoy_rp::led_strip::Gamma;
+use device_envoy_rp::led2d::Led2dFont;
+use device_envoy_rp::led2d::layout::LedLayout;
+use device_envoy_rp::led2d::led2d;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use panic_probe as _;

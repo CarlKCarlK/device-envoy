@@ -13,22 +13,22 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy::button::{PressDuration, PressedTo};
-use device_envoy::button_watch;
-use device_envoy::clock_sync::{
+use device_envoy_rp::button::{PressDuration, PressedTo};
+use device_envoy_rp::button_watch;
+use device_envoy_rp::clock_sync::{
     ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
-use device_envoy::flash_array::FlashArray;
-use device_envoy::led_strip::Current;
-use device_envoy::led_strip::Gamma;
-use device_envoy::led_strip::colors;
-use device_envoy::led2d;
-use device_envoy::led2d::Frame2d;
-use device_envoy::led2d::Led2dFont;
-use device_envoy::led2d::layout::LedLayout;
-use device_envoy::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy::wifi_auto::{WifiAuto, WifiAutoEvent};
-use device_envoy::{Error, Result};
+use device_envoy_rp::flash_array::FlashArray;
+use device_envoy_rp::led_strip::Current;
+use device_envoy_rp::led_strip::Gamma;
+use device_envoy_rp::led_strip::colors;
+use device_envoy_rp::led2d;
+use device_envoy_rp::led2d::Frame2d;
+use device_envoy_rp::led2d::Led2dFont;
+use device_envoy_rp::led2d::layout::LedLayout;
+use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
+use device_envoy_rp::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::Duration;

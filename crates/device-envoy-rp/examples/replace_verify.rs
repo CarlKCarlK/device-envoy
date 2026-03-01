@@ -6,7 +6,7 @@
 use core::{convert::Infallible, panic};
 use defmt::info;
 
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     button::{Button, PressedTo},
     led_strip::{Current, Frame1d, colors, led_strips},

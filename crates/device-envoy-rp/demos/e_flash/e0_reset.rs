@@ -4,7 +4,7 @@
 #![cfg(not(feature = "host"))]
 
 use core::{convert::Infallible, future, panic};
-use device_envoy::{
+use device_envoy_rp::{
     Result,
     flash_array::FlashArray,
     led2d,

@@ -1,8 +1,8 @@
 # device-envoy
 
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
-[![crates.io](https://img.shields.io/crates/v/device-envoy?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy)
-[![docs.rs](https://img.shields.io/docsrs/device-envoy?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy)
+[![crates.io](https://img.shields.io/crates/v/device-envoy-rp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-rp)
+[![docs.rs](https://img.shields.io/docsrs/device-envoy-rp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-rp)
 
 **Build Pico applications with LED panels, easy WiFi, and composable device abstractions.**
 
@@ -26,18 +26,18 @@ The API is actively evolving. Not recommended for production use, but excellent 
 
 ## Features
 
-- **[LED Strips](https://docs.rs/device-envoy/latest/device_envoy/led_strip/) & [Panels](https://docs.rs/device-envoy/latest/device_envoy/led2d/)**  - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, embedded-graphics support. Provides efficient options for power limiting and color correction.
-- **[WiFi (Pico W)](https://docs.rs/device-envoy/latest/device_envoy/wifi_auto/)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to a stored network. Requires Pico W; WiFi is not supported on non-W boards.
-- **[Audio Player](https://docs.rs/device-envoy/latest/device_envoy/audio_player/)** - Play audio clips over I²S hardware with runtime sequencing, volume control, and compression.
-- **[Button Input](https://docs.rs/device-envoy/latest/device_envoy/button/)** - Button handling with debouncing
-- **[Servo Control](https://docs.rs/device-envoy/latest/device_envoy/servo/)** - Servo positioning and animation
-- **[Flash Storage](https://docs.rs/device-envoy/latest/device_envoy/flash_array/)** - Type-safe, on-board persist storage
-- **[LCD Display](https://docs.rs/device-envoy/latest/device_envoy/char_lcd/)** - Text display (HD44780)
-- **[IR Remote](https://docs.rs/device-envoy/latest/device_envoy/ir/)** - Remote control decoder (NEC protocol)
-- **[RFID Reader](https://docs.rs/device-envoy/latest/device_envoy/rfid/)** - Card detection and reading (MFRC522)
-- **[Clock Sync](https://docs.rs/device-envoy/latest/device_envoy/clock_sync/)** - Network time synchronization utilities
-- **[LED4 Display](https://docs.rs/device-envoy/latest/device_envoy/led4/)** - 4-digit, 7-segment LED display control with optional animation and blinking
-- **[Single LED](https://docs.rs/device-envoy/latest/device_envoy/led/)** - Single LED control with animation support
+- **[LED Strips](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/led_strip/) & [Panels](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/led2d/)**  - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, embedded-graphics support. Provides efficient options for power limiting and color correction.
+- **[WiFi (Pico W)](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/wifi_auto/)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to a stored network. Requires Pico W; WiFi is not supported on non-W boards.
+- **[Audio Player](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/audio_player/)** - Play audio clips over I²S hardware with runtime sequencing, volume control, and compression.
+- **[Button Input](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/button/)** - Button handling with debouncing
+- **[Servo Control](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/servo/)** - Servo positioning and animation
+- **[Flash Storage](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/flash_array/)** - Type-safe, on-board persist storage
+- **[LCD Display](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/char_lcd/)** - Text display (HD44780)
+- **[IR Remote](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/ir/)** - Remote control decoder (NEC protocol)
+- **[RFID Reader](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/rfid/)** - Card detection and reading (MFRC522)
+- **[Clock Sync](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/clock_sync/)** - Network time synchronization utilities
+- **[LED4 Display](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/led4/)** - 4-digit, 7-segment LED display control with optional animation and blinking
+- **[Single LED](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/led/)** - Single LED control with animation support
 
 ## Forum
 
@@ -68,8 +68,8 @@ It shows how device-envoy generates a struct (device abstraction) for an LED str
 # #![no_main]
 # use panic_probe as _;
 # use core::convert::Infallible;
-use device_envoy::{Result, led_strip::{Frame1d, colors}};
-use device_envoy::led_strip;
+use device_envoy_rp::{Result, led_strip::{Frame1d, colors}};
+use device_envoy_rp::led_strip;
 
 led_strip! {
     LedStripAnimated {

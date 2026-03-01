@@ -13,8 +13,8 @@
 use core::convert::Infallible;
 use core::future::pending;
 
-use device_envoy::Result;
-use device_envoy::audio_player::{AtEnd, NARROWBAND_8000_HZ, Volume, adpcm_clip, audio_player};
+use device_envoy_rp::Result;
+use device_envoy_rp::audio_player::{AtEnd, NARROWBAND_8000_HZ, Volume, adpcm_clip, audio_player};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 

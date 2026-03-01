@@ -211,9 +211,9 @@ pub async fn button_watch_task_from_input(
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy::button_watch;
-/// use device_envoy::button::PressDuration;
-/// use device_envoy::button::PressedTo;
+/// use device_envoy_rp::button_watch;
+/// use device_envoy_rp::button::PressDuration;
+/// use device_envoy_rp::button::PressedTo;
 /// use embassy_executor::Spawner;
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
@@ -375,7 +375,7 @@ macro_rules! __button_watch_impl {
                 /// ```rust,no_run
                 /// # #![no_std]
                 /// # #![no_main]
-                /// # use device_envoy::button_watch;
+                /// # use device_envoy_rp::button_watch;
                 /// # use embassy_executor::Spawner;
                 /// # #[panic_handler]
                 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
@@ -386,9 +386,9 @@ macro_rules! __button_watch_impl {
                 /// }
                 ///
                 /// async fn example(
-                ///     button: device_envoy::button::Button<'static>,
+                ///     button: device_envoy_rp::button::Button<'static>,
                 ///     spawner: Spawner,
-                /// ) -> device_envoy::Result<()> {
+                /// ) -> device_envoy_rp::Result<()> {
                 ///     // Convert Button from WifiAuto into ButtonWatch
                 ///     let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
                 ///

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-DOC_PATH="$(pwd)/target/doc/device_envoy/index.html"
+DOC_PATH="$(pwd)/target/doc/device_envoy_rp/index.html"
 
 if [ ! -f "$DOC_PATH" ]; then
   echo "Error: Documentation not found at $DOC_PATH"

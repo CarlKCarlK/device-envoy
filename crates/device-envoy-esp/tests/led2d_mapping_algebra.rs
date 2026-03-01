@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use device_envoy_esp32::led2d::layout::LedLayout;
+use device_envoy_esp::led2d::layout::LedLayout;
 
 const CLOCK_EXPECTED: [(u16, u16); 96] = [
     (0, 11),

@@ -8,7 +8,7 @@ use core::time::Duration as StdDuration;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 
-use device_envoy_esp32::{
+use device_envoy_esp::{
     Result, audio_player::AtEnd, audio_player::SilenceClip, audio_player::VOICE_22050_HZ,
     audio_player::Volume, audio_player::audio_player, init_and_start, tone,
 };

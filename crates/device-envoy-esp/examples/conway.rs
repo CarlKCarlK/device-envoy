@@ -12,9 +12,9 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 #[allow(unused_imports)]
-use device_envoy_esp32::led_strip::Engine;
+use device_envoy_esp::led_strip::Engine;
 
-use device_envoy_esp32::{
+use device_envoy_esp::{
     init_and_start,
     ir::{IrKepler, IrKeplerStatic, KeplerButton},
     led2d,
@@ -119,7 +119,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp32::Result<Infallible> {
+async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p, rmt80, rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
@@ -478,10 +478,10 @@ impl Conway<'_> {
         conway_static: &'static ConwayStatic,
         led16x16_conway: &'static Led16x16Conway,
         spawner: Spawner,
-    ) -> device_envoy_esp32::Result<Self> {
+    ) -> device_envoy_esp::Result<Self> {
         spawner
             .spawn(conway_task(led16x16_conway, &conway_static.signal))
-            .map_err(device_envoy_esp32::Error::TaskSpawn)?;
+            .map_err(device_envoy_esp::Error::TaskSpawn)?;
         Ok(Self(&conway_static.signal))
     }
 

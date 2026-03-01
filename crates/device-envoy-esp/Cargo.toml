@@ -1,5 +1,5 @@
 [package]
-name = "device-envoy-esp32"
+name = "device-envoy-esp"
 version = "0.0.1-alpha"
 edition = "2021"
 

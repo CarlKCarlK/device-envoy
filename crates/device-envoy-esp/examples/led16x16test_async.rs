@@ -10,7 +10,7 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp32::{
+use device_envoy_esp::{
     esp_hal::{
         gpio::Level,
         rmt::{PulseCode, TxChannelCreator as _},
@@ -40,7 +40,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(_spawner: Spawner) -> device_envoy_esp32::Result<core::convert::Infallible> {
+async fn inner_main(_spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p, rmt80, rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
@@ -67,7 +67,7 @@ async fn inner_main(_spawner: Spawner) -> device_envoy_esp32::Result<core::conve
                 tx_channel
                     .transmit(&pulse_buf)
                     .await
-                    .map_err(device_envoy_esp32::Error::Rmt)?;
+                    .map_err(device_envoy_esp::Error::Rmt)?;
                 Timer::after(DOT_DELAY).await;
             }
         }

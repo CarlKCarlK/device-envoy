@@ -4,7 +4,7 @@ Shared rules are in the root [`AGENTS.md`](../../AGENTS.md). This file contains 
 
 - While the crate version remains `0.0.1-alpha`, we do not care about breaking changes. Optimize for the best API design.
 - For ESP32 programs that should run forever, use `core::future::pending().await` instead of a timer loop.
-- **Hide boilerplate in doctests**: In addition to the shared rules, hide `use esp_backtrace as _`. **Important:** Do NOT hide imports from `device_envoy_esp32`, `embassy_time::Duration`, or `smart_leds` because they are unusual and users need to see them to understand what to import.
+- **Hide boilerplate in doctests**: In addition to the shared rules, hide `use esp_backtrace as _`. **Important:** Do NOT hide imports from `device_envoy_esp`, `embassy_time::Duration`, or `smart_leds` because they are unusual and users need to see them to understand what to import.
 - Always run `cargo check` before handing work back.
 - For `cargo` aliases that target `riscv32imac-unknown-none-elf`, include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
 
@@ -25,7 +25,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp32::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p);
     // ... use ? freely here ...
     core::future::pending().await
@@ -61,19 +61,19 @@ For the board peripherals handle, always use `init_and_start!(p)` so `p` is the 
 
 ## Colors
 
-For RGB8 colors, use the predefined constants from `device_envoy_esp32::led_strip::colors` rather than creating RGB values manually:
+For RGB8 colors, use the predefined constants from `device_envoy_esp::led_strip::colors` rather than creating RGB values manually:
 
 ✅ Good:
 
 ```rust
-use device_envoy_esp32::led_strip::colors;
+use device_envoy_esp::led_strip::colors;
 let frame = Frame1d([colors::RED]);
 ```
 
 ❌ Bad:
 
 ```rust
-use device_envoy_esp32::led_strip::RGB8;
+use device_envoy_esp::led_strip::RGB8;
 let red = RGB8 { r: 255, g: 0, b: 0 };
 ```
 
@@ -97,7 +97,7 @@ Treat that README section as the single source of truth for examples and docs.
 
 ## Documentation (ESP-specific)
 
-- In examples, keep `use` statements limited to `device_envoy_esp32::...` items; refer to other crates/modules with fully qualified paths inline.
+- In examples, keep `use` statements limited to `device_envoy_esp::...` items; refer to other crates/modules with fully qualified paths inline.
 - Use `cargo run --bin <name> --target riscv32imac-unknown-none-elf` as the standard way to run demos/examples; only use short alias commands when they are defined in `.cargo/config.toml`.
 - **API completeness**: When linking back to the primary struct example, use phrasing like `See the [LedStrip struct example](Self) for usage.`
 

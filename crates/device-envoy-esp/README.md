@@ -1,4 +1,4 @@
-# device-envoy-esp32
+# device-envoy-esp
 
 Device abstractions and examples for ESP32-C6.
 

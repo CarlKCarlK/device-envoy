@@ -477,7 +477,7 @@ macro_rules! led2d {
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
             font: $font:expr,
-            engine: device_envoy_esp32::led_strip::Engine::Spi
+            engine: device_envoy_esp::led_strip::Engine::Spi
             $(, gamma: $gamma:expr)?
             $(, max_frames: $max_frames:expr)?
             $(,)?
@@ -543,7 +543,7 @@ macro_rules! led2d {
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
             font: $font:expr,
-            engine: device_envoy_esp32::led_strip::Engine::Rmt
+            engine: device_envoy_esp::led_strip::Engine::Rmt
             $(, gamma: $gamma:expr)?
             $(, max_frames: $max_frames:expr)?
             $(,)?

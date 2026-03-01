@@ -1,4 +1,4 @@
-//! device-envoy-esp32 — NeoPixel-style (WS2812) LED strips and panels for ESP32.
+//! device-envoy-esp — NeoPixel-style (WS2812) LED strips and panels for ESP32.
 //!
 //! See the [`led_strip` module](mod@led_strip) and [`led2d` module](mod@led2d).
 

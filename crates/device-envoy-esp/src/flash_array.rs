@@ -207,7 +207,7 @@ impl FlashArrayStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_esp32::flash_array::FlashArray;
+/// use device_envoy_esp::flash_array::FlashArray;
 ///
 /// #[derive(serde::Serialize, serde::Deserialize, Clone)]
 /// struct WifiPersistedState {
@@ -216,8 +216,8 @@ impl FlashArrayStatic {
 ///     timezone_offset_minutes: i32,
 /// }
 ///
-/// # async fn example() -> device_envoy_esp32::Result<core::convert::Infallible> {
-/// device_envoy_esp32::init_and_start!(p);
+/// # async fn example() -> device_envoy_esp::Result<core::convert::Infallible> {
+/// device_envoy_esp::init_and_start!(p);
 /// let [mut wifi_persisted_state_flash_block, mut fields_flash_block] = FlashArray::<2>::new(p.FLASH)?;
 ///
 /// let wifi_persisted_state = wifi_persisted_state_flash_block.load::<WifiPersistedState>()?;

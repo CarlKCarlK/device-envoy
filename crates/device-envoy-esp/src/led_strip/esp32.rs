@@ -177,12 +177,12 @@ pub async fn led_strip_device_loop<
 /// # Syntax
 ///
 /// ```rust,no_run
-/// use device_envoy_esp32::led_strip::esp32::led_strip;
+/// use device_envoy_esp::led_strip::esp32::led_strip;
 ///
 /// led_strip! {
 ///     MyStrip {
 ///         len: 8,
-///         max_current: device_envoy_esp32::led_strip::Current::Milliamps(1000),
+///         max_current: device_envoy_esp::led_strip::Current::Milliamps(1000),
 ///     }
 /// }
 /// ```
@@ -223,7 +223,7 @@ macro_rules! led_strip {
         $name:ident {
             len: $len:expr,
             max_current: $max_current:expr,
-            engine: device_envoy_esp32::led_strip::Engine::Spi
+            engine: device_envoy_esp::led_strip::Engine::Spi
             $(, gamma: $gamma:expr)?
             $(, max_frames: $max_frames:expr)?
             $(,)?
@@ -283,7 +283,7 @@ macro_rules! led_strip {
         $name:ident {
             len: $len:expr,
             max_current: $max_current:expr,
-            engine: device_envoy_esp32::led_strip::Engine::Rmt
+            engine: device_envoy_esp::led_strip::Engine::Rmt
             $(, gamma: $gamma:expr)?
             $(, max_frames: $max_frames:expr)?
             $(,)?

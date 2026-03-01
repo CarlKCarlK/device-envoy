@@ -18,7 +18,7 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp32::{
+use device_envoy_esp::{
     Result,
     audio_player::{
         AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,

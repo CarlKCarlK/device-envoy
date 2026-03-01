@@ -1,4 +1,4 @@
-//! Build automation tasks for the device-envoy-esp32 project.
+//! Build automation tasks for the device-envoy-esp project.
 //!
 //! Run with: `cargo xtask <command>`
 
@@ -11,7 +11,7 @@ const TARGET: &str = "riscv32imac-unknown-none-elf";
 
 #[derive(Parser)]
 #[command(name = "xtask")]
-#[command(about = "Build automation for device-envoy-esp32 project")]
+#[command(about = "Build automation for device-envoy-esp project")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -36,7 +36,7 @@ fn main() -> ExitCode {
 fn check_all() -> ExitCode {
     let root = workspace_root();
 
-    println!("{}", "==> cargo check-all: device-envoy-esp32".cyan().bold());
+    println!("{}", "==> cargo check-all: device-envoy-esp".cyan().bold());
 
     // Check the library itself.
     println!("{}", "--> check lib".cyan());

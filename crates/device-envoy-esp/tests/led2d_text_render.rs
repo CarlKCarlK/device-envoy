@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use device_envoy_esp32::led2d::{render_text_to_frame, Frame2d, Led2dFont};
+use device_envoy_esp::led2d::{render_text_to_frame, Frame2d, Led2dFont};
 use png::{BitDepth, ColorType, Decoder, Encoder};
 use smart_leds::{colors, RGB8};
 use std::fs::File;
@@ -73,10 +73,10 @@ fn run_render_test<const W: usize, const H: usize>(
 }
 
 fn generation_dir() -> Option<PathBuf> {
-    let env_value = std::env::var("DEVICE_ENVOY_ESP32_GENERATE_TEXT_PNGS").ok()?;
+    let env_value = std::env::var("DEVICE_ENVOY_ESP_GENERATE_TEXT_PNGS").ok()?;
     let output_dir = if env_value.is_empty() {
         let mut temp_dir = std::env::temp_dir();
-        temp_dir.push("device-envoy-esp32-text-pngs");
+        temp_dir.push("device-envoy-esp-text-pngs");
         temp_dir
     } else {
         PathBuf::from(env_value)

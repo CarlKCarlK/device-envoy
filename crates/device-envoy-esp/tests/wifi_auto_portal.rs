@@ -1,5 +1,5 @@
-use device_envoy_esp32::wifi_auto::fields::{TextField, TimezoneField};
-use device_envoy_esp32::wifi_auto::{WifiAuto, WifiAutoField, WifiCredentials, WifiStartMode};
+use device_envoy_esp::wifi_auto::fields::{TextField, TimezoneField};
+use device_envoy_esp::wifi_auto::{WifiAuto, WifiAutoField, WifiCredentials, WifiStartMode};
 
 #[test]
 fn parse_post_decodes_credentials() {
@@ -49,7 +49,7 @@ fn parse_post_requires_ssid() {
 fn generate_config_page_escapes_defaults() {
     let wifi_auto = WifiAuto::new("PortalSsid", &[]);
     let wifi_credentials =
-        device_envoy_esp32::wifi_auto::WifiCredentials::new("A&B\"<ssid>", "p@ss<word>&\"");
+        device_envoy_esp::wifi_auto::WifiCredentials::new("A&B\"<ssid>", "p@ss<word>&\"");
 
     let page = wifi_auto.generate_config_page(Some(&wifi_credentials));
 

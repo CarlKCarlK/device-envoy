@@ -1,0 +1,9 @@
+[package]
+name = "device-envoy-core"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "device_envoy_core"
+path = "src/lib.rs"

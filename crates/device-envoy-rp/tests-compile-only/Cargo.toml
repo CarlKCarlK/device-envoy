@@ -42,7 +42,7 @@ paste = "1.0"
 heapless = "0.8.0"
 static_cell = "2.1.0"
 cortex-m-rt = "0.7.5"
-riscv-rt = { version = "0.12", optional = true }
+riscv-rt = { version = "0.16", optional = true }
 
 [[bin]]
 name = "led12x4"

@@ -71,8 +71,6 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 #[non_exhaustive]
 pub enum Error {
     TaskSpawn(embassy_executor::SpawnError),
-    AnimationDisabled(usize),
-    EmptyAnimation,
     #[cfg(target_os = "none")]
     FlashStorage(esp_storage::FlashStorageError),
     InvalidFlashRegion,

@@ -395,13 +395,12 @@ impl<'a, const N: usize, const MAX_FRAMES: usize> Led2d<'a, N, MAX_FRAMES> {
         StripFrame::from(frame_1d)
     }
 
-    pub fn write_frame<const W: usize, const H: usize>(&self, frame: Frame2d<W, H>) -> Result<()> {
+    pub fn write_frame<const W: usize, const H: usize>(&self, frame: Frame2d<W, H>) {
         let strip_frame = self.convert_frame(frame);
         self.led_strip.write_frame(strip_frame);
-        Ok(())
     }
 
-    pub fn animate<const W: usize, const H: usize, I>(&self, frames: I) -> Result<()>
+    pub fn animate<const W: usize, const H: usize, I>(&self, frames: I)
     where
         I: IntoIterator,
         I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
@@ -409,7 +408,7 @@ impl<'a, const N: usize, const MAX_FRAMES: usize> Led2d<'a, N, MAX_FRAMES> {
         self.led_strip.animate(frames.into_iter().map(|frame| {
             let (frame, duration) = *frame.borrow();
             (self.convert_frame(frame), duration)
-        }))
+        }));
     }
 }
 

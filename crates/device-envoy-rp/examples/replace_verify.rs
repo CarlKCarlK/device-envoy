@@ -68,35 +68,35 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
             // write
             frame1d[index] = colors::YELLOW;
-            gpio0_led_strip.write_frame(frame1d)?;
+            gpio0_led_strip.write_frame(frame1d);
             gpio3_led2d.write_text(text, &[colors::YELLOW]).await?;
             button.wait_for_press().await;
 
             // write again
             frame1d[index] = colors::RED;
-            gpio0_led_strip.write_frame(frame1d)?;
+            gpio0_led_strip.write_frame(frame1d);
             gpio3_led2d.write_text(text, &[colors::RED]).await?;
             button.wait_for_press().await;
 
             // animate
             frame1d_b[index] = colors::YELLOW;
-            gpio0_led_strip.animate([(frame1d_b, ANIMATION_DELAY), (frame1d, ANIMATION_DELAY)])?;
+            gpio0_led_strip.animate([(frame1d_b, ANIMATION_DELAY), (frame1d, ANIMATION_DELAY)]);
             gpio3_led2d.write_text_to_frame(text, &[colors::RED], &mut frame2d)?;
             gpio3_led2d.write_text_to_frame(text, &[colors::YELLOW], &mut frame2d_b)?;
-            gpio3_led2d.animate([(frame2d_b, ANIMATION_DELAY), (frame2d, ANIMATION_DELAY)])?;
+            gpio3_led2d.animate([(frame2d_b, ANIMATION_DELAY), (frame2d, ANIMATION_DELAY)]);
             button.wait_for_press().await;
 
             // animate again
             frame1d_b[index] = colors::CYAN;
-            gpio0_led_strip.animate([(frame1d_b, ANIMATION_DELAY), (frame1d, ANIMATION_DELAY)])?;
+            gpio0_led_strip.animate([(frame1d_b, ANIMATION_DELAY), (frame1d, ANIMATION_DELAY)]);
             gpio3_led2d.write_text_to_frame(text, &[colors::YELLOW], &mut frame2d)?;
             gpio3_led2d.write_text_to_frame(text, &[colors::CYAN], &mut frame2d_b)?;
-            gpio3_led2d.animate([(frame2d_b, ANIMATION_DELAY), (frame2d, ANIMATION_DELAY)])?;
+            gpio3_led2d.animate([(frame2d_b, ANIMATION_DELAY), (frame2d, ANIMATION_DELAY)]);
             button.wait_for_press().await;
 
             // write again, again
             frame1d[index] = colors::LIME;
-            gpio0_led_strip.write_frame(frame1d)?;
+            gpio0_led_strip.write_frame(frame1d);
             gpio3_led2d.write_text(text, &[colors::LIME]).await?;
             button.wait_for_press().await;
         }

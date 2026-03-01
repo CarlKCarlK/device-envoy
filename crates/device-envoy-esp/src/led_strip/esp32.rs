@@ -441,7 +441,8 @@ macro_rules! __led2d_strip_methods {
             frame: $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
         ) -> $crate::Result<()> {
             let led2d = $crate::led2d::Led2d::new(&self.inner, &Self::LED_LAYOUT);
-            led2d.write_frame(frame)
+            led2d.write_frame(frame);
+            Ok(())
         }
 
         pub fn animate2d<I>(&self, frames: I) -> $crate::Result<()>
@@ -453,7 +454,8 @@ macro_rules! __led2d_strip_methods {
             )>,
         {
             let led2d = $crate::led2d::Led2d::new(&self.inner, &Self::LED_LAYOUT);
-            led2d.animate(frames)
+            led2d.animate(frames);
+            Ok(())
         }
 
         pub fn write_text_to_frame(

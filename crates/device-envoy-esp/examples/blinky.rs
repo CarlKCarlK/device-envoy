@@ -92,7 +92,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel0, spawner)?;
     #[cfg(target_arch = "xtensa")]
     let sos_strip = SosStrip::new(p.GPIO38, rmt80.channel0, spawner)?;
-    sos_strip.animate(&SOS)?;
+    sos_strip.animate(&SOS);
 
     core::future::pending().await
 }

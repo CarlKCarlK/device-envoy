@@ -348,7 +348,8 @@ async fn show_portal_ready(led8x12: &Led8x12) -> Result<()> {
     led8x12.animate([
         (on_frame, Duration::from_millis(700)),
         (Frame2d::new(), Duration::from_millis(300)),
-    ])
+    ]);
+    Ok(())
 }
 
 async fn show_connecting(led8x12: &Led8x12, try_index: u8, _try_count: u8) -> Result<()> {
@@ -358,7 +359,8 @@ async fn show_connecting(led8x12: &Led8x12, try_index: u8, _try_count: u8) -> Re
     let clockwise = try_index % 2 == 0;
     const FRAME_DURATION: Duration = Duration::from_millis(90);
     let animation = perimeter_chase_animation(clockwise, CONNECTING_COLOR, FRAME_DURATION)?;
-    led8x12.animate(animation)
+    led8x12.animate(animation);
+    Ok(())
 }
 
 async fn show_connected(led8x12: &Led8x12) -> Result<()> {

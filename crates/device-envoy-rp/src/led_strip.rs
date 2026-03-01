@@ -74,7 +74,7 @@
 //!     }
 //!
 //!     // Display the frame on the LED strip (until replaced).
-//!     led_strip_simple.write_frame(frame)?;
+//!     led_strip_simple.write_frame(frame);
 //!
 //!     core::future::pending().await // run forever
 //! }
@@ -126,250 +126,13 @@
 //!         (Frame1d::filled(colors::RED), frame_duration),
 //!         (Frame1d::filled(colors::GREEN), frame_duration),
 //!         (Frame1d::filled(colors::BLUE), frame_duration),
-//!     ])?;
+//!     ]);
 //!
 //!     core::future::pending().await // run forever
 //! }
 //! ```
 
-/// 8-bit-per-channel RGB color re-exported from the
-/// [`smart_leds`](https://docs.rs/smart-leds/latest/smart_leds/index.html) crate.
-///
-/// Used in [`Frame1d`] and [Frame2d](crate::led2d::Frame2d) for pixel colors.
-///
-/// See [`colors`] for the predefined color list.
-///
-/// Conversion to [`Rgb888`] via [`ToRgb888::to_rgb888`].
-///
-/// # [`smart_leds`](https://docs.rs/smart-leds/latest/smart_leds/type.RGB8.html) Documentation:
-#[doc(inline)]
-pub use smart_leds::RGB8;
-
-/// Module containing predefined [`RGB8`] color constants, re-exported from the
-/// [`smart_leds`](https://docs.rs/smart-leds/latest/smart_leds/index.html) crate.
-///
-/// These constants follow CSS/Web color names. In particular, `GREEN` is
-/// `(0, 128, 0)` and `LIME` is `(0, 255, 0)`. If you want "full green," use
-/// `LIME`.
-///
-/// All examples in this crate use `smart_leds::colors::*` as the single source
-/// of named colors; when an embedded-graphics API needs [`Rgb888`], convert with
-/// [`ToRgb888::to_rgb888`].
-#[doc(inline)]
-pub use smart_leds::colors;
-
-/// 8-bit-per-channel RGB color re-exported from the
-/// [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
-///
-/// See [Frame2d](crate::led2d::Frame2d) for usage examples of [`Rgb888`] and [`RGB8`].
-///
-/// Get named colors from [`colors`] and convert to `Rgb888` with
-/// [`ToRgb888::to_rgb888`].
-///
-/// Conversion to [`RGB8`] via [`ToRgb8::to_rgb8`].
-///
-/// # [`embedded-graphics`](https://docs.rs/embedded-graphics/latest/embedded_graphics/pixelcolor/struct.Rgb888.html) Documentation:
-#[doc(inline)]
-pub use embedded_graphics::pixelcolor::Rgb888;
-
-/// Convert colors to [`RGB8`] for LED strip rendering.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// # use core::assert_eq;
-/// use device_envoy_rp::led_strip::{Rgb888, ToRgb8, RGB8};
-/// # fn main() {
-/// let rgb8 = RGB8::new(16, 32, 48).to_rgb8();
-/// let rgb888 = Rgb888::new(16, 32, 48);
-/// let converted = rgb888.to_rgb8();
-///
-/// assert_eq!(rgb8, converted);
-/// # }
-/// ```
-pub trait ToRgb8 {
-    /// Convert this color to [`RGB8`].
-    ///
-    /// See the [`ToRgb8`](Self) trait docs for a usage example.
-    #[must_use]
-    fn to_rgb8(self) -> RGB8;
-}
-
-impl ToRgb8 for RGB8 {
-    #[inline(always)]
-    fn to_rgb8(self) -> RGB8 {
-        self
-    }
-}
-
-impl ToRgb8 for Rgb888 {
-    #[inline(always)]
-    fn to_rgb8(self) -> RGB8 {
-        RGB8::new(self.r(), self.g(), self.b())
-    }
-}
-
-/// Convert colors to [`Rgb888`] for embedded-graphics rendering.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// # use core::assert_eq;
-/// use device_envoy_rp::led_strip::{Rgb888, ToRgb888, RGB8};
-/// # fn main() {
-/// let rgb8 = RGB8::new(16, 32, 48);
-/// let rgb888 = rgb8.to_rgb888();
-/// let already_rgb888 = Rgb888::new(16, 32, 48).to_rgb888();
-///
-/// assert_eq!(rgb888, already_rgb888);
-/// # }
-/// ```
-pub trait ToRgb888 {
-    /// Convert this color to [`Rgb888`].
-    ///
-    /// See the [`ToRgb888`](Self) trait docs for a usage example.
-    #[must_use]
-    fn to_rgb888(self) -> Rgb888;
-}
-
-impl ToRgb888 for RGB8 {
-    #[inline(always)]
-    fn to_rgb888(self) -> Rgb888 {
-        Rgb888::new(self.r, self.g, self.b)
-    }
-}
-
-impl ToRgb888 for Rgb888 {
-    #[inline(always)]
-    fn to_rgb888(self) -> Rgb888 {
-        self
-    }
-}
-
-#[cfg(not(feature = "host"))]
-use core::borrow::Borrow;
-use core::ops::{Deref, DerefMut};
-use embedded_graphics::prelude::RgbColor;
-
-// ============================================================================
-// Gamma Correction
-// ============================================================================
-
-/// Gamma correction configuration for LED strips.
-///
-/// See the [`led_strip!`](macro@crate::led_strip), [`led_strips!`](crate::led_strips),
-/// and [`led2d!`](mod@crate::led2d) macro docs for usage and context.
-///
-/// For background on gamma correction, see the
-/// [Wikipedia article on gamma correction](https://en.wikipedia.org/wiki/Gamma_correction).
-///
-/// This is not display-calibrated color management; it is a simple LED brightness curve.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Gamma {
-    /// No correction; raw LED PWM values.
-    Linear,
-    /// Perceptual sRGB semantics (gamma 2.2).
-    ///
-    /// This preserves the intent of the named color constants.
-    Srgb,
-    /// Compatibility with the historical `smart_leds::gamma()` curve (2.8).
-    SmartLeds,
-}
-
-impl Default for Gamma {
-    fn default() -> Self {
-        Self::Srgb
-    }
-}
-
-// Public so led_strip!/led_strips! expansions in downstream crates can reference it.
-#[doc(hidden)]
-/// Default gamma correction curve for generated LED devices (`Gamma::Srgb`).
-pub const GAMMA_DEFAULT: Gamma = Gamma::Srgb;
-
-/// Gamma 2.2 lookup table for 8-bit values.
-/// Pre-computed to avoid floating point math: corrected = (value/255)^2.2 * 255
-pub(crate) const GAMMA_SRGB_TABLE: [u8; 256] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
-    3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11,
-    11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 22, 22, 23,
-    23, 24, 25, 25, 26, 26, 27, 28, 28, 29, 30, 30, 31, 32, 33, 33, 34, 35, 35, 36, 37, 38, 39, 39,
-    40, 41, 42, 43, 43, 44, 45, 46, 47, 48, 49, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-    62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 73, 74, 75, 76, 77, 78, 79, 81, 82, 83, 84, 85, 87, 88,
-    89, 90, 91, 93, 94, 95, 97, 98, 99, 100, 102, 103, 105, 106, 107, 109, 110, 111, 113, 114, 116,
-    117, 119, 120, 121, 123, 124, 126, 127, 129, 130, 132, 133, 135, 137, 138, 140, 141, 143, 145,
-    146, 148, 149, 151, 153, 154, 156, 158, 159, 161, 163, 165, 166, 168, 170, 172, 173, 175, 177,
-    179, 181, 182, 184, 186, 188, 190, 192, 194, 196, 197, 199, 201, 203, 205, 207, 209, 211, 213,
-    215, 217, 219, 221, 223, 225, 227, 229, 231, 234, 236, 238, 240, 242, 244, 246, 248, 251, 253,
-    255,
-];
-
-/// Gamma 2.8 lookup table for 8-bit values.
-/// Matches `smart_leds::gamma()` behavior.
-pub(crate) const GAMMA_SMARTLEDS_TABLE: [u8; 256] = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
-    5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14,
-    14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25, 25, 26, 27,
-    27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36, 37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46,
-    47, 48, 49, 50, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68, 69, 70, 72,
-    73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89, 90, 92, 93, 95, 96, 98, 99, 101, 102, 104,
-    105, 107, 109, 110, 112, 114, 115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137,
-    138, 140, 142, 144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
-    177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213, 215, 218, 220,
-    223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255,
-];
-
-/// Linear lookup table (identity function).
-const LINEAR_TABLE: [u8; 256] = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-    50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
-    74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97,
-    98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-    117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
-    136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
-    155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173,
-    174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192,
-    193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211,
-    212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230,
-    231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249,
-    250, 251, 252, 253, 254, 255,
-];
-
-/// Generate a combined gamma correction and brightness scaling lookup table.
-///
-/// This combines two operations into a single table lookup for efficiency:
-/// 1. Apply gamma correction based on the `gamma` parameter
-/// 2. Scale by `max_brightness` for electrical current limiting
-///
-/// The result is a table where `combo_table[input_value]` gives the final output value.
-#[doc(hidden)] // Implementation detail used by macro-generated strip types
-#[must_use]
-pub const fn generate_combo_table(gamma: Gamma, max_brightness: u8) -> [u8; 256] {
-    let gamma_table = match gamma {
-        Gamma::Linear => &LINEAR_TABLE,
-        Gamma::Srgb => &GAMMA_SRGB_TABLE,
-        Gamma::SmartLeds => &GAMMA_SMARTLEDS_TABLE,
-    };
-    let mut result = [0u8; 256];
-    let mut index = 0;
-    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
-    while index < 256 {
-        let gamma_corrected = gamma_table[index];
-        // Apply brightness scaling: (value * brightness) / 255
-        let scaled = ((gamma_corrected as u16 * max_brightness as u16) / 255) as u8;
-        result[index] = scaled;
-        index += 1;
-    }
-    result
-}
+pub use device_envoy_core::led_strip::*;
 
 #[cfg(not(feature = "host"))]
 use core::cell::RefCell;
@@ -387,81 +150,15 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 #[cfg(not(feature = "host"))]
 use embassy_sync::once_lock::OnceLock;
 #[cfg(not(feature = "host"))]
-use embassy_sync::signal::Signal;
-#[cfg(not(feature = "host"))]
 use embassy_time::{Duration, Timer};
 #[cfg(not(feature = "host"))]
 use heapless::Vec;
-
-#[cfg(not(feature = "host"))]
-use crate::Result;
 
 // ============================================================================
 // Submodules
 // ============================================================================
 
 pub mod led_strip_generated;
-
-/// 1D pixel array used to describe LED strip patterns.
-///
-/// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
-///
-/// Frames deref to `[RGB8; N]`, so you can mutate pixels directly before passing them to the generated strip's `write_frame` method.
-#[derive(Clone, Copy, Debug)]
-pub struct Frame1d<const N: usize>(pub [RGB8; N]);
-
-impl<const N: usize> Frame1d<N> {
-    /// Number of LEDs in this frame.
-    pub const LEN: usize = N;
-
-    /// Create a new blank (all black) frame.
-    ///
-    /// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self([RGB8::new(0, 0, 0); N])
-    }
-
-    /// Create a frame filled with a single color.
-    ///
-    /// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
-    #[must_use]
-    pub const fn filled(color: RGB8) -> Self {
-        Self([color; N])
-    }
-}
-
-impl<const N: usize> Deref for Frame1d<N> {
-    type Target = [RGB8; N];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<const N: usize> DerefMut for Frame1d<N> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<const N: usize> From<[RGB8; N]> for Frame1d<N> {
-    fn from(array: [RGB8; N]) -> Self {
-        Self(array)
-    }
-}
-
-impl<const N: usize> From<Frame1d<N>> for [RGB8; N] {
-    fn from(frame: Frame1d<N>) -> Self {
-        frame.0
-    }
-}
-
-impl<const N: usize> Default for Frame1d<N> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 // ============================================================================
 // PIO Bus - Shared PIO resource for multiple LED strips
@@ -546,135 +243,6 @@ impl<'d, PIO: Instance> PioBus<'d, PIO> {
     }
 }
 
-// ============================================================================
-// LED Strip Command Channel and Static
-// ============================================================================
-
-#[cfg(not(feature = "host"))]
-#[cfg(not(feature = "host"))]
-#[doc(hidden)] // Required pub for macro expansion in downstream crates
-pub type LedStripCommandSignal<const N: usize, const MAX_FRAMES: usize> =
-    Signal<CriticalSectionRawMutex, Command<N, MAX_FRAMES>>;
-
-#[cfg(not(feature = "host"))]
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-// Command for the LED strip animation loop.
-#[derive(Clone)]
-pub enum Command<const N: usize, const MAX_FRAMES: usize> {
-    DisplayStatic(Frame1d<N>),
-    Animate(Vec<(Frame1d<N>, Duration), MAX_FRAMES>),
-}
-
-/// Static used to construct LED strip instances with animation support.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)] // Must be pub for method signatures and macro expansion in downstream crates
-pub struct LedStripStatic<const N: usize, const MAX_FRAMES: usize> {
-    command_signal: LedStripCommandSignal<N, MAX_FRAMES>,
-}
-
-#[cfg(not(feature = "host"))]
-impl<const N: usize, const MAX_FRAMES: usize> LedStripStatic<N, MAX_FRAMES> {
-    /// Creates static resources.
-    #[must_use]
-    #[doc(hidden)]
-    pub const fn new_static() -> Self {
-        Self {
-            command_signal: Signal::new(),
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn command_signal(&'static self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
-        &self.command_signal
-    }
-}
-
-// Public so macro-generated types can deref to it; hidden from docs.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-/// Internal deref target for generated LED strip types.
-///
-/// All LED strip methods are available through macro-generated types.
-/// See [`led_strip!`] macro documentation for usage.
-pub struct LedStrip<const N: usize, const MAX_FRAMES: usize> {
-    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
-}
-
-#[cfg(not(feature = "host"))]
-impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
-    /// Creates LED strip resources.
-    #[must_use]
-    #[doc(hidden)]
-    pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
-        LedStripStatic::new_static()
-    }
-
-    /// Creates a new LED strip controller bound to the given static resources.
-    pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Result<Self> {
-        Ok(Self {
-            command_signal: led_strip_static.command_signal(),
-        })
-    }
-
-    /// Writes a full frame to the LED strip. It remains displayed until another command
-    /// replaces it.
-    ///
-    /// See the [led_strip module documentation](mod@crate::led_strip) for example usage.
-    pub fn write_frame(&self, frame: Frame1d<N>) -> Result<()> {
-        self.command_signal.signal(Command::DisplayStatic(frame));
-        Ok(())
-    }
-
-    /// Loop forever through a sequence of animation frames.
-    /// They remain displayed until another command replaces them.
-    ///
-    /// Each frame is a tuple of `(Frame1d, Duration)`. Accepts arrays, `Vec`s, or any
-    /// iterator that produces `(Frame1d, Duration)` tuples.
-    ///
-    /// Returns immediately; the animation runs in the background until interrupted
-    /// by a new `animate` call or `write_frame`.
-    ///
-    /// This uses [`embassy_time::Duration`] for frame timing.
-    /// See the [led_strip module documentation](mod@crate::led_strip) for example usage.
-    pub fn animate<I>(&self, frames: I) -> Result<()>
-    where
-        I: IntoIterator,
-        I::Item: Borrow<(Frame1d<N>, embassy_time::Duration)>,
-    {
-        if MAX_FRAMES == 0 {
-            return Err(crate::Error::AnimationDisabled(MAX_FRAMES));
-        }
-        let mut sequence: Vec<(Frame1d<N>, Duration), MAX_FRAMES> = Vec::new();
-        for frame in frames {
-            let (frame, duration) = *frame.borrow();
-            assert!(
-                duration.as_micros() > 0,
-                "animation frame duration must be positive"
-            );
-            sequence
-                .push((frame, duration))
-                .expect("animation sequence fits within MAX_FRAMES");
-        }
-        self.animate_frames(sequence)
-    }
-
-    pub(crate) fn animate_frames(
-        &self,
-        sequence: Vec<(Frame1d<N>, Duration), MAX_FRAMES>,
-    ) -> Result<()> {
-        if MAX_FRAMES == 0 {
-            return Err(crate::Error::AnimationDisabled(MAX_FRAMES));
-        }
-        assert!(
-            !sequence.is_empty(),
-            "animation requires at least one frame"
-        );
-        self.command_signal.signal(Command::Animate(sequence));
-        Ok(())
-    }
-}
-
 #[cfg(not(feature = "host"))]
 #[doc(hidden)] // Required pub for macro expansion in downstream crates
 pub async fn led_strip_device_loop<
@@ -742,14 +310,6 @@ where
     }
 }
 
-#[cfg(not(feature = "host"))]
-fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 256]) {
-    frame.iter_mut().for_each(|pixel| {
-        pixel.r = combo_table[pixel.r as usize];
-        pixel.g = combo_table[pixel.g as usize];
-        pixel.b = combo_table[pixel.b as usize];
-    });
-}
 /// Macro to generate multiple LED strip and panel struct types that share a single
 /// [PIO resource](crate#glossary) (includes syntax details).
 ///
@@ -872,14 +432,14 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///
 ///     // Turn on all-white on GPIO0 strip.
 ///     let frame_gpio0 = Frame1d::filled(colors::WHITE);
-///     gpio0_led_strip.write_frame(frame_gpio0)?; // Display the frame (until replaced)
+///     gpio0_led_strip.write_frame(frame_gpio0); // Display the frame (until replaced)
 ///
 ///     // Alternate blue/gray on GPIO3 strip.
 ///     let mut frame_gpio3 = Frame1d::new();
 ///     for pixel_index in 0..Gpio3LedStrip::LEN {
 ///         frame_gpio3[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
 ///     }
-///     gpio3_led_strip.write_frame(frame_gpio3)?;  // Display the frame (until replaced)
+///     gpio3_led_strip.write_frame(frame_gpio3);  // Display the frame (until replaced)
 ///
 ///     // Animate "Go Go" text on GPIO4 2D panel.
 ///     let mut frame_go_top = Frame2d::new();
@@ -897,7 +457,7 @@ fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 2
 ///         .animate([
 ///             (frame_go_top, frame_duration),
 ///             (frame_go_bottom, frame_duration),
-///         ])?; // Loop animation (until replaced)
+///         ]); // Loop animation (until replaced)
 ///
 ///     future::pending::<Result<Infallible>>().await // Run forever
 /// }
@@ -1231,7 +791,7 @@ macro_rules! __led_strips_impl {
                         STRIP_STATIC.command_signal(),
                     );
                     spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
-                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC)?;
+                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init(Self { strip });
                     Ok(instance)
                 }
@@ -1349,7 +909,7 @@ macro_rules! __led_strips_impl {
                         STRIP_STATIC.command_signal(),
                     );
                     spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
-                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC)?;
+                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init(Self { strip });
                     Ok(instance)
                 }
@@ -3102,7 +2662,7 @@ macro_rules! __led_strip_impl {
                     );
                     spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
 
-                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC)?;
+                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init($name { strip });
                     Ok(instance)
                 }
@@ -3181,60 +2741,7 @@ pub use led_strip;
 #[doc(inline)]
 pub use led_strips;
 
-/// Electrical current budget configuration for LED strips.
-///
-/// See the [`led_strip!`](macro@crate::led_strip), [`led_strips!`](crate::led_strips),
-/// and [`led2d!`](mod@crate::led2d) macro docs for usage and context.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Current {
-    /// Limit brightness to stay within a specific milliamp budget.
-    ///
-    /// The `max_brightness` is automatically calculated to ensure the worst-case electrical current
-    /// (all LEDs at full brightness) does not exceed this limit. For example, a 16-LED strip
-    /// draws 960 mA at full brightness (assuming 60 mA per LED); with the default electrical current
-    /// limit, brightness is capped at ~26%.
-    ///
-    /// See the [`led_strip!`](macro@crate::led_strip), [`led_strips!`](crate::led_strips),
-    /// and [`led2d!`](mod@crate::led2d) macro docs for usage and context.
-    Milliamps(u16),
-    /// No limit — brightness stays at 100% (subject to practical hardware constraints like
-    /// USB power delivery and the Pico's circuitry).
-    ///
-    /// See the [`led_strip!`](macro@crate::led_strip), [`led_strips!`](crate::led_strips),
-    /// and [`led2d!`](mod@crate::led2d) macro docs for usage and context.
-    Unlimited,
-}
-
-impl Default for Current {
-    fn default() -> Self {
-        Self::Milliamps(250)
-    }
-}
-
 // Public so led_strip!/led_strips! expansions in downstream crates can reference it.
 #[doc(hidden)]
 /// Default electrical current budget for generated LED devices (`Current::Milliamps(250)`).
 pub const MAX_CURRENT_DEFAULT: Current = Current::Milliamps(250);
-
-// Public so led_strip!/led_strips! expansions in downstream crates can reference it.
-#[doc(hidden)]
-/// Default maximum animation frames for generated LED devices (`16`).
-pub const MAX_FRAMES_DEFAULT: usize = 16;
-
-impl Current {
-    /// Calculate maximum brightness based on electrical current budget and worst-case electrical current draw.
-    ///
-    /// Returns 255 (full brightness) for Unlimited, or a scaled value for Milliamps.
-    #[doc(hidden)] // Called by macro-generated code; not part of public API
-    #[must_use]
-    pub const fn max_brightness(self, worst_case_ma: u32) -> u8 {
-        assert!(worst_case_ma > 0, "worst_case_ma must be positive");
-        match self {
-            Self::Milliamps(ma) => {
-                let scale = (ma as u32 * 255) / worst_case_ma;
-                if scale > 255 { 255 } else { scale as u8 }
-            }
-            Self::Unlimited => 255,
-        }
-    }
-}

@@ -43,9 +43,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Display frames in a loop with delay to create a blinking effect.
     loop {
-        led_strip8.write_frame(frame0)?;
+        led_strip8.write_frame(frame0);
         Timer::after(Duration::from_millis(150)).await;
-        led_strip8.write_frame(frame1)?;
+        led_strip8.write_frame(frame1);
         Timer::after(Duration::from_millis(150)).await;
     }
 }

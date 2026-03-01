@@ -186,7 +186,7 @@ async fn conway_task(
 
     loop {
         let current_frame = board.to_frame(alive_color);
-        led16x16.write_frame(current_frame).unwrap();
+        led16x16.write_frame(current_frame);
 
         // Calculate frame duration based on speed mode
         let frame_duration = match speed_mode {
@@ -260,7 +260,7 @@ async fn conway_task(
                         if paused {
                             board.step();
                             let current_frame = board.to_frame(colors::LIME);
-                            led16x16.write_frame(current_frame).unwrap();
+                            led16x16.write_frame(current_frame);
                         } else {
                             // Pattern change requested
                             pattern_index = (pattern_index + 1) % PATTERNS.len();
@@ -304,7 +304,7 @@ async fn conway_task(
                         alive_color = ALIVE_COLORS[color_index];
                         info!("=== Color index: {} ===", color_index);
                         let current_frame = board.to_frame(alive_color);
-                        led16x16.write_frame(current_frame).unwrap();
+                        led16x16.write_frame(current_frame);
                     }
                     ConwayMessage::SetPatternIndex(new_pattern_index) => {
                         assert!(new_pattern_index < PATTERNS.len());

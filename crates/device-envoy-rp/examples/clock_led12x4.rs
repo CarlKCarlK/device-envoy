@@ -341,14 +341,16 @@ async fn show_portal_ready(led12x4: &Led12x4) -> Result<()> {
     led12x4.animate([
         (on_frame, Duration::from_millis(700)),
         (Frame2d::new(), Duration::from_millis(300)),
-    ])
+    ]);
+    Ok(())
 }
 
 async fn show_connecting(led12x4: &Led12x4, try_index: u8, _try_count: u8) -> Result<()> {
     let clockwise = try_index % 2 == 0;
     const FRAME_DURATION: Duration = Duration::from_millis(90);
     let animation = perimeter_chase_animation(clockwise, CONNECTING_COLOR, FRAME_DURATION)?;
-    led12x4.animate(animation)
+    led12x4.animate(animation);
+    Ok(())
 }
 
 async fn show_connected(led12x4: &Led12x4) -> Result<()> {

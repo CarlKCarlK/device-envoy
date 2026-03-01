@@ -96,7 +96,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         .push((frame2, Duration::from_millis(1000)))
         .expect("go_frames has capacity for 2 frames");
 
-    gpio3_led2d.animate(go_frames)?;
+    gpio3_led2d.animate(go_frames);
 
     // Create separate animation for the 8x12 rotated display with 2-line text
     let mut go_frames_8x12 = Vec::<_, 2>::new();
@@ -123,11 +123,11 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         .push((frame2_8x12, Duration::from_millis(1000)))
         .expect("go_frames_8x12 has capacity for 2 frames");
 
-    gpio4_led2d.animate(go_frames_8x12)?;
+    gpio4_led2d.animate(go_frames_8x12);
 
     loop {
         step_snake(&mut frame_g0, &mut pos_g0);
-        gpio0_led_strip.write_frame(frame_g0)?;
+        gpio0_led_strip.write_frame(frame_g0);
         Timer::after_millis(80).await;
     }
 }

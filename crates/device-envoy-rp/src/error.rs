@@ -52,9 +52,6 @@ pub enum Error {
 
     #[display("Storage is invalid or corrupted")]
     StorageCorrupted,
-
-    #[display("animation disabled (max_frames = {_0})")]
-    AnimationDisabled(#[error(not(source))] usize),
 }
 
 impl From<()> for Error {

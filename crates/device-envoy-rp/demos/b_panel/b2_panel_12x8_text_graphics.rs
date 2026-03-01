@@ -81,7 +81,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .draw(&mut frame2d)?;
 
     // Write the frame to the LED panel. It stays until you replace it.
-    led12x8.write_frame(frame2d)?;
+    led12x8.write_frame(frame2d);
 
     future::pending().await // run forever
 }

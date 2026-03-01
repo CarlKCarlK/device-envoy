@@ -152,9 +152,8 @@ impl Led2dGenerated {
     pub fn write_frame(
         &self,
         frame: Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>,
-    ) -> Result<()> {
+    ) {
         let _ = frame;
-        Ok(())
     }
 
     /// Write text to the LED panel.
@@ -184,9 +183,8 @@ impl Led2dGenerated {
     pub fn animate<const N: usize>(
         &self,
         frames: [(Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>, embassy_time::Duration); N],
-    ) -> Result<()> {
+    ) {
         let _ = frames;
-        Ok(())
     }
 }
 "#;

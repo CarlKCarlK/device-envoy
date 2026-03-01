@@ -104,9 +104,8 @@ impl LedStripGenerated {
     pub fn write_frame(
         &self,
         frame: Frame1d<{ Self::LEN }>,
-    ) -> Result<()> {
+    ) {
         let _ = frame;
-        Ok(())
     }
 
     /// Animate frames on the LED strip.
@@ -115,8 +114,7 @@ impl LedStripGenerated {
     pub fn animate<const N: usize>(
         &self,
         frames: [(Frame1d<{ Self::LEN }>, embassy_time::Duration); N],
-    ) -> Result<()> {
+    ) {
         let _ = frames;
-        Ok(())
     }
 }

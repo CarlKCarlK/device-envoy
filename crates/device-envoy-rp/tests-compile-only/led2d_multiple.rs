@@ -70,20 +70,20 @@ async fn test_multiple_devices(p: embassy_rp::Peripherals, spawner: Spawner) -> 
     let mut frame_4x12 = Frame2d::<12, 4>::new();
     frame_4x12[(0, 0)] = colors::RED;
     frame_4x12[(Gpio3Led2d::WIDTH - 1, Gpio3Led2d::HEIGHT - 1)] = colors::BLUE;
-    gpio3_led2d.write_frame(frame_4x12)?;
+    gpio3_led2d.write_frame(frame_4x12);
 
     // Create frame for 8x8 display (different dimensions)
     let mut frame_8x8 = Frame2d::<8, 8>::new();
     frame_8x8[(0, 0)] = colors::GREEN;
     frame_8x8[(Gpio4Led2d::WIDTH - 1, Gpio4Led2d::HEIGHT - 1)] = colors::YELLOW;
-    gpio4_led2d.write_frame(frame_8x8)?;
+    gpio4_led2d.write_frame(frame_8x8);
 
     // Verify animations work with both
     let frames_4x12 = [(frame_4x12, Duration::from_millis(100))];
-    gpio3_led2d.animate(frames_4x12)?;
+    gpio3_led2d.animate(frames_4x12);
 
     let frames_8x8 = [(frame_8x8, Duration::from_millis(100))];
-    gpio4_led2d.animate(frames_8x8)?;
+    gpio4_led2d.animate(frames_8x8);
 
     // Verify N constant is correct for each
     const _N_4X12: usize = Gpio3Led2d::N; // Should be 48

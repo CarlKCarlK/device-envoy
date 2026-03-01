@@ -117,7 +117,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         colors::GRAY,
     ]);
     led_strip8.write_frame(frame);
-    sos_strip.animate(&SOS)?;
+    sos_strip.animate(&SOS);
 
     core::future::pending().await
 }

@@ -48,7 +48,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         blink_frame[led_index] = colors::BLACK;
         steady_frame[led_index] = color;
         const BLINK_DELAY: Duration = Duration::from_millis(150);
-        led_strip8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)])?;
+        led_strip8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)]);
 
         // Wait for a button press.
         // Tells if a long or short press.

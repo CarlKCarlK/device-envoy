@@ -88,7 +88,7 @@ async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         (Frame1d::filled(colors::RED), frame_duration),
         (Frame1d::filled(colors::GREEN), frame_duration),
         (Frame1d::filled(colors::BLUE), frame_duration),
-    ])?;
+    ]);
 
     core::future::pending().await // run forever
 }

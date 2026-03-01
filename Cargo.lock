@@ -676,6 +676,14 @@ dependencies = [
 [[package]]
 name = "device-envoy-core"
 version = "0.0.0"
+dependencies = [
+ "critical-section",
+ "embassy-sync 0.7.2",
+ "embassy-time",
+ "embedded-graphics",
+ "heapless 0.8.0",
+ "smart-leds",
+]
 
 [[package]]
 name = "device-envoy-demos"
@@ -703,6 +711,7 @@ name = "device-envoy-esp"
 version = "0.0.1-alpha"
 dependencies = [
  "crc32fast",
+ "device-envoy-core",
  "embassy-executor",
  "embassy-futures",
  "embassy-net",
@@ -745,6 +754,7 @@ dependencies = [
  "defmt 0.3.100",
  "defmt-rtt",
  "derive_more",
+ "device-envoy-core",
  "embassy-executor",
  "embassy-futures",
  "embassy-hal-internal 0.4.0",

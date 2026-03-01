@@ -65,8 +65,8 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     );
 
     // Start the animation loop on both strips - they will run forever in the background
-    gpio3_led_strip.animate(&frames)?;
-    gpio4_led_strip.animate(&frames)?;
+    gpio3_led_strip.animate(&frames);
+    gpio4_led_strip.animate(&frames);
 
     info!("Snake animations started, entering idle loop");
 

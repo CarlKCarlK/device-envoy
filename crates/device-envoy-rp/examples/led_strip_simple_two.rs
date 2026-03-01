@@ -88,7 +88,7 @@ impl<const N: usize> BounceState<N> {
         assert!(self.position < N);
         let mut frame = Frame1d::<N>::new();
         frame[self.position] = colors::WHITE;
-        led_strip.write_frame(frame)?;
+        led_strip.write_frame(frame);
         self.advance();
         Ok(())
     }

@@ -50,7 +50,7 @@ async fn update_rainbow(led_strip: &Gpio0LedStrip, base: u8) -> Result<()> {
         let offset = base.wrapping_add((idx as u8).wrapping_mul(16));
         frame[idx] = wheel(offset);
     }
-    led_strip.write_frame(frame)?;
+    led_strip.write_frame(frame);
     Ok(())
 }
 

@@ -67,7 +67,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         frames.len()
     );
 
-    gpio5_led_strip.animate(frames)?;
+    gpio5_led_strip.animate(frames);
 
     future::pending::<Result<Infallible>>().await // Run forever
 }

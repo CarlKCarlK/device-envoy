@@ -154,12 +154,12 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         .expect("go_frames has capacity for 2 frames");
 
     // Kick off animations
-    gpio3_led2d.animate(go_frames_gpio3.clone())?;
-    gpio4_led2d.animate(go_frames_gpio4)?;
+    gpio3_led2d.animate(go_frames_gpio3.clone());
+    gpio4_led2d.animate(go_frames_gpio4);
 
     loop {
         step_snake(&mut frame_gpio0, &mut position_gpio0);
-        gpio0_led_strip.write_frame(frame_gpio0)?;
+        gpio0_led_strip.write_frame(frame_gpio0);
         Timer::after(snake_tick).await;
     }
 }

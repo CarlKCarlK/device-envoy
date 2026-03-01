@@ -43,7 +43,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     for led_index in (0..LedStrip8::LEN).cycle() {
         blink_frame[led_index] = colors::BLACK; // add hole
         const BLINK_DELAY: Duration = Duration::from_millis(150);
-        led_strip8.animate([(steady_frame, BLINK_DELAY), (blink_frame, BLINK_DELAY)])?;
+        led_strip8.animate([(steady_frame, BLINK_DELAY), (blink_frame, BLINK_DELAY)]);
 
         // Wait for a press. (If down already, waits for release, first.)
         // Do debouncing internally. When pressed, don't wait for release.

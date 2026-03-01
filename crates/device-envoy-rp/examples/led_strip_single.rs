@@ -54,7 +54,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     led_strip.animate([
         (rainbow_frame, FRAME_DURATION),
         (black_frame, FRAME_DURATION),
-    ])?;
+    ]);
 
     future::pending().await // run forever
 }

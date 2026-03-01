@@ -37,7 +37,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     for pixel_index in 0..LedStrip3::LEN {
         frame[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
     }
-    led_strip3.write_frame(frame)?;
+    led_strip3.write_frame(frame);
 
     future::pending::<Result<Infallible>>().await // Run forever
 }

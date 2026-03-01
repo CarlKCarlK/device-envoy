@@ -12,6 +12,7 @@ embassy-time   = { version = "0.5.0" }
 embassy-sync   = { version = "0.7.2" }
 embassy-futures = { version = "0.1.2" }
 smart-leds     = { version = "0.4.0" }
+device-envoy-core = { path = "../device-envoy-core" }
 embedded-graphics = { version = "0.8", default-features = false }
 heapless       = { version = "0.8.0", features = ["serde"] }
 static_cell    = { version = "2.1.0" }

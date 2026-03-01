@@ -132,7 +132,7 @@
 //!     // Animate between the two frames indefinitely.
 //!     let frame_duration = Duration::from_secs(1);
 //!     led_12x8_animated
-//!         .animate([(frame_0, frame_duration), (frame_1, frame_duration)])?;
+//!         .animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
 //!
 //!     future::pending().await // run forever
 //! }
@@ -193,13 +193,9 @@ type StripFrame<const N: usize> = [RGB8; N];
 pub struct LedStrip<const N: usize, const MAX_FRAMES: usize>;
 #[cfg(feature = "host")]
 impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
-    fn write_frame(&self, _frame: StripFrame<N>) -> Result<()> {
-        Ok(())
-    }
+    fn write_frame(&self, _frame: StripFrame<N>) {}
 
-    fn animate(&self, _frames: impl IntoIterator<Item = (StripFrame<N>, Duration)>) -> Result<()> {
-        Ok(())
-    }
+    fn animate(&self, _frames: impl IntoIterator<Item = (StripFrame<N>, Duration)>) {}
 }
 use crate::Result;
 use crate::led_strip::ToRgb888;
@@ -758,9 +754,9 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
     /// Render a fully defined frame to the panel.
     ///
     /// Frame2d is a 2D array in row-major order where `frame[(col, row)]` is the pixel at (col, row).
-    pub fn write_frame<const W: usize, const H: usize>(&self, frame: Frame2d<W, H>) -> Result<()> {
+    pub fn write_frame<const W: usize, const H: usize>(&self, frame: Frame2d<W, H>) {
         let strip_frame = self.convert_frame(frame);
-        self.led_strip.write_frame(strip_frame)
+        self.led_strip.write_frame(strip_frame);
     }
 
     /// Loop through a sequence of animation frames until interrupted by another command.
@@ -772,7 +768,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
     /// Returns immediately; the animation runs in the background until interrupted
     /// by a new `animate` call or `write_frame`.
     /// This uses [`embassy_time::Duration`] for frame timing.
-    pub fn animate<const W: usize, const H: usize, I>(&self, frames: I) -> Result<()>
+    pub fn animate<const W: usize, const H: usize, I>(&self, frames: I)
     where
         I: IntoIterator,
         I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
@@ -780,7 +776,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2d<N, MAX_FRAMES> {
         self.led_strip.animate(frames.into_iter().map(|frame| {
             let (frame, duration) = *frame.borrow();
             (self.convert_frame(frame), duration)
-        }))
+        }));
     }
 }
 
@@ -1436,7 +1432,7 @@ macro_rules! led2d_from_strip {
                 $vis fn write_frame(
                     &self,
                     frame: $crate::led2d::Frame2d<{ $led_layout_const.width() }, { $led_layout_const.height() }>,
-                ) -> $crate::Result<()> {
+                ) {
                     self.led2d.write_frame(frame)
                 }
 
@@ -1449,7 +1445,7 @@ macro_rules! led2d_from_strip {
                             ::embassy_time::Duration,
                         ),
                     >,
-                ) -> $crate::Result<()> {
+                ) {
                     self.led2d.animate(frames)
                 }
 
@@ -1467,7 +1463,8 @@ macro_rules! led2d_from_strip {
                 pub async fn write_text(&self, text: &str, colors: &[smart_leds::RGB8]) -> $crate::Result<()> {
                     let mut frame = $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::new();
                     self.write_text_to_frame(text, colors, &mut frame)?;
-                    self.write_frame(frame)
+                    self.write_frame(frame);
+                    Ok(())
                 }
             }
         }

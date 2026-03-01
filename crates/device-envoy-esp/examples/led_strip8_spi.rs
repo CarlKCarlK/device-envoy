@@ -63,7 +63,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         colors::BLACK,
         colors::ORANGE,
     ]);
-    led_strip8_spi.animate([(frame0, FRAME_DURATION), (frame1, FRAME_DURATION)])?;
+    led_strip8_spi.animate([(frame0, FRAME_DURATION), (frame1, FRAME_DURATION)]);
 
     core::future::pending().await
 }

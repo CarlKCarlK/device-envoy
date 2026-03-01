@@ -9,3 +9,15 @@ members = [
     "crates/device-envoy-esp",
     "crates/device-envoy-esp/xtask",
 ]
+
+[profile.dev]
+panic = "abort"
+
+[profile.dev.package.esp-radio]
+opt-level = 3
+
+[profile.release]
+# debug = 2    # uncomment for better backtraces, at the cost of code size
+lto = "thin"
+codegen-units = 1
+panic = "abort"

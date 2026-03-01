@@ -235,12 +235,3 @@ must_use_candidate = "warn"
 blanket_clippy_restriction_lints = "warn"
 cargo = "warn"
 restriction = "warn"
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-# debug = 2    # uncomment for better backtraces, at the cost of code size
-lto = "thin"
-codegen-units = 1
-panic = "abort"

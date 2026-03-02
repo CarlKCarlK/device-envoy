@@ -19,53 +19,12 @@ pub use button_watch::{ButtonWatch, ButtonWatchStatic};
 #[doc(hidden)]
 pub use button_watch::{button_watch_task, button_watch_task_from_input};
 
+pub use device_envoy_core::button::{BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION, PressDuration, PressedTo};
+
 use embassy_futures::select::{Either, select};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Pull};
 use embassy_time::{Duration, Timer};
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-/// Debounce delay for the button.
-pub(crate) const BUTTON_DEBOUNCE_DELAY: Duration = Duration::from_millis(10);
-
-/// Duration representing a long button press.
-pub(crate) const LONG_PRESS_DURATION: Duration = Duration::from_millis(500);
-
-// ============================================================================
-// PressedTo - How the button is wired
-// ============================================================================
-
-/// Describes if the button connects to voltage or ground when pressed.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, defmt::Format)]
-pub enum PressedTo {
-    /// Button connects pin to voltage (3.3V) when pressed.
-    /// Uses internal pull-down resistor. Pin reads HIGH when pressed.
-    ///
-    /// Note: The original Pico 2 (RP2350) has a known silicon bug with pull-down resistors
-    /// that can cause pins to stay HIGH after button release. Use ToGround instead.
-    Voltage,
-
-    /// Button connects pin to ground (GND) when pressed.
-    /// Uses internal pull-up resistor. Pin reads LOW when pressed.
-    /// Recommended for Pico 2 due to pull-down resistor bug.
-    Ground,
-}
-
-// ============================================================================
-// PressDuration - Button press type
-// ============================================================================
-
-/// Duration of a button press (short or long).
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, defmt::Format)]
-pub enum PressDuration {
-    /// Button was held for less than [`LONG_PRESS_DURATION`](crate::button) (500ms).
-    Short,
-    /// Button was held for at least [`LONG_PRESS_DURATION`](crate::button) (500ms).
-    Long,
-}
 
 // ============================================================================
 // Button Virtual Device
@@ -147,10 +106,7 @@ impl<'a> Button<'a> {
     /// Returns whether the button is currently pressed.
     #[must_use]
     pub fn is_pressed(&self) -> bool {
-        match self.pressed_to {
-            PressedTo::Voltage => self.input.is_high(),
-            PressedTo::Ground => self.input.is_low(),
-        }
+        self.pressed_to.is_pressed(self.input.is_high())
     }
 
     #[inline]

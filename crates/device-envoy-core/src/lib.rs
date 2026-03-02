@@ -3,6 +3,7 @@
 //! Shared building blocks for the device-envoy workspace.
 
 pub mod audio_player;
+pub mod button;
 pub mod clock;
 #[cfg(feature = "wifi")]
 pub mod clock_sync;

@@ -2,6 +2,8 @@
 //!
 //! This module provides a reusable button device for ESP32 projects.
 
+pub use device_envoy_core::button::{BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION, PressDuration, PressedTo};
+
 #[cfg(target_os = "none")]
 use embassy_futures::select::{select, Either};
 #[cfg(target_os = "none")]
@@ -9,52 +11,6 @@ use embassy_time::{Duration, Timer};
 
 #[cfg(target_os = "none")]
 use esp_hal::gpio::{Input, InputConfig, InputPin, Pull};
-
-/// Debounce delay for the button.
-#[cfg(target_os = "none")]
-pub(crate) const BUTTON_DEBOUNCE_DELAY: Duration = Duration::from_millis(10);
-
-/// Duration representing a long button press.
-#[cfg(target_os = "none")]
-pub(crate) const LONG_PRESS_DURATION: Duration = Duration::from_millis(500);
-
-/// Describes if the button connects to voltage or ground when pressed.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PressedTo {
-    /// Button connects pin to voltage (3.3V) when pressed.
-    /// Uses internal pull-down resistor. Pin reads HIGH when pressed.
-    Voltage,
-    /// Button connects pin to ground (GND) when pressed.
-    /// Uses internal pull-up resistor. Pin reads LOW when pressed.
-    Ground,
-}
-
-impl PressedTo {
-    /// Returns `true` when a high input level means "pressed".
-    #[must_use]
-    pub const fn pressed_is_high(self) -> bool {
-        matches!(self, Self::Voltage)
-    }
-
-    /// Evaluate whether the button is pressed for a sampled logic level.
-    #[must_use]
-    pub const fn is_pressed(self, level_is_high: bool) -> bool {
-        if self.pressed_is_high() {
-            level_is_high
-        } else {
-            !level_is_high
-        }
-    }
-}
-
-/// Duration of a button press (short or long).
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PressDuration {
-    /// Button was held for less than 500 ms.
-    Short,
-    /// Button was held for at least 500 ms.
-    Long,
-}
 
 /// A button with debouncing and press duration detection.
 #[cfg(target_os = "none")]
@@ -149,22 +105,5 @@ impl<'d> Button<'d> {
     /// Wait for any button edge (press or release).
     pub async fn wait_for_any_edge(&mut self) {
         self.input.wait_for_any_edge().await;
-    }
-}
-
-#[cfg(all(test, not(target_os = "none")))]
-mod tests {
-    use super::PressedTo;
-
-    #[test]
-    fn pressed_to_ground_maps_low_to_pressed() {
-        assert!(PressedTo::Ground.is_pressed(false));
-        assert!(!PressedTo::Ground.is_pressed(true));
-    }
-
-    #[test]
-    fn pressed_to_voltage_maps_high_to_pressed() {
-        assert!(!PressedTo::Voltage.is_pressed(false));
-        assert!(PressedTo::Voltage.is_pressed(true));
     }
 }

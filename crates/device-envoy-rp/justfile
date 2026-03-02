@@ -6,25 +6,25 @@ regenerate-text-pngs:
 
 # Update led2d_graphics PNG expected output (host-only)
 pngs-update-led2d-graphics:
-	DEVICE_KIT_UPDATE_PNGS=1 cargo test --no-default-features --features host --test pngs led2d_graphics_png_matches_expected
+        DEVICE_KIT_UPDATE_PNGS=1 cargo test --features host -p device-envoy-core --test pngs led2d_graphics_png_matches_expected
 
 # Update all expected PNG outputs (host-only)
 pngs-update-all:
-	DEVICE_KIT_UPDATE_PNGS=1 cargo test --no-default-features --features host --test pngs
+        DEVICE_KIT_UPDATE_PNGS=1 cargo test --features host -p device-envoy-core --test pngs
 
 # Full validation (docs + embedded + host PNGs)
 verify-all:
-	just update-docs
-	cargo check-all
-	just pngs-check-all
+        just update-docs
+        cargo check-all
+        just pngs-check-all
 
 # Host-only PNG checks without updating
 pngs-check-all:
-	cargo test --no-default-features --features host --test pngs
+        cargo test --features host -p device-envoy-core --test pngs
 
 # Generate video frames data (uses SANTA_VIDEO_PATH or SANTA_FRAMES_DIR)
-video-frames:
-	cargo xtask video-frames-gen > examples/data/frame-data/video_frames_data.rs
+# After regenerating, copy to device-envoy-core/tests/data/frame-data/ as well:
+#   cp examples/data/frame-data/video_frames_data.rs ../device-envoy-core/tests/data/frame-data/
 
 # Build an example for Pico 2 (ARM)
 example name:

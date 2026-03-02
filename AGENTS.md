@@ -4,6 +4,7 @@ Crate-specific rules are in each crate's `AGENTS.md`. This file contains rules t
 
 ## General Policies
 
+- **Never silently skip required build targets in xtask/CI.** Every supported target (e.g., ESP32-C6, ESP32-S3, Pico 1, Pico 2) must be built on every `check-all` run. If a required toolchain component is missing, fail loudly with a clear error message and instructions to install it — do not skip or silently ignore the missing target. Silent skips hide real breakage.
 - When loading data from flash (or any other storage) into a local variable, name the variable after the concrete type. Example: `DeviceConfig` data should live in variables like `device_config`, not generic `config` or `flash0`.
 - Avoid introducing `unsafe` blocks. If a change truly requires `unsafe`, call it out explicitly and explain the justification so the user can review it carefully.
 - Avoid silent clamping; prefer asserts or typed ranges so out-of-range inputs fail fast.
@@ -302,3 +303,32 @@ There is one legitimate use case for `#[doc(hidden)]` on `pub` items: functions 
 When using `#[doc(hidden)]` for this reason, always add a comment explaining why it must be public despite being an implementation detail.
 
 For macro-helper functions, prefix helper names with `__` to clearly signal internal-only usage (for example, `__helper_for_macro`).
+
+## Tips for Unifying Code
+
+These tips apply when moving platform-specific code into `device-envoy-core` or otherwise consolidating shared logic across crates.
+
+- **Inline trivial re-export modules.** When a submodule file is reduced to just a
+  `pub use some_crate::some_module::*;` re-export (a few lines), don't keep it as a
+  standalone file. Instead, inline it as a one-liner `pub mod` block directly in the
+  parent module:
+
+  ```rust
+  // In led2d.rs — no separate layout.rs file needed
+  pub mod layout {
+      pub use device_envoy_core::led2d::layout::*;
+  }
+  ```
+
+  Delete the now-empty subdirectory too. This keeps the file tree clean and avoids
+  file proliferation for files with essentially no content.
+
+- **Rename hardware-named files to abstraction-named files.** Platform crates (e.g.,
+  `device-envoy-esp`) used to mix platform-independent code and ESP-specific
+  implementation code in the same files, with the implementation details sometimes
+  living in hardware-named files like `esp32.rs`. As the platform-independent code
+  is extracted into `device-envoy-core`, what remains in the platform crate is
+  purely the ESP-specific wiring. At that point, rename the file to match the device
+  abstraction it implements — e.g., the ESP-specific parts of `led_strip` belong in
+  `led_strip.rs`, not in a file named after the chip (`esp32.rs`). File names should
+  describe the abstraction, not the underlying hardware.

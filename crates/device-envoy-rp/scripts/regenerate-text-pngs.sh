@@ -20,7 +20,7 @@ else
     echo "Generating PNGs to: $OUTPUT_DIR"
 fi
 
-cargo test --features host --no-default-features --test led2d_text_render
+cargo test --features host -p device-envoy-core --test led2d_text_render
 
 echo ""
 echo "PNGs generated in: $OUTPUT_DIR"

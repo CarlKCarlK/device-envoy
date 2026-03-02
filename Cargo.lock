@@ -682,6 +682,7 @@ dependencies = [
  "embassy-time",
  "embedded-graphics",
  "heapless 0.8.0",
+ "png",
  "smart-leds",
 ]
 

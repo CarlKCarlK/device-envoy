@@ -62,7 +62,7 @@
 //!     // Write text to the display with per-character colors.
 //!     let colors = [colors::CYAN, colors::RED, colors::YELLOW];
 //!     // Each character takes the next color; when we run out, we start over.
-//!     led12x4.write_text("Rust", &colors).await?;
+//!     led12x4.write_text("Rust", &colors).await;
 //!
 //!     future::pending().await // run forever
 //! }
@@ -118,7 +118,7 @@
 //!     // Write "Go" into an in-memory frame buffer.
 //!     let mut frame_0 = Frame2d::new();
 //!     // Empty text colors array defaults to white.
-//!     led_12x8_animated.write_text_to_frame("Go", &[], &mut frame_0)?;
+//!     led_12x8_animated.write_text_to_frame("Go", &[], &mut frame_0);
 //!
 //!     // Write "Go" into a second frame buffer with custom colors and on the 2nd line.
 //!     let mut frame_1 = Frame2d::new();
@@ -127,7 +127,7 @@
 //!         "\nGo",
 //!         &[colors::HOT_PINK, colors::LIME],
 //!         &mut frame_1,
-//!     )?;
+//!     );
 //!
 //!     // Animate between the two frames indefinitely.
 //!     let frame_duration = Duration::from_secs(1);
@@ -141,549 +141,22 @@
 // Re-export for macro use
 #[doc(hidden)]
 pub use paste;
-
-/// Re-exported from the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
-///
-/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Point.html) Documentation:
-pub use embedded_graphics::geometry::Point;
-/// Re-exported from the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
-///
-/// # [`embedded-graphics::Size`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/struct.Size.html) Documentation:
-pub use embedded_graphics::geometry::Size;
-
-pub mod layout;
-
 pub mod led2d_generated;
 
+/// Layout mapping types for 2D LED panels. See the [`led2d` module documentation](mod@crate::led2d) for details.
+pub mod layout {
+    pub use device_envoy_core::led2d::layout::*;
+}
+
 pub use layout::LedLayout;
-
-use core::{
-    borrow::Borrow,
-    convert::Infallible,
-    ops::{Deref, DerefMut, Index, IndexMut},
+pub use device_envoy_core::led2d::{
+    Frame2d, Led2dFont, Point, Size, bit_matrix3x4_font, render_text_to_frame,
 };
-#[cfg(feature = "host")]
-use embassy_time::Duration;
-use embedded_graphics::pixelcolor::Rgb888;
-use embedded_graphics::{
-    draw_target::DrawTarget,
-    mono_font::{
-        DecorationDimensions, MonoFont,
-        ascii::{
-            FONT_4X6, FONT_5X7, FONT_5X8, FONT_6X9, FONT_6X10, FONT_6X12, FONT_6X13,
-            FONT_6X13_BOLD, FONT_6X13_ITALIC, FONT_7X13, FONT_7X13_BOLD, FONT_7X13_ITALIC,
-            FONT_7X14, FONT_7X14_BOLD, FONT_8X13, FONT_8X13_BOLD, FONT_8X13_ITALIC, FONT_9X15,
-            FONT_9X15_BOLD, FONT_9X18, FONT_9X18_BOLD, FONT_10X20,
-        },
-        mapping::StrGlyphMapping,
-    },
-    prelude::*,
-};
+use core::borrow::Borrow;
 use smart_leds::RGB8;
-
-#[cfg(not(feature = "host"))]
 use crate::led_strip::{Frame1d as StripFrame, LedStrip};
-#[cfg(feature = "host")]
-type StripFrame<const N: usize> = [RGB8; N];
-#[cfg(feature = "host")]
-/// Stub LED strip type for host testing.
-///
-/// This type provides no-op implementations for testing 2D LED panel code on host machines.
-/// See the [`led2d`](self) module documentation for usage.
-pub struct LedStrip<const N: usize, const MAX_FRAMES: usize>;
-#[cfg(feature = "host")]
-impl<const N: usize, const MAX_FRAMES: usize> LedStrip<N, MAX_FRAMES> {
-    fn write_frame(&self, _frame: StripFrame<N>) {}
 
-    fn animate(&self, _frames: impl IntoIterator<Item = (StripFrame<N>, Duration)>) {}
-}
-use crate::Result;
-use crate::led_strip::ToRgb888;
 
-// Packed bitmap for the internal 3x4 font (ASCII 0x20-0x7E).
-const BIT_MATRIX3X4_FONT_DATA: [u8; 144] = [
-    0x0a, 0xd5, 0x10, 0x4a, 0xa0, 0x01, 0x0a, 0xfe, 0x68, 0x85, 0x70, 0x02, 0x08, 0x74, 0x90, 0x86,
-    0xa5, 0xc4, 0x08, 0x5e, 0x68, 0x48, 0x08, 0x10, 0xeb, 0x7b, 0xe7, 0xfd, 0x22, 0x27, 0xb8, 0x9b,
-    0x39, 0xb4, 0x05, 0xd1, 0xa9, 0x3e, 0xea, 0x5d, 0x28, 0x0a, 0xff, 0xf3, 0xfc, 0xe4, 0x45, 0xd2,
-    0xff, 0x7d, 0xff, 0xbc, 0xd9, 0xff, 0xb7, 0xcb, 0xb4, 0xe8, 0xe9, 0xfd, 0xfe, 0xcb, 0x25, 0xaa,
-    0xd9, 0x7d, 0x97, 0x7d, 0xe7, 0xbf, 0xdf, 0x6f, 0xdf, 0x7f, 0x6d, 0xb7, 0xe0, 0xd0, 0xf7, 0xe5,
-    0x6d, 0x48, 0xc0, 0x68, 0xdf, 0x35, 0x6f, 0x49, 0x40, 0x40, 0x86, 0xf5, 0xd7, 0xab, 0xe0, 0xc7,
-    0x5f, 0x7d, 0xff, 0xbc, 0xd9, 0xff, 0x37, 0xcb, 0xb4, 0xe8, 0xe9, 0xfd, 0x1e, 0xcb, 0x25, 0xaa,
-    0xd9, 0x7d, 0x17, 0x7d, 0xe7, 0xbf, 0xdf, 0x6f, 0xdf, 0x7f, 0x6d, 0xb7, 0xb1, 0x80, 0xf7, 0xe5,
-    0x6d, 0x48, 0xa0, 0xa8, 0xdf, 0x35, 0x6f, 0x49, 0x20, 0x90, 0x86, 0xf5, 0xd7, 0xab, 0xb1, 0x80,
-];
-const BIT_MATRIX3X4_IMAGE_WIDTH: u32 = 48;
-const BIT_MATRIX3X4_GLYPH_MAPPING: StrGlyphMapping<'static> = StrGlyphMapping::new("\0 \u{7e}", 0);
-
-#[doc(hidden)]
-/// Monospace 3x4 font matching `bit_matrix3x4`.
-#[must_use]
-pub fn bit_matrix3x4_font() -> MonoFont<'static> {
-    MonoFont {
-        image: embedded_graphics::image::ImageRaw::new(
-            &BIT_MATRIX3X4_FONT_DATA,
-            BIT_MATRIX3X4_IMAGE_WIDTH,
-        ),
-        glyph_mapping: &BIT_MATRIX3X4_GLYPH_MAPPING,
-        character_size: embedded_graphics::prelude::Size::new(3, 4),
-        character_spacing: 0,
-        baseline: 3,
-        underline: DecorationDimensions::new(3, 1),
-        strikethrough: DecorationDimensions::new(2, 1),
-    }
-}
-
-#[doc(hidden)]
-/// Render text into a frame using the provided font.
-pub fn render_text_to_frame<const W: usize, const H: usize>(
-    frame: &mut Frame2d<W, H>,
-    font: &embedded_graphics::mono_font::MonoFont<'static>,
-    text: &str,
-    colors: &[RGB8],
-    spacing_reduction: (i32, i32),
-) -> Result<()> {
-    let glyph_width = font.character_size.width as i32;
-    let glyph_height = font.character_size.height as i32;
-    let advance_x = glyph_width - spacing_reduction.0;
-    let advance_y = glyph_height - spacing_reduction.1;
-    let width_limit = W as i32;
-    let height_limit = H as i32;
-    if height_limit <= 0 || width_limit <= 0 {
-        return Ok(());
-    }
-    let baseline = font.baseline as i32;
-    let mut x = 0i32;
-    let mut y = baseline;
-    let mut color_index: usize = 0;
-
-    for ch in text.chars() {
-        if ch == '\n' {
-            x = 0;
-            y += advance_y;
-            if y - baseline >= height_limit {
-                break;
-            }
-            continue;
-        }
-
-        // Clip characters that exceed width limit (no wrapping until explicit \n)
-        if x + advance_x > width_limit {
-            continue;
-        }
-
-        let color = if colors.is_empty() {
-            smart_leds::colors::WHITE
-        } else {
-            colors[color_index % colors.len()]
-        };
-        color_index = color_index.wrapping_add(1);
-
-        let mut buf = [0u8; 4];
-        let slice = ch.encode_utf8(&mut buf);
-        let style = embedded_graphics::mono_font::MonoTextStyle::new(font, color.to_rgb888());
-        let position = embedded_graphics::prelude::Point::new(x, y);
-        embedded_graphics::Drawable::draw(
-            &embedded_graphics::text::Text::new(slice, position, style),
-            frame,
-        )
-        .expect("drawing into frame cannot fail");
-
-        x += advance_x;
-    }
-
-    Ok(())
-}
-
-/// Fonts available for use with [led2d module](mod@crate::led2d) panels.
-///
-/// Fonts with `Trim` suffix remove blank spacing to pack text more tightly on small displays.
-#[derive(Clone, Copy, Debug)]
-pub enum Led2dFont {
-    /// 3x4 monospace font, trimmed (compact layout).
-    Font3x4Trim,
-    /// 4x6 monospace font.
-    Font4x6,
-    /// 3x5 monospace font, trimmed (compact layout).
-    Font3x5Trim,
-    /// 5x7 monospace font.
-    Font5x7,
-    /// 4x6 monospace font, trimmed (compact layout).
-    Font4x6Trim,
-    /// 5x8 monospace font.
-    Font5x8,
-    /// 4x7 monospace font, trimmed (compact layout).
-    Font4x7Trim,
-    /// 6x9 monospace font.
-    Font6x9,
-    /// 5x8 monospace font, trimmed (compact layout).
-    Font5x8Trim,
-    /// 6x10 monospace font.
-    Font6x10,
-    /// 5x9 monospace font, trimmed (compact layout).
-    Font5x9Trim,
-    /// 6x12 monospace font.
-    Font6x12,
-    /// 5x11 monospace font, trimmed (compact layout).
-    Font5x11Trim,
-    /// 6x13 monospace font.
-    Font6x13,
-    /// 5x12 monospace font, trimmed (compact layout).
-    Font5x12Trim,
-    /// 6x13 bold monospace font.
-    Font6x13Bold,
-    /// 5x12 bold monospace font, trimmed (compact layout).
-    Font5x12TrimBold,
-    /// 6x13 italic monospace font.
-    Font6x13Italic,
-    /// 5x12 italic monospace font, trimmed (compact layout).
-    Font5x12TrimItalic,
-    /// 7x13 monospace font.
-    Font7x13,
-    /// 6x12 monospace font, trimmed (compact layout).
-    Font6x12Trim,
-    /// 7x13 bold monospace font.
-    Font7x13Bold,
-    /// 6x12 bold monospace font, trimmed (compact layout).
-    Font6x12TrimBold,
-    /// 7x13 italic monospace font.
-    Font7x13Italic,
-    /// 6x12 italic monospace font, trimmed (compact layout).
-    Font6x12TrimItalic,
-    /// 7x14 monospace font.
-    Font7x14,
-    /// 6x13 monospace font, trimmed (compact layout).
-    Font6x13Trim,
-    /// 7x14 bold monospace font.
-    Font7x14Bold,
-    /// 6x13 bold monospace font, trimmed (compact layout).
-    Font6x13TrimBold,
-    /// 8x13 monospace font.
-    Font8x13,
-    /// 7x12 monospace font, trimmed (compact layout).
-    Font7x12Trim,
-    /// 8x13 bold monospace font.
-    Font8x13Bold,
-    /// 7x12 bold monospace font, trimmed (compact layout).
-    Font7x12TrimBold,
-    /// 8x13 italic monospace font.
-    Font8x13Italic,
-    /// 7x12 italic monospace font, trimmed (compact layout).
-    Font7x12TrimItalic,
-    /// 9x15 monospace font.
-    Font9x15,
-    /// 8x14 monospace font, trimmed (compact layout).
-    Font8x14Trim,
-    /// 9x15 bold monospace font.
-    Font9x15Bold,
-    /// 8x14 bold monospace font, trimmed (compact layout).
-    Font8x14TrimBold,
-    /// 9x18 monospace font.
-    Font9x18,
-    /// 8x17 monospace font, trimmed (compact layout).
-    Font8x17Trim,
-    /// 9x18 bold monospace font.
-    Font9x18Bold,
-    /// 8x17 bold monospace font, trimmed (compact layout).
-    Font8x17TrimBold,
-    /// 10x20 monospace font.
-    Font10x20,
-    /// 9x19 monospace font, trimmed (compact layout).
-    Font9x19Trim,
-}
-
-impl Led2dFont {
-    /// Return the `MonoFont` for this variant.
-    #[must_use]
-    pub fn to_font(self) -> MonoFont<'static> {
-        match self {
-            Self::Font3x4Trim => bit_matrix3x4_font(),
-            Self::Font4x6 | Self::Font3x5Trim => FONT_4X6,
-            Self::Font5x7 | Self::Font4x6Trim => FONT_5X7,
-            Self::Font5x8 | Self::Font4x7Trim => FONT_5X8,
-            Self::Font6x9 | Self::Font5x8Trim => FONT_6X9,
-            Self::Font6x10 | Self::Font5x9Trim => FONT_6X10,
-            Self::Font6x12 | Self::Font5x11Trim => FONT_6X12,
-            Self::Font6x13 | Self::Font5x12Trim => FONT_6X13,
-            Self::Font6x13Bold | Self::Font5x12TrimBold => FONT_6X13_BOLD,
-            Self::Font6x13Italic | Self::Font5x12TrimItalic => FONT_6X13_ITALIC,
-            Self::Font7x13 | Self::Font6x12Trim => FONT_7X13,
-            Self::Font7x13Bold | Self::Font6x12TrimBold => FONT_7X13_BOLD,
-            Self::Font7x13Italic | Self::Font6x12TrimItalic => FONT_7X13_ITALIC,
-            Self::Font7x14 | Self::Font6x13Trim => FONT_7X14,
-            Self::Font7x14Bold | Self::Font6x13TrimBold => FONT_7X14_BOLD,
-            Self::Font8x13 | Self::Font7x12Trim => FONT_8X13,
-            Self::Font8x13Bold | Self::Font7x12TrimBold => FONT_8X13_BOLD,
-            Self::Font8x13Italic | Self::Font7x12TrimItalic => FONT_8X13_ITALIC,
-            Self::Font9x15 | Self::Font8x14Trim => FONT_9X15,
-            Self::Font9x15Bold | Self::Font8x14TrimBold => FONT_9X15_BOLD,
-            Self::Font9x18 | Self::Font8x17Trim => FONT_9X18,
-            Self::Font9x18Bold | Self::Font8x17TrimBold => FONT_9X18_BOLD,
-            Self::Font10x20 | Self::Font9x19Trim => FONT_10X20,
-        }
-    }
-
-    /// Return spacing reduction for trimmed variants (width, height).
-    #[must_use]
-    pub const fn spacing_reduction(self) -> (i32, i32) {
-        match self {
-            Self::Font3x4Trim
-            | Self::Font4x6
-            | Self::Font5x7
-            | Self::Font5x8
-            | Self::Font6x9
-            | Self::Font6x10
-            | Self::Font6x12
-            | Self::Font6x13
-            | Self::Font6x13Bold
-            | Self::Font6x13Italic
-            | Self::Font7x13
-            | Self::Font7x13Bold
-            | Self::Font7x13Italic
-            | Self::Font7x14
-            | Self::Font7x14Bold
-            | Self::Font8x13
-            | Self::Font8x13Bold
-            | Self::Font8x13Italic
-            | Self::Font9x15
-            | Self::Font9x15Bold
-            | Self::Font9x18
-            | Self::Font9x18Bold
-            | Self::Font10x20 => (0, 0),
-            Self::Font3x5Trim
-            | Self::Font4x6Trim
-            | Self::Font4x7Trim
-            | Self::Font5x8Trim
-            | Self::Font5x9Trim
-            | Self::Font5x11Trim
-            | Self::Font5x12Trim
-            | Self::Font5x12TrimBold
-            | Self::Font5x12TrimItalic
-            | Self::Font6x12Trim
-            | Self::Font6x12TrimBold
-            | Self::Font6x12TrimItalic
-            | Self::Font6x13Trim
-            | Self::Font6x13TrimBold
-            | Self::Font7x12Trim
-            | Self::Font7x12TrimBold
-            | Self::Font7x12TrimItalic
-            | Self::Font8x14Trim
-            | Self::Font8x14TrimBold
-            | Self::Font8x17Trim
-            | Self::Font8x17TrimBold
-            | Self::Font9x19Trim => (1, 1),
-        }
-    }
-}
-
-/// 2D pixel array used for general graphics on LED panels (includes examples).
-///
-/// This page provides the primary documentation for drawing onto LED panels.
-///
-/// **Read the examples below first.** After that, keep these details in mind:
-///
-/// - Use a frame to prepare an image before sending it to the panel.
-/// - Coordinates are `(x, y)` with `(0, 0)` at the top-left. The x-axis increases to the right,
-///   and the y-axis increases downward.
-/// - Set pixels using tuple indexing: `frame[(x, y)] = colors::RED;`.
-/// - For shapes, lines, and text rendering, use the [`embedded-graphics`](https://docs.rs/embedded-graphics) crate.
-/// - Frames are rendered by a panel type generated with [`led2d!`](macro@crate::led2d).
-///   See [`Led2dGenerated`](crate::led2d::led2d_generated::Led2dGenerated) for the full API of the generated panel type.
-/// - For animation, call [`animate`](crate::led2d::led2d_generated::Led2dGenerated::animate) with a sequence
-///   of `(`[`Frame2d`]`, `[`Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html)`)`
-///   pairs. See the [led2d](mod@crate::led2d) module for an example.
-///
-/// ## Indexing and storage
-///
-/// `Frame2d` supports both:
-///
-/// - `(x, y)` tuple indexing: `frame[(x, y)]`
-/// - Row-major array indexing: `frame[y][x]`
-///
-/// Tuple indexing matches display coordinates. Array indexing matches the underlying storage.
-///
-/// ## Rendering pipeline (what happens when you display a frame)
-///
-/// `Frame2d` is only pixel storage. When you render a frame through a generated panel type,
-/// the device abstraction:
-///
-/// - Maps `(x, y)` pixels to the physical LED wiring order
-/// - Applies gamma correction
-/// - Scales brightness to respect the configured electrical current budget
-///
-/// These steps are implemented using two **compile-time–generated lookup tables**.
-/// Writing a frame performs only indexed memory reads and writes.
-///
-/// # Example: Draw pixels both directly and with [`embedded-graphics`](https://docs.rs/embedded-graphics):
-///
-/// ![LED panel preview][led2d-graphics]
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// use device_envoy_rp::{led2d::Frame2d, led_strip::ToRgb888};
-/// use embedded_graphics::{
-///     prelude::*,
-///     primitives::{Circle, PrimitiveStyle, Rectangle},
-/// };
-/// use smart_leds::colors;
-/// # fn example() {
-///
-/// type Frame = Frame2d<12, 8>;
-///
-/// /// Calculate the top-left corner position to center a shape within a bounding box.
-/// const fn centered_top_left(width: usize, height: usize, size: usize) -> Point {
-///     assert!(size <= width);
-///     assert!(size <= height);
-///     Point::new(((width - size) / 2) as i32, ((height - size) / 2) as i32)
-/// }
-///
-/// // Create a frame to draw on. This is just an in-memory 2D pixel buffer.
-/// let mut frame = Frame::new();
-///
-/// // Use the embedded-graphics crate to draw a red rectangle border around the edge of the frame.
-/// // We use `to_rgb888()` to convert from smart-leds RGB8 to embedded-graphics Rgb888.
-/// Rectangle::new(Frame::TOP_LEFT, Frame::SIZE)
-///     .into_styled(PrimitiveStyle::with_stroke(colors::RED.to_rgb888(), 1))
-///     .draw(&mut frame)
-///     .expect("rectangle draw must succeed");
-///
-/// // Direct pixel access: set the upper-left LED pixel (x = 0, y = 0).
-/// // Frame2d stores LED colors directly, so we write an LED color here.
-/// frame[(0, 0)] = colors::CYAN;
-///
-/// // Use the embedded-graphics crate to draw a green circle centered in the frame.
-/// const DIAMETER: u32 = 6;
-/// const CIRCLE_TOP_LEFT: Point = centered_top_left(Frame::WIDTH, Frame::HEIGHT, DIAMETER as usize);
-/// Circle::new(CIRCLE_TOP_LEFT, DIAMETER)
-///     .into_styled(PrimitiveStyle::with_stroke(colors::LIME.to_rgb888(), 1))
-///     .draw(&mut frame)
-///     .expect("circle draw must succeed");
-/// # }
-/// ```
-#[cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!("led2d-graphics", "docs/assets/led2d_graphics.png")
-)]
-#[derive(Clone, Copy, Debug)]
-pub struct Frame2d<const W: usize, const H: usize>(pub [[RGB8; W]; H]);
-
-impl<const W: usize, const H: usize> Frame2d<W, H> {
-    /// The width of the frame.
-    pub const WIDTH: usize = W;
-    /// The height of the frame.
-    pub const HEIGHT: usize = H;
-    /// Total pixels in this frame (width × height).
-    pub const LEN: usize = W * H;
-    /// Frame dimensions as a [`Size`].
-    ///
-    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
-    pub const SIZE: Size = Size::new(W as u32, H as u32);
-    /// Top-left corner coordinate as a [`Point`].
-    ///
-    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
-    pub const TOP_LEFT: Point = Point::new(0, 0);
-    /// Top-right corner coordinate as a [`Point`].
-    ///
-    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
-    pub const TOP_RIGHT: Point = Point::new((W - 1) as i32, 0);
-    /// Bottom-left corner coordinate as a [`Point`].
-    ///
-    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
-    pub const BOTTOM_LEFT: Point = Point::new(0, (H - 1) as i32);
-    /// Bottom-right corner coordinate as a [`Point`].
-    ///
-    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operation.
-    pub const BOTTOM_RIGHT: Point = Point::new((W - 1) as i32, (H - 1) as i32);
-
-    /// Create a new blank (all black) frame.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self([[RGB8::new(0, 0, 0); W]; H])
-    }
-
-    /// Create a frame filled with a single color.
-    #[must_use]
-    pub const fn filled(color: RGB8) -> Self {
-        Self([[color; W]; H])
-    }
-}
-
-impl<const W: usize, const H: usize> Deref for Frame2d<W, H> {
-    type Target = [[RGB8; W]; H];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<const W: usize, const H: usize> DerefMut for Frame2d<W, H> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<const W: usize, const H: usize> Index<(usize, usize)> for Frame2d<W, H> {
-    type Output = RGB8;
-
-    fn index(&self, (x_index, y_index): (usize, usize)) -> &Self::Output {
-        assert!(x_index < W, "x_index must be within width");
-        assert!(y_index < H, "y_index must be within height");
-        &self.0[y_index][x_index]
-    }
-}
-
-impl<const W: usize, const H: usize> IndexMut<(usize, usize)> for Frame2d<W, H> {
-    fn index_mut(&mut self, (x_index, y_index): (usize, usize)) -> &mut Self::Output {
-        assert!(x_index < W, "x_index must be within width");
-        assert!(y_index < H, "y_index must be within height");
-        &mut self.0[y_index][x_index]
-    }
-}
-
-impl<const W: usize, const H: usize> From<[[RGB8; W]; H]> for Frame2d<W, H> {
-    fn from(array: [[RGB8; W]; H]) -> Self {
-        Self(array)
-    }
-}
-
-impl<const W: usize, const H: usize> From<Frame2d<W, H>> for [[RGB8; W]; H] {
-    fn from(frame: Frame2d<W, H>) -> Self {
-        frame.0
-    }
-}
-
-impl<const W: usize, const H: usize> Default for Frame2d<W, H> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<const W: usize, const H: usize> OriginDimensions for Frame2d<W, H> {
-    fn size(&self) -> Size {
-        Size::new(W as u32, H as u32)
-    }
-}
-
-impl<const W: usize, const H: usize> DrawTarget for Frame2d<W, H> {
-    type Color = Rgb888;
-    type Error = Infallible;
-
-    fn draw_iter<I>(&mut self, pixels: I) -> core::result::Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = Pixel<Self::Color>>,
-    {
-        for Pixel(coord, color) in pixels {
-            let x_index = coord.x;
-            let y_index = coord.y;
-            if x_index >= 0 && x_index < W as i32 && y_index >= 0 && y_index < H as i32 {
-                self.0[y_index as usize][x_index as usize] =
-                    RGB8::new(color.r(), color.g(), color.b());
-            }
-        }
-        Ok(())
-    }
-}
 
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that expands at the call site in downstream crates.
 // This is an implementation detail, not part of the user-facing API.
@@ -1455,16 +928,15 @@ macro_rules! led2d_from_strip {
                     text: &str,
                     colors: &[smart_leds::RGB8],
                     frame: &mut $crate::led2d::Frame2d<{ $led_layout_const.width() }, { $led_layout_const.height() }>,
-                ) -> $crate::Result<()> {
-                    $crate::led2d::render_text_to_frame(frame, &self.font, text, colors, self.font_variant.spacing_reduction())
+                ) {
+                    $crate::led2d::render_text_to_frame(frame, &self.font, text, colors, self.font_variant.spacing_reduction());
                 }
 
                 /// Render text and display it on the LED matrix.
-                pub async fn write_text(&self, text: &str, colors: &[smart_leds::RGB8]) -> $crate::Result<()> {
+                pub async fn write_text(&self, text: &str, colors: &[smart_leds::RGB8]) {
                     let mut frame = $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::new();
-                    self.write_text_to_frame(text, colors, &mut frame)?;
+                    self.write_text_to_frame(text, colors, &mut frame);
                     self.write_frame(frame);
-                    Ok(())
                 }
             }
         }

@@ -244,7 +244,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
                     "HELLO\nWORLD",
                     &[colors::CYAN, colors::MAGENTA],
                     &mut frame,
-                )?;
+                );
                 led_12x8.write_frame(frame);
 
                 button.wait_for_press().await;

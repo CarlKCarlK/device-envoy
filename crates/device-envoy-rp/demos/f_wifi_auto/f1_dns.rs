@@ -83,10 +83,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             }
             Ok(())
         })
-        .await?;
+        .await;
 
     // Show initial state with dashes until DNS is fetched.
-    led8x12.write_text("--\n--", COLORS).await?;
+    led8x12.write_text("--\n--", COLORS).await;
 
     // Do DNS on google.com periodically. Display last 4 hex digits of IP address.
     loop {
@@ -101,7 +101,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         } else {
             hex_str.push_str("--\n--").unwrap();
         }
-        led8x12.write_text(&hex_str, COLORS).await?;
+        led8x12.write_text(&hex_str, COLORS).await;
 
         Timer::after(Duration::from_secs(15)).await;
     }
@@ -119,10 +119,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 async fn show_animated_dots(led8x12: &Led8x12) -> Result<()> {
     const FRAME_DURATION: Duration = Duration::from_millis(200);
     let mut frames = [(led2d::Frame2d::new(), FRAME_DURATION); 4];
-    led8x12.write_text_to_frame(".\n ", &[COLORS[0]], &mut frames[0].0)?;
-    led8x12.write_text_to_frame(" .\n ", &[COLORS[1]], &mut frames[1].0)?;
-    led8x12.write_text_to_frame(" \n .", &[COLORS[2]], &mut frames[2].0)?;
-    led8x12.write_text_to_frame(" \n. ", &[COLORS[3]], &mut frames[3].0)?;
+    led8x12.write_text_to_frame(".\n ", &[COLORS[0]], &mut frames[0].0);
+    led8x12.write_text_to_frame(" .\n ", &[COLORS[1]], &mut frames[1].0);
+    led8x12.write_text_to_frame(" \n .", &[COLORS[2]], &mut frames[2].0);
+    led8x12.write_text_to_frame(" \n. ", &[COLORS[3]], &mut frames[3].0);
 
     led8x12.animate(frames)
 }

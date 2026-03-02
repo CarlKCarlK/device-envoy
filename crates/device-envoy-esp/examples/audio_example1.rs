@@ -18,8 +18,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 audio_player! {
     AudioPlayerGpio21 {
         data_pin: GPIO21,
-        bit_clock_pin: GPIO22,
-        word_select_pin: GPIO23,
+        bit_clock_pin: GPIO11,
+        word_select_pin: GPIO12,
         sample_rate_hz: VOICE_22050_HZ,
         max_volume: Volume::percent(25),
     }
@@ -44,7 +44,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NOTE_C4: &AudioPlayerGpio21Playable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
 
     let audio_player_gpio21 = AudioPlayerGpio21::new(
-        p.GPIO21, p.GPIO22, p.GPIO23, p.I2S0, p.DMA_CH0, spawner,
+        p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner,
     )?;
     audio_player_gpio21.play(
         [

@@ -75,7 +75,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         "go  ",
         &[colors::MAGENTA, colors::CYAN, colors::BLACK, colors::BLACK],
         &mut frame1,
-    )?;
+    );
     go_frames
         .push((frame1, Duration::from_millis(1000)))
         .expect("go_frames has capacity for 2 frames");
@@ -91,7 +91,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
             colors::HOT_PINK,
         ],
         &mut frame2,
-    )?;
+    );
     go_frames
         .push((frame2, Duration::from_millis(1000)))
         .expect("go_frames has capacity for 2 frames");
@@ -107,7 +107,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         "GO\n  ",
         &[colors::MAGENTA, colors::CYAN, colors::BLACK, colors::BLACK],
         &mut frame1_8x12,
-    )?;
+    );
     go_frames_8x12
         .push((frame1_8x12, Duration::from_millis(1000)))
         .expect("go_frames_8x12 has capacity for 2 frames");
@@ -118,7 +118,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
         "\nGO",
         &[colors::ORANGE, colors::HOT_PINK],
         &mut frame2_8x12,
-    )?;
+    );
     go_frames_8x12
         .push((frame2_8x12, Duration::from_millis(1000)))
         .expect("go_frames_8x12 has capacity for 2 frames");

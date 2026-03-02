@@ -56,7 +56,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
             for x_index in 0..Led16x16Test::WIDTH {
                 let mut frame2d = Frame2d::<16, 16>::new();
                 frame2d[(x_index, y_index)] = colors::WHITE;
-                led16x16_test.write_frame2d(frame2d)?;
+                led16x16_test.write_frame2d(frame2d);
                 Timer::after(DOT_DELAY).await;
             }
         }

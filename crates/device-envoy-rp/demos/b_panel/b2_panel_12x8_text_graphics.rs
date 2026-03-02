@@ -50,7 +50,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Can write text to a frame instead of directly to the LED panel.
     let text_colors = [colors::ORANGE, colors::HOT_PINK];
-    led12x8.write_text_to_frame("Go", &text_colors, &mut frame2d)?;
+    led12x8.write_text_to_frame("Go", &text_colors, &mut frame2d);
 
     // Can read and write the frame's pixels directly.
     // Index with tuple (x, y). Origin (0,0) is top-left.

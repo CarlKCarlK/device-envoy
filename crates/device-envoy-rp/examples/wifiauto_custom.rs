@@ -98,20 +98,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .connect(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    led12x8_ref.write_text("JOIN", COLORS).await?;
+                    led12x8_ref.write_text("JOIN", COLORS).await;
                 }
                 WifiAutoEvent::Connecting { .. } => {
-                    led12x8_ref.write_text("...", COLORS).await?;
+                    led12x8_ref.write_text("...", COLORS).await;
                 }
                 WifiAutoEvent::ConnectionFailed => {
-                    led12x8_ref.write_text("FAIL", COLORS).await?;
+                    led12x8_ref.write_text("FAIL", COLORS).await;
                 }
             }
             Ok(())
         })
         .await?;
 
-    led12x8.write_text("DONE", COLORS).await?;
+    led12x8.write_text("DONE", COLORS).await;
 
     // Get device name from field
     let device_name = device_name_field.text()?.unwrap_or_default();
@@ -119,7 +119,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Show initial state with dashes until time arrives
     let initial_display = format_two_lines("----", device_name.as_str());
-    led12x8.write_text(&initial_display, COLORS).await?;
+    led12x8.write_text(&initial_display, COLORS).await;
 
     // Main loop: fetch and display time every minute
     loop {
@@ -131,7 +131,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
                 // Display: time on line 1, name on line 2
                 let display_text = format_two_lines(&time_str, device_name.as_str());
-                led12x8.write_text(&display_text, COLORS).await?;
+                led12x8.write_text(&display_text, COLORS).await;
 
                 info!("Time: {} | Name: {}", time_str, device_name.as_str());
             }
@@ -139,7 +139,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 warn!("NTP fetch failed: {}", msg);
                 // Keep showing dashes with device name on error
                 let error_display = format_two_lines("----", device_name.as_str());
-                led12x8.write_text(&error_display, COLORS).await?;
+                led12x8.write_text(&error_display, COLORS).await;
             }
         }
 

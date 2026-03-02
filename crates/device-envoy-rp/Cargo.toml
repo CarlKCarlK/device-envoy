@@ -54,6 +54,7 @@ host = [
     "dep:png",
     "dep:tempfile",
     "critical-section/std",
+    "device-envoy-core/host",
 ] # For testing on host platform without hardware dependencies
 doc-images = ["dep:embed-doc-image"]
 wifi = ["dep:cyw43", "dep:cyw43-pio", "dep:cyw43-firmware", "dep:embassy-net"]
@@ -145,11 +146,6 @@ riscv = { version = "0.11", features = [
 ], optional = true }
 
 # Integration tests
-[[test]]
-name = "led2d_text_render"
-path = "tests/led2d_text_render.rs"
-required-features = ["host"]
-
 [[test]]
 name = "mapping"
 path = "tests/mapping.rs"

@@ -4,7 +4,7 @@
 //! types, etc.) come from [`device_envoy_core::led_strip`] and are re-exported
 //! here for transparent access.
 //!
-//! The [`led_strip!`] macro generates a fully async, Embassy-based strip
+//! The [`led_strip!`](macro@crate::led_strip) macro generates a fully async, Embassy-based strip
 //! controller. Use `engine: Engine::Spi` to select the SPI variant backed by
 //! the [`spi`] sub-module.
 
@@ -50,7 +50,7 @@ const BIT1: PulseCode = PulseCode::new(Level::High, 16, Level::Low, 9);
 /// WS2812 driver backed by an ESP32 RMT TX channel.
 ///
 /// `LEDS` is the number of LED pixels; `PULSES` must equal `LEDS * 24 + 1`.
-/// Both are generated as concrete `const` values by the [`led_strip!`] macro,
+/// Both are generated as concrete `const` values by the [`led_strip!`](macro@crate::led_strip) macro,
 /// so no `generic_const_exprs` is required.
 ///
 /// The pulse buffer is a **field** of this struct so that it lives in BSS /
@@ -467,13 +467,12 @@ macro_rules! __led2d_strip_methods {
         pub fn write_frame2d(
             &self,
             frame: $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
-        ) -> $crate::Result<()> {
+        ) {
             let led2d = $crate::led2d::Led2d::new(&self.inner, &Self::LED_LAYOUT);
             led2d.write_frame(frame);
-            Ok(())
         }
 
-        pub fn animate2d<I>(&self, frames: I) -> $crate::Result<()>
+        pub fn animate2d<I>(&self, frames: I)
         where
             I: IntoIterator,
             I::Item: ::core::borrow::Borrow<(
@@ -483,7 +482,6 @@ macro_rules! __led2d_strip_methods {
         {
             let led2d = $crate::led2d::Led2d::new(&self.inner, &Self::LED_LAYOUT);
             led2d.animate(frames);
-            Ok(())
         }
 
         pub fn write_text_to_frame(
@@ -491,25 +489,25 @@ macro_rules! __led2d_strip_methods {
             text: &str,
             colors: &[$crate::led_strip::RGB8],
             frame: &mut $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
-        ) -> $crate::Result<()> {
+        ) {
             $crate::led2d::render_text_to_frame(
                 frame,
                 &Self::FONT.to_font(),
                 text,
                 colors,
                 Self::FONT.spacing_reduction(),
-            )
+            );
         }
 
         pub fn write_text(
             &self,
             text: &str,
             colors: &[$crate::led_strip::RGB8],
-        ) -> $crate::Result<()> {
+        ) {
             let mut frame =
                 $crate::led2d::Frame2d::<{ $led_layout.width() }, { $led_layout.height() }>::new();
-            self.write_text_to_frame(text, colors, &mut frame)?;
-            self.write_frame2d(frame)
+            self.write_text_to_frame(text, colors, &mut frame);
+            self.write_frame2d(frame);
         }
     };
     ($_leds:expr, $_max_frames:expr, [], []) => {};

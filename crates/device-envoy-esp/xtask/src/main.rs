@@ -7,7 +7,94 @@ use owo_colors::OwoColorize;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-const TARGET: &str = "riscv32imac-unknown-none-elf";
+const TARGET_C6: &str = "riscv32imac-unknown-none-elf";
+const TARGET_S3: &str = "xtensa-esp32s3-none-elf";
+
+/// Locates the `xtensa-esp32s3-elf-gcc` linker and returns its parent directory.
+///
+/// `espup install` places the linker inside the `esp` rustup toolchain directory,
+/// which is not automatically on PATH in every shell.  This function checks PATH
+/// first, then falls back to searching the toolchain tree so that S3 builds work
+/// after `espup install` without requiring `source ~/export-esp.sh`.
+///
+/// Returns `None` with a descriptive error printed if the linker is not found.
+fn find_s3_linker_dir() -> Option<PathBuf> {
+    const LINKER: &str = "xtensa-esp32s3-elf-gcc";
+
+    // Check PATH first.
+    if Command::new(LINKER)
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        // Already on PATH — no extra dir needed (use empty PathBuf as sentinel).
+        return Some(PathBuf::new());
+    }
+
+    // espup installs the linker inside ~/.rustup/toolchains/esp/; search there.
+    let home = std::env::var_os("HOME").unwrap_or_default();
+    let esp_toolchain = Path::new(&home).join(".rustup/toolchains/esp");
+
+    fn find_in(dir: &Path, linker: &str, depth: u32) -> Option<PathBuf> {
+        if depth == 0 {
+            return None;
+        }
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return None;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if path.join(linker).exists() {
+                    return Some(path);
+                }
+                if let Some(found) = find_in(&path, linker, depth - 1) {
+                    return Some(found);
+                }
+            }
+        }
+        None
+    }
+
+    if let Some(dir) = find_in(&esp_toolchain, LINKER, 6) {
+        return Some(dir);
+    }
+
+    eprintln!(
+        "{}",
+        "error: xtensa-esp32s3-elf-gcc not found.\n\
+         Run `espup install` to install the Xtensa GCC linker, then re-run check-all."
+            .red()
+            .bold()
+    );
+    None
+}
+
+/// Returns `Some(linker_dir)` when the full S3 toolchain is ready, `None` otherwise.
+///
+/// Requires the `esp` rustup toolchain with `rust-src` *and* the Xtensa GCC linker.
+/// Prints a clear error if anything is missing.
+fn require_s3_toolchain() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME").unwrap_or_default();
+    let rust_src = Path::new(&home)
+        .join(".rustup/toolchains/esp/lib/rustlib/src/rust");
+
+    if !rust_src.exists() {
+        eprintln!(
+            "{}",
+            "error: `esp` rustup toolchain with rust-src not found.\n\
+             Run `espup install` to install it, then re-run check-all."
+                .red()
+                .bold()
+        );
+        return None;
+    }
+
+    find_s3_linker_dir()
+}
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -21,7 +108,7 @@ struct Cli {
 enum Commands {
     /// Run all checks: lib + all examples + docs
     CheckAll,
-    /// Check all examples
+    /// Build all examples (catches linker errors)
     CheckExamples,
 }
 
@@ -38,17 +125,33 @@ fn check_all() -> ExitCode {
 
     println!("{}", "==> cargo check-all: device-envoy-esp".cyan().bold());
 
-    // Check the library itself.
-    println!("{}", "--> check lib".cyan());
-    if !run(Command::new("cargo").current_dir(&root).args([
-        "check",
-        "--lib",
-        "--release",
-        "--target",
-        TARGET,
-        "--no-default-features",
-    ])) {
+    // Build the library itself for both supported chips.
+    // S3 uses -Zbuild-std because the `esp` toolchain ships no prebuilt Xtensa sysroot.
+    let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
+    };
+    // (label, target, toolchain_override, build_std)
+    let targets: &[(&str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, None, false),
+        ("s3", TARGET_S3, Some("+esp"), true),
+    ];
+    for (label, target, toolchain, build_std) in targets {
+        println!("{}", format!("--> build lib ({label})").cyan());
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(&root);
+        if *build_std {
+            prepend_path(&mut cmd, &s3_linker_dir);
+        }
+        if let Some(tc) = toolchain {
+            cmd.arg(tc);
+        }
+        cmd.args(["build", "--lib", "--release", "--target", target, "--no-default-features"]);
+        if *build_std {
+            cmd.arg("-Zbuild-std=core,alloc");
+        }
+        if !run(&mut cmd) {
+            return ExitCode::FAILURE;
+        }
     }
 
     if check_examples() != ExitCode::SUCCESS {
@@ -59,14 +162,14 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    // Generate docs.
+    // Generate docs (docs only need to be generated once; C6 is the primary target).
     println!("{}", "--> doc".cyan());
     if !run(Command::new("cargo").current_dir(&root).args([
         "doc",
         "--no-deps",
         "--release",
         "--target",
-        TARGET,
+        TARGET_C6,
         "--no-default-features",
     ])) {
         return ExitCode::FAILURE;
@@ -78,7 +181,6 @@ fn check_all() -> ExitCode {
 
 fn check_examples() -> ExitCode {
     let root = workspace_root();
-    println!("{}", "--> check examples".cyan());
 
     let examples_dir = root.join("examples");
     let mut examples: Vec<String> = std::fs::read_dir(&examples_dir)
@@ -91,18 +193,33 @@ fn check_examples() -> ExitCode {
         .collect();
     examples.sort();
 
-    for example in &examples {
-        println!("    check example: {example}");
-        if !run(Command::new("cargo").current_dir(&root).args([
-            "check",
-            "--example",
-            example,
-            "--release",
-            "--target",
-            TARGET,
-            "--no-default-features",
-        ])) {
-            return ExitCode::FAILURE;
+    let Some(s3_linker_dir) = require_s3_toolchain() else {
+        return ExitCode::FAILURE;
+    };
+    // (label, target, toolchain_override, build_std)
+    let targets: &[(&str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, None, false),
+        ("s3", TARGET_S3, Some("+esp"), true),
+    ];
+    for (label, target, toolchain, build_std) in targets {
+        println!("{}", format!("--> build examples ({label})").cyan());
+        for example in &examples {
+            println!("    build example: {example}");
+            let mut cmd = Command::new("cargo");
+            cmd.current_dir(&root);
+            if *build_std {
+                prepend_path(&mut cmd, &s3_linker_dir);
+            }
+            if let Some(tc) = toolchain {
+                cmd.arg(tc);
+            }
+            cmd.args(["build", "--example", example, "--release", "--target", target, "--no-default-features"]);
+            if *build_std {
+                cmd.arg("-Zbuild-std=core,alloc");
+            }
+            if !run(&mut cmd) {
+                return ExitCode::FAILURE;
+            }
         }
     }
 
@@ -152,6 +269,19 @@ fn workspace_root() -> PathBuf {
         .parent()
         .expect("xtask must be a subdirectory of the workspace root")
         .to_owned()
+}
+
+/// Prepends `dir` to the `PATH` environment variable for `cmd`.
+///
+/// When `dir` is empty (the linker was already found on PATH), this is a no-op.
+fn prepend_path(cmd: &mut Command, dir: &Path) {
+    if dir.as_os_str().is_empty() {
+        return;
+    }
+    let current = std::env::var_os("PATH").unwrap_or_default();
+    let mut paths = std::env::split_paths(&current).collect::<Vec<_>>();
+    paths.insert(0, dir.to_owned());
+    cmd.env("PATH", std::env::join_paths(paths).expect("PATH join failed"));
 }
 
 fn run(cmd: &mut Command) -> bool {

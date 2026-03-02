@@ -3,8 +3,8 @@
 //!
 //! Wiring:
 //! - Data pin (`DIN`) -> GPIO21
-//! - Bit clock pin (`BCLK`) -> GPIO22
-//! - Word select pin (`LRC` / `LRCLK`) -> GPIO23
+//! - Bit clock pin (`BCLK`) -> GPIO11
+//! - Word select pin (`LRC` / `LRCLK`) -> GPIO12
 //! - Button -> GPIO6 to GND (starts playback)
 
 #![no_std]
@@ -32,8 +32,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 audio_player! {
     AudioPlayerGpio21 {
         data_pin: GPIO21,
-        bit_clock_pin: GPIO22,
-        word_select_pin: GPIO23,
+        bit_clock_pin: GPIO11,
+        word_select_pin: GPIO12,
         sample_rate_hz: VOICE_22050_HZ,
         max_volume: Volume::percent(50),
         initial_volume: Volume::percent(100),
@@ -71,10 +71,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let mut button = Button::new(p.GPIO6, PressedTo::Ground);
     let audio_player_gpio21 = AudioPlayerGpio21::new(
-        p.GPIO21, p.GPIO22, p.GPIO23, p.I2S0, p.DMA_CH0, spawner,
+        p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner,
     )?;
 
-    info!("I2S ready: GPIO21 DIN, GPIO22 BCLK, GPIO23 LRCLK");
+    info!("I2S ready: GPIO21 DIN, GPIO11 BCLK, GPIO12 LRCLK");
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
         Nasa::PCM_SAMPLE_COUNT,

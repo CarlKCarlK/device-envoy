@@ -86,7 +86,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         if tick_index % 2 == 0 {
             let mut panel_frame2d = Frame2d::<16, 16>::new();
             panel_frame2d[(panel_x_index, panel_y_index)] = colors::WHITE;
-            led16x16_dual.write_frame2d(panel_frame2d)?;
+            led16x16_dual.write_frame2d(panel_frame2d);
             panel_x_index += 1;
             if panel_x_index >= 16 {
                 panel_x_index = 0;

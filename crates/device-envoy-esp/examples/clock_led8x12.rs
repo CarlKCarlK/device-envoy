@@ -90,13 +90,13 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
             |wifi_auto_event| async move {
                 match wifi_auto_event {
                     WifiAutoEvent::CaptivePortalReady => {
-                        led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS)?;
+                        led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);
                     }
                     WifiAutoEvent::Connecting { .. } => {
-                        led8x12_clock_ref.write_text("CO\nNN", &DIGIT_COLORS)?;
+                        led8x12_clock_ref.write_text("CO\nNN", &DIGIT_COLORS);
                     }
                     WifiAutoEvent::ConnectionFailed => {
-                        led8x12_clock_ref.write_text("FA\nIL", &DIGIT_COLORS)?;
+                        led8x12_clock_ref.write_text("FA\nIL", &DIGIT_COLORS);
                     }
                 }
                 Ok(())
@@ -105,7 +105,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         .await?;
 
     while !stack.is_link_up() || stack.config_v4().is_none() {
-        led8x12_clock.write_text("IP\n..", &DIGIT_COLORS)?;
+        led8x12_clock.write_text("IP\n..", &DIGIT_COLORS);
         Timer::after(Duration::from_millis(200)).await;
     }
 
@@ -155,9 +155,9 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
                 DisplayMode::MinuteSecond => format_mmss(current_unix_seconds, offset_minutes),
             };
             let display_text_with_o = format_zero_as_o(&display_text);
-            led8x12_clock.write_text(display_text_with_o.as_str(), &DIGIT_COLORS)?;
+            led8x12_clock.write_text(display_text_with_o.as_str(), &DIGIT_COLORS);
         } else {
-            led8x12_clock.write_text("--\n--", &DIGIT_COLORS)?;
+            led8x12_clock.write_text("--\n--", &DIGIT_COLORS);
         }
 
         Timer::after(BUTTON_POLL_INTERVAL).await;

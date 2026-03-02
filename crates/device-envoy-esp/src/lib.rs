@@ -1,6 +1,9 @@
 //! device-envoy-esp — NeoPixel-style (WS2812) LED strips and panels for ESP32.
 //!
 //! See the [`led_strip` module](mod@led_strip) and [`led2d` module](mod@led2d).
+// todo00 does led_strip for esp have two methods that rp doesn't?
+// todo00 check if every async method should be async?
+// todo00 rename check-all to check-rp and check-esp? likewise attach
 
 #![cfg_attr(target_os = "none", no_std)]
 
@@ -21,6 +24,26 @@ pub mod time_sync;
 pub mod wifi_auto;
 
 pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
+
+// Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
+// __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but
+// esp-radio only defines them with #[cfg(xtensa)], leaving RISC-V targets with unresolved
+// symbols in release builds.  These no-op stubs reproduce exactly what the Xtensa
+// implementation does.  Remove this block when the upstream bug is fixed.
+//
+// SAFETY: `no_mangle` is required because the linker script demands these exact C symbol
+// names.  The functions are no-ops that match the Xtensa stubs in esp-radio's
+// common_adapter.rs; they are called by the wifi blob and must have C linkage.
+#[cfg(all(target_arch = "riscv32", target_os = "none"))]
+mod _esp_radio_nvs_stubs {
+    #[unsafe(no_mangle)]
+    unsafe extern "C" fn __esp_radio_misc_nvs_deinit() {}
+
+    #[unsafe(no_mangle)]
+    unsafe extern "C" fn __esp_radio_misc_nvs_init() -> i32 {
+        0
+    }
+}
 
 #[doc(hidden)]
 #[cfg(target_os = "none")]

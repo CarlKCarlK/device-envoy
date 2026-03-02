@@ -1,9 +1,9 @@
 #![allow(missing_docs)]
 #![cfg(feature = "host")]
 
-use device_envoy_rp::led_strip::{Frame1d, ToRgb888};
-use device_envoy_rp::led2d::{Frame2d, Led2dFont, render_text_to_frame};
-use device_envoy_rp::to_png::{write_frame_png_with_gamma, write_frames_apng_with_gamma};
+use device_envoy_core::led_strip::{Frame1d, ToRgb888};
+use device_envoy_core::led2d::{Frame2d, Led2dFont, render_text_to_frame};
+use device_envoy_core::to_png::{write_frame_png_with_gamma, write_frames_apng_with_gamma};
 use embassy_time::Duration;
 use embedded_graphics::{
     prelude::*,
@@ -21,12 +21,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 include!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/examples/data/frame-data/video_frames_data.rs"
+    "/tests/data/frame-data/video_frames_data.rs"
 ));
 
 include!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/examples/data/conway_board.rs"
+    "/tests/data/conway_board.rs"
 ));
 
 type Frame = Frame2d<12, 8>;
@@ -120,8 +120,7 @@ fn build_led2d1_frame() -> Led12x4Frame {
     let spacing_reduction = font_variant.spacing_reduction();
     let colors = [colors::CYAN, colors::RED, colors::YELLOW];
 
-    render_text_to_frame(&mut frame, &font, "Rust", &colors, spacing_reduction)
-        .expect("text render must succeed");
+    render_text_to_frame(&mut frame, &font, "Rust", &colors, spacing_reduction);
 
     frame
 }
@@ -136,8 +135,7 @@ fn build_led2d2_frame_0() -> Led8x12Frame {
     let font = font_variant.to_font();
     let spacing_reduction = font_variant.spacing_reduction();
 
-    render_text_to_frame(&mut frame, &font, "Go", &[], spacing_reduction)
-        .expect("text render must succeed");
+    render_text_to_frame(&mut frame, &font, "Go", &[], spacing_reduction);
 
     frame
 }
@@ -149,8 +147,7 @@ fn build_led2d2_frame_1() -> Led8x12Frame {
     let spacing_reduction = font_variant.spacing_reduction();
     let colors = [colors::HOT_PINK, colors::LIME];
 
-    render_text_to_frame(&mut frame, &font, "\nGo", &colors, spacing_reduction)
-        .expect("text render must succeed");
+    render_text_to_frame(&mut frame, &font, "\nGo", &colors, spacing_reduction);
 
     frame
 }

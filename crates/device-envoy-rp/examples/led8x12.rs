@@ -88,13 +88,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 /// Display time-like text using two lines (like "12" on top, "34" on bottom).
 async fn demo_clock_text(led8x12: &Led8x12) -> Result<()> {
     let colors = [colors::CYAN, colors::MAGENTA, colors::ORANGE, colors::LIME];
-    led8x12.write_text("12\n34", &colors).await
+    led8x12.write_text("12\n34", &colors).await;
+    Ok(())
 }
 
 /// Blink text by constructing frames explicitly.
 async fn demo_blink_text(led8x12: &Led8x12) -> Result<()> {
     let mut on_frame = Frame2d::new();
-    led8x12.write_text_to_frame("HI", &[colors::YELLOW], &mut on_frame)?;
+    led8x12.write_text_to_frame("HI", &[colors::YELLOW], &mut on_frame);
     led8x12.animate([
         (on_frame, Duration::from_millis(500)),
         (Frame2d::new(), Duration::from_millis(500)),

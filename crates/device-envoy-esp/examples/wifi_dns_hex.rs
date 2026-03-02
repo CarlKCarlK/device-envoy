@@ -75,18 +75,18 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
             |wifi_auto_event| async move {
                 match wifi_auto_event {
                     WifiAutoEvent::CaptivePortalReady => {
-                        led12x8_dns_ref.write_text("JO\nIN", COLORS)?;
+                        led12x8_dns_ref.write_text("JO\nIN", COLORS);
                     }
                     WifiAutoEvent::Connecting {
                         try_index,
                         try_count: _,
                     } => {
                         info!("connect try {}", try_index + 1);
-                        led12x8_dns_ref.write_text("CO\nNN", COLORS)?;
+                        led12x8_dns_ref.write_text("CO\nNN", COLORS);
                     }
                     WifiAutoEvent::ConnectionFailed => {
                         warn!("wifi_auto connection failed");
-                        led12x8_dns_ref.write_text("FA\nIL", COLORS)?;
+                        led12x8_dns_ref.write_text("FA\nIL", COLORS);
                     }
                 }
                 Ok(())
@@ -95,16 +95,16 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         .await?;
 
     while !stack.is_link_up() {
-        led12x8_dns.write_text("IP\n..", COLORS)?;
+        led12x8_dns.write_text("IP\n..", COLORS);
         Timer::after(Duration::from_millis(200)).await;
     }
     while stack.config_v4().is_none() {
-        led12x8_dns.write_text("IP\n..", COLORS)?;
+        led12x8_dns.write_text("IP\n..", COLORS);
         Timer::after(Duration::from_millis(200)).await;
     }
 
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
-    led12x8_dns.write_text("--\n--", COLORS)?;
+    led12x8_dns.write_text("--\n--", COLORS);
     loop {
         let mut hex_text: heapless::String<6> = heapless::String::new();
 
@@ -122,7 +122,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
                 .expect("fallback text must fit into fixed buffer");
         }
 
-        led12x8_dns.write_text(&hex_text, COLORS)?;
+        led12x8_dns.write_text(&hex_text, COLORS);
         Timer::after(DNS_PERIOD).await;
     }
 }

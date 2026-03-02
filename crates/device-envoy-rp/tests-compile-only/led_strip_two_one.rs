@@ -101,7 +101,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
             colors::HOT_PINK,
         ],
         &mut frame1,
-    )?;
+    );
     go_frames_gpio3
         .push((frame1, go_frame_duration))
         .expect("go_frames has capacity for 2 frames");
@@ -116,7 +116,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
             colors::MAGENTA,
         ],
         &mut frame2,
-    )?;
+    );
     go_frames_gpio3
         .push((frame2, go_frame_duration))
         .expect("go_frames has capacity for 2 frames");
@@ -133,7 +133,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
             colors::HOT_PINK,
         ],
         &mut frame1,
-    )?;
+    );
     go_frames_gpio4
         .push((frame1, go_frame_duration))
         .expect("go_frames has capacity for 2 frames");
@@ -148,7 +148,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
             colors::MAGENTA,
         ],
         &mut frame2,
-    )?;
+    );
     go_frames_gpio4
         .push((frame2, go_frame_duration))
         .expect("go_frames has capacity for 2 frames");

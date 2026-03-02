@@ -5,7 +5,7 @@ error[E0080]: evaluation panicked: column out of bounds
   |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `INVALID` failed inside this call
   |
 note: inside `LedLayout::<3, 3, 1>::new`
- --> src/led2d/layout.rs
+ --> $WORKSPACE/crates/device-envoy-core/src/led2d/layout.rs
   |
   |             assert!(c < W, "column out of bounds");
   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the failure occurred here

@@ -47,7 +47,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
 
     led24x4_concat
         .write_text("HELLO MOM", &[colors::CYAN, colors::WHITE])
-        .await?;
+        .await;
 
     loop {
         Timer::after(Duration::from_millis(3600)).await;

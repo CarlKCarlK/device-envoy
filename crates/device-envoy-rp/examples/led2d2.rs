@@ -52,7 +52,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let mut frame_0 = Frame2d::new();
     // Empty colors array defaults to white
-    led_12x8_animated.write_text_to_frame("Go", &[], &mut frame_0)?;
+    led_12x8_animated.write_text_to_frame("Go", &[], &mut frame_0);
 
     let mut frame_1 = Frame2d::new();
     // "/n" starts a new line. Text does not wrap but rather clips.
@@ -60,7 +60,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         "\nGo",
         &[colors::HOT_PINK, colors::LIME],
         &mut frame_1,
-    )?;
+    );
 
     // Animate between the two frames indefinitely.
     let frame_duration = Duration::from_secs(1);

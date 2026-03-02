@@ -58,11 +58,7 @@
 /// Rotate a serpentine-wired 3×2 panel into a 2×3 layout and verify the result at compile time:
 ///
 /// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # #[panic_handler]
-/// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-/// use device_envoy_rp::led2d::layout::LedLayout;
+/// use device_envoy_core::led2d::layout::LedLayout;
 ///
 /// const ROTATED: LedLayout<6, 2, 3> = LedLayout::serpentine_column_major().rotate_cw();
 /// const EXPECTED: LedLayout<6, 2, 3> =
@@ -108,8 +104,12 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         N
     }
 
+    /// Return the inverse mapping: `(x, y)` coordinates to LED wiring index.
+    ///
+    /// The returned array is indexed by `y * W + x` and contains the LED wiring
+    /// index for each pixel position. This is the inverse of [`index_to_xy`](Self::index_to_xy).
     #[must_use]
-    pub(crate) const fn xy_to_index(&self) -> [u16; N] {
+    pub const fn xy_to_index(&self) -> [u16; N] {
         assert!(
             N <= u16::MAX as usize,
             "total LEDs must fit in u16 for xy_to_index"
@@ -151,11 +151,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Const equality helper for doctests/examples.
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const LINEAR: LedLayout<4, 4, 1> = LedLayout::linear_h();
     /// const ROTATED: LedLayout<4, 4, 1> = LedLayout::linear_v().rotate_cw();
@@ -191,11 +187,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// This constructor is `const` and is intended to be used in a `const`
     /// definition, so layout errors are caught at **compile time**, not at runtime.
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// // 3×2 panel (landscape, W×H)
     /// const MAP: LedLayout<6, 3, 2> =
@@ -258,11 +250,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Linear row-major mapping for a single-row strip (cols increase left-to-right).
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const LINEAR: LedLayout<6, 6, 1> = LedLayout::linear_h();
     /// const EXPECTED: LedLayout<6, 6, 1> =
@@ -292,11 +280,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Linear column-major mapping for a single-column strip (rows increase top-to-bottom).
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const LINEAR: LedLayout<6, 1, 6> = LedLayout::linear_v();
     /// const EXPECTED: LedLayout<6, 1, 6> =
@@ -331,11 +315,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Serpentine column-major mapping returned as a checked `LedLayout`.
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const MAP: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -377,11 +357,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Serpentine row-major mapping (alternating left-to-right and right-to-left across rows).
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const MAP: LedLayout<6, 3, 2> = LedLayout::serpentine_row_major();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -421,11 +397,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Rotate 90° clockwise (dims swap).
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const ROTATED: LedLayout<6, 2, 3> = LedLayout::serpentine_column_major().rotate_cw();
     /// const EXPECTED: LedLayout<6, 2, 3> =
@@ -457,11 +429,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Flip horizontally (mirror columns).
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const FLIPPED: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major().flip_h();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -491,11 +459,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Rotate 180° derived from rotate_cw.
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const ROTATED: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major().rotate_180();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -516,11 +480,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Rotate 90° counter-clockwise derived from rotate_cw.
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const ROTATED: LedLayout<6, 2, 3> = LedLayout::serpentine_column_major().rotate_ccw();
     /// const EXPECTED: LedLayout<6, 2, 3> =
@@ -542,11 +502,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Flip vertically derived from rotation + horizontal flip.
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const FLIPPED: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major().flip_v();
     /// const EXPECTED: LedLayout<6, 3, 2> =
@@ -567,11 +523,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Concatenate horizontally with another mapping sharing the same rows.
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const LED_LAYOUT: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
     /// const COMBINED: LedLayout<12, 6, 2> = LED_LAYOUT.combine_h::<6, 12, 3, 6>(LED_LAYOUT);
@@ -626,11 +578,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Concatenate vertically with another mapping sharing the same columns.
     ///
     /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # #[panic_handler]
-    /// # fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
-    /// use device_envoy_rp::led2d::layout::LedLayout;
+    /// use device_envoy_core::led2d::layout::LedLayout;
     ///
     /// const LED_LAYOUT: LedLayout<6, 3, 2> = LedLayout::serpentine_column_major();
     /// const COMBINED: LedLayout<12, 3, 4> = LED_LAYOUT.combine_v::<6, 12, 2, 4>(LED_LAYOUT);

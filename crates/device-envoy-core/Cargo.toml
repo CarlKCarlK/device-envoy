@@ -8,6 +8,9 @@ publish = false
 name = "device_envoy_core"
 path = "src/lib.rs"
 
+[features]
+host = ["dep:png"]
+
 [dependencies]
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }
@@ -15,6 +18,17 @@ embassy-sync = "0.7.2"
 embassy-time = { version = "0.5.0" }
 heapless = { version = "0.8.0" }
 critical-section = { version = "1.2.0", default-features = false }
+png = { version = "0.17", optional = true }
 
 [dev-dependencies]
 critical-section = { version = "1.2.0", features = ["std"] }
+
+[[test]]
+name = "led2d_text_render"
+path = "tests/led2d_text_render.rs"
+required-features = ["host"]
+
+[[test]]
+name = "pngs"
+path = "tests/pngs.rs"
+required-features = ["host"]

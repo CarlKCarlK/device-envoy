@@ -51,8 +51,7 @@ fn run_render_test<const W: usize, const H: usize>(
     colors: &[RGB8],
 ) {
     let mut frame: Frame2d<W, H> = Frame2d::new();
-    render_text_to_frame(&mut frame, &font.to_font(), text, colors, (0, 0))
-        .expect("render must succeed");
+    render_text_to_frame(&mut frame, &font.to_font(), text, colors, (0, 0));
 
     if let Some(output_dir) = generation_dir() {
         let output_path = output_dir.join(format!("{name}.png"));

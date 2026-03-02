@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 #![cfg(feature = "host")]
 
-use device_envoy_rp::led2d::{Frame2d, Led2dFont, render_text_to_frame};
+use device_envoy_core::led2d::{Frame2d, Led2dFont, render_text_to_frame};
 use png::{BitDepth, ColorType, Decoder, Encoder};
 use smart_leds::{RGB8, colors};
 use std::fs::File;
@@ -62,8 +62,7 @@ fn run_render_test<const W: usize, const H: usize>(
     colors: &[RGB8],
 ) {
     let mut frame: Frame2d<W, H> = Frame2d::new();
-    render_text_to_frame(&mut frame, &font.to_font(), text, colors, (0, 0))
-        .expect("render must succeed");
+    render_text_to_frame(&mut frame, &font.to_font(), text, colors, (0, 0));
 
     if let Some(dir) = generation_dir() {
         let output_path = dir.join(format!("{name}.png"));
@@ -97,8 +96,7 @@ fn run_render_test_heap<const W: usize, const H: usize>(
     let frame_ptr = frame_box.as_mut_ptr() as *mut [[RGB8; W]; H];
     let frame_ref: &mut Frame2d<W, H> = unsafe { &mut *(frame_ptr as *mut Frame2d<W, H>) };
 
-    render_text_to_frame(frame_ref, &font.to_font(), text, colors, (0, 0))
-        .expect("render must succeed");
+    render_text_to_frame(frame_ref, &font.to_font(), text, colors, (0, 0));
 
     if let Some(dir) = generation_dir() {
         let output_path = dir.join(format!("{name}.png"));

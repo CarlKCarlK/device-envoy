@@ -9,9 +9,21 @@
 
 pub mod button;
 #[cfg(target_os = "none")]
-pub(crate) mod clock;
+pub mod clock_sync {
+    //! A device abstraction that combines NTP time synchronization with a local clock.
+    //! See [`ClockSync`] for the full API and usage.
+    pub use device_envoy_core::clock_sync::{
+        ClockSync, ClockSyncStatic, ClockSyncTick, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds,
+        h12_m_s,
+    };
+}
 #[cfg(target_os = "none")]
-pub mod clock_sync;
+pub mod time_sync {
+    //! A device abstraction for Network Time Protocol (NTP) time synchronization over Wi-Fi.
+    //! See the [`clock_sync` module](crate::clock_sync) for the high-level clock API.
+    pub use device_envoy_core::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
+    pub use device_envoy_core::clock::UnixSeconds;
+}
 pub mod audio_player;
 pub mod flash_array;
 pub mod ir;
@@ -19,8 +31,6 @@ pub mod led2d;
 pub mod led_strip;
 pub mod rmt;
 pub mod rmt_mode;
-#[cfg(target_os = "none")]
-pub mod time_sync;
 pub mod wifi_auto;
 
 pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};

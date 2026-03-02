@@ -11,17 +11,24 @@ path = "src/lib.rs"
 [features]
 host = ["dep:png"]
 defmt = ["dep:defmt"]
+wifi = ["dep:embassy-net"]
 
 [dependencies]
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }
+embassy-executor = { version = "0.9.0", default-features = false }
+embassy-futures = "0.1.2"
 embassy-sync = "0.7.2"
 embassy-time = { version = "0.5.0" }
+embassy-net = { version = "0.8.0", features = ["dns", "udp", "proto-ipv4", "medium-ip"], optional = true }
 heapless = { version = "0.8.0" }
 paste = { version = "1.0" }
 critical-section = { version = "1.2.0", default-features = false }
 defmt = { version = "0.3", optional = true }
 png = { version = "0.17", optional = true }
+portable-atomic = { version = "1.11.1", features = ["critical-section"] }
+static_cell = "2.1.0"
+time = { version = "0.3", default-features = false }
 
 [dev-dependencies]
 critical-section = { version = "1.2.0", features = ["std"] }

@@ -1,19 +1,15 @@
 //! A device abstraction that manages timekeeping and emits tick events.
 //!
-//! The clock is headless: it uses the monotonic timer only—no external peripherals required—so
-//! it can run in tests or alongside other devices without owning hardware.
+//! The clock is headless: it uses the monotonic timer only — no external peripherals required —
+//! so it can run alongside other devices without owning hardware.
 //!
-//! See [`Clock`] for usage and examples.
+//! See [`Clock`] for the primary API. For platform-specific examples see the platform crate
+//! (for example `device_envoy_rp::clock_sync` or `device_envoy_esp::clock_sync`).
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::convert::Infallible;
 use core::sync::atomic::{AtomicI32, Ordering};
-use defmt::*;
-// Import assert! and panic! explicitly from prelude to disambiguate from defmt::*
-use core::panic;
-#[allow(unused_imports)]
-use core::{assert, debug_assert, debug_assert_eq, debug_assert_ne};
+
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -23,15 +19,50 @@ use embassy_time::{Duration, Instant, Timer};
 use portable_atomic::{AtomicI64, AtomicU64};
 use time::{Duration as TimeDuration, OffsetDateTime, UtcOffset};
 
-use crate::Result;
-use crate::time_sync::UnixSeconds;
+// ============================================================================
+// UnixSeconds
+// ============================================================================
+
+/// Units-safe wrapper for Unix timestamps (seconds since 1970-01-01 00:00:00 UTC).
+#[repr(transparent)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct UnixSeconds(pub i64);
+
+impl UnixSeconds {
+    /// Get the underlying `i64` value.
+    #[must_use]
+    pub const fn as_i64(self) -> i64 {
+        self.0
+    }
+
+    /// Convert NTP seconds (since 1900-01-01) to Unix seconds (since 1970-01-01).
+    #[must_use]
+    pub const fn from_ntp_seconds(ntp: u32) -> Option<Self> {
+        const NTP_TO_UNIX_SECONDS: i64 = 2_208_988_800;
+        let seconds = (ntp as i64) - NTP_TO_UNIX_SECONDS;
+        if seconds >= 0 {
+            Some(Self(seconds))
+        } else {
+            None
+        }
+    }
+
+    /// Convert to [`OffsetDateTime`] with the given timezone offset.
+    #[must_use]
+    pub fn to_offset_datetime(self, offset: UtcOffset) -> Option<OffsetDateTime> {
+        OffsetDateTime::from_unix_timestamp(self.as_i64())
+            .ok()
+            .map(|datetime| datetime.to_offset(offset))
+    }
+}
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-/// Maximum absolute offset minutes supported by [`UtcOffset`] (< 24h).
-const MAX_OFFSET_MINUTES: i32 = (24 * 60) - 1;
+/// Maximum absolute offset minutes supported by [`UtcOffset`] (< 24 h).
+pub const MAX_OFFSET_MINUTES: i32 = (24 * 60) - 1;
 /// Fixed-point scale factor for speed multiplier (parts per million).
 const SPEED_SCALE_PPM: u64 = 1_000_000;
 
@@ -41,30 +72,30 @@ const SPEED_SCALE_PPM: u64 = 1_000_000;
 
 /// Commands sent to the clock device.
 enum ClockCommand {
-    /// Emit a tick notification (used when time/offset changes)
+    /// Emit a tick notification (used when time/offset changes).
     UpdateTicker,
 }
-
-// ============================================================================
-// Clock Virtual Device
-// ============================================================================
 
 /// Channel type for clock commands.
 type ClockCommands = Channel<CriticalSectionRawMutex, ClockCommand, 4>;
 /// Signal type for clock tick notifications.
 type ClockTicks = Signal<CriticalSectionRawMutex, ()>;
 
-/// Resources needed by Clock device
+// ============================================================================
+// Clock Virtual Device
+// ============================================================================
+
+/// Resources needed by the [`Clock`] device.
 pub struct ClockStatic {
     commands: ClockCommands,
     ticks: ClockTicks,
     offset_minutes: AtomicI32,
     tick_interval_ms: AtomicU64,
-    // Base UTC timestamp in microseconds corresponding to base_instant_ticks (0 = not set)
+    /// Base UTC timestamp in microseconds corresponding to `base_instant_ticks` (0 = not set).
     base_unix_micros: AtomicI64,
-    // Monotonic ticks (microseconds) when base_unix_micros was captured
+    /// Monotonic ticks (microseconds) when `base_unix_micros` was captured.
     base_instant_ticks: AtomicU64,
-    // Speed multiplier scaled by SPEED_SCALE_PPM (1.0x = 1_000_000)
+    /// Speed multiplier scaled by `SPEED_SCALE_PPM` (1.0x = 1_000_000).
     speed_scaled_ppm: AtomicU64,
 }
 
@@ -79,13 +110,13 @@ impl ClockStatic {
     }
 }
 
-/// A device abstraction that manages time keeping and emits time tick events.
+/// A device abstraction that manages timekeeping and emits time tick events.
 ///
 /// Pass `Some(duration)` to enable periodic ticks aligned to that interval; use `None` to emit
 /// ticks only when time/offset changes. The clock is headless (no hardware ownership) and
 /// supports time scaling for demos/tests via [`Clock::set_speed`].
 ///
-/// This type is used internally by [`ClockSync`](crate::clock_sync::ClockSync).
+/// This type is used internally by `ClockSync` in the platform crate.
 pub struct Clock {
     commands: &'static ClockCommands,
     ticks: &'static ClockTicks,
@@ -97,7 +128,7 @@ pub struct Clock {
 }
 
 impl Clock {
-    /// Create Clock resources
+    /// Create [`Clock`] static resources.
     #[must_use]
     pub const fn new_static() -> ClockStatic {
         ClockStatic {
@@ -111,7 +142,8 @@ impl Clock {
         }
     }
 
-    /// Create a new Clock device and spawn its task. See [`Clock`] docs for a full example.
+    /// Create a new [`Clock`] device and spawn its task.
+    ///
     /// The `tick_interval` parameter uses [`embassy_time::Duration`].
     pub fn new(
         clock_static: &'static ClockStatic,
@@ -121,7 +153,9 @@ impl Clock {
     ) -> Self {
         clock_static.set_offset_minutes(offset_minutes);
         clock_static.set_tick_interval_ms(tick_interval.map(|d| d.as_millis()));
-        unwrap!(spawner.spawn(clock_device_loop(clock_static)));
+        spawner
+            .spawn(clock_device_loop(clock_static))
+            .expect("clock task spawn should succeed");
         Self {
             commands: &clock_static.commands,
             ticks: &clock_static.ticks,
@@ -133,16 +167,18 @@ impl Clock {
         }
     }
 
-    /// Wait for and return the next clock tick event. If constructed with `None` tick interval,
-    /// ticks occur only when time or offset changes. Passing `Some(duration)` enables periodic
-    /// ticks aligned to that interval. See [`Clock`] for usage.
+    /// Wait for and return the next clock tick event.
+    ///
+    /// If constructed with `None` tick interval, ticks occur only when time or offset changes.
+    /// Passing `Some(duration)` enables periodic ticks aligned to that interval.
     pub async fn wait_for_tick(&self) -> OffsetDateTime {
         self.ticks.wait().await;
         self.now_local()
     }
 
     /// Get the current local time (offset already applied) without waiting for a tick.
-    /// Computed from atomics + `Instant::now()` - no async needed.
+    ///
+    /// Computed from atomics + `Instant::now()` — no async required.
     pub fn now_local(&self) -> OffsetDateTime {
         let offset_minutes = self.offset_minutes.load(Ordering::Relaxed);
         let base_unix_micros = self.base_unix_micros.load(Ordering::Relaxed);
@@ -152,7 +188,7 @@ impl Clock {
         );
 
         if base_unix_micros == 0 {
-            // Time not set - return midnight
+            // Time not set — return epoch midnight.
             return OffsetDateTime::from_unix_timestamp(0).expect("midnight is valid");
         }
 
@@ -184,17 +220,17 @@ impl Clock {
         utc.to_offset(offset)
     }
 
-    /// Set the current UTC time. See [`Clock`] docs for usage.
+    /// Set the current UTC time.
     pub async fn set_utc_time(&self, unix_seconds: UnixSeconds) {
-        let unix_seconds = unix_seconds.as_i64();
-        let unix_micros = i128::from(unix_seconds) * i128::from(1_000_000);
+        let unix_seconds_val = unix_seconds.as_i64();
+        let unix_micros = i128::from(unix_seconds_val) * 1_000_000_i128;
         let unix_micros = i64::try_from(unix_micros).expect("unix micros fits in i64");
         let now_ticks = Instant::now().as_ticks();
 
         self.base_unix_micros.store(unix_micros, Ordering::Relaxed);
         self.base_instant_ticks.store(now_ticks, Ordering::Relaxed);
-        info!("Clock time set: {}", unix_seconds);
-        // Notify the device loop to emit a tick
+        #[cfg(feature = "defmt")]
+        defmt::info!("Clock time set: {}", unix_seconds_val);
         self.commands.send(ClockCommand::UpdateTicker).await;
     }
 
@@ -204,10 +240,9 @@ impl Clock {
             minutes.unsigned_abs() <= MAX_OFFSET_MINUTES as u32,
             "offset minutes within +/-24h"
         );
-        // Update the atomic immediately
         self.offset_minutes.store(minutes, Ordering::Relaxed);
-        info!("Clock UTC offset updated to {} minutes", minutes);
-        // Notify the device loop to emit a tick
+        #[cfg(feature = "defmt")]
+        defmt::info!("Clock UTC offset updated to {} minutes", minutes);
         self.commands.send(ClockCommand::UpdateTicker).await;
     }
 
@@ -216,29 +251,27 @@ impl Clock {
         self.offset_minutes.load(Ordering::Relaxed)
     }
 
-    /// Set the tick interval (e.g., `Some(clock_sync::ONE_SECOND)`).
-    /// Use `None` to disable periodic ticks (only emit on time/offset changes). See [`Clock`].
+    /// Set the tick interval (e.g., `Some(ONE_SECOND)`).
+    ///
+    /// Use `None` to disable periodic ticks (only emit on time/offset changes).
     /// This uses [`embassy_time::Duration`] for interval timing.
     pub async fn set_tick_interval(&self, interval: Option<embassy_time::Duration>) {
-        // Update the atomic immediately
         let interval_ms = interval.map(|d| d.as_millis()).unwrap_or(0);
         self.tick_interval_ms.store(interval_ms, Ordering::Relaxed);
+        #[cfg(feature = "defmt")]
         if interval_ms == 0 {
-            info!("Clock tick interval cleared (ticks only on updates)");
+            defmt::info!("Clock tick interval cleared (ticks only on updates)");
         } else {
-            info!("Clock tick interval updated to {} ms", interval_ms);
+            defmt::info!("Clock tick interval updated to {} ms", interval_ms);
         }
-        // Notify device loop to wake up and recalculate sleep duration
         self.commands.send(ClockCommand::UpdateTicker).await;
     }
 
-    /// Update the speed multiplier (1.0 = real time). Changing speed resets the base time to
-    /// the current real time so returning to 1.0 resumes the correct clock.
+    /// Update the speed multiplier (1.0 = real time).
     ///
-    /// Internally this stores real wall-clock ticks (`Instant::now`) and a base Unix timestamp
-    /// in microseconds. When you speed up (e.g., `2.0`), elapsed real ticks are scaled before
-    /// converting back to Unix time; when you slow down (e.g., `0.5`), they are scaled down.
-    /// Useful for fast-forwarding demos or accelerating tests without sleeping in real time.
+    /// Changing speed resets the base time to the current real time so returning to 1.0 resumes
+    /// the correct clock. Useful for fast-forwarding demos or accelerating tests without sleeping
+    /// in real time.
     pub async fn set_speed(&self, speed_multiplier: f32) {
         assert!(speed_multiplier.is_finite(), "speed must be finite");
         assert!(speed_multiplier > 0.0, "speed must be positive");
@@ -270,29 +303,32 @@ impl Clock {
         self.base_instant_ticks.store(now_ticks, Ordering::Relaxed);
         self.speed_scaled_ppm
             .store(speed_scaled_ppm, Ordering::Relaxed);
-        info!("Clock speed set: {} ppm", speed_scaled_ppm);
+        #[cfg(feature = "defmt")]
+        defmt::info!("Clock speed set: {} ppm", speed_scaled_ppm);
         self.commands.send(ClockCommand::UpdateTicker).await;
     }
 }
 
 #[embassy_executor::task]
 async fn clock_device_loop(resources: &'static ClockStatic) -> ! {
-    let err = inner_clock_device_loop(resources).await.unwrap_err();
-    panic!("{err}");
+    inner_clock_device_loop(resources).await
 }
 
-async fn inner_clock_device_loop(resources: &'static ClockStatic) -> Result<Infallible> {
-    // Local loop variables
+async fn inner_clock_device_loop(resources: &'static ClockStatic) -> ! {
     let mut tick_interval_ms = resources.tick_interval_ms.load(Ordering::Relaxed);
     let mut speed_scaled_ppm = resources.speed_scaled_ppm.load(Ordering::Relaxed);
     let offset_minutes = resources.offset_minutes.load(Ordering::Relaxed);
 
-    info!(
+    #[cfg(feature = "defmt")]
+    defmt::info!(
         "Clock device started (UTC offset: {} minutes, tick interval: {} ms, speed: {} ppm)",
-        offset_minutes, tick_interval_ms, speed_scaled_ppm
+        offset_minutes,
+        tick_interval_ms,
+        speed_scaled_ppm
     );
+    #[cfg(not(feature = "defmt"))]
+    let _ = offset_minutes;
 
-    // Helper to calculate duration until next tick boundary
     let sleep_until_boundary = |interval_micros: u64| -> Duration {
         assert!(interval_micros > 0);
         let now_ticks = Instant::now().as_ticks();
@@ -308,25 +344,22 @@ async fn inner_clock_device_loop(resources: &'static ClockStatic) -> Result<Infa
         emit_tick = true;
 
         if tick_interval_ms == 0 {
-            // No periodic ticks; wait for commands to trigger a single tick
+            // No periodic ticks; wait for a command to trigger a single tick.
             match resources.commands.receive().await {
                 ClockCommand::UpdateTicker => {
                     tick_interval_ms = resources.tick_interval_ms.load(Ordering::Relaxed);
                     speed_scaled_ppm = resources.speed_scaled_ppm.load(Ordering::Relaxed);
-                    // emit_tick remains true for next loop iteration
                 }
             }
             continue;
         }
 
-        // Calculate sleep duration aligned to tick boundary
         let interval_micros = scaled_interval_microseconds(tick_interval_ms, speed_scaled_ppm);
         let sleep_duration = sleep_until_boundary(interval_micros);
 
-        // Wait for either tick interval or a command
         match select(Timer::after(sleep_duration), resources.commands.receive()).await {
             Either::First(_) => {
-                // Timer elapsed - tick occurred, loop will signal again
+                // Timer elapsed — tick occurred; loop will signal again.
             }
             Either::Second(ClockCommand::UpdateTicker) => {
                 tick_interval_ms = resources.tick_interval_ms.load(Ordering::Relaxed);

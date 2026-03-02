@@ -679,13 +679,19 @@ version = "0.0.0"
 dependencies = [
  "critical-section",
  "defmt 0.3.100",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-net",
  "embassy-sync 0.7.2",
  "embassy-time",
  "embedded-graphics",
  "heapless 0.8.0",
  "paste",
  "png",
+ "portable-atomic",
  "smart-leds",
+ "static_cell",
+ "time",
 ]
 
 [[package]]

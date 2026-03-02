@@ -45,8 +45,6 @@ pub mod button;
 #[cfg(target_os = "none")]
 pub mod char_lcd;
 #[cfg(all(feature = "wifi", target_os = "none"))]
-pub(crate) mod clock;
-#[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 mod error;
 #[cfg(target_os = "none")]
@@ -65,8 +63,6 @@ pub mod rfid;
 pub mod servo;
 #[cfg(target_os = "none")]
 pub mod servo_player;
-#[cfg(target_os = "none")]
-pub(crate) mod time_sync;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod wifi_auto;
 

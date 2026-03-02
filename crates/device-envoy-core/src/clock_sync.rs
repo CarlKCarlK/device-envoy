@@ -1,5 +1,14 @@
-//! A device abstraction that combines NTP sync with local ticking time.
-//! See [`ClockSync`] for usage.
+//! A device abstraction that combines NTP time synchronization with a local clock.
+//!
+//! This module provides platform-independent types and logic for [`ClockSync`].
+//! For a complete usage example see the platform crate's `clock_sync` module
+//! (for example `device_envoy_rp::clock_sync` or `device_envoy_esp::clock_sync`).
+//!
+//! # WiFi feature required
+//!
+//! This module is only available when the `wifi` feature is enabled.
+
+#![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use embassy_executor::Spawner;
 use embassy_net::Stack;
@@ -10,31 +19,57 @@ use portable_atomic::{AtomicBool, AtomicU64, Ordering};
 use time::OffsetDateTime;
 
 use crate::clock::{Clock, ClockStatic};
-pub use crate::time_sync::UnixSeconds;
 use crate::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 
+// ============================================================================
+// Re-exports
+// ============================================================================
+
+pub use crate::clock::UnixSeconds;
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/// Duration representing one second.
 pub const ONE_SECOND: Duration = Duration::from_secs(1);
+/// Duration representing one minute (60 seconds).
 pub const ONE_MINUTE: Duration = Duration::from_secs(60);
+/// Duration representing one day (24 hours).
 pub const ONE_DAY: Duration = Duration::from_secs(86_400);
 
-#[must_use]
-pub fn h12_m_s(datetime: &OffsetDateTime) -> (u8, u8, u8) {
-    let hour_24 = datetime.hour() as u8;
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/// Extract hour (12-hour format), minute, and second from an [`OffsetDateTime`].
+pub fn h12_m_s(dt: &OffsetDateTime) -> (u8, u8, u8) {
+    let hour_24 = dt.hour() as u8;
     let hour_12 = match hour_24 {
         0 => 12,
         1..=12 => hour_24,
         _ => hour_24 - 12,
     };
-    (hour_12, datetime.minute() as u8, datetime.second() as u8)
+    (hour_12, dt.minute() as u8, dt.second() as u8)
 }
 
+// ============================================================================
+// ClockSync types
+// ============================================================================
+
+/// Tick event emitted by [`ClockSync`].
+///
+/// See the platform crate's `clock_sync` module for a usage example.
 pub struct ClockSyncTick {
+    /// The current local time (adjusted by timezone offset if set).
     pub local_time: OffsetDateTime,
+    /// Duration since the last successful NTP synchronization.
     pub since_last_sync: Duration,
 }
 
 type SyncReadySignal = Signal<CriticalSectionRawMutex, ()>;
 
+/// Resources needed to construct a [`ClockSync`].
 pub struct ClockSyncStatic {
     clock_static: ClockStatic,
     clock_cell: static_cell::StaticCell<Clock>,
@@ -44,6 +79,13 @@ pub struct ClockSyncStatic {
     synced: AtomicBool,
 }
 
+/// Combines NTP synchronization with a local clock and tick events.
+///
+/// Does not emit ticks until the first successful sync (or a manual call to
+/// [`ClockSync::set_utc_time`]). Each tick includes how long it has been since the last
+/// successful sync.
+///
+/// See the platform crate's `clock_sync` module for a complete usage example.
 pub struct ClockSync {
     clock: &'static Clock,
     time_sync: &'static TimeSync,
@@ -53,6 +95,7 @@ pub struct ClockSync {
 }
 
 impl ClockSyncStatic {
+    /// Creates static resources for the [`ClockSync`] device.
     #[must_use]
     pub(crate) const fn new() -> Self {
         Self {
@@ -67,11 +110,16 @@ impl ClockSyncStatic {
 }
 
 impl ClockSync {
+    /// Create [`ClockSync`] static resources.
     #[must_use]
     pub const fn new_static() -> ClockSyncStatic {
         ClockSyncStatic::new()
     }
 
+    /// Create a [`ClockSync`] using an existing network stack.
+    ///
+    /// See the platform crate's `clock_sync` module for a full usage example.
+    /// The `tick_interval` parameter uses [`embassy_time::Duration`].
     pub fn new(
         clock_sync_static: &'static ClockSyncStatic,
         stack: &'static Stack<'static>,
@@ -109,6 +157,10 @@ impl ClockSync {
         clock_sync
     }
 
+    /// Wait for and return the next tick after sync.
+    ///
+    /// Blocks until the first NTP sync completes, then returns a tick each interval.
+    /// See the platform crate's `clock_sync` module for usage.
     pub async fn wait_for_tick(&self) -> ClockSyncTick {
         self.wait_for_first_sync().await;
         let local_time = self.clock.wait_for_tick().await;
@@ -118,26 +170,34 @@ impl ClockSync {
         }
     }
 
+    /// Get the current local time without waiting for a tick.
     pub fn now_local(&self) -> OffsetDateTime {
         self.clock.now_local()
     }
 
+    /// Update the UTC offset used for local time.
     pub async fn set_offset_minutes(&self, minutes: i32) {
         self.clock.set_offset_minutes(minutes).await;
     }
 
+    /// Get the current UTC offset in minutes.
     pub fn offset_minutes(&self) -> i32 {
         self.clock.offset_minutes()
     }
 
+    /// Set the tick interval. Use `None` to disable periodic ticks.
+    ///
+    /// This uses [`embassy_time::Duration`] for interval timing.
     pub async fn set_tick_interval(&self, interval: Option<embassy_time::Duration>) {
         self.clock.set_tick_interval(interval).await;
     }
 
+    /// Update the speed multiplier (1.0 = real time).
     pub async fn set_speed(&self, speed_multiplier: f32) {
         self.clock.set_speed(speed_multiplier).await;
     }
 
+    /// Manually set the current UTC time and mark the clock as synced.
     pub async fn set_utc_time(&self, unix_seconds: UnixSeconds) {
         self.clock.set_utc_time(unix_seconds).await;
         self.mark_synced();
@@ -149,10 +209,7 @@ impl ClockSync {
             return Duration::from_secs(0);
         }
         let now_ticks = Instant::now().as_ticks();
-        assert!(
-            now_ticks >= last_sync_ticks,
-            "instant ticks must be monotonic"
-        );
+        assert!(now_ticks >= last_sync_ticks);
         let elapsed_ticks = now_ticks - last_sync_ticks;
         Duration::from_micros(elapsed_ticks)
     }
@@ -172,6 +229,10 @@ impl ClockSync {
     }
 }
 
+// ============================================================================
+// Task
+// ============================================================================
+
 #[embassy_executor::task]
 async fn clock_sync_loop(
     clock: &'static Clock,
@@ -189,7 +250,12 @@ async fn clock_sync_loop(
                 synced.store(true, Ordering::Release);
                 sync_ready.signal(());
             }
-            TimeSyncEvent::Err(_message) => {}
+            TimeSyncEvent::Err(message) => {
+                #[cfg(feature = "defmt")]
+                defmt::info!("ClockSync time sync failed: {}", message);
+                #[cfg(not(feature = "defmt"))]
+                let _ = message;
+            }
         }
     }
 }

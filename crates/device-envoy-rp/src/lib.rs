@@ -37,9 +37,6 @@ pub(crate) mod bit_matrix_led4;
 #[cfg(target_os = "none")]
 #[doc(hidden)]
 pub mod pio_irqs;
-#[cfg(feature = "host")]
-/// Utilities for converting frames to PNG images (host testing only).
-pub mod to_png;
 // Embedded-only in normal builds, but compiled for host unit tests.
 #[cfg(any(target_os = "none", all(test, feature = "host")))]
 pub mod audio_player;

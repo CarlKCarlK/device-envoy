@@ -2,8 +2,6 @@
 //! See [`WifiAuto`] for the main struct and usage.
 
 #[cfg(target_os = "none")]
-pub mod button;
-#[cfg(target_os = "none")]
 mod dhcp;
 #[cfg(target_os = "none")]
 mod dns;
@@ -18,7 +16,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use crate::flash_array::FlashBlock;
 use crate::Result;
 #[cfg(target_os = "none")]
-use button::Button;
+use crate::button::Button;
 #[cfg(target_os = "none")]
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4};
 #[cfg(target_os = "none")]

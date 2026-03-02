@@ -72,3 +72,4 @@ pub mod wifi_auto;
 
 // Re-export error types and result (used throughout)
 pub use crate::error::{Error, Result};
+pub use device_envoy_core::tone;

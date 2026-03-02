@@ -145,18 +145,6 @@ riscv = { version = "0.11", features = [
     "critical-section-single-hart",
 ], optional = true }
 
-# Integration tests
-[[test]]
-name = "mapping"
-path = "tests/mapping.rs"
-required-features = ["host"]
-
-[[test]]
-name = "led2d_mapping_algebra"
-path = "tests/led2d_mapping_algebra.rs"
-required-features = ["host"]
-
-
 [lints.rust]
 # To use the `unsafe` keyword, do not remove the `unsafe_code = "forbid"` entry.
 # Instead, prefer to change it to `unsafe_code = "deny"` + opt-in with local use of

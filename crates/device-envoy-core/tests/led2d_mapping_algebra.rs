@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use device_envoy_esp::led2d::layout::LedLayout;
+use device_envoy_core::led2d::layout::LedLayout;
 
 const CLOCK_EXPECTED: [(u16, u16); 96] = [
     (0, 11),
@@ -104,6 +104,11 @@ const CLOCK_EXPECTED: [(u16, u16); 96] = [
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_12X4_ORIENTED: LedLayout<48, 4, 12> =
     LED_LAYOUT_12X4.rotate_cw().flip_h().flip_v();
+// Build the 8x12 mapping from two mirrored 12x4 serpentine panels:
+// 1) serpentine_12x4 (4 rows x 12 cols)
+// 2) rotate clockwise to get 12 rows x 4 cols
+// 3) flip horizontally and vertically (panel orientation)
+// 4) concat horizontally two panels to reach 8 cols (12 rows)
 const CLOCK_COMPOSED: LedLayout<96, 8, 12> =
     LED_LAYOUT_12X4_ORIENTED.combine_h::<48, 96, 4, 8>(LED_LAYOUT_12X4_ORIENTED);
 

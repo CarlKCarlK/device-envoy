@@ -24,6 +24,7 @@ pub mod time_sync;
 pub mod wifi_auto;
 
 pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
+pub use device_envoy_core::tone;
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but

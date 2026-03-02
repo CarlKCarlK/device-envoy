@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 //! Host-level tests for mapping primitives.
 
-use device_envoy_rp::led2d::layout::LedLayout;
+use device_envoy_core::led2d::layout::LedLayout;
 
 #[test]
 fn linear_single_row_matches_expected() {

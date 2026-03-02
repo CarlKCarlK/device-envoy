@@ -3,13 +3,10 @@
 //! See [`FlashArray`] for details and usage.
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
-use core::any::type_name;
-
-use crc32fast::Hasher;
-#[cfg(target_os = "none")]
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 #[cfg(target_os = "none")]
 use embassy_sync::blocking_mutex::Mutex;
+#[cfg(target_os = "none")]
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 #[cfg(target_os = "none")]
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
 use serde::{Deserialize, Serialize};
@@ -17,34 +14,43 @@ use serde::{Deserialize, Serialize};
 use static_cell::StaticCell;
 
 use crate::{Error, Result};
+use device_envoy_core::flash_array::{
+    self as core_flash, FlashBlockError, FlashDevice, FLASH_BLOCK_SIZE_U32,
+};
 
-const MAGIC: u32 = 0x424C_4B53; // 'BLKS'
-const HEADER_SIZE: usize = 10;
-const CRC_SIZE: usize = 4;
-const FLASH_BLOCK_SIZE: usize = 4096;
-const FLASH_BLOCK_SIZE_U32: u32 = 4096;
-const MAX_PAYLOAD_SIZE: usize = FLASH_BLOCK_SIZE - HEADER_SIZE - CRC_SIZE;
 #[cfg(target_os = "none")]
-const DEFAULT_FLASH_REGION_BYTES: u32 = 16 * FLASH_BLOCK_SIZE_U32;
+const DEFAULT_FLASH_REGION_BYTES: u32 = 16 * core_flash::FLASH_BLOCK_SIZE_U32;
 
-trait FlashDevice {
-    fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<()>;
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<()>;
-    fn erase(&mut self, from: u32, to: u32) -> Result<()>;
+// Local adapter — wraps esp_storage::FlashStorage so core's FlashDevice trait can be
+// implemented for a type defined in this crate (required by the orphan rule).
+#[cfg(target_os = "none")]
+struct EspFlashAdapter<'a>(&'a mut esp_storage::FlashStorage<'static>);
+
+#[cfg(target_os = "none")]
+impl FlashDevice for EspFlashAdapter<'_> {
+    type Error = esp_storage::FlashStorageError;
+
+    fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), esp_storage::FlashStorageError> {
+        ReadNorFlash::read(self.0, offset, bytes)
+    }
+
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), esp_storage::FlashStorageError> {
+        NorFlash::write(self.0, offset, bytes)
+    }
+
+    fn erase(&mut self, from: u32, to: u32) -> Result<(), esp_storage::FlashStorageError> {
+        NorFlash::erase(self.0, from, to)
+    }
 }
 
 #[cfg(target_os = "none")]
-impl FlashDevice for esp_storage::FlashStorage<'static> {
-    fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<()> {
-        ReadNorFlash::read(self, offset, bytes).map_err(Error::from)
-    }
-
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<()> {
-        NorFlash::write(self, offset, bytes).map_err(Error::from)
-    }
-
-    fn erase(&mut self, from: u32, to: u32) -> Result<()> {
-        NorFlash::erase(self, from, to).map_err(Error::from)
+fn convert_flash_block_error(
+    e: FlashBlockError<esp_storage::FlashStorageError>,
+) -> Error {
+    match e {
+        FlashBlockError::Io(err) => Error::FlashStorage(err),
+        FlashBlockError::FormatError => Error::FormatError,
+        FlashBlockError::StorageCorrupted => Error::StorageCorrupted,
     }
 }
 
@@ -294,8 +300,11 @@ impl FlashBlock {
         T: Serialize + for<'de> Deserialize<'de>,
     {
         let block_offset = self.manager.block_offset(self.block_id)?;
-        self.manager
-            .with_flash(|flash_storage| load_block(flash_storage, block_offset))
+        self.manager.with_flash(|flash_storage| {
+            let mut adapter = EspFlashAdapter(flash_storage);
+            core_flash::load_block::<T, _>(&mut adapter, block_offset)
+                .map_err(convert_flash_block_error)
+        })
     }
 
     /// Save a typed value to this block.
@@ -306,8 +315,11 @@ impl FlashBlock {
         T: Serialize + for<'de> Deserialize<'de>,
     {
         let block_offset = self.manager.block_offset(self.block_id)?;
-        self.manager
-            .with_flash(|flash_storage| save_block(flash_storage, block_offset, value))
+        self.manager.with_flash(|flash_storage| {
+            let mut adapter = EspFlashAdapter(flash_storage);
+            core_flash::save_block(&mut adapter, block_offset, value)
+                .map_err(convert_flash_block_error)
+        })
     }
 
     /// Clear this block.
@@ -315,206 +327,10 @@ impl FlashBlock {
     /// See the [FlashArray struct example](crate::flash_array::FlashArray) for usage.
     pub fn clear(&mut self) -> Result<()> {
         let block_offset = self.manager.block_offset(self.block_id)?;
-        self.manager
-            .with_flash(|flash_storage| clear_block(flash_storage, block_offset))
-    }
-}
-
-fn save_block<T>(flash_device: &mut impl FlashDevice, block_offset: u32, value: &T) -> Result<()>
-where
-    T: Serialize + for<'de> Deserialize<'de>,
-{
-    let mut payload_buffer = [0u8; MAX_PAYLOAD_SIZE];
-    let payload = postcard::to_slice(value, &mut payload_buffer).map_err(|_| Error::FormatError)?;
-    let payload_len = payload.len();
-
-    let mut block_bytes = [0xFFu8; FLASH_BLOCK_SIZE];
-    block_bytes[0..4].copy_from_slice(&MAGIC.to_le_bytes());
-    block_bytes[4..8].copy_from_slice(&compute_type_hash::<T>().to_le_bytes());
-    block_bytes[8..10].copy_from_slice(&(payload_len as u16).to_le_bytes());
-    block_bytes[HEADER_SIZE..HEADER_SIZE + payload_len].copy_from_slice(payload);
-
-    let crc_offset = HEADER_SIZE + payload_len;
-    let crc = compute_crc(&block_bytes[..crc_offset]);
-    block_bytes[crc_offset..crc_offset + CRC_SIZE].copy_from_slice(&crc.to_le_bytes());
-
-    flash_device.erase(block_offset, block_offset + FLASH_BLOCK_SIZE_U32)?;
-    flash_device.write(block_offset, &block_bytes)?;
-    Ok(())
-}
-
-fn load_block<T>(flash_device: &mut impl FlashDevice, block_offset: u32) -> Result<Option<T>>
-where
-    T: Serialize + for<'de> Deserialize<'de>,
-{
-    let mut block_bytes = [0u8; FLASH_BLOCK_SIZE];
-    flash_device.read(block_offset, &mut block_bytes)?;
-
-    let magic = u32::from_le_bytes(block_bytes[0..4].try_into().expect("4 byte slice"));
-    if magic != MAGIC {
-        return Ok(None);
-    }
-
-    let stored_type_hash = u32::from_le_bytes(block_bytes[4..8].try_into().expect("4 byte slice"));
-    if stored_type_hash != compute_type_hash::<T>() {
-        return Ok(None);
-    }
-
-    let payload_len = u16::from_le_bytes(block_bytes[8..10].try_into().expect("2 byte slice"));
-    let payload_len = payload_len as usize;
-    if payload_len > MAX_PAYLOAD_SIZE {
-        return Err(Error::StorageCorrupted);
-    }
-
-    let crc_offset = HEADER_SIZE + payload_len;
-    let stored_crc = u32::from_le_bytes(
-        block_bytes[crc_offset..crc_offset + CRC_SIZE]
-            .try_into()
-            .expect("4 byte slice"),
-    );
-    let computed_crc = compute_crc(&block_bytes[..crc_offset]);
-    if stored_crc != computed_crc {
-        return Err(Error::StorageCorrupted);
-    }
-
-    let payload = &block_bytes[HEADER_SIZE..HEADER_SIZE + payload_len];
-    let value = postcard::from_bytes(payload).map_err(|_| Error::StorageCorrupted)?;
-    Ok(Some(value))
-}
-
-fn clear_block(flash_device: &mut impl FlashDevice, block_offset: u32) -> Result<()> {
-    flash_device.erase(block_offset, block_offset + FLASH_BLOCK_SIZE_U32)?;
-    Ok(())
-}
-
-fn compute_type_hash<T>() -> u32 {
-    const FNV_OFFSET: u32 = 2_166_136_261;
-    const FNV_PRIME: u32 = 16_777_619;
-
-    let mut hash = FNV_OFFSET;
-    for byte in type_name::<T>().bytes() {
-        hash ^= u32::from(byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-    hash
-}
-
-fn compute_crc(bytes: &[u8]) -> u32 {
-    let mut hasher = Hasher::new();
-    hasher.update(bytes);
-    hasher.finalize()
-}
-
-#[cfg(all(test, not(target_os = "none")))]
-mod tests {
-    use super::{clear_block, load_block, save_block, Error, FLASH_BLOCK_SIZE, HEADER_SIZE};
-    use crate::Result;
-
-    const TEST_FLASH_SIZE: usize = FLASH_BLOCK_SIZE * 4;
-
-    struct MemoryFlashDevice {
-        bytes: [u8; TEST_FLASH_SIZE],
-    }
-
-    impl MemoryFlashDevice {
-        fn new() -> Self {
-            Self {
-                bytes: [0xFF; TEST_FLASH_SIZE],
-            }
-        }
-    }
-
-    impl super::FlashDevice for MemoryFlashDevice {
-        fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<()> {
-            let offset = offset as usize;
-            let end = offset + bytes.len();
-            if end > self.bytes.len() {
-                return Err(Error::IndexOutOfBounds);
-            }
-            bytes.copy_from_slice(&self.bytes[offset..end]);
-            Ok(())
-        }
-
-        fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<()> {
-            let offset = offset as usize;
-            let end = offset + bytes.len();
-            if end > self.bytes.len() {
-                return Err(Error::IndexOutOfBounds);
-            }
-            self.bytes[offset..end].copy_from_slice(bytes);
-            Ok(())
-        }
-
-        fn erase(&mut self, from: u32, to: u32) -> Result<()> {
-            let from = from as usize;
-            let to = to as usize;
-            if to > self.bytes.len() || from > to {
-                return Err(Error::IndexOutOfBounds);
-            }
-            self.bytes[from..to].fill(0xFF);
-            Ok(())
-        }
-    }
-
-    #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-    struct WifiPersistedState {
-        ssid: heapless::String<32>,
-        password: heapless::String<64>,
-        timezone_offset_minutes: i32,
-    }
-
-    #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
-    struct OtherState {
-        timezone_offset_minutes: i32,
-    }
-
-    #[test]
-    fn save_load_clear_round_trip() {
-        let mut memory_flash_device = MemoryFlashDevice::new();
-        let wifi_persisted_state = WifiPersistedState {
-            ssid: heapless::String::try_from("demo-net").expect("ssid fits"),
-            password: heapless::String::try_from("password123").expect("password fits"),
-            timezone_offset_minutes: -300,
-        };
-
-        save_block(&mut memory_flash_device, 0, &wifi_persisted_state).expect("save succeeds");
-        let loaded_wifi_persisted_state =
-            load_block::<WifiPersistedState>(&mut memory_flash_device, 0)
-                .expect("load succeeds")
-                .expect("value exists");
-        assert_eq!(loaded_wifi_persisted_state, wifi_persisted_state);
-
-        clear_block(&mut memory_flash_device, 0).expect("clear succeeds");
-        let cleared =
-            load_block::<WifiPersistedState>(&mut memory_flash_device, 0).expect("load succeeds");
-        assert!(cleared.is_none());
-    }
-
-    #[test]
-    fn type_mismatch_returns_none() {
-        let mut memory_flash_device = MemoryFlashDevice::new();
-        let other_state = OtherState {
-            timezone_offset_minutes: 60,
-        };
-        save_block(&mut memory_flash_device, 0, &other_state).expect("save succeeds");
-        let wifi_persisted_state =
-            load_block::<WifiPersistedState>(&mut memory_flash_device, 0).expect("load succeeds");
-        assert!(wifi_persisted_state.is_none());
-    }
-
-    #[test]
-    fn corrupted_crc_returns_error() {
-        let mut memory_flash_device = MemoryFlashDevice::new();
-        let wifi_persisted_state = WifiPersistedState {
-            ssid: heapless::String::new(),
-            password: heapless::String::new(),
-            timezone_offset_minutes: 0,
-        };
-        save_block(&mut memory_flash_device, 0, &wifi_persisted_state).expect("save succeeds");
-        memory_flash_device.bytes[HEADER_SIZE + 1] ^= 0x5A;
-
-        let error = load_block::<WifiPersistedState>(&mut memory_flash_device, 0)
-            .expect_err("crc mismatch should fail");
-        assert!(matches!(error, Error::StorageCorrupted));
+        self.manager.with_flash(|flash_storage| {
+            let mut adapter = EspFlashAdapter(flash_storage);
+            core_flash::clear_block(&mut adapter, block_offset)
+                .map_err(convert_flash_block_error)
+        })
     }
 }

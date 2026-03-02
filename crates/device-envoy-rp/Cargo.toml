@@ -85,11 +85,9 @@ derive_more = { version = "2.0.1", default-features = false, features = [
 heapless = { version = "0.8.0", features = ["serde"] }
 time = { version = "0.3", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
-postcard = { version = "1.0", default-features = false }
 smart-leds = "0.4.0"
 device-envoy-core = { path = "../device-envoy-core", features = ["defmt"] }
 itertools = { version = "0.13.0", default-features = false }
-crc32fast = { version = "1.4.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"

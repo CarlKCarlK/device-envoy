@@ -7,8 +7,8 @@
 
 use core::array;
 use core::cell::RefCell;
-use crc32fast::Hasher;
-use defmt::{error, info};
+
+use defmt::info;
 use embassy_rp::Peri;
 use embassy_rp::flash::{Blocking, ERASE_SIZE, Flash as EmbassyFlash};
 use embassy_rp::peripherals::FLASH;
@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use static_cell::StaticCell;
 
 use crate::{Error, Result};
+use device_envoy_core::flash_array::{self as core_flash, FlashBlockError, FlashDevice};
 
 // Internal flash size for Raspberry Pi Pico 2 (4 MB).
 #[cfg(feature = "pico2")]
@@ -32,11 +33,37 @@ const INTERNAL_FLASH_SIZE: usize = 2 * 1024 * 1024;
 #[cfg(all(not(feature = "pico2"), not(feature = "pico1")))]
 pub const INTERNAL_FLASH_SIZE: usize = 2 * 1024 * 1024;
 
-const MAGIC: u32 = 0x424C_4B53; // 'BLKS'
-const HEADER_SIZE: usize = 4 + 4 + 2; // Magic + TypeHash + PayloadLen
-const CRC_SIZE: usize = 4;
-const MAX_PAYLOAD_SIZE: usize = ERASE_SIZE - HEADER_SIZE - CRC_SIZE; // 3900 bytes
 const TOTAL_BLOCKS: u32 = (INTERNAL_FLASH_SIZE / ERASE_SIZE) as u32;
+
+// Local adapter — wraps EmbassyFlash so core's FlashDevice trait can be implemented
+// for a type defined in this crate (required by the orphan rule).
+struct RpFlashAdapter<'a>(
+    &'a mut EmbassyFlash<'static, FLASH, Blocking, INTERNAL_FLASH_SIZE>,
+);
+
+impl FlashDevice for RpFlashAdapter<'_> {
+    type Error = embassy_rp::flash::Error;
+
+    fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), embassy_rp::flash::Error> {
+        self.0.blocking_read(offset, bytes)
+    }
+
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), embassy_rp::flash::Error> {
+        self.0.blocking_write(offset, bytes)
+    }
+
+    fn erase(&mut self, from: u32, to: u32) -> Result<(), embassy_rp::flash::Error> {
+        self.0.blocking_erase(from, to)
+    }
+}
+
+fn flash_block_error_to_crate_error(e: FlashBlockError<embassy_rp::flash::Error>) -> Error {
+    match e {
+        FlashBlockError::Io(err) => Error::Flash(err),
+        FlashBlockError::FormatError => Error::FormatError,
+        FlashBlockError::StorageCorrupted => Error::StorageCorrupted,
+    }
+}
 
 /// Shared flash manager that owns the hardware driver and allocation cursor.
 struct FlashManager {
@@ -98,7 +125,18 @@ impl FlashBlock {
     where
         T: Serialize + for<'de> Deserialize<'de>,
     {
-        load_block(self.manager, self.block)
+        let offset = block_offset(self.block);
+        let result = self.manager.with_flash(|flash| {
+            let mut adapter = RpFlashAdapter(flash);
+            core_flash::load_block::<T, _>(&mut adapter, offset)
+                .map_err(flash_block_error_to_crate_error)
+        })?;
+        if result.is_some() {
+            info!("Flash: Loaded data from block {}", self.block);
+        } else {
+            info!("Flash: No data at block {}", self.block);
+        }
+        Ok(result)
     }
 
     /// Save data to this block.
@@ -108,12 +146,26 @@ impl FlashBlock {
     where
         T: Serialize + for<'de> Deserialize<'de>,
     {
-        save_block(self.manager, self.block, value)
+        let offset = block_offset(self.block);
+        self.manager.with_flash(|flash| {
+            let mut adapter = RpFlashAdapter(flash);
+            core_flash::save_block(&mut adapter, offset, value)
+                .map_err(flash_block_error_to_crate_error)
+        })?;
+        info!("Flash: Saved to block {}", self.block);
+        Ok(())
     }
 
     /// Clear this block.
     pub fn clear(&mut self) -> Result<()> {
-        clear_block(self.manager, self.block)
+        let offset = block_offset(self.block);
+        self.manager.with_flash(|flash| {
+            let mut adapter = RpFlashAdapter(flash);
+            core_flash::clear_block(&mut adapter, offset)
+                .map_err(flash_block_error_to_crate_error)
+        })?;
+        info!("Flash: Cleared block {}", self.block);
+        Ok(())
     }
 }
 
@@ -148,17 +200,17 @@ impl FlashArrayStatic {
 /// A device abstraction for type-safe persistent storage in flash memory.
 ///
 /// This struct provides a generic flash-block storage system for Raspberry Pi Pico,
-/// allowing you to store any `serde`-compatible type in the device’s internal flash.
+/// allowing you to store any `serde`-compatible type in the device's internal flash.
 ///
 /// You choose the number of storage blocks at compile time. Each block holds up to
-/// 3900 bytes of postcard-serialized data (a hardware-determined 4 KB flash block
+/// 4,082 bytes of postcard-serialized data (a hardware-determined 4 KB flash block
 /// minus metadata space).
 ///
 /// # Features
 ///
 /// - **Type safety**: Hash-based type checking prevents reading data written under a
 ///   different Rust type name. The hash is derived from the full type path
-///   (for example, `app1::BootCounter`). **Trying to read a different types
+///   (for example, `app1::BootCounter`). **Trying to read a different type
 ///   returns `Ok(None)`**. Structural changes (adding or removing fields) do not
 ///   change the hash, but may cause deserialization to fail and return an error.
 /// - **Postcard serialization**: A compact, `no_std`-friendly binary format.
@@ -171,7 +223,6 @@ impl FlashArrayStatic {
 ///
 /// ⚠️ **Warning**: Pico 1 and Pico 2 store firmware, vector tables, and user data in the
 /// same flash device. Allocating too many blocks can overwrite your firmware.
-
 ///
 /// # Example
 ///
@@ -210,7 +261,7 @@ impl FlashArrayStatic {
 ///     // if the stored type matches the requested type; mismatches yield `None`.
 ///     let boot_counter = boot_counter_flash_block
 ///         .load()?
-///         .unwrap_or(BootCounter::new(0)) // Default to 0 type not present
+///         .unwrap_or(BootCounter::new(0)) // Default to 0 if not present
 ///         .increment();
 ///
 ///     // Write incremented counter back to flash.
@@ -235,147 +286,8 @@ impl<const N: usize> FlashArray<N> {
     }
 }
 
-fn save_block<T>(manager: &'static FlashManager, block: u32, value: &T) -> Result<()>
-where
-    T: Serialize + for<'de> Deserialize<'de>,
-{
-    let mut payload_buffer = [0u8; MAX_PAYLOAD_SIZE];
-    let payload_len = postcard::to_slice(value, &mut payload_buffer)
-        .map_err(|_| {
-            error!(
-                "Flash: Serialization failed or data too large (max {} bytes)",
-                MAX_PAYLOAD_SIZE
-            );
-            Error::FormatError
-        })?
-        .len();
-
-    let mut buffer = [0xFFu8; ERASE_SIZE];
-    buffer[0..4].copy_from_slice(&MAGIC.to_le_bytes());
-    buffer[4..8].copy_from_slice(&compute_type_hash::<T>().to_le_bytes());
-    buffer[8..10].copy_from_slice(&(payload_len as u16).to_le_bytes());
-    buffer[HEADER_SIZE..HEADER_SIZE + payload_len].copy_from_slice(&payload_buffer[..payload_len]);
-
-    let crc_offset = HEADER_SIZE + payload_len;
-    let crc = compute_crc(&buffer[0..crc_offset]);
-    buffer[crc_offset..crc_offset + CRC_SIZE].copy_from_slice(&crc.to_le_bytes());
-
-    let offset = block_offset(block);
-    manager.with_flash(|flash| {
-        flash
-            .blocking_erase(offset, offset + ERASE_SIZE as u32)
-            .map_err(Error::Flash)?;
-        flash
-            .blocking_write(offset, &buffer)
-            .map_err(Error::Flash)?;
-        Ok(())
-    })?;
-
-    info!("Flash: Saved {} bytes to block {}", payload_len, block);
-    Ok(())
-}
-
-fn load_block<T>(manager: &'static FlashManager, block: u32) -> Result<Option<T>>
-where
-    T: Serialize + for<'de> Deserialize<'de>,
-{
-    let offset = block_offset(block);
-    let mut buffer = [0u8; ERASE_SIZE];
-
-    manager.with_flash(|flash| {
-        flash
-            .blocking_read(offset, &mut buffer)
-            .map_err(Error::Flash)?;
-        Ok(())
-    })?;
-
-    let magic = u32::from_le_bytes(buffer[0..4].try_into().unwrap());
-    if magic != MAGIC {
-        info!("Flash: No data at block {}", block);
-        return Ok(None);
-    }
-
-    let stored_type_hash = u32::from_le_bytes(buffer[4..8].try_into().unwrap());
-    let expected_type_hash = compute_type_hash::<T>();
-    if stored_type_hash != expected_type_hash {
-        info!(
-            "Flash: Type mismatch at block {} (expected hash {}, found {})",
-            block, expected_type_hash, stored_type_hash
-        );
-        return Ok(None);
-    }
-
-    let payload_len = u16::from_le_bytes(buffer[8..10].try_into().unwrap()) as usize;
-    if payload_len > MAX_PAYLOAD_SIZE {
-        error!(
-            "Flash: Invalid payload length {} at block {}",
-            payload_len, block
-        );
-        return Err(Error::StorageCorrupted);
-    }
-
-    let crc_offset = HEADER_SIZE + payload_len;
-    let stored_crc = u32::from_le_bytes(
-        buffer[crc_offset..crc_offset + CRC_SIZE]
-            .try_into()
-            .unwrap(),
-    );
-    let computed_crc = compute_crc(&buffer[0..crc_offset]);
-    if stored_crc != computed_crc {
-        error!(
-            "Flash: CRC mismatch at block {} (expected {}, found {})",
-            block, computed_crc, stored_crc
-        );
-        return Err(Error::StorageCorrupted);
-    }
-
-    let payload = &buffer[HEADER_SIZE..HEADER_SIZE + payload_len];
-    let value: T = postcard::from_bytes(payload).map_err(|_| {
-        error!("Flash: Deserialization failed at block {}", block);
-        Error::StorageCorrupted
-    })?;
-
-    info!("Flash: Loaded data from block {}", block);
-    Ok(Some(value))
-}
-
-fn clear_block(manager: &'static FlashManager, block: u32) -> Result<()> {
-    let offset = block_offset(block);
-    manager.with_flash(|flash| {
-        flash
-            .blocking_erase(offset, offset + ERASE_SIZE as u32)
-            .map_err(Error::Flash)?;
-        Ok(())
-    })?;
-    info!("Flash: Cleared block {}", block);
-    Ok(())
-}
-
 /// Blocks are allocated from the end of flash backwards.
 fn block_offset(block_id: u32) -> u32 {
     let capacity = INTERNAL_FLASH_SIZE as u32;
     capacity - (block_id + 1) * ERASE_SIZE as u32
-}
-
-/// Compute FNV-1a hash of the type name for type safety.
-fn compute_type_hash<T>() -> u32 {
-    const FNV_PRIME: u32 = 16_777_619;
-    const FNV_OFFSET: u32 = 2_166_136_261;
-
-    let type_name = core::any::type_name::<T>();
-    let mut hash = FNV_OFFSET;
-
-    for byte in type_name.bytes() {
-        hash ^= u32::from(byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-
-    hash
-}
-
-/// Compute CRC32 checksum.
-fn compute_crc(data: &[u8]) -> u32 {
-    let mut hasher = Hasher::new();
-    hasher.update(data);
-    hasher.finalize()
 }

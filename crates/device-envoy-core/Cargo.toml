@@ -21,8 +21,11 @@ embassy-futures = "0.1.2"
 embassy-sync = "0.7.2"
 embassy-time = { version = "0.5.0" }
 embassy-net = { version = "0.8.0", features = ["dns", "udp", "proto-ipv4", "medium-ip"], optional = true }
-heapless = { version = "0.8.0" }
+heapless = { version = "0.8.0", features = ["serde"] }
 paste = { version = "1.0" }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+postcard = { version = "1.0", default-features = false }
+crc32fast = { version = "1.4.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
 defmt = { version = "0.3", optional = true }
 png = { version = "0.17", optional = true }

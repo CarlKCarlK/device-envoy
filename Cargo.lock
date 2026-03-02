@@ -677,6 +677,7 @@ dependencies = [
 name = "device-envoy-core"
 version = "0.0.0"
 dependencies = [
+ "crc32fast",
  "critical-section",
  "defmt 0.3.100",
  "embassy-executor",
@@ -689,6 +690,8 @@ dependencies = [
  "paste",
  "png",
  "portable-atomic",
+ "postcard",
+ "serde",
  "smart-leds",
  "static_cell",
  "time",
@@ -719,7 +722,6 @@ dependencies = [
 name = "device-envoy-esp"
 version = "0.0.1-alpha"
 dependencies = [
- "crc32fast",
  "device-envoy-core",
  "embassy-executor",
  "embassy-futures",
@@ -741,7 +743,6 @@ dependencies = [
  "paste",
  "png",
  "portable-atomic",
- "postcard",
  "serde",
  "smart-leds",
  "static_cell",
@@ -755,7 +756,6 @@ version = "0.0.4-alpha.2"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
- "crc32fast",
  "critical-section",
  "cyw43",
  "cyw43-firmware",
@@ -787,7 +787,6 @@ dependencies = [
  "pio",
  "png",
  "portable-atomic",
- "postcard",
  "riscv 0.11.1",
  "riscv-rt",
  "serde",

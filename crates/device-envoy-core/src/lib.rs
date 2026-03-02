@@ -4,6 +4,7 @@
 
 pub mod audio_player;
 pub mod clock;
+pub mod flash_array;
 #[cfg(feature = "wifi")]
 pub mod clock_sync;
 pub mod ir;

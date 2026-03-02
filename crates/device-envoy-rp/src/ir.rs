@@ -8,11 +8,12 @@ use embassy_rp::gpio::{Pin, Pull};
 use embassy_rp::pio::{
     Common, Config, FifoJoin, Instance, PioPin, ShiftConfig, ShiftDirection, StateMachine,
 };
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel as EmbassyChannel;
 use fixed::traits::ToFixed;
 
 use crate::{Error, Result};
+
+pub use device_envoy_core::ir::{IrEvent, IrStatic};
+use device_envoy_core::ir::decode_nec_frame;
 
 // ============================================================================
 // Submodules
@@ -23,23 +24,6 @@ mod mapping;
 
 pub use kepler::{IrKepler, IrKeplerStatic, KeplerButton};
 pub use mapping::{IrMapping, IrMappingStatic};
-
-// ===== Public API ===========================================================
-
-/// Events received from the infrared receiver.
-///
-/// See [`Ir`] for usage examples.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum IrEvent {
-    /// Button press with 16-bit address and 8-bit command.
-    /// Supports both standard NEC (8-bit address) and extended NEC (16-bit address).
-    Press {
-        /// 16-bit device address (or 8-bit address in low byte for standard NEC).
-        addr: u16,
-        /// 8-bit command code.
-        cmd: u8,
-    },
-}
 
 // ===== NEC Receiver (forward declaration) ==================================
 
@@ -95,27 +79,6 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
     ) -> Result<()> {
         let token = ir_pio2_task(receiver, ir_static);
         spawner.spawn(token).map_err(Error::TaskSpawn)
-    }
-}
-
-/// Static resources for the [`Ir`] device abstraction.
-///
-/// See [`Ir`] for usage examples.
-pub struct IrStatic(EmbassyChannel<CriticalSectionRawMutex, IrEvent, 8>);
-
-impl IrStatic {
-    /// Creates static resources for the infrared receiver device.
-    #[must_use]
-    pub(crate) const fn new() -> Self {
-        Self(EmbassyChannel::new())
-    }
-
-    pub(crate) async fn send(&self, event: IrEvent) {
-        self.0.send(event).await;
-    }
-
-    pub(crate) async fn receive(&self) -> IrEvent {
-        self.0.receive().await
     }
 }
 
@@ -338,36 +301,4 @@ impl<'d, PIO: Instance, const SM: usize> NecReceiver<'d, PIO, SM> {
     async fn receive_frame(&mut self) -> u32 {
         self.sm.rx().wait_pull().await
     }
-}
-
-/// Decode and validate a 32-bit NEC frame
-///
-/// NEC protocol structure (32 bits, LSB first):
-/// - Byte 0: Address (8 bits)
-/// - Byte 1: Address inverse (~Address)
-/// - Byte 2: Command (8 bits)
-/// - Byte 3: Command inverse (~Command)
-///
-/// Extended NEC uses 16-bit address (bytes 0-1) without inversion check
-///
-/// Returns `Some((address, command))` if valid, `None` if checksum fails
-fn decode_nec_frame(frame: u32) -> Option<(u16, u8)> {
-    let byte0 = (frame & 0xFF) as u8;
-    let byte1 = ((frame >> 8) & 0xFF) as u8;
-    let byte2 = ((frame >> 16) & 0xFF) as u8;
-    let byte3 = ((frame >> 24) & 0xFF) as u8;
-
-    // Validate command bytes (required in both standard and extended NEC)
-    if (byte2 ^ byte3) != 0xFF {
-        return None;
-    }
-
-    // Standard NEC: 8-bit address with inverse validation
-    if (byte0 ^ byte1) == 0xFF {
-        return Some((u16::from(byte0), byte2));
-    }
-
-    // Extended NEC: 16-bit address (no inversion check on address)
-    let addr16 = ((u16::from(byte1)) << 8) | u16::from(byte0);
-    Some((addr16, byte2))
 }

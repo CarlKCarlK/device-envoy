@@ -678,6 +678,7 @@ name = "device-envoy-core"
 version = "0.0.0"
 dependencies = [
  "critical-section",
+ "defmt 0.3.100",
  "embassy-sync 0.7.2",
  "embassy-time",
  "embedded-graphics",

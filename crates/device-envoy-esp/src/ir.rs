@@ -6,50 +6,19 @@
 mod kepler;
 mod mapping;
 
+pub use device_envoy_core::ir::{IrEvent, IrStatic};
 pub use kepler::{IrKepler, IrKeplerStatic, KeplerButton};
 pub use mapping::{IrMapping, IrMappingStatic};
 
 #[cfg(target_os = "none")]
+use device_envoy_core::ir::decode_nec_frame;
+#[cfg(target_os = "none")]
 use embassy_executor::Spawner;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel as EmbassyChannel;
 #[cfg(target_os = "none")]
 use log::info;
 
 #[cfg(target_os = "none")]
 use crate::Result;
-
-/// Events received from the infrared receiver.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum IrEvent {
-    /// Button press with 16-bit address and 8-bit command.
-    /// Supports both standard NEC (8-bit address) and extended NEC (16-bit address).
-    Press {
-        /// 16-bit device address (or 8-bit address in low byte for standard NEC).
-        addr: u16,
-        /// 8-bit command code.
-        cmd: u8,
-    },
-}
-
-/// Static resources for the [`Ir`] device abstraction.
-pub struct IrStatic(EmbassyChannel<CriticalSectionRawMutex, IrEvent, 8>);
-
-impl IrStatic {
-    #[must_use]
-    pub(crate) const fn new() -> Self {
-        Self(EmbassyChannel::new())
-    }
-
-    #[cfg(target_os = "none")]
-    pub(crate) async fn send(&self, event: IrEvent) {
-        self.0.send(event).await;
-    }
-
-    pub(crate) async fn receive(&self) -> IrEvent {
-        self.0.receive().await
-    }
-}
 
 /// A device abstraction for an infrared receiver for NEC protocol decoding.
 ///
@@ -228,30 +197,3 @@ fn is_nec_repeat_runs(runs: &[(esp_hal::gpio::Level, u16)]) -> bool {
         && within(duration1, 2250, 1000)
 }
 
-/// Decode and validate a 32-bit NEC frame.
-///
-/// NEC protocol structure (32 bits, LSB first):
-/// - Byte 0: Address (8 bits)
-/// - Byte 1: Address inverse (~Address)
-/// - Byte 2: Command (8 bits)
-/// - Byte 3: Command inverse (~Command)
-///
-/// Extended NEC uses 16-bit address (bytes 0-1) without inversion check.
-#[cfg(target_os = "none")]
-fn decode_nec_frame(frame: u32) -> Option<(u16, u8)> {
-    let byte0 = (frame & 0xFF) as u8;
-    let byte1 = ((frame >> 8) & 0xFF) as u8;
-    let byte2 = ((frame >> 16) & 0xFF) as u8;
-    let byte3 = ((frame >> 24) & 0xFF) as u8;
-
-    if (byte2 ^ byte3) != 0xFF {
-        return None;
-    }
-
-    if (byte0 ^ byte1) == 0xFF {
-        return Some((u16::from(byte0), byte2));
-    }
-
-    let addr16 = ((u16::from(byte1)) << 8) | u16::from(byte0);
-    Some((addr16, byte2))
-}

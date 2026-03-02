@@ -9,26 +9,9 @@ use embassy_rp::pio::PioPin;
 use heapless::LinearMap;
 
 use crate::Result;
-use crate::ir::{Ir, IrEvent, IrPioPeripheral, IrStatic};
+use crate::ir::{Ir, IrEvent, IrPioPeripheral};
 
-/// Static channel for IR mapping events.
-///
-/// See [`IrMapping`] for usage examples.
-pub struct IrMappingStatic(IrStatic);
-
-impl IrMappingStatic {
-    /// Create static mapping resources.
-    #[must_use]
-    pub(crate) const fn new() -> Self {
-        Self(Ir::new_static())
-    }
-
-    /// Get a reference to the inner channel resources.
-    #[must_use]
-    pub(crate) const fn inner(&self) -> &IrStatic {
-        &self.0
-    }
-}
+pub use device_envoy_core::ir::mapping::IrMappingStatic;
 
 /// A generic device abstraction that maps IR remote button presses to user-defined button types.
 ///

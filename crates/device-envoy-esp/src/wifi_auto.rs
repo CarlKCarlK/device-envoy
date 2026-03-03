@@ -101,6 +101,10 @@ impl<'a> WifiAuto<'a> {
     /// Create an in-memory setup flow for embedded targets with runtime Wi-Fi resources.
     ///
     /// This constructor is available on embedded targets (`target_os = "none"`).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if custom field validation fails while resolving startup mode.
     #[cfg(target_os = "none")]
     #[must_use]
     pub fn new_in_memory<const N: usize>(
@@ -110,7 +114,7 @@ impl<'a> WifiAuto<'a> {
         button_pressed_to: PressedTo,
         custom_fields: [&'a dyn WifiAutoField<Error = crate::Error>; N],
         spawner: embassy_executor::Spawner,
-    ) -> Self {
+    ) -> Result<Self> {
         assert!(
             N <= MAX_WIFI_AUTO_FIELDS,
             "custom_fields supports up to {MAX_WIFI_AUTO_FIELDS} entries"
@@ -119,7 +123,7 @@ impl<'a> WifiAuto<'a> {
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
         let button = Button::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
-        Self {
+        let wifi_auto = Self {
             captive_portal_ssid,
             fields,
             storage: WifiAutoStorage::Memory(RefCell::new(WifiAutoPersistedState {
@@ -130,12 +134,30 @@ impl<'a> WifiAuto<'a> {
             spawner,
             force_captive_portal,
             button: RefCell::new(Some(button)),
+        };
+
+        let wifi_start_mode = wifi_auto.start_mode()?;
+        let custom_fields_satisfied = wifi_auto.custom_fields_satisfied()?;
+        let has_persisted_credentials = wifi_auto.load_persisted_credentials()?.is_some();
+        if device_envoy_core::wifi_auto::should_enter_captive_portal(
+            wifi_start_mode,
+            force_captive_portal,
+            has_persisted_credentials,
+            custom_fields_satisfied,
+        ) {
+            wifi_auto.set_start_mode(WifiStartMode::CaptivePortal)?;
         }
+
+        Ok(wifi_auto)
     }
 
     /// Create a setup flow backed by persistent flash storage.
     ///
     /// This constructor is available on embedded targets (`target_os = "none"`).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if stored state cannot be loaded/saved while resolving startup mode.
     #[cfg(target_os = "none")]
     #[must_use]
     pub fn new<const N: usize>(
@@ -146,7 +168,7 @@ impl<'a> WifiAuto<'a> {
         captive_portal_ssid: &'static str,
         custom_fields: [&'a dyn WifiAutoField<Error = crate::Error>; N],
         spawner: embassy_executor::Spawner,
-    ) -> Self {
+    ) -> Result<Self> {
         assert!(
             N <= MAX_WIFI_AUTO_FIELDS,
             "custom_fields supports up to {MAX_WIFI_AUTO_FIELDS} entries"
@@ -155,7 +177,7 @@ impl<'a> WifiAuto<'a> {
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
         let button = Button::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
-        Self {
+        let wifi_auto = Self {
             captive_portal_ssid,
             fields,
             storage: WifiAutoStorage::Flash(RefCell::new(wifi_auto_flash_block)),
@@ -163,7 +185,21 @@ impl<'a> WifiAuto<'a> {
             spawner,
             force_captive_portal,
             button: RefCell::new(Some(button)),
+        };
+
+        let wifi_start_mode = wifi_auto.start_mode()?;
+        let custom_fields_satisfied = wifi_auto.custom_fields_satisfied()?;
+        let has_persisted_credentials = wifi_auto.load_persisted_credentials()?.is_some();
+        if device_envoy_core::wifi_auto::should_enter_captive_portal(
+            wifi_start_mode,
+            force_captive_portal,
+            has_persisted_credentials,
+            custom_fields_satisfied,
+        ) {
+            wifi_auto.set_start_mode(WifiStartMode::CaptivePortal)?;
         }
+
+        Ok(wifi_auto)
     }
 
     /// Return the SSID shown in captive-portal mode.

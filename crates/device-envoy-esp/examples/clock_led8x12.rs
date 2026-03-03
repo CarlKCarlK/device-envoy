@@ -83,7 +83,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,
-    );
+    )?;
 
     let led8x12_clock_ref = &led8x12_clock;
     let (stack, force_portal_button) = wifi_auto

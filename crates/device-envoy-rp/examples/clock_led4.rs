@@ -158,9 +158,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
 // State machine for 4-digit LED clock display modes and transitions.
 
-/// Display states for the 4-digit LED clock.
 #[derive(Debug, defmt::Format, Clone, Copy, PartialEq)]
-pub enum State {
+enum State {
     HoursMinutes { speed: f32 },
     MinutesSeconds,
     EditOffset,

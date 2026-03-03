@@ -70,7 +70,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         CAPTIVE_PORTAL_SSID,
         [],
         spawner,
-    );
+    )?;
 
     let led12x8_dns_ref = &led12x8_dns;
     let (stack, _button) = wifi_auto

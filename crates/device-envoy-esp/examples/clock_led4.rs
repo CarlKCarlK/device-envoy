@@ -1,7 +1,8 @@
 //! Wi-Fi enabled 4-digit clock that provisions credentials through `WifiAuto`.
 //!
-//! This example ports the RP `clock_led4` flow to ESP32-S3 and uses an explicit
-//! LED4 wiring map so cell/segment order is predictable.
+//! This example demonstrates how to pair the shared captive-portal workflow with the
+//! 4-digit LED clock state machine. The `WifiAuto` helper owns Wi-Fi onboarding while the
+//! clock display reflects progress and, once connected, continues handling user input.
 //!
 //! Hardware defaults:
 //! - force-portal button on GPIO6 (wired to GND)
@@ -15,17 +16,17 @@
 use core::convert::Infallible;
 
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
+use embassy_futures::select::{select, Either};
 use esp_backtrace as _;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use log::info;
 
 use device_envoy_esp::{
     button::{ButtonWatch, ButtonWatchStatic, PressDuration, PressedTo},
-    clock_sync::{ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s},
+    clock_sync::{h12_m_s, ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND},
     flash_array::FlashArray,
     init_and_start,
-    led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation},
+    led4::{circular_outline_animation, BlinkState, Led4, Led4Static, OutputArray},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto, WifiAutoEvent,
@@ -65,7 +66,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,
-    );
+    )?;
 
     let cell_pins = OutputArray::new([
         Output::new(p.GPIO14, Level::High, OutputConfig::default()),
@@ -135,12 +136,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(
-                        speed,
-                        &clock_sync,
-                        &button_watch,
-                        &led4,
-                    )
+                    .execute_hours_minutes(speed, &clock_sync, &button_watch, &led4)
                     .await?
             }
             State::MinutesSeconds => {
@@ -150,12 +146,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(
-                        &clock_sync,
-                        &button_watch,
-                        timezone_field,
-                        &led4,
-                    )
+                    .execute_edit_offset(&clock_sync, &button_watch, timezone_field, &led4)
                     .await?
             }
         };
@@ -191,7 +182,12 @@ impl State {
         clock_sync.set_tick_interval(Some(ONE_MINUTE)).await;
 
         loop {
-            match select(button_watch.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
+            match select(
+                button_watch.wait_for_press_duration(),
+                clock_sync.wait_for_tick(),
+            )
+            .await
+            {
                 Either::First(press_duration) => match (press_duration, speed.to_bits()) {
                     (PressDuration::Short, bits) if bits == 1.0_f32.to_bits() => {
                         return Ok(Self::MinutesSeconds);
@@ -239,7 +235,12 @@ impl State {
         clock_sync.set_tick_interval(Some(ONE_SECOND)).await;
 
         loop {
-            match select(button_watch.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
+            match select(
+                button_watch.wait_for_press_duration(),
+                clock_sync.wait_for_tick(),
+            )
+            .await
+            {
                 Either::First(PressDuration::Short) => {
                     return Ok(Self::HoursMinutes {
                         speed: FAST_MODE_SPEED,
@@ -333,7 +334,11 @@ impl State {
 
     #[inline]
     const fn tens_hours(value: u8) -> char {
-        if value >= 10 { '1' } else { ' ' }
+        if value >= 10 {
+            '1'
+        } else {
+            ' '
+        }
     }
 
     #[inline]

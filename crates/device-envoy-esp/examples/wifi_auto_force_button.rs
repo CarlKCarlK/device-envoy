@@ -38,7 +38,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         "EnvoySetup",
         [],
         spawner,
-    );
+    )?;
 
     let before_mode = wifi_auto.start_mode()?;
     let changed = wifi_auto.force_captive_portal_if_pressed_state(true)?;

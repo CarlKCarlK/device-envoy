@@ -90,6 +90,10 @@ static SOS_STRIP_STATIC: SosStripStatic = SosStrip::new_static();
 let sos_strip = SosStrip::new(&SOS_STRIP_STATIC, channel, spawner)?;
 ```
 
+## Porting Scope (ESP-specific)
+
+- When porting a device abstraction from another platform crate, port all user-facing sibling submodules/helpers that belong to that abstraction (for example `button` and `button_watch`) instead of adding example-local replacements.
+
 ## LED Hardware Configuration
 
 Pin assignments and portability guardrails are documented in `README.md` under `Default Pin Assignments`.

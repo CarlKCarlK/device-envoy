@@ -36,7 +36,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         p.GPIO6,
         PressedTo::Ground,
         "EnvoySetup",
-        &[],
+        [],
         spawner,
     );
 

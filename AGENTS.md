@@ -308,6 +308,8 @@ For macro-helper functions, prefix helper names with `__` to clearly signal inte
 
 These tips apply when moving platform-specific code into `device-envoy-core` or otherwise consolidating shared logic across crates.
 
+- **Port full abstraction families, not only top-level files.** When asked to port a device abstraction `X` between platform crates, port all submodules and macro/helper pieces that make up the user-facing abstraction (for example `button` plus `button_watch`), then update examples/docs to use the ported abstraction rather than one-off local replacements.
+
 - **Inline trivial re-export modules.** When a submodule file is reduced to just a
   `pub use some_crate::some_module::*;` re-export (a few lines), don't keep it as a
   standalone file. Instead, inline it as a one-liner `pub mod` block directly in the

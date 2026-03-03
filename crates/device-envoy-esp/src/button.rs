@@ -1,10 +1,17 @@
 //! A device abstraction for buttons with debouncing and press duration detection.
 //!
-//! This module provides a reusable button device for ESP32 projects.
+//! This module provides:
+//! - [`Button`] for direct debounced polling
+//! - [`ButtonWatch`] for background monitoring that avoids future-cancellation starvation
+
+#[cfg(target_os = "none")]
+mod button_watch;
 
 pub use device_envoy_core::button::{
     PressDuration, PressedTo, BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION,
 };
+#[cfg(target_os = "none")]
+pub use button_watch::{ButtonWatch, ButtonWatchStatic};
 
 #[cfg(target_os = "none")]
 use embassy_futures::select::{select, Either};
@@ -107,5 +114,14 @@ impl<'d> Button<'d> {
     /// Wait for any button edge (press or release).
     pub async fn wait_for_any_edge(&mut self) {
         self.input.wait_for_any_edge().await;
+    }
+
+    /// Consumes the button and returns its internal components.
+    ///
+    /// This is useful for converting a `Button` into a `ButtonWatch`.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn into_parts(self) -> (Input<'d>, PressedTo) {
+        (self.input, self.pressed_to)
     }
 }

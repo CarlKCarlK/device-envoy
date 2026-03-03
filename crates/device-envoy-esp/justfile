@@ -33,6 +33,12 @@ clock-led8x12-s3:
 clock-led8x12-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features
 
+clock-led4-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_led4 --target xtensa-esp32s3-none-elf --release --no-default-features
+
+clock-led4-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_led4 --target xtensa-esp32s3-none-elf --release --no-default-features
+
 wifi-scan-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features
 

@@ -21,6 +21,20 @@ __impl_wifi_auto_fields!(
     flash_cfg = target_os = "none"
 );
 
+#[cfg(target_os = "none")]
+impl TimezoneField {
+    /// Initialize a timezone field backed by a flash block.
+    ///
+    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    pub fn new(
+        timezone_field_static: &'static TimezoneFieldStatic,
+        timezone_flash_block: FlashBlock,
+    ) -> &'static Self {
+        Self::new_with_flash(timezone_field_static, timezone_flash_block)
+    }
+}
+
+#[cfg(not(target_os = "none"))]
 impl TimezoneField {
     /// Initialize a timezone field backed by in-memory state.
     ///
@@ -30,6 +44,29 @@ impl TimezoneField {
     }
 }
 
+#[cfg(target_os = "none")]
+impl<const N: usize> TextField<N> {
+    /// Initialize a text field backed by a flash block.
+    ///
+    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    pub fn new(
+        text_field_static: &'static TextFieldStatic<N>,
+        text_flash_block: FlashBlock,
+        field_name: &'static str,
+        label: &'static str,
+        default_value: &'static str,
+    ) -> &'static Self {
+        Self::new_with_flash(
+            text_field_static,
+            text_flash_block,
+            field_name,
+            label,
+            default_value,
+        )
+    }
+}
+
+#[cfg(not(target_os = "none"))]
 impl<const N: usize> TextField<N> {
     /// Initialize a text field backed by in-memory state.
     ///

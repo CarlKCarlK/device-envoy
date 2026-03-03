@@ -276,9 +276,9 @@ impl WifiAuto {
         let stored_credentials = Wifi::peek_credentials(&mut wifi_credentials_flash_block);
         let stored_start_mode = Wifi::peek_start_mode(&mut wifi_credentials_flash_block);
         if matches!(stored_start_mode, WifiStartMode::CaptivePortal) {
-            if let Some(creds) = stored_credentials.clone() {
+            if let Some(credentials) = stored_credentials.clone() {
                 wifi_auto_static.defaults.lock(|cell| {
-                    *cell.borrow_mut() = Some(creds);
+                    *cell.borrow_mut() = Some(credentials);
                 });
             }
         }
@@ -295,9 +295,9 @@ impl WifiAuto {
             .all(|field| field.is_satisfied().unwrap_or(false));
 
         if force_captive_portal || !extras_ready {
-            if let Some(creds) = stored_credentials.clone() {
+            if let Some(credentials) = stored_credentials.clone() {
                 wifi_auto_static.defaults.lock(|cell| {
-                    *cell.borrow_mut() = Some(creds);
+                    *cell.borrow_mut() = Some(credentials);
                 });
             }
             Wifi::prepare_start_mode(
@@ -387,7 +387,7 @@ impl WifiAuto {
     ///
     /// # Example 1: No-op event handler
     /// ```rust,no_run
-    /// # // Based on examples/wifiauto2.rs.
+    /// # // Based on a wifi_auto example.
     /// # #![no_std]
     /// # #![no_main]
     /// # use panic_probe as _;
@@ -539,17 +539,17 @@ impl WifiAutoInner {
             let force_captive_portal = self.force_captive_portal.swap(false, Ordering::AcqRel);
             let start_mode = self.wifi.current_start_mode();
             let persisted_wifi_credentials = self.wifi.load_persisted_credentials();
-            let has_creds = persisted_wifi_credentials.is_some();
+            let has_credentials = persisted_wifi_credentials.is_some();
             let extras_ready = self.extra_fields_ready()?;
             let enter_captive_portal = device_envoy_core::wifi_auto::should_enter_captive_portal(
                 start_mode,
                 force_captive_portal,
-                has_creds,
+                has_credentials,
                 extras_ready,
             );
             info!(
-                "WifiAuto: force={} has_creds={} extras_ready={} enter_captive_portal={}",
-                force_captive_portal, has_creds, extras_ready, enter_captive_portal
+                "WifiAuto: force={} has_credentials={} extras_ready={} enter_captive_portal={}",
+                force_captive_portal, has_credentials, extras_ready, enter_captive_portal
             );
 
             struct RpWifiAutoBackend<'a> {
@@ -661,9 +661,9 @@ impl WifiAutoInner {
                 "WifiAuto: failed to connect after {} attempts, returning to captive portal",
                 MAX_CONNECT_ATTEMPTS
             );
-            if let Some(creds) = self.wifi.load_persisted_credentials() {
+            if let Some(credentials) = self.wifi.load_persisted_credentials() {
                 self.defaults.lock(|cell| {
-                    *cell.borrow_mut() = Some(creds);
+                    *cell.borrow_mut() = Some(credentials);
                 });
             }
             info!("WifiAuto: writing CaptivePortal mode to flash");

@@ -4,6 +4,7 @@
 
 use core::future::Future;
 
+pub mod fields;
 pub mod portal;
 
 pub use portal::{FormData, HtmlBuffer, WifiAutoField, generate_config_page, parse_post};

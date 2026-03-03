@@ -1,11 +1,10 @@
 {
-  "rust-analyzer.lens.enable": false,
-  "rust-analyzer.lens.run": false,
-  "rust-analyzer.lens.debug": false,
-  "rust-analyzer.runnables.command": "cargo",
+  "cSpell.words": [
+    "mmss"
+  ],
+  "rust-analyzer.check.workspace": false,
   "rust-analyzer.cargo.allTargets": false,
-  "rust-analyzer.checkOnSave.allTargets": false,
-  "rust-analyzer.procMacro.enable": false,
-  "rust-analyzer.cargo.buildScripts.enable": false,
-  "rust-analyzer.testing.enable": false
+  "rust-analyzer.check.allTargets": false,
+  "rust-analyzer.cargo.noDefaultFeatures": true,
+  "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf"
 }

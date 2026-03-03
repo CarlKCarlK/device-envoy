@@ -7,11 +7,11 @@
 #[cfg(target_os = "none")]
 mod button_watch;
 
+#[cfg(target_os = "none")]
+pub use button_watch::{ButtonWatch, ButtonWatchStatic};
 pub use device_envoy_core::button::{
     PressDuration, PressedTo, BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION,
 };
-#[cfg(target_os = "none")]
-pub use button_watch::{ButtonWatch, ButtonWatchStatic};
 
 #[cfg(target_os = "none")]
 use embassy_futures::select::{select, Either};

@@ -138,12 +138,8 @@
 //! ```
 
 use crate::servo::Servo;
-use core::borrow::Borrow;
-use embassy_futures::select::{Either, select};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::signal::Signal;
-use embassy_time::{Duration, Timer};
-use heapless::Vec;
+pub use device_envoy_core::servo_player::{AtEnd, ServoPlayer, ServoPlayerStatic, combine, linear};
+use device_envoy_core::servo_player::{ServoPlayerOutput, device_loop as device_loop_core};
 
 #[doc(inline)]
 pub use crate::combine;
@@ -160,115 +156,6 @@ pub use paste;
 // ============================================================================
 
 pub mod servo_player_generated;
-
-/// Commands sent to the servo player device.
-enum PlayerCommand<const MAX_STEPS: usize> {
-    Set {
-        degrees: u16,
-    },
-    Animate {
-        steps: Vec<(u16, Duration), MAX_STEPS>,
-        mode: AtEnd,
-    },
-    Hold,
-    Relax,
-}
-
-/// Animation end behavior.
-///
-/// See the [servo_player module documentation](mod@crate::servo_player) for usage.
-#[derive(Clone, Copy, Debug, defmt::Format)]
-pub enum AtEnd {
-    /// Repeat the animation sequence indefinitely.
-    Loop,
-    /// Hold the final position when animation completes.
-    Hold,
-    /// Stop holding position after animation completes (servo relaxes).
-    Relax,
-}
-
-/// Build a const linear sequence of animation steps as an array.
-///
-/// Returns a fixed-size array with `N` steps interpolating linearly from `start_degrees` to
-/// `end_degrees` over `total_duration`. Can be used in const contexts.
-///
-/// See the [servo_player module documentation](mod@crate::servo_player) for usage.
-///
-/// # Parameters
-///
-/// - `N` — Number of steps in the sequence (const generic parameter)
-/// - `start_degrees` — Starting angle in degrees
-/// - `end_degrees` — Ending angle in degrees
-/// - `total_duration` — Total time for the entire sequence
-///
-/// This uses [`embassy_time::Duration`] for step timing.
-#[must_use]
-pub const fn linear<const N: usize>(
-    start_degrees: u16,
-    end_degrees: u16,
-    total_duration: embassy_time::Duration,
-) -> [(u16, embassy_time::Duration); N] {
-    assert!(N > 0, "at least one step required");
-    let step_duration = Duration::from_micros(total_duration.as_micros() / (N as u64));
-    let delta = end_degrees as i32 - start_degrees as i32;
-    let denom = if N == 1 { 1 } else { (N - 1) as i32 };
-
-    let mut result = [(0u16, Duration::from_micros(0)); N];
-    let mut step_index = 0;
-    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
-    while step_index < N {
-        let degrees = if N == 1 {
-            start_degrees
-        } else {
-            let step_delta = delta * (step_index as i32) / denom;
-            (start_degrees as i32 + step_delta) as u16
-        };
-        result[step_index] = (degrees, step_duration);
-        step_index += 1;
-    }
-    result
-}
-
-/// Combine two animation step arrays into one larger array.
-///
-/// For combining more than two arrays, use the `combine!` macro.
-///
-/// # Example
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use embassy_time::Duration;
-/// # use device_envoy_rp::servo_player::{combine, linear};
-/// # use panic_probe as _;
-/// const SWEEP_UP: [(u16, Duration); 19] = linear(0, 180, Duration::from_secs(2));
-/// const HOLD: [(u16, Duration); 1] = [(180, Duration::from_millis(400))];
-/// const COMBINED: [(u16, Duration); 20] = combine(SWEEP_UP, HOLD);
-/// ```
-/// This uses [`embassy_time::Duration`] for step timing.
-#[must_use]
-#[doc(hidden)]
-pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
-    first: [(u16, embassy_time::Duration); N1],
-    second: [(u16, embassy_time::Duration); N2],
-) -> [(u16, embassy_time::Duration); OUT_N] {
-    assert!(OUT_N == N1 + N2, "OUT_N must equal N1 + N2");
-
-    let mut result = [(0u16, Duration::from_micros(0)); OUT_N];
-    let mut i = 0;
-    // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
-    while i < N1 {
-        result[i] = first[i];
-        i += 1;
-    }
-    let mut j = 0;
-    while j < N2 {
-        result[N1 + j] = second[j];
-        j += 1;
-    }
-    result
-}
-
 /// Combine multiple animation step arrays into one larger array.
 ///
 /// This macro allows combining any number of const arrays with a clean syntax.
@@ -301,118 +188,6 @@ macro_rules! combine {
         const REST: &[(u16, ::embassy_time::Duration)] = &$crate::combine!($($rest),+);
         $crate::servo_player::combine::<{FIRST.len()}, {REST.len()}, {FIRST.len() + REST.len()}>($first, $crate::combine!($($rest),+))
     }};
-}
-
-// Public so macro-generated types can reference it; hidden from docs.
-#[doc(hidden)]
-/// Static resources for [`ServoPlayer`].
-pub struct ServoPlayerStatic<const MAX_STEPS: usize> {
-    command: Signal<CriticalSectionRawMutex, PlayerCommand<MAX_STEPS>>,
-}
-
-impl<const MAX_STEPS: usize> ServoPlayerStatic<MAX_STEPS> {
-    /// Create static resources for the servo player device.
-    #[must_use]
-    pub const fn new_static() -> Self {
-        Self {
-            command: Signal::new(),
-        }
-    }
-
-    fn signal(&self, command: PlayerCommand<MAX_STEPS>) {
-        self.command.signal(command);
-    }
-
-    async fn wait(&self) -> PlayerCommand<MAX_STEPS> {
-        self.command.wait().await
-    }
-}
-
-// Public so macro-generated types can deref to it; hidden from docs.
-#[doc(hidden)]
-/// Internal deref target for generated servo player types.
-///
-/// All servo player methods are available through macro-generated types.
-/// See [`servo_player!`] macro documentation for usage.
-pub struct ServoPlayer<const MAX_STEPS: usize> {
-    servo_player_static: &'static ServoPlayerStatic<MAX_STEPS>,
-}
-
-impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
-    /// Create static resources for a servo player.
-    #[must_use]
-    pub const fn new_static() -> ServoPlayerStatic<MAX_STEPS> {
-        ServoPlayerStatic::new_static()
-    }
-
-    /// Create a servo player handle. The device loop must already be running.
-    ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for usage.
-    #[must_use]
-    pub const fn new(servo_player_static: &'static ServoPlayerStatic<MAX_STEPS>) -> Self {
-        Self {
-            servo_player_static,
-        }
-    }
-
-    /// Set the target angle. The most recent command always wins.
-    ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for
-    /// usage.
-    pub fn set_degrees(&self, degrees: u16) {
-        self.servo_player_static
-            .signal(PlayerCommand::Set { degrees });
-    }
-
-    /// Hold the servo at its current position.
-    ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for
-    /// usage.
-    pub fn hold(&self) {
-        self.servo_player_static.signal(PlayerCommand::Hold);
-    }
-
-    /// Relax the servo (stops holding position, servo can move freely).
-    ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for
-    /// usage.
-    pub fn relax(&self) {
-        self.servo_player_static.signal(PlayerCommand::Relax);
-    }
-
-    /// Animate the servo through a sequence of angles with per-step hold durations.
-    ///
-    /// Each step is a tuple `(degrees, duration)`. Accepts both owned iterators and
-    /// references to collections.
-    ///
-    /// This uses [`embassy_time::Duration`] for step timing.
-    ///
-    /// See the [servo_player module documentation](mod@crate::servo_player) for
-    /// usage.
-    pub fn animate<I>(&self, steps: I, at_end: AtEnd)
-    where
-        I: IntoIterator,
-        I::Item: Borrow<(u16, embassy_time::Duration)>,
-    {
-        assert!(MAX_STEPS > 0, "animate disabled: max_steps is 0");
-        let mut sequence: Vec<(u16, Duration), MAX_STEPS> = Vec::new();
-        for step in steps {
-            let step = *step.borrow();
-            assert!(
-                step.1.as_micros() > 0,
-                "animation step duration must be positive"
-            );
-            sequence
-                .push(step)
-                .expect("animate sequence fits within max_steps");
-        }
-        assert!(!sequence.is_empty(), "animate requires at least one step");
-
-        self.servo_player_static.signal(PlayerCommand::Animate {
-            steps: sequence,
-            mode: at_end,
-        });
-    }
 }
 
 /// Macro to generate a servo player struct type (includes syntax details).
@@ -1352,74 +1127,21 @@ macro_rules! __servo_player_impl {
 #[doc(hidden)]
 pub async fn device_loop<const MAX_STEPS: usize>(
     servo_player_static: &'static ServoPlayerStatic<MAX_STEPS>,
-    mut servo: Servo<'static>,
+    servo: Servo<'static>,
 ) -> ! {
-    let mut current_degrees: u16 = 0;
-    servo.set_degrees(current_degrees);
-
-    let mut command = servo_player_static.wait().await;
-    loop {
-        match command {
-            PlayerCommand::Set { degrees } => {
-                current_degrees = degrees;
-                servo.set_degrees(current_degrees);
-                command = servo_player_static.wait().await;
-            }
-            PlayerCommand::Hold => {
-                servo.hold();
-                command = servo_player_static.wait().await;
-            }
-            PlayerCommand::Relax => {
-                servo.relax();
-                command = servo_player_static.wait().await;
-            }
-            PlayerCommand::Animate { steps, mode } => {
-                command = run_animation(
-                    &steps,
-                    mode,
-                    &mut servo,
-                    servo_player_static,
-                    &mut current_degrees,
-                )
-                .await;
-            }
-        }
-    }
+    device_loop_core(servo_player_static, servo).await
 }
 
-async fn run_animation<const MAX_STEPS: usize>(
-    steps: &[(u16, Duration)],
-    mode: AtEnd,
-    servo: &mut Servo<'static>,
-    servo_player_static: &'static ServoPlayerStatic<MAX_STEPS>,
-    current_degrees: &mut u16,
-) -> PlayerCommand<MAX_STEPS> {
-    loop {
-        for step in steps {
-            if *current_degrees != step.0 {
-                servo.set_degrees(step.0);
-                *current_degrees = step.0;
-            }
-            match select(Timer::after(step.1), servo_player_static.wait()).await {
-                Either::First(_) => {}
-                Either::Second(command) => return command,
-            }
-        }
+impl ServoPlayerOutput for Servo<'static> {
+    fn set_degrees(&mut self, degrees: u16) {
+        Servo::set_degrees(self, degrees);
+    }
 
-        // Animation sequence completed - handle end behavior
-        match mode {
-            AtEnd::Loop => {
-                // Continue looping
-            }
-            AtEnd::Hold => {
-                // Hold final position and wait for next command
-                return servo_player_static.wait().await;
-            }
-            AtEnd::Relax => {
-                // Stop holding position (servo relaxes) and wait for next command
-                servo.relax();
-                return servo_player_static.wait().await;
-            }
-        }
+    fn hold(&mut self) {
+        Servo::hold(self);
+    }
+
+    fn relax(&mut self) {
+        Servo::relax(self);
     }
 }

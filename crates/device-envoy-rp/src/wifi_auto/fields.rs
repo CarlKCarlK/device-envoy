@@ -112,9 +112,9 @@ use defmt::info;
 use heapless::String;
 use static_cell::StaticCell;
 
-use super::portal::{FormData, HtmlBuffer, WifiAutoField};
 use crate::flash_array::FlashBlock;
 use crate::{Error, Result};
+use device_envoy_core::wifi_auto::{FormData, HtmlBuffer};
 
 /// A timezone selection field for WiFi provisioning.
 ///
@@ -203,7 +203,9 @@ impl TimezoneField {
     }
 }
 
-impl WifiAutoField for TimezoneField {
+impl device_envoy_core::wifi_auto::WifiAutoField for TimezoneField {
+    type Error = Error;
+
     fn render(&self, page: &mut HtmlBuffer) -> Result<()> {
         info!("WifiAuto field: rendering timezone select");
         let current = self.offset_minutes()?.unwrap_or(0);
@@ -527,7 +529,9 @@ impl<const N: usize> TextField<N> {
     }
 }
 
-impl<const N: usize> WifiAutoField for TextField<N> {
+impl<const N: usize> device_envoy_core::wifi_auto::WifiAutoField for TextField<N> {
+    type Error = Error;
+
     fn render(&self, page: &mut HtmlBuffer) -> Result<()> {
         info!("WifiAuto field: rendering text input");
         let current = self

@@ -359,6 +359,7 @@ impl WifiAuto {
         })
     }
 
+    device_envoy_core::__impl_wifi_auto_connect! {
     /// Connects to WiFi (if possible), reports status, and returns the
     /// network stack and button, consuming the `WifiAuto`.
     ///
@@ -483,15 +484,9 @@ impl WifiAuto {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn connect<Fut, F>(
-        self,
-        on_event: F,
-    ) -> Result<(&'static Stack<'static>, Button<'static>)>
-    where
-        F: FnMut(WifiAutoEvent) -> Fut,
-        Fut: Future<Output = Result<()>>,
-    {
-        self.wifi_auto.connect(on_event).await
+    fn connect(self as wifi_auto, on_event) -> Result<(&'static Stack<'static>, Button<'static>)> {
+        wifi_auto.wifi_auto.connect(on_event).await
+    }
     }
 }
 
@@ -524,18 +519,15 @@ impl WifiAutoInner {
         Ok(true)
     }
 
-    async fn connect<Fut, F>(
-        &self,
-        mut on_event: F,
-    ) -> Result<(&'static Stack<'static>, Button<'static>)>
-    where
-        F: FnMut(WifiAutoEvent) -> Fut,
-        Fut: Future<Output = Result<()>>,
-    {
-        self.ensure_connected_with(&mut on_event).await?;
-        let stack = self.wifi.wait_for_stack().await;
-        let button = self.take_button().ok_or(Error::StorageCorrupted)?;
+    device_envoy_core::__impl_wifi_auto_connect! {
+    fn connect(&self as wifi_auto_inner, on_event) -> Result<(&'static Stack<'static>, Button<'static>)> {
+        wifi_auto_inner.ensure_connected_with(&mut on_event).await?;
+        let stack = wifi_auto_inner.wifi.wait_for_stack().await;
+        let button = wifi_auto_inner
+            .take_button()
+            .ok_or(Error::StorageCorrupted)?;
         Ok((stack, button))
+    }
     }
 
     async fn ensure_connected_with<Fut, F>(&self, on_event: &mut F) -> Result<()>
@@ -560,40 +552,82 @@ impl WifiAutoInner {
                 force_captive_portal, has_creds, extras_ready, enter_captive_portal
             );
 
-            let persisted_wifi_credentials_for_load = persisted_wifi_credentials.clone();
-            struct RpConnectAttemptHook<'a> {
+            struct RpWifiAutoBackend<'a> {
                 wifi_auto_inner: &'a WifiAutoInner,
+                force_captive_portal: bool,
             }
-            impl device_envoy_core::wifi_auto::ConnectAttemptHook<Error> for RpConnectAttemptHook<'_> {
-                async fn on_attempt(&mut self, try_index: u8) -> Result<bool> {
-                    let attempt = try_index + 1;
-                    info!(
-                        "WifiAuto: connection attempt {}/{}",
-                        attempt, MAX_CONNECT_ATTEMPTS
-                    );
-                    if self
-                        .wifi_auto_inner
-                        .wait_for_client_ready_with_timeout(CONNECT_TIMEOUT)
-                        .await
-                    {
-                        return Ok(true);
-                    }
-                    warn!("WifiAuto: connection attempt {} timed out", attempt);
-                    let retry_delay = retry_delay_with_jitter(try_index);
-                    info!(
-                        "WifiAuto: retrying after {} ms (attempt {})",
-                        retry_delay.as_millis(),
-                        attempt
-                    );
-                    Timer::after(retry_delay).await;
-                    Ok(false)
+            impl device_envoy_core::wifi_auto::WifiAutoBackend for RpWifiAutoBackend<'_> {
+                type Error = Error;
+
+                fn force_captive_portal(&self) -> bool {
+                    self.force_captive_portal
                 }
-            }
-            impl device_envoy_core::wifi_auto::ConnectFlowHook<Error> for RpConnectAttemptHook<'_> {
+
+                fn try_count(&self) -> u8 {
+                    MAX_CONNECT_ATTEMPTS
+                }
+
+                fn load_start_mode(&self) -> Result<WifiStartMode> {
+                    Ok(self.wifi_auto_inner.wifi.current_start_mode())
+                }
+
+                fn custom_fields_satisfied(&self) -> Result<bool> {
+                    self.wifi_auto_inner.extra_fields_ready()
+                }
+
+                fn load_persisted_credentials(&self) -> Result<Option<InnerWifiCredentials>> {
+                    Ok(self.wifi_auto_inner.wifi.load_persisted_credentials())
+                }
+
+                fn persist_credentials(
+                    &self,
+                    wifi_credentials: &InnerWifiCredentials,
+                ) -> Result<()> {
+                    self.wifi_auto_inner
+                        .wifi
+                        .persist_credentials(wifi_credentials)
+                        .map_err(|_| Error::StorageCorrupted)
+                }
+
+                fn set_start_mode(&self, wifi_start_mode: WifiStartMode) -> Result<()> {
+                    self.wifi_auto_inner
+                        .wifi
+                        .set_start_mode(wifi_start_mode)
+                        .map_err(|_| Error::StorageCorrupted)
+                }
+
+                fn on_connect_attempt(
+                    &mut self,
+                    try_index: u8,
+                ) -> impl Future<Output = Result<bool>> + '_ {
+                    async move {
+                        let attempt = try_index + 1;
+                        info!(
+                            "WifiAuto: connection attempt {}/{}",
+                            attempt, MAX_CONNECT_ATTEMPTS
+                        );
+                        if self
+                            .wifi_auto_inner
+                            .wait_for_client_ready_with_timeout(CONNECT_TIMEOUT)
+                            .await
+                        {
+                            return Ok(true);
+                        }
+                        warn!("WifiAuto: connection attempt {} timed out", attempt);
+                        let retry_delay = retry_delay_with_jitter(try_index);
+                        info!(
+                            "WifiAuto: retrying after {} ms (attempt {})",
+                            retry_delay.as_millis(),
+                            attempt
+                        );
+                        Timer::after(retry_delay).await;
+                        Ok(false)
+                    }
+                }
+
                 fn run_captive_portal(
                     &mut self,
-                ) -> impl Future<Output = Result<device_envoy_core::wifi_auto::WifiCredentials>>
-                       + '_ {
+                ) -> impl Future<Output = Result<InnerWifiCredentials>> + '_ {
                     async move {
                         match self.wifi_auto_inner.run_captive_portal().await {
                             Ok(infallible) => match infallible {},
@@ -604,33 +638,19 @@ impl WifiAutoInner {
 
                 fn on_resolved_credentials(
                     &mut self,
-                    _wifi_credentials: &device_envoy_core::wifi_auto::WifiCredentials,
+                    _wifi_credentials: &InnerWifiCredentials,
                 ) -> impl Future<Output = Result<()>> + '_ {
                     async { Ok(()) }
                 }
             }
 
-            let mut connect_attempt_hook = RpConnectAttemptHook {
+            let mut wifi_auto_backend = RpWifiAutoBackend {
                 wifi_auto_inner: self,
-            };
-            let connected = device_envoy_core::wifi_auto::connect_with_auto_setup(
                 force_captive_portal,
+            };
+            let connected = device_envoy_core::wifi_auto::connect_with_backend(
+                &mut wifi_auto_backend,
                 on_event,
-                MAX_CONNECT_ATTEMPTS,
-                || Ok(start_mode),
-                || Ok(extras_ready),
-                || Ok(persisted_wifi_credentials_for_load.clone()),
-                |wifi_credentials| {
-                    self.wifi
-                        .persist_credentials(wifi_credentials)
-                        .map_err(|_| Error::StorageCorrupted)
-                },
-                |wifi_start_mode| {
-                    self.wifi
-                        .set_start_mode(wifi_start_mode)
-                        .map_err(|_| Error::StorageCorrupted)
-                },
-                &mut connect_attempt_hook,
             )
             .await?;
             if connected {

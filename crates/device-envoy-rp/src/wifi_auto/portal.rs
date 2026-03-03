@@ -1,19 +1,17 @@
-use core::{cell::RefCell, fmt::Write};
+use core::cell::RefCell;
 
-use defmt::{Debug2Format, info, unwrap, warn};
+use defmt::{info, unwrap, warn};
 use embassy_executor::Spawner;
 use embassy_net::{Stack, tcp::TcpSocket};
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
 use embedded_io_async::Write as _;
-use heapless::{FnvIndexMap, String};
+use heapless::Vec;
 use static_cell::StaticCell;
 
 use crate::Result;
-use device_envoy_core::wifi_auto::WifiCredentials;
-
-pub type HtmlBuffer = String<16384>;
+use device_envoy_core::wifi_auto::{HtmlBuffer, WifiCredentials};
 
 /// Traits for custom extra information that [`WifiAuto`](crate::wifi_auto::WifiAuto) can ask the
 /// user for on its setup web page. Supports HTML snippets.
@@ -24,60 +22,17 @@ pub type HtmlBuffer = String<16384>;
 ///
 /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
 ///
-/// # Methods
-///
-/// - [`render`](Self::render): Generate HTML form elements for the captive portal
-/// - [`parse`](Self::parse): Parse and save submitted form data
-/// - [`is_satisfied`](Self::is_satisfied): Check if field has valid configuration
-pub trait WifiAutoField: Sync {
-    /// Render HTML form elements for this field.
-    ///
-    /// Append form elements (labels, inputs, selects, etc.) to the `page` buffer.
-    /// This is called when generating the captive portal page.
-    ///
-    /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
-    fn render(&self, page: &mut HtmlBuffer) -> Result<()>;
-
-    /// Parse and save form data submitted by the user.
-    ///
-    /// Extract values from the `form` data and persist them (typically to flash).
-    /// Return an error if validation fails.
-    ///
-    /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
-    fn parse(&self, form: &FormData<'_>) -> Result<()>;
-
-    /// Check if this field has valid configuration.
-    ///
-    /// Returns `true` if the field has been configured (default implementation always
-    /// returns `true`). If `false`, the captive portal will be shown even if WiFi
-    /// credentials exist.
-    ///
-    /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
-    fn is_satisfied(&self) -> Result<bool> {
-        Ok(true)
-    }
+/// This trait forwards to [`device_envoy_core::wifi_auto::WifiAutoField`] with
+/// `Error = crate::Error` and adds `Sync` for static shared usage in RP tasks.
+pub trait WifiAutoField:
+    device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error> + Sync
+{
 }
 
-pub struct FormData<'a> {
-    params: &'a FormMap,
+impl<T> WifiAutoField for T where
+    T: device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error> + Sync
+{
 }
-
-impl<'a> FormData<'a> {
-    fn new(params: &'a FormMap) -> Self {
-        Self { params }
-    }
-
-    pub fn get(&self, key: &str) -> Option<&str> {
-        self.params
-            .iter()
-            .find(|(stored, _)| stored.as_str() == key)
-            .map(|(_, value)| value.as_str())
-    }
-}
-
-type FormKey = String<32>;
-type FormValue = String<256>;
-type FormMap = FnvIndexMap<FormKey, FormValue, 32>;
 
 static CREDENTIAL_CHANNEL: Channel<CriticalSectionRawMutex, WifiCredentials, 1> = Channel::new();
 
@@ -161,7 +116,8 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
             "GET" => {
                 let state_snapshot = FORM_STATE.lock(|state| state.borrow().clone());
                 let fields_snapshot = FORM_FIELDS.lock(|fields| *fields.borrow());
-                generate_config_page(&state_snapshot, fields_snapshot)
+                generate_config_page(state_snapshot.defaults.as_ref(), fields_snapshot)
+                    .unwrap_or_else(|| static_page(generate_error_page()))
             }
             "POST" => {
                 let fields_snapshot = FORM_FIELDS.lock(|fields| *fields.borrow());
@@ -187,118 +143,20 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
 }
 
 fn parse_post(request: &str, fields: &[&'static dyn WifiAutoField]) -> Option<WifiCredentials> {
-    let body_start = request.find("\r\n\r\n")? + 4;
-    let body = &request[body_start..];
-
-    let mut params: FormMap = FormMap::new();
-    let mut ssid = heapless::String::<32>::new();
-    let mut password = heapless::String::<64>::new();
-
-    for param in body.split('&') {
-        if let Some((key, value)) = param.split_once('=') {
-            let decoded_key = url_decode::<32>(key);
-            let decoded_value = url_decode::<256>(value);
-            params
-                .insert(decoded_key.clone(), decoded_value.clone())
-                .ok();
-            match decoded_key.as_str() {
-                "ssid" => {
-                    ssid.push_str(&decoded_value)
-                        .expect("ssid exceeds capacity");
-                }
-                "password" => {
-                    password
-                        .push_str(&decoded_value)
-                        .expect("password exceeds capacity");
-                }
-                _ => {}
-            }
-        }
-    }
-
-    if ssid.is_empty() {
-        return None;
-    }
-
-    let form = FormData::new(&params);
-    for field in fields {
-        if let Err(err) = field.parse(&form) {
-            warn!("WifiAuto field parse failed: {}", Debug2Format(&err));
-            return None;
-        }
-    }
-
-    Some(WifiCredentials { ssid, password })
+    let core_fields = core_fields(fields)?;
+    device_envoy_core::wifi_auto::parse_post(request, core_fields.as_slice())
 }
 
-fn generate_config_page(state: &FormState, fields: &[&'static dyn WifiAutoField]) -> HtmlBuffer {
+fn generate_config_page(
+    defaults: Option<&WifiCredentials>,
+    fields: &[&'static dyn WifiAutoField],
+) -> Option<HtmlBuffer> {
     info!("WifiAuto portal rendering {} fields", fields.len());
-    let mut page = HtmlBuffer::new();
-    let ssid = state
-        .defaults
-        .as_ref()
-        .map(|creds| escape_html::<160>(creds.ssid.as_str()))
-        .unwrap_or_else(heapless::String::new);
-    let password = state
-        .defaults
-        .as_ref()
-        .map(|creds| escape_html::<320>(creds.password.as_str()))
-        .unwrap_or_else(heapless::String::new);
-
-    write!(
-        page,
-        "HTTP/1.1 200 OK\r\n\
-         Content-Type: text/html\r\n\
-         Connection: close\r\n\
-         \r\n\
-         <!DOCTYPE html>\
-         <html>\
-         <head>\
-             <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
-             <title>WiFi Configuration</title>\
-             <link rel=\"icon\" href=\"data:,\">\
-             <style>\
-                 body {{ font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }}\
-                 h1 {{ color: #333; }}\
-                 form {{ margin-top: 20px; }}\
-                 input {{ width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }}\
-                 label {{ display: block; margin-top: 10px; }}\
-                 .toggle {{ display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #444; margin-top: 5px; }}\
-                 .toggle input {{ width: auto; margin: 0; }}\
-                 button {{ width: 100%; padding: 12px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }}\
-                 button:hover {{ background-color: #45a049; }}\
-             </style>\
-             <script>\
-                 function togglePasswordVisibility() {{\
-                     var input = document.getElementById('password');\
-                     input.type = input.type === 'password' ? 'text' : 'password';\
-                 }}\
-             </script>\
-         </head>\
-         <body>\
-             <h1>WiFi Configuration</h1>\
-             <p>Enter your WiFi network credentials:</p>\
-             <form method=\"POST\" action=\"/\">\
-                <label for=\"ssid\">WiFi Network Name (SSID):</label>\
-                <input type=\"text\" id=\"ssid\" name=\"ssid\" value=\"{}\" required>\
-                <label for=\"password\">Password:</label>\
-                <input type=\"password\" id=\"password\" name=\"password\" value=\"{}\" required>\
-                <label class=\"toggle\"><input type=\"checkbox\" onclick=\"togglePasswordVisibility()\">Show password</label>\
-",
-        ssid, password
-    )
-    .ok();
-
-    for field in fields {
-        if let Err(err) = field.render(&mut page) {
-            warn!("WifiAuto field render failed: {}", Debug2Format(&err));
-        }
-    }
-
-    page.push_str("<button type=\"submit\">Connect</button></form></body></html>")
-        .expect("page HTML exceeds capacity");
-
-    page
+    let core_fields = core_fields(fields)?;
+    Some(device_envoy_core::wifi_auto::generate_config_page(
+        defaults,
+        core_fields.as_slice(),
+    ))
 }
 
 fn generate_success_page() -> &'static str {
@@ -355,64 +213,22 @@ fn static_page(content: &'static str) -> HtmlBuffer {
     page
 }
 
-fn url_decode<const N: usize>(s: &str) -> heapless::String<N> {
-    let mut result = heapless::String::<N>::new();
-    let mut chars = s.chars();
-
-    while let Some(c) = chars.next() {
-        if c == '+' {
-            result.push(' ').expect("decoded URL exceeds capacity");
-        } else if c == '%' {
-            if let (Some(h1), Some(h2)) = (chars.next(), chars.next()) {
-                if let (Some(d1), Some(d2)) = (h1.to_digit(16), h2.to_digit(16)) {
-                    #[allow(clippy::cast_possible_truncation)]
-                    let byte = ((d1 << 4) | d2) as u8;
-                    if let Ok(ch) = core::str::from_utf8(&[byte]) {
-                        result.push_str(ch).expect("decoded URL exceeds capacity");
-                    }
-                }
-            }
-        } else {
-            result.push(c).expect("decoded URL exceeds capacity");
+fn core_fields(
+    fields: &[&'static dyn WifiAutoField],
+) -> Option<Vec<&'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>, 16>>
+{
+    let mut core_fields: Vec<
+        &'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>,
+        16,
+    > = Vec::new();
+    for field in fields {
+        if core_fields
+            .push(*field as &'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>)
+            .is_err()
+        {
+            warn!("WifiAuto portal has too many fields to parse");
+            return None;
         }
     }
-
-    result
-}
-
-fn escape_html<const N: usize>(value: &str) -> heapless::String<N> {
-    let mut escaped = heapless::String::<N>::new();
-    for ch in value.chars() {
-        match ch {
-            '&' => {
-                escaped
-                    .push_str("&amp;")
-                    .expect("escaped HTML exceeds capacity");
-            }
-            '<' => {
-                escaped
-                    .push_str("&lt;")
-                    .expect("escaped HTML exceeds capacity");
-            }
-            '>' => {
-                escaped
-                    .push_str("&gt;")
-                    .expect("escaped HTML exceeds capacity");
-            }
-            '"' => {
-                escaped
-                    .push_str("&quot;")
-                    .expect("escaped HTML exceeds capacity");
-            }
-            '\'' => {
-                escaped
-                    .push_str("&#39;")
-                    .expect("escaped HTML exceeds capacity");
-            }
-            _ => {
-                escaped.push(ch).expect("escaped HTML exceeds capacity");
-            }
-        }
-    }
-    escaped
+    Some(core_fields)
 }

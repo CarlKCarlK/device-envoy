@@ -8,6 +8,46 @@ pub mod portal;
 
 pub use portal::{FormData, HtmlBuffer, WifiAutoField, generate_config_page, parse_post};
 
+// This helper macro must be `pub` because downstream crates expand it in impl blocks.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __impl_wifi_auto_connect {
+    (
+        $(#[$meta:meta])*
+        fn $name:ident (&self as $self_ident:ident, $on_event:ident) -> $return_ty:ty $body:block
+    ) => {
+        $(#[$meta])*
+        pub async fn $name<OnEvent, OnEventFuture>(
+            &self,
+            mut $on_event: OnEvent,
+        ) -> $return_ty
+        where
+            OnEvent: FnMut($crate::wifi_auto::WifiAutoEvent) -> OnEventFuture,
+            OnEventFuture: core::future::Future<Output = crate::Result<()>>,
+        {
+            let $self_ident = self;
+            $body
+        }
+    };
+    (
+        $(#[$meta:meta])*
+        fn $name:ident (self as $self_ident:ident, $on_event:ident) -> $return_ty:ty $body:block
+    ) => {
+        $(#[$meta])*
+        pub async fn $name<OnEvent, OnEventFuture>(
+            self,
+            mut $on_event: OnEvent,
+        ) -> $return_ty
+        where
+            OnEvent: FnMut($crate::wifi_auto::WifiAutoEvent) -> OnEventFuture,
+            OnEventFuture: core::future::Future<Output = crate::Result<()>>,
+        {
+            let $self_ident = self;
+            $body
+        }
+    };
+}
+
 /// Events emitted while driving a Wi-Fi setup flow.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WifiAutoEvent {
@@ -100,174 +140,93 @@ impl Default for WifiAutoPersistedState {
     }
 }
 
-/// Resolve Wi-Fi credentials for connection, optionally running captive-portal setup.
-///
-/// This function centralizes the common startup flow used by platform ports:
-///
-/// 1. Inspect persisted mode/credentials and custom-field readiness.
-/// 2. Enter captive portal when required.
-/// 3. Persist submitted credentials and switch startup mode back to client mode.
-///
-/// The returned credentials are guaranteed to be present unless callback logic violates
-/// the expected contract (for example, `run_captive_portal` returns but does not provide
-/// credentials).
-pub async fn resolve_wifi_credentials<
-    Error,
-    OnEvent,
-    OnEventFuture,
-    LoadStartMode,
-    CustomFieldsSatisfied,
-    LoadPersistedCredentials,
-    PersistCredentials,
-    SetStartMode,
-    RunCaptivePortalFuture,
->(
-    force_captive_portal: bool,
+/// Backend contract for platform-specific Wi-Fi auto-connect operations.
+pub trait WifiAutoBackend {
+    /// Platform-specific error type.
+    type Error;
+
+    /// Whether boot should force captive portal regardless of persisted state.
+    fn force_captive_portal(&self) -> bool;
+
+    /// Number of connection attempts before emitting `ConnectionFailed`.
+    fn try_count(&self) -> u8;
+
+    /// Load persisted startup mode.
+    fn load_start_mode(&self) -> Result<WifiStartMode, Self::Error>;
+
+    /// Check whether all custom fields are currently satisfied.
+    fn custom_fields_satisfied(&self) -> Result<bool, Self::Error>;
+
+    /// Load persisted credentials, if present.
+    fn load_persisted_credentials(&self) -> Result<Option<WifiCredentials>, Self::Error>;
+
+    /// Persist submitted credentials.
+    fn persist_credentials(&self, wifi_credentials: &WifiCredentials) -> Result<(), Self::Error>;
+
+    /// Persist startup mode.
+    fn set_start_mode(&self, wifi_start_mode: WifiStartMode) -> Result<(), Self::Error>;
+
+    /// Run captive portal and return submitted credentials.
+    fn run_captive_portal(
+        &mut self,
+    ) -> impl Future<Output = Result<WifiCredentials, Self::Error>> + '_;
+
+    /// Configure platform networking once credentials are resolved.
+    fn on_resolved_credentials(
+        &mut self,
+        wifi_credentials: &WifiCredentials,
+    ) -> impl Future<Output = Result<(), Self::Error>> + '_;
+
+    /// Run one platform-specific connect attempt.
+    fn on_connect_attempt(
+        &mut self,
+        try_index: u8,
+    ) -> impl Future<Output = Result<bool, Self::Error>> + '_;
+}
+
+/// Run the shared Wi-Fi auto-connect flow through a platform backend.
+pub async fn connect_with_backend<Backend, OnEvent, OnEventFuture>(
+    backend: &mut Backend,
     on_event: &mut OnEvent,
-    mut load_start_mode: LoadStartMode,
-    mut custom_fields_satisfied: CustomFieldsSatisfied,
-    mut load_persisted_credentials: LoadPersistedCredentials,
-    mut persist_credentials: PersistCredentials,
-    mut set_start_mode: SetStartMode,
-    run_captive_portal: RunCaptivePortalFuture,
-) -> Result<WifiCredentials, Error>
+) -> Result<bool, Backend::Error>
 where
+    Backend: WifiAutoBackend,
     OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), Error>>,
-    LoadStartMode: FnMut() -> Result<WifiStartMode, Error>,
-    CustomFieldsSatisfied: FnMut() -> Result<bool, Error>,
-    LoadPersistedCredentials: FnMut() -> Result<Option<WifiCredentials>, Error>,
-    PersistCredentials: FnMut(&WifiCredentials) -> Result<(), Error>,
-    SetStartMode: FnMut(WifiStartMode) -> Result<(), Error>,
-    RunCaptivePortalFuture: Future<Output = Result<WifiCredentials, Error>>,
+    OnEventFuture: Future<Output = Result<(), Backend::Error>>,
 {
-    let wifi_start_mode = load_start_mode()?;
-    let custom_fields_satisfied = custom_fields_satisfied()?;
-    let mut wifi_credentials = load_persisted_credentials()?;
+    let wifi_start_mode = backend.load_start_mode()?;
+    let custom_fields_satisfied = backend.custom_fields_satisfied()?;
+    let mut wifi_credentials = backend.load_persisted_credentials()?;
     let has_persisted_credentials = wifi_credentials.is_some();
 
-    let enter_captive_portal = should_enter_captive_portal(
+    if should_enter_captive_portal(
         wifi_start_mode,
-        force_captive_portal,
+        backend.force_captive_portal(),
         has_persisted_credentials,
         custom_fields_satisfied,
-    );
-    if enter_captive_portal {
+    ) {
         on_event(WifiAutoEvent::CaptivePortalReady).await?;
-        let portal_wifi_credentials = run_captive_portal.await?;
-        persist_credentials(&portal_wifi_credentials)?;
-        set_start_mode(WifiStartMode::Client)?;
+        let portal_wifi_credentials = backend.run_captive_portal().await?;
+        backend.persist_credentials(&portal_wifi_credentials)?;
+        backend.set_start_mode(WifiStartMode::Client)?;
         wifi_credentials = Some(portal_wifi_credentials);
     }
 
     let wifi_credentials =
         wifi_credentials.expect("wifi credentials should exist after captive portal fallback");
-    Ok(wifi_credentials)
-}
+    backend.on_resolved_credentials(&wifi_credentials).await?;
 
-/// Hook trait for one connection attempt in [`run_connect_retries`].
-pub trait ConnectAttemptHook<Error> {
-    /// Run a single attempt identified by a zero-based `try_index`.
-    ///
-    /// Return `Ok(true)` when a connection is established.
-    fn on_attempt(&mut self, try_index: u8) -> impl Future<Output = Result<bool, Error>> + '_;
-}
-
-/// Run a shared connect-retry loop and emit standard Wi-Fi auto events.
-///
-/// Returns `Ok(true)` when connected and `Ok(false)` after exhausting all retries
-/// (after emitting `ConnectionFailed`).
-pub async fn run_connect_retries<Error, OnEvent, OnEventFuture, Hook>(
-    try_count: u8,
-    on_event: &mut OnEvent,
-    hook: &mut Hook,
-) -> Result<bool, Error>
-where
-    OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), Error>>,
-    Hook: ConnectAttemptHook<Error>,
-{
-    for try_index in 0..try_count {
+    for try_index in 0..backend.try_count() {
         on_event(WifiAutoEvent::Connecting {
             try_index,
-            try_count,
+            try_count: backend.try_count(),
         })
         .await?;
-        if hook.on_attempt(try_index).await? {
+        if backend.on_connect_attempt(try_index).await? {
             return Ok(true);
         }
     }
 
     on_event(WifiAutoEvent::ConnectionFailed).await?;
     Ok(false)
-}
-
-/// Hook trait for post-setup connect flow orchestration.
-pub trait ConnectFlowHook<Error>: ConnectAttemptHook<Error> {
-    /// Run captive portal and return submitted credentials.
-    fn run_captive_portal(
-        &mut self,
-    ) -> impl Future<Output = Result<WifiCredentials, Error>> + '_;
-
-    /// Configure platform networking after credentials are resolved and before retries.
-    fn on_resolved_credentials(
-        &mut self,
-        wifi_credentials: &WifiCredentials,
-    ) -> impl Future<Output = Result<(), Error>> + '_;
-}
-
-/// Shared connect orchestration: setup decision + credential resolution + retry loop.
-///
-/// Returns `Ok(true)` on successful connection and `Ok(false)` after exhausted retries.
-pub async fn connect_with_auto_setup<
-    Error,
-    OnEvent,
-    OnEventFuture,
-    LoadStartMode,
-    CustomFieldsSatisfied,
-    LoadPersistedCredentials,
-    PersistCredentials,
-    SetStartMode,
-    Hook,
->(
-    force_captive_portal: bool,
-    on_event: &mut OnEvent,
-    try_count: u8,
-    mut load_start_mode: LoadStartMode,
-    mut custom_fields_satisfied: CustomFieldsSatisfied,
-    mut load_persisted_credentials: LoadPersistedCredentials,
-    mut persist_credentials: PersistCredentials,
-    mut set_start_mode: SetStartMode,
-    hook: &mut Hook,
-) -> Result<bool, Error>
-where
-    OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), Error>>,
-    LoadStartMode: FnMut() -> Result<WifiStartMode, Error>,
-    CustomFieldsSatisfied: FnMut() -> Result<bool, Error>,
-    LoadPersistedCredentials: FnMut() -> Result<Option<WifiCredentials>, Error>,
-    PersistCredentials: FnMut(&WifiCredentials) -> Result<(), Error>,
-    SetStartMode: FnMut(WifiStartMode) -> Result<(), Error>,
-    Hook: ConnectFlowHook<Error>,
-{
-    let wifi_start_mode = load_start_mode()?;
-    let custom_fields_satisfied = custom_fields_satisfied()?;
-    let mut wifi_credentials = load_persisted_credentials()?;
-    let has_persisted_credentials = wifi_credentials.is_some();
-    if should_enter_captive_portal(
-        wifi_start_mode,
-        force_captive_portal,
-        has_persisted_credentials,
-        custom_fields_satisfied,
-    ) {
-        on_event(WifiAutoEvent::CaptivePortalReady).await?;
-        let portal_wifi_credentials = hook.run_captive_portal().await?;
-        persist_credentials(&portal_wifi_credentials)?;
-        set_start_mode(WifiStartMode::Client)?;
-        wifi_credentials = Some(portal_wifi_credentials);
-    }
-    let wifi_credentials =
-        wifi_credentials.expect("wifi credentials should exist after captive portal fallback");
-    hook.on_resolved_credentials(&wifi_credentials).await?;
-    run_connect_retries(try_count, on_event, hook).await
 }

@@ -17,7 +17,7 @@ fn parse_post_decodes_credentials() {
 fn parse_post_applies_custom_field_parsing() {
     let timezone_field_static = Box::leak(Box::new(TimezoneField::new_static()));
     let timezone_field = TimezoneField::new(timezone_field_static);
-    let fields: [&'static dyn WifiAutoField; 1] = [timezone_field];
+    let fields: [&'static dyn WifiAutoField<Error = device_envoy_esp::Error>; 1] = [timezone_field];
     let wifi_auto = WifiAuto::new("PortalSsid", &fields);
 
     let request =
@@ -66,7 +66,7 @@ fn text_field_roundtrip_from_post() {
         "Device name",
         "DeskSensor",
     );
-    let fields: [&'static dyn WifiAutoField; 1] = [text_field];
+    let fields: [&'static dyn WifiAutoField<Error = device_envoy_esp::Error>; 1] = [text_field];
     let wifi_auto = WifiAuto::new("PortalSsid", &fields);
 
     let request =

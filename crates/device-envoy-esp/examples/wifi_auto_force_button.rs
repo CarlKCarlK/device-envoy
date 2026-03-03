@@ -12,10 +12,7 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    button::{Button, PressedTo},
-    flash_array::FlashArray,
-    init_and_start,
-    wifi_auto::WifiAuto,
+    button::PressedTo, flash_array::FlashArray, init_and_start, wifi_auto::WifiAuto,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -28,17 +25,23 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(_spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let [wifi_auto_flash_block] = FlashArray::<1>::new(p.FLASH)?;
-    let wifi_auto = WifiAuto::new_with_flash("EnvoySetup", wifi_auto_flash_block, &[]);
-
-    let button = Button::new(p.GPIO6, PressedTo::Ground);
+    let wifi_auto = WifiAuto::new(
+        p.WIFI,
+        wifi_auto_flash_block,
+        p.GPIO6,
+        PressedTo::Ground,
+        "EnvoySetup",
+        &[],
+        spawner,
+    );
 
     let before_mode = wifi_auto.start_mode()?;
-    let changed = wifi_auto.force_captive_portal_if_pressed(&button)?;
+    let changed = wifi_auto.force_captive_portal_if_pressed_state(true)?;
     let after_mode = wifi_auto.start_mode()?;
 
     info!("wifi_auto_force_button");

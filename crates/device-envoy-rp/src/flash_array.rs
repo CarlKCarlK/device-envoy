@@ -37,9 +37,7 @@ const TOTAL_BLOCKS: u32 = (INTERNAL_FLASH_SIZE / ERASE_SIZE) as u32;
 
 // Local adapter — wraps EmbassyFlash so core's FlashDevice trait can be implemented
 // for a type defined in this crate (required by the orphan rule).
-struct RpFlashAdapter<'a>(
-    &'a mut EmbassyFlash<'static, FLASH, Blocking, INTERNAL_FLASH_SIZE>,
-);
+struct RpFlashAdapter<'a>(&'a mut EmbassyFlash<'static, FLASH, Blocking, INTERNAL_FLASH_SIZE>);
 
 impl FlashDevice for RpFlashAdapter<'_> {
     type Error = embassy_rp::flash::Error;
@@ -161,8 +159,7 @@ impl FlashBlock {
         let offset = block_offset(self.block);
         self.manager.with_flash(|flash| {
             let mut adapter = RpFlashAdapter(flash);
-            core_flash::clear_block(&mut adapter, offset)
-                .map_err(flash_block_error_to_crate_error)
+            core_flash::clear_block(&mut adapter, offset).map_err(flash_block_error_to_crate_error)
         })?;
         info!("Flash: Cleared block {}", self.block);
         Ok(())

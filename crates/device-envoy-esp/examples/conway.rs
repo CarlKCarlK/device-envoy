@@ -4,6 +4,8 @@
 
 use core::convert::Infallible;
 
+#[allow(unused_imports)]
+use device_envoy_esp::led_strip::Engine;
 use embassy_executor::Spawner;
 use embassy_futures::select::{select, Either};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -11,16 +13,14 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
-#[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
 
 use device_envoy_esp::{
+    esp_hal::gpio::{Level, Output, OutputConfig},
     init_and_start,
     ir::{IrKepler, IrKeplerStatic, KeplerButton},
     led2d,
     led2d::{layout::LedLayout, Frame2d, Led2dFont},
     led_strip::{colors, Current, RGB8},
-    esp_hal::gpio::{Level, Output, OutputConfig},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

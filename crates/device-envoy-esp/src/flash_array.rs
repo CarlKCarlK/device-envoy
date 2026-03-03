@@ -4,16 +4,19 @@
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
 #[cfg(target_os = "none")]
-use embassy_sync::blocking_mutex::Mutex;
-#[cfg(target_os = "none")]
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 #[cfg(target_os = "none")]
+use embassy_sync::blocking_mutex::Mutex;
+#[cfg(target_os = "none")]
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
+#[cfg(target_os = "none")]
 use serde::{Deserialize, Serialize};
 #[cfg(target_os = "none")]
 use static_cell::StaticCell;
 
+#[cfg(target_os = "none")]
 use crate::{Error, Result};
+#[cfg(target_os = "none")]
 use device_envoy_core::flash_array::{
     self as core_flash, FlashBlockError, FlashDevice, FLASH_BLOCK_SIZE_U32,
 };
@@ -30,7 +33,11 @@ struct EspFlashAdapter<'a>(&'a mut esp_storage::FlashStorage<'static>);
 impl FlashDevice for EspFlashAdapter<'_> {
     type Error = esp_storage::FlashStorageError;
 
-    fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), esp_storage::FlashStorageError> {
+    fn read(
+        &mut self,
+        offset: u32,
+        bytes: &mut [u8],
+    ) -> Result<(), esp_storage::FlashStorageError> {
         ReadNorFlash::read(self.0, offset, bytes)
     }
 
@@ -44,9 +51,7 @@ impl FlashDevice for EspFlashAdapter<'_> {
 }
 
 #[cfg(target_os = "none")]
-fn convert_flash_block_error(
-    e: FlashBlockError<esp_storage::FlashStorageError>,
-) -> Error {
+fn convert_flash_block_error(e: FlashBlockError<esp_storage::FlashStorageError>) -> Error {
     match e {
         FlashBlockError::Io(err) => Error::FlashStorage(err),
         FlashBlockError::FormatError => Error::FormatError,
@@ -329,8 +334,7 @@ impl FlashBlock {
         let block_offset = self.manager.block_offset(self.block_id)?;
         self.manager.with_flash(|flash_storage| {
             let mut adapter = EspFlashAdapter(flash_storage);
-            core_flash::clear_block(&mut adapter, block_offset)
-                .map_err(convert_flash_block_error)
+            core_flash::clear_block(&mut adapter, block_offset).map_err(convert_flash_block_error)
         })
     }
 }

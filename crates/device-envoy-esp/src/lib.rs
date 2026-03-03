@@ -13,16 +13,16 @@ pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.
     //! See [`ClockSync`] for the full API and usage.
     pub use device_envoy_core::clock_sync::{
-        ClockSync, ClockSyncStatic, ClockSyncTick, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds,
-        h12_m_s,
+        h12_m_s, ClockSync, ClockSyncStatic, ClockSyncTick, UnixSeconds, ONE_DAY, ONE_MINUTE,
+        ONE_SECOND,
     };
 }
 #[cfg(target_os = "none")]
 pub mod time_sync {
     //! A device abstraction for Network Time Protocol (NTP) time synchronization over Wi-Fi.
     //! See the [`clock_sync` module](crate::clock_sync) for the high-level clock API.
-    pub use device_envoy_core::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
     pub use device_envoy_core::clock::UnixSeconds;
+    pub use device_envoy_core::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 }
 pub mod audio_player;
 pub mod flash_array;
@@ -33,8 +33,8 @@ pub mod rmt;
 pub mod rmt_mode;
 pub mod wifi_auto;
 
-pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
 pub use device_envoy_core::tone;
+pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but

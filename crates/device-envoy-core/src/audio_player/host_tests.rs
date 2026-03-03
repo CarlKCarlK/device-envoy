@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 
 use super::{
-    __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, AtEnd, AudioPlayer, Gain, PcmClip,
-    PcmClipBuf, Playable, SilenceClip, VOICE_22050_HZ,
+    __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, AtEnd, AudioPlayer, Gain, PcmClip, PcmClipBuf,
+    Playable, SilenceClip, VOICE_22050_HZ,
 };
 use std::error::Error;
 use std::fs;

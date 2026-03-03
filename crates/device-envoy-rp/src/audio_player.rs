@@ -499,8 +499,7 @@ async fn play_full_pcm_clip_once<
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
-            let scaled_sample_value =
-                scale_sample_with_volume(sample_value, runtime_volume);
+            let scaled_sample_value = scale_sample_with_volume(sample_value, runtime_volume);
             *sample_buffer_slot = stereo_sample(scaled_sample_value);
         }
 
@@ -568,18 +567,15 @@ async fn play_full_adpcm_clip_once<
 
                 let decoded_sample_i16 =
                     decode_adpcm_nibble(adpcm_nibble, &mut predictor_i32, &mut step_index_i32);
-                sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_volume(
-                    decoded_sample_i16,
-                    runtime_volume,
-                ));
+                sample_buffer[sample_buffer_len] =
+                    stereo_sample(scale_sample_with_volume(decoded_sample_i16, runtime_volume));
                 sample_buffer_len += 1;
                 samples_decoded_in_block += 1;
 
                 if sample_buffer_len == SAMPLE_BUFFER_LEN {
                     pio_i2s_out.write(sample_buffer).await;
                     sample_buffer_len = 0;
-                    if let Some(next_audio_command) = audio_player_static.try_take_command()
-                    {
+                    if let Some(next_audio_command) = audio_player_static.try_take_command() {
                         return ControlFlow::Break(next_audio_command);
                     }
                 }

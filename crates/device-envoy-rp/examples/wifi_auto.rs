@@ -13,7 +13,9 @@ use defmt_rtt as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::clock_sync::UnixSeconds;
 use device_envoy_rp::flash_array::FlashArray;
-use device_envoy_rp::led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation};
+use device_envoy_rp::led4::{
+    BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation,
+};
 use device_envoy_rp::wifi_auto::fields::{
     TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic,
 };

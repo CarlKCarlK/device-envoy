@@ -11,7 +11,7 @@ use core::{cell::RefCell, fmt::Write};
 use heapless::String;
 use static_cell::StaticCell;
 
-use super::portal::{FormData, HtmlBuffer, WifiAutoField};
+use super::{FormData, HtmlBuffer, WifiAutoField};
 #[cfg(target_os = "none")]
 use crate::flash_array::FlashBlock;
 use crate::{Error, Result};
@@ -123,6 +123,8 @@ impl TimezoneField {
 }
 
 impl WifiAutoField for TimezoneField {
+    type Error = crate::Error;
+
     fn render(&self, page: &mut HtmlBuffer) -> Result<()> {
         let current_offset_minutes = self.offset_minutes()?.unwrap_or(0);
         write!(page, "<label for=\"timezone\">Time zone:</label>")
@@ -469,6 +471,8 @@ impl<const N: usize> TextField<N> {
 }
 
 impl<const N: usize> WifiAutoField for TextField<N> {
+    type Error = crate::Error;
+
     fn render(&self, page: &mut HtmlBuffer) -> Result<()> {
         let current_text = self
             .text()?

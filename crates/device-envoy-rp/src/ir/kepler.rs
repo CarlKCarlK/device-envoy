@@ -11,7 +11,7 @@ use crate::Result;
 use crate::ir::IrPioPeripheral;
 use crate::ir::mapping::IrMapping;
 
-pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KeplerButton, KEPLER_MAPPING};
+pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
 
 /// Type alias for the Kepler button mapping.
 ///

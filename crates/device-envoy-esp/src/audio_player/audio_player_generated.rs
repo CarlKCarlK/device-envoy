@@ -40,9 +40,9 @@ pub struct AudioPlayerGenerated;
 pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;
 
 #[cfg(doc)]
-use crate::Result;
-#[cfg(doc)]
 use crate::audio_player::{AtEnd, Playable, Volume, VOICE_22050_HZ};
+#[cfg(doc)]
+use crate::Result;
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
@@ -85,11 +85,7 @@ impl AudioPlayerGenerated {
     /// [`audio_player!`](macro@crate::audio_player::audio_player) (default: `16`).
     ///
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
-    pub fn play<I>(
-        &self,
-        audio_clips: I,
-        at_end: AtEnd,
-    )
+    pub fn play<I>(&self, audio_clips: I, at_end: AtEnd)
     where
         I: IntoIterator<Item = &'static dyn Playable<{ Self::SAMPLE_RATE_HZ }>>,
     {
@@ -114,5 +110,4 @@ impl AudioPlayerGenerated {
     pub fn volume(&self) -> Volume {
         Volume::MAX
     }
-
 }

@@ -19,12 +19,9 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Result,
-    audio_player::{
-        AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
-    },
+    audio_player::{audio_player, pcm_clip, AtEnd, Gain, SilenceClip, Volume, VOICE_22050_HZ},
     button::{Button, PressedTo},
-    init_and_start, tone,
+    init_and_start, tone, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -70,9 +67,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         &SilenceClip::new(StdDuration::from_millis(100));
 
     let mut button = Button::new(p.GPIO6, PressedTo::Ground);
-    let audio_player_gpio21 = AudioPlayerGpio21::new(
-        p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner,
-    )?;
+    let audio_player_gpio21 =
+        AudioPlayerGpio21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
 
     info!("I2S ready: GPIO21 DIN, GPIO11 BCLK, GPIO12 LRCLK");
     info!(

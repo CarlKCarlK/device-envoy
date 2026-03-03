@@ -18,7 +18,6 @@
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use esp_backtrace as _;
-use log::info;
 
 use device_envoy_esp::{
     init_and_start, led_strip,
@@ -27,11 +26,12 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-const STRIP8_PIN_NUM: u8 = 10;
-#[cfg(target_arch = "riscv32")]
-const BUILTIN_LED_PIN_NUM: u8 = 8;
-#[cfg(target_arch = "xtensa")]
-const BUILTIN_LED_PIN_NUM: u8 = 48;
+// todo0 delete
+// const STRIP8_PIN_NUM: u8 = 10;
+// #[cfg(target_arch = "riscv32")]
+// const BUILTIN_LED_PIN_NUM: u8 = 8;
+// #[cfg(target_arch = "xtensa")]
+// const BUILTIN_LED_PIN_NUM: u8 = 48;
 
 // Morse timing (in milliseconds).
 const DOT_MS: u64 = 200;
@@ -98,8 +98,9 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     init_and_start!(p, rmt80, rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");
+    //info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");
 
+    // todo0 Name mismatch
     let led_strip8 = LedStrip8::new(p.GPIO10, rmt80.channel0, spawner)?;
     #[cfg(target_arch = "riscv32")]
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel1, spawner)?;

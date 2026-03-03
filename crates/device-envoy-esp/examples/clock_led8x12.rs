@@ -17,7 +17,7 @@ use esp_backtrace as _;
 use log::{info, warn};
 
 use device_envoy_esp::{
-    button::{Button, PressedTo},
+    button::PressedTo,
     flash_array::FlashArray,
     init_and_start, led2d,
     led2d::{layout::LedLayout, Led2dFont},
@@ -75,33 +75,34 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field =
         TimezoneField::new_with_flash(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
-    let fields: [&'static dyn WifiAutoField; 1] = [timezone_field];
+    let fields: [&'static dyn WifiAutoField<Error = device_envoy_esp::Error>; 1] = [timezone_field];
 
-    let wifi_auto = WifiAuto::new_with_flash(CAPTIVE_PORTAL_SSID, wifi_auto_flash_block, &fields);
-    let force_portal_button = Button::new(p.GPIO6, PressedTo::Ground);
-    let force_captive_portal = force_portal_button.is_pressed();
+    let wifi_auto = WifiAuto::new(
+        p.WIFI,
+        wifi_auto_flash_block,
+        p.GPIO6,
+        PressedTo::Ground,
+        CAPTIVE_PORTAL_SSID,
+        &fields,
+        spawner,
+    );
 
     let led8x12_clock_ref = &led8x12_clock;
-    let stack = wifi_auto
-        .connect(
-            p.WIFI,
-            spawner,
-            force_captive_portal,
-            |wifi_auto_event| async move {
-                match wifi_auto_event {
-                    WifiAutoEvent::CaptivePortalReady => {
-                        led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);
-                    }
-                    WifiAutoEvent::Connecting { .. } => {
-                        led8x12_clock_ref.write_text("CO\nNN", &DIGIT_COLORS);
-                    }
-                    WifiAutoEvent::ConnectionFailed => {
-                        led8x12_clock_ref.write_text("FA\nIL", &DIGIT_COLORS);
-                    }
+    let (stack, force_portal_button) = wifi_auto
+        .connect(|wifi_auto_event| async move {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);
                 }
-                Ok(())
-            },
-        )
+                WifiAutoEvent::Connecting { .. } => {
+                    led8x12_clock_ref.write_text("CO\nNN", &DIGIT_COLORS);
+                }
+                WifiAutoEvent::ConnectionFailed => {
+                    led8x12_clock_ref.write_text("FA\nIL", &DIGIT_COLORS);
+                }
+            }
+            Ok(())
+        })
         .await?;
 
     while !stack.is_link_up() || stack.config_v4().is_none() {

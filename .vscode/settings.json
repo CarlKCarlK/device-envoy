@@ -1,0 +1,11 @@
+{
+  "rust-analyzer.lens.enable": false,
+  "rust-analyzer.lens.run": false,
+  "rust-analyzer.lens.debug": false,
+  "rust-analyzer.runnables.command": "cargo",
+  "rust-analyzer.cargo.allTargets": false,
+  "rust-analyzer.checkOnSave.allTargets": false,
+  "rust-analyzer.procMacro.enable": false,
+  "rust-analyzer.cargo.buildScripts.enable": false,
+  "rust-analyzer.testing.enable": false
+}

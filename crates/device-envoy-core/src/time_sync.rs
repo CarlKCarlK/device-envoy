@@ -234,8 +234,7 @@ async fn fetch_ntp_time(stack: &Stack<'static>) -> Result<UnixSeconds, &'static 
         return Err("NTP response too short");
     }
 
-    let ntp_seconds =
-        u32::from_be_bytes([response[40], response[41], response[42], response[43]]);
+    let ntp_seconds = u32::from_be_bytes([response[40], response[41], response[42], response[43]]);
 
     UnixSeconds::from_ntp_seconds(ntp_seconds).ok_or("Invalid NTP timestamp")
 }

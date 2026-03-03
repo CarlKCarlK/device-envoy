@@ -499,11 +499,7 @@ macro_rules! __led2d_strip_methods {
             );
         }
 
-        pub fn write_text(
-            &self,
-            text: &str,
-            colors: &[$crate::led_strip::RGB8],
-        ) {
+        pub fn write_text(&self, text: &str, colors: &[$crate::led_strip::RGB8]) {
             let mut frame =
                 $crate::led2d::Frame2d::<{ $led_layout.width() }, { $led_layout.height() }>::new();
             self.write_text_to_frame(text, colors, &mut frame);

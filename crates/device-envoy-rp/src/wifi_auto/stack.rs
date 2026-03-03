@@ -28,9 +28,9 @@ use embassy_time::Timer;
 use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
-use super::credentials::WifiCredentials;
 use super::dhcp::dhcp_server_task;
 use crate::flash_array::FlashBlock;
+use device_envoy_core::wifi_auto::{WifiCredentials, WifiStartMode};
 
 // ============================================================================
 // Types
@@ -42,12 +42,6 @@ pub enum WifiEvent {
     CaptivePortalReady,
     /// Network stack is initialized in client mode and DHCP is configured
     ClientReady,
-}
-
-#[derive(Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-pub enum WifiStartMode {
-    CaptivePortal,
-    Client,
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -275,11 +269,6 @@ impl Wifi {
             state.credentials = Some(cloned.clone());
             state.start_mode = WifiStartMode::Client;
         })
-    }
-
-    /// Return whether credentials currently exist in flash.
-    pub fn has_persisted_credentials(&self) -> bool {
-        self.read_state(|state| state.credentials.is_some())
     }
 
     /// Load stored credentials if available.

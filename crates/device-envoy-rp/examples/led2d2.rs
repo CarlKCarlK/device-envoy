@@ -56,11 +56,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let mut frame_1 = Frame2d::new();
     // "/n" starts a new line. Text does not wrap but rather clips.
-    led_12x8_animated.write_text_to_frame(
-        "\nGo",
-        &[colors::HOT_PINK, colors::LIME],
-        &mut frame_1,
-    );
+    led_12x8_animated.write_text_to_frame("\nGo", &[colors::HOT_PINK, colors::LIME], &mut frame_1);
 
     // Animate between the two frames indefinitely.
     let frame_duration = Duration::from_secs(1);

@@ -6,10 +6,10 @@
 #[cfg(target_os = "none")]
 use embassy_executor::Spawner;
 
-pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KeplerButton};
 use crate::ir::mapping::IrMapping;
 #[cfg(target_os = "none")]
 use crate::Result;
+pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KeplerButton};
 
 type IrKeplerMapping<'a> = IrMapping<'a, KeplerButton, 21>;
 

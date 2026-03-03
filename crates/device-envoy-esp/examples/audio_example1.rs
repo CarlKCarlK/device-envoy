@@ -9,8 +9,8 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    Result, audio_player::AtEnd, audio_player::SilenceClip, audio_player::VOICE_22050_HZ,
-    audio_player::Volume, audio_player::audio_player, init_and_start, tone,
+    audio_player::audio_player, audio_player::AtEnd, audio_player::SilenceClip,
+    audio_player::Volume, audio_player::VOICE_22050_HZ, init_and_start, tone, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -43,9 +43,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NOTE_D4: &AudioPlayerGpio21Playable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
     const NOTE_C4: &AudioPlayerGpio21Playable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
 
-    let audio_player_gpio21 = AudioPlayerGpio21::new(
-        p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner,
-    )?;
+    let audio_player_gpio21 =
+        AudioPlayerGpio21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
     audio_player_gpio21.play(
         [
             NOTE_E4, REST, NOTE_D4, REST, NOTE_C4, REST, NOTE_D4, REST, NOTE_E4, REST, NOTE_E4,

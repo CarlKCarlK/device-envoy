@@ -79,8 +79,7 @@ fn find_s3_linker_dir() -> Option<PathBuf> {
 /// Prints a clear error if anything is missing.
 fn require_s3_toolchain() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").unwrap_or_default();
-    let rust_src = Path::new(&home)
-        .join(".rustup/toolchains/esp/lib/rustlib/src/rust");
+    let rust_src = Path::new(&home).join(".rustup/toolchains/esp/lib/rustlib/src/rust");
 
     if !rust_src.exists() {
         eprintln!(
@@ -145,7 +144,14 @@ fn check_all() -> ExitCode {
         if let Some(tc) = toolchain {
             cmd.arg(tc);
         }
-        cmd.args(["build", "--lib", "--release", "--target", target, "--no-default-features"]);
+        cmd.args([
+            "build",
+            "--lib",
+            "--release",
+            "--target",
+            target,
+            "--no-default-features",
+        ]);
         if *build_std {
             cmd.arg("-Zbuild-std=core,alloc");
         }
@@ -188,7 +194,8 @@ fn check_examples() -> ExitCode {
         .flatten()
         .filter_map(|entry| {
             let name = entry.file_name().into_string().ok()?;
-            name.ends_with(".rs").then(|| name.trim_end_matches(".rs").to_owned())
+            name.ends_with(".rs")
+                .then(|| name.trim_end_matches(".rs").to_owned())
         })
         .collect();
     examples.sort();
@@ -213,7 +220,15 @@ fn check_examples() -> ExitCode {
             if let Some(tc) = toolchain {
                 cmd.arg(tc);
             }
-            cmd.args(["build", "--example", example, "--release", "--target", target, "--no-default-features"]);
+            cmd.args([
+                "build",
+                "--example",
+                example,
+                "--release",
+                "--target",
+                target,
+                "--no-default-features",
+            ]);
             if *build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
             }
@@ -236,7 +251,8 @@ fn check_host_tests() -> ExitCode {
         .flatten()
         .filter_map(|entry| {
             let name = entry.file_name().into_string().ok()?;
-            name.ends_with(".rs").then(|| name.trim_end_matches(".rs").to_owned())
+            name.ends_with(".rs")
+                .then(|| name.trim_end_matches(".rs").to_owned())
         })
         .collect();
     tests.sort();
@@ -281,7 +297,10 @@ fn prepend_path(cmd: &mut Command, dir: &Path) {
     let current = std::env::var_os("PATH").unwrap_or_default();
     let mut paths = std::env::split_paths(&current).collect::<Vec<_>>();
     paths.insert(0, dir.to_owned());
-    cmd.env("PATH", std::env::join_paths(paths).expect("PATH join failed"));
+    cmd.env(
+        "PATH",
+        std::env::join_paths(paths).expect("PATH join failed"),
+    );
 }
 
 fn run(cmd: &mut Command) -> bool {
@@ -295,7 +314,9 @@ fn run(cmd: &mut Command) -> bool {
     );
     println!("    $ {}", display.dimmed());
 
-    let status = cmd.status().unwrap_or_else(|e| panic!("failed to run command: {e}"));
+    let status = cmd
+        .status()
+        .unwrap_or_else(|e| panic!("failed to run command: {e}"));
     if !status.success() {
         eprintln!("{}", format!("    FAILED: {display}").red().bold());
     }

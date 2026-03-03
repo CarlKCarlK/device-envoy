@@ -148,15 +148,13 @@ pub mod layout {
     pub use device_envoy_core::led2d::layout::*;
 }
 
-pub use layout::LedLayout;
+use crate::led_strip::{Frame1d as StripFrame, LedStrip};
+use core::borrow::Borrow;
 pub use device_envoy_core::led2d::{
     Frame2d, Led2dFont, Point, Size, bit_matrix3x4_font, render_text_to_frame,
 };
-use core::borrow::Borrow;
+pub use layout::LedLayout;
 use smart_leds::RGB8;
-use crate::led_strip::{Frame1d as StripFrame, LedStrip};
-
-
 
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that expands at the call site in downstream crates.
 // This is an implementation detail, not part of the user-facing API.

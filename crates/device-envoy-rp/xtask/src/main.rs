@@ -570,17 +570,17 @@ fn check_all() -> ExitCode {
                     let is_should_fail_test = test.ends_with("_should_fail");
                     let mut cmd = Command::new("cargo");
                     cmd.current_dir(&workspace_root).args([
-                            "check",
-                            "-p",
-                            "device-envoy-compile-only",
-                            "--bin",
-                            test,
-                            "--target",
-                            target_pico1,
-                            "--features",
-                            "pico1,arm,wifi",
-                            "--no-default-features",
-                        ]);
+                        "check",
+                        "-p",
+                        "device-envoy-compile-only",
+                        "--bin",
+                        test,
+                        "--target",
+                        target_pico1,
+                        "--features",
+                        "pico1,arm,wifi",
+                        "--no-default-features",
+                    ]);
                     let passed = if is_should_fail_test {
                         run_command_quiet(&mut cmd)
                     } else {

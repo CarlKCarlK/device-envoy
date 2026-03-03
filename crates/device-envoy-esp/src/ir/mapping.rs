@@ -7,10 +7,10 @@
 use embassy_executor::Spawner;
 use heapless::LinearMap;
 
-pub use device_envoy_core::ir::mapping::IrMappingStatic;
 use crate::ir::{Ir, IrEvent};
 #[cfg(target_os = "none")]
 use crate::Result;
+pub use device_envoy_core::ir::mapping::IrMappingStatic;
 
 /// A generic device abstraction that maps IR remote button presses to user-defined button types.
 pub struct IrMapping<'a, B, const N: usize> {

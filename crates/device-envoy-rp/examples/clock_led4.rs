@@ -19,7 +19,9 @@ use device_envoy_rp::clock_sync::{
     ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
 use device_envoy_rp::flash_array::FlashArray;
-use device_envoy_rp::led4::{BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation};
+use device_envoy_rp::led4::{
+    BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation,
+};
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAuto, WifiAutoEvent};
 use device_envoy_rp::{Error, Result};

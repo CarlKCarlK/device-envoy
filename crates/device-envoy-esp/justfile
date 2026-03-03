@@ -1,5 +1,8 @@
 set shell := ["bash", "-cu"]
 
+attach-esp:
+    source "$HOME/export-esp.sh" && espflash monitor
+
 blinky-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features
 
@@ -11,6 +14,12 @@ led2d-s3:
 
 led2d-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led2d --target xtensa-esp32s3-none-elf --release --no-default-features
+
+led-strip8-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_strip8 --target xtensa-esp32s3-none-elf --release --no-default-features
+
+led-strip8-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_strip8 --target xtensa-esp32s3-none-elf --release --no-default-features
 
 button-read-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features

@@ -3,24 +3,28 @@ use core::fmt::Write;
 use heapless::{FnvIndexMap, String};
 
 use super::WifiCredentials;
-use crate::Result;
 
+/// Captive-portal page buffer type.
 pub type HtmlBuffer = String<16384>;
 
 /// Trait for custom setup fields rendered and parsed by the captive portal.
 pub trait WifiAutoField {
+    /// Platform crate error type used by field implementations.
+    type Error;
+
     /// Render form HTML elements.
-    fn render(&self, page: &mut HtmlBuffer) -> Result<()>;
+    fn render(&self, page: &mut HtmlBuffer) -> Result<(), Self::Error>;
 
     /// Parse submitted form data.
-    fn parse(&self, form: &FormData<'_>) -> Result<()>;
+    fn parse(&self, form: &FormData<'_>) -> Result<(), Self::Error>;
 
     /// Whether this field currently has valid configured data.
-    fn is_satisfied(&self) -> Result<bool> {
+    fn is_satisfied(&self) -> Result<bool, Self::Error> {
         Ok(true)
     }
 }
 
+/// Parsed key/value form data from a URL-encoded POST body.
 pub struct FormData<'a> {
     params: &'a FormMap,
 }
@@ -30,6 +34,7 @@ impl<'a> FormData<'a> {
         Self { params }
     }
 
+    /// Return the value for `key`.
     #[must_use]
     pub fn get(&self, key: &str) -> Option<&str> {
         self.params
@@ -43,7 +48,15 @@ type FormKey = String<32>;
 type FormValue = String<256>;
 type FormMap = FnvIndexMap<FormKey, FormValue, 32>;
 
-pub(super) fn parse_post(request: &str, fields: &[&dyn WifiAutoField]) -> Option<WifiCredentials> {
+/// Parse a raw HTTP POST request into Wi-Fi credentials and apply field parsers.
+///
+/// Returns `None` when the request body is malformed, the SSID is missing, or any custom
+/// field parser reports an error.
+#[must_use]
+pub fn parse_post<E>(
+    request: &str,
+    fields: &[&dyn WifiAutoField<Error = E>],
+) -> Option<WifiCredentials> {
     let body_start = request.find("\r\n\r\n")? + 4;
     let body = &request[body_start..];
 
@@ -82,9 +95,11 @@ pub(super) fn parse_post(request: &str, fields: &[&dyn WifiAutoField]) -> Option
     Some(WifiCredentials { ssid, password })
 }
 
-pub(super) fn generate_config_page(
+/// Build the captive-portal configuration HTML page.
+#[must_use]
+pub fn generate_config_page<E>(
     defaults: Option<&WifiCredentials>,
-    fields: &[&dyn WifiAutoField],
+    fields: &[&dyn WifiAutoField<Error = E>],
 ) -> HtmlBuffer {
     let mut page = HtmlBuffer::new();
     let ssid = defaults
@@ -143,7 +158,7 @@ pub(super) fn generate_config_page(
     for field in fields {
         field
             .render(&mut page)
-            .expect("custom field HTML exceeds page capacity");
+            .unwrap_or_else(|_| panic!("custom field HTML exceeds page capacity"));
     }
 
     page.push_str("<button type=\"submit\">Connect</button></form></body></html>")

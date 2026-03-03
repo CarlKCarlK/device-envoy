@@ -196,4 +196,3 @@ fn is_nec_repeat_runs(runs: &[(esp_hal::gpio::Level, u16)]) -> bool {
         && within(duration0, 9000, 2200)
         && within(duration1, 2250, 1000)
 }
-

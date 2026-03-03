@@ -3,12 +3,12 @@
 #![no_std]
 #![no_main]
 
+#[allow(unused_imports)]
+use device_envoy_esp::led_strip::Engine;
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use esp_backtrace as _;
 use log::info;
-#[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
 
 use device_envoy_esp::{
     init_and_start, led_strip,

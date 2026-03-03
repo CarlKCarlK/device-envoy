@@ -12,8 +12,8 @@ use fixed::traits::ToFixed;
 
 use crate::{Error, Result};
 
-pub use device_envoy_core::ir::{IrEvent, IrStatic};
 use device_envoy_core::ir::decode_nec_frame;
+pub use device_envoy_core::ir::{IrEvent, IrStatic};
 
 // ============================================================================
 // Submodules

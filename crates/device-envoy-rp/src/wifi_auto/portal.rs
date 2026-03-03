@@ -10,8 +10,8 @@ use embedded_io_async::Write as _;
 use heapless::{FnvIndexMap, String};
 use static_cell::StaticCell;
 
-use super::credentials::WifiCredentials;
 use crate::Result;
+use device_envoy_core::wifi_auto::WifiCredentials;
 
 pub type HtmlBuffer = String<16384>;
 

@@ -16,10 +16,7 @@ use embassy_rp::{
     gpio::Pin,
     peripherals::{PIN_23, PIN_24, PIN_25, PIN_29},
 };
-use embassy_sync::{
-    blocking_mutex::{Mutex, raw::CriticalSectionRawMutex},
-    signal::Signal,
-};
+use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use embassy_time::{Duration, Instant, Timer, with_timeout};
 use heapless::Vec;
 use portable_atomic::{AtomicBool, Ordering};
@@ -28,52 +25,32 @@ use static_cell::StaticCell;
 use crate::button::{Button, PressedTo};
 use crate::flash_array::FlashBlock;
 use crate::{Error, Result};
+use device_envoy_core::wifi_auto::{WifiCredentials as InnerWifiCredentials, WifiStartMode};
 
-mod credentials;
 mod dhcp;
 mod dns;
 pub mod fields;
 mod portal;
 mod stack;
 
-use credentials::WifiCredentials as InnerWifiCredentials;
 use dns::dns_server_task;
-use stack::{WifiStartMode, WifiStatic as InnerWifiStatic};
+use stack::WifiStatic as InnerWifiStatic;
 
 pub use stack::WifiPio;
 pub(crate) use stack::{Wifi, WifiEvent};
 
+pub use device_envoy_core::wifi_auto::WifiAutoEvent;
 pub use portal::WifiAutoField;
-
-/// Events emitted while connecting. See [`WifiAuto::connect`](crate::wifi_auto::WifiAuto::connect)
-/// for usage examples.
-#[derive(Clone, Copy, Debug, defmt::Format)]
-pub enum WifiAutoEvent {
-    /// Captive portal is ready and waiting for user configuration.
-    CaptivePortalReady,
-    /// Attempting to connect to WiFi network.
-    Connecting {
-        /// Current attempt number (0-based).
-        try_index: u8,
-        /// Total number of attempts that will be made.
-        try_count: u8,
-    },
-    /// Connection failed after all attempts, device will reset.
-    ConnectionFailed,
-}
 
 const MAX_CONNECT_ATTEMPTS: u8 = 4;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(40);
 const RETRY_BASE_DELAY: Duration = Duration::from_secs(3);
 const RETRY_JITTER_MAX: Duration = Duration::from_millis(500);
 
-pub(crate) type WifiAutoEvents = Signal<CriticalSectionRawMutex, WifiAutoEvent>;
-
 const MAX_WIFI_AUTO_FIELDS: usize = 8;
 
 /// Static for [`WifiAuto`]. See [`WifiAuto`] for usage example.
 pub(crate) struct WifiAutoStatic {
-    events: WifiAutoEvents,
     wifi: InnerWifiStatic,
     wifi_auto_cell: StaticCell<WifiAutoInner>,
     force_captive_portal: AtomicBool,
@@ -222,7 +199,6 @@ pub struct WifiAuto {
 }
 
 struct WifiAutoInner {
-    events: &'static WifiAutoEvents,
     wifi: &'static Wifi,
     spawner: Spawner,
     force_captive_portal: &'static AtomicBool,
@@ -235,7 +211,6 @@ impl WifiAutoStatic {
     #[must_use]
     pub const fn new() -> Self {
         WifiAutoStatic {
-            events: Signal::new(),
             wifi: Wifi::new_static(),
             wifi_auto_cell: StaticCell::new(),
             force_captive_portal: AtomicBool::new(false),
@@ -367,7 +342,6 @@ impl WifiAuto {
         };
 
         let instance = wifi_auto_static.wifi_auto_cell.init(WifiAutoInner {
-            events: &wifi_auto_static.events,
             wifi,
             spawner,
             force_captive_portal: wifi_auto_static.force_captive_portal_flag(),
@@ -564,16 +538,6 @@ impl WifiAutoInner {
         Ok((stack, button))
     }
 
-    async fn signal_event_with<Fut, F>(&self, on_event: &mut F, event: WifiAutoEvent) -> Result<()>
-    where
-        F: FnMut(WifiAutoEvent) -> Fut,
-        Fut: Future<Output = Result<()>>,
-    {
-        self.events.signal(event);
-        on_event(event).await?;
-        Ok(())
-    }
-
     async fn ensure_connected_with<Fut, F>(&self, on_event: &mut F) -> Result<()>
     where
         F: FnMut(WifiAutoEvent) -> Fut,
@@ -582,66 +546,101 @@ impl WifiAutoInner {
         loop {
             let force_captive_portal = self.force_captive_portal.swap(false, Ordering::AcqRel);
             let start_mode = self.wifi.current_start_mode();
-            let has_creds = self.wifi.has_persisted_credentials();
+            let persisted_wifi_credentials = self.wifi.load_persisted_credentials();
+            let has_creds = persisted_wifi_credentials.is_some();
             let extras_ready = self.extra_fields_ready()?;
-            info!(
-                "WifiAuto: force={} has_creds={} extras_ready={}",
-                force_captive_portal, has_creds, extras_ready
+            let enter_captive_portal = device_envoy_core::wifi_auto::should_enter_captive_portal(
+                start_mode,
+                force_captive_portal,
+                has_creds,
+                extras_ready,
             );
-            if force_captive_portal
-                || matches!(start_mode, WifiStartMode::CaptivePortal)
-                || !has_creds
-                || !extras_ready
-            {
-                if has_creds {
-                    if let Some(creds) = self.wifi.load_persisted_credentials() {
-                        self.defaults.lock(|cell| {
-                            *cell.borrow_mut() = Some(creds);
-                        });
+            info!(
+                "WifiAuto: force={} has_creds={} extras_ready={} enter_captive_portal={}",
+                force_captive_portal, has_creds, extras_ready, enter_captive_portal
+            );
+
+            let persisted_wifi_credentials_for_load = persisted_wifi_credentials.clone();
+            struct RpConnectAttemptHook<'a> {
+                wifi_auto_inner: &'a WifiAutoInner,
+            }
+            impl device_envoy_core::wifi_auto::ConnectAttemptHook<Error> for RpConnectAttemptHook<'_> {
+                async fn on_attempt(&mut self, try_index: u8) -> Result<bool> {
+                    let attempt = try_index + 1;
+                    info!(
+                        "WifiAuto: connection attempt {}/{}",
+                        attempt, MAX_CONNECT_ATTEMPTS
+                    );
+                    if self
+                        .wifi_auto_inner
+                        .wait_for_client_ready_with_timeout(CONNECT_TIMEOUT)
+                        .await
+                    {
+                        return Ok(true);
+                    }
+                    warn!("WifiAuto: connection attempt {} timed out", attempt);
+                    let retry_delay = retry_delay_with_jitter(try_index);
+                    info!(
+                        "WifiAuto: retrying after {} ms (attempt {})",
+                        retry_delay.as_millis(),
+                        attempt
+                    );
+                    Timer::after(retry_delay).await;
+                    Ok(false)
+                }
+            }
+            impl device_envoy_core::wifi_auto::ConnectFlowHook<Error> for RpConnectAttemptHook<'_> {
+                fn run_captive_portal(
+                    &mut self,
+                ) -> impl Future<Output = Result<device_envoy_core::wifi_auto::WifiCredentials>>
+                       + '_ {
+                    async move {
+                        match self.wifi_auto_inner.run_captive_portal().await {
+                            Ok(infallible) => match infallible {},
+                            Err(error) => Err(error),
+                        }
                     }
                 }
-                self.signal_event_with(on_event, WifiAutoEvent::CaptivePortalReady)
-                    .await?;
-                self.run_captive_portal().await?;
-                unreachable!("Device should reset after captive portal submission");
+
+                fn on_resolved_credentials(
+                    &mut self,
+                    _wifi_credentials: &device_envoy_core::wifi_auto::WifiCredentials,
+                ) -> impl Future<Output = Result<()>> + '_ {
+                    async { Ok(()) }
+                }
             }
 
-            for attempt in 1..=MAX_CONNECT_ATTEMPTS {
-                info!(
-                    "WifiAuto: connection attempt {}/{}",
-                    attempt, MAX_CONNECT_ATTEMPTS
-                );
-                self.signal_event_with(
-                    on_event,
-                    WifiAutoEvent::Connecting {
-                        try_index: attempt - 1,
-                        try_count: MAX_CONNECT_ATTEMPTS,
-                    },
-                )
-                .await?;
-                if self
-                    .wait_for_client_ready_with_timeout(CONNECT_TIMEOUT)
-                    .await
-                {
-                    return Ok(());
-                }
-                warn!("WifiAuto: connection attempt {} timed out", attempt);
-                let retry_delay = retry_delay_with_jitter(attempt - 1);
-                info!(
-                    "WifiAuto: retrying after {} ms (attempt {})",
-                    retry_delay.as_millis(),
-                    attempt
-                );
-                Timer::after(retry_delay).await;
+            let mut connect_attempt_hook = RpConnectAttemptHook {
+                wifi_auto_inner: self,
+            };
+            let connected = device_envoy_core::wifi_auto::connect_with_auto_setup(
+                force_captive_portal,
+                on_event,
+                MAX_CONNECT_ATTEMPTS,
+                || Ok(start_mode),
+                || Ok(extras_ready),
+                || Ok(persisted_wifi_credentials_for_load.clone()),
+                |wifi_credentials| {
+                    self.wifi
+                        .persist_credentials(wifi_credentials)
+                        .map_err(|_| Error::StorageCorrupted)
+                },
+                |wifi_start_mode| {
+                    self.wifi
+                        .set_start_mode(wifi_start_mode)
+                        .map_err(|_| Error::StorageCorrupted)
+                },
+                &mut connect_attempt_hook,
+            )
+            .await?;
+            if connected {
+                return Ok(());
             }
 
             info!(
                 "WifiAuto: failed to connect after {} attempts, returning to captive portal",
                 MAX_CONNECT_ATTEMPTS
             );
-            info!("WifiAuto: signaling ConnectionFailed event");
-            self.signal_event_with(on_event, WifiAutoEvent::ConnectionFailed)
-                .await?;
             if let Some(creds) = self.wifi.load_persisted_credentials() {
                 self.defaults.lock(|cell| {
                     *cell.borrow_mut() = Some(creds);

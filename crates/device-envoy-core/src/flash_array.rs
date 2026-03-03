@@ -70,8 +70,8 @@ where
     F: FlashDevice,
 {
     let mut payload_buffer = [0u8; MAX_PAYLOAD_SIZE];
-    let payload = postcard::to_slice(value, &mut payload_buffer)
-        .map_err(|_| FlashBlockError::FormatError)?;
+    let payload =
+        postcard::to_slice(value, &mut payload_buffer).map_err(|_| FlashBlockError::FormatError)?;
     let payload_len = payload.len();
 
     let mut block_bytes = [0xFFu8; FLASH_BLOCK_SIZE];
@@ -115,8 +115,7 @@ where
         return Ok(None);
     }
 
-    let stored_type_hash =
-        u32::from_le_bytes(block_bytes[4..8].try_into().expect("4-byte slice"));
+    let stored_type_hash = u32::from_le_bytes(block_bytes[4..8].try_into().expect("4-byte slice"));
     if stored_type_hash != compute_type_hash::<T>() {
         return Ok(None);
     }
@@ -179,7 +178,7 @@ pub fn compute_crc(bytes: &[u8]) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        FlashBlockError, FlashDevice, FLASH_BLOCK_SIZE, HEADER_SIZE, clear_block, load_block,
+        FLASH_BLOCK_SIZE, FlashBlockError, FlashDevice, HEADER_SIZE, clear_block, load_block,
         save_block,
     };
 
@@ -246,8 +245,7 @@ mod tests {
         assert_eq!(loaded, state);
 
         clear_block(&mut device, 0).expect("clear succeeds");
-        let cleared =
-            load_block::<WifiPersistedState, _>(&mut device, 0).expect("load succeeds");
+        let cleared = load_block::<WifiPersistedState, _>(&mut device, 0).expect("load succeeds");
         assert!(cleared.is_none());
     }
 
@@ -258,8 +256,7 @@ mod tests {
             timezone_offset_minutes: 60,
         };
         save_block(&mut device, 0, &other).expect("save succeeds");
-        let result =
-            load_block::<WifiPersistedState, _>(&mut device, 0).expect("load succeeds");
+        let result = load_block::<WifiPersistedState, _>(&mut device, 0).expect("load succeeds");
         assert!(result.is_none());
     }
 

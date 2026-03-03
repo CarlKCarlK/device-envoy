@@ -333,8 +333,8 @@ use esp_hal::{
     dma::DmaChannelFor,
     gpio::interconnect::PeripheralOutput,
     i2s::{
-        AnyI2s,
         master::{Channels, Config, DataFormat, I2s},
+        AnyI2s,
     },
     time::Rate,
 };
@@ -480,10 +480,7 @@ async fn wait_for_audio_command_while_feeding_silence<
 }
 
 #[cfg(target_os = "none")]
-async fn play_clip_sequence_once<
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
+async fn play_clip_sequence_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     i2s_tx_transfer: &mut AudioI2sTxTransfer,
     audio_clips: &[PlaybackClip<SAMPLE_RATE_HZ>],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
@@ -504,14 +501,13 @@ async fn play_clip_sequence_once<
                 }
             }
             PlaybackClip::Silence(duration) => {
-                if let ControlFlow::Break(next_audio_command) =
-                    play_silence_duration_once(
-                        i2s_tx_transfer,
-                        *duration,
-                        sample_buffer,
-                        audio_player_static,
-                    )
-                    .await
+                if let ControlFlow::Break(next_audio_command) = play_silence_duration_once(
+                    i2s_tx_transfer,
+                    *duration,
+                    sample_buffer,
+                    audio_player_static,
+                )
+                .await
                 {
                     return Some(next_audio_command);
                 }
@@ -534,10 +530,7 @@ async fn play_clip_sequence_once<
 }
 
 #[cfg(target_os = "none")]
-async fn play_full_pcm_clip_once<
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
+async fn play_full_pcm_clip_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     i2s_tx_transfer: &mut AudioI2sTxTransfer,
     audio_clip: &PcmClip<SAMPLE_RATE_HZ>,
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
@@ -549,15 +542,18 @@ async fn play_full_pcm_clip_once<
             sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
         {
             let sample_value = *sample_value_ref;
-            let scaled_sample_value =
-                scale_sample_with_volume(sample_value, runtime_volume);
+            let scaled_sample_value = scale_sample_with_volume(sample_value, runtime_volume);
             *sample_buffer_slot = stereo_sample(scaled_sample_value);
         }
 
         sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));
-        if write_words_to_i2s_with_recovery(i2s_tx_transfer, sample_buffer, audio_sample_chunk.len())
-            .await
-            .is_err()
+        if write_words_to_i2s_with_recovery(
+            i2s_tx_transfer,
+            sample_buffer,
+            audio_sample_chunk.len(),
+        )
+        .await
+        .is_err()
         {
             return ControlFlow::Continue(());
         }
@@ -573,10 +569,7 @@ async fn play_full_pcm_clip_once<
 }
 
 #[cfg(target_os = "none")]
-async fn play_silence_duration_once<
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
+async fn play_silence_duration_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     i2s_tx_transfer: &mut AudioI2sTxTransfer,
     duration: Duration,
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
@@ -605,10 +598,7 @@ async fn play_silence_duration_once<
 }
 
 #[cfg(target_os = "none")]
-async fn play_full_adpcm_clip_once<
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
+async fn play_full_adpcm_clip_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     i2s_tx_transfer: &mut AudioI2sTxTransfer,
     adpcm_clip: &AdpcmClip<SAMPLE_RATE_HZ>,
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
@@ -662,10 +652,8 @@ async fn play_full_adpcm_clip_once<
 
                 let decoded_sample_i16 =
                     decode_adpcm_nibble(adpcm_nibble, &mut predictor_i32, &mut step_index_i32);
-                sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_volume(
-                    decoded_sample_i16,
-                    runtime_volume,
-                ));
+                sample_buffer[sample_buffer_len] =
+                    stereo_sample(scale_sample_with_volume(decoded_sample_i16, runtime_volume));
                 sample_buffer_len += 1;
                 samples_decoded_in_block += 1;
 
@@ -682,8 +670,7 @@ async fn play_full_adpcm_clip_once<
                     }
                     sample_buffer_len = 0;
                     yield_now().await;
-                    if let Some(next_audio_command) = audio_player_static.try_take_command()
-                    {
+                    if let Some(next_audio_command) = audio_player_static.try_take_command() {
                         return ControlFlow::Break(next_audio_command);
                     }
                 }

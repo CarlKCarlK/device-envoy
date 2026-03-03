@@ -7,7 +7,7 @@ pub mod layout {
 }
 
 pub use device_envoy_core::led2d::{
-    Frame2d, Led2dFont, LedLayout, Point, Size, bit_matrix3x4_font, render_text_to_frame,
+    bit_matrix3x4_font, render_text_to_frame, Frame2d, Led2dFont, LedLayout, Point, Size,
 };
 
 use core::borrow::Borrow;

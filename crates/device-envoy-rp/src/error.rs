@@ -74,6 +74,14 @@ impl From<embassy_executor::SpawnError> for Error {
     }
 }
 
+impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
+    fn from(error: device_envoy_core::led4::Led4BitsToIndexesError) -> Self {
+        match error {
+            device_envoy_core::led4::Led4BitsToIndexesError::Full => Self::BitsToIndexesFull,
+        }
+    }
+}
+
 impl From<WifiAutoError> for Error {
     fn from(error: WifiAutoError) -> Self {
         match error {

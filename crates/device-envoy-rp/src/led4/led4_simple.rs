@@ -5,17 +5,17 @@
 use core::convert::Infallible;
 
 use super::OutputArray;
-use super::{CELL_COUNT, MULTIPLEX_SLEEP, SEGMENT_COUNT};
+use super::{CELL_COUNT, SEGMENT_COUNT};
+use crate::Error;
 use crate::Result;
-use crate::bit_matrix_led4::BitMatrixLed4;
-use crate::bit_matrix_led4::BitsToIndexes;
 #[cfg(feature = "display-trace")]
 use defmt::info;
+use device_envoy_core::led4::{
+    BitMatrixLed4, Led4OutputAdapter, Led4SimpleLoopError, run_simple_loop,
+};
 use embassy_executor::{SpawnError, Spawner};
-use embassy_futures::select::{Either, select};
 use embassy_rp::gpio::Level;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embassy_time::Timer;
 
 /// Static for the [`Led4Simple`] device.
 pub struct Led4SimpleStatic(Signal<CriticalSectionRawMutex, BitMatrixLed4>);
@@ -27,10 +27,6 @@ impl Led4SimpleStatic {
 
     fn signal(&self, bit_matrix: BitMatrixLed4) {
         self.0.signal(bit_matrix);
-    }
-
-    async fn wait(&self) -> BitMatrixLed4 {
-        self.0.wait().await
     }
 }
 
@@ -86,40 +82,42 @@ pub(crate) async fn device_loop(
 }
 
 async fn inner_device_loop(
-    mut cell_pins: OutputArray<'static, CELL_COUNT>,
-    mut segment_pins: OutputArray<'static, SEGMENT_COUNT>,
+    cell_pins: OutputArray<'static, CELL_COUNT>,
+    segment_pins: OutputArray<'static, SEGMENT_COUNT>,
     led4_simple_static: &'static Led4SimpleStatic,
 ) -> Result<Infallible> {
-    let mut bit_matrix = BitMatrixLed4::default();
-    let mut bits_to_indexes = BitsToIndexes::default();
-    'outer: loop {
-        #[cfg(feature = "display-trace")]
-        info!("bit_matrix: {:?}", bit_matrix);
-        bit_matrix.bits_to_indexes(&mut bits_to_indexes)?;
-        #[cfg(feature = "display-trace")]
-        info!("# of unique cell bit_matrix: {:?}", bits_to_indexes.len());
+    let mut rp_led4_output = RpLed4Output {
+        cell_pins,
+        segment_pins,
+    };
+    run_simple_loop(&mut rp_led4_output, &led4_simple_static.0)
+        .await
+        .map_err(Error::from)
+}
 
-        match bits_to_indexes.iter().next() {
-            None => bit_matrix = led4_simple_static.wait().await,
-            Some((&bits, indexes)) if bits_to_indexes.len() == 1 => {
-                segment_pins.set_from_nonzero_bits(bits);
-                cell_pins.set_levels_at_indexes(indexes, Level::Low)?;
-                bit_matrix = led4_simple_static.wait().await;
-                cell_pins.set_levels_at_indexes(indexes, Level::High)?;
-            }
-            _ => loop {
-                for (bits, indexes) in &bits_to_indexes {
-                    segment_pins.set_from_nonzero_bits(*bits);
-                    cell_pins.set_levels_at_indexes(indexes, Level::Low)?;
-                    let timeout_or_signal =
-                        select(Timer::after(MULTIPLEX_SLEEP), led4_simple_static.wait()).await;
-                    cell_pins.set_levels_at_indexes(indexes, Level::High)?;
-                    if let Either::Second(notification) = timeout_or_signal {
-                        bit_matrix = notification;
-                        continue 'outer;
-                    }
-                }
-            },
+struct RpLed4Output {
+    cell_pins: OutputArray<'static, CELL_COUNT>,
+    segment_pins: OutputArray<'static, SEGMENT_COUNT>,
+}
+
+impl Led4OutputAdapter for RpLed4Output {
+    type Error = Error;
+
+    fn set_segments_from_nonzero_bits(&mut self, bits: core::num::NonZeroU8) {
+        self.segment_pins.set_from_nonzero_bits(bits);
+    }
+
+    fn set_cells_active(&mut self, indexes: &[u8], active: bool) -> Result<(), Self::Error> {
+        let level = if active { Level::Low } else { Level::High };
+        self.cell_pins.set_levels_at_indexes(indexes, level)
+    }
+}
+
+impl From<Led4SimpleLoopError<Error>> for Error {
+    fn from(error: Led4SimpleLoopError<Error>) -> Self {
+        match error {
+            Led4SimpleLoopError::BitsToIndexes(error) => Self::from(error),
+            Led4SimpleLoopError::Output(error) => error,
         }
     }
 }

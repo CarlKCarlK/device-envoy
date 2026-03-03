@@ -19,7 +19,9 @@ pub use button_watch::{ButtonWatch, ButtonWatchStatic};
 #[doc(hidden)]
 pub use button_watch::{button_watch_task, button_watch_task_from_input};
 
-pub use device_envoy_core::button::{BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION, PressDuration, PressedTo};
+pub use device_envoy_core::button::{
+    BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION, PressDuration, PressedTo,
+};
 
 use embassy_futures::select::{Either, select};
 use embassy_rp::Peri;

@@ -37,8 +37,8 @@ use alloc::string::String;
 use embassy_futures::select::{select4, Either4};
 
 pub use device_envoy_core::wifi_auto::{
-    FormData, HtmlBuffer, WifiAutoEvent, WifiAutoField, WifiAutoPersistedState, WifiCredentials,
-    WifiAutoError, WifiStartMode,
+    FormData, HtmlBuffer, WifiAutoError, WifiAutoEvent, WifiAutoField, WifiAutoPersistedState,
+    WifiCredentials, WifiStartMode,
 };
 
 enum WifiAutoStorage {

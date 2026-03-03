@@ -2,7 +2,9 @@
 //!
 //! This module provides a reusable button device for ESP32 projects.
 
-pub use device_envoy_core::button::{BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION, PressDuration, PressedTo};
+pub use device_envoy_core::button::{
+    PressDuration, PressedTo, BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION,
+};
 
 #[cfg(target_os = "none")]
 use embassy_futures::select::{select, Either};

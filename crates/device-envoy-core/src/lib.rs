@@ -10,6 +10,7 @@ pub mod clock_sync;
 pub mod flash_array;
 pub mod ir;
 pub mod led2d;
+pub mod led4;
 pub mod led_strip;
 #[cfg(feature = "wifi")]
 pub mod time_sync;

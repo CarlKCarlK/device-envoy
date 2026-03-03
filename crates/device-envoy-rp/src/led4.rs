@@ -6,15 +6,10 @@
 //! 4-digit 7-segment LED displays. Supports displaying text and numbers with
 //! optional blinking.
 
-use core::borrow::Borrow;
-
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embassy_time::{Duration, Timer};
-use heapless::Vec;
 
 use crate::{Error, Result};
+use device_envoy_core::led4::{run_command_loop, signal_animation, signal_text};
 
 #[cfg(feature = "display-trace")]
 use defmt::info;
@@ -31,6 +26,7 @@ use self::led4_simple::{Led4Simple, Led4SimpleStatic};
 // ============================================================================
 
 mod output_array;
+pub use device_envoy_core::led4::{AnimationFrame, BlinkState, circular_outline_animation};
 pub use output_array::OutputArray;
 
 // ============================================================================
@@ -43,64 +39,6 @@ pub(crate) const CELL_COUNT: usize = CELL_COUNT_U8 as usize;
 
 /// The number of segments per digit in the display.
 pub(crate) const SEGMENT_COUNT: usize = 8;
-
-/// Sleep duration between multiplexing updates.
-pub(crate) const MULTIPLEX_SLEEP: Duration = Duration::from_millis(3);
-
-/// Delay for the "off" state during blinking.
-const BLINK_OFF_DELAY: Duration = Duration::from_millis(50);
-
-/// Delay for the "on" state during blinking.
-const BLINK_ON_DELAY: Duration = Duration::from_millis(150);
-
-// This is not configurable for now because that would require use of an extra macro.
-const ANIMATION_MAX_FRAMES: usize = 16;
-
-// ============================================================================
-// BlinkState Enum
-// ============================================================================
-
-/// Blinking behavior for 4-digit LED displays.
-///
-/// Used with [`Led4::write_text()`] to control whether the display blinks.
-/// See the [`Led4`] documentation for usage examples.
-#[derive(Debug, Clone, Copy, defmt::Format, Default)]
-pub enum BlinkState {
-    /// Display is always on (solid, no blinking).
-    #[default]
-    Solid,
-    /// Display blinks; currently shows on.
-    BlinkingAndOn,
-    /// Display blinks; currently shows off.
-    BlinkingButOff,
-}
-
-#[derive(Clone)]
-pub(crate) enum Led4Command {
-    Text {
-        blink_state: BlinkState,
-        text: [char; CELL_COUNT],
-    },
-    Animation(Vec<AnimationFrame, ANIMATION_MAX_FRAMES>),
-}
-
-/// Frame of animated text for [`Led4::animate_text`]. See that method's example for usage.
-#[derive(Clone, Copy, Debug)]
-pub struct AnimationFrame {
-    /// Text to display (4 characters for a 4-digit display).
-    pub text: [char; CELL_COUNT],
-    /// Duration to display this frame.
-    pub duration: Duration,
-}
-
-impl AnimationFrame {
-    /// Creates a new animation frame with text and duration.
-    /// This uses [`embassy_time::Duration`] for frame timing.
-    #[must_use]
-    pub const fn new(text: [char; CELL_COUNT], duration: embassy_time::Duration) -> Self {
-        Self { text, duration }
-    }
-}
 
 // ============================================================================
 // Led4 Virtual Device
@@ -164,7 +102,7 @@ impl AnimationFrame {
 pub struct Led4<'a>(&'a Led4OuterStatic);
 
 /// Signal for sending display commands to the [`Led4`] device.
-pub(crate) type Led4OuterStatic = Signal<CriticalSectionRawMutex, Led4Command>;
+pub(crate) type Led4OuterStatic = device_envoy_core::led4::Led4CommandSignal;
 
 /// Static for the [`Led4`] device.
 pub struct Led4Static {
@@ -176,7 +114,7 @@ impl Led4Static {
     /// Creates static resources for the 4-digit LED display device.
     pub(crate) const fn new() -> Self {
         Self {
-            outer: Signal::new(),
+            outer: device_envoy_core::led4::Led4CommandSignal::new(),
             display: Led4Simple::new_static(),
         }
     }
@@ -214,7 +152,7 @@ impl Led4<'_> {
     pub fn write_text(&self, text: [char; CELL_COUNT], blink_state: BlinkState) {
         #[cfg(feature = "display-trace")]
         info!("blink_state: {:?}, text: {:?}", blink_state, text);
-        self.0.signal(Led4Command::Text { blink_state, text });
+        signal_text(self.0, text, blink_state);
     }
 
     /// Plays a looped text animation using the provided frames.
@@ -262,149 +200,13 @@ impl Led4<'_> {
     pub fn animate_text<I>(&self, animation: I)
     where
         I: IntoIterator,
-        I::Item: Borrow<AnimationFrame>,
+        I::Item: core::borrow::Borrow<AnimationFrame>,
     {
-        let mut frames: Vec<AnimationFrame, ANIMATION_MAX_FRAMES> = Vec::new();
-        for animation_frame in animation {
-            let animation_frame = *animation_frame.borrow();
-            frames
-                .push(animation_frame)
-                .expect("animate sequence fits within ANIMATION_MAX_FRAMES");
-        }
-        self.0.signal(Led4Command::Animation(frames));
+        signal_animation(self.0, animation);
     }
 }
 
 #[embassy_executor::task]
 async fn device_loop(outer_static: &'static Led4OuterStatic, display: Led4Simple<'static>) -> ! {
-    let mut command = Led4Command::Text {
-        blink_state: BlinkState::default(),
-        text: [' '; CELL_COUNT],
-    };
-
-    loop {
-        command = match command {
-            Led4Command::Text { blink_state, text } => {
-                run_text_loop(blink_state, text, outer_static, &display).await
-            }
-            Led4Command::Animation(animation) => {
-                run_animation_loop(animation, outer_static, &display).await
-            }
-        };
-    }
-}
-
-async fn run_text_loop(
-    mut blink_state: BlinkState,
-    text: [char; CELL_COUNT],
-    outer_static: &'static Led4OuterStatic,
-    display: &Led4Simple<'_>,
-) -> Led4Command {
-    loop {
-        match blink_state {
-            BlinkState::Solid => {
-                display.write_text(text);
-                return outer_static.wait().await;
-            }
-            BlinkState::BlinkingAndOn => {
-                display.write_text(text);
-                match select(outer_static.wait(), Timer::after(BLINK_ON_DELAY)).await {
-                    Either::First(command) => return command,
-                    Either::Second(()) => blink_state = BlinkState::BlinkingButOff,
-                }
-            }
-            BlinkState::BlinkingButOff => {
-                display.write_text([' '; CELL_COUNT]);
-                match select(outer_static.wait(), Timer::after(BLINK_OFF_DELAY)).await {
-                    Either::First(command) => return command,
-                    Either::Second(()) => blink_state = BlinkState::BlinkingAndOn,
-                }
-            }
-        }
-    }
-}
-
-async fn run_animation_loop(
-    animation: Vec<AnimationFrame, ANIMATION_MAX_FRAMES>,
-    outer_static: &'static Led4OuterStatic,
-    display: &Led4Simple<'_>,
-) -> Led4Command {
-    if animation.is_empty() {
-        return outer_static.wait().await;
-    }
-
-    let frames = animation;
-    let len = frames.len();
-    let mut index = 0;
-
-    loop {
-        let frame = frames[index];
-        display.write_text(frame.text);
-        match select(outer_static.wait(), Timer::after(frame.duration)).await {
-            Either::First(command) => return command,
-            Either::Second(()) => {
-                index = (index + 1) % len;
-            }
-        }
-    }
-}
-
-/// Creates a circular outline animation that chases around the edges of the display.
-///
-/// Returns an animation with 8 frames showing a segment moving clockwise or
-/// counter-clockwise around the perimeter of the 4-digit display.
-///
-/// # Arguments
-///
-/// * `clockwise` - If `true`, animates clockwise; if `false`, counter-clockwise
-///
-/// # Example
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// use device_envoy_rp::led4::{Led4, circular_outline_animation};
-/// # #[panic_handler]
-/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-///
-/// async fn example(led4: &Led4<'_>) {
-///     // Animate clockwise
-///     led4.animate_text(circular_outline_animation(true));
-///
-///     // Animate counter-clockwise
-///     led4.animate_text(circular_outline_animation(false));
-/// }
-/// ```
-#[must_use]
-pub fn circular_outline_animation(clockwise: bool) -> Vec<AnimationFrame, ANIMATION_MAX_FRAMES> {
-    const FRAME_DURATION: Duration = Duration::from_millis(120);
-    const CLOCKWISE: [[char; 4]; 8] = [
-        ['\'', '\'', '\'', '\''],
-        ['\'', '\'', '\'', '"'],
-        [' ', ' ', ' ', '>'],
-        [' ', ' ', ' ', ')'],
-        ['_', '_', '_', '_'],
-        ['*', '_', '_', '_'],
-        ['<', ' ', ' ', ' '],
-        ['(', '\'', '\'', '\''],
-    ];
-    const COUNTER: [[char; 4]; 8] = [
-        ['(', '\'', '\'', '\''],
-        ['<', ' ', ' ', ' '],
-        ['*', '_', '_', '_'],
-        ['_', '_', '_', '_'],
-        [' ', ' ', ' ', ')'],
-        [' ', ' ', ' ', '>'],
-        ['\'', '\'', '\'', '"'],
-        ['\'', '\'', '\'', '\''],
-    ];
-
-    let mut animation = Vec::new();
-    let frames = if clockwise { &CLOCKWISE } else { &COUNTER };
-    for text in frames {
-        animation
-            .push(AnimationFrame::new(*text, FRAME_DURATION))
-            .expect("animation exceeds frame capacity");
-    }
-    animation
+    run_command_loop(outer_static, |text| display.write_text(text)).await
 }

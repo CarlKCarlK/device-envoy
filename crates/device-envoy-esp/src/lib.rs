@@ -28,14 +28,15 @@ pub mod audio_player;
 pub mod flash_array;
 pub mod ir;
 pub mod led2d;
+pub mod led4;
 pub mod led_strip;
 pub mod rmt;
 pub mod rmt_mode;
 pub mod wifi_auto;
 
 pub use device_envoy_core::tone;
-pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
 use device_envoy_core::wifi_auto::WifiAutoError;
+pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but
@@ -113,6 +114,7 @@ pub enum Error {
     FormatError,
     StorageCorrupted,
     FlashRegionMismatch,
+    Led4BitsToIndexesFull,
     MissingCustomWifiAutoField,
     Ntp(&'static str),
     #[cfg(target_os = "none")]
@@ -130,6 +132,14 @@ pub enum Error {
 impl From<embassy_executor::SpawnError> for Error {
     fn from(e: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(e)
+    }
+}
+
+impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
+    fn from(error: device_envoy_core::led4::Led4BitsToIndexesError) -> Self {
+        match error {
+            device_envoy_core::led4::Led4BitsToIndexesError::Full => Self::Led4BitsToIndexesFull,
+        }
     }
 }
 

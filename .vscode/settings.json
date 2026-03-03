@@ -1,6 +1,8 @@
 {
   "cSpell.words": [
-    "mmss"
+    "deinit",
+    "mmss",
+    "timg"
   ],
   "rust-analyzer.check.workspace": false,
   "rust-analyzer.cargo.allTargets": false,

@@ -38,7 +38,7 @@ use embassy_futures::select::{select4, Either4};
 
 pub use device_envoy_core::wifi_auto::{
     FormData, HtmlBuffer, WifiAutoEvent, WifiAutoField, WifiAutoPersistedState, WifiCredentials,
-    WifiStartMode,
+    WifiAutoError, WifiStartMode,
 };
 
 enum WifiAutoStorage {
@@ -277,12 +277,12 @@ impl<'a> WifiAuto<'a> {
             .wifi
             .borrow_mut()
             .take()
-            .ok_or(crate::Error::StorageCorrupted)?;
+            .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
         let button = wifi_auto
             .button
             .borrow_mut()
             .take()
-            .ok_or(crate::Error::StorageCorrupted)?;
+            .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
         let spawner = wifi_auto.spawner;
         let force_captive_portal = wifi_auto.force_captive_portal;
 

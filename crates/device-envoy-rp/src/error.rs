@@ -2,6 +2,7 @@
 use core::convert::Infallible;
 
 use derive_more::derive::{Display, Error};
+use device_envoy_core::wifi_auto::WifiAutoError;
 use esp_hal_mfrc522::consts::PCDErrorCode;
 
 /// A specialized `Result` where the error is this crate's `Error` type.
@@ -70,5 +71,15 @@ impl From<Infallible> for Error {
 impl From<embassy_executor::SpawnError> for Error {
     fn from(err: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(err)
+    }
+}
+
+impl From<WifiAutoError> for Error {
+    fn from(error: WifiAutoError) -> Self {
+        match error {
+            WifiAutoError::FormatError => Self::FormatError,
+            WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
+            WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
+        }
     }
 }

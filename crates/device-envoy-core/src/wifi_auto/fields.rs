@@ -17,6 +17,15 @@ macro_rules! __impl_wifi_auto_fields {
         use heapless::String;
         use static_cell::StaticCell;
 
+        fn wifi_auto_format_error() -> $error
+        where
+            $error: From<$crate::wifi_auto::WifiAutoError>,
+        {
+            <$error as From<$crate::wifi_auto::WifiAutoError>>::from(
+                $crate::wifi_auto::WifiAutoError::FormatError,
+            )
+        }
+
         enum TimezoneFieldStorage {
             $(#[cfg($flash_cfg)])?
             Flash(RefCell<$flash_block>),
@@ -134,9 +143,9 @@ macro_rules! __impl_wifi_auto_fields {
             fn render(&self, page: &mut $html_buffer) -> core::result::Result<(), $error> {
                 let current_offset_minutes = self.offset_minutes()?.unwrap_or(0);
                 write!(page, "<label for=\"timezone\">Time zone:</label>")
-                    .map_err(|_| <$error>::FormatError)?;
+                    .map_err(|_| wifi_auto_format_error())?;
                 write!(page, "<select id=\"timezone\" name=\"timezone\" required>")
-                    .map_err(|_| <$error>::FormatError)?;
+                    .map_err(|_| wifi_auto_format_error())?;
                 for timezone_option in TIMEZONE_OPTIONS {
                     let selected = if timezone_option.minutes == current_offset_minutes {
                         " selected"
@@ -148,18 +157,18 @@ macro_rules! __impl_wifi_auto_fields {
                         "<option value=\"{}\"{}>{}</option>",
                         timezone_option.minutes, selected, timezone_option.label
                     )
-                    .map_err(|_| <$error>::FormatError)?;
+                    .map_err(|_| wifi_auto_format_error())?;
                 }
-                write!(page, "</select>").map_err(|_| <$error>::FormatError)?;
+                write!(page, "</select>").map_err(|_| wifi_auto_format_error())?;
                 Ok(())
             }
 
             fn parse(&self, form: &$form_data) -> core::result::Result<(), $error> {
                 let offset_minutes = form
                     .get("timezone")
-                    .ok_or(<$error>::FormatError)?
+                    .ok_or_else(wifi_auto_format_error)?
                     .parse::<i32>()
-                    .map_err(|_| <$error>::FormatError)?;
+                    .map_err(|_| wifi_auto_format_error())?;
                 assert!(
                     (-720..=840).contains(&offset_minutes),
                     "timezone offset_minutes must be within -720..=840"
@@ -499,12 +508,12 @@ macro_rules! __impl_wifi_auto_fields {
                      <input type=\"text\" id=\"{}\" name=\"{}\" value=\"{}\" maxlength=\"{}\" required>",
                     self.field_name, self.label, self.field_name, self.field_name, escaped, N
                 )
-                .map_err(|_| <$error>::FormatError)?;
+                .map_err(|_| wifi_auto_format_error())?;
                 Ok(())
             }
 
             fn parse(&self, form: &$form_data) -> core::result::Result<(), $error> {
-                let value = form.get(self.field_name).ok_or(<$error>::FormatError)?;
+                let value = form.get(self.field_name).ok_or_else(wifi_auto_format_error)?;
                 let trimmed_value = value.trim();
                 assert!(
                     !trimmed_value.is_empty() && trimmed_value.len() <= N,

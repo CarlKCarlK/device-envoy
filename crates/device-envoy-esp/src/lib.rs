@@ -35,6 +35,7 @@ pub mod wifi_auto;
 
 pub use device_envoy_core::tone;
 pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
+use device_envoy_core::wifi_auto::WifiAutoError;
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but
@@ -129,6 +130,16 @@ pub enum Error {
 impl From<embassy_executor::SpawnError> for Error {
     fn from(e: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(e)
+    }
+}
+
+impl From<WifiAutoError> for Error {
+    fn from(error: WifiAutoError) -> Self {
+        match error {
+            WifiAutoError::FormatError => Self::FormatError,
+            WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
+            WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
+        }
     }
 }
 

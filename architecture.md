@@ -90,7 +90,18 @@ This keeps APIs consistent for users while allowing hardware-specific setup per 
 ### 1) Pico 1 / Pico 2 construction (`PIO` + `DMA`)
 
 ```rust
-let led_strip = LedStripType::new(
+use device_envoy_rp::led_strip;
+use device_envoy_rp::led_strip::Current;
+
+led_strip! {
+    Gpio0LedStrip {
+        pin: PIN_0,
+        len: 8,
+        max_current: Current::Milliamps(50),
+    }
+}
+
+let gpio0_led_strip = Gpio0LedStrip::new(
     p.PIN_0,
     p.PIO0,
     p.DMA_CH0,
@@ -105,8 +116,18 @@ RP construction depends on PIO and DMA resources, which are central to Pico LED 
 RMT path:
 
 ```rust
+use device_envoy_esp::led_strip;
+use device_envoy_esp::led_strip::Current;
+
+led_strip! {
+    LedStrip8 {
+        len: 8,
+        max_current: Current::Milliamps(200),
+    }
+}
+
 init_and_start!(p, rmt80, rmt_mode::Blocking);
-let led_strip = LedStripType::new(p.GPIO10, rmt80.channel0, spawner)?;
+let led_strip8 = LedStrip8::new(p.GPIO10, rmt80.channel0, spawner)?;
 ```
 
 SPI path:
@@ -131,6 +152,11 @@ let led_strip8_spi = LedStrip8Spi::new(p.GPIO10, p.SPI2, spawner)?;
 ```
 
 ESP examples demonstrate both RMT-driven and SPI-driven LED strip construction.
+In these snippets, `Gpio0LedStrip`, `LedStrip8`, and `LedStrip8Spi` are concrete types created by `led_strip!`.
+The macro itself is defined in:
+
+- `crates/device-envoy-rp/src/led_strip.rs` (RP)
+- `crates/device-envoy-esp/src/led_strip.rs` (ESP)
 
 ## Why We Do Not Merge Pico and ESP Constructors
 

@@ -112,7 +112,22 @@ let led_strip = LedStripType::new(p.GPIO10, rmt80.channel0, spawner)?;
 SPI path:
 
 ```rust
-let led_strip = LedStripType::new_spi(/* spi peripheral + pins + config */)?;
+use device_envoy_esp::{
+    init_and_start, led_strip,
+    led_strip::{Current, Engine},
+};
+
+led_strip! {
+    LedStrip8Spi {
+        len: 8,
+        max_current: Current::Milliamps(180),
+        engine: Engine::Spi,
+        max_frames: 2,
+    }
+}
+
+init_and_start!(p);
+let led_strip8_spi = LedStrip8Spi::new(p.GPIO10, p.SPI2, spawner)?;
 ```
 
 ESP examples demonstrate both RMT-driven and SPI-driven LED strip construction.

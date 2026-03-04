@@ -45,6 +45,18 @@ clock-servos-s3:
 clock-servos-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_servos --target xtensa-esp32s3-none-elf --release --no-default-features
 
+servo-basic-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_basic --target xtensa-esp32s3-none-elf --release --no-default-features
+
+servo-basic-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_basic --target xtensa-esp32s3-none-elf --release --no-default-features
+
+servos-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servos --target xtensa-esp32s3-none-elf --release --no-default-features
+
+servos-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servos --target xtensa-esp32s3-none-elf --release --no-default-features
+
 wifi-scan-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features
 

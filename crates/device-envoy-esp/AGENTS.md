@@ -98,6 +98,8 @@ let sos_strip = SosStrip::new(&SOS_STRIP_STATIC, channel, spawner)?;
 ## Porting Scope (ESP-specific)
 
 - When porting a device abstraction from another platform crate, port all user-facing sibling submodules/helpers that belong to that abstraction (for example `button` and `button_watch`) instead of adding example-local replacements.
+- For LEDC timer/channel resources, follow the crate ownership-claim protocol used by servo abstractions. Do not bypass this protocol with direct ad-hoc LEDC timer/channel setup in examples or device modules.
+- If a macro/device abstraction claims an LEDC timer or channel, treat that claim as exclusive for the entire binary (no sharing), and let duplicate usage fail at link time.
 
 ## LED Hardware Configuration
 

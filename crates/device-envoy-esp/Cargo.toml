@@ -41,6 +41,7 @@ embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "u
 log = { version = "0.4", default-features = false }
 
 [dev-dependencies]
+device-envoy-example-common = { path = "../device-envoy-example-common" }
 
 [target.'cfg(not(target_os = "none"))'.dev-dependencies]
 png = { version = "0.17" }

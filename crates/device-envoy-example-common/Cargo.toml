@@ -1,0 +1,11 @@
+[package]
+name = "device-envoy-example-common"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+device-envoy-core = { path = "../device-envoy-core" }
+embassy-futures = "0.1.2"
+embassy-time = "0.5.0"
+smart-leds = "0.4.0"

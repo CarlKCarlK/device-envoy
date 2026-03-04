@@ -7,7 +7,7 @@
 //! Hardware defaults:
 //! - force-portal button on GPIO6 (wired to GND)
 //! - LED4 cell pins: GPIO14, GPIO13, GPIO12, GPIO11 (active-low)
-//! - LED4 segment pins: GPIO10, GPIO9, GPIO46, GPIO3, GPIO8, GPIO18, GPIO17, GPIO16 (active-high)
+//! - LED4 segment pins: GPIO10, GPIO9, GPIO46 (S3) / GPIO4 (C6), GPIO3, GPIO8, GPIO18, GPIO17, GPIO16 (active-high)
 
 #![no_std]
 #![no_main]
@@ -78,7 +78,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let segment_pins = OutputArray::new([
         Output::new(p.GPIO10, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO9, Level::Low, OutputConfig::default()),
+        #[cfg(target_arch = "xtensa")]
         Output::new(p.GPIO46, Level::Low, OutputConfig::default()),
+        #[cfg(not(target_arch = "xtensa"))]
+        Output::new(p.GPIO4, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO3, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO8, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO18, Level::Low, OutputConfig::default()),

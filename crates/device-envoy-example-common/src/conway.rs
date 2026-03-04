@@ -1,0 +1,453 @@
+use device_envoy_core::{ir::kepler::KeplerButton, led_strip::RGB8, led2d::Frame2d};
+use embassy_futures::select::{Either, select};
+use embassy_time::{Duration, Instant, Timer};
+use smart_leds::colors;
+
+const STASIS_RESET_GENERATIONS: u8 = 15;
+const BOARD_SIZE_16X16: usize = 16;
+
+const ALIVE_COLORS: [RGB8; 6] = [
+    colors::LIME,
+    colors::CYAN,
+    colors::MAGENTA,
+    colors::ORANGE,
+    colors::YELLOW,
+    colors::WHITE,
+];
+
+const PATTERNS: [Pattern; 10] = [
+    Pattern::Glider,
+    Pattern::Random,
+    Pattern::Blinker,
+    Pattern::Toad,
+    Pattern::Beacon,
+    Pattern::Lwss,
+    Pattern::Block,
+    Pattern::Pentadecathlon,
+    Pattern::Cross,
+    Pattern::Custom9,
+];
+
+pub trait ConwayLed16x16 {
+    fn write_frame16x16(&self, frame16x16: Frame2d<16, 16>);
+}
+
+#[allow(async_fn_in_trait)]
+pub trait ConwayIrReceiver {
+    async fn wait_for_press(&self) -> KeplerButton;
+}
+
+pub async fn run_conway<Led16x16, IrReceiver>(led16x16: &Led16x16, ir_receiver: &IrReceiver) -> !
+where
+    Led16x16: ConwayLed16x16,
+    IrReceiver: ConwayIrReceiver,
+{
+    let mut board16x16 = Board::<16, 16>::new();
+    let mut pattern_index = 0usize;
+    let mut speed_mode = SpeedMode::Slower;
+    let mut paused = false;
+    let mut color_index = 0usize;
+    let mut alive_color = ALIVE_COLORS[color_index];
+    board16x16.add_pattern(PATTERNS[pattern_index]);
+
+    let mut stasis_tracker = (0u8, 0u16);
+    let mut empty_tracker = 0u8;
+
+    loop {
+        let frame16x16 = board16x16.to_frame(alive_color);
+        led16x16.write_frame16x16(frame16x16);
+
+        let frame_duration = speed_mode.frame_duration();
+
+        match select(Timer::after(frame_duration), ir_receiver.wait_for_press()).await {
+            Either::First(_) => {
+                if paused {
+                    continue;
+                }
+
+                board16x16.step();
+                evaluate_auto_reset(
+                    &mut board16x16,
+                    pattern_index,
+                    &mut stasis_tracker,
+                    &mut empty_tracker,
+                );
+            }
+            Either::Second(button) => match button {
+                KeplerButton::Num(number) => {
+                    if number < PATTERNS.len() as u8 {
+                        pattern_index = number as usize;
+                        reset_board_for_pattern(
+                            &mut board16x16,
+                            pattern_index,
+                            &mut stasis_tracker,
+                            &mut empty_tracker,
+                        );
+                    }
+                }
+                KeplerButton::Minus => {
+                    speed_mode = speed_mode.slower();
+                }
+                KeplerButton::Plus => {
+                    speed_mode = speed_mode.faster();
+                }
+                KeplerButton::Next => {
+                    if paused {
+                        board16x16.step();
+                    } else {
+                        pattern_index = (pattern_index + 1) % PATTERNS.len();
+                        reset_board_for_pattern(
+                            &mut board16x16,
+                            pattern_index,
+                            &mut stasis_tracker,
+                            &mut empty_tracker,
+                        );
+                    }
+                }
+                KeplerButton::Prev => {
+                    if !paused {
+                        pattern_index = (pattern_index + PATTERNS.len() - 1) % PATTERNS.len();
+                        reset_board_for_pattern(
+                            &mut board16x16,
+                            pattern_index,
+                            &mut stasis_tracker,
+                            &mut empty_tracker,
+                        );
+                    }
+                }
+                KeplerButton::PlayPause => {
+                    paused = !paused;
+                }
+                KeplerButton::Mode => {
+                    color_index = (color_index + 1) % ALIVE_COLORS.len();
+                    alive_color = ALIVE_COLORS[color_index];
+                }
+                _ => {}
+            },
+        }
+    }
+}
+
+fn reset_board_for_pattern(
+    board16x16: &mut Board<16, 16>,
+    pattern_index: usize,
+    stasis_tracker: &mut (u8, u16),
+    empty_tracker: &mut u8,
+) {
+    let pattern = PATTERNS[pattern_index];
+    *board16x16 = Board::new();
+    board16x16.add_pattern(pattern);
+    *stasis_tracker = (0, 0);
+    *empty_tracker = 0;
+}
+
+fn evaluate_auto_reset(
+    board16x16: &mut Board<16, 16>,
+    pattern_index: usize,
+    stasis_tracker: &mut (u8, u16),
+    empty_tracker: &mut u8,
+) {
+    let live_cell_count = board16x16.count_live_cells();
+    let current_pattern = PATTERNS[pattern_index];
+
+    if matches!(current_pattern, Pattern::Random | Pattern::Cross) {
+        let (unchanged_count, last_live_count) = *stasis_tracker;
+        if live_cell_count == last_live_count {
+            let new_unchanged_count = unchanged_count + 1;
+            *stasis_tracker = (new_unchanged_count, live_cell_count);
+
+            if new_unchanged_count >= STASIS_RESET_GENERATIONS {
+                board16x16.add_pattern(current_pattern);
+                *stasis_tracker = (0, 0);
+                *empty_tracker = 0;
+            }
+        } else {
+            *stasis_tracker = (1, live_cell_count);
+        }
+    } else if live_cell_count == 0 {
+        *empty_tracker += 1;
+        if *empty_tracker >= STASIS_RESET_GENERATIONS {
+            board16x16.add_pattern(current_pattern);
+            *stasis_tracker = (0, 0);
+            *empty_tracker = 0;
+        }
+    } else {
+        *empty_tracker = 0;
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SpeedMode {
+    Slower,
+    Medium,
+    Normal,
+}
+
+impl SpeedMode {
+    const fn slower(self) -> Self {
+        match self {
+            Self::Slower => Self::Normal,
+            Self::Medium => Self::Slower,
+            Self::Normal => Self::Medium,
+        }
+    }
+
+    const fn faster(self) -> Self {
+        match self {
+            Self::Slower => Self::Medium,
+            Self::Medium => Self::Normal,
+            Self::Normal => Self::Slower,
+        }
+    }
+
+    const fn frame_duration(self) -> Duration {
+        match self {
+            Self::Slower => Duration::from_millis(500),
+            Self::Medium => Duration::from_millis(160),
+            Self::Normal => Duration::from_millis(50),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Pattern {
+    Glider,
+    Blinker,
+    Toad,
+    Beacon,
+    Lwss,
+    Block,
+    Pentadecathlon,
+    Random,
+    Cross,
+    Custom9,
+}
+
+#[derive(Copy, Clone)]
+struct Board<const H: usize, const W: usize> {
+    cells: [[bool; W]; H],
+}
+
+impl<const H: usize, const W: usize> Board<H, W> {
+    fn new() -> Self {
+        Self {
+            cells: [[false; W]; H],
+        }
+    }
+
+    fn load_rows(&mut self, rows: [&str; H]) {
+        for row_index in 0..H {
+            let row_bytes = rows[row_index].as_bytes();
+            assert!(row_bytes.len() == W, "row width must match board width");
+            for col_index in 0..W {
+                self.cells[row_index][col_index] = match row_bytes[col_index] {
+                    b'#' => true,
+                    b'.' => false,
+                    _ => panic!("pattern rows may only contain '.' or '#"),
+                };
+            }
+        }
+    }
+
+    fn step(&mut self) {
+        let mut next_cells = [[false; W]; H];
+
+        for row_index in 0..H {
+            for col_index in 0..W {
+                let live_neighbors = self.count_live_neighbors(row_index, col_index);
+                let is_alive = self.cells[row_index][col_index];
+
+                next_cells[row_index][col_index] = match (is_alive, live_neighbors) {
+                    (true, 2) | (true, 3) => true,
+                    (false, 3) => true,
+                    _ => false,
+                };
+            }
+        }
+
+        self.cells = next_cells;
+    }
+
+    fn count_live_neighbors(&self, row: usize, col: usize) -> u8 {
+        let mut live_neighbor_count = 0u8;
+
+        for row_offset in [-1, 0, 1].iter().copied() {
+            for col_offset in [-1, 0, 1].iter().copied() {
+                if row_offset == 0 && col_offset == 0 {
+                    continue;
+                }
+
+                let neighbor_row = ((row as isize + row_offset).rem_euclid(H as isize)) as usize;
+                let neighbor_col = ((col as isize + col_offset).rem_euclid(W as isize)) as usize;
+
+                if self.cells[neighbor_row][neighbor_col] {
+                    live_neighbor_count += 1;
+                }
+            }
+        }
+
+        live_neighbor_count
+    }
+
+    fn to_frame(&self, alive_color: RGB8) -> Frame2d<W, H> {
+        let mut frame2d = Frame2d::<W, H>::new();
+        for row_index in 0..H {
+            for col_index in 0..W {
+                if self.cells[row_index][col_index] {
+                    frame2d[(col_index, row_index)] = alive_color;
+                }
+            }
+        }
+        frame2d
+    }
+}
+
+impl Board<BOARD_SIZE_16X16, BOARD_SIZE_16X16> {
+    fn add_pattern(&mut self, pattern: Pattern) {
+        match pattern {
+            Pattern::Glider => self.add_glider(4, 2),
+            Pattern::Blinker => self.add_blinker(5, 4),
+            Pattern::Toad => self.add_toad(5, 4),
+            Pattern::Beacon => self.add_beacon(4, 4),
+            Pattern::Lwss => self.add_lwss(5, 6),
+            Pattern::Block => self.add_block(5, 4),
+            Pattern::Pentadecathlon => self.add_pentadecathlon(),
+            Pattern::Random => self.add_random(),
+            Pattern::Cross => self.add_cross(7, 7),
+            Pattern::Custom9 => self.add_custom9(),
+        }
+    }
+
+    fn add_glider(&mut self, start_row: usize, start_col: usize) {
+        self.cells[start_row][start_col + 1] = true;
+        self.cells[start_row + 1][start_col + 2] = true;
+        self.cells[start_row + 2][start_col] = true;
+        self.cells[start_row + 2][start_col + 1] = true;
+        self.cells[start_row + 2][start_col + 2] = true;
+    }
+
+    fn add_blinker(&mut self, row: usize, col: usize) {
+        self.cells[row][col] = true;
+        self.cells[row][col + 1] = true;
+        self.cells[row][col + 2] = true;
+    }
+
+    fn add_toad(&mut self, row: usize, col: usize) {
+        self.cells[row][col + 1] = true;
+        self.cells[row][col + 2] = true;
+        self.cells[row][col + 3] = true;
+        self.cells[row + 1][col] = true;
+        self.cells[row + 1][col + 1] = true;
+        self.cells[row + 1][col + 2] = true;
+    }
+
+    fn add_beacon(&mut self, row: usize, col: usize) {
+        self.cells[row][col] = true;
+        self.cells[row][col + 1] = true;
+        self.cells[row + 1][col] = true;
+        self.cells[row + 1][col + 1] = true;
+        self.cells[row + 2][col + 2] = true;
+        self.cells[row + 2][col + 3] = true;
+        self.cells[row + 3][col + 2] = true;
+        self.cells[row + 3][col + 3] = true;
+    }
+
+    fn add_lwss(&mut self, row: usize, col: usize) {
+        self.cells[row][col + 1] = true;
+        self.cells[row + 1][col] = true;
+        self.cells[row + 2][col] = true;
+        self.cells[row + 2][col + 1] = true;
+        self.cells[row + 2][col + 2] = true;
+        self.cells[row + 2][col + 3] = true;
+        self.cells[row + 1][col + 3] = true;
+    }
+
+    fn add_block(&mut self, row: usize, col: usize) {
+        self.cells[row][col] = true;
+        self.cells[row][col + 1] = true;
+        self.cells[row + 1][col] = true;
+        self.cells[row + 1][col + 1] = true;
+    }
+
+    fn add_wall(&mut self, row: usize) {
+        for col_index in 0..BOARD_SIZE_16X16 {
+            self.cells[row][col_index] = true;
+        }
+    }
+
+    fn add_vertical(&mut self, col: usize) {
+        for row_index in 0..BOARD_SIZE_16X16 {
+            self.cells[row_index][col] = true;
+        }
+    }
+
+    fn add_cross(&mut self, row: usize, col: usize) {
+        self.add_wall(row);
+        self.add_vertical(col);
+    }
+
+    fn add_random(&mut self) {
+        let now_millis = Instant::now().as_millis();
+        let mut random_seed = (now_millis ^ 0x9e37_79b9) as u32;
+        for row_index in 0..BOARD_SIZE_16X16 {
+            for col_index in 0..BOARD_SIZE_16X16 {
+                random_seed = random_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+                self.cells[row_index][col_index] = (random_seed & 0x100) != 0;
+            }
+        }
+    }
+
+    fn count_live_cells(&self) -> u16 {
+        let mut live_cell_count = 0u16;
+        for row in &self.cells {
+            for &is_alive in row {
+                if is_alive {
+                    live_cell_count += 1;
+                }
+            }
+        }
+        live_cell_count
+    }
+
+    fn add_pentadecathlon(&mut self) {
+        self.load_rows([
+            "................",
+            "................",
+            "................",
+            "......###.......",
+            ".....#...#......",
+            "................",
+            "....#.....#.....",
+            "....#.....#.....",
+            "................",
+            ".....#...#......",
+            "......###.......",
+            "................",
+            "................",
+            "................",
+            "................",
+            "................",
+        ]);
+    }
+
+    fn add_custom9(&mut self) {
+        self.load_rows([
+            "................",
+            "...##.....##....",
+            "....##...##.....",
+            ".#..#.#.#.#..#..",
+            ".###.##.##.###..",
+            "..#.#.#.#.#.#...",
+            "...###...###....",
+            "................",
+            "...###...###....",
+            "..#.#.#.#.#.#...",
+            ".###.##.##.###..",
+            ".#..#.#.#.#..#..",
+            "....##...##.....",
+            "...##.....##....",
+            "................",
+            "................",
+        ]);
+    }
+}

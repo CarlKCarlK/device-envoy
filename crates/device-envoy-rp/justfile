@@ -1,6 +1,11 @@
 update-docs:
 	./scripts/update-docs.sh
 
+# Build docs and open them in Windows Edge (via WSL)
+show-docs-rp:
+	just update-docs
+	./scripts/open-docs-rp.sh
+
 regenerate-text-pngs:
 	./scripts/regenerate-text-pngs.sh
 

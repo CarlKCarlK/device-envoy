@@ -1,5 +1,10 @@
 set shell := ["bash", "-cu"]
 
+# Build docs and open them in a browser
+show-docs-esp:
+    source "$HOME/export-esp.sh" && cargo doc --no-deps --release --target riscv32imac-unknown-none-elf --no-default-features
+    xdg-open ../../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/index.html
+
 attach-esp:
     source "$HOME/export-esp.sh" && espflash monitor
 

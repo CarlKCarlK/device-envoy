@@ -723,6 +723,7 @@ name = "device-envoy-esp"
 version = "0.0.1-alpha"
 dependencies = [
  "device-envoy-core",
+ "device-envoy-example-common",
  "embassy-executor",
  "embassy-futures",
  "embassy-net",
@@ -751,6 +752,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "device-envoy-example-common"
+version = "0.0.0"
+dependencies = [
+ "device-envoy-core",
+ "embassy-futures",
+ "embassy-time",
+ "smart-leds",
+]
+
+[[package]]
 name = "device-envoy-rp"
 version = "0.0.4-alpha.2"
 dependencies = [
@@ -764,6 +775,7 @@ dependencies = [
  "defmt-rtt",
  "derive_more",
  "device-envoy-core",
+ "device-envoy-example-common",
  "embassy-executor",
  "embassy-futures",
  "embassy-hal-internal 0.4.0",

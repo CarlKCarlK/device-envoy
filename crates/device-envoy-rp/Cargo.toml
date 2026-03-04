@@ -143,6 +143,9 @@ riscv = { version = "0.11", features = [
     "critical-section-single-hart",
 ], optional = true }
 
+[dev-dependencies]
+device-envoy-example-common = { path = "../device-envoy-example-common" }
+
 [lints.rust]
 # To use the `unsafe` keyword, do not remove the `unsafe_code = "forbid"` entry.
 # Instead, prefer to change it to `unsafe_code = "deny"` + opt-in with local use of

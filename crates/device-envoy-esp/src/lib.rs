@@ -9,6 +9,8 @@
 
 pub mod button;
 #[cfg(target_os = "none")]
+pub mod char_lcd;
+#[cfg(target_os = "none")]
 pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.
     //! See [`ClockSync`] for the full API and usage.

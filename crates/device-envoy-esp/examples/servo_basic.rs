@@ -36,13 +36,13 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     let mut basic_servo = BasicServo::new(&ledc, p.GPIO10)?;
 
-    basic_servo.set_degrees(45)?; // Move to 45 degrees and hold.
+    basic_servo.set_degrees(45); // Move to 45 degrees and hold.
     Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position
 
-    basic_servo.set_degrees(90)?; // Move to 90 degrees and hold.
+    basic_servo.set_degrees(90); // Move to 90 degrees and hold.
     Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position
 
-    basic_servo.relax()?; // Let the servo relax. It will re-enable on next set_degrees()
+    basic_servo.relax(); // Let the servo relax. It will re-enable on next set_degrees()
 
     core::future::pending().await
 }

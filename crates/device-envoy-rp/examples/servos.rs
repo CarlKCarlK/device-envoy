@@ -1,4 +1,3 @@
-#![allow(missing_docs)]
 //! Dual servo control example.
 //! Moves two servos in opposite directions for 2 seconds.
 //! Connect servos to GPIO 11 and GPIO 12.
@@ -10,7 +9,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::servo;
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Instant, Timer};
 use panic_probe as _;
 
 #[embassy_executor::main]
@@ -23,11 +22,9 @@ pub async fn main(_spawner: Spawner) -> ! {
     // Create servos on GPIO 11 and GPIO 12
     // GPIO 11 → PWM_SLICE5 (channel B)
     // GPIO 12 → PWM_SLICE6 (channel A)
-    let some_pin = p.PIN_11;
-    let some_slice = p.PWM_SLICE5;
     let mut servo11 = servo! {
-        pin: some_pin,
-        slice: some_slice,
+        pin: p.PIN_11,
+        slice: p.PWM_SLICE5,
     };
     let mut servo12 = servo! {
         pin: p.PIN_12,
@@ -36,7 +33,7 @@ pub async fn main(_spawner: Spawner) -> ! {
 
     info!("Moving servos in opposite directions for 2 seconds");
 
-    let start = embassy_time::Instant::now();
+    let start = Instant::now();
     let duration = Duration::from_secs(2);
 
     loop {
@@ -46,13 +43,11 @@ pub async fn main(_spawner: Spawner) -> ! {
         }
 
         // Move servos in opposite directions
-        info!("Position: servo11=0°, servo12=180°");
         servo11.set_degrees(0);
         servo12.set_degrees(180);
         Timer::after_millis(500).await;
 
         // Move servos in opposite directions (swapped)
-        info!("Position: servo11=180°, servo12=0°");
         servo11.set_degrees(180);
         servo12.set_degrees(0);
         Timer::after_millis(500).await;
@@ -68,10 +63,5 @@ pub async fn main(_spawner: Spawner) -> ! {
     servo11.relax();
     servo12.relax();
 
-    Timer::after_secs(5).await;
-
-    loop {
-        info!("Sleeping");
-        Timer::after_secs(5).await;
-    }
+    core::future::pending().await
 }

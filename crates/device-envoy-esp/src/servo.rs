@@ -97,20 +97,22 @@ impl Servo {
     }
 
     /// Set position in degrees `0..=max_degrees`.
-    pub fn set_degrees(&mut self, degrees: u16) -> Result<()> {
+    pub fn set_degrees(&mut self, degrees: u16) {
         assert!(degrees <= self.max_degrees);
         let duty_pct = self.degrees_to_duty_pct(degrees);
-        self.channel.set_duty(duty_pct)?;
-        Ok(())
+        self.channel
+            .set_duty(duty_pct)
+            .expect("LEDC set_duty failed in Servo::set_degrees");
     }
 
     /// Keep driving pulses at the last commanded angle.
     pub fn hold(&mut self) {}
 
     /// Stop driving pulses.
-    pub fn relax(&mut self) -> Result<()> {
-        self.channel.set_duty(0)?;
-        Ok(())
+    pub fn relax(&mut self) {
+        self.channel
+            .set_duty(0)
+            .expect("LEDC set_duty failed in Servo::relax");
     }
 
     fn pulse_for_degrees(&self, degrees: u16) -> u32 {

@@ -9,5 +9,8 @@
   "rust-analyzer.cargo.allTargets": false,
   "rust-analyzer.check.allTargets": false,
   "rust-analyzer.cargo.noDefaultFeatures": true,
-  "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf"
+  "rust-analyzer.cargo.features": [
+    "embedded"
+  ],
+  "rust-analyzer.cargo.target": "thumbv6m-none-eabi"
 }

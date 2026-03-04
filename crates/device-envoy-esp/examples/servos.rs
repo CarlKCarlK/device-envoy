@@ -61,23 +61,23 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
             break;
         }
 
-        servo_a.set_degrees(0)?;
-        servo_b.set_degrees(180)?;
+        servo_a.set_degrees(0);
+        servo_b.set_degrees(180);
         Timer::after_millis(500).await;
 
-        servo_a.set_degrees(180)?;
-        servo_b.set_degrees(0)?;
+        servo_a.set_degrees(180);
+        servo_b.set_degrees(0);
         Timer::after_millis(500).await;
     }
 
     info!("Centering servos");
-    servo_a.set_degrees(90)?;
-    servo_b.set_degrees(90)?;
+    servo_a.set_degrees(90);
+    servo_b.set_degrees(90);
     Timer::after_millis(500).await;
 
     info!("Relaxing servos");
-    servo_a.relax()?;
-    servo_b.relax()?;
+    servo_a.relax();
+    servo_b.relax();
 
     core::future::pending().await
 }

@@ -38,12 +38,14 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 const FAST_MODE_SPEED: f32 = 720.0;
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyServoClock";
+const SERVO_MAX_STEPS: usize = 30;
+type ClockServoPlayer = ServoPlayer<SERVO_MAX_STEPS>;
 
 servo_player! {
     BottomServoPlayer {
         timer: Timer0,
         channel: Channel0,
-        max_steps: 30,
+        max_steps: SERVO_MAX_STEPS,
     }
 }
 
@@ -51,7 +53,7 @@ servo_player! {
     TopServoPlayer {
         timer: Timer1,
         channel: Channel1,
-        max_steps: 30,
+        max_steps: SERVO_MAX_STEPS,
     }
 }
 
@@ -290,12 +292,12 @@ impl State {
 }
 
 struct ServoClockDisplay {
-    bottom: ServoPlayer,
-    top: ServoPlayer,
+    bottom: ClockServoPlayer,
+    top: ClockServoPlayer,
 }
 
 impl ServoClockDisplay {
-    fn new(bottom: ServoPlayer, top: ServoPlayer) -> Self {
+    fn new(bottom: ClockServoPlayer, top: ClockServoPlayer) -> Self {
         Self { bottom, top }
     }
 

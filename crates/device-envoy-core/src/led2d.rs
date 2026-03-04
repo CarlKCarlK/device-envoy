@@ -33,6 +33,15 @@ use smart_leds::RGB8;
 
 use crate::led_strip::ToRgb888;
 
+/// Platform-agnostic LED panel device contract.
+///
+/// Platform crates implement this for their concrete LED panel types so shared logic can
+/// write 2D frames without knowing the underlying hardware backend.
+pub trait Led2dDevice<const W: usize, const H: usize> {
+    /// Write a frame to the LED panel.
+    fn write_frame2d(&self, frame2d: Frame2d<W, H>);
+}
+
 // Packed bitmap for the internal 3x4 font (ASCII 0x20-0x7E).
 const BIT_MATRIX3X4_FONT_DATA: [u8; 144] = [
     0x0a, 0xd5, 0x10, 0x4a, 0xa0, 0x01, 0x0a, 0xfe, 0x68, 0x85, 0x70, 0x02, 0x08, 0x74, 0x90, 0x86,

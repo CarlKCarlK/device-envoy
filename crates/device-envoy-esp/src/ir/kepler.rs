@@ -3,6 +3,7 @@
 //! See [`IrKepler`] for usage examples.
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
+use device_envoy_core::ir::kepler::IrKeplerDevice;
 #[cfg(target_os = "none")]
 use embassy_executor::Spawner;
 
@@ -52,5 +53,11 @@ impl<'a> IrKepler<'a> {
     /// Ignores button presses that are not recognized by the Kepler remote.
     pub async fn wait_for_press(&self) -> KeplerButton {
         self.mapping.wait_for_press().await
+    }
+}
+
+impl IrKeplerDevice for IrKepler<'_> {
+    async fn wait_for_press(&self) -> KeplerButton {
+        self.wait_for_press().await
     }
 }

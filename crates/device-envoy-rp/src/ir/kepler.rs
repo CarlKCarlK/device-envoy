@@ -7,6 +7,8 @@ use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;
 use embassy_rp::pio::PioPin;
 
+use device_envoy_core::ir::kepler::IrKeplerDevice;
+
 use crate::Result;
 use crate::ir::IrPioPeripheral;
 use crate::ir::mapping::IrMapping;
@@ -88,5 +90,11 @@ impl<'a> IrKepler<'a> {
     /// See [`IrKepler`] for usage examples.
     pub async fn wait_for_press(&self) -> KeplerButton {
         self.mapping.wait_for_press().await
+    }
+}
+
+impl IrKeplerDevice for IrKepler<'_> {
+    async fn wait_for_press(&self) -> KeplerButton {
+        self.wait_for_press().await
     }
 }

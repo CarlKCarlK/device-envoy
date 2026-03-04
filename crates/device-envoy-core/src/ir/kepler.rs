@@ -34,6 +34,16 @@ pub enum KeplerButton {
     USd,
 }
 
+/// Platform-agnostic SunFounder Kepler IR device contract.
+///
+/// Platform crates implement this for their concrete `IrKepler` types so shared logic can wait
+/// for button presses without depending on platform-specific modules.
+#[allow(async_fn_in_trait)]
+pub trait IrKeplerDevice {
+    /// Wait for the next recognized Kepler button press.
+    async fn wait_for_press(&self) -> KeplerButton;
+}
+
 /// Static resources for Kepler IR remote events.
 ///
 /// See the platform-specific crate for usage examples.

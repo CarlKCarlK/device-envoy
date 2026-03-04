@@ -1,4 +1,8 @@
-use device_envoy_core::{ir::kepler::KeplerButton, led_strip::RGB8, led2d::Frame2d};
+use device_envoy_core::{
+    ir::kepler::{IrKeplerDevice, KeplerButton},
+    led_strip::RGB8,
+    led2d::{Frame2d, Led2dDevice},
+};
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
 use smart_leds::colors;
@@ -28,19 +32,10 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
-pub trait ConwayLed16x16 {
-    fn write_frame16x16(&self, frame16x16: Frame2d<16, 16>);
-}
-
-#[allow(async_fn_in_trait)]
-pub trait ConwayIrReceiver {
-    async fn wait_for_press(&self) -> KeplerButton;
-}
-
-pub async fn run_conway<Led16x16, IrReceiver>(led16x16: &Led16x16, ir_receiver: &IrReceiver) -> !
+pub async fn run_conway<Led2d, IrKepler>(led2d: &Led2d, ir_kepler: &IrKepler) -> !
 where
-    Led16x16: ConwayLed16x16,
-    IrReceiver: ConwayIrReceiver,
+    Led2d: Led2dDevice<16, 16>,
+    IrKepler: IrKeplerDevice,
 {
     let mut board16x16 = Board::<16, 16>::new();
     let mut pattern_index = 0usize;
@@ -55,11 +50,11 @@ where
 
     loop {
         let frame16x16 = board16x16.to_frame(alive_color);
-        led16x16.write_frame16x16(frame16x16);
+        led2d.write_frame2d(frame16x16);
 
         let frame_duration = speed_mode.frame_duration();
 
-        match select(Timer::after(frame_duration), ir_receiver.wait_for_press()).await {
+        match select(Timer::after(frame_duration), ir_kepler.wait_for_press()).await {
             Either::First(_) => {
                 if paused {
                     continue;

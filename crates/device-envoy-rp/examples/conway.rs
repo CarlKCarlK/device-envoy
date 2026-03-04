@@ -7,9 +7,10 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_example_common::conway::{ConwayIrReceiver, ConwayLed16x16, run_conway};
+use device_envoy_core::led2d::Led2dDevice;
+use device_envoy_example_common::conway::run_conway;
 use device_envoy_rp::Result;
-use device_envoy_rp::ir::{IrKepler, IrKeplerStatic, KeplerButton};
+use device_envoy_rp::ir::{IrKepler, IrKeplerStatic};
 use device_envoy_rp::led_strip::Current;
 use device_envoy_rp::led2d;
 use device_envoy_rp::led2d::{Frame2d, Led2dFont, layout::LedLayout};
@@ -29,23 +30,9 @@ led2d! {
     }
 }
 
-struct Led16x16ConwayAdapter {
-    led16x16: Led16x16,
-}
-
-impl ConwayLed16x16 for Led16x16ConwayAdapter {
-    fn write_frame16x16(&self, frame16x16: Frame2d<16, 16>) {
-        self.led16x16.write_frame(frame16x16);
-    }
-}
-
-struct IrKeplerConwayAdapter<'a> {
-    ir_kepler: IrKepler<'a>,
-}
-
-impl ConwayIrReceiver for IrKeplerConwayAdapter<'_> {
-    async fn wait_for_press(&self) -> KeplerButton {
-        self.ir_kepler.wait_for_press().await
+impl Led2dDevice<16, 16> for Led16x16 {
+    fn write_frame2d(&self, frame16x16: Frame2d<16, 16>) {
+        self.write_frame(frame16x16);
     }
 }
 
@@ -60,11 +47,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = init(Default::default());
 
     let led16x16 = Led16x16::new(p.PIN_6, p.PIO0, p.DMA_CH0, spawner)?;
-    let led16x16_conway_adapter = Led16x16ConwayAdapter { led16x16 };
-
     static IR_KEPLER_STATIC: IrKeplerStatic = IrKepler::new_static();
     let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO1, spawner)?;
-    let ir_kepler_conway_adapter = IrKeplerConwayAdapter { ir_kepler };
-
-    run_conway(&led16x16_conway_adapter, &ir_kepler_conway_adapter).await
+    run_conway(&led16x16, &ir_kepler).await
 }

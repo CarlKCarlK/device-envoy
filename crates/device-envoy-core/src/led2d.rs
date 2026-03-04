@@ -39,7 +39,7 @@ use crate::led_strip::ToRgb888;
 /// write 2D frames without knowing the underlying hardware backend.
 pub trait Led2dDevice<const W: usize, const H: usize> {
     /// Write a frame to the LED panel.
-    fn write_frame2d(&self, frame2d: Frame2d<W, H>);
+    fn write_frame2d(&mut self, frame2d: &Frame2d<W, H>);
 }
 
 // Packed bitmap for the internal 3x4 font (ASCII 0x20-0x7E).

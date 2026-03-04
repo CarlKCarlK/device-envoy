@@ -31,8 +31,8 @@ led2d! {
 }
 
 impl Led2dDevice<16, 16> for Led16x16 {
-    fn write_frame2d(&self, frame16x16: Frame2d<16, 16>) {
-        self.write_frame(frame16x16);
+    fn write_frame2d(&mut self, frame16x16: &Frame2d<16, 16>) {
+        self.write_frame(*frame16x16);
     }
 }
 
@@ -49,5 +49,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led16x16 = Led16x16::new(p.PIN_6, p.PIO0, p.DMA_CH0, spawner)?;
     static IR_KEPLER_STATIC: IrKeplerStatic = IrKepler::new_static();
     let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO1, spawner)?;
-    run_conway(&led16x16, &ir_kepler).await
+    run_conway(led16x16, ir_kepler).await
 }

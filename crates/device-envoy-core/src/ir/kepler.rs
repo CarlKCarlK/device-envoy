@@ -41,7 +41,7 @@ pub enum KeplerButton {
 #[allow(async_fn_in_trait)]
 pub trait IrKeplerDevice {
     /// Wait for the next recognized Kepler button press.
-    async fn wait_for_press(&self) -> KeplerButton;
+    async fn wait_for_press(&mut self) -> KeplerButton;
 }
 
 /// Static resources for Kepler IR remote events.

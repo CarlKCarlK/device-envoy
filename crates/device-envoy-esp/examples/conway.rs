@@ -38,9 +38,9 @@ led2d! {
     }
 }
 
-impl Led2dDevice<16, 16> for Led16x16Conway {
-    fn write_frame2d(&self, frame16x16: Frame2d<16, 16>) {
-        self.write_frame2d(frame16x16);
+impl Led2dDevice<16, 16> for &'static Led16x16Conway {
+    fn write_frame2d(&mut self, frame16x16: &Frame2d<16, 16>) {
+        (*self).write_frame2d(*frame16x16);
     }
 }
 
@@ -77,5 +77,5 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     #[cfg(not(target_arch = "xtensa"))]
     let ir_rmt_channel = rmt80.channel2;
     let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.GPIO7, ir_rmt_channel, spawner)?;
-    run_conway(led16x16_conway, &ir_kepler).await
+    run_conway(led16x16_conway, ir_kepler).await
 }

@@ -57,7 +57,7 @@ impl<'a> IrKepler<'a> {
 }
 
 impl IrKeplerDevice for IrKepler<'_> {
-    async fn wait_for_press(&self) -> KeplerButton {
-        self.wait_for_press().await
+    async fn wait_for_press(&mut self) -> KeplerButton {
+        IrKepler::wait_for_press(self).await
     }
 }

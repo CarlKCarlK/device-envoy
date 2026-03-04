@@ -32,7 +32,7 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
-pub async fn run_conway<Led2d, IrKepler>(led2d: &Led2d, ir_kepler: &IrKepler) -> !
+pub async fn run_conway<Led2d, IrKepler>(mut led2d: Led2d, mut ir_kepler: IrKepler) -> !
 where
     Led2d: Led2dDevice<16, 16>,
     IrKepler: IrKeplerDevice,
@@ -50,7 +50,7 @@ where
 
     loop {
         let frame16x16 = board16x16.to_frame(alive_color);
-        led2d.write_frame2d(frame16x16);
+        led2d.write_frame2d(&frame16x16);
 
         let frame_duration = speed_mode.frame_duration();
 

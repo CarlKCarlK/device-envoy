@@ -52,6 +52,11 @@ let rmt = esp_hal::rmt::Rmt::new(p.RMT, esp_hal::time::Rate::from_mhz(80)).unwra
 
 For the board peripherals handle, always use `init_and_start!(p)` so `p` is the consistent name across examples.
 
+Optional keyword outputs:
+
+- RMT handle: `init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking|Async)`
+- LEDC handle with APB slow clock: `init_and_start!(p, ledc: ledc)`
+
 ## Variable Naming Conventions (ESP-specific)
 
 **Type-based naming:**

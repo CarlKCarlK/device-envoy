@@ -68,18 +68,48 @@ pub use esp_rtos;
 #[cfg(target_os = "none")]
 #[macro_export]
 macro_rules! init_and_start {
-    ($p:ident, $rmt80:ident, rmt_mode::Blocking) => {
+    (@init_ledc $p:ident, $ledc:ident) => {
+        let mut $ledc = $crate::esp_hal::ledc::Ledc::new($p.LEDC);
+        $ledc.set_global_slow_clock($crate::esp_hal::ledc::LSGlobalClkSource::APBClk);
+    };
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
         $crate::init_and_start!($p);
         let $rmt80 = $crate::rmt::new_rmt80($p.RMT).expect("RMT init failed");
     };
-    ($p:ident, $rmt80:ident, rmt_mode::Async) => {
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
         $crate::init_and_start!($p);
         let $rmt80 =
             $crate::rmt::into_async($crate::rmt::new_rmt80($p.RMT).expect("RMT init failed"));
     };
+    ($p:ident, ledc: $ledc:ident) => {
+        $crate::init_and_start!($p);
+        $crate::init_and_start!(@init_ledc $p, $ledc);
+    };
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking, ledc: $ledc:ident) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking);
+        $crate::init_and_start!(@init_ledc $p, $ledc);
+    };
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async, ledc: $ledc:ident) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async);
+        $crate::init_and_start!(@init_ledc $p, $ledc);
+    };
+    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking, ledc: $ledc);
+    };
+    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async, ledc: $ledc);
+    };
+    // Backward-compatible RMT syntax (positional mode argument).
+    ($p:ident, $rmt80:ident, rmt_mode::Blocking) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking);
+    };
+    // Backward-compatible RMT syntax (positional mode argument).
+    ($p:ident, $rmt80:ident, rmt_mode::Async) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async);
+    };
     ($p:ident, $rmt80:ident) => {
         compile_error!(
-            "init_and_start!(p, rmt80) now requires mode: init_and_start!(p, rmt80, rmt_mode::Blocking|Async)"
+            "init_and_start!(p, rmt80) now requires mode. Prefer keyword form: init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking|Async)"
         );
     };
     ($p:ident) => {
@@ -123,6 +153,10 @@ pub enum Error {
     SpiConfig(esp_hal::spi::master::ConfigError),
     #[cfg(target_os = "none")]
     Spi(esp_hal::spi::Error),
+    #[cfg(target_os = "none")]
+    LedcTimer(esp_hal::ledc::timer::Error),
+    #[cfg(target_os = "none")]
+    LedcChannel(esp_hal::ledc::channel::Error),
     #[cfg(target_os = "none")]
     WifiInit(esp_radio::InitializationError),
     #[cfg(target_os = "none")]
@@ -185,6 +219,20 @@ impl From<esp_hal::spi::master::ConfigError> for Error {
 impl From<esp_hal::spi::Error> for Error {
     fn from(error: esp_hal::spi::Error) -> Self {
         Self::Spi(error)
+    }
+}
+
+#[cfg(target_os = "none")]
+impl From<esp_hal::ledc::timer::Error> for Error {
+    fn from(error: esp_hal::ledc::timer::Error) -> Self {
+        Self::LedcTimer(error)
+    }
+}
+
+#[cfg(target_os = "none")]
+impl From<esp_hal::ledc::channel::Error> for Error {
+    fn from(error: esp_hal::ledc::channel::Error) -> Self {
+        Self::LedcChannel(error)
     }
 }
 

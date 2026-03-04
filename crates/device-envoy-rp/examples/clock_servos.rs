@@ -30,6 +30,7 @@ use panic_probe as _;
 
 const FAST_MODE_SPEED: f32 = 720.0;
 
+// todo0 this differs between rp and esp; should we unify them?
 button_watch! {
     ButtonWatch13 {
         pin: PIN_13,

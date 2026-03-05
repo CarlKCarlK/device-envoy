@@ -10,8 +10,8 @@
 
 use defmt_rtt as _;
 use device_envoy_rp::led_strip::{Current, Gamma};
-use device_envoy_rp::led2d::Led2d as _;
 use device_envoy_rp::led2d;
+use device_envoy_rp::led2d::Led2d as _;
 use device_envoy_rp::led2d::Led2dFont;
 use device_envoy_rp::led2d::layout::LedLayout;
 use embassy_executor::Spawner;

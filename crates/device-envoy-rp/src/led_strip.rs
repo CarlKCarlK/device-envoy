@@ -140,8 +140,6 @@
 //! }
 //! ```
 
-use core::borrow::Borrow;
-
 pub use device_envoy_core::led_strip::*;
 
 #[cfg(not(feature = "host"))]
@@ -185,35 +183,10 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStripRp<N, MAX_FRAMES> {
         }
     }
 
+    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
     #[doc(hidden)]
-    pub fn write_frame(&self, frame: Frame1d<N>) {
-        self.command_signal.signal(Command::DisplayStatic(frame));
-    }
-
-    #[doc(hidden)]
-    pub fn animate<I>(&self, frames: I)
-    where
-        I: IntoIterator,
-        I::Item: core::borrow::Borrow<(Frame1d<N>, embassy_time::Duration)>,
-    {
-        assert!(MAX_FRAMES > 0, "animation disabled (MAX_FRAMES = 0)");
-        let mut sequence: heapless::Vec<(Frame1d<N>, embassy_time::Duration), MAX_FRAMES> =
-            heapless::Vec::new();
-        for item in frames {
-            let (frame, duration) = *item.borrow();
-            assert!(
-                duration.as_micros() > 0,
-                "animation frame duration must be positive"
-            );
-            sequence
-                .push((frame, duration))
-                .expect("animation sequence fits within MAX_FRAMES");
-        }
-        assert!(
-            !sequence.is_empty(),
-            "animation requires at least one frame"
-        );
-        self.command_signal.signal(Command::Animate(sequence));
+    pub fn __command_signal(&self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
+        self.command_signal
     }
 }
 
@@ -871,7 +844,7 @@ macro_rules! __led_strips_impl {
                 const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
 
                 fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) {
-                    self.strip.write_frame(frame);
+                    $crate::led_strip::__write_frame(self.strip.__command_signal(), frame);
                 }
 
                 fn animate<I>(&self, frames: I)
@@ -882,7 +855,7 @@ macro_rules! __led_strips_impl {
                         embassy_time::Duration,
                     )>,
                 {
-                    self.strip.animate(frames);
+                    $crate::led_strip::__animate(self.strip.__command_signal(), frames);
                 }
             }
 
@@ -1001,7 +974,7 @@ macro_rules! __led_strips_impl {
                 const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
 
                 fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) {
-                    self.strip.write_frame(frame);
+                    $crate::led_strip::__write_frame(self.strip.__command_signal(), frame);
                 }
 
                 fn animate<I>(&self, frames: I)
@@ -1012,7 +985,7 @@ macro_rules! __led_strips_impl {
                         embassy_time::Duration,
                     )>,
                 {
-                    self.strip.animate(frames);
+                    $crate::led_strip::__animate(self.strip.__command_signal(), frames);
                 }
             }
 
@@ -2765,7 +2738,7 @@ macro_rules! __led_strip_impl {
                 const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
 
                 fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) {
-                    self.strip.write_frame(frame);
+                    $crate::led_strip::__write_frame(self.strip.__command_signal(), frame);
                 }
 
                 fn animate<I>(&self, frames: I)
@@ -2776,7 +2749,7 @@ macro_rules! __led_strip_impl {
                         embassy_time::Duration,
                     )>,
                 {
-                    self.strip.animate(frames);
+                    $crate::led_strip::__animate(self.strip.__command_signal(), frames);
                 }
             }
 

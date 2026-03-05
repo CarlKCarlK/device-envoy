@@ -10,9 +10,9 @@
 
 use defmt_rtt as _;
 use device_envoy_rp::Result;
-use device_envoy_rp::led2d::Led2d as _;
 use device_envoy_rp::led_strip::led_strips;
 use device_envoy_rp::led_strip::{Current, colors};
+use device_envoy_rp::led2d::Led2d as _;
 use device_envoy_rp::led2d::Led2dFont;
 use device_envoy_rp::led2d::layout::LedLayout;
 use embassy_executor::Spawner;
@@ -55,11 +55,10 @@ led_strips! {
 async fn test_led12x4_pio0_write_text(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     let (gpio3_pio0_led2d,) = LedStripsPio0::new(p.PIO0, p.PIN_3, p.DMA_CH0, spawner)?;
 
-    gpio3_pio0_led2d
-        .write_text(
-            "1234",
-            &[colors::RED, colors::GREEN, colors::BLUE, colors::YELLOW],
-        );
+    gpio3_pio0_led2d.write_text(
+        "1234",
+        &[colors::RED, colors::GREEN, colors::BLUE, colors::YELLOW],
+    );
 
     Ok(())
 }

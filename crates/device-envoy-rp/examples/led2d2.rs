@@ -12,9 +12,9 @@ use device_envoy_rp::{
     led_strip::{Current, Gamma, colors},
     led2d,
     led2d::Frame2d,
+    led2d::Led2d as _,
     led2d::Led2dFont,
     led2d::layout::LedLayout,
-    led2d::Led2d as _,
 };
 use embassy_executor::Spawner;
 use embassy_rp::init;

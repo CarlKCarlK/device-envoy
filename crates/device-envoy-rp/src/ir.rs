@@ -165,7 +165,6 @@ impl IrRp<'_> {
 
         Ok(Self { ir_static })
     }
-
 }
 
 impl Ir for IrRp<'_> {

@@ -7,7 +7,7 @@
 use embassy_executor::Spawner;
 use heapless::LinearMap;
 
-use crate::ir::{Ir as _, IrEvent, IrMapping, IrEsp};
+use crate::ir::{Ir as _, IrEsp, IrEvent, IrMapping};
 #[cfg(target_os = "none")]
 use crate::Result;
 pub use device_envoy_core::ir::mapping::IrMappingStatic;

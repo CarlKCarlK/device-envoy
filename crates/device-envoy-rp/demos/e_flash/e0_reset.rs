@@ -8,8 +8,8 @@ use device_envoy_rp::{
     Result,
     flash_array::FlashArray,
     led2d,
-    led2d::{Led2dFont, layout::LedLayout},
     led2d::Led2d as _,
+    led2d::{Led2dFont, layout::LedLayout},
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};

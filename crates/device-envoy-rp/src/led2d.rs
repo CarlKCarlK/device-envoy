@@ -156,109 +156,17 @@ pub mod layout {
     pub use device_envoy_core::led2d::layout::*;
 }
 
-use crate::led_strip::{Frame1d as StripFrame, LedStripRp};
-use core::borrow::Borrow;
-pub use device_envoy_core::led2d::{
-    Frame2d, Led2dFont, Point, Size, bit_matrix3x4_font, render_text_to_frame,
-};
 pub use device_envoy_core::led2d::Led2d;
+pub use device_envoy_core::led2d::{
+    Frame2d, Led2dFont, Led2dStripAdapter, Led2dStripBacked, Point, Size, bit_matrix3x4_font,
+    render_text_to_frame,
+};
 pub use layout::LedLayout;
-use smart_leds::RGB8;
 
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that expands at the call site in downstream crates.
 // This is an implementation detail, not part of the user-facing API.
 #[doc(hidden)]
-/// A device abstraction for rectangular NeoPixel-style (WS2812) LED matrix displays.
-///
-/// Supports any size display with arbitrary LED-index-to-coordinate mapping. The provided mapping
-/// is reversed during initialization into an internal (row, col) → LED index lookup so frame
-/// conversion stays fast.
-///
-/// Rows and columns are metadata used only for indexing - the core type is generic only over
-/// N (total LEDs) and MAX_FRAMES (animation capacity).
-///
-/// Most users should use the `led2d!` or `led2d_from_strip!` macros which generate
-/// a higher-level wrapper. See the [led2d](mod@crate::led2d) module docs for examples.
-pub struct Led2dRp<const N: usize, const MAX_FRAMES: usize> {
-    led_strip: &'static LedStripRp<N, MAX_FRAMES>,
-    mapping_by_xy: [u16; N],
-    width: usize,
-}
-
-impl<const N: usize, const MAX_FRAMES: usize> Led2dRp<N, MAX_FRAMES> {
-    /// Create Led2dRp device handle.
-    ///
-    /// The `led_layout` defines how LED indices map to `(column, row)` coordinates. Entry `i`
-    /// provides the `(col, row)` destination for LED `i`. The layout is inverted via
-    /// [`LedLayout::xy_to_index`] so (row, col) queries are O(1) when converting frames.
-    ///
-    /// See the [Led2dRp struct example](Self) for usage.
-    #[must_use]
-    pub fn new<const W: usize, const H: usize>(
-        led_strip: &'static LedStripRp<N, MAX_FRAMES>,
-        led_layout: &LedLayout<N, W, H>,
-    ) -> Self {
-        assert_eq!(
-            W.checked_mul(H).expect("width * height must fit in usize"),
-            N,
-            "width * height must equal N (total LEDs for led_layout reversal)"
-        );
-        Self {
-            led_strip,
-            mapping_by_xy: led_layout.xy_to_index(),
-            width: W,
-        }
-    }
-
-    /// Convert (column, row) coordinates to LED strip index using the stored LED layout.
-    #[must_use]
-    fn xy_to_index(&self, x_index: usize, y_index: usize) -> usize {
-        self.mapping_by_xy[y_index * self.width + x_index] as usize
-    }
-
-    /// Convert 2D frame to 1D array using the LED layout.
-    fn convert_frame<const W: usize, const H: usize>(
-        &self,
-        frame_2d: Frame2d<W, H>,
-    ) -> StripFrame<N> {
-        let mut frame_1d = [RGB8::new(0, 0, 0); N];
-        for y_index in 0..H {
-            for x_index in 0..W {
-                let led_index = self.xy_to_index(x_index, y_index);
-                frame_1d[led_index] = frame_2d[(x_index, y_index)];
-            }
-        }
-        StripFrame::from(frame_1d)
-    }
-
-    /// Render a fully defined frame to the panel.
-    ///
-    /// Frame2d is a 2D array in row-major order where `frame[(col, row)]` is the pixel at (col, row).
-    pub fn write_frame<const W: usize, const H: usize>(&self, frame: Frame2d<W, H>) {
-        let strip_frame = self.convert_frame(frame);
-        self.led_strip.write_frame(strip_frame);
-    }
-
-    /// Loop through a sequence of animation frames until interrupted by another command.
-    ///
-    /// Each frame is a tuple of `(Frame2d, Duration)`. Accepts arrays, `Vec`s, or any
-    /// iterator that produces `(Frame2d, Duration)` tuples. For best efficiency with large
-    /// frame sequences, pass an iterator to avoid intermediate allocations.
-    ///
-    /// Returns immediately; the animation runs in the background until interrupted
-    /// by a new `animate` call or `write_frame`.
-    /// This uses [`embassy_time::Duration`] for frame timing.
-    pub fn animate<const W: usize, const H: usize, I>(&self, frames: I)
-    where
-        I: IntoIterator,
-        I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
-    {
-        self.led_strip.animate(frames.into_iter().map(|frame| {
-            let (frame, duration) = *frame.borrow();
-            (self.convert_frame(frame), duration)
-        }));
-    }
-}
+pub type Led2dRp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 
 /// Macro to generate an LED-panel struct type (includes syntax details). See [`Led2d`](`crate::led2d::Led2d`) for the shared API.
 ///
@@ -864,7 +772,7 @@ macro_rules! led2d_from_strip {
         $crate::led2d::paste::paste! {
             /// LED matrix device handle generated by [`led2d_from_strip!`](crate::led2d::led2d_from_strip).
             $vis struct [<$name>] {
-                led2d: $crate::led2d::Led2dRp<{ $led_layout_const.len() }, $max_frames_const>,
+                led2d: $crate::led2d::Led2dRp<'static, { $led_layout_const.len() }, $strip_type>,
             }
 
             #[allow(non_snake_case, dead_code)]
@@ -875,7 +783,7 @@ macro_rules! led2d_from_strip {
                     led_strip: &'static $strip_type,
                 ) -> $crate::Result<Self> {
                     let led2d = $crate::led2d::Led2dRp::new(
-                        led_strip.as_ref(),
+                        led_strip,
                         &$led_layout_const,
                     );
 
@@ -895,7 +803,7 @@ macro_rules! led2d_from_strip {
                     &self,
                     frame2d: $crate::led2d::Frame2d<{ $led_layout_const.width() }, { $led_layout_const.height() }>,
                 ) {
-                    self.led2d.write_frame(frame2d);
+                    $crate::led2d::Led2dStripBacked::write_frame(&self.led2d, frame2d);
                 }
 
                 fn animate<I>(&self, frames: I)
@@ -906,7 +814,7 @@ macro_rules! led2d_from_strip {
                         embassy_time::Duration,
                     )>,
                 {
-                    self.led2d.animate(frames);
+                    $crate::led2d::Led2dStripBacked::animate(&self.led2d, frames);
                 }
             }
         }

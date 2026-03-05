@@ -13,9 +13,9 @@ use device_envoy_rp::{
     flash_array::FlashArray,
     led_strip::colors,
     led2d,
+    led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},
     wifi_auto::{WifiAuto, WifiAutoEvent},
-    led2d::Led2d as _,
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;

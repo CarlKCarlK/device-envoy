@@ -14,10 +14,9 @@ use log::info;
 
 use device_envoy_esp::{
     init_and_start, led2d,
-    led2d::{layout::LedLayout, Frame2d, Led2dFont},
+    led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
     led_strip,
-    led_strip::{colors, Current, Frame1d},
-    led2d::Led2d as _,
+    led_strip::{colors, Current, Frame1d, LedStrip as _},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -87,7 +86,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         if tick_index % 2 == 0 {
             let mut panel_frame2d = Frame2d::<16, 16>::new();
             panel_frame2d[(panel_x_index, panel_y_index)] = colors::WHITE;
-            led16x16_dual.write_frame2d(panel_frame2d);
+            Led2d::write_frame(&led16x16_dual, panel_frame2d);
             panel_x_index += 1;
             if panel_x_index >= 16 {
                 panel_x_index = 0;

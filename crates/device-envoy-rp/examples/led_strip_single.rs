@@ -7,7 +7,7 @@ use core::future;
 
 use defmt::info;
 use device_envoy_rp::Result;
-use device_envoy_rp::led_strip::{LedStrip as _, Current, Frame1d, colors, led_strip};
+use device_envoy_rp::led_strip::{Current, Frame1d, LedStrip as _, colors, led_strip};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use {defmt_rtt as _, panic_probe as _};

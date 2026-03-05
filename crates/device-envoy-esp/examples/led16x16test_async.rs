@@ -17,9 +17,9 @@ use device_envoy_esp::{
     },
     init_and_start,
     led2d::layout::LedLayout,
+    led2d::Led2d as _,
     led_strip::{colors, RGB8},
     rmt,
-    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

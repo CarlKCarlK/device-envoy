@@ -104,7 +104,6 @@ where
             button_map: map,
         })
     }
-
 }
 
 impl<B, const N: usize> IrMapping<B> for IrMappingRp<'_, B, N>

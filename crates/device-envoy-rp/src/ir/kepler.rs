@@ -79,10 +79,10 @@ impl<'a> IrKeplerRp<'a> {
         P: Pin + PioPin,
         PIO: IrPioPeripheral,
     {
-        let mapping = IrMappingRp::new(ir_kepler_static.inner(), pin, pio, &KEPLER_MAPPING, spawner)?;
+        let mapping =
+            IrMappingRp::new(ir_kepler_static.inner(), pin, pio, &KEPLER_MAPPING, spawner)?;
         Ok(Self { mapping })
     }
-
 }
 
 impl IrKepler for IrKeplerRp<'_> {

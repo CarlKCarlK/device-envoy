@@ -12,10 +12,10 @@
 
 use defmt_rtt as _;
 use device_envoy_rp::Result;
-use device_envoy_rp::led2d::Led2d as _;
 use device_envoy_rp::led_strip::Current;
 use device_envoy_rp::led_strip::led_strips;
 use device_envoy_rp::led2d::Frame2d;
+use device_envoy_rp::led2d::Led2d as _;
 use device_envoy_rp::led2d::Led2dFont;
 use device_envoy_rp::led2d::layout::LedLayout;
 use embassy_executor::Spawner;
@@ -86,9 +86,9 @@ async fn test_multiple_devices(p: embassy_rp::Peripherals, spawner: Spawner) -> 
     let frames_8x8 = [(frame_8x8, Duration::from_millis(100))];
     gpio4_led2d.animate(frames_8x8);
 
-    // Verify N constant is correct for each
-    const _N_4X12: usize = Gpio3Led2d::N; // Should be 48
-    const _N_8X8: usize = Gpio4Led2d::N; // Should be 64
+    // Verify LEN constant is correct for each
+    const _N_4X12: usize = Gpio3Led2d::LEN; // Should be 48
+    const _N_8X8: usize = Gpio4Led2d::LEN; // Should be 64
 
     Ok(())
 }

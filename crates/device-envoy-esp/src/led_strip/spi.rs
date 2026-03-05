@@ -265,7 +265,7 @@ macro_rules! __led_strip_spi_impl {
                     &self,
                     frame: $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
                 ) {
-                    self.inner.write_frame(frame);
+                    $crate::led_strip::__write_frame(self.inner.__command_signal(), frame);
                 }
 
                 fn animate<I>(&self, frames: I)
@@ -276,7 +276,7 @@ macro_rules! __led_strip_spi_impl {
                         embassy_time::Duration,
                     )>,
                 {
-                    self.inner.animate(frames);
+                    $crate::led_strip::__animate(self.inner.__command_signal(), frames);
                 }
             }
 

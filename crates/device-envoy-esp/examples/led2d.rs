@@ -15,9 +15,9 @@ use log::info;
 
 use device_envoy_esp::{
     init_and_start, led2d,
+    led2d::Led2d as _,
     led2d::{layout::LedLayout, Frame2d, Led2dFont},
     led_strip::{colors, Current, Gamma},
-    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -60,7 +60,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     led12x8_animated.write_text_to_frame("\nGo", &[colors::HOT_PINK, colors::LIME], &mut frame_1);
 
     let frame_duration = Duration::from_secs(1);
-    led12x8_animated.animate2d([(frame_0, frame_duration), (frame_1, frame_duration)]);
+    led12x8_animated.animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
 
     core::future::pending().await
 }

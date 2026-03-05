@@ -6,8 +6,7 @@
 use core::{convert::Infallible, future, panic};
 
 use device_envoy_rp::{
-    Result, led_strip::colors, led2d, led2d::Led2dFont, led2d::layout::LedLayout,
-    led2d::Led2d as _,
+    Result, led_strip::colors, led2d, led2d::Led2d as _, led2d::Led2dFont, led2d::layout::LedLayout,
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -40,16 +39,15 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Text supports "\n" for multiple lines.
     // Colors are per-character, repeat as needed, and default to white.
-    led12x8
-        .write_text(
-            "Go\nGo",
-            &[
-                colors::LIGHT_GRAY,
-                colors::LIGHT_GRAY,
-                colors::ORANGE,
-                colors::HOT_PINK,
-            ],
-        );
+    led12x8.write_text(
+        "Go\nGo",
+        &[
+            colors::LIGHT_GRAY,
+            colors::LIGHT_GRAY,
+            colors::ORANGE,
+            colors::HOT_PINK,
+        ],
+    );
 
     future::pending().await // run forever
 }

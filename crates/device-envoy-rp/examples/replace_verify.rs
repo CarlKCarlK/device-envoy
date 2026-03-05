@@ -9,11 +9,11 @@ use defmt::info;
 use device_envoy_rp::{
     Result,
     button::{Button, PressedTo},
-    led_strip::{LedStrip as _, Current, Frame1d, colors, led_strips},
+    led_strip::{Current, Frame1d, LedStrip as _, colors, led_strips},
     led2d::Frame2d,
+    led2d::Led2d as _,
     led2d::Led2dFont,
     led2d::layout::LedLayout,
-    led2d::Led2d as _,
 };
 use {defmt_rtt as _, panic_probe as _};
 

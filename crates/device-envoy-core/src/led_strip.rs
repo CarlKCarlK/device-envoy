@@ -336,6 +336,43 @@ pub enum Command<const N: usize, const MAX_FRAMES: usize> {
     Animate(Vec<(Frame1d<N>, Duration), MAX_FRAMES>),
 }
 
+// Must be `pub` for macro expansion at foreign call sites — not user-facing.
+#[doc(hidden)]
+pub fn __write_frame<const N: usize, const MAX_FRAMES: usize>(
+    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
+    frame: Frame1d<N>,
+) {
+    command_signal.signal(Command::DisplayStatic(frame));
+}
+
+// Must be `pub` for macro expansion at foreign call sites — not user-facing.
+#[doc(hidden)]
+pub fn __animate<const N: usize, const MAX_FRAMES: usize, I>(
+    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
+    frames: I,
+) where
+    I: IntoIterator,
+    I::Item: Borrow<(Frame1d<N>, Duration)>,
+{
+    assert!(MAX_FRAMES > 0, "animation disabled (MAX_FRAMES = 0)");
+    let mut sequence: Vec<(Frame1d<N>, Duration), MAX_FRAMES> = Vec::new();
+    for item in frames {
+        let (frame, duration) = *item.borrow();
+        assert!(
+            duration.as_micros() > 0,
+            "animation frame duration must be positive"
+        );
+        sequence
+            .push((frame, duration))
+            .expect("animation sequence fits within MAX_FRAMES");
+    }
+    assert!(
+        !sequence.is_empty(),
+        "animation requires at least one frame"
+    );
+    command_signal.signal(Command::Animate(sequence));
+}
+
 /// Static resources for a LED strip runtime instance. Allocated once at program
 /// start (typically as a `static`).
 ///

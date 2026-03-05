@@ -9,7 +9,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::Result;
 use device_envoy_rp::led_strip::led_strip;
-use device_envoy_rp::led_strip::{LedStrip as _, Frame1d, colors};
+use device_envoy_rp::led_strip::{Frame1d, LedStrip as _, colors};
 use embassy_executor::Spawner;
 use panic_probe as _;
 

@@ -6,7 +6,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::Result;
 use device_envoy_rp::led_strip::led_strip;
-use device_envoy_rp::led_strip::{LedStrip as _, Current, Frame1d, RGB8};
+use device_envoy_rp::led_strip::{Current, Frame1d, LedStrip as _, RGB8};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use panic_probe as _;

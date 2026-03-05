@@ -64,7 +64,6 @@ impl IrEsp<'_> {
 
         Ok(Self { ir_static })
     }
-
 }
 
 impl Ir for IrEsp<'_> {

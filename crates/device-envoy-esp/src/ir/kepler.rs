@@ -47,7 +47,6 @@ impl<'a> IrKeplerEsp<'a> {
         )?;
         Ok(Self { mapping })
     }
-
 }
 
 impl IrKepler for IrKeplerEsp<'_> {

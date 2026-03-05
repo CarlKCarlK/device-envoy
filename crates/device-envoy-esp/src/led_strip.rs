@@ -8,8 +8,6 @@
 //! controller. Use `engine: Engine::Spi` to select the SPI variant backed by
 //! the [`spi`] sub-module.
 
-use core::borrow::Borrow;
-
 pub use device_envoy_core::led_strip::*;
 
 /// Internal runtime handle for macro-generated LED strip types.
@@ -33,35 +31,10 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStripEsp<N, MAX_FRAMES> {
         }
     }
 
+    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
     #[doc(hidden)]
-    pub fn write_frame(&self, frame: Frame1d<N>) {
-        self.command_signal.signal(Command::DisplayStatic(frame));
-    }
-
-    #[doc(hidden)]
-    pub fn animate<I>(&self, frames: I)
-    where
-        I: IntoIterator,
-        I::Item: core::borrow::Borrow<(Frame1d<N>, embassy_time::Duration)>,
-    {
-        assert!(MAX_FRAMES > 0, "animation disabled (MAX_FRAMES = 0)");
-        let mut sequence: heapless::Vec<(Frame1d<N>, embassy_time::Duration), MAX_FRAMES> =
-            heapless::Vec::new();
-        for item in frames {
-            let (frame, duration) = *item.borrow();
-            assert!(
-                duration.as_micros() > 0,
-                "animation frame duration must be positive"
-            );
-            sequence
-                .push((frame, duration))
-                .expect("animation sequence fits within MAX_FRAMES");
-        }
-        assert!(
-            !sequence.is_empty(),
-            "animation requires at least one frame"
-        );
-        self.command_signal.signal(Command::Animate(sequence));
+    pub fn __command_signal(&self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
+        self.command_signal
     }
 }
 
@@ -509,8 +482,7 @@ macro_rules! __led_strip_first_or_default {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __led2d_strip_methods {
-    ($_leds:expr, $_max_frames:expr, [$led_layout:expr], [$font:expr]) => {
-    };
+    ($_leds:expr, $_max_frames:expr, [$led_layout:expr], [$font:expr]) => {};
     ($_leds:expr, $_max_frames:expr, [], []) => {};
 }
 
@@ -530,8 +502,8 @@ macro_rules! __led2d_strip_trait_impl {
                 &self,
                 frame2d: $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
             ) {
-                let led2d = $crate::led2d::Led2dEsp::new(&self.inner, &$led_layout);
-                led2d.write_frame(frame2d);
+                let led2d = $crate::led2d::Led2dEsp::new(*self, &$led_layout);
+                $crate::led2d::Led2dStripBacked::write_frame(&led2d, frame2d);
             }
 
             fn animate<I>(&self, frames: I)
@@ -542,8 +514,8 @@ macro_rules! __led2d_strip_trait_impl {
                     embassy_time::Duration,
                 )>,
             {
-                let led2d = $crate::led2d::Led2dEsp::new(&self.inner, &$led_layout);
-                led2d.animate(frames);
+                let led2d = $crate::led2d::Led2dEsp::new(*self, &$led_layout);
+                $crate::led2d::Led2dStripBacked::animate(&led2d, frames);
             }
         }
     };
@@ -673,7 +645,7 @@ macro_rules! __led_strip_impl {
                     &self,
                     frame: $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
                 ) {
-                    self.inner.write_frame(frame);
+                    $crate::led_strip::__write_frame(self.inner.__command_signal(), frame);
                 }
 
                 fn animate<I>(&self, frames: I)
@@ -684,7 +656,7 @@ macro_rules! __led_strip_impl {
                         embassy_time::Duration,
                     )>,
                 {
-                    self.inner.animate(frames);
+                    $crate::led_strip::__animate(self.inner.__command_signal(), frames);
                 }
             }
 

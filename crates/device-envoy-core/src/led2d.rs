@@ -33,6 +33,7 @@ use embedded_graphics::{
 use smart_leds::RGB8;
 
 use crate::led_strip::ToRgb888;
+use crate::led_strip::{Frame1d as StripFrame, LedStrip as LedStripTrait};
 
 /// Platform-agnostic LED panel device contract.
 ///
@@ -62,8 +63,6 @@ pub trait Led2d<const W: usize, const H: usize> {
     const HEIGHT: usize = H;
     /// Total LEDs in this panel (width × height).
     const LEN: usize = W * H;
-    /// Compatibility alias for [`Led2d::LEN`].
-    const N: usize = Self::LEN;
     /// Panel dimensions as a [`Size`].
     ///
     /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations.
@@ -103,11 +102,6 @@ pub trait Led2d<const W: usize, const H: usize> {
     /// See your platform crate's `led2d` module docs for usage examples.
     fn write_frame(&self, frame2d: Frame2d<W, H>);
 
-    /// Compatibility alias for [`Led2d::write_frame`].
-    fn write_frame2d(&self, frame2d: Frame2d<W, H>) {
-        self.write_frame(frame2d);
-    }
-
     /// Animate frames on the LED panel.
     ///
     /// The duration type is [`embassy_time::Duration`], and `frames` can be any iterator whose
@@ -118,15 +112,6 @@ pub trait Led2d<const W: usize, const H: usize> {
     where
         I: IntoIterator,
         I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>;
-
-    /// Compatibility alias for [`Led2d::animate`].
-    fn animate2d<I>(&self, frames: I)
-    where
-        I: IntoIterator,
-        I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
-    {
-        self.animate(frames);
-    }
 
     /// Write text into a frame.
     ///
@@ -160,6 +145,118 @@ pub trait Led2d<const W: usize, const H: usize> {
         let mut frame = Frame2d::<W, H>::new();
         self.write_text_to_frame(text, colors, &mut frame);
         self.write_frame(frame);
+    }
+}
+
+/// Extension trait for strip-backed [`Led2d`] implementations.
+///
+/// This keeps the base [`Led2d`] trait backend-agnostic while still providing
+/// reusable default behavior for implementations that render via a [`crate::led_strip::LedStrip`].
+pub trait Led2dStripBacked<const N: usize> {
+    /// Concrete strip type used by this panel implementation.
+    type Strip: LedStripTrait<N> + ?Sized;
+
+    /// Return the underlying strip handle.
+    fn led_strip(&self) -> &Self::Strip;
+
+    /// Return the `(x, y) -> strip_index` mapping table.
+    fn mapping_by_xy(&self) -> &[u16; N];
+
+    /// Return the panel width used by [`Led2dStripBacked::xy_to_index`].
+    fn width(&self) -> usize;
+
+    /// Convert `(column, row)` to strip index using [`Led2dStripBacked::mapping_by_xy`].
+    #[must_use]
+    fn xy_to_index(&self, x_index: usize, y_index: usize) -> usize {
+        self.mapping_by_xy()[y_index * self.width() + x_index] as usize
+    }
+
+    /// Convert a 2D frame into a strip frame using the stored mapping.
+    fn convert_frame<const W: usize, const H: usize>(
+        &self,
+        frame_2d: Frame2d<W, H>,
+    ) -> StripFrame<N> {
+        let mut frame_1d = [RGB8::new(0, 0, 0); N];
+        for y_index in 0..H {
+            for x_index in 0..W {
+                let led_index = self.xy_to_index(x_index, y_index);
+                frame_1d[led_index] = frame_2d[(x_index, y_index)];
+            }
+        }
+        StripFrame::from(frame_1d)
+    }
+
+    /// Write a panel frame through the associated strip backend.
+    fn write_frame<const W: usize, const H: usize>(&self, frame: Frame2d<W, H>) {
+        let strip_frame = self.convert_frame(frame);
+        self.led_strip().write_frame(strip_frame);
+    }
+
+    /// Animate panel frames through the associated strip backend.
+    fn animate<const W: usize, const H: usize, I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
+    {
+        self.led_strip().animate(frames.into_iter().map(|frame| {
+            let (frame, duration) = *frame.borrow();
+            (self.convert_frame(frame), duration)
+        }));
+    }
+}
+
+/// Shared adapter that maps [`Frame2d`] panels onto a 1D LED strip device.
+///
+/// Platform crates can use this to build their `led2d` wrappers while keeping
+/// mapping and frame-conversion logic in `device-envoy-core`.
+pub struct Led2dStripAdapter<'a, const N: usize, S>
+where
+    S: LedStripTrait<N> + ?Sized,
+{
+    led_strip: &'a S,
+    mapping_by_xy: [u16; N],
+    width: usize,
+}
+
+impl<'a, const N: usize, S> Led2dStripAdapter<'a, N, S>
+where
+    S: LedStripTrait<N> + ?Sized,
+{
+    /// Create a strip-backed LED panel adapter from a strip and panel layout.
+    #[must_use]
+    pub fn new<const W: usize, const H: usize>(
+        led_strip: &'a S,
+        led_layout: &LedLayout<N, W, H>,
+    ) -> Self {
+        assert_eq!(
+            W.checked_mul(H).expect("width * height must fit in usize"),
+            N,
+            "width * height must equal N"
+        );
+        Self {
+            led_strip,
+            mapping_by_xy: led_layout.xy_to_index(),
+            width: W,
+        }
+    }
+}
+
+impl<'a, const N: usize, S> Led2dStripBacked<N> for Led2dStripAdapter<'a, N, S>
+where
+    S: LedStripTrait<N> + ?Sized,
+{
+    type Strip = S;
+
+    fn led_strip(&self) -> &Self::Strip {
+        self.led_strip
+    }
+
+    fn mapping_by_xy(&self) -> &[u16; N] {
+        &self.mapping_by_xy
+    }
+
+    fn width(&self) -> usize {
+        self.width
     }
 }
 

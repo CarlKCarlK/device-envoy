@@ -22,10 +22,10 @@ use device_envoy_esp::{
     button::PressedTo,
     flash_array::FlashArray,
     init_and_start, led2d,
+    led2d::Led2d as _,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::{colors, Current, Gamma},
     wifi_auto::{WifiAuto, WifiAutoEvent},
-    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

@@ -7,7 +7,7 @@ use core::{convert::Infallible, future, panic};
 
 use device_envoy_rp::{
     Result,
-    led_strip::{LedStrip as _, Frame1d, colors, led_strip},
+    led_strip::{Frame1d, LedStrip as _, colors, led_strip},
 };
 use embassy_executor::Spawner;
 use embassy_time::Duration;

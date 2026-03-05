@@ -7,8 +7,7 @@ use core::{convert::Infallible, future};
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::{
-    Result, led_strip::colors, led2d, led2d::Led2dFont, led2d::layout::LedLayout,
-    led2d::Led2d as _,
+    Result, led_strip::colors, led2d, led2d::Led2d as _, led2d::Led2dFont, led2d::layout::LedLayout,
 };
 use embassy_executor::Spawner;
 use embassy_rp::init;

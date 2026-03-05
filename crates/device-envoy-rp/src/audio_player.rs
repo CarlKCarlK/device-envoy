@@ -127,7 +127,7 @@
 //!     audio_player::{
 //!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
-//!     button::{ButtonRp, PressedTo},
+//!     button::{ButtonDevice as _, ButtonRp, PressedTo},
 //!     tone,
 //! };
 //! use core::time::Duration as StdDuration;
@@ -321,11 +321,6 @@ pub mod pcm_clip_generated;
 pub use device_envoy_core::audio_player::*;
 
 #[cfg(target_os = "none")]
-use core::ops::ControlFlow;
-#[cfg(target_os = "none")]
-use core::time::Duration;
-
-#[cfg(target_os = "none")]
 use crate::pio_irqs::PioIrqMap;
 #[cfg(target_os = "none")]
 use embassy_rp::Peri;
@@ -342,6 +337,96 @@ use embassy_rp::pio_programs::i2s::{PioI2sOut, PioI2sOutProgram};
 const BIT_DEPTH_BITS: u32 = 16;
 #[cfg(target_os = "none")]
 const SAMPLE_BUFFER_LEN: usize = 256;
+
+/// Internal runtime handle for macro-generated audio player types.
+///
+/// `#[doc(hidden)]` because this is implementation detail used by macro output.
+#[doc(hidden)]
+pub struct AudioPlayerRp<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+}
+
+impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayerRp<MAX_CLIPS, SAMPLE_RATE_HZ> {
+    #[doc(hidden)]
+    pub const fn new_static() -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static()
+    }
+
+    #[doc(hidden)]
+    pub const fn new_static_with_max_volume(
+        max_volume: Volume,
+    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static_with_max_volume(max_volume)
+    }
+
+    #[doc(hidden)]
+    pub const fn new_static_with_max_volume_and_initial_volume(
+        max_volume: Volume,
+        initial_volume: Volume,
+    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static_with_max_volume_and_initial_volume(max_volume, initial_volume)
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub const fn new(
+        audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+    ) -> Self {
+        Self {
+            audio_player_static,
+        }
+    }
+
+    pub fn play<I>(&self, audio_clips: I, at_end: AtEnd)
+    where
+        I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>,
+    {
+        __audio_player_play(self.audio_player_static, audio_clips, at_end);
+    }
+
+    pub fn play_iter<I>(&self, audio_clips: I, at_end: AtEnd)
+    where
+        I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>,
+    {
+        self.play(audio_clips, at_end);
+    }
+
+    pub fn stop(&self) {
+        __audio_player_stop(self.audio_player_static);
+    }
+
+    pub async fn wait_until_stopped(&self) {
+        __audio_player_wait_until_stopped(self.audio_player_static).await;
+    }
+
+    pub fn set_volume(&self, volume: Volume) {
+        __audio_player_set_volume(self.audio_player_static, volume);
+    }
+
+    #[must_use]
+    pub fn volume(&self) -> Volume {
+        __audio_player_volume(self.audio_player_static)
+    }
+}
+
+#[cfg(target_os = "none")]
+struct RpAudioOutputSink<'a, PIO: Instance + 'static> {
+    pio_i2s_out: &'a mut PioI2sOut<'static, PIO, 0>,
+}
+
+#[cfg(target_os = "none")]
+impl<PIO: Instance + 'static> AudioOutputSink<SAMPLE_BUFFER_LEN> for RpAudioOutputSink<'_, PIO> {
+    async fn write_stereo_words(
+        &mut self,
+        stereo_words: &[u32; SAMPLE_BUFFER_LEN],
+        stereo_word_count: usize,
+    ) -> core::result::Result<(), ()> {
+        self.pio_i2s_out
+            .write(&stereo_words[..stereo_word_count])
+            .await;
+        Ok(())
+    }
+}
 
 // Called by macro-generated code in downstream crates; must be public.
 #[cfg(target_os = "none")]
@@ -391,8 +476,11 @@ pub async fn device_loop<
                     audio_player_static.mark_playing();
                     let next_audio_command = match at_end {
                         AtEnd::Loop => loop {
+                            let mut rp_audio_output_sink = RpAudioOutputSink {
+                                pio_i2s_out: &mut pio_i2s_out,
+                            };
                             if let Some(next_audio_command) = play_clip_sequence_once(
-                                &mut pio_i2s_out,
+                                &mut rp_audio_output_sink,
                                 &audio_clips,
                                 &mut sample_buffer,
                                 audio_player_static,
@@ -403,8 +491,11 @@ pub async fn device_loop<
                             }
                         },
                         AtEnd::Stop => {
+                            let mut rp_audio_output_sink = RpAudioOutputSink {
+                                pio_i2s_out: &mut pio_i2s_out,
+                            };
                             play_clip_sequence_once(
-                                &mut pio_i2s_out,
+                                &mut rp_audio_output_sink,
                                 &audio_clips,
                                 &mut sample_buffer,
                                 audio_player_static,
@@ -426,229 +517,6 @@ pub async fn device_loop<
             break;
         }
     }
-}
-
-#[cfg(target_os = "none")]
-async fn play_clip_sequence_once<
-    PIO: Instance,
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
-    pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_clips: &[PlaybackClip<SAMPLE_RATE_HZ>],
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> Option<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>> {
-    for audio_clip in audio_clips {
-        match audio_clip {
-            PlaybackClip::Pcm(audio_clip) => {
-                if let ControlFlow::Break(next_audio_command) = play_full_pcm_clip_once(
-                    pio_i2s_out,
-                    audio_clip,
-                    sample_buffer,
-                    audio_player_static,
-                )
-                .await
-                {
-                    return Some(next_audio_command);
-                }
-            }
-            PlaybackClip::Adpcm(adpcm_clip) => {
-                if let ControlFlow::Break(next_audio_command) = play_full_adpcm_clip_once(
-                    pio_i2s_out,
-                    adpcm_clip,
-                    sample_buffer,
-                    audio_player_static,
-                )
-                .await
-                {
-                    return Some(next_audio_command);
-                }
-            }
-            PlaybackClip::Silence(duration) => {
-                if let ControlFlow::Break(next_audio_command) = play_silence_duration_once(
-                    pio_i2s_out,
-                    *duration,
-                    sample_buffer,
-                    audio_player_static,
-                )
-                .await
-                {
-                    return Some(next_audio_command);
-                }
-            }
-        }
-    }
-    None
-}
-
-#[cfg(target_os = "none")]
-async fn play_full_pcm_clip_once<
-    PIO: Instance,
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
-    pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    audio_clip: &PcmClip<SAMPLE_RATE_HZ>,
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
-    for audio_sample_chunk in audio_clip.samples().chunks(SAMPLE_BUFFER_LEN) {
-        let runtime_volume = audio_player_static.effective_runtime_volume();
-        for (sample_buffer_slot, sample_value_ref) in
-            sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
-        {
-            let sample_value = *sample_value_ref;
-            let scaled_sample_value = scale_sample_with_volume(sample_value, runtime_volume);
-            *sample_buffer_slot = stereo_sample(scaled_sample_value);
-        }
-
-        sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));
-        pio_i2s_out.write(sample_buffer).await;
-
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    ControlFlow::Continue(())
-}
-
-#[cfg(target_os = "none")]
-async fn play_full_adpcm_clip_once<
-    PIO: Instance,
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
-    pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    adpcm_clip: &AdpcmClip<SAMPLE_RATE_HZ>,
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
-    let mut sample_buffer_len = 0usize;
-
-    let block_align = adpcm_clip.block_align() as usize;
-    for adpcm_block in adpcm_clip.data().chunks_exact(block_align) {
-        if adpcm_block.len() < 4 {
-            return ControlFlow::Continue(());
-        }
-
-        let runtime_volume = audio_player_static.effective_runtime_volume();
-        let mut predictor_i32 = match read_i16_le(adpcm_block, 0) {
-            Ok(value) => value as i32,
-            Err(_) => return ControlFlow::Continue(()),
-        };
-        let mut step_index_i32 = adpcm_block[2] as i32;
-        if !(0..=88).contains(&step_index_i32) {
-            return ControlFlow::Continue(());
-        }
-
-        sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_volume(
-            predictor_i32 as i16,
-            runtime_volume,
-        ));
-        sample_buffer_len += 1;
-        if sample_buffer_len == SAMPLE_BUFFER_LEN {
-            pio_i2s_out.write(sample_buffer).await;
-            sample_buffer_len = 0;
-            if let Some(next_audio_command) = audio_player_static.try_take_command() {
-                return ControlFlow::Break(next_audio_command);
-            }
-        }
-
-        let mut samples_decoded_in_block = 1usize;
-        let samples_per_block = adpcm_clip.samples_per_block() as usize;
-
-        for adpcm_byte in &adpcm_block[4..] {
-            for adpcm_nibble in [adpcm_byte & 0x0F, adpcm_byte >> 4] {
-                if samples_decoded_in_block >= samples_per_block {
-                    break;
-                }
-
-                let decoded_sample_i16 =
-                    decode_adpcm_nibble(adpcm_nibble, &mut predictor_i32, &mut step_index_i32);
-                sample_buffer[sample_buffer_len] =
-                    stereo_sample(scale_sample_with_volume(decoded_sample_i16, runtime_volume));
-                sample_buffer_len += 1;
-                samples_decoded_in_block += 1;
-
-                if sample_buffer_len == SAMPLE_BUFFER_LEN {
-                    pio_i2s_out.write(sample_buffer).await;
-                    sample_buffer_len = 0;
-                    if let Some(next_audio_command) = audio_player_static.try_take_command() {
-                        return ControlFlow::Break(next_audio_command);
-                    }
-                }
-            }
-        }
-
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    if sample_buffer_len != 0 {
-        sample_buffer[sample_buffer_len..].fill(stereo_sample(0));
-        pio_i2s_out.write(sample_buffer).await;
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    ControlFlow::Continue(())
-}
-
-#[cfg(target_os = "none")]
-async fn play_silence_duration_once<
-    PIO: Instance,
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
-    pio_i2s_out: &mut PioI2sOut<'static, PIO, 0>,
-    duration: Duration,
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
-    let silence_sample_count = __samples_for_duration(duration, SAMPLE_RATE_HZ);
-    let mut remaining_sample_count = silence_sample_count;
-    let zero_stereo_sample = stereo_sample(0);
-    sample_buffer.fill(zero_stereo_sample);
-
-    while remaining_sample_count > 0 {
-        let chunk_sample_count = remaining_sample_count.min(SAMPLE_BUFFER_LEN);
-        pio_i2s_out.write(sample_buffer).await;
-        remaining_sample_count -= chunk_sample_count;
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    ControlFlow::Continue(())
-}
-
-#[cfg(target_os = "none")]
-fn read_i16_le(bytes: &[u8], byte_offset: usize) -> crate::Result<i16> {
-    let Some(end_offset) = byte_offset.checked_add(2) else {
-        return Err(crate::Error::FormatError);
-    };
-    if end_offset > bytes.len() {
-        return Err(crate::Error::FormatError);
-    }
-    Ok(i16::from_le_bytes([
-        bytes[byte_offset],
-        bytes[byte_offset + 1],
-    ]))
-}
-
-#[cfg(target_os = "none")]
-fn decode_adpcm_nibble(adpcm_nibble: u8, predictor_i32: &mut i32, step_index_i32: &mut i32) -> i16 {
-    decode_adpcm_nibble_const(adpcm_nibble, predictor_i32, step_index_i32)
-}
-#[inline]
-#[cfg(target_os = "none")]
-const fn stereo_sample(sample: i16) -> u32 {
-    let sample_bits = sample as u16 as u32;
-    (sample_bits << 16) | sample_bits
 }
 
 /// Macro to generate an audio player struct type (includes syntax details).
@@ -1131,7 +999,7 @@ macro_rules! __audio_player_impl {
         $crate::audio_player::paste::paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]:
                 $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }> =
-                $crate::audio_player::AudioPlayer::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
+                $crate::audio_player::AudioPlayerRp::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
                     $max_volume,
                     $initial_volume,
                 );
@@ -1143,7 +1011,7 @@ macro_rules! __audio_player_impl {
                 "See the [audio_player module documentation](mod@crate::audio_player) for usage and examples."
             )]
             $vis struct $name {
-                player: $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>,
+                player: $crate::audio_player::AudioPlayerRp<$max_clips, { $sample_rate_hz }>,
             }
 
             #[doc = concat!(
@@ -1191,7 +1059,7 @@ macro_rules! __audio_player_impl {
                     );
                     spawner.spawn(token)?;
                     let player =
-                        $crate::audio_player::AudioPlayer::new(&[<$name:upper _AUDIO_PLAYER_STATIC>]);
+                        $crate::audio_player::AudioPlayerRp::new(&[<$name:upper _AUDIO_PLAYER_STATIC>]);
                     Ok([<$name:upper _AUDIO_PLAYER_CELL>].init(Self { player }))
                 }
 
@@ -1205,7 +1073,7 @@ macro_rules! __audio_player_impl {
             }
 
             impl ::core::ops::Deref for $name {
-                type Target = $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>;
+                type Target = $crate::audio_player::AudioPlayerRp<$max_clips, { $sample_rate_hz }>;
 
                 fn deref(&self) -> &Self::Target {
                     &self.player

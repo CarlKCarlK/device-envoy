@@ -15,6 +15,7 @@ pub mod pcm_clip_generated;
 // `$crate::audio_player::paste::paste!` in their `audio_player!` macro.
 pub use paste;
 
+use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use core::sync::atomic::{AtomicI32, Ordering};
 use core::time::Duration;
@@ -330,6 +331,275 @@ const fn clamp_i64_to_i16(value_i64: i64) -> i16 {
     } else {
         value_i64 as i16
     }
+}
+
+/// Platform sink used by shared audio playback routines.
+#[doc(hidden)]
+#[allow(async_fn_in_trait)]
+pub trait AudioOutputSink<const SAMPLE_BUFFER_LEN: usize> {
+    /// Writes `stereo_word_count` samples from `stereo_words`.
+    async fn write_stereo_words(
+        &mut self,
+        stereo_words: &[u32; SAMPLE_BUFFER_LEN],
+        stereo_word_count: usize,
+    ) -> Result<(), ()>;
+
+    /// Optional hook for platform pacing after each successful write.
+    async fn after_write(&mut self) {}
+}
+
+/// Packs a mono sample into a stereo I2S frame word.
+#[doc(hidden)]
+#[inline]
+pub const fn stereo_sample(sample: i16) -> u32 {
+    let sample_bits = sample as u16 as u32;
+    (sample_bits << 16) | sample_bits
+}
+
+// Must be `pub` because platform `device_loop` implementations call this from
+// another crate.
+#[doc(hidden)]
+pub async fn play_clip_sequence_once<
+    Output: AudioOutputSink<SAMPLE_BUFFER_LEN>,
+    const SAMPLE_BUFFER_LEN: usize,
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
+    output: &mut Output,
+    audio_clips: &[PlaybackClip<SAMPLE_RATE_HZ>],
+    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) -> Option<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>> {
+    for audio_clip in audio_clips {
+        match audio_clip {
+            PlaybackClip::Pcm(audio_clip) => {
+                if let ControlFlow::Break(next_audio_command) =
+                    play_full_pcm_clip_once(output, audio_clip, sample_buffer, audio_player_static)
+                        .await
+                {
+                    return Some(next_audio_command);
+                }
+            }
+            PlaybackClip::Adpcm(adpcm_clip) => {
+                if let ControlFlow::Break(next_audio_command) = play_full_adpcm_clip_once(
+                    output,
+                    adpcm_clip,
+                    sample_buffer,
+                    audio_player_static,
+                )
+                .await
+                {
+                    return Some(next_audio_command);
+                }
+            }
+            PlaybackClip::Silence(duration) => {
+                if let ControlFlow::Break(next_audio_command) = play_silence_duration_once(
+                    output,
+                    *duration,
+                    sample_buffer,
+                    audio_player_static,
+                )
+                .await
+                {
+                    return Some(next_audio_command);
+                }
+            }
+        }
+    }
+    None
+}
+
+async fn play_full_pcm_clip_once<
+    Output: AudioOutputSink<SAMPLE_BUFFER_LEN>,
+    const SAMPLE_BUFFER_LEN: usize,
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
+    output: &mut Output,
+    audio_clip: &PcmClip<SAMPLE_RATE_HZ>,
+    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
+    for audio_sample_chunk in audio_clip.samples().chunks(SAMPLE_BUFFER_LEN) {
+        let runtime_volume = audio_player_static.effective_runtime_volume();
+        for (sample_buffer_slot, sample_value_ref) in
+            sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
+        {
+            let sample_value = *sample_value_ref;
+            let scaled_sample_value = scale_sample_with_volume(sample_value, runtime_volume);
+            *sample_buffer_slot = stereo_sample(scaled_sample_value);
+        }
+        sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));
+
+        if output
+            .write_stereo_words(sample_buffer, audio_sample_chunk.len())
+            .await
+            .is_err()
+        {
+            return ControlFlow::Continue(());
+        }
+        output.after_write().await;
+
+        if let Some(next_audio_command) = audio_player_static.try_take_command() {
+            return ControlFlow::Break(next_audio_command);
+        }
+    }
+
+    ControlFlow::Continue(())
+}
+
+async fn play_full_adpcm_clip_once<
+    Output: AudioOutputSink<SAMPLE_BUFFER_LEN>,
+    const SAMPLE_BUFFER_LEN: usize,
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
+    output: &mut Output,
+    adpcm_clip: &AdpcmClip<SAMPLE_RATE_HZ>,
+    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
+    let mut sample_buffer_len = 0usize;
+
+    let block_align = adpcm_clip.block_align() as usize;
+    for adpcm_block in adpcm_clip.data().chunks_exact(block_align) {
+        if adpcm_block.len() < 4 {
+            return ControlFlow::Continue(());
+        }
+
+        let runtime_volume = audio_player_static.effective_runtime_volume();
+        let mut predictor_i32 = match read_i16_le(adpcm_block, 0) {
+            Some(value) => value as i32,
+            None => return ControlFlow::Continue(()),
+        };
+        let mut step_index_i32 = adpcm_block[2] as i32;
+        if !(0..=88).contains(&step_index_i32) {
+            return ControlFlow::Continue(());
+        }
+
+        sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_volume(
+            predictor_i32 as i16,
+            runtime_volume,
+        ));
+        sample_buffer_len += 1;
+        if sample_buffer_len == SAMPLE_BUFFER_LEN {
+            if output
+                .write_stereo_words(sample_buffer, sample_buffer_len)
+                .await
+                .is_err()
+            {
+                return ControlFlow::Continue(());
+            }
+            output.after_write().await;
+            sample_buffer_len = 0;
+            if let Some(next_audio_command) = audio_player_static.try_take_command() {
+                return ControlFlow::Break(next_audio_command);
+            }
+        }
+
+        let mut samples_decoded_in_block = 1usize;
+        let samples_per_block = adpcm_clip.samples_per_block() as usize;
+
+        for adpcm_byte in &adpcm_block[4..] {
+            for adpcm_nibble in [adpcm_byte & 0x0F, adpcm_byte >> 4] {
+                if samples_decoded_in_block >= samples_per_block {
+                    break;
+                }
+
+                let decoded_sample_i16 = decode_adpcm_nibble_const(
+                    adpcm_nibble,
+                    &mut predictor_i32,
+                    &mut step_index_i32,
+                );
+                sample_buffer[sample_buffer_len] =
+                    stereo_sample(scale_sample_with_volume(decoded_sample_i16, runtime_volume));
+                sample_buffer_len += 1;
+                samples_decoded_in_block += 1;
+
+                if sample_buffer_len == SAMPLE_BUFFER_LEN {
+                    if output
+                        .write_stereo_words(sample_buffer, sample_buffer_len)
+                        .await
+                        .is_err()
+                    {
+                        return ControlFlow::Continue(());
+                    }
+                    output.after_write().await;
+                    sample_buffer_len = 0;
+                    if let Some(next_audio_command) = audio_player_static.try_take_command() {
+                        return ControlFlow::Break(next_audio_command);
+                    }
+                }
+            }
+        }
+
+        if let Some(next_audio_command) = audio_player_static.try_take_command() {
+            return ControlFlow::Break(next_audio_command);
+        }
+    }
+
+    if sample_buffer_len != 0 {
+        sample_buffer[sample_buffer_len..].fill(stereo_sample(0));
+        if output
+            .write_stereo_words(sample_buffer, sample_buffer_len)
+            .await
+            .is_err()
+        {
+            return ControlFlow::Continue(());
+        }
+        output.after_write().await;
+        if let Some(next_audio_command) = audio_player_static.try_take_command() {
+            return ControlFlow::Break(next_audio_command);
+        }
+    }
+
+    ControlFlow::Continue(())
+}
+
+async fn play_silence_duration_once<
+    Output: AudioOutputSink<SAMPLE_BUFFER_LEN>,
+    const SAMPLE_BUFFER_LEN: usize,
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
+    output: &mut Output,
+    duration: Duration,
+    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
+    let silence_sample_count = __samples_for_duration(duration, SAMPLE_RATE_HZ);
+    let mut remaining_sample_count = silence_sample_count;
+    sample_buffer.fill(stereo_sample(0));
+
+    while remaining_sample_count > 0 {
+        let chunk_sample_count = remaining_sample_count.min(SAMPLE_BUFFER_LEN);
+        if output
+            .write_stereo_words(sample_buffer, chunk_sample_count)
+            .await
+            .is_err()
+        {
+            return ControlFlow::Continue(());
+        }
+        output.after_write().await;
+        remaining_sample_count -= chunk_sample_count;
+        if let Some(next_audio_command) = audio_player_static.try_take_command() {
+            return ControlFlow::Break(next_audio_command);
+        }
+    }
+
+    ControlFlow::Continue(())
+}
+
+#[inline]
+fn read_i16_le(bytes: &[u8], byte_offset: usize) -> Option<i16> {
+    let end_offset = byte_offset.checked_add(2)?;
+    if end_offset > bytes.len() {
+        return None;
+    }
+    Some(i16::from_le_bytes([
+        bytes[byte_offset],
+        bytes[byte_offset + 1],
+    ]))
 }
 
 /// End-of-sequence behavior for playback.
@@ -1110,7 +1380,7 @@ pub enum AudioCommand<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
     Stop,
 }
 
-/// Static resources for [`AudioPlayer`].
+/// Static resources for audio player runtime handles.
 // Must be `pub` so `audio_player!` expansions in downstream crates can reference this type.
 #[doc(hidden)]
 pub struct AudioPlayerStatic<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
@@ -1219,139 +1489,73 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>
     }
 }
 
-/// Plays static audio clips with preemptive command handling in the background device task.
-///
-/// See the [`audio_player!`] macro for the normal construction pattern.
-// Must be `pub` so `audio_player!` expansions in downstream crates can reference this type.
+// Must be `pub` so platform runtime handles can call this from another crate.
 #[doc(hidden)]
-pub struct AudioPlayer<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
+pub fn __audio_player_play<
+    I,
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+    audio_clips: I,
+    at_end: AtEnd,
+) where
+    I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>,
+{
+    assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
+    let mut audio_clip_sequence: Vec<PlaybackClip<SAMPLE_RATE_HZ>, MAX_CLIPS> = Vec::new();
+    for audio_clip in audio_clips {
+        assert!(
+            audio_clip_sequence
+                .push(sealed::PlayableSealed::playback_clip(audio_clip))
+                .is_ok(),
+            "play sequence fits within max_clips"
+        );
+    }
+    assert!(
+        !audio_clip_sequence.is_empty(),
+        "play requires at least one clip"
+    );
+
+    audio_player_static.mark_pending_play();
+    audio_player_static.signal(AudioCommand::Play {
+        audio_clips: audio_clip_sequence,
+        at_end,
+    });
 }
 
-impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayer<MAX_CLIPS, SAMPLE_RATE_HZ> {
-    /// Creates static resources for a player.
-    #[must_use]
-    pub const fn new_static() -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
-        AudioPlayerStatic::new_static()
-    }
+// Must be `pub` so platform runtime handles can call this from another crate.
+#[doc(hidden)]
+pub fn __audio_player_stop<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) {
+    audio_player_static.signal(AudioCommand::Stop);
+}
 
-    /// Creates static resources for a player with a runtime volume ceiling.
-    #[must_use]
-    pub const fn new_static_with_max_volume(
-        max_volume: Volume,
-    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
-        AudioPlayerStatic::new_static_with_max_volume(max_volume)
-    }
+// Must be `pub` so platform runtime handles can call this from another crate.
+#[doc(hidden)]
+pub async fn __audio_player_wait_until_stopped<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) {
+    audio_player_static.wait_until_stopped().await;
+}
 
-    /// Creates static resources for a player with a runtime volume ceiling
-    /// and an initial runtime volume relative to that ceiling.
-    #[must_use]
-    pub const fn new_static_with_max_volume_and_initial_volume(
-        max_volume: Volume,
-        initial_volume: Volume,
-    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
-        AudioPlayerStatic::new_static_with_max_volume_and_initial_volume(max_volume, initial_volume)
-    }
+// Must be `pub` so platform runtime handles can call this from another crate.
+#[doc(hidden)]
+pub fn __audio_player_set_volume<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+    volume: Volume,
+) {
+    audio_player_static.set_runtime_volume(volume);
+}
 
-    /// Creates a player handle. The device task must already be running.
-    #[must_use]
-    pub const fn new(
-        audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-    ) -> Self {
-        Self {
-            audio_player_static,
-        }
-    }
-
-    /// Starts playback of one or more static audio clips.
-    /// Playback runs in the background. If you need to know when playback is
-    /// finished, use [`Self::wait_until_stopped`].
-    ///
-    /// Accepts any array-like or iterator input. The maximum number of clips
-    /// is set by the `max_clips` field of
-    /// [`audio_player!`](macro@crate::audio_player::audio_player) (default: `16`).
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    pub fn play<I>(&self, audio_clips: I, at_end: AtEnd)
-    where
-        I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>,
-    {
-        assert!(MAX_CLIPS > 0, "play disabled: max_clips is 0");
-        let mut audio_clip_sequence: Vec<PlaybackClip<SAMPLE_RATE_HZ>, MAX_CLIPS> = Vec::new();
-        for audio_clip in audio_clips {
-            assert!(
-                audio_clip_sequence
-                    .push(sealed::PlayableSealed::playback_clip(audio_clip))
-                    .is_ok(),
-                "play sequence fits within max_clips"
-            );
-        }
-        assert!(
-            !audio_clip_sequence.is_empty(),
-            "play requires at least one clip"
-        );
-
-        self.audio_player_static.mark_pending_play();
-        self.audio_player_static.signal(AudioCommand::Play {
-            audio_clips: audio_clip_sequence,
-            at_end,
-        });
-    }
-
-    /// Starts playback from a generic iterator of static clip sources.
-    ///
-    /// This allows runtime-selected sequencing while still requiring static
-    /// clip sample storage.
-    pub fn play_iter<I>(&self, audio_clips: I, at_end: AtEnd)
-    where
-        I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>,
-    {
-        self.play(audio_clips, at_end);
-    }
-
-    /// Stops current playback as soon as possible.
-    ///
-    /// If playback is active, it is interrupted at the next DMA chunk boundary.
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    pub fn stop(&self) {
-        self.audio_player_static.signal(AudioCommand::Stop);
-    }
-
-    /// Waits until playback is stopped.
-    ///
-    /// If playback is currently stopped, this returns immediately.
-    /// If playback is active, this waits until the player reaches the stopped
-    /// state (natural end with [`AtEnd::Stop`] or a processed [`Self::stop`]).
-    pub async fn wait_until_stopped(&self) {
-        self.audio_player_static.wait_until_stopped().await;
-    }
-
-    /// Sets runtime playback volume relative to [`Self::MAX_VOLUME`].
-    /// This can take effect while a sequence of clips is already playing.
-    ///
-    /// - `Volume::percent(100)` plays at exactly `max_volume`.
-    /// - `Volume::percent(50)` plays at half of `max_volume`.
-    ///
-    /// This relative scale composes multiplicatively with any per-clip gain
-    /// pre-applied via [`PcmClipBuf::with_gain`].
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    pub fn set_volume(&self, volume: Volume) {
-        self.audio_player_static.set_runtime_volume(volume);
-    }
-
-    /// Returns the current runtime playback volume relative to [`Self::MAX_VOLUME`].
-    ///
-    /// See the [audio_player module documentation](mod@crate::audio_player) for
-    /// usage examples.
-    #[must_use]
-    pub fn volume(&self) -> Volume {
-        self.audio_player_static.runtime_volume()
-    }
+// Must be `pub` so platform runtime handles can call this from another crate.
+#[doc(hidden)]
+#[must_use]
+pub fn __audio_player_volume<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+) -> Volume {
+    audio_player_static.runtime_volume()
 }
 
 /// Const backend helper that creates a PCM sine-wave clip.

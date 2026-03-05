@@ -173,6 +173,7 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
 /// use device_envoy_rp::button_watch;
 /// use device_envoy_rp::button::PressDuration;
 /// use device_envoy_rp::button::PressedTo;
+/// use device_envoy_rp::button::ButtonWatchDevice as _;
 /// use embassy_executor::Spawner;
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
@@ -335,6 +336,7 @@ macro_rules! __button_watch_impl {
                 /// # #![no_std]
                 /// # #![no_main]
                 /// # use device_envoy_rp::button_watch;
+                /// # use device_envoy_rp::button::ButtonWatchDevice as _;
                 /// # use embassy_executor::Spawner;
                 /// # #[panic_handler]
                 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }

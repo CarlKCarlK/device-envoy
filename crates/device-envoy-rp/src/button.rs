@@ -58,7 +58,7 @@ use embassy_rp::gpio::{Input, Pull};
 /// # #![no_std]
 /// # #![no_main]
 ///
-/// use device_envoy_rp::button::{ButtonRp, PressDuration, PressedTo};
+/// use device_envoy_rp::button::{ButtonDevice as _, ButtonRp, PressDuration, PressedTo};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///

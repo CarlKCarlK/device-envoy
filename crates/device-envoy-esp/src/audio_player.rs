@@ -322,11 +322,6 @@ pub mod pcm_clip_generated;
 pub use device_envoy_core::audio_player::*;
 
 #[cfg(target_os = "none")]
-use core::ops::ControlFlow;
-#[cfg(target_os = "none")]
-use core::time::Duration;
-
-#[cfg(target_os = "none")]
 use embassy_futures::yield_now;
 #[cfg(target_os = "none")]
 use esp_hal::{
@@ -348,6 +343,27 @@ type AudioI2sTxTransfer = esp_hal::i2s::master::asynch::I2sWriteDmaTransferAsync
     'static,
     &'static mut [u8; DMA_TX_BYTES],
 >;
+
+#[cfg(target_os = "none")]
+struct EspAudioOutputSink<'a> {
+    i2s_tx_transfer: &'a mut AudioI2sTxTransfer,
+}
+
+#[cfg(target_os = "none")]
+impl AudioOutputSink<SAMPLE_BUFFER_LEN> for EspAudioOutputSink<'_> {
+    async fn write_stereo_words(
+        &mut self,
+        stereo_words: &[u32; SAMPLE_BUFFER_LEN],
+        stereo_word_count: usize,
+    ) -> core::result::Result<(), ()> {
+        write_words_to_i2s_with_recovery(self.i2s_tx_transfer, stereo_words, stereo_word_count)
+            .await
+    }
+
+    async fn after_write(&mut self) {
+        yield_now().await;
+    }
+}
 
 // Called by macro-generated code in downstream crates; must be public.
 #[cfg(target_os = "none")]
@@ -406,8 +422,11 @@ pub async fn device_loop<
                     audio_player_static.mark_playing();
                     let next_audio_command = match at_end {
                         AtEnd::Loop => loop {
+                            let mut esp_audio_output_sink = EspAudioOutputSink {
+                                i2s_tx_transfer: &mut i2s_tx_transfer,
+                            };
                             if let Some(next_audio_command) = play_clip_sequence_once(
-                                &mut i2s_tx_transfer,
+                                &mut esp_audio_output_sink,
                                 &audio_clips,
                                 &mut sample_buffer,
                                 audio_player_static,
@@ -418,8 +437,11 @@ pub async fn device_loop<
                             }
                         },
                         AtEnd::Stop => {
+                            let mut esp_audio_output_sink = EspAudioOutputSink {
+                                i2s_tx_transfer: &mut i2s_tx_transfer,
+                            };
                             play_clip_sequence_once(
-                                &mut i2s_tx_transfer,
+                                &mut esp_audio_output_sink,
                                 &audio_clips,
                                 &mut sample_buffer,
                                 audio_player_static,
@@ -477,226 +499,6 @@ async fn wait_for_audio_command_while_feeding_silence<
 
         yield_now().await;
     }
-}
-
-#[cfg(target_os = "none")]
-async fn play_clip_sequence_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
-    i2s_tx_transfer: &mut AudioI2sTxTransfer,
-    audio_clips: &[PlaybackClip<SAMPLE_RATE_HZ>],
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> Option<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>> {
-    for audio_clip in audio_clips {
-        match audio_clip {
-            PlaybackClip::Pcm(audio_clip) => {
-                if let ControlFlow::Break(next_audio_command) = play_full_pcm_clip_once(
-                    i2s_tx_transfer,
-                    audio_clip,
-                    sample_buffer,
-                    audio_player_static,
-                )
-                .await
-                {
-                    return Some(next_audio_command);
-                }
-            }
-            PlaybackClip::Silence(duration) => {
-                if let ControlFlow::Break(next_audio_command) = play_silence_duration_once(
-                    i2s_tx_transfer,
-                    *duration,
-                    sample_buffer,
-                    audio_player_static,
-                )
-                .await
-                {
-                    return Some(next_audio_command);
-                }
-            }
-            PlaybackClip::Adpcm(adpcm_clip) => {
-                if let ControlFlow::Break(next_audio_command) = play_full_adpcm_clip_once(
-                    i2s_tx_transfer,
-                    adpcm_clip,
-                    sample_buffer,
-                    audio_player_static,
-                )
-                .await
-                {
-                    return Some(next_audio_command);
-                }
-            }
-        }
-    }
-    None
-}
-
-#[cfg(target_os = "none")]
-async fn play_full_pcm_clip_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
-    i2s_tx_transfer: &mut AudioI2sTxTransfer,
-    audio_clip: &PcmClip<SAMPLE_RATE_HZ>,
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
-    for audio_sample_chunk in audio_clip.samples().chunks(SAMPLE_BUFFER_LEN) {
-        let runtime_volume = audio_player_static.effective_runtime_volume();
-        for (sample_buffer_slot, sample_value_ref) in
-            sample_buffer.iter_mut().zip(audio_sample_chunk.iter())
-        {
-            let sample_value = *sample_value_ref;
-            let scaled_sample_value = scale_sample_with_volume(sample_value, runtime_volume);
-            *sample_buffer_slot = stereo_sample(scaled_sample_value);
-        }
-
-        sample_buffer[audio_sample_chunk.len()..].fill(stereo_sample(0));
-        if write_words_to_i2s_with_recovery(
-            i2s_tx_transfer,
-            sample_buffer,
-            audio_sample_chunk.len(),
-        )
-        .await
-        .is_err()
-        {
-            return ControlFlow::Continue(());
-        }
-
-        yield_now().await;
-
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    ControlFlow::Continue(())
-}
-
-#[cfg(target_os = "none")]
-async fn play_silence_duration_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
-    i2s_tx_transfer: &mut AudioI2sTxTransfer,
-    duration: Duration,
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
-    let silence_sample_count = __samples_for_duration(duration, SAMPLE_RATE_HZ);
-    let mut remaining_sample_count = silence_sample_count;
-    sample_buffer.fill(stereo_sample(0));
-
-    while remaining_sample_count > 0 {
-        let chunk_sample_count = remaining_sample_count.min(SAMPLE_BUFFER_LEN);
-        if write_words_to_i2s_with_recovery(i2s_tx_transfer, sample_buffer, chunk_sample_count)
-            .await
-            .is_err()
-        {
-            return ControlFlow::Continue(());
-        }
-        yield_now().await;
-        remaining_sample_count -= chunk_sample_count;
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    ControlFlow::Continue(())
-}
-
-#[cfg(target_os = "none")]
-async fn play_full_adpcm_clip_once<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
-    i2s_tx_transfer: &mut AudioI2sTxTransfer,
-    adpcm_clip: &AdpcmClip<SAMPLE_RATE_HZ>,
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
-    let mut sample_buffer_len = 0usize;
-
-    let block_align = adpcm_clip.block_align() as usize;
-    for adpcm_block in adpcm_clip.data().chunks_exact(block_align) {
-        if adpcm_block.len() < 4 {
-            return ControlFlow::Continue(());
-        }
-
-        let runtime_volume = audio_player_static.effective_runtime_volume();
-        let mut predictor_i32 = match read_i16_le(adpcm_block, 0) {
-            Ok(value) => value as i32,
-            Err(_) => return ControlFlow::Continue(()),
-        };
-        let mut step_index_i32 = adpcm_block[2] as i32;
-        if !(0..=88).contains(&step_index_i32) {
-            return ControlFlow::Continue(());
-        }
-
-        sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_volume(
-            predictor_i32 as i16,
-            runtime_volume,
-        ));
-        sample_buffer_len += 1;
-        if sample_buffer_len == SAMPLE_BUFFER_LEN {
-            if write_words_to_i2s_with_recovery(i2s_tx_transfer, sample_buffer, sample_buffer_len)
-                .await
-                .is_err()
-            {
-                return ControlFlow::Continue(());
-            }
-            sample_buffer_len = 0;
-            yield_now().await;
-            if let Some(next_audio_command) = audio_player_static.try_take_command() {
-                return ControlFlow::Break(next_audio_command);
-            }
-        }
-
-        let mut samples_decoded_in_block = 1usize;
-        let samples_per_block = adpcm_clip.samples_per_block() as usize;
-
-        for adpcm_byte in &adpcm_block[4..] {
-            for adpcm_nibble in [adpcm_byte & 0x0F, adpcm_byte >> 4] {
-                if samples_decoded_in_block >= samples_per_block {
-                    break;
-                }
-
-                let decoded_sample_i16 =
-                    decode_adpcm_nibble(adpcm_nibble, &mut predictor_i32, &mut step_index_i32);
-                sample_buffer[sample_buffer_len] =
-                    stereo_sample(scale_sample_with_volume(decoded_sample_i16, runtime_volume));
-                sample_buffer_len += 1;
-                samples_decoded_in_block += 1;
-
-                if sample_buffer_len == SAMPLE_BUFFER_LEN {
-                    if write_words_to_i2s_with_recovery(
-                        i2s_tx_transfer,
-                        sample_buffer,
-                        sample_buffer_len,
-                    )
-                    .await
-                    .is_err()
-                    {
-                        return ControlFlow::Continue(());
-                    }
-                    sample_buffer_len = 0;
-                    yield_now().await;
-                    if let Some(next_audio_command) = audio_player_static.try_take_command() {
-                        return ControlFlow::Break(next_audio_command);
-                    }
-                }
-            }
-        }
-
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    if sample_buffer_len != 0 {
-        sample_buffer[sample_buffer_len..].fill(stereo_sample(0));
-        if write_words_to_i2s_with_recovery(i2s_tx_transfer, sample_buffer, sample_buffer_len)
-            .await
-            .is_err()
-        {
-            return ControlFlow::Continue(());
-        }
-        yield_now().await;
-        if let Some(next_audio_command) = audio_player_static.try_take_command() {
-            return ControlFlow::Break(next_audio_command);
-        }
-    }
-
-    ControlFlow::Continue(())
 }
 
 #[cfg(target_os = "none")]
@@ -768,32 +570,6 @@ async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) ->
         write_index += pushed_byte_count;
     }
     Ok(())
-}
-
-#[cfg(target_os = "none")]
-fn read_i16_le(bytes: &[u8], byte_offset: usize) -> crate::Result<i16> {
-    let Some(end_offset) = byte_offset.checked_add(2) else {
-        return Err(crate::Error::FormatError);
-    };
-    if end_offset > bytes.len() {
-        return Err(crate::Error::FormatError);
-    }
-    Ok(i16::from_le_bytes([
-        bytes[byte_offset],
-        bytes[byte_offset + 1],
-    ]))
-}
-
-#[cfg(target_os = "none")]
-fn decode_adpcm_nibble(adpcm_nibble: u8, predictor_i32: &mut i32, step_index_i32: &mut i32) -> i16 {
-    decode_adpcm_nibble_const(adpcm_nibble, predictor_i32, step_index_i32)
-}
-
-#[inline]
-#[cfg(target_os = "none")]
-const fn stereo_sample(sample: i16) -> u32 {
-    let sample_bits = sample as u16 as u32;
-    (sample_bits << 16) | sample_bits
 }
 
 /// Macro to generate an audio player struct type (includes syntax details).

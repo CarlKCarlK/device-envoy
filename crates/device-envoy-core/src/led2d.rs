@@ -39,36 +39,68 @@ use crate::led_strip::ToRgb888;
 /// Platform crates implement this for their concrete LED panel types so shared logic can
 /// drive LED panels without knowing the underlying hardware backend.
 ///
-/// `write_frame` and `animate` are primitive operations. Text helpers are default methods.
+/// This page serves as the definitive reference for what a generated LED panel type
+/// provides. For first-time readers, start with the `led2d` module documentation in your
+/// platform crate (`device-envoy-rp` or `device-envoy-esp`), then return here for a
+/// complete list of available methods and associated constants.
+///
+/// Design intent:
+///
+/// - Primitive operations are [`Led2d::write_frame`] and [`Led2d::animate`].
+/// - Convenience text operations ([`Led2d::write_text_to_frame`] and [`Led2d::write_text`])
+///   are default methods derived from primitives and associated constants.
+/// - This trait is intended for static dispatch on embedded targets.
+///
+/// The trait takes `const W` and `const H` so dimensions remain compile-time constants and
+/// can be used in frame types like [`Frame2d<W, H>`].
 // TODO000 Consider splitting this into separate traits if animation semantics diverge from
 // simple frame writes across platforms.
 pub trait Led2d<const W: usize, const H: usize> {
-    /// Number of columns in the panel.
+    /// The width of the panel.
     const WIDTH: usize = W;
-    /// Number of rows in the panel.
+    /// The height of the panel.
     const HEIGHT: usize = H;
-    /// Total number of LEDs (WIDTH * HEIGHT).
+    /// Total LEDs in this panel (width × height).
     const LEN: usize = W * H;
     /// Compatibility alias for [`Led2d::LEN`].
     const N: usize = Self::LEN;
-    /// Frame dimensions as a [`Size`] for embedded-graphics.
+    /// Panel dimensions as a [`Size`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations.
     const SIZE: Size = Frame2d::<W, H>::SIZE;
-    /// Top-left corner coordinate for embedded-graphics drawing.
+    /// Top-left corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations.
     const TOP_LEFT: Point = Frame2d::<W, H>::TOP_LEFT;
-    /// Top-right corner coordinate for embedded-graphics drawing.
+    /// Top-right corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations.
     const TOP_RIGHT: Point = Frame2d::<W, H>::TOP_RIGHT;
-    /// Bottom-left corner coordinate for embedded-graphics drawing.
+    /// Bottom-left corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations.
     const BOTTOM_LEFT: Point = Frame2d::<W, H>::BOTTOM_LEFT;
-    /// Bottom-right corner coordinate for embedded-graphics drawing.
+    /// Bottom-right corner coordinate as a [`Point`].
+    ///
+    /// For [`embedded-graphics`](https://docs.rs/embedded-graphics) drawing operations.
     const BOTTOM_RIGHT: Point = Frame2d::<W, H>::BOTTOM_RIGHT;
-    /// Maximum number of animation frames.
+    /// Maximum number of animation frames allowed.
+    ///
+    /// Usually configured by the platform macro (for example `led2d!`).
     const MAX_FRAMES: usize;
-    /// Maximum brightness, capped by the configured power budget.
+    /// Maximum brightness level, automatically limited by the power budget.
+    ///
+    /// Many implementations assume each LED draws about 60 mA at full brightness and compute
+    /// a safe cap from power budget and LED count.
     const MAX_BRIGHTNESS: u8;
     /// The font used by default text helpers.
+    ///
+    /// Used by [`Led2d::write_text_to_frame`] and [`Led2d::write_text`].
     const FONT: Led2dFont;
 
     /// Write a frame to the LED panel.
+    ///
+    /// See your platform crate's `led2d` module docs for usage examples.
     fn write_frame(&self, frame2d: Frame2d<W, H>);
 
     /// Compatibility alias for [`Led2d::write_frame`].
@@ -76,7 +108,12 @@ pub trait Led2d<const W: usize, const H: usize> {
         self.write_frame(frame2d);
     }
 
-    /// Loop through a sequence of animation frames.
+    /// Animate frames on the LED panel.
+    ///
+    /// The duration type is [`embassy_time::Duration`], and `frames` can be any iterator whose
+    /// items borrow `(Frame2d<W, H>, embassy_time::Duration)`.
+    ///
+    /// See your platform crate's `led2d` module docs for usage examples.
     fn animate<I>(&self, frames: I)
     where
         I: IntoIterator,
@@ -91,7 +128,16 @@ pub trait Led2d<const W: usize, const H: usize> {
         self.animate(frames);
     }
 
-    /// Render text into an in-memory frame using this device's default font.
+    /// Write text into a frame.
+    ///
+    /// This is a default helper built on [`render_text_to_frame`] plus associated constants.
+    ///
+    /// Behavior:
+    ///
+    /// - Text is drawn with [`Led2d::FONT`].
+    /// - `colors` cycles one color per character; an empty slice defaults to white.
+    /// - A `\n` character starts a new line.
+    /// - Characters beyond frame width are clipped.
     fn write_text_to_frame(&self, text: &str, colors: &[RGB8], frame: &mut Frame2d<W, H>) {
         // TODO0000 should render_text_to_frame be rolled into here?
         render_text_to_frame(
@@ -103,7 +149,13 @@ pub trait Led2d<const W: usize, const H: usize> {
         );
     }
 
-    /// Render text and immediately write it to the panel.
+    /// Write text to the LED panel.
+    ///
+    /// This default helper is equivalent to:
+    ///
+    /// 1. Create `Frame2d::<W, H>::new()`.
+    /// 2. Call [`Led2d::write_text_to_frame`].
+    /// 3. Call [`Led2d::write_frame`].
     fn write_text(&self, text: &str, colors: &[RGB8]) {
         let mut frame = Frame2d::<W, H>::new();
         self.write_text_to_frame(text, colors, &mut frame);

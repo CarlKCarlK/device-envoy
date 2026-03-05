@@ -1,6 +1,15 @@
 //! A device abstraction for rectangular NeoPixel-style (WS2812) LED panel displays.
 //! See [`Led2d`] for the runtime adapter and [`layout::LedLayout`] for compile-time
 //! panel wiring and geometry.
+//!
+//! # Start Here
+//!
+//! If rustdoc lands on generated source, jump straight to:
+//!
+//! - [`Led2dApi`](`crate::led2d::Led2dApi`)
+//! - [`Led2dApi::write_frame`](`crate::led2d::Led2dApi::write_frame`)
+//! - [`Led2dApi::write_text`](`crate::led2d::Led2dApi::write_text`)
+//! - [`Led2dApi::animate`](`crate::led2d::Led2dApi::animate`)
 
 pub mod layout {
     pub use device_envoy_core::led2d::layout::*;

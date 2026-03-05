@@ -1,9 +1,14 @@
-update-docs:
+# RP docs only
+update-docs-rp:
 	./scripts/update-docs.sh
+
+# Backward compatibility alias (RP only)
+update-docs:
+	just update-docs-rp
 
 # Build docs and open them in Windows Edge (via WSL)
 show-docs-rp:
-	just update-docs
+	just update-docs-rp
 	./scripts/open-docs-rp.sh
 
 regenerate-text-pngs:
@@ -19,7 +24,7 @@ pngs-update-all:
 
 # Full validation (docs + embedded + host PNGs)
 verify-all:
-        just update-docs
+        just update-docs-rp
         cargo check-all
         just pngs-check-all
 

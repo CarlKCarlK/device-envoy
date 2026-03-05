@@ -86,7 +86,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 /// Display "RUST" using the bit_matrix3x4 font via embedded-graphics.
 async fn demo_rust_text(led4x12: &Led4x12) -> Result<()> {
     let colors = [colors::RED, colors::GREEN, colors::BLUE, colors::YELLOW];
-    led4x12.write_text("RUST\ntwo", &colors).await;
+    led4x12.write_text("RUST\ntwo", &colors);
     Ok(())
 }
 

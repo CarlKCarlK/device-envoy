@@ -49,7 +49,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Display black (turn off all LEDs) on the panel
     let led12x8 = Led12x8::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
-    led12x8.write_text("", &[]).await;
+    led12x8.write_text("", &[]);
 
     future::pending().await // Keep running
 }

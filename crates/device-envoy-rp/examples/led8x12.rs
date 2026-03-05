@@ -88,7 +88,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 /// Display time-like text using two lines (like "12" on top, "34" on bottom).
 async fn demo_clock_text(led8x12: &Led8x12) -> Result<()> {
     let colors = [colors::CYAN, colors::MAGENTA, colors::ORANGE, colors::LIME];
-    led8x12.write_text("12\n34", &colors).await;
+    led8x12.write_text("12\n34", &colors);
     Ok(())
 }
 

@@ -364,32 +364,32 @@ async fn show_connecting(led8x12: &Led8x12, try_index: u8, _try_count: u8) -> Re
 }
 
 async fn show_connected(led8x12: &Led8x12) {
-    led8x12.write_text("DO\nNE", &DIGIT_COLORS).await;
+    led8x12.write_text("DO\nNE", &DIGIT_COLORS);
 }
 
 async fn show_connection_failed(led8x12: &Led8x12) {
-    led8x12.write_text("FA\nIL", &DIGIT_COLORS).await;
+    led8x12.write_text("FA\nIL", &DIGIT_COLORS);
 }
 
 async fn show_hours_minutes(led8x12: &Led8x12, hours: u8, minutes: u8) {
     let (hours_tens, hours_ones) = hours_digits(hours);
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let text = two_line_text([hours_tens, hours_ones], [minutes_tens, minutes_ones]);
-    led8x12.write_text(text.as_str(), &DIGIT_COLORS).await;
+    led8x12.write_text(text.as_str(), &DIGIT_COLORS);
 }
 
 async fn show_hours_minutes_indicator(led8x12: &Led8x12, hours: u8, minutes: u8) {
     let (hours_tens, hours_ones) = hours_digits(hours);
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let text = two_line_text([hours_tens, hours_ones], [minutes_tens, minutes_ones]);
-    led8x12.write_text(text.as_str(), &EDIT_COLORS).await;
+    led8x12.write_text(text.as_str(), &EDIT_COLORS);
 }
 
 async fn show_minutes_seconds(led8x12: &Led8x12, minutes: u8, seconds: u8) {
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let (seconds_tens, seconds_ones) = two_digit_chars(seconds);
     let text = two_line_text([minutes_tens, minutes_ones], [seconds_tens, seconds_ones]);
-    led8x12.write_text(text.as_str(), &DIGIT_COLORS).await;
+    led8x12.write_text(text.as_str(), &DIGIT_COLORS);
 }
 
 const PERIMETER_LENGTH: usize = (Led8x12::WIDTH * 2) + ((Led8x12::HEIGHT - 2) * 2);

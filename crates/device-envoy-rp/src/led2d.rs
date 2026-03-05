@@ -62,7 +62,7 @@
 //!     // Write text to the display with per-character colors.
 //!     let colors = [colors::CYAN, colors::RED, colors::YELLOW];
 //!     // Each character takes the next color; when we run out, we start over.
-//!     led12x4.write_text("Rust", &colors).await;
+//!     led12x4.write_text("Rust", &colors);
 //!
 //!     future::pending().await // run forever
 //! }
@@ -931,7 +931,7 @@ macro_rules! led2d_from_strip {
                 }
 
                 /// Render text and display it on the LED matrix.
-                pub async fn write_text(&self, text: &str, colors: &[smart_leds::RGB8]) {
+                pub fn write_text(&self, text: &str, colors: &[smart_leds::RGB8]) {
                     let mut frame = $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::new();
                     self.write_text_to_frame(text, colors, &mut frame);
                     self.write_frame(frame);

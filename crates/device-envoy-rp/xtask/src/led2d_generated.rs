@@ -159,7 +159,7 @@ impl Led2dGenerated {
     /// Write text to the LED panel.
     ///
     /// See the [`led2d`](mod@crate::led2d) module docs for usage.
-    pub async fn write_text(&self, text: &str, colors: &[RGB8]) -> Result<()> {
+    pub fn write_text(&self, text: &str, colors: &[RGB8]) -> Result<()> {
         let _ = (text, colors);
         Ok(())
     }

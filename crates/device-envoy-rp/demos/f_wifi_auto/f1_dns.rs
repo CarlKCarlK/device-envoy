@@ -76,17 +76,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .connect(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    led8x12_ref.write_text("JO\nIN", COLORS).await? // Join setup network
+                    led8x12_ref.write_text("JO\nIN", COLORS)? // Join setup network
                 }
-                WifiAutoEvent::Connecting { .. } => show_animated_dots(led8x12_ref).await?,
-                WifiAutoEvent::ConnectionFailed => led8x12_ref.write_text("FA\nIL", COLORS).await?,
+                WifiAutoEvent::Connecting { .. } => show_animated_dots(led8x12_ref)?,
+                WifiAutoEvent::ConnectionFailed => led8x12_ref.write_text("FA\nIL", COLORS)?,
             }
             Ok(())
         })
         .await;
 
     // Show initial state with dashes until DNS is fetched.
-    led8x12.write_text("--\n--", COLORS).await;
+    led8x12.write_text("--\n--", COLORS);
 
     // Do DNS on google.com periodically. Display last 4 hex digits of IP address.
     loop {
@@ -101,7 +101,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         } else {
             hex_str.push_str("--\n--").unwrap();
         }
-        led8x12.write_text(&hex_str, COLORS).await;
+        led8x12.write_text(&hex_str, COLORS);
 
         Timer::after(Duration::from_secs(15)).await;
     }

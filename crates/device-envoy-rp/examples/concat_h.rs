@@ -45,9 +45,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
 
     let led24x4_concat = Led24x4Concat::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
-    led24x4_concat
-        .write_text("HELLO MOM", &[colors::CYAN, colors::WHITE])
-        .await;
+    led24x4_concat.write_text("HELLO MOM", &[colors::CYAN, colors::WHITE]);
 
     loop {
         Timer::after(Duration::from_millis(3600)).await;

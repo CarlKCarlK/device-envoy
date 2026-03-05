@@ -467,13 +467,13 @@ impl WifiAuto {
     ///     .connect(|event| async move {
     ///         match event {
     ///             WifiAutoEvent::CaptivePortalReady => {
-    ///                 led8x12_ref.write_text("JO\nIN", COLORS).await;
+    ///                 led8x12_ref.write_text("JO\nIN", COLORS);
     ///             }
     ///             WifiAutoEvent::Connecting { .. } => {
     ///                 show_animated_dots(led8x12_ref).await?;
     ///             }
     ///             WifiAutoEvent::ConnectionFailed => {
-    ///                 led8x12_ref.write_text("FA\nIL", COLORS).await;
+    ///                 led8x12_ref.write_text("FA\nIL", COLORS);
     ///             }
     ///         }
     ///         Ok(())

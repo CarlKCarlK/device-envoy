@@ -355,32 +355,32 @@ async fn show_connecting(led12x4: &Led12x4, try_index: u8, _try_count: u8) -> Re
 
 // todo00 should these return result? (may no longer apply)
 async fn show_connected(led12x4: &Led12x4) {
-    led12x4.write_text("DONE", &DIGIT_COLORS).await;
+    led12x4.write_text("DONE", &DIGIT_COLORS);
 }
 
 async fn show_connection_failed(led12x4: &Led12x4) {
-    led12x4.write_text("FAIL", &DIGIT_COLORS).await;
+    led12x4.write_text("FAIL", &DIGIT_COLORS);
 }
 
 async fn show_hours_minutes(led12x4: &Led12x4, hours: u8, minutes: u8) {
     let (hours_tens, hours_ones) = hours_digits(hours);
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let text = chars_to_text([hours_tens, hours_ones, minutes_tens, minutes_ones]);
-    led12x4.write_text(text.as_str(), &DIGIT_COLORS).await;
+    led12x4.write_text(text.as_str(), &DIGIT_COLORS);
 }
 
 async fn show_hours_minutes_indicator(led12x4: &Led12x4, hours: u8, minutes: u8) {
     let (hours_tens, hours_ones) = hours_digits(hours);
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let text = chars_to_text([hours_tens, hours_ones, minutes_tens, minutes_ones]);
-    led12x4.write_text(text.as_str(), &EDIT_COLORS).await;
+    led12x4.write_text(text.as_str(), &EDIT_COLORS);
 }
 
 async fn show_minutes_seconds(led12x4: &Led12x4, minutes: u8, seconds: u8) {
     let (minutes_tens, minutes_ones) = two_digit_chars(minutes);
     let (seconds_tens, seconds_ones) = two_digit_chars(seconds);
     let text = chars_to_text([minutes_tens, minutes_ones, seconds_tens, seconds_ones]);
-    led12x4.write_text(text.as_str(), &DIGIT_COLORS).await;
+    led12x4.write_text(text.as_str(), &DIGIT_COLORS);
 }
 
 const PERIMETER_LENGTH: usize = (Led12x4::WIDTH * 2) + ((Led12x4::HEIGHT - 2) * 2);

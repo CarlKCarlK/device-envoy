@@ -59,9 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Display the counter on the LED panel (single digit 0-9)
     const DIGITS: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-    led12x8
-        .write_text(DIGITS[boot_counter.0], &[colors::RED])
-        .await;
+    led12x8.write_text(DIGITS[boot_counter.0], &[colors::RED]);
 
     future::pending().await // Keep running
 }

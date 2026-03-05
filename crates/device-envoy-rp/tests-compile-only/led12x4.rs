@@ -58,8 +58,7 @@ async fn test_led12x4_pio0_write_text(p: embassy_rp::Peripherals, spawner: Spawn
         .write_text(
             "1234",
             &[colors::RED, colors::GREEN, colors::BLUE, colors::YELLOW],
-        )
-        .await;
+        );
 
     Ok(())
 }

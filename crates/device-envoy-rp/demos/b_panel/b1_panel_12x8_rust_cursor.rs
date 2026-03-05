@@ -48,8 +48,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 colors::ORANGE,
                 colors::HOT_PINK,
             ],
-        )
-        .await;
+        );
 
     future::pending().await // run forever
 }

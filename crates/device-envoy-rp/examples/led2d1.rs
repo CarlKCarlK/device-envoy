@@ -36,7 +36,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led12x4 = Led12x4::new(p.PIN_3, p.PIO0, p.DMA_CH0, spawner)?;
 
     let colors = [colors::CYAN, colors::RED, colors::YELLOW];
-    led12x4.write_text("Rust", &colors).await;
+    led12x4.write_text("Rust", &colors);
 
     future::pending().await // run forever
 }

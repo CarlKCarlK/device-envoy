@@ -69,13 +69,13 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
             // write
             frame1d[index] = colors::YELLOW;
             gpio0_led_strip.write_frame(frame1d);
-            gpio3_led2d.write_text(text, &[colors::YELLOW]).await;
+            gpio3_led2d.write_text(text, &[colors::YELLOW]);
             button.wait_for_press().await;
 
             // write again
             frame1d[index] = colors::RED;
             gpio0_led_strip.write_frame(frame1d);
-            gpio3_led2d.write_text(text, &[colors::RED]).await;
+            gpio3_led2d.write_text(text, &[colors::RED]);
             button.wait_for_press().await;
 
             // animate
@@ -97,7 +97,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
             // write again, again
             frame1d[index] = colors::LIME;
             gpio0_led_strip.write_frame(frame1d);
-            gpio3_led2d.write_text(text, &[colors::LIME]).await;
+            gpio3_led2d.write_text(text, &[colors::LIME]);
             button.wait_for_press().await;
         }
     }

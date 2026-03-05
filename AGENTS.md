@@ -253,6 +253,9 @@ led.animate(&frames);
 
 When migrating a device abstraction from generated inherent methods/consts to a pure trait API (constructors excluded), follow this sequence.
 
+Core rule: identify the smallest primitive method set first, then define all non-primitive behavior as default trait methods expressed in terms of those primitives and associated consts.
+Naming rule for migrations: keep canonical abstraction names on traits (`IrKepler`, etc.) and rename platform concrete structs with explicit suffixes (`IrKeplerRp`, `IrKeplerEsp`, etc.) to avoid collisions.
+
 1. If no trait exists yet, introduce one first (in `device-envoy-core`) with the target API shape.
 2. Keep the old inherent surface temporarily while wiring the new trait, so callsites can migrate incrementally.
 3. Define the canonical trait in `device-envoy-core`.

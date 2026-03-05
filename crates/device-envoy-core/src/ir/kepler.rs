@@ -39,9 +39,9 @@ pub enum KeplerButton {
 /// Platform crates implement this for their concrete `IrKepler` types so shared logic can wait
 /// for button presses without depending on platform-specific modules.
 #[allow(async_fn_in_trait)]
-pub trait IrKeplerDevice {
+pub trait IrKepler {
     /// Wait for the next recognized Kepler button press.
-    async fn wait_for_press(&mut self) -> KeplerButton;
+    async fn wait_for_press(&self) -> KeplerButton;
 }
 
 /// Static resources for Kepler IR remote events.

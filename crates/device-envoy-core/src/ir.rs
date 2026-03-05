@@ -7,8 +7,8 @@
 pub mod kepler;
 pub mod mapping;
 
-pub use kepler::{IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
-pub use mapping::IrMappingStatic;
+pub use kepler::{IrKepler, IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
+pub use mapping::{IrMapping, IrMappingStatic};
 
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel as EmbassyChannel;
@@ -26,6 +26,16 @@ pub enum IrEvent {
         /// 8-bit command code.
         cmd: u8,
     },
+}
+
+/// Platform-agnostic infrared receiver device contract.
+///
+/// Platform crates implement this for their concrete `Ir` types so shared logic can wait for
+/// NEC button press events without depending on platform-specific modules.
+#[allow(async_fn_in_trait)]
+pub trait Ir {
+    /// Wait for the next IR event.
+    async fn wait_for_press(&self) -> IrEvent;
 }
 
 /// Static resources for the [`Ir`] device abstraction.

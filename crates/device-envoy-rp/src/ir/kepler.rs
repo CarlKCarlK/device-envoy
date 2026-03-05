@@ -1,24 +1,24 @@
 //! A device abstraction for the SunFounder Kepler Kit IR remote control.
 //!
-//! See [`IrKepler`] for usage examples.
+//! See [`IrKeplerRp`] for usage examples.
 
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;
 use embassy_rp::pio::PioPin;
 
-use device_envoy_core::ir::kepler::IrKeplerDevice;
+use device_envoy_core::ir::{IrKepler, IrMapping as _};
 
 use crate::Result;
 use crate::ir::IrPioPeripheral;
-use crate::ir::mapping::IrMapping;
+use crate::ir::mapping::IrMappingRp;
 
 pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
 
 /// Type alias for the Kepler button mapping.
 ///
-/// See [`IrKepler`] for usage examples.
-type IrKeplerMapping<'a> = IrMapping<'a, KeplerButton, 21>;
+/// See [`IrKeplerRp`] for usage examples.
+type IrKeplerMapping<'a> = IrMappingRp<'a, KeplerButton, 21>;
 
 /// A device abstraction for the SunFounder Kepler Kit IR remote.
 ///
@@ -29,14 +29,14 @@ type IrKeplerMapping<'a> = IrMapping<'a, KeplerButton, 21>;
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_envoy_rp::ir::{IrKepler, IrKeplerStatic};
+/// use device_envoy_rp::ir::{IrKepler as _, IrKeplerRp, IrKeplerStatic};
 ///
 /// async fn example(
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
-///     static IR_KEPLER_STATIC: IrKeplerStatic = IrKepler::new_static();
-///     let ir_kepler = IrKepler::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO0, spawner)?;
+///     static IR_KEPLER_STATIC: IrKeplerStatic = IrKeplerRp::new_static();
+///     let ir_kepler = IrKeplerRp::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO0, spawner)?;
 ///
 ///     loop {
 ///         let button = ir_kepler.wait_for_press().await;
@@ -44,14 +44,14 @@ type IrKeplerMapping<'a> = IrMapping<'a, KeplerButton, 21>;
 ///     }
 /// }
 /// ```
-pub struct IrKepler<'a> {
+pub struct IrKeplerRp<'a> {
     mapping: IrKeplerMapping<'a>,
 }
 
-impl<'a> IrKepler<'a> {
+impl<'a> IrKeplerRp<'a> {
     /// Create static channel resources for IR events.
     ///
-    /// See [`IrKepler`] for usage examples.
+    /// See [`IrKeplerRp`] for usage examples.
     #[must_use]
     pub const fn new_static() -> IrKeplerStatic {
         IrKeplerStatic::new()
@@ -65,7 +65,7 @@ impl<'a> IrKepler<'a> {
     /// - `pio`: PIO peripheral to use (PIO0, PIO1, or PIO2)
     /// - `spawner`: Embassy spawner for background task
     ///
-    /// See [`IrKepler`] for usage examples.
+    /// See [`IrKeplerRp`] for usage examples.
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
@@ -79,22 +79,14 @@ impl<'a> IrKepler<'a> {
         P: Pin + PioPin,
         PIO: IrPioPeripheral,
     {
-        let mapping = IrMapping::new(ir_kepler_static.inner(), pin, pio, &KEPLER_MAPPING, spawner)?;
+        let mapping = IrMappingRp::new(ir_kepler_static.inner(), pin, pio, &KEPLER_MAPPING, spawner)?;
         Ok(Self { mapping })
     }
 
-    /// Wait for the next button press.
-    ///
-    /// Ignores button presses that are not recognized by the Kepler remote.
-    ///
-    /// See [`IrKepler`] for usage examples.
-    pub async fn wait_for_press(&self) -> KeplerButton {
-        self.mapping.wait_for_press().await
-    }
 }
 
-impl IrKeplerDevice for IrKepler<'_> {
-    async fn wait_for_press(&mut self) -> KeplerButton {
-        IrKepler::wait_for_press(self).await
+impl IrKepler for IrKeplerRp<'_> {
+    async fn wait_for_press(&self) -> KeplerButton {
+        self.mapping.wait_for_press().await
     }
 }

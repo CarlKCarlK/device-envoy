@@ -4,6 +4,16 @@
 
 use crate::ir::IrStatic;
 
+/// Platform-agnostic IR button mapper device contract.
+///
+/// Platform crates implement this for their concrete `IrMapping` types so shared logic can wait
+/// for mapped button presses without depending on platform-specific modules.
+#[allow(async_fn_in_trait)]
+pub trait IrMapping<Button> {
+    /// Wait for the next recognized mapped button press.
+    async fn wait_for_press(&self) -> Button;
+}
+
 /// Static channel resources for IR mapping events.
 ///
 /// Create with `IrMapping::new_static()` from the platform-specific crate.

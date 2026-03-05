@@ -1,5 +1,5 @@
 use device_envoy_core::{
-    ir::kepler::{IrKeplerDevice, KeplerButton},
+    ir::kepler::{IrKepler, KeplerButton},
     led_strip::RGB8,
     led2d::{Frame2d, Led2d},
 };
@@ -8,7 +8,6 @@ use embassy_time::{Duration, Instant, Timer};
 use smart_leds::colors;
 
 const STASIS_RESET_GENERATIONS: u8 = 15;
-const BOARD_SIZE_16X16: usize = 16;
 
 const ALIVE_COLORS: [RGB8; 6] = [
     colors::LIME,
@@ -32,25 +31,28 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
-pub async fn run_conway<Display, IrKepler>(led2d: Display, mut ir_kepler: IrKepler) -> !
+pub async fn run_conway<const W: usize, const H: usize, L, I>(led2d: L, ir_kepler: I) -> !
 where
-    Display: Led2d<16, 16>,
-    IrKepler: IrKeplerDevice,
+    L: Led2d<W, H>,
+    I: IrKepler,
 {
-    let mut board16x16 = Board::<16, 16>::new();
+    assert!(W > 0, "Conway width must be greater than zero");
+    assert!(H > 0, "Conway height must be greater than zero");
+
+    let mut board = Board::<H, W>::new();
     let mut pattern_index = 0usize;
     let mut speed_mode = SpeedMode::Slower;
     let mut paused = false;
     let mut color_index = 0usize;
     let mut alive_color = ALIVE_COLORS[color_index];
-    board16x16.add_pattern(PATTERNS[pattern_index]);
+    board.add_pattern(PATTERNS[pattern_index]);
 
     let mut stasis_tracker = (0u8, 0u16);
     let mut empty_tracker = 0u8;
 
     loop {
-        let frame16x16 = board16x16.to_frame(alive_color);
-        led2d.write_frame(frame16x16);
+        let frame2d = board.to_frame(alive_color);
+        led2d.write_frame(frame2d);
 
         let frame_duration = speed_mode.frame_duration();
 
@@ -60,9 +62,9 @@ where
                     continue;
                 }
 
-                board16x16.step();
+                board.step();
                 evaluate_auto_reset(
-                    &mut board16x16,
+                    &mut board,
                     pattern_index,
                     &mut stasis_tracker,
                     &mut empty_tracker,
@@ -73,7 +75,7 @@ where
                     if number < PATTERNS.len() as u8 {
                         pattern_index = number as usize;
                         reset_board_for_pattern(
-                            &mut board16x16,
+                            &mut board,
                             pattern_index,
                             &mut stasis_tracker,
                             &mut empty_tracker,
@@ -88,11 +90,11 @@ where
                 }
                 KeplerButton::Next => {
                     if paused {
-                        board16x16.step();
+                        board.step();
                     } else {
                         pattern_index = (pattern_index + 1) % PATTERNS.len();
                         reset_board_for_pattern(
-                            &mut board16x16,
+                            &mut board,
                             pattern_index,
                             &mut stasis_tracker,
                             &mut empty_tracker,
@@ -103,7 +105,7 @@ where
                     if !paused {
                         pattern_index = (pattern_index + PATTERNS.len() - 1) % PATTERNS.len();
                         reset_board_for_pattern(
-                            &mut board16x16,
+                            &mut board,
                             pattern_index,
                             &mut stasis_tracker,
                             &mut empty_tracker,
@@ -123,26 +125,26 @@ where
     }
 }
 
-fn reset_board_for_pattern(
-    board16x16: &mut Board<16, 16>,
+fn reset_board_for_pattern<const H: usize, const W: usize>(
+    board: &mut Board<H, W>,
     pattern_index: usize,
     stasis_tracker: &mut (u8, u16),
     empty_tracker: &mut u8,
 ) {
     let pattern = PATTERNS[pattern_index];
-    *board16x16 = Board::new();
-    board16x16.add_pattern(pattern);
+    *board = Board::new();
+    board.add_pattern(pattern);
     *stasis_tracker = (0, 0);
     *empty_tracker = 0;
 }
 
-fn evaluate_auto_reset(
-    board16x16: &mut Board<16, 16>,
+fn evaluate_auto_reset<const H: usize, const W: usize>(
+    board: &mut Board<H, W>,
     pattern_index: usize,
     stasis_tracker: &mut (u8, u16),
     empty_tracker: &mut u8,
 ) {
-    let live_cell_count = board16x16.count_live_cells();
+    let live_cell_count = board.count_live_cells();
     let current_pattern = PATTERNS[pattern_index];
 
     if matches!(current_pattern, Pattern::Random | Pattern::Cross) {
@@ -152,7 +154,7 @@ fn evaluate_auto_reset(
             *stasis_tracker = (new_unchanged_count, live_cell_count);
 
             if new_unchanged_count >= STASIS_RESET_GENERATIONS {
-                board16x16.add_pattern(current_pattern);
+                board.add_pattern(current_pattern);
                 *stasis_tracker = (0, 0);
                 *empty_tracker = 0;
             }
@@ -162,7 +164,7 @@ fn evaluate_auto_reset(
     } else if live_cell_count == 0 {
         *empty_tracker += 1;
         if *empty_tracker >= STASIS_RESET_GENERATIONS {
-            board16x16.add_pattern(current_pattern);
+            board.add_pattern(current_pattern);
             *stasis_tracker = (0, 0);
             *empty_tracker = 0;
         }
@@ -230,20 +232,6 @@ impl<const H: usize, const W: usize> Board<H, W> {
         }
     }
 
-    fn load_rows(&mut self, rows: [&str; H]) {
-        for row_index in 0..H {
-            let row_bytes = rows[row_index].as_bytes();
-            assert!(row_bytes.len() == W, "row width must match board width");
-            for col_index in 0..W {
-                self.cells[row_index][col_index] = match row_bytes[col_index] {
-                    b'#' => true,
-                    b'.' => false,
-                    _ => panic!("pattern rows may only contain '.' or '#"),
-                };
-            }
-        }
-    }
-
     fn step(&mut self) {
         let mut next_cells = [[false; W]; H];
 
@@ -295,9 +283,7 @@ impl<const H: usize, const W: usize> Board<H, W> {
         }
         frame2d
     }
-}
 
-impl Board<BOARD_SIZE_16X16, BOARD_SIZE_16X16> {
     fn add_pattern(&mut self, pattern: Pattern) {
         match pattern {
             Pattern::Glider => self.add_glider(4, 2),
@@ -313,66 +299,70 @@ impl Board<BOARD_SIZE_16X16, BOARD_SIZE_16X16> {
         }
     }
 
+    fn set_alive(&mut self, row_index: usize, col_index: usize) {
+        self.cells[row_index % H][col_index % W] = true;
+    }
+
     fn add_glider(&mut self, start_row: usize, start_col: usize) {
-        self.cells[start_row][start_col + 1] = true;
-        self.cells[start_row + 1][start_col + 2] = true;
-        self.cells[start_row + 2][start_col] = true;
-        self.cells[start_row + 2][start_col + 1] = true;
-        self.cells[start_row + 2][start_col + 2] = true;
+        self.set_alive(start_row, start_col + 1);
+        self.set_alive(start_row + 1, start_col + 2);
+        self.set_alive(start_row + 2, start_col);
+        self.set_alive(start_row + 2, start_col + 1);
+        self.set_alive(start_row + 2, start_col + 2);
     }
 
     fn add_blinker(&mut self, row: usize, col: usize) {
-        self.cells[row][col] = true;
-        self.cells[row][col + 1] = true;
-        self.cells[row][col + 2] = true;
+        self.set_alive(row, col);
+        self.set_alive(row, col + 1);
+        self.set_alive(row, col + 2);
     }
 
     fn add_toad(&mut self, row: usize, col: usize) {
-        self.cells[row][col + 1] = true;
-        self.cells[row][col + 2] = true;
-        self.cells[row][col + 3] = true;
-        self.cells[row + 1][col] = true;
-        self.cells[row + 1][col + 1] = true;
-        self.cells[row + 1][col + 2] = true;
+        self.set_alive(row, col + 1);
+        self.set_alive(row, col + 2);
+        self.set_alive(row, col + 3);
+        self.set_alive(row + 1, col);
+        self.set_alive(row + 1, col + 1);
+        self.set_alive(row + 1, col + 2);
     }
 
     fn add_beacon(&mut self, row: usize, col: usize) {
-        self.cells[row][col] = true;
-        self.cells[row][col + 1] = true;
-        self.cells[row + 1][col] = true;
-        self.cells[row + 1][col + 1] = true;
-        self.cells[row + 2][col + 2] = true;
-        self.cells[row + 2][col + 3] = true;
-        self.cells[row + 3][col + 2] = true;
-        self.cells[row + 3][col + 3] = true;
+        self.set_alive(row, col);
+        self.set_alive(row, col + 1);
+        self.set_alive(row + 1, col);
+        self.set_alive(row + 1, col + 1);
+        self.set_alive(row + 2, col + 2);
+        self.set_alive(row + 2, col + 3);
+        self.set_alive(row + 3, col + 2);
+        self.set_alive(row + 3, col + 3);
     }
 
     fn add_lwss(&mut self, row: usize, col: usize) {
-        self.cells[row][col + 1] = true;
-        self.cells[row + 1][col] = true;
-        self.cells[row + 2][col] = true;
-        self.cells[row + 2][col + 1] = true;
-        self.cells[row + 2][col + 2] = true;
-        self.cells[row + 2][col + 3] = true;
-        self.cells[row + 1][col + 3] = true;
+        self.set_alive(row, col + 1);
+        self.set_alive(row + 1, col);
+        self.set_alive(row + 2, col);
+        self.set_alive(row + 2, col + 1);
+        self.set_alive(row + 2, col + 2);
+        self.set_alive(row + 2, col + 3);
+        self.set_alive(row + 1, col + 3);
     }
 
     fn add_block(&mut self, row: usize, col: usize) {
-        self.cells[row][col] = true;
-        self.cells[row][col + 1] = true;
-        self.cells[row + 1][col] = true;
-        self.cells[row + 1][col + 1] = true;
+        self.set_alive(row, col);
+        self.set_alive(row, col + 1);
+        self.set_alive(row + 1, col);
+        self.set_alive(row + 1, col + 1);
     }
 
     fn add_wall(&mut self, row: usize) {
-        for col_index in 0..BOARD_SIZE_16X16 {
-            self.cells[row][col_index] = true;
+        for col_index in 0..W {
+            self.set_alive(row, col_index);
         }
     }
 
     fn add_vertical(&mut self, col: usize) {
-        for row_index in 0..BOARD_SIZE_16X16 {
-            self.cells[row_index][col] = true;
+        for row_index in 0..H {
+            self.set_alive(row_index, col);
         }
     }
 
@@ -384,8 +374,8 @@ impl Board<BOARD_SIZE_16X16, BOARD_SIZE_16X16> {
     fn add_random(&mut self) {
         let now_millis = Instant::now().as_millis();
         let mut random_seed = (now_millis ^ 0x9e37_79b9) as u32;
-        for row_index in 0..BOARD_SIZE_16X16 {
-            for col_index in 0..BOARD_SIZE_16X16 {
+        for row_index in 0..H {
+            for col_index in 0..W {
                 random_seed = random_seed.wrapping_mul(1664525).wrapping_add(1013904223);
                 self.cells[row_index][col_index] = (random_seed & 0x100) != 0;
             }
@@ -405,7 +395,8 @@ impl Board<BOARD_SIZE_16X16, BOARD_SIZE_16X16> {
     }
 
     fn add_pentadecathlon(&mut self) {
-        self.load_rows([
+        self.draw_ascii_pattern(
+            &[
             "................",
             "................",
             "................",
@@ -422,11 +413,15 @@ impl Board<BOARD_SIZE_16X16, BOARD_SIZE_16X16> {
             "................",
             "................",
             "................",
-        ]);
+            ],
+            0,
+            0,
+        );
     }
 
     fn add_custom9(&mut self) {
-        self.load_rows([
+        self.draw_ascii_pattern(
+            &[
             "................",
             "...##.....##....",
             "....##...##.....",
@@ -443,6 +438,19 @@ impl Board<BOARD_SIZE_16X16, BOARD_SIZE_16X16> {
             "...##.....##....",
             "................",
             "................",
-        ]);
+            ],
+            0,
+            0,
+        );
+    }
+
+    fn draw_ascii_pattern(&mut self, rows: &[&str], row_offset: usize, col_offset: usize) {
+        for (row_index, row) in rows.iter().enumerate() {
+            for (col_index, row_char) in row.chars().enumerate() {
+                if row_char == '#' {
+                    self.set_alive(row_index + row_offset, col_index + col_offset);
+                }
+            }
+        }
     }
 }

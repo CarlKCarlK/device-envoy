@@ -6,7 +6,7 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::Result;
-use device_envoy_rp::ir::{Ir, IrEvent, IrStatic};
+use device_envoy_rp::ir::{Ir as _, IrEvent, IrRp, IrStatic};
 use embassy_executor::Spawner;
 use panic_probe as _;
 
@@ -21,8 +21,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("IR NEC decoder example starting...");
 
-    static IR_STATIC: IrStatic = Ir::new_static();
-    let ir = Ir::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
+    static IR_STATIC: IrStatic = IrRp::new_static();
+    let ir = IrRp::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
 
     info!("IR receiver initialized on GP15");
 

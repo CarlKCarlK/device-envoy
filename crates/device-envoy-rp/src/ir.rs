@@ -1,6 +1,13 @@
 //! A device abstraction for infrared receivers using the NEC protocol.
 //!
-//! See [`Ir`], [`IrMapping`], and [`IrKepler`] for usage examples.
+//! See [`IrRp`], [`IrMappingRp`], and [`IrKeplerRp`] for usage examples.
+//!
+//! # Start Here
+//!
+//! - [`Ir`](`crate::ir::Ir`)
+//! - [`Ir::wait_for_press`](`crate::ir::Ir::wait_for_press`)
+//! - [`IrMapping`](`crate::ir::IrMapping`)
+//! - [`IrKepler`](`crate::ir::IrKepler`)
 
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
@@ -13,7 +20,7 @@ use fixed::traits::ToFixed;
 use crate::{Error, Result};
 
 use device_envoy_core::ir::decode_nec_frame;
-pub use device_envoy_core::ir::{IrEvent, IrStatic};
+pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrStatic};
 
 // ============================================================================
 // Submodules
@@ -22,8 +29,8 @@ pub use device_envoy_core::ir::{IrEvent, IrStatic};
 mod kepler;
 mod mapping;
 
-pub use kepler::{IrKepler, IrKeplerStatic, KeplerButton};
-pub use mapping::{IrMapping, IrMappingStatic};
+pub use kepler::{IrKeplerRp, IrKeplerStatic, KeplerButton};
+pub use mapping::{IrMappingRp, IrMappingStatic};
 
 // ===== NEC Receiver (forward declaration) ==================================
 
@@ -92,7 +99,7 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_rp::ir::{Ir, IrEvent, IrStatic};
+/// use device_envoy_rp::ir::{Ir as _, IrEvent, IrRp, IrStatic};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///
@@ -100,8 +107,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
-///     static IR_STATIC: IrStatic = Ir::new_static();
-///     let ir = Ir::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
+///     static IR_STATIC: IrStatic = IrRp::new_static();
+///     let ir = IrRp::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
 ///
 ///     loop {
 ///         let IrEvent::Press { addr, cmd } = ir.wait_for_press().await;
@@ -109,14 +116,14 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
 ///     }
 /// }
 /// ```
-pub struct Ir<'a> {
+pub struct IrRp<'a> {
     ir_static: &'a IrStatic,
 }
 
-impl Ir<'_> {
+impl IrRp<'_> {
     /// Create static channel resources for IR events.
     ///
-    /// See [`Ir`] for usage examples.
+    /// See [`IrRp`] for usage examples.
     #[must_use]
     pub const fn new_static() -> IrStatic {
         IrStatic::new()
@@ -124,7 +131,7 @@ impl Ir<'_> {
 
     /// Create a new PIO-based IR receiver on the specified pin.
     ///
-    /// See [`Ir`] for usage examples.
+    /// See [`IrRp`] for usage examples.
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
@@ -159,10 +166,10 @@ impl Ir<'_> {
         Ok(Self { ir_static })
     }
 
-    /// Wait for the next IR event.
-    ///
-    /// See [`Ir`] for usage examples.
-    pub async fn wait_for_press(&self) -> IrEvent {
+}
+
+impl Ir for IrRp<'_> {
+    async fn wait_for_press(&self) -> IrEvent {
         self.ir_static.receive().await
     }
 }

@@ -1,14 +1,21 @@
 //! A device abstraction for infrared receivers using the NEC protocol.
 //!
-//! See [`Ir`], [`IrMapping`], and [`IrKepler`] for usage examples.
+//! See [`IrEsp`], [`IrMappingEsp`], and [`IrKeplerEsp`] for usage examples.
+//!
+//! # Start Here
+//!
+//! - [`Ir`](`crate::ir::Ir`)
+//! - [`Ir::wait_for_press`](`crate::ir::Ir::wait_for_press`)
+//! - [`IrMapping`](`crate::ir::IrMapping`)
+//! - [`IrKepler`](`crate::ir::IrKepler`)
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
 mod kepler;
 mod mapping;
 
-pub use device_envoy_core::ir::{IrEvent, IrStatic};
-pub use kepler::{IrKepler, IrKeplerStatic, KeplerButton};
-pub use mapping::{IrMapping, IrMappingStatic};
+pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrStatic};
+pub use kepler::{IrKeplerEsp, IrKeplerStatic, KeplerButton};
+pub use mapping::{IrMappingEsp, IrMappingStatic};
 
 #[cfg(target_os = "none")]
 use device_envoy_core::ir::decode_nec_frame;
@@ -23,11 +30,11 @@ use crate::Result;
 /// A device abstraction for an infrared receiver for NEC protocol decoding.
 ///
 /// The caller owns RMT lifecycle and passes an owned RX channel.
-pub struct Ir<'a> {
+pub struct IrEsp<'a> {
     ir_static: &'a IrStatic,
 }
 
-impl Ir<'_> {
+impl IrEsp<'_> {
     /// Create static channel resources for IR events.
     #[must_use]
     pub const fn new_static() -> IrStatic {
@@ -58,8 +65,10 @@ impl Ir<'_> {
         Ok(Self { ir_static })
     }
 
-    /// Wait for the next IR event.
-    pub async fn wait_for_press(&self) -> IrEvent {
+}
+
+impl Ir for IrEsp<'_> {
+    async fn wait_for_press(&self) -> IrEvent {
         self.ir_static.receive().await
     }
 }

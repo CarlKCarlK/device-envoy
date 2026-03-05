@@ -1,25 +1,25 @@
 //! A device abstraction for the SunFounder Kepler Kit IR remote control.
 //!
-//! See [`IrKepler`] for usage examples.
+//! See [`IrKeplerEsp`] for usage examples.
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
-use device_envoy_core::ir::kepler::IrKeplerDevice;
+use device_envoy_core::ir::{IrKepler, IrMapping as _};
 #[cfg(target_os = "none")]
 use embassy_executor::Spawner;
 
-use crate::ir::mapping::IrMapping;
+use crate::ir::mapping::IrMappingEsp;
 #[cfg(target_os = "none")]
 use crate::Result;
 pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KeplerButton};
 
-type IrKeplerMapping<'a> = IrMapping<'a, KeplerButton, 21>;
+type IrKeplerMapping<'a> = IrMappingEsp<'a, KeplerButton, 21>;
 
 /// A device abstraction for the SunFounder Kepler Kit IR remote.
-pub struct IrKepler<'a> {
+pub struct IrKeplerEsp<'a> {
     mapping: IrKeplerMapping<'a>,
 }
 
-impl<'a> IrKepler<'a> {
+impl<'a> IrKeplerEsp<'a> {
     /// Create static channel resources for IR events.
     #[must_use]
     pub const fn new_static() -> IrKeplerStatic {
@@ -38,7 +38,7 @@ impl<'a> IrKepler<'a> {
         spawner: Spawner,
     ) -> Result<Self> {
         use device_envoy_core::ir::kepler::KEPLER_MAPPING;
-        let mapping = IrMapping::new(
+        let mapping = IrMappingEsp::new(
             ir_kepler_static.inner(),
             pin,
             channel_creator,
@@ -48,16 +48,10 @@ impl<'a> IrKepler<'a> {
         Ok(Self { mapping })
     }
 
-    /// Wait for the next button press.
-    ///
-    /// Ignores button presses that are not recognized by the Kepler remote.
-    pub async fn wait_for_press(&self) -> KeplerButton {
-        self.mapping.wait_for_press().await
-    }
 }
 
-impl IrKeplerDevice for IrKepler<'_> {
-    async fn wait_for_press(&mut self) -> KeplerButton {
-        IrKepler::wait_for_press(self).await
+impl IrKepler for IrKeplerEsp<'_> {
+    async fn wait_for_press(&self) -> KeplerButton {
+        self.mapping.wait_for_press().await
     }
 }

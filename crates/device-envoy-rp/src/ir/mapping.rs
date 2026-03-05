@@ -1,6 +1,6 @@
 //! A device abstraction for mapping IR remote buttons to application-specific actions.
 //!
-//! See [`IrMapping`] for usage examples.
+//! See [`IrMappingRp`] for usage examples.
 
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
@@ -9,7 +9,7 @@ use embassy_rp::pio::PioPin;
 use heapless::LinearMap;
 
 use crate::Result;
-use crate::ir::{Ir, IrEvent, IrPioPeripheral};
+use crate::ir::{Ir as _, IrEvent, IrMapping, IrPioPeripheral, IrRp};
 
 pub use device_envoy_core::ir::mapping::IrMappingStatic;
 
@@ -19,7 +19,7 @@ pub use device_envoy_core::ir::mapping::IrMappingStatic;
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_rp::ir::{IrMapping, IrMappingStatic};
+/// use device_envoy_rp::ir::{IrMapping as _, IrMappingRp, IrMappingStatic};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// #[derive(Debug, Clone, Copy)]
@@ -34,8 +34,8 @@ pub use device_envoy_core::ir::mapping::IrMappingStatic;
 ///         (0x0000, 0x08, RemoteButton::Stop),
 ///     ];
 ///
-///     static IR_MAPPING_STATIC: IrMappingStatic = IrMapping::<RemoteButton, 3>::new_static();
-///     let ir_mapping: IrMapping<RemoteButton, 3> = IrMapping::new(&IR_MAPPING_STATIC, p.PIN_15, p.PIO0, &button_map, spawner)?;
+///     static IR_MAPPING_STATIC: IrMappingStatic = IrMappingRp::<RemoteButton, 3>::new_static();
+///     let ir_mapping: IrMappingRp<RemoteButton, 3> = IrMappingRp::new(&IR_MAPPING_STATIC, p.PIN_15, p.PIO0, &button_map, spawner)?;
 ///
 ///     loop {
 ///         let button = ir_mapping.wait_for_press().await;
@@ -43,18 +43,18 @@ pub use device_envoy_core::ir::mapping::IrMappingStatic;
 ///     }
 /// }
 /// ```
-pub struct IrMapping<'a, B, const N: usize> {
-    ir: Ir<'a>,
+pub struct IrMappingRp<'a, B, const N: usize> {
+    ir: IrRp<'a>,
     button_map: LinearMap<(u16, u8), B, N>,
 }
 
-impl<'a, B, const N: usize> IrMapping<'a, B, N>
+impl<'a, B, const N: usize> IrMappingRp<'a, B, N>
 where
     B: Copy,
 {
     /// Create static channel resources for IR mapping events.
     ///
-    /// See [`IrMapping`] for usage examples.
+    /// See [`IrMappingRp`] for usage examples.
     #[must_use]
     pub const fn new_static() -> IrMappingStatic {
         IrMappingStatic::new()
@@ -69,7 +69,7 @@ where
     /// - `button_map`: Array mapping (address, command) pairs to button types
     /// - `spawner`: Embassy spawner for background task
     ///
-    /// See [`IrMapping`] for usage examples.
+    /// See [`IrMappingRp`] for usage examples.
     ///
     /// # Errors
     /// Returns an error if the background task cannot be spawned.
@@ -84,12 +84,19 @@ where
         P: Pin + PioPin,
         PIO: IrPioPeripheral,
     {
-        let ir = Ir::new(ir_mapping_static.inner(), pin, pio, spawner)?;
+        let ir = IrRp::new(ir_mapping_static.inner(), pin, pio, spawner)?;
 
         // Convert the flat array to a LinearMap
         let mut map = LinearMap::new();
         for &(addr, cmd, button) in button_map {
-            map.insert((addr, cmd), button).ok();
+            let previous_button = match map.insert((addr, cmd), button) {
+                Ok(previous_button) => previous_button,
+                Err(_) => panic!("button_map entries exceed IrMapping capacity"),
+            };
+            assert!(
+                previous_button.is_none(),
+                "button_map contains duplicate (addr, cmd) entries"
+            );
         }
 
         Ok(Self {
@@ -98,12 +105,13 @@ where
         })
     }
 
-    /// Wait for the next recognized button press.
-    ///
-    /// Ignores button presses that are not in the button map.
-    ///
-    /// See [`IrMapping`] for usage examples.
-    pub async fn wait_for_press(&self) -> B {
+}
+
+impl<B, const N: usize> IrMapping<B> for IrMappingRp<'_, B, N>
+where
+    B: Copy,
+{
+    async fn wait_for_press(&self) -> B {
         loop {
             let IrEvent::Press { addr, cmd } = self.ir.wait_for_press().await;
             #[cfg(feature = "defmt")]

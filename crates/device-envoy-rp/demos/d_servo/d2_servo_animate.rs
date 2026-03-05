@@ -6,7 +6,7 @@
 use core::{convert::Infallible, panic};
 use device_envoy_rp::{
     Result,
-    button::{Button, PressDuration, PressedTo},
+    button::{ButtonRp, PressDuration, PressedTo},
     servo_player::{AtEnd, combine, linear, servo_player},
 };
 use embassy_executor::Spawner;
@@ -36,6 +36,8 @@ const STEPS: [(u16, Duration); 40] = combine!(
     [(0, Duration::from_millis(400))]             // hold
 );
 
+use device_envoy_rp::button::ButtonDevice as _;
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -44,7 +46,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     // Create the servo player on GPIO 11. (11/2) % 8 = 5 → PWM_SLICE5
     let servo_player_11 = ServoPlayer11::new(p.PIN_11, p.PWM_SLICE5, spawner)?;

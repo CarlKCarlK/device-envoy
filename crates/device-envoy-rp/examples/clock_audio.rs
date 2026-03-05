@@ -22,6 +22,7 @@ use defmt_rtt as _;
 use device_envoy_rp::audio_player::SilenceClip;
 use device_envoy_rp::audio_player::{AtEnd, Gain, VOICE_22050_HZ, Volume, audio_player};
 use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button::ButtonDevice as _;
 use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s};
 use device_envoy_rp::flash_array::FlashArray;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};

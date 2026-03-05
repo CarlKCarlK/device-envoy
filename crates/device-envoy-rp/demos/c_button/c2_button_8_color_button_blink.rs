@@ -6,7 +6,7 @@
 use core::{convert::Infallible, panic};
 use device_envoy_rp::{
     Result,
-    button::{Button, PressDuration, PressedTo},
+    button::{ButtonRp, PressDuration, PressedTo},
     led_strip::{Frame1d, LedStrip as _, RGB8, colors, led_strip},
 };
 use embassy_executor::Spawner;
@@ -20,6 +20,8 @@ led_strip! {
         max_frames: 2,
     }
 }
+
+use device_envoy_rp::button::ButtonDevice as _;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -42,7 +44,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut led_index_iter = (0..LedStrip8::LEN).cycle();
     let mut led_index = led_index_iter.next().unwrap();
 
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     loop {
         blink_frame[led_index] = colors::BLACK;

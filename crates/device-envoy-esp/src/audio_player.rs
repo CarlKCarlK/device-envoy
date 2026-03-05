@@ -128,7 +128,7 @@
 //!     audio_player::{
 //!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
-//!     button::{Button, PressedTo},
+//!     button::{ButtonEsp, PressedTo},
 //!     tone,
 //! };
 //! use core::time::Duration as StdDuration;
@@ -181,7 +181,7 @@
 //!         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
 //!
 //!     let p = embassy_rp::init(Default::default());
-//!     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+//!     let mut button = ButtonEsp::new(p.PIN_13, PressedTo::Ground);
 //!     let audio_player8 =
 //!         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner)?;
 //!

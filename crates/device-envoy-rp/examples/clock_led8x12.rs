@@ -76,6 +76,8 @@ button_watch! {
     }
 }
 
+use device_envoy_rp::button::{ButtonDevice as _, ButtonWatchDevice as _};
+
 #[embassy_executor::main]
 pub async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();

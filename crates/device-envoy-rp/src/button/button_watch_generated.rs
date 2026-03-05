@@ -21,7 +21,7 @@ button_watch! {
 /// provides. For first-time readers, start with the examples in the [`button_watch!`](crate::button_watch!) macro
 /// documentation, then return here for a complete list of available methods.
 pub struct ButtonWatchGenerated {
-    button_watch: super::ButtonWatch,
+    button_watch: super::ButtonWatchRp,
 }
 
 #[cfg(doc)]
@@ -47,7 +47,7 @@ impl ButtonWatchGenerated {
         spawner: embassy_executor::Spawner,
     ) -> crate::Result<&'static Self> {
         static INSTANCE: ButtonWatchGenerated = ButtonWatchGenerated {
-            button_watch: super::ButtonWatch {
+            button_watch: super::ButtonWatchRp {
                 signal: &embassy_sync::signal::Signal::new(),
             },
         };
@@ -57,8 +57,8 @@ impl ButtonWatchGenerated {
 
     /// A device abstraction for buttons that uses a background task to monitor presses.
     ///
-    /// This is useful for converting a `Button` returned from `WifiAuto::connect()`
-    /// into a `ButtonWatch` for background monitoring.
+    /// This is useful for converting a `ButtonRp` returned from `WifiAuto::connect()`
+    /// into a `ButtonWatchRp` for background monitoring.
     ///
     /// # Parameters
     ///
@@ -69,11 +69,11 @@ impl ButtonWatchGenerated {
     ///
     /// Returns an error if the background task cannot be spawned.
     pub fn from_button(
-        button: crate::button::Button<'static>,
+        button: crate::button::ButtonRp<'static>,
         spawner: embassy_executor::Spawner,
     ) -> crate::Result<&'static Self> {
         static INSTANCE: ButtonWatchGenerated = ButtonWatchGenerated {
-            button_watch: super::ButtonWatch {
+            button_watch: super::ButtonWatchRp {
                 signal: &embassy_sync::signal::Signal::new(),
             },
         };
@@ -84,7 +84,7 @@ impl ButtonWatchGenerated {
 
 #[cfg(doc)]
 impl core::ops::Deref for ButtonWatchGenerated {
-    type Target = super::ButtonWatch;
+    type Target = super::ButtonWatchRp;
 
     fn deref(&self) -> &Self::Target {
         &self.button_watch

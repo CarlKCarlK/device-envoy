@@ -6,12 +6,14 @@
 use core::{convert::Infallible, panic};
 use device_envoy_rp::{
     Result,
-    button::{Button, PressDuration, PressedTo},
+    button::{ButtonRp, PressDuration, PressedTo},
     servo,
 };
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
+
+use device_envoy_rp::button::ButtonDevice as _;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -22,7 +24,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     // Create a servo on GPIO 11. Must also give "PWM slice".
     // rule: slice = (gpio/2) % 8; GPIO11 -> 5

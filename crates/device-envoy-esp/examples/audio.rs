@@ -20,9 +20,11 @@ use log::info;
 
 use device_envoy_esp::{
     audio_player::{audio_player, pcm_clip, AtEnd, Gain, SilenceClip, Volume, VOICE_22050_HZ},
-    button::{Button, PressedTo},
+    button::{ButtonEsp, PressedTo},
     init_and_start, tone, Result,
 };
+
+use device_envoy_esp::button::ButtonDevice as _;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -66,7 +68,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const SILENCE_100MS: &AudioPlayerGpio21Playable =
         &SilenceClip::new(StdDuration::from_millis(100));
 
-    let mut button = Button::new(p.GPIO6, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let audio_player_gpio21 =
         AudioPlayerGpio21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
 

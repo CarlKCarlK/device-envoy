@@ -14,7 +14,7 @@ use core::future::Future;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "none")]
-use crate::button::{Button, PressedTo};
+use crate::button::{ButtonDevice as _, ButtonEsp, PressedTo};
 #[cfg(target_os = "none")]
 use crate::flash_array::FlashBlock;
 use crate::Result;
@@ -66,7 +66,7 @@ pub struct WifiAuto<'a> {
     #[cfg(target_os = "none")]
     force_captive_portal: bool,
     #[cfg(target_os = "none")]
-    button: RefCell<Option<Button<'static>>>,
+    button: RefCell<Option<ButtonEsp<'static>>>,
 }
 
 impl<'a> WifiAuto<'a> {
@@ -121,7 +121,7 @@ impl<'a> WifiAuto<'a> {
         );
         let fields =
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
-        let button = Button::new(button_pin, button_pressed_to);
+        let button = ButtonEsp::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
         let wifi_auto = Self {
             captive_portal_ssid,
@@ -175,7 +175,7 @@ impl<'a> WifiAuto<'a> {
         );
         let fields =
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
-        let button = Button::new(button_pin, button_pressed_to);
+        let button = ButtonEsp::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
         let wifi_auto = Self {
             captive_portal_ssid,
@@ -280,7 +280,7 @@ impl<'a> WifiAuto<'a> {
     ///
     /// Returns `true` if startup mode was changed to [`WifiStartMode::CaptivePortal`].
     #[cfg(target_os = "none")]
-    pub fn force_captive_portal_if_pressed(&self, button: &Button<'_>) -> Result<bool> {
+    pub fn force_captive_portal_if_pressed(&self, button: &ButtonEsp<'_>) -> Result<bool> {
         self.force_captive_portal_if_pressed_state(button.is_pressed())
     }
 
@@ -331,7 +331,7 @@ impl<'a> WifiAuto<'a> {
     #[cfg(target_os = "none")]
     device_envoy_core::__impl_wifi_auto_connect! {
     /// Connect using persisted credentials or captive-portal setup flow.
-    fn connect(&self as wifi_auto, on_event) -> Result<(&'static Stack<'static>, Button<'static>)> {
+    fn connect(&self as wifi_auto, on_event) -> Result<(&'static Stack<'static>, ButtonEsp<'static>)> {
         Self::initialize_wifi_heap_once();
         let wifi = wifi_auto
             .wifi

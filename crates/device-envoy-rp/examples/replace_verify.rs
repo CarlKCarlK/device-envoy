@@ -8,7 +8,7 @@ use defmt::info;
 
 use device_envoy_rp::{
     Result,
-    button::{Button, PressedTo},
+    button::{ButtonRp, PressedTo},
     led_strip::{Current, Frame1d, LedStrip as _, colors, led_strips},
     led2d::Frame2d,
     led2d::Led2d as _,
@@ -40,6 +40,8 @@ led_strips! {
     }
 }
 
+use device_envoy_rp::button::ButtonDevice as _;
+
 #[embassy_executor::main]
 async fn main(spawner: embassy_executor::Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -51,7 +53,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     let (gpio0_led_strip, gpio3_led2d) =
         LedStripsPio0::new(p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, spawner)?;
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     const ANIMATION_DELAY: embassy_time::Duration = embassy_time::Duration::from_millis(50);
 

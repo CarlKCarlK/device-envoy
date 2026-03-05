@@ -7,7 +7,7 @@ use core::future;
 use core::{convert::Infallible, panic};
 use device_envoy_rp::{
     Result,
-    button::{Button, PressedTo},
+    button::{ButtonRp, PressedTo},
     led_strip::{Frame1d, LedStrip as _, colors, led_strip},
 };
 use embassy_executor::Spawner;
@@ -21,6 +21,8 @@ led_strip! {
         max_frames: 2,
     }
 }
+
+use device_envoy_rp::button::ButtonDevice as _;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -38,7 +40,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // A button just needs to know its pin and whether it connects to Vcc or Ground.
     // (Pico 2 erratum E9 is avoided by wiring buttons to GND.)
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     for led_index in (0..LedStrip8::LEN).cycle() {
         blink_frame[led_index] = colors::BLACK; // add hole

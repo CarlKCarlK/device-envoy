@@ -22,7 +22,7 @@ use heapless::Vec;
 use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
-use crate::button::{Button, PressedTo};
+use crate::button::{ButtonDevice as _, ButtonRp, PressedTo};
 use crate::flash_array::FlashBlock;
 use crate::{Error, Result};
 use device_envoy_core::wifi_auto::{WifiCredentials as InnerWifiCredentials, WifiStartMode};
@@ -55,7 +55,7 @@ pub(crate) struct WifiAutoStatic {
     wifi_auto_cell: StaticCell<WifiAutoInner>,
     force_captive_portal: AtomicBool,
     defaults: Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>>,
-    button: Mutex<CriticalSectionRawMutex, RefCell<Option<Button<'static>>>>,
+    button: Mutex<CriticalSectionRawMutex, RefCell<Option<ButtonRp<'static>>>>,
     fields_storage: StaticCell<Vec<&'static dyn WifiAutoField, MAX_WIFI_AUTO_FIELDS>>,
 }
 /// A device abstraction that connects a Pico with WiFi to the Internet and, when needed,
@@ -203,7 +203,7 @@ struct WifiAutoInner {
     spawner: Spawner,
     force_captive_portal: &'static AtomicBool,
     defaults: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>>,
-    button: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<Button<'static>>>>,
+    button: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<ButtonRp<'static>>>>,
     fields: &'static [&'static dyn WifiAutoField],
 }
 
@@ -232,7 +232,7 @@ impl WifiAutoStatic {
 
     fn button(
         &'static self,
-    ) -> &'static Mutex<CriticalSectionRawMutex, RefCell<Option<Button<'static>>>> {
+    ) -> &'static Mutex<CriticalSectionRawMutex, RefCell<Option<ButtonRp<'static>>>> {
         &self.button
     }
 }
@@ -284,7 +284,7 @@ impl WifiAuto {
         }
 
         // Allow the pull-up to stabilize after reset before sampling the button.
-        let button = Button::new(button_pin, button_pressed_to);
+        let button = ButtonRp::new(button_pin, button_pressed_to);
         let button_reset_stabilize_cycles: u32 = 300_000;
         cortex_m::asm::delay(button_reset_stabilize_cycles);
         let force_captive_portal = button.is_pressed();
@@ -484,7 +484,7 @@ impl WifiAuto {
     /// # Ok(())
     /// # }
     /// ```
-    fn connect(self as wifi_auto, on_event) -> Result<(&'static Stack<'static>, Button<'static>)> {
+    fn connect(self as wifi_auto, on_event) -> Result<(&'static Stack<'static>, ButtonRp<'static>)> {
         wifi_auto.wifi_auto.connect(on_event).await
     }
     }
@@ -500,7 +500,7 @@ impl WifiAutoInner {
         self.force_captive_portal.store(true, Ordering::Relaxed);
     }
 
-    fn take_button(&self) -> Option<Button<'static>> {
+    fn take_button(&self) -> Option<ButtonRp<'static>> {
         self.button.lock(|cell| cell.borrow_mut().take())
     }
 
@@ -520,7 +520,7 @@ impl WifiAutoInner {
     }
 
     device_envoy_core::__impl_wifi_auto_connect! {
-    fn connect(&self as wifi_auto_inner, on_event) -> Result<(&'static Stack<'static>, Button<'static>)> {
+    fn connect(&self as wifi_auto_inner, on_event) -> Result<(&'static Stack<'static>, ButtonRp<'static>)> {
         wifi_auto_inner.ensure_connected_with(&mut on_event).await?;
         let stack = wifi_auto_inner.wifi.wait_for_stack().await;
         let button = wifi_auto_inner

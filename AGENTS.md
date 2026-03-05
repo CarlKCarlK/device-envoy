@@ -276,6 +276,7 @@ Runtime naming rule: when such platform runtime structs are needed, name them us
    - Remove now-unneeded stored fields used only by removed inherent helpers
 9. Enforce trait-based method resolution for non-constructor APIs:
    - After migration, methods like `write_*`, `animate`, `play`, etc. must resolve via the trait, not inherent methods.
+   - Do not add inherent forwarding/wrapper methods (including UFCS shims) for trait operations during migration.
    - Do not expose those methods through `Deref` to runtime helper structs.
    - Keep constructors (`new`, `new_static`, `from_*`) inherent; move operational methods to trait-only surface.
    - Verify at least one representative callsite requires `use ...::<TraitName> as _;` for method resolution.

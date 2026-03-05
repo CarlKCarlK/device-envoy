@@ -29,6 +29,8 @@ use device_envoy_esp::{
     },
 };
 
+use device_envoy_esp::button::ButtonDevice as _;
+
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyClock";

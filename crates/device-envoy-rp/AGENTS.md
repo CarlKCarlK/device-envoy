@@ -151,7 +151,7 @@ The `OnLevel` enum specifies what pin level turns the LED on.
 The standard button pin across examples is **PIN_13**:
 
 ```rust
-let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 ```
 
 Use this consistently when adding button input to examples.

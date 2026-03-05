@@ -3,26 +3,24 @@
 //! See the [`button_watch!`](crate::button_watch!) macro for usage and
 //! [`ButtonWatchGenerated`](super::button_watch_generated::ButtonWatchGenerated) for a sample of a generated type.
 
-use embassy_futures::select::{Either, select};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Pin, Pull};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-use embassy_time::{Duration, Timer};
 
-use super::{BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION, PressDuration, PressedTo};
+use super::{PressDuration, PressedTo};
 
 // ============================================================================
-// ButtonWatchStatic - Static resources for button monitoring
+// ButtonWatchStaticRp - Static resources for button monitoring
 // ============================================================================
 
 // Must be public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
-pub struct ButtonWatchStatic {
+pub struct ButtonWatchStaticRp {
     signal: Signal<CriticalSectionRawMutex, PressDuration>,
 }
 
-impl ButtonWatchStatic {
+impl ButtonWatchStaticRp {
     #[must_use]
     pub const fn new() -> Self {
         Self {
@@ -37,25 +35,27 @@ impl ButtonWatchStatic {
 }
 
 // ============================================================================
-// ButtonWatch - Handle for background button monitoring
+// ButtonWatchRp - Handle for background button monitoring
 // ============================================================================
 
 // Must be public for macro expansion in downstream crates, but not user-facing API.
 // Users interact with the macro-generated structs (e.g., ButtonWatchGenerated), not this type directly.
 #[doc(hidden)]
-pub struct ButtonWatch {
+pub struct ButtonWatchRp {
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
 }
 
-impl ButtonWatch {
+impl ButtonWatchRp {
     #[must_use]
-    pub fn new(button_watch_static: &'static ButtonWatchStatic) -> Self {
+    pub fn new(button_watch_static: &'static ButtonWatchStaticRp) -> Self {
         Self {
             signal: button_watch_static.signal(),
         }
     }
+}
 
-    pub async fn wait_for_press_duration(&self) -> PressDuration {
+impl device_envoy_core::button::ButtonWatch for ButtonWatchRp {
+    async fn wait_for_press_duration(&self) -> PressDuration {
         self.signal.wait().await
     }
 }
@@ -78,63 +78,16 @@ pub async fn button_watch_task<P: Pin>(
         PressedTo::Ground => Pull::Up,
     };
     let mut input = Input::new(pin, pull);
-
-    loop {
-        // Wait for button to be released (if pressed)
-        while is_pressed(&input, pressed_to) {
-            Timer::after(Duration::from_millis(1)).await;
-        }
-        Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-        while is_pressed(&input, pressed_to) {
-            Timer::after(Duration::from_millis(1)).await;
-        }
-
-        // Wait for button press (debounced)
-        while !is_pressed(&input, pressed_to) {
-            Timer::after(Duration::from_millis(1)).await;
-        }
-        Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-        if !is_pressed(&input, pressed_to) {
-            continue; // was bounce
-        }
-
-        // Measure press duration
-        let press_duration = match select(
-            wait_for_release(&mut input, pressed_to),
-            Timer::after(LONG_PRESS_DURATION),
-        )
-        .await
-        {
-            Either::First(_) => PressDuration::Short,
-            Either::Second(()) => PressDuration::Long,
-        };
-
-        signal.signal(press_duration);
-    }
-}
-
-fn is_pressed(input: &Input<'static>, pressed_to: PressedTo) -> bool {
-    match pressed_to {
-        PressedTo::Voltage => input.is_high(),
-        PressedTo::Ground => input.is_low(),
-    }
-}
-
-async fn wait_for_release(input: &mut Input<'static>, pressed_to: PressedTo) {
-    loop {
-        if !is_pressed(input, pressed_to) {
-            Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-            if !is_pressed(input, pressed_to) {
-                break;
-            }
-        }
-        Timer::after(Duration::from_millis(1)).await;
-    }
+    let mut input_button = InputButton {
+        input: &mut input,
+        pressed_to,
+    };
+    signal_press_durations(&mut input_button, signal).await
 }
 
 /// Background task that monitors button state from an existing Input.
 ///
-/// This variant is used when converting from a `Button` via `from_button()`.
+/// This variant is used when converting from a `ButtonRp` via `from_button()`.
 /// Never call directly - spawned automatically by the [`button_watch!`](crate::button_watch!) macro.
 #[doc(hidden)]
 pub async fn button_watch_task_from_input(
@@ -142,36 +95,42 @@ pub async fn button_watch_task_from_input(
     pressed_to: PressedTo,
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
 ) -> ! {
+    let mut input_button = InputButton {
+        input: &mut input,
+        pressed_to,
+    };
+    signal_press_durations(&mut input_button, signal).await
+}
+
+struct InputButton<'a> {
+    input: &'a mut Input<'static>,
+    pressed_to: PressedTo,
+}
+
+impl device_envoy_core::button::Button for InputButton<'_> {
+    fn is_pressed(&self) -> bool {
+        self.pressed_to.is_pressed(self.input.is_high())
+    }
+
+    async fn wait_until_pressed_state(&mut self, pressed: bool) {
+        match (pressed, self.pressed_to) {
+            (true, PressedTo::Voltage) | (false, PressedTo::Ground) => {
+                self.input.wait_for_high().await;
+            }
+            (true, PressedTo::Ground) | (false, PressedTo::Voltage) => {
+                self.input.wait_for_low().await;
+            }
+        }
+    }
+}
+
+async fn signal_press_durations<B: device_envoy_core::button::Button>(
+    button: &mut B,
+    signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
+) -> ! {
     loop {
-        // Wait for button to be released (if pressed)
-        while is_pressed(&input, pressed_to) {
-            Timer::after(Duration::from_millis(1)).await;
-        }
-        Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-        while is_pressed(&input, pressed_to) {
-            Timer::after(Duration::from_millis(1)).await;
-        }
-
-        // Wait for button press (debounced)
-        while !is_pressed(&input, pressed_to) {
-            Timer::after(Duration::from_millis(1)).await;
-        }
-        Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-        if !is_pressed(&input, pressed_to) {
-            continue; // was bounce
-        }
-
-        // Measure press duration
-        let press_duration = match select(
-            wait_for_release(&mut input, pressed_to),
-            Timer::after(LONG_PRESS_DURATION),
-        )
-        .await
-        {
-            Either::First(_) => PressDuration::Short,
-            Either::Second(()) => PressDuration::Long,
-        };
-
+        let press_duration =
+            <B as device_envoy_core::button::Button>::wait_for_press_duration(button).await;
         signal.signal(press_duration);
     }
 }
@@ -190,12 +149,12 @@ pub async fn button_watch_task_from_input(
 /// # Constructors
 ///
 /// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
-/// - [`from_button()`](crate::button::button_watch_generated::ButtonWatchGenerated::from_button) — Convert from an existing `Button`
+/// - [`from_button()`](crate::button::button_watch_generated::ButtonWatchGenerated::from_button) — Convert from an existing `ButtonRp`
 ///
 /// # Use Cases
 ///
-/// Use `button_watch!` instead of [`Button`](super::Button) when you need continuous monitoring
-/// that works even in fast loops or `select()` operations. [`Button`](super::Button) starts
+/// Use `button_watch!` instead of [`ButtonRp`](super::ButtonRp) when you need continuous monitoring
+/// that works even in fast loops or `select()` operations. [`ButtonRp`](super::ButtonRp) starts
 /// fresh monitoring on each call to `wait_for_press()`, which can miss events in busy loops.
 ///
 ///  # Parameters
@@ -315,7 +274,7 @@ macro_rules! __button_watch_impl {
                 "See the [button_watch module documentation](mod@$crate::button) for usage."
             )]
             $vis struct $name {
-                button_watch: $crate::button::ButtonWatch,
+                button_watch: $crate::button::ButtonWatchRp,
             }
 
             impl $name {
@@ -335,8 +294,8 @@ macro_rules! __button_watch_impl {
                     pressed_to: $crate::button::PressedTo,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStatic =
-                        $crate::button::ButtonWatchStatic::new();
+                    static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticRp =
+                        $crate::button::ButtonWatchStaticRp::new();
                     static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$name> =
                         ::static_cell::StaticCell::new();
 
@@ -348,7 +307,7 @@ macro_rules! __button_watch_impl {
                     );
                     spawner.spawn(task_token).map_err($crate::Error::TaskSpawn)?;
 
-                    let button_watch = $crate::button::ButtonWatch::new(
+                    let button_watch = $crate::button::ButtonWatchRp::new(
                         &BUTTON_WATCH_STATIC,
                     );
 
@@ -356,10 +315,10 @@ macro_rules! __button_watch_impl {
                     Ok(instance)
                 }
 
-                /// Creates a button monitor from an existing `Button` and spawns its background task.
+                /// Creates a button monitor from an existing `ButtonRp` and spawns its background task.
                 ///
-                /// This is useful for converting a `Button` returned from `WifiAuto::connect()`
-                /// into a `ButtonWatch` for background monitoring.
+                /// This is useful for converting a `ButtonRp` returned from `WifiAuto::connect()`
+                /// into a `ButtonWatchRp` for background monitoring.
                 ///
                 /// # Parameters
                 ///
@@ -386,10 +345,10 @@ macro_rules! __button_watch_impl {
                 /// }
                 ///
                 /// async fn example(
-                ///     button: device_envoy_rp::button::Button<'static>,
+                ///     button: device_envoy_rp::button::ButtonRp<'static>,
                 ///     spawner: Spawner,
                 /// ) -> device_envoy_rp::Result<()> {
-                ///     // Convert Button from WifiAuto into ButtonWatch
+                ///     // Convert ButtonRp from WifiAuto into ButtonWatchRp
                 ///     let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
                 ///
                 ///     // Now button monitoring happens in background
@@ -402,11 +361,11 @@ macro_rules! __button_watch_impl {
                 /// }
                 /// ```
                 pub fn from_button(
-                    button: $crate::button::Button<'static>,
+                    button: $crate::button::ButtonRp<'static>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStatic =
-                        $crate::button::ButtonWatchStatic::new();
+                    static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticRp =
+                        $crate::button::ButtonWatchStaticRp::new();
                     static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$name> =
                         ::static_cell::StaticCell::new();
 
@@ -418,7 +377,7 @@ macro_rules! __button_watch_impl {
                     );
                     spawner.spawn(task_token).map_err($crate::Error::TaskSpawn)?;
 
-                    let button_watch = $crate::button::ButtonWatch::new(
+                    let button_watch = $crate::button::ButtonWatchRp::new(
                         &BUTTON_WATCH_STATIC,
                     );
 
@@ -428,7 +387,7 @@ macro_rules! __button_watch_impl {
             }
 
             impl ::core::ops::Deref for $name {
-                type Target = $crate::button::ButtonWatch;
+                type Target = $crate::button::ButtonWatchRp;
 
                 fn deref(&self) -> &Self::Target {
                     &self.button_watch

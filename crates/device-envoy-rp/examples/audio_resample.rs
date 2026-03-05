@@ -17,7 +17,8 @@ use device_envoy_rp::Result;
 use device_envoy_rp::audio_player::{
     AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
-use device_envoy_rp::button::{Button, PressedTo};
+use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -88,7 +89,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NASA_8K: &AudioPlayer8KPlayable = &Nasa::pcm_clip().with_gain(Gain::percent(25));
 
     let p = embassy_rp::init(Default::default());
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let audio_player8k =
         AudioPlayer8K::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 

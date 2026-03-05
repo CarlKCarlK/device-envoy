@@ -13,6 +13,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
+use device_envoy_rp::button::{ButtonDevice as _, ButtonWatchDevice as _};
 use device_envoy_rp::button::{PressDuration, PressedTo};
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{

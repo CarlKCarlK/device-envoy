@@ -19,7 +19,8 @@ use device_envoy_rp::Result;
 use device_envoy_rp::audio_player::{
     AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
-use device_envoy_rp::button::{Button, PressedTo};
+use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::tone;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -61,7 +62,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const SILENCE_100MS: &AudioPlayer8Playable = &SilenceClip::new(StdDuration::from_millis(100));
 
     let p = embassy_rp::init(Default::default());
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 

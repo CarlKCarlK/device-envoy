@@ -84,7 +84,8 @@
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::Result;
-use device_envoy_rp::button::{Button, PressedTo};
+use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::led_strip::Current;
 use device_envoy_rp::led_strip::Gamma;
 use device_envoy_rp::led2d;
@@ -222,7 +223,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let led_12x8 = Led12x8::new(p.PIN_4, p.PIO1, p.DMA_CH1, spawner)?;
 
     // Set up button on GPIO13 (wired to ground)
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     info!("Video player initialized - gamma correction applied automatically");
 

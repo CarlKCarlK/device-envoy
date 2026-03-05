@@ -8,7 +8,7 @@ use core::time::Duration as StdDuration;
 use device_envoy_rp::{
     Result,
     audio_player::{AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
-    button::{Button, PressedTo},
+    button::{ButtonRp, PressedTo},
     tone,
 };
 use embassy_executor::Spawner;
@@ -39,6 +39,8 @@ pcm_clip! {
     }
 }
 
+use device_envoy_rp::button::ButtonDevice as _;
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = example(spawner).await.unwrap_err();
@@ -63,7 +65,7 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
 
     let p = embassy_rp::init(Default::default());
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner)?;
 
     const VOLUME_STEPS_PERCENT: [u8; 7] = [50, 25, 12, 6, 3, 1, 0];

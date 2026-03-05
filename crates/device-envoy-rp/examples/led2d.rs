@@ -7,7 +7,8 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{Button, PressedTo};
+use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::led_strip::Current;
 use device_envoy_rp::led_strip::Gamma;
 use device_envoy_rp::led2d;
@@ -51,7 +52,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led4x12 = Led4x12::new(p.PIN_3, p.PIO1, p.DMA_CH0, spawner)?;
 
-    let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     loop {
         info!("Demo 1: 3x4 font (\"RUST\" in four colors)");
@@ -248,7 +249,7 @@ impl BouncingDot {
     }
 }
 
-async fn demo_bouncing_dot_manual(led4x12: &Led4x12, button: &mut Button<'_>) -> Result<()> {
+async fn demo_bouncing_dot_manual(led4x12: &Led4x12, button: &mut ButtonRp<'_>) -> Result<()> {
     let mut bouncing_dot = BouncingDot::new();
     match select(bouncing_dot.run(led4x12), button.wait_for_press()).await {
         Either::First(result) => result.map(|_| ()),

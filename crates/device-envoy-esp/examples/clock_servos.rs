@@ -22,7 +22,7 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    button::{ButtonWatch, ButtonWatchStatic, PressDuration, PressedTo},
+    button::{ButtonWatchEsp, ButtonWatchStaticEsp, PressDuration, PressedTo},
     clock_sync::{h12_m_s, ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND},
     flash_array::FlashArray,
     init_and_start,
@@ -33,6 +33,8 @@ use device_envoy_esp::{
     },
     Error, Result,
 };
+
+use device_envoy_esp::button::ButtonWatchDevice as _;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -118,8 +120,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("WiFi connected");
     servo_clock_display.show_portal_ready();
 
-    static BUTTON_WATCH_STATIC: ButtonWatchStatic = ButtonWatch::new_static();
-    let button_watch = ButtonWatch::new(&BUTTON_WATCH_STATIC, button, spawner)?;
+    static BUTTON_WATCH_STATIC: ButtonWatchStaticEsp = ButtonWatchEsp::new_static();
+    let button_watch = ButtonWatchEsp::new(&BUTTON_WATCH_STATIC, button, spawner)?;
 
     let offset_minutes = timezone_field
         .offset_minutes()?
@@ -173,7 +175,7 @@ impl State {
         self,
         speed: f32,
         clock_sync: &ClockSync,
-        button_watch: &ButtonWatch<'_>,
+        button_watch: &ButtonWatchEsp<'_>,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
         clock_sync.set_speed(speed).await;
@@ -210,7 +212,7 @@ impl State {
     async fn execute_minutes_seconds(
         self,
         clock_sync: &ClockSync,
-        button_watch: &ButtonWatch<'_>,
+        button_watch: &ButtonWatchEsp<'_>,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
         clock_sync.set_speed(1.0).await;
@@ -244,7 +246,7 @@ impl State {
     async fn execute_edit_offset(
         self,
         clock_sync: &ClockSync,
-        button_watch: &ButtonWatch<'_>,
+        button_watch: &ButtonWatchEsp<'_>,
         timezone_field: &TimezoneField,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {

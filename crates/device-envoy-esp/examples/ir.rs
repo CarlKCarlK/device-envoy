@@ -17,6 +17,7 @@ use device_envoy_esp::{
     ir::{Ir as _, IrEsp, IrEvent, IrStatic},
 };
 
+
 esp_bootloader_esp_idf::esp_app_desc!();
 
 #[esp_rtos::main]

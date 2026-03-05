@@ -2,7 +2,7 @@
 //!
 //! This module provides two ways to monitor button presses:
 //!
-//! - [`Button`] — Simple button monitoring. Each call to `wait_for_press()`, etc. starts fresh
+//! - [`ButtonRp`] — Simple button monitoring. Each call to `wait_for_press()`, etc. starts fresh
 //!   button monitoring.
 //! - [`button_watch!`](crate::button_watch!) — Monitors a button in a background task
 //!   so that it works even in a fast loop/select.
@@ -13,20 +13,19 @@ pub mod button_watch_generated;
 
 // Must be public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
-pub use button_watch::{ButtonWatch, ButtonWatchStatic};
+pub use button_watch::{ButtonWatchRp, ButtonWatchStaticRp};
 
 // Must be public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
 pub use button_watch::{button_watch_task, button_watch_task_from_input};
 
 pub use device_envoy_core::button::{
-    BUTTON_DEBOUNCE_DELAY, LONG_PRESS_DURATION, PressDuration, PressedTo,
+    BUTTON_DEBOUNCE_DELAY, BUTTON_POLL_INTERVAL, LONG_PRESS_DURATION, PressDuration, PressedTo,
 };
+pub use device_envoy_core::button::{Button as ButtonDevice, ButtonWatch as ButtonWatchDevice};
 
-use embassy_futures::select::{Either, select};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Pull};
-use embassy_time::{Duration, Timer};
 
 // ============================================================================
 // Button Virtual Device
@@ -46,10 +45,10 @@ use embassy_time::{Duration, Timer};
 ///
 /// # Usage
 ///
-/// Use [`wait_for_press()`](Self::wait_for_press) when you only need a debounced
+/// Use [`ButtonDevice::wait_for_press`] when you only need a debounced
 /// press event. It returns on the down edge and does not wait for release.
 ///
-/// Use [`wait_for_press_duration()`](Self::wait_for_press_duration) when you need to
+/// Use [`ButtonDevice::wait_for_press_duration`] when you need to
 /// distinguish short vs. long presses. It returns as soon as it can decide, so long
 /// presses are reported before the button is released.
 ///
@@ -59,12 +58,12 @@ use embassy_time::{Duration, Timer};
 /// # #![no_std]
 /// # #![no_main]
 ///
-/// use device_envoy_rp::button::{Button, PressDuration, PressedTo};
+/// use device_envoy_rp::button::{ButtonRp, PressDuration, PressedTo};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///
 /// async fn example(p: embassy_rp::Peripherals) {
-///     let mut button = Button::new(p.PIN_13, PressedTo::Ground);
+///     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 ///
 ///     // Wait for a press without measuring duration.
 ///     button.wait_for_press().await;
@@ -82,13 +81,13 @@ use embassy_time::{Duration, Timer};
 ///     }
 /// }
 /// ```
-pub struct Button<'a> {
+pub struct ButtonRp<'a> {
     input: Input<'a>,
     pressed_to: PressedTo,
 }
 
-impl<'a> Button<'a> {
-    /// Creates a new `Button` instance from a pin.
+impl<'a> ButtonRp<'a> {
+    /// Creates a new `ButtonRp` instance from a pin.
     ///
     /// The pin is configured based on the connection type:
     /// - [`PressedTo::Voltage`]: Uses internal pull-down (button to 3.3V)
@@ -105,94 +104,10 @@ impl<'a> Button<'a> {
         }
     }
 
-    /// Returns whether the button is currently pressed.
-    #[must_use]
-    pub fn is_pressed(&self) -> bool {
-        self.pressed_to.is_pressed(self.input.is_high())
-    }
-
-    #[inline]
-    async fn wait_for_button_up(&mut self) -> &mut Self {
-        loop {
-            if !self.is_pressed() {
-                break;
-            }
-            Timer::after(Duration::from_millis(1)).await;
-        }
-        self
-    }
-
-    #[inline]
-    async fn wait_for_button_down(&mut self) -> &mut Self {
-        loop {
-            if self.is_pressed() {
-                break;
-            }
-            Timer::after(Duration::from_millis(1)).await;
-        }
-        self
-    }
-
-    #[inline]
-    async fn wait_for_stable_down(&mut self) -> &mut Self {
-        loop {
-            self.wait_for_button_down().await;
-            Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-            if self.is_pressed() {
-                break;
-            }
-            // otherwise it was bounce; keep waiting
-        }
-        self
-    }
-
-    #[inline]
-    async fn wait_for_stable_up(&mut self) -> &mut Self {
-        loop {
-            self.wait_for_button_up().await;
-            Timer::after(BUTTON_DEBOUNCE_DELAY).await;
-            if !self.is_pressed() {
-                break;
-            }
-        }
-        self
-    }
-    /// Waits for the next press (button goes down, debounced).
-    /// Does not wait for release.
-    ///
-    /// See [`Button`] for usage example
-    pub async fn wait_for_press(&mut self) {
-        self.wait_for_stable_up().await; // ensure edge-triggered
-        self.wait_for_stable_down().await; // return on down
-    }
-
-    /// Waits for the next press and returns whether it was short or long (debounced).
-    ///
-    /// Returns as soon as it can decide, so long presses are reported before release.
-    ///
-    /// See [`Button`] for usage example
-    pub async fn wait_for_press_duration(&mut self) -> PressDuration {
-        self.wait_for_stable_up().await;
-        self.wait_for_stable_down().await;
-
-        let press_duration =
-            match select(self.wait_for_stable_up(), Timer::after(LONG_PRESS_DURATION)).await {
-                Either::First(_) => PressDuration::Short,
-                Either::Second(()) => PressDuration::Long,
-            };
-
-        press_duration
-    }
-
-    /// Waits until the button is released (debounced).
-    pub async fn wait_for_release(&mut self) {
-        self.wait_for_stable_up().await;
-    }
-
     /// Consumes the button and returns its internal components.
     ///
-    /// This is useful for converting a `Button` (returned from `WifiAuto::connect`)
-    /// into a `ButtonWatch` for background monitoring.
+    /// This is useful for converting a `ButtonRp` (returned from `WifiAuto::connect`)
+    /// into a `ButtonWatchRp` for background monitoring.
     ///
     /// See the [`button_watch!`](crate::button_watch!) macro documentation for usage with `from_button()`.
     // Must be public for macro expansion but not part of the user-facing API.
@@ -200,6 +115,23 @@ impl<'a> Button<'a> {
     #[must_use]
     pub fn into_parts(self) -> (Input<'a>, PressedTo) {
         (self.input, self.pressed_to)
+    }
+}
+
+impl device_envoy_core::button::Button for ButtonRp<'_> {
+    fn is_pressed(&self) -> bool {
+        self.pressed_to.is_pressed(self.input.is_high())
+    }
+
+    async fn wait_until_pressed_state(&mut self, pressed: bool) {
+        match (pressed, self.pressed_to) {
+            (true, PressedTo::Voltage) | (false, PressedTo::Ground) => {
+                self.input.wait_for_high().await;
+            }
+            (true, PressedTo::Ground) | (false, PressedTo::Voltage) => {
+                self.input.wait_for_low().await;
+            }
+        }
     }
 }
 

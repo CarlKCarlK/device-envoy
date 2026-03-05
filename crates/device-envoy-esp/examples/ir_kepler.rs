@@ -17,6 +17,7 @@ use device_envoy_esp::{
     ir::{IrKepler as _, IrKeplerEsp, IrKeplerStatic},
 };
 
+
 esp_bootloader_esp_idf::esp_app_desc!();
 
 #[esp_rtos::main]

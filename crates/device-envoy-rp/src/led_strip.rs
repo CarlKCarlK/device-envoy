@@ -342,7 +342,7 @@ where
 /// **After reading the examples below, see also:**
 ///
 /// - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) — Sample LED **strip** type showing all methods and associated constants
-/// - [`Led2dApi`](crate::led2d::Led2dApi) — LED **panel** trait defining methods and associated constants
+/// - [`Led2d`](crate::led2d::Led2d) — LED **panel** trait defining methods and associated constants
 /// - [`led_strip!`](macro@crate::led_strip) — Alternative macro to generate a single LED strip type. Consumes a PIO resource.
 /// - [`led2d!`](mod@crate::led2d) — Alternative macro to generate a single LED panel type. Consumes a PIO resource.
 ///
@@ -376,7 +376,7 @@ where
 /// # use embassy_executor::Spawner;
 /// # use defmt::info;
 /// use device_envoy_rp::{Result, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout, led_strip::{Current, Frame1d, Gamma, colors, led_strips}};
-/// # use device_envoy_rp::led2d::Led2dApi as _;
+/// use device_envoy_rp::led2d::Led2d as _;
 /// use embassy_time::Duration;
 ///
 /// // Our 2D panel is two 12x4 panels stacked vertically.

@@ -4,13 +4,13 @@
 #![cfg(not(feature = "host"))]
 
 use core::{convert::Infallible, future, panic};
-use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result,
     flash_array::FlashArray,
     led_strip::colors,
     led2d,
     led2d::{Led2dFont, layout::LedLayout},
+    led2d::Led2d as _,
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};

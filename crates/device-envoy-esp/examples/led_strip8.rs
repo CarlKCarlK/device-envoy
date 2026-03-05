@@ -19,10 +19,10 @@ use embassy_executor::Spawner;
 use embassy_time::Duration;
 use esp_backtrace as _;
 
-use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_esp::{
     init_and_start, led_strip,
     led_strip::{colors, Current, Frame1d},
+    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

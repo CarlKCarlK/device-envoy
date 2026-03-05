@@ -1,15 +1,15 @@
 //! A device abstraction for rectangular NeoPixel-style (WS2812) LED panel displays.
-//! See [`Led2d`] for the runtime adapter and [`layout::LedLayout`] for compile-time
+//! See [`Led2dEsp`] for the runtime adapter and [`layout::LedLayout`] for compile-time
 //! panel wiring and geometry.
 //!
 //! # Start Here
 //!
 //! If rustdoc lands on generated source, jump straight to:
 //!
-//! - [`Led2dApi`](`crate::led2d::Led2dApi`)
-//! - [`Led2dApi::write_frame`](`crate::led2d::Led2dApi::write_frame`)
-//! - [`Led2dApi::write_text`](`crate::led2d::Led2dApi::write_text`)
-//! - [`Led2dApi::animate`](`crate::led2d::Led2dApi::animate`)
+//! - [`Led2d`](`crate::led2d::Led2d`)
+//! - [`Led2d::write_frame`](`crate::led2d::Led2d::write_frame`)
+//! - [`Led2d::write_text`](`crate::led2d::Led2d::write_text`)
+//! - [`Led2d::animate`](`crate::led2d::Led2d::animate`)
 
 pub mod layout {
     pub use device_envoy_core::led2d::layout::*;
@@ -18,20 +18,20 @@ pub mod layout {
 pub use device_envoy_core::led2d::{
     bit_matrix3x4_font, render_text_to_frame, Frame2d, Led2dFont, LedLayout, Point, Size,
 };
-pub use device_envoy_core::led2d::Led2d as Led2dApi;
+pub use device_envoy_core::led2d::Led2d;
 
 use core::borrow::Borrow;
 use smart_leds::RGB8;
 
 use crate::led_strip::{Frame1d as StripFrame, LedStrip};
 
-pub struct Led2d<'a, const N: usize, const MAX_FRAMES: usize> {
+pub struct Led2dEsp<'a, const N: usize, const MAX_FRAMES: usize> {
     led_strip: &'a LedStrip<N, MAX_FRAMES>,
     mapping_by_xy: [u16; N],
     width: usize,
 }
 
-impl<'a, const N: usize, const MAX_FRAMES: usize> Led2d<'a, N, MAX_FRAMES> {
+impl<'a, const N: usize, const MAX_FRAMES: usize> Led2dEsp<'a, N, MAX_FRAMES> {
     #[must_use]
     pub fn new<const W: usize, const H: usize>(
         led_strip: &'a LedStrip<N, MAX_FRAMES>,

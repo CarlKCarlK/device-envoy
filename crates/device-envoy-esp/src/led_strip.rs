@@ -464,7 +464,7 @@ macro_rules! __led2d_strip_methods {
 #[macro_export]
 macro_rules! __led2d_strip_trait_impl {
     ($name:ident, [$led_layout:expr], [$font:expr], $max_frames:expr) => {
-        impl $crate::led2d::Led2dApi<{ $led_layout.width() }, { $led_layout.height() }>
+        impl $crate::led2d::Led2d<{ $led_layout.width() }, { $led_layout.height() }>
             for &'static $name
         {
             const MAX_FRAMES: usize = $max_frames;
@@ -475,7 +475,7 @@ macro_rules! __led2d_strip_trait_impl {
                 &self,
                 frame2d: $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
             ) {
-                let led2d = $crate::led2d::Led2d::new(&self.inner, &$led_layout);
+                let led2d = $crate::led2d::Led2dEsp::new(&self.inner, &$led_layout);
                 led2d.write_frame(frame2d);
             }
 
@@ -487,7 +487,7 @@ macro_rules! __led2d_strip_trait_impl {
                     embassy_time::Duration,
                 )>,
             {
-                let led2d = $crate::led2d::Led2d::new(&self.inner, &$led_layout);
+                let led2d = $crate::led2d::Led2dEsp::new(&self.inner, &$led_layout);
                 led2d.animate(frames);
             }
         }

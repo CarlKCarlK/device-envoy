@@ -10,7 +10,6 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_esp::{
     esp_hal::{
         gpio::Level,
@@ -20,6 +19,7 @@ use device_envoy_esp::{
     led2d::layout::LedLayout,
     led_strip::{colors, RGB8},
     rmt,
+    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

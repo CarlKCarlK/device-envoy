@@ -7,7 +7,6 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use core::{convert::Infallible, fmt::Write, panic};
-use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result,
     button::PressedTo,
@@ -16,6 +15,7 @@ use device_envoy_rp::{
     led2d,
     led2d::{Led2dFont, layout::LedLayout},
     wifi_auto::{WifiAuto, WifiAutoEvent},
+    led2d::Led2d as _,
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;

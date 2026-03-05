@@ -6,9 +6,9 @@
 use core::{convert::Infallible, future};
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result, led_strip::colors, led2d, led2d::Led2dFont, led2d::layout::LedLayout,
+    led2d::Led2d as _,
 };
 use embassy_executor::Spawner;
 use embassy_rp::init;

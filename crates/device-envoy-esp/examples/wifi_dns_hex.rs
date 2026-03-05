@@ -18,7 +18,6 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::{info, warn};
 
-use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_esp::{
     button::PressedTo,
     flash_array::FlashArray,
@@ -26,6 +25,7 @@ use device_envoy_esp::{
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::{colors, Current, Gamma},
     wifi_auto::{WifiAuto, WifiAutoEvent},
+    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

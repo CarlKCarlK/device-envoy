@@ -14,7 +14,6 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::button::{PressDuration, PressedTo};
-use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
@@ -29,7 +28,7 @@ use device_envoy_rp::led2d::Led2dFont;
 use device_envoy_rp::led2d::layout::LedLayout;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAuto, WifiAutoEvent};
-use device_envoy_rp::{Error, Result};
+use device_envoy_rp::{Error, Result, led2d::Led2d as _};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::Duration;

@@ -18,7 +18,6 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Error, Result,
     button::{PressDuration, PressedTo},
@@ -34,6 +33,7 @@ use device_envoy_rp::{
         WifiAuto, WifiAutoEvent,
         fields::{TimezoneField, TimezoneFieldStatic},
     },
+    led2d::Led2d as _,
 };
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};

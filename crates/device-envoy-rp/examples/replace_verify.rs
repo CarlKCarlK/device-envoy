@@ -6,7 +6,6 @@
 use core::{convert::Infallible, panic};
 use defmt::info;
 
-use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result,
     button::{Button, PressedTo},
@@ -14,6 +13,7 @@ use device_envoy_rp::{
     led2d::Frame2d,
     led2d::Led2dFont,
     led2d::layout::LedLayout,
+    led2d::Led2d as _,
 };
 use {defmt_rtt as _, panic_probe as _};
 

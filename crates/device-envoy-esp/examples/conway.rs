@@ -6,7 +6,6 @@ use core::convert::Infallible;
 
 #[allow(unused_imports)]
 use device_envoy_esp::led_strip::Engine;
-use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_example_common::conway::run_conway;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
@@ -19,6 +18,7 @@ use device_envoy_esp::{
     led2d,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::Current,
+    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

@@ -8,7 +8,6 @@
 
 use core::{convert::Infallible, panic};
 use defmt::{info, warn};
-use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result,
     button::PressedTo,
@@ -18,6 +17,7 @@ use device_envoy_rp::{
     led2d::{Led2dFont, layout::LedLayout},
     wifi_auto::fields::{TextField, TextFieldStatic},
     wifi_auto::{WifiAuto, WifiAutoEvent},
+    led2d::Led2d as _,
 };
 use embassy_executor::Spawner;
 use embassy_net::{

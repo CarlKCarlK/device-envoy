@@ -10,11 +10,11 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_esp::{
     init_and_start, led2d,
     led2d::{layout::LedLayout, Frame2d, Led2dFont},
     led_strip::{colors, Current},
+    led2d::Led2d as _,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -52,9 +52,9 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let led16x16_test = Led16x16Test::new(p.GPIO2, rmt80.channel0, spawner)?;
     const DOT_DELAY: Duration = Duration::from_millis(500);
     const WIDTH: usize =
-        <&'static Led16x16Test as device_envoy_esp::led2d::Led2dApi<16, 16>>::WIDTH;
+        <&'static Led16x16Test as device_envoy_esp::led2d::Led2d<16, 16>>::WIDTH;
     const HEIGHT: usize =
-        <&'static Led16x16Test as device_envoy_esp::led2d::Led2dApi<16, 16>>::HEIGHT;
+        <&'static Led16x16Test as device_envoy_esp::led2d::Led2d<16, 16>>::HEIGHT;
 
     loop {
         for y_index in 0..HEIGHT {

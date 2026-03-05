@@ -13,7 +13,7 @@
 mod kepler;
 mod mapping;
 
-pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrStatic};
+pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrMappingAdapter, IrStatic};
 pub use kepler::{IrKeplerEsp, IrKeplerStatic, KeplerButton};
 pub use mapping::{IrMappingEsp, IrMappingStatic};
 

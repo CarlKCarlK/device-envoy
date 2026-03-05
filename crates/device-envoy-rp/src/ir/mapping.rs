@@ -6,10 +6,9 @@ use embassy_executor::Spawner;
 use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;
 use embassy_rp::pio::PioPin;
-use heapless::LinearMap;
 
 use crate::Result;
-use crate::ir::{Ir as _, IrEvent, IrMapping, IrPioPeripheral, IrRp};
+use crate::ir::{IrMapping, IrMappingAdapter, IrPioPeripheral, IrRp};
 
 pub use device_envoy_core::ir::mapping::IrMappingStatic;
 
@@ -44,8 +43,7 @@ pub use device_envoy_core::ir::mapping::IrMappingStatic;
 /// }
 /// ```
 pub struct IrMappingRp<'a, B, const N: usize> {
-    ir: IrRp<'a>,
-    button_map: LinearMap<(u16, u8), B, N>,
+    mapping: IrMappingAdapter<IrRp<'a>, B, N>,
 }
 
 impl<'a, B, const N: usize> IrMappingRp<'a, B, N>
@@ -85,24 +83,8 @@ where
         PIO: IrPioPeripheral,
     {
         let ir = IrRp::new(ir_mapping_static.inner(), pin, pio, spawner)?;
-
-        // Convert the flat array to a LinearMap
-        let mut map = LinearMap::new();
-        for &(addr, cmd, button) in button_map {
-            let previous_button = match map.insert((addr, cmd), button) {
-                Ok(previous_button) => previous_button,
-                Err(_) => panic!("button_map entries exceed IrMapping capacity"),
-            };
-            assert!(
-                previous_button.is_none(),
-                "button_map contains duplicate (addr, cmd) entries"
-            );
-        }
-
-        Ok(Self {
-            ir,
-            button_map: map,
-        })
+        let mapping = IrMappingAdapter::new(ir, button_map);
+        Ok(Self { mapping })
     }
 }
 
@@ -111,15 +93,6 @@ where
     B: Copy,
 {
     async fn wait_for_press(&self) -> B {
-        loop {
-            let IrEvent::Press { addr, cmd } = self.ir.wait_for_press().await;
-            #[cfg(feature = "defmt")]
-            defmt::info!("IR received - addr=0x{:04X} cmd=0x{:02X}", addr, cmd);
-            if let Some(&button) = self.button_map.get(&(addr, cmd)) {
-                return button;
-            }
-            #[cfg(feature = "defmt")]
-            defmt::info!("  (unrecognized - ignoring)");
-        }
+        self.mapping.wait_for_press().await
     }
 }

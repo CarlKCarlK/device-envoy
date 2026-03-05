@@ -5,17 +5,15 @@
 
 #[cfg(target_os = "none")]
 use embassy_executor::Spawner;
-use heapless::LinearMap;
 
-use crate::ir::{Ir as _, IrEsp, IrEvent, IrMapping};
+use crate::ir::{IrEsp, IrMapping, IrMappingAdapter};
 #[cfg(target_os = "none")]
 use crate::Result;
 pub use device_envoy_core::ir::mapping::IrMappingStatic;
 
 /// A generic device abstraction that maps IR remote button presses to user-defined button types.
 pub struct IrMappingEsp<'a, B, const N: usize> {
-    ir: IrEsp<'a>,
-    button_map: LinearMap<(u16, u8), B, N>,
+    mapping: IrMappingAdapter<IrEsp<'a>, B, N>,
 }
 
 impl<'a, B, const N: usize> IrMappingEsp<'a, B, N>
@@ -41,23 +39,8 @@ where
         spawner: Spawner,
     ) -> Result<Self> {
         let ir = IrEsp::new(ir_mapping_static.inner(), pin, channel_creator, spawner)?;
-
-        let mut linear_map = LinearMap::new();
-        for &(addr, cmd, button) in button_map {
-            let previous_button = match linear_map.insert((addr, cmd), button) {
-                Ok(previous_button) => previous_button,
-                Err(_) => panic!("button_map entries exceed IrMapping capacity"),
-            };
-            assert!(
-                previous_button.is_none(),
-                "button_map contains duplicate (addr, cmd) entries"
-            );
-        }
-
-        Ok(Self {
-            ir,
-            button_map: linear_map,
-        })
+        let mapping = IrMappingAdapter::new(ir, button_map);
+        Ok(Self { mapping })
     }
 }
 
@@ -66,11 +49,6 @@ where
     B: Copy,
 {
     async fn wait_for_press(&self) -> B {
-        loop {
-            let IrEvent::Press { addr, cmd } = self.ir.wait_for_press().await;
-            if let Some(&button) = self.button_map.get(&(addr, cmd)) {
-                return button;
-            }
-        }
+        self.mapping.wait_for_press().await
     }
 }

@@ -20,7 +20,7 @@ use fixed::traits::ToFixed;
 use crate::{Error, Result};
 
 use device_envoy_core::ir::decode_nec_frame;
-pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrStatic};
+pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrMappingAdapter, IrStatic};
 
 // ============================================================================
 // Submodules

@@ -1207,7 +1207,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub const HEIGHT: usize",
                 "pub const LEN: usize",
                 "pub fn write_frame(",
-                "pub fn write_text(&self, text: &str, colors: &[RGB8]) -> Result<()>",
+                "pub fn write_text(&self, text: &str, colors: &[RGB8])",
                 "pub fn animate<const N: usize>(",
             ],
         },

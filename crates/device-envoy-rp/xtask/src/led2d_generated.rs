@@ -159,9 +159,8 @@ impl Led2dGenerated {
     /// Write text to the LED panel.
     ///
     /// See the [`led2d`](mod@crate::led2d) module docs for usage.
-    pub fn write_text(&self, text: &str, colors: &[RGB8]) -> Result<()> {
+    pub fn write_text(&self, text: &str, colors: &[RGB8]) {
         let _ = (text, colors);
-        Ok(())
     }
 
     /// Write text into a frame.
@@ -172,9 +171,8 @@ impl Led2dGenerated {
         text: &str,
         colors: &[RGB8],
         frame: &mut Frame2d<{ Self::WIDTH }, { Self::HEIGHT }>,
-    ) -> Result<()> {
+    ) {
         let _ = (text, colors, frame);
-        Ok(())
     }
 
     /// Animate frames on the LED panel.

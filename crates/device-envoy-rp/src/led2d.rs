@@ -153,6 +153,7 @@ use core::borrow::Borrow;
 pub use device_envoy_core::led2d::{
     Frame2d, Led2dFont, Point, Size, bit_matrix3x4_font, render_text_to_frame,
 };
+pub use device_envoy_core::led2d::Led2d as Led2dApi;
 pub use layout::LedLayout;
 use smart_leds::RGB8;
 
@@ -935,6 +936,35 @@ macro_rules! led2d_from_strip {
                     let mut frame = $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::new();
                     self.write_text_to_frame(text, colors, &mut frame);
                     self.write_frame(frame);
+                }
+            }
+
+            impl $crate::led2d::Led2dApi<{ $led_layout_const.width() }, { $led_layout_const.height() }>
+                for [<$name>]
+            {
+                const FONT: $crate::led2d::Led2dFont = $font_variant;
+
+                fn write_frame(
+                    &mut self,
+                    frame2d: $crate::led2d::Frame2d<{ $led_layout_const.width() }, { $led_layout_const.height() }>,
+                ) {
+                    [<$name>]::write_frame(self, frame2d);
+                }
+
+                fn animate<I>(&mut self, frames: I)
+                where
+                    I: IntoIterator,
+                    I::Item: core::borrow::Borrow<(
+                        $crate::led2d::Frame2d<{ $led_layout_const.width() }, { $led_layout_const.height() }>,
+                        embassy_time::Duration,
+                    )>,
+                {
+                    [<$name>]::animate(
+                        self,
+                        frames
+                            .into_iter()
+                            .map(|frame| *core::borrow::Borrow::borrow(&frame)),
+                    );
                 }
             }
         }

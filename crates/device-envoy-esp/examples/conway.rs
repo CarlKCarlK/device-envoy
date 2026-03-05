@@ -4,7 +4,6 @@
 
 use core::convert::Infallible;
 
-use device_envoy_core::led2d::Led2dDevice;
 #[allow(unused_imports)]
 use device_envoy_esp::led_strip::Engine;
 use device_envoy_example_common::conway::run_conway;
@@ -17,7 +16,7 @@ use device_envoy_esp::{
     init_and_start,
     ir::{IrKepler, IrKeplerStatic},
     led2d,
-    led2d::{layout::LedLayout, Frame2d, Led2dFont},
+    led2d::{layout::LedLayout, Led2dFont},
     led_strip::Current,
 };
 
@@ -35,12 +34,6 @@ led2d! {
         font: Led2dFont::Font4x6Trim,
         engine: Engine::Spi,
         max_frames: 30,
-    }
-}
-
-impl Led2dDevice<16, 16> for &'static Led16x16Conway {
-    fn write_frame2d(&mut self, frame16x16: &Frame2d<16, 16>) {
-        (*self).write_frame2d(*frame16x16);
     }
 }
 

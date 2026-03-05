@@ -9,6 +9,7 @@ pub mod layout {
 pub use device_envoy_core::led2d::{
     bit_matrix3x4_font, render_text_to_frame, Frame2d, Led2dFont, LedLayout, Point, Size,
 };
+pub use device_envoy_core::led2d::Led2d as Led2dApi;
 
 use core::borrow::Borrow;
 use smart_leds::RGB8;

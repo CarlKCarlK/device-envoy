@@ -2,8 +2,10 @@
   "cSpell.words": [
     "deinit",
     "ledc",
+    "Lwss",
     "mmss",
-    "timg"
+    "timg",
+    "Vecs"
   ],
   "rust-analyzer.check.workspace": false,
   "rust-analyzer.cargo.allTargets": false,

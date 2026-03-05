@@ -505,8 +505,41 @@ macro_rules! __led2d_strip_methods {
             self.write_text_to_frame(text, colors, &mut frame);
             self.write_frame2d(frame);
         }
+
     };
     ($_leds:expr, $_max_frames:expr, [], []) => {};
+}
+
+/// Emit optional LED2D trait impl for generated strip type.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led2d_strip_trait_impl {
+    ($name:ident, [$led_layout:expr], [$font:expr]) => {
+        impl $crate::led2d::Led2dApi<{ $led_layout.width() }, { $led_layout.height() }>
+            for &'static $name
+        {
+            const FONT: $crate::led2d::Led2dFont = $font;
+
+            fn write_frame(
+                &mut self,
+                frame2d: $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
+            ) {
+                (*self).write_frame2d(frame2d);
+            }
+
+            fn animate<I>(&mut self, frames: I)
+            where
+                I: IntoIterator,
+                I::Item: ::core::borrow::Borrow<(
+                    $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
+                    embassy_time::Duration,
+                )>,
+            {
+                (*self).animate2d(frames);
+            }
+        }
+    };
+    ($_name:ident, [], []) => {};
 }
 
 /// Core implementation macro. Do not call directly.
@@ -634,6 +667,12 @@ macro_rules! __led_strip_impl {
                 }
             }
 
+            $crate::__led2d_strip_trait_impl!(
+                $name,
+                [$($led2d_layout)?],
+                [$($led2d_font)?]
+            );
+
             // ------------------------------------------------------------------
             // Background task (embassy task function).
             // ------------------------------------------------------------------
@@ -670,5 +709,6 @@ pub mod spi;
 
 // Re-export macros so they are visible from the `led_strip` module path.
 pub use crate::{
-    __led2d_strip_methods, __led_strip_first_or_default, __led_strip_impl, __led_strip_inner,
+    __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_first_or_default,
+    __led_strip_impl, __led_strip_inner,
 };

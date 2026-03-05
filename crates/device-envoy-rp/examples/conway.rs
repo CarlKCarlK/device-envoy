@@ -7,13 +7,12 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_core::led2d::Led2dDevice;
 use device_envoy_example_common::conway::run_conway;
 use device_envoy_rp::Result;
 use device_envoy_rp::ir::{IrKepler, IrKeplerStatic};
 use device_envoy_rp::led_strip::Current;
 use device_envoy_rp::led2d;
-use device_envoy_rp::led2d::{Frame2d, Led2dFont, layout::LedLayout};
+use device_envoy_rp::led2d::{Led2dFont, layout::LedLayout};
 use embassy_executor::Spawner;
 use embassy_rp::init;
 use panic_probe as _;
@@ -27,12 +26,6 @@ led2d! {
         max_current: Current::Milliamps(500),
         max_frames: 30,
         font: Led2dFont::Font4x6Trim,
-    }
-}
-
-impl Led2dDevice<16, 16> for Led16x16 {
-    fn write_frame2d(&mut self, frame16x16: &Frame2d<16, 16>) {
-        self.write_frame(*frame16x16);
     }
 }
 

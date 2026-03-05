@@ -11,6 +11,7 @@ pub use embedded_graphics::geometry::Size;
 pub use layout::LedLayout;
 
 use core::{
+    borrow::Borrow,
     convert::Infallible,
     ops::{Deref, DerefMut, Index, IndexMut},
 };
@@ -36,10 +37,42 @@ use crate::led_strip::ToRgb888;
 /// Platform-agnostic LED panel device contract.
 ///
 /// Platform crates implement this for their concrete LED panel types so shared logic can
-/// write 2D frames without knowing the underlying hardware backend.
-pub trait Led2dDevice<const W: usize, const H: usize> {
+/// drive LED panels without knowing the underlying hardware backend.
+///
+/// `write_frame` and `animate` are primitive operations. Text helpers are default methods.
+// TODO000 Consider splitting this into separate traits if animation semantics diverge from
+// simple frame writes across platforms.
+pub trait Led2d<const W: usize, const H: usize> {
+    /// The font used by default text helpers.
+    const FONT: Led2dFont;
+
     /// Write a frame to the LED panel.
-    fn write_frame2d(&mut self, frame2d: &Frame2d<W, H>);
+    fn write_frame(&mut self, frame2d: Frame2d<W, H>);
+
+    /// Loop through a sequence of animation frames.
+    fn animate<I>(&mut self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>;
+
+    /// Render text into an in-memory frame using this device's default font.
+    fn write_text_to_frame(&self, text: &str, colors: &[RGB8], frame: &mut Frame2d<W, H>) {
+        // TODO0000 should render_text_to_frame be rolled into here?
+        render_text_to_frame(
+            frame,
+            &Self::FONT.to_font(),
+            text,
+            colors,
+            Self::FONT.spacing_reduction(),
+        );
+    }
+
+    /// Render text and immediately write it to the panel.
+    fn write_text(&mut self, text: &str, colors: &[RGB8]) {
+        let mut frame = Frame2d::<W, H>::new();
+        self.write_text_to_frame(text, colors, &mut frame);
+        self.write_frame(frame);
+    }
 }
 
 // Packed bitmap for the internal 3x4 font (ASCII 0x20-0x7E).

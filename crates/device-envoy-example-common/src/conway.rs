@@ -1,7 +1,7 @@
 use device_envoy_core::{
     ir::kepler::{IrKeplerDevice, KeplerButton},
     led_strip::RGB8,
-    led2d::{Frame2d, Led2dDevice},
+    led2d::{Frame2d, Led2d},
 };
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
@@ -32,9 +32,9 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
-pub async fn run_conway<Led2d, IrKepler>(mut led2d: Led2d, mut ir_kepler: IrKepler) -> !
+pub async fn run_conway<Display, IrKepler>(mut led2d: Display, mut ir_kepler: IrKepler) -> !
 where
-    Led2d: Led2dDevice<16, 16>,
+    Display: Led2d<16, 16>,
     IrKepler: IrKeplerDevice,
 {
     let mut board16x16 = Board::<16, 16>::new();
@@ -50,7 +50,7 @@ where
 
     loop {
         let frame16x16 = board16x16.to_frame(alive_color);
-        led2d.write_frame2d(&frame16x16);
+        led2d.write_frame(frame16x16);
 
         let frame_duration = speed_mode.frame_duration();
 

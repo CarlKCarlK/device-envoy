@@ -267,6 +267,12 @@ macro_rules! __led_strip_spi_impl {
                 }
             }
 
+            $crate::__led2d_strip_trait_impl!(
+                $name,
+                [$($led2d_layout)?],
+                [$($led2d_font)?]
+            );
+
             #[::embassy_executor::task]
             async fn [<$name:snake _device_task>](
                 driver: $crate::led_strip::spi::SpiWs2812<

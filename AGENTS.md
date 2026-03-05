@@ -255,6 +255,9 @@ When migrating a device abstraction from generated inherent methods/consts to a 
 
 Core rule: identify the smallest primitive method set first, then define all non-primitive behavior as default trait methods expressed in terms of those primitives and associated consts.
 Naming rule for migrations: keep canonical abstraction names on traits (`IrKepler`, etc.) and rename platform concrete structs with explicit suffixes (`IrKeplerRp`, `IrKeplerEsp`, etc.) to avoid collisions.
+Core boundary rule: `device-envoy-core` should define the canonical trait and shared value types; avoid adding platform runtime handle structs there unless they are truly platform-agnostic and intended as canonical API surface.
+Platform runtime rule: if macro/device plumbing needs a runtime handle struct, define it in the platform crate (`device-envoy-rp` / `device-envoy-esp`) and keep it as implementation detail, not the canonical API.
+Runtime naming rule: when such platform runtime structs are needed, name them using the abstraction name + platform suffix (`XRp`, `XEsp`), for example `LedStripRp` / `LedStripEsp`.
 
 1. If no trait exists yet, introduce one first (in `device-envoy-core`) with the target API shape.
 2. Keep the old inherent surface temporarily while wiring the new trait, so callsites can migrate incrementally.
@@ -266,22 +269,23 @@ Naming rule for migrations: keep canonical abstraction names on traits (`IrKeple
    - Default helper methods built on primitives + associated consts (for Led2d: `write_text_to_frame`, `write_text`)
 5. Keep constructors inherent (`new`, `new_static`, `from_*`) and out of the trait unless there is a strong reason otherwise.
 6. In platform macro expansions, implement the core trait for each generated type and provide all required consts/methods there.
-7. Remove duplicated inherent API from generated types:
+7. Keep platform runtime/plumbing types out of the abstraction docs and out of "Start Here" guidance; docs should point readers to the canonical trait and trait methods.
+8. Remove duplicated inherent API from generated types:
    - Remove inherent API consts that now live on the trait
    - Remove inherent helper methods that are now trait defaults
    - Remove now-unneeded stored fields used only by removed inherent helpers
-8. Update callsites to use trait methods/consts:
+9. Update callsites to use trait methods/consts:
    - Bring the trait into scope as `_` for method resolution (`use ...::Led2d as _;`)
    - For associated const access, use UFCS (`<Type as Led2d<W, H>>::CONST` or equivalent reference type form)
-9. Move docs to the trait as the API reference:
+10. Move docs to the trait as the API reference:
    - Update module "Start Here" links to point at the trait and trait methods
    - Replace references to generated sample types with trait references in macro docs and module docs
-10. Remove generated doc stub flow when it no longer represents the API:
+11. Remove generated doc stub flow when it no longer represents the API:
    - Delete the abstraction's `*_generated.rs` generator/template and generated stub module
    - Remove `xtask` generation/check hooks for that stub, including `check_generated_doc_stubs` expectations
    - Update crate `AGENTS.md` generated-file lists accordingly
-11. Keep compatibility aliases only when needed for migration, and document canonical names.
-12. Verify with crate/workspace checks (`cargo xtask check-all` and docs checks) so trait-const access and imports are validated across examples/demos/tests.
+12. Keep compatibility aliases only when needed for migration, and document canonical names.
+13. Verify with crate/workspace checks (`cargo xtask check-all` and docs checks) so trait-const access and imports are validated across examples/demos/tests.
 
 ## Async Coordination
 

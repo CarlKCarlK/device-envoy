@@ -156,7 +156,7 @@ pub mod layout {
     pub use device_envoy_core::led2d::layout::*;
 }
 
-use crate::led_strip::{Frame1d as StripFrame, LedStrip};
+use crate::led_strip::{Frame1d as StripFrame, LedStripRp};
 use core::borrow::Borrow;
 pub use device_envoy_core::led2d::{
     Frame2d, Led2dFont, Point, Size, bit_matrix3x4_font, render_text_to_frame,
@@ -180,7 +180,7 @@ use smart_leds::RGB8;
 /// Most users should use the `led2d!` or `led2d_from_strip!` macros which generate
 /// a higher-level wrapper. See the [led2d](mod@crate::led2d) module docs for examples.
 pub struct Led2dRp<const N: usize, const MAX_FRAMES: usize> {
-    led_strip: &'static LedStrip<N, MAX_FRAMES>,
+    led_strip: &'static LedStripRp<N, MAX_FRAMES>,
     mapping_by_xy: [u16; N],
     width: usize,
 }
@@ -195,7 +195,7 @@ impl<const N: usize, const MAX_FRAMES: usize> Led2dRp<N, MAX_FRAMES> {
     /// See the [Led2dRp struct example](Self) for usage.
     #[must_use]
     pub fn new<const W: usize, const H: usize>(
-        led_strip: &'static LedStrip<N, MAX_FRAMES>,
+        led_strip: &'static LedStripRp<N, MAX_FRAMES>,
         led_layout: &LedLayout<N, W, H>,
     ) -> Self {
         assert_eq!(

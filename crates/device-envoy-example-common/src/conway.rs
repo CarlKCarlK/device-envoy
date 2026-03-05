@@ -44,7 +44,7 @@ where
 
     let mut board = Board::<H, W>::new();
     let mut pattern_index = 0usize;
-    let mut speed_mode = SpeedMode::Slower;
+    let mut speed_mode = SpeedMode::Slow;
     let mut paused = false;
     let mut color_index = 0usize;
     let mut alive_color = ALIVE_COLORS[color_index];
@@ -178,33 +178,33 @@ fn evaluate_auto_reset<const H: usize, const W: usize>(
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SpeedMode {
-    Slower,
+    Slow,
     Medium,
-    Normal,
+    Fast,
 }
 
 impl SpeedMode {
     const fn slower(self) -> Self {
         match self {
-            Self::Slower => Self::Normal,
-            Self::Medium => Self::Slower,
-            Self::Normal => Self::Medium,
+            Self::Slow => Self::Slow,
+            Self::Medium => Self::Slow,
+            Self::Fast => Self::Medium,
         }
     }
 
     const fn faster(self) -> Self {
         match self {
-            Self::Slower => Self::Medium,
-            Self::Medium => Self::Normal,
-            Self::Normal => Self::Slower,
+            Self::Slow => Self::Medium,
+            Self::Medium => Self::Fast,
+            Self::Fast => Self::Fast,
         }
     }
 
     const fn frame_duration(self) -> Duration {
         match self {
-            Self::Slower => Duration::from_millis(500),
+            Self::Slow => Duration::from_millis(500),
             Self::Medium => Duration::from_millis(160),
-            Self::Normal => Duration::from_millis(50),
+            Self::Fast => Duration::from_millis(50),
         }
     }
 }

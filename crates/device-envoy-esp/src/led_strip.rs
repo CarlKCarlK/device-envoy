@@ -8,7 +8,62 @@
 //! controller. Use `engine: Engine::Spi` to select the SPI variant backed by
 //! the [`spi`] sub-module.
 
+use core::borrow::Borrow;
+
 pub use device_envoy_core::led_strip::*;
+
+/// Internal runtime handle for macro-generated LED strip types.
+///
+/// `#[doc(hidden)]` because this is implementation detail used by macro output.
+#[doc(hidden)]
+pub struct LedStripEsp<const N: usize, const MAX_FRAMES: usize> {
+    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
+}
+
+impl<const N: usize, const MAX_FRAMES: usize> LedStripEsp<N, MAX_FRAMES> {
+    #[doc(hidden)]
+    pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
+        LedStripStatic::new_static()
+    }
+
+    #[doc(hidden)]
+    pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Self {
+        Self {
+            command_signal: led_strip_static.command_signal(),
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn write_frame(&self, frame: Frame1d<N>) {
+        self.command_signal.signal(Command::DisplayStatic(frame));
+    }
+
+    #[doc(hidden)]
+    pub fn animate<I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: core::borrow::Borrow<(Frame1d<N>, embassy_time::Duration)>,
+    {
+        assert!(MAX_FRAMES > 0, "animation disabled (MAX_FRAMES = 0)");
+        let mut sequence: heapless::Vec<(Frame1d<N>, embassy_time::Duration), MAX_FRAMES> =
+            heapless::Vec::new();
+        for item in frames {
+            let (frame, duration) = *item.borrow();
+            assert!(
+                duration.as_micros() > 0,
+                "animation frame duration must be positive"
+            );
+            sequence
+                .push((frame, duration))
+                .expect("animation sequence fits within MAX_FRAMES");
+        }
+        assert!(
+            !sequence.is_empty(),
+            "animation requires at least one frame"
+        );
+        self.command_signal.signal(Command::Animate(sequence));
+    }
+}
 
 /// Output engine for WS2812 transmission.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -226,7 +281,7 @@ pub async fn led_strip_device_loop<
 /// # What gets generated
 ///
 /// - A `mod my_strip` containing `const LEDS`, `const PULSES = LEDS*24+1`.
-/// - A struct `MyStrip` that derefs to [`LedStrip<LEDS, MAX_FRAMES>`][`LedStrip`].
+/// - A struct `MyStrip` implementing [`LedStrip<LEDS>`](crate::led_strip::LedStrip).
 /// - `MyStrip::new(channel, spawner) -> Result<&'static MyStrip>`, which
 ///   consumes a configured TX channel and spawns the background device task.
 /// - `MyStrip::MAX_BRIGHTNESS`, `MY_STRIP::MAX_FRAMES`, `MyStrip::LEN`.
@@ -530,26 +585,16 @@ macro_rules! __led_strip_impl {
                 $crate::led_strip::LedStripStatic<
                     { [<$name:snake _consts>]::LEDS },
                     { $max_frames },
-                > = $crate::led_strip::LedStrip::new_static();
+                > = $crate::led_strip::LedStripEsp::new_static();
 
             // ------------------------------------------------------------------
             // Public struct.
             // ------------------------------------------------------------------
             pub struct $name {
-                inner: $crate::led_strip::LedStrip<
+                inner: $crate::led_strip::LedStripEsp<
                     { [<$name:snake _consts>]::LEDS },
                     { $max_frames },
                 >,
-            }
-
-            impl ::core::ops::Deref for $name {
-                type Target = $crate::led_strip::LedStrip<
-                    { [<$name:snake _consts>]::LEDS },
-                    { $max_frames },
-                >;
-                fn deref(&self) -> &Self::Target {
-                    &self.inner
-                }
             }
 
             impl $name {
@@ -614,9 +659,32 @@ macro_rules! __led_strip_impl {
                         .map_err($crate::Error::TaskSpawn)?;
 
                     let instance = INSTANCE.init($name {
-                        inner: $crate::led_strip::LedStrip::new(strip_static),
+                        inner: $crate::led_strip::LedStripEsp::new(strip_static),
                     });
                     Ok(instance)
+                }
+            }
+
+            impl $crate::led_strip::LedStrip<{ [<$name:snake _consts>]::LEDS }> for $name {
+                const MAX_FRAMES: usize = $max_frames;
+                const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
+
+                fn write_frame(
+                    &self,
+                    frame: $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
+                ) {
+                    self.inner.write_frame(frame);
+                }
+
+                fn animate<I>(&self, frames: I)
+                where
+                    I: IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(
+                        $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
+                        embassy_time::Duration,
+                    )>,
+                {
+                    self.inner.animate(frames);
                 }
             }
 

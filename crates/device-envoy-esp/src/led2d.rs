@@ -23,10 +23,10 @@ pub use device_envoy_core::led2d::Led2d;
 use core::borrow::Borrow;
 use smart_leds::RGB8;
 
-use crate::led_strip::{Frame1d as StripFrame, LedStrip};
+use crate::led_strip::{Frame1d as StripFrame, LedStripEsp};
 
 pub struct Led2dEsp<'a, const N: usize, const MAX_FRAMES: usize> {
-    led_strip: &'a LedStrip<N, MAX_FRAMES>,
+    led_strip: &'a LedStripEsp<N, MAX_FRAMES>,
     mapping_by_xy: [u16; N],
     width: usize,
 }
@@ -34,7 +34,7 @@ pub struct Led2dEsp<'a, const N: usize, const MAX_FRAMES: usize> {
 impl<'a, const N: usize, const MAX_FRAMES: usize> Led2dEsp<'a, N, MAX_FRAMES> {
     #[must_use]
     pub fn new<const W: usize, const H: usize>(
-        led_strip: &'a LedStrip<N, MAX_FRAMES>,
+        led_strip: &'a LedStripEsp<N, MAX_FRAMES>,
         led_layout: &LedLayout<N, W, H>,
     ) -> Self {
         assert_eq!(

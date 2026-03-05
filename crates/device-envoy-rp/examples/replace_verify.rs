@@ -9,7 +9,7 @@ use defmt::info;
 use device_envoy_rp::{
     Result,
     button::{Button, PressedTo},
-    led_strip::{Current, Frame1d, colors, led_strips},
+    led_strip::{LedStrip as _, Current, Frame1d, colors, led_strips},
     led2d::Frame2d,
     led2d::Led2dFont,
     led2d::layout::LedLayout,

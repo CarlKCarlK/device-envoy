@@ -199,23 +199,13 @@ macro_rules! __led_strip_spi_impl {
                 $crate::led_strip::LedStripStatic<
                     { [<$name:snake _consts>]::LEDS },
                     { $max_frames },
-                > = $crate::led_strip::LedStrip::new_static();
+                > = $crate::led_strip::LedStripEsp::new_static();
 
             pub struct $name {
-                inner: $crate::led_strip::LedStrip<
+                inner: $crate::led_strip::LedStripEsp<
                     { [<$name:snake _consts>]::LEDS },
                     { $max_frames },
                 >,
-            }
-
-            impl ::core::ops::Deref for $name {
-                type Target = $crate::led_strip::LedStrip<
-                    { [<$name:snake _consts>]::LEDS },
-                    { $max_frames },
-                >;
-                fn deref(&self) -> &Self::Target {
-                    &self.inner
-                }
             }
 
             impl $name {
@@ -261,9 +251,32 @@ macro_rules! __led_strip_spi_impl {
                         .map_err($crate::Error::TaskSpawn)?;
 
                     let instance = INSTANCE.init($name {
-                        inner: $crate::led_strip::LedStrip::new(strip_static),
+                        inner: $crate::led_strip::LedStripEsp::new(strip_static),
                     });
                     Ok(instance)
+                }
+            }
+
+            impl $crate::led_strip::LedStrip<{ [<$name:snake _consts>]::LEDS }> for $name {
+                const MAX_FRAMES: usize = $max_frames;
+                const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
+
+                fn write_frame(
+                    &self,
+                    frame: $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
+                ) {
+                    self.inner.write_frame(frame);
+                }
+
+                fn animate<I>(&self, frames: I)
+                where
+                    I: IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(
+                        $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
+                        embassy_time::Duration,
+                    )>,
+                {
+                    self.inner.animate(frames);
                 }
             }
 

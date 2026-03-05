@@ -8,6 +8,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::Result;
 use device_envoy_rp::led2d::Led2d as _;
+use device_envoy_rp::led_strip::LedStrip as _;
 use device_envoy_rp::led_strip::led_strips;
 use device_envoy_rp::led_strip::{Current, Frame1d, RGB8, colors};
 use device_envoy_rp::led2d::Frame2d;

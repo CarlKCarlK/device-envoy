@@ -71,7 +71,7 @@ It shows how device-envoy generates a struct (device abstraction) for an LED str
 # #![no_main]
 # use panic_probe as _;
 # use core::convert::Infallible;
-use device_envoy_rp::{Result, led_strip::{Frame1d, colors}};
+use device_envoy_rp::{Result, led_strip::{LedStrip as _, Frame1d, colors}};
 use device_envoy_rp::led_strip;
 
 led_strip! {

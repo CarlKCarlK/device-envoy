@@ -4,7 +4,6 @@
 
 mod adpcm_clip_generated;
 mod audio_player_generated;
-mod led_strip_generated;
 mod pcm_clip_generated;
 mod servo_player_generated;
 mod video_frames_gen;
@@ -193,10 +192,6 @@ fn check_quick() -> ExitCode {
         eprintln!("Error generating audio_player_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
-        eprintln!("Error generating led_strip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
         eprintln!("Error generating servo_player_generated.rs: {}", err);
         return ExitCode::FAILURE;
@@ -344,10 +339,6 @@ fn check_all() -> ExitCode {
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
         eprintln!("Error generating audio_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
-        eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
@@ -648,10 +639,6 @@ fn check_docs() -> ExitCode {
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
         eprintln!("Error generating audio_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
-        eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
@@ -1174,17 +1161,6 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub async fn wait_until_stopped(&self)",
                 "pub fn set_volume(&self, volume: Volume)",
                 "pub fn volume(&self) -> Volume",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led_strip/led_strip_generated.rs",
-            required_fragments: &[
-                "pub const LEN: usize",
-                "pub const MAX_BRIGHTNESS: u8",
-                "pub const MAX_FRAMES: usize",
-                "pub const fn new_static() -> LedStripGeneratedStatic",
-                "pub fn write_frame(",
-                "pub fn animate<const N: usize>(",
             ],
         },
         GeneratedDocStubExpectation {

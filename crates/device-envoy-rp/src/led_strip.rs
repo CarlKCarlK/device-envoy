@@ -23,10 +23,18 @@
 //! This page provides the primary documentation and examples for programming LED strips.
 //! The device abstraction supports pixel patterns and animation on the LED strip.
 //!
+//! # Start Here
+//!
+//! If rustdoc jumps into generated source and you want the key API quickly, start with:
+//!
+//! - [`LedStrip`](`crate::led_strip::LedStrip`)
+//! - [`LedStrip::write_frame`](`crate::led_strip::LedStrip::write_frame`)
+//! - [`LedStrip::animate`](`crate::led_strip::LedStrip::animate`)
+//!
 //! **After reading the examples below, see also:**
 //!
-//! - [`led_strip!`](macro@crate::led_strip) — Macro to generate an LED strip struct type (includes syntax details). See [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a sample of a generated type.
-//! - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) — Sample struct type showing all methods and associated constants.
+//! - [`led_strip!`](macro@crate::led_strip) — Macro to generate an LED strip struct type (includes syntax details).
+//! - [`LedStrip`](`crate::led_strip::LedStrip`) — Core trait defining the LED strip API surface.
 //! - [`Frame1d`] — 1D pixel array used to describe LED strip patterns.
 //! - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples).
 //!
@@ -44,7 +52,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_envoy_rp::{Result, led_strip::{Frame1d, colors}};
+//! use device_envoy_rp::{Result, led_strip::{LedStrip as _, Frame1d, colors}};
 //! use device_envoy_rp::led_strip;
 //!
 //! // Define LedStripSimple, a struct type for an 8-LED strip on PIN_0.
@@ -94,7 +102,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_envoy_rp::{Result, led_strip::{Current, Frame1d, Gamma, colors}};
+//! use device_envoy_rp::{Result, led_strip::{LedStrip as _, Current, Frame1d, Gamma, colors}};
 //! use device_envoy_rp::led_strip;
 //!
 //! // Define LedStripAnimated, a struct type for a 96-LED strip on PIN_4.
@@ -132,6 +140,8 @@
 //! }
 //! ```
 
+use core::borrow::Borrow;
+
 pub use device_envoy_core::led_strip::*;
 
 #[cfg(not(feature = "host"))]
@@ -154,11 +164,62 @@ use embassy_time::{Duration, Timer};
 #[cfg(not(feature = "host"))]
 use heapless::Vec;
 
+/// Internal runtime handle for macro-generated LED strip types.
+///
+/// `#[doc(hidden)]` because this is implementation detail used by macro output.
+#[doc(hidden)]
+pub struct LedStripRp<const N: usize, const MAX_FRAMES: usize> {
+    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
+}
+
+impl<const N: usize, const MAX_FRAMES: usize> LedStripRp<N, MAX_FRAMES> {
+    #[doc(hidden)]
+    pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
+        LedStripStatic::new_static()
+    }
+
+    #[doc(hidden)]
+    pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Self {
+        Self {
+            command_signal: led_strip_static.command_signal(),
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn write_frame(&self, frame: Frame1d<N>) {
+        self.command_signal.signal(Command::DisplayStatic(frame));
+    }
+
+    #[doc(hidden)]
+    pub fn animate<I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: core::borrow::Borrow<(Frame1d<N>, embassy_time::Duration)>,
+    {
+        assert!(MAX_FRAMES > 0, "animation disabled (MAX_FRAMES = 0)");
+        let mut sequence: heapless::Vec<(Frame1d<N>, embassy_time::Duration), MAX_FRAMES> =
+            heapless::Vec::new();
+        for item in frames {
+            let (frame, duration) = *item.borrow();
+            assert!(
+                duration.as_micros() > 0,
+                "animation frame duration must be positive"
+            );
+            sequence
+                .push((frame, duration))
+                .expect("animation sequence fits within MAX_FRAMES");
+        }
+        assert!(
+            !sequence.is_empty(),
+            "animation requires at least one frame"
+        );
+        self.command_signal.signal(Command::Animate(sequence));
+    }
+}
+
 // ============================================================================
 // Submodules
 // ============================================================================
-
-pub mod led_strip_generated;
 
 // ============================================================================
 // PIO Bus - Shared PIO resource for multiple LED strips
@@ -341,7 +402,7 @@ where
 ///
 /// **After reading the examples below, see also:**
 ///
-/// - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) — Sample LED **strip** type showing all methods and associated constants
+/// - [`LedStrip`](`crate::led_strip::LedStrip`) — LED **strip** trait defining methods and associated constants
 /// - [`Led2d`](crate::led2d::Led2d) — LED **panel** trait defining methods and associated constants
 /// - [`led_strip!`](macro@crate::led_strip) — Alternative macro to generate a single LED strip type. Consumes a PIO resource.
 /// - [`led2d!`](mod@crate::led2d) — Alternative macro to generate a single LED panel type. Consumes a PIO resource.
@@ -375,7 +436,7 @@ where
 /// # use defmt_rtt as _;
 /// # use embassy_executor::Spawner;
 /// # use defmt::info;
-/// use device_envoy_rp::{Result, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout, led_strip::{Current, Frame1d, Gamma, colors, led_strips}};
+/// use device_envoy_rp::{Result, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout, led_strip::{LedStrip as _, Current, Frame1d, Gamma, colors, led_strips}};
 /// use device_envoy_rp::led2d::Led2d as _;
 /// use embassy_time::Duration;
 ///
@@ -745,12 +806,12 @@ macro_rules! __led_strips_impl {
         paste::paste! {
             #[doc = concat!(
                 "LED strip wrapper generated by [`led_strips!`].\n\n",
-                "Derefs to provide all LED control methods. ",
+                "Implements the [`LedStrip`](crate::led_strip::LedStrip) trait for LED control methods. ",
                 "Created with [`", stringify!($group), "::new`]. ",
                 "See the [led_strip module documentation](mod@crate::led_strip) for a similar example."
             )]
             $vis struct $label {
-                strip: $crate::led_strip::LedStrip<{ $len }, { $max_frames }>,
+                strip: $crate::led_strip::LedStripRp<{ $len }, { $max_frames }>,
             }
 
             #[allow(missing_docs)]
@@ -768,7 +829,7 @@ macro_rules! __led_strips_impl {
                 const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
 
                 pub(crate) const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
-                    $crate::led_strip::LedStrip::new_static()
+                    $crate::led_strip::LedStripRp::new_static()
                 }
 
                 pub fn new(
@@ -792,24 +853,36 @@ macro_rules! __led_strips_impl {
                         STRIP_STATIC.command_signal(),
                     );
                     spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
-                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC);
+                    let strip = $crate::led_strip::LedStripRp::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init(Self { strip });
                     Ok(instance)
                 }
             }
 
-            impl ::core::ops::Deref for $label {
-                type Target = $crate::led_strip::LedStrip<{ $len }, { $max_frames }>;
-
-                fn deref(&self) -> &Self::Target {
+            #[cfg(not(feature = "host"))]
+            impl AsRef<$crate::led_strip::LedStripRp<{ $len }, { $max_frames }>> for $label {
+                fn as_ref(&self) -> &$crate::led_strip::LedStripRp<{ $len }, { $max_frames }> {
                     &self.strip
                 }
             }
 
-            #[cfg(not(feature = "host"))]
-            impl AsRef<$crate::led_strip::LedStrip<{ $len }, { $max_frames }>> for $label {
-                fn as_ref(&self) -> &$crate::led_strip::LedStrip<{ $len }, { $max_frames }> {
-                    &self.strip
+            impl $crate::led_strip::LedStrip<{ $len }> for $label {
+                const MAX_FRAMES: usize = $max_frames;
+                const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
+
+                fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) {
+                    self.strip.write_frame(frame);
+                }
+
+                fn animate<I>(&self, frames: I)
+                where
+                    I: IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(
+                        $crate::led_strip::Frame1d<{ $len }>,
+                        embassy_time::Duration,
+                    )>,
+                {
+                    self.strip.animate(frames);
                 }
             }
 
@@ -862,13 +935,13 @@ macro_rules! __led_strips_impl {
         paste::paste! {
             #[doc = concat!(
                 "LED strip wrapper generated by [`led_strips!`].\n\n",
-                "Derefs to provide all LED control methods. ",
+                "Implements the [`LedStrip`](crate::led_strip::LedStrip) trait for LED control methods. ",
                 "Created with [`", stringify!($group), "::new`]. ",
                 "See the [led_strip module documentation](mod@crate::led_strip) for a similar example."
             )]
             #[allow(missing_docs)]
             struct [<$label:camel LedStrip>] {
-                strip: $crate::led_strip::LedStrip<{ $len }, { $max_frames }>,
+                strip: $crate::led_strip::LedStripRp<{ $len }, { $max_frames }>,
             }
 
             #[allow(missing_docs)]
@@ -886,7 +959,7 @@ macro_rules! __led_strips_impl {
                 const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
 
                 pub(crate) const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
-                    $crate::led_strip::LedStrip::new_static()
+                    $crate::led_strip::LedStripRp::new_static()
                 }
 
                 pub fn new(
@@ -910,24 +983,36 @@ macro_rules! __led_strips_impl {
                         STRIP_STATIC.command_signal(),
                     );
                     spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
-                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC);
+                    let strip = $crate::led_strip::LedStripRp::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init(Self { strip });
                     Ok(instance)
                 }
             }
 
-            impl ::core::ops::Deref for [<$label:camel LedStrip>] {
-                type Target = $crate::led_strip::LedStrip<{ $len }, { $max_frames }>;
-
-                fn deref(&self) -> &Self::Target {
+            #[cfg(not(feature = "host"))]
+            impl AsRef<$crate::led_strip::LedStripRp<{ $len }, { $max_frames }>> for [<$label:camel LedStrip>] {
+                fn as_ref(&self) -> &$crate::led_strip::LedStripRp<{ $len }, { $max_frames }> {
                     &self.strip
                 }
             }
 
-            #[cfg(not(feature = "host"))]
-            impl AsRef<$crate::led_strip::LedStrip<{ $len }, { $max_frames }>> for [<$label:camel LedStrip>] {
-                fn as_ref(&self) -> &$crate::led_strip::LedStrip<{ $len }, { $max_frames }> {
-                    &self.strip
+            impl $crate::led_strip::LedStrip<{ $len }> for [<$label:camel LedStrip>] {
+                const MAX_FRAMES: usize = $max_frames;
+                const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
+
+                fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) {
+                    self.strip.write_frame(frame);
+                }
+
+                fn animate<I>(&self, frames: I)
+                where
+                    I: IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(
+                        $crate::led_strip::Frame1d<{ $len }>,
+                        embassy_time::Duration,
+                    )>,
+                {
+                    self.strip.animate(frames);
                 }
             }
 
@@ -2206,8 +2291,7 @@ macro_rules! __led_strips_impl {
     };
 }
 
-/// Macro to generate an LED-strip struct type (includes syntax details). See
-/// [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a sample of a generated type.
+/// Macro to generate an LED-strip struct type (includes syntax details).
 ///
 /// **See the [led_strip module documentation](mod@crate::led_strip) for usage examples.**
 ///
@@ -2601,7 +2685,7 @@ macro_rules! __led_strip_impl {
                 "See the [led_strip module documentation](mod@crate::led_strip) for usage and examples."
             )]
             $vis struct $name {
-                strip: $crate::led_strip::LedStrip<{ $len }, { $max_frames }>,
+                strip: $crate::led_strip::LedStripRp<{ $len }, { $max_frames }>,
             }
 
             impl $name {
@@ -2645,7 +2729,7 @@ macro_rules! __led_strip_impl {
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> =
-                        $crate::led_strip::LedStrip::new_static();
+                        $crate::led_strip::LedStripRp::new_static();
                     static STRIP_CELL: ::static_cell::StaticCell<$name> = ::static_cell::StaticCell::new();
 
                     let pin = pin.into();
@@ -2663,24 +2747,36 @@ macro_rules! __led_strip_impl {
                     );
                     spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
 
-                    let strip = $crate::led_strip::LedStrip::new(&STRIP_STATIC);
+                    let strip = $crate::led_strip::LedStripRp::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init($name { strip });
                     Ok(instance)
                 }
             }
 
-            impl ::core::ops::Deref for $name {
-                type Target = $crate::led_strip::LedStrip<{ $len }, { $max_frames }>;
-
-                fn deref(&self) -> &Self::Target {
+            #[cfg(not(feature = "host"))]
+            impl AsRef<$crate::led_strip::LedStripRp<{ $len }, { $max_frames }>> for $name {
+                fn as_ref(&self) -> &$crate::led_strip::LedStripRp<{ $len }, { $max_frames }> {
                     &self.strip
                 }
             }
 
-            #[cfg(not(feature = "host"))]
-            impl AsRef<$crate::led_strip::LedStrip<{ $len }, { $max_frames }>> for $name {
-                fn as_ref(&self) -> &$crate::led_strip::LedStrip<{ $len }, { $max_frames }> {
-                    &self.strip
+            impl $crate::led_strip::LedStrip<{ $len }> for $name {
+                const MAX_FRAMES: usize = $max_frames;
+                const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
+
+                fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) {
+                    self.strip.write_frame(frame);
+                }
+
+                fn animate<I>(&self, frames: I)
+                where
+                    I: IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(
+                        $crate::led_strip::Frame1d<{ $len }>,
+                        embassy_time::Duration,
+                    )>,
+                {
+                    self.strip.animate(frames);
                 }
             }
 

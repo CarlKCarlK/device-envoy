@@ -2,13 +2,12 @@
 #![no_std]
 #![no_main]
 use core::convert::Infallible;
-use core::ops::Deref;
 
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::Result;
 use device_envoy_rp::led_strip::led_strip;
-use device_envoy_rp::led_strip::{Frame1d, LedStrip, colors};
+use device_envoy_rp::led_strip::{Frame1d, colors};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use panic_probe as _;
@@ -81,9 +80,9 @@ impl<const N: usize> BounceState<N> {
         }
     }
 
-    async fn update<const MAX_FRAMES: usize>(
+    async fn update(
         &mut self,
-        led_strip: &impl Deref<Target = LedStrip<N, MAX_FRAMES>>,
+        led_strip: &impl device_envoy_rp::led_strip::LedStrip<N>,
     ) -> Result<()> {
         assert!(self.position < N);
         let mut frame = Frame1d::<N>::new();

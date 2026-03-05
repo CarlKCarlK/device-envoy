@@ -31,7 +31,10 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
-pub async fn run_conway<const W: usize, const H: usize, L, I>(led2d: L, ir_kepler: I) -> !
+pub async fn conway_with_led2d_ir_kepler<const W: usize, const H: usize, L, I>(
+    led2d: L,
+    ir_kepler: I,
+) -> !
 where
     L: Led2d<W, H>,
     I: IrKepler,

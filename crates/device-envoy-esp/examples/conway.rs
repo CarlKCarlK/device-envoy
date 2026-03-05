@@ -6,7 +6,7 @@ use core::convert::Infallible;
 
 #[allow(unused_imports)]
 use device_envoy_esp::led_strip::Engine;
-use device_envoy_example_common::conway::run_conway;
+use device_envoy_example_common::conway::conway_with_led2d_ir_kepler;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
@@ -57,5 +57,5 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     static IR_KEPLER_STATIC: IrKeplerStatic = IrKeplerEsp::new_static();
     let ir_kepler = IrKeplerEsp::new(&IR_KEPLER_STATIC, p.GPIO7, ir_rmt_channel, spawner)?;
 
-    run_conway(led16x16, ir_kepler).await
+    conway_with_led2d_ir_kepler(led16x16, ir_kepler).await
 }

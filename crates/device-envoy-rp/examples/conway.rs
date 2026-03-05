@@ -7,7 +7,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_example_common::conway::run_conway;
+use device_envoy_example_common::conway::conway_with_led2d_ir_kepler;
 use device_envoy_rp::Result;
 use device_envoy_rp::ir::{IrKeplerRp, IrKeplerStatic};
 use device_envoy_rp::led_strip::Current;
@@ -42,5 +42,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led16x16 = Led16x16::new(p.PIN_6, p.PIO0, p.DMA_CH0, spawner)?;
     static IR_KEPLER_STATIC: IrKeplerStatic = IrKeplerRp::new_static();
     let ir_kepler = IrKeplerRp::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO1, spawner)?;
-    run_conway(led16x16, ir_kepler).await
+    conway_with_led2d_ir_kepler(led16x16, ir_kepler).await
 }

@@ -274,18 +274,23 @@ Runtime naming rule: when such platform runtime structs are needed, name them us
    - Remove inherent API consts that now live on the trait
    - Remove inherent helper methods that are now trait defaults
    - Remove now-unneeded stored fields used only by removed inherent helpers
-9. Update callsites to use trait methods/consts:
+9. Enforce trait-based method resolution for non-constructor APIs:
+   - After migration, methods like `write_*`, `animate`, `play`, etc. must resolve via the trait, not inherent methods.
+   - Do not expose those methods through `Deref` to runtime helper structs.
+   - Keep constructors (`new`, `new_static`, `from_*`) inherent; move operational methods to trait-only surface.
+   - Verify at least one representative callsite requires `use ...::<TraitName> as _;` for method resolution.
+10. Update callsites to use trait methods/consts:
    - Bring the trait into scope as `_` for method resolution (`use ...::Led2d as _;`)
    - For associated const access, use UFCS (`<Type as Led2d<W, H>>::CONST` or equivalent reference type form)
-10. Move docs to the trait as the API reference:
+11. Move docs to the trait as the API reference:
    - Update module "Start Here" links to point at the trait and trait methods
    - Replace references to generated sample types with trait references in macro docs and module docs
-11. Remove generated doc stub flow when it no longer represents the API:
+12. Remove generated doc stub flow when it no longer represents the API:
    - Delete the abstraction's `*_generated.rs` generator/template and generated stub module
    - Remove `xtask` generation/check hooks for that stub, including `check_generated_doc_stubs` expectations
    - Update crate `AGENTS.md` generated-file lists accordingly
-12. Keep compatibility aliases only when needed for migration, and document canonical names.
-13. Verify with crate/workspace checks (`cargo xtask check-all` and docs checks) so trait-const access and imports are validated across examples/demos/tests.
+13. Keep compatibility aliases only when needed for migration, and document canonical names.
+14. Verify with crate/workspace checks (`cargo xtask check-all` and docs checks) so trait-const access and imports are validated across examples/demos/tests.
 
 ## Async Coordination
 

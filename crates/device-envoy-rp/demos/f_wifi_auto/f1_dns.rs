@@ -7,6 +7,7 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use core::{convert::Infallible, fmt::Write, panic};
+use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result,
     button::PressedTo,

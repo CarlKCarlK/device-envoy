@@ -16,6 +16,7 @@ use embassy_time::{Duration, Instant, Timer};
 use esp_backtrace as _;
 use log::{info, warn};
 
+use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_esp::{
     button::PressedTo,
     flash_array::FlashArray,

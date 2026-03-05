@@ -6,6 +6,7 @@
 use core::{convert::Infallible, panic};
 use defmt::info;
 
+use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result,
     button::{Button, PressedTo},

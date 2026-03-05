@@ -43,17 +43,53 @@ use crate::led_strip::ToRgb888;
 // TODO000 Consider splitting this into separate traits if animation semantics diverge from
 // simple frame writes across platforms.
 pub trait Led2d<const W: usize, const H: usize> {
+    /// Number of columns in the panel.
+    const WIDTH: usize = W;
+    /// Number of rows in the panel.
+    const HEIGHT: usize = H;
+    /// Total number of LEDs (WIDTH * HEIGHT).
+    const LEN: usize = W * H;
+    /// Compatibility alias for [`Led2d::LEN`].
+    const N: usize = Self::LEN;
+    /// Frame dimensions as a [`Size`] for embedded-graphics.
+    const SIZE: Size = Frame2d::<W, H>::SIZE;
+    /// Top-left corner coordinate for embedded-graphics drawing.
+    const TOP_LEFT: Point = Frame2d::<W, H>::TOP_LEFT;
+    /// Top-right corner coordinate for embedded-graphics drawing.
+    const TOP_RIGHT: Point = Frame2d::<W, H>::TOP_RIGHT;
+    /// Bottom-left corner coordinate for embedded-graphics drawing.
+    const BOTTOM_LEFT: Point = Frame2d::<W, H>::BOTTOM_LEFT;
+    /// Bottom-right corner coordinate for embedded-graphics drawing.
+    const BOTTOM_RIGHT: Point = Frame2d::<W, H>::BOTTOM_RIGHT;
+    /// Maximum number of animation frames.
+    const MAX_FRAMES: usize;
+    /// Maximum brightness, capped by the configured power budget.
+    const MAX_BRIGHTNESS: u8;
     /// The font used by default text helpers.
     const FONT: Led2dFont;
 
     /// Write a frame to the LED panel.
-    fn write_frame(&mut self, frame2d: Frame2d<W, H>);
+    fn write_frame(&self, frame2d: Frame2d<W, H>);
+
+    /// Compatibility alias for [`Led2d::write_frame`].
+    fn write_frame2d(&self, frame2d: Frame2d<W, H>) {
+        self.write_frame(frame2d);
+    }
 
     /// Loop through a sequence of animation frames.
-    fn animate<I>(&mut self, frames: I)
+    fn animate<I>(&self, frames: I)
     where
         I: IntoIterator,
         I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>;
+
+    /// Compatibility alias for [`Led2d::animate`].
+    fn animate2d<I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
+    {
+        self.animate(frames);
+    }
 
     /// Render text into an in-memory frame using this device's default font.
     fn write_text_to_frame(&self, text: &str, colors: &[RGB8], frame: &mut Frame2d<W, H>) {
@@ -68,7 +104,7 @@ pub trait Led2d<const W: usize, const H: usize> {
     }
 
     /// Render text and immediately write it to the panel.
-    fn write_text(&mut self, text: &str, colors: &[RGB8]) {
+    fn write_text(&self, text: &str, colors: &[RGB8]) {
         let mut frame = Frame2d::<W, H>::new();
         self.write_text_to_frame(text, colors, &mut frame);
         self.write_frame(frame);

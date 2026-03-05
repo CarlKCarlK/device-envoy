@@ -9,6 +9,7 @@
 
 #[allow(unused_imports)]
 use device_envoy_esp::led_strip::Engine;
+use device_envoy_esp::led2d::Led2dApi as _;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;

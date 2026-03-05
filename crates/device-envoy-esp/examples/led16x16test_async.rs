@@ -10,6 +10,7 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
+use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_esp::{
     esp_hal::{
         gpio::Level,

@@ -32,7 +32,7 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
-pub async fn run_conway<Display, IrKepler>(mut led2d: Display, mut ir_kepler: IrKepler) -> !
+pub async fn run_conway<Display, IrKepler>(led2d: Display, mut ir_kepler: IrKepler) -> !
 where
     Display: Led2d<16, 16>,
     IrKepler: IrKeplerDevice,

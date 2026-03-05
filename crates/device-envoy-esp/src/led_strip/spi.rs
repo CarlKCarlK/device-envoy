@@ -270,7 +270,8 @@ macro_rules! __led_strip_spi_impl {
             $crate::__led2d_strip_trait_impl!(
                 $name,
                 [$($led2d_layout)?],
-                [$($led2d_font)?]
+                [$($led2d_font)?],
+                $max_frames
             );
 
             #[::embassy_executor::task]

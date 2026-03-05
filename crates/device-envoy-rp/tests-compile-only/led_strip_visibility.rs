@@ -5,6 +5,7 @@
 //! Test visibility support for led_strip! and led_strips! macros.
 
 use device_envoy_rp::led_strip;
+use device_envoy_rp::led2d::Led2dApi as _;
 use panic_probe as _;
 
 // Test default visibility (public)

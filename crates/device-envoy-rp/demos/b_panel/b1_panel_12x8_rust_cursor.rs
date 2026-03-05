@@ -5,6 +5,7 @@
 
 use core::{convert::Infallible, future, panic};
 
+use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::{
     Result, led_strip::colors, led2d, led2d::Led2dFont, led2d::layout::LedLayout,
 };

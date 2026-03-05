@@ -84,6 +84,7 @@
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::Result;
+use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::button::{Button, PressedTo};
 use device_envoy_rp::led_strip::Current;
 use device_envoy_rp::led_strip::Gamma;

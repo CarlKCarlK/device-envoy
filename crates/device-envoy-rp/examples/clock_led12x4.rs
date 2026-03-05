@@ -14,6 +14,7 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::button::{PressDuration, PressedTo};
+use device_envoy_rp::led2d::Led2dApi as _;
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,

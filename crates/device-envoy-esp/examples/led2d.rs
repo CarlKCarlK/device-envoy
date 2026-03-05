@@ -13,6 +13,7 @@ use embassy_time::Duration;
 use esp_backtrace as _;
 use log::info;
 
+use device_envoy_esp::led2d::Led2dApi as _;
 use device_envoy_esp::{
     init_and_start, led2d,
     led2d::{layout::LedLayout, Frame2d, Led2dFont},

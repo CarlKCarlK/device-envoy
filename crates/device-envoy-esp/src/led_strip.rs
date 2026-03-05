@@ -454,58 +454,7 @@ macro_rules! __led_strip_first_or_default {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __led2d_strip_methods {
-    ($leds:expr, $max_frames:expr, [$led_layout:expr], [$font:expr]) => {
-        pub const LED_LAYOUT: $crate::led2d::LedLayout<
-            { $leds },
-            { $led_layout.width() },
-            { $led_layout.height() },
-        > = $led_layout;
-        pub const WIDTH: usize = $led_layout.width();
-        pub const HEIGHT: usize = $led_layout.height();
-        pub const FONT: $crate::led2d::Led2dFont = $font;
-
-        pub fn write_frame2d(
-            &self,
-            frame: $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
-        ) {
-            let led2d = $crate::led2d::Led2d::new(&self.inner, &Self::LED_LAYOUT);
-            led2d.write_frame(frame);
-        }
-
-        pub fn animate2d<I>(&self, frames: I)
-        where
-            I: IntoIterator,
-            I::Item: ::core::borrow::Borrow<(
-                $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
-                embassy_time::Duration,
-            )>,
-        {
-            let led2d = $crate::led2d::Led2d::new(&self.inner, &Self::LED_LAYOUT);
-            led2d.animate(frames);
-        }
-
-        pub fn write_text_to_frame(
-            &self,
-            text: &str,
-            colors: &[$crate::led_strip::RGB8],
-            frame: &mut $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
-        ) {
-            $crate::led2d::render_text_to_frame(
-                frame,
-                &Self::FONT.to_font(),
-                text,
-                colors,
-                Self::FONT.spacing_reduction(),
-            );
-        }
-
-        pub fn write_text(&self, text: &str, colors: &[$crate::led_strip::RGB8]) {
-            let mut frame =
-                $crate::led2d::Frame2d::<{ $led_layout.width() }, { $led_layout.height() }>::new();
-            self.write_text_to_frame(text, colors, &mut frame);
-            self.write_frame2d(frame);
-        }
-
+    ($_leds:expr, $_max_frames:expr, [$led_layout:expr], [$font:expr]) => {
     };
     ($_leds:expr, $_max_frames:expr, [], []) => {};
 }
@@ -514,20 +463,23 @@ macro_rules! __led2d_strip_methods {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __led2d_strip_trait_impl {
-    ($name:ident, [$led_layout:expr], [$font:expr]) => {
+    ($name:ident, [$led_layout:expr], [$font:expr], $max_frames:expr) => {
         impl $crate::led2d::Led2dApi<{ $led_layout.width() }, { $led_layout.height() }>
             for &'static $name
         {
+            const MAX_FRAMES: usize = $max_frames;
+            const MAX_BRIGHTNESS: u8 = $name::MAX_BRIGHTNESS;
             const FONT: $crate::led2d::Led2dFont = $font;
 
             fn write_frame(
-                &mut self,
+                &self,
                 frame2d: $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
             ) {
-                (*self).write_frame2d(frame2d);
+                let led2d = $crate::led2d::Led2d::new(&self.inner, &$led_layout);
+                led2d.write_frame(frame2d);
             }
 
-            fn animate<I>(&mut self, frames: I)
+            fn animate<I>(&self, frames: I)
             where
                 I: IntoIterator,
                 I::Item: ::core::borrow::Borrow<(
@@ -535,11 +487,12 @@ macro_rules! __led2d_strip_trait_impl {
                     embassy_time::Duration,
                 )>,
             {
-                (*self).animate2d(frames);
+                let led2d = $crate::led2d::Led2d::new(&self.inner, &$led_layout);
+                led2d.animate(frames);
             }
         }
     };
-    ($_name:ident, [], []) => {};
+    ($_name:ident, [], [], $_max_frames:expr) => {};
 }
 
 /// Core implementation macro. Do not call directly.
@@ -670,7 +623,8 @@ macro_rules! __led_strip_impl {
             $crate::__led2d_strip_trait_impl!(
                 $name,
                 [$($led2d_layout)?],
-                [$($led2d_font)?]
+                [$($led2d_font)?],
+                $max_frames
             );
 
             // ------------------------------------------------------------------

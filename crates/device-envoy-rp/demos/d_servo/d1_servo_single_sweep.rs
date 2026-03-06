@@ -13,7 +13,7 @@ use embassy_executor::Spawner;
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
 
-use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::Button as _;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {

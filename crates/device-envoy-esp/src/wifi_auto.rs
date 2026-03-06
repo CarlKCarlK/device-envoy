@@ -14,7 +14,7 @@ use core::future::Future;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "none")]
-use crate::button::{ButtonDevice as _, ButtonEsp, PressedTo};
+use crate::button::{Button as _, ButtonEsp, PressedTo};
 #[cfg(target_os = "none")]
 use crate::flash_block::{FlashBlock as _, FlashBlockEsp};
 use crate::Result;

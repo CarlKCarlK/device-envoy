@@ -22,7 +22,7 @@ pub use button_watch::{button_watch_task, button_watch_task_from_input};
 pub use device_envoy_core::button::{
     BUTTON_DEBOUNCE_DELAY, BUTTON_POLL_INTERVAL, LONG_PRESS_DURATION, PressDuration, PressedTo,
 };
-pub use device_envoy_core::button::{Button as ButtonDevice, ButtonWatch as ButtonWatchDevice};
+pub use device_envoy_core::button::{Button, ButtonWatch};
 
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Pull};
@@ -45,10 +45,10 @@ use embassy_rp::gpio::{Input, Pull};
 ///
 /// # Usage
 ///
-/// Use [`ButtonDevice::wait_for_press`] when you only need a debounced
+/// Use [`Button::wait_for_press`] when you only need a debounced
 /// press event. It returns on the down edge and does not wait for release.
 ///
-/// Use [`ButtonDevice::wait_for_press_duration`] when you need to
+/// Use [`Button::wait_for_press_duration`] when you need to
 /// distinguish short vs. long presses. It returns as soon as it can decide, so long
 /// presses are reported before the button is released.
 ///
@@ -58,7 +58,7 @@ use embassy_rp::gpio::{Input, Pull};
 /// # #![no_std]
 /// # #![no_main]
 ///
-/// use device_envoy_rp::button::{ButtonDevice as _, ButtonRp, PressDuration, PressedTo};
+/// use device_envoy_rp::button::{Button as _, ButtonRp, PressDuration, PressedTo};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///

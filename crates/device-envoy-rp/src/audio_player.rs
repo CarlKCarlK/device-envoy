@@ -126,7 +126,7 @@
 //!     audio_player::{AudioPlayer as _,
 //!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
-//!     button::{ButtonDevice as _, ButtonRp, PressedTo},
+//!     button::{Button as _, ButtonRp, PressedTo},
 //!     tone,
 //! };
 //! use core::time::Duration as StdDuration;

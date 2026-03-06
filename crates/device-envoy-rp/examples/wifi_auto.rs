@@ -10,7 +10,7 @@
 use core::convert::Infallible;
 use defmt::{info, warn};
 use defmt_rtt as _;
-use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::Button as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::clock_sync::UnixSeconds;
 use device_envoy_rp::flash_block::FlashBlockRp;

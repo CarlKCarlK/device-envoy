@@ -26,7 +26,7 @@ use device_envoy_esp::{
     init_and_start, tone, Result,
 };
 
-use device_envoy_esp::button::ButtonDevice as _;
+use device_envoy_esp::button::Button as _;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

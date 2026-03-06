@@ -18,7 +18,7 @@ use device_envoy_rp::audio_player::{
     AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player,
     pcm_clip,
 };
-use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::Button as _;
 use device_envoy_rp::button::{ButtonRp, PressedTo};
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};

@@ -34,7 +34,7 @@ use device_envoy_esp::{
     Error, Result,
 };
 
-use device_envoy_esp::button::ButtonWatchDevice as _;
+use device_envoy_esp::button::ButtonWatch as _;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

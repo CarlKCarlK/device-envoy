@@ -19,7 +19,7 @@ use device_envoy_rp::Result;
 use device_envoy_rp::audio_player::{
     AtEnd, AudioPlayer as _, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
-use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::Button as _;
 use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::tone;
 use embassy_executor::Spawner;

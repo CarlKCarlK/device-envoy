@@ -48,7 +48,7 @@ pcm_clip! {
     }
 }
 
-use device_envoy_rp::button::ButtonDevice as _;
+use device_envoy_rp::button::Button as _;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {

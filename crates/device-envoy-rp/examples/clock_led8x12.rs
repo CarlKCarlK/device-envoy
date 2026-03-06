@@ -76,7 +76,7 @@ button_watch! {
     }
 }
 
-use device_envoy_rp::button::ButtonWatchDevice as _;
+use device_envoy_rp::button::ButtonWatch as _;
 
 #[embassy_executor::main]
 pub async fn main(spawner: Spawner) -> ! {

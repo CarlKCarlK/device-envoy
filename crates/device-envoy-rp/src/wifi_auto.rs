@@ -22,7 +22,7 @@ use heapless::Vec;
 use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
-use crate::button::{ButtonDevice as _, ButtonRp, PressedTo};
+use crate::button::{Button as _, ButtonRp, PressedTo};
 use crate::flash_block::FlashBlockRp;
 use crate::{Error, Result};
 use device_envoy_core::wifi_auto::{WifiCredentials as InnerWifiCredentials, WifiStartMode};

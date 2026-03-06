@@ -1132,6 +1132,12 @@ macro_rules! __audio_player_impl {
             impl $name {
                 /// Sample rate used for audio playback by this generated player type.
                 pub const SAMPLE_RATE_HZ: u32 = $sample_rate_hz;
+                /// Maximum number of clips accepted by `play(...)`.
+                pub const MAX_CLIPS: usize = $max_clips;
+                /// Initial runtime volume relative to [`Self::MAX_VOLUME`].
+                pub const INITIAL_VOLUME: $crate::audio_player::Volume = $initial_volume;
+                /// Runtime volume ceiling for this generated player type.
+                pub const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;
 
                 /// Creates and spawns the generated audio player instance.
                 ///
@@ -1161,6 +1167,7 @@ macro_rules! __audio_player_impl {
             }
 
             impl $crate::audio_player::AudioPlayer<{ $sample_rate_hz }> for $name {
+                const SAMPLE_RATE_HZ: u32 = $sample_rate_hz;
                 const MAX_CLIPS: usize = $max_clips;
                 const INITIAL_VOLUME: $crate::audio_player::Volume = $initial_volume;
                 const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;

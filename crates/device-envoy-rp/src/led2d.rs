@@ -22,6 +22,7 @@
 //!
 //! - [`led2d!`](macro@crate::led2d) — Macro to generate an LED-panel struct type (includes syntax details).
 //! - [`Led2d`](`crate::led2d::Led2d`) — Core trait that defines the LED panel API surface.
+//! - [`Led2dGenerated`](led2d_generated::Led2dGenerated) — Sample generated panel type showing the constructor path.
 //! - [`LedLayout`] — Compile-type description of panel geometry and wiring, including dimensions (with examples)
 //! - [`Frame2d`] — 2D pixel array used for general graphics (includes examples)
 //! - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other panels or LED strips (includes examples)
@@ -162,6 +163,7 @@ pub use device_envoy_core::led2d::{
     render_text_to_frame,
 };
 pub use layout::LedLayout;
+pub mod led2d_generated;
 
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that expands at the call site in downstream crates.
 // This is an implementation detail, not part of the user-facing API.
@@ -777,6 +779,34 @@ macro_rules! led2d_from_strip {
 
             #[allow(non_snake_case, dead_code)]
             impl [<$name>] {
+                /// Maximum number of animation frames.
+                pub const MAX_FRAMES: usize = $max_frames_const;
+                /// Maximum brightness level after current limiting.
+                pub const MAX_BRIGHTNESS: u8 = $strip_type::MAX_BRIGHTNESS;
+                /// Default font used by text helpers.
+                pub const FONT: $crate::led2d::Led2dFont = $font_variant;
+                /// Panel width in pixels.
+                pub const WIDTH: usize = $led_layout_const.width();
+                /// Panel height in pixels.
+                pub const HEIGHT: usize = $led_layout_const.height();
+                /// Total LED count (`WIDTH * HEIGHT`).
+                pub const LEN: usize = $led_layout_const.len();
+                /// Panel dimensions as a [`Size`](crate::led2d::Size).
+                pub const SIZE: $crate::led2d::Size =
+                    $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::SIZE;
+                /// Top-left corner coordinate.
+                pub const TOP_LEFT: $crate::led2d::Point =
+                    $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::TOP_LEFT;
+                /// Top-right corner coordinate.
+                pub const TOP_RIGHT: $crate::led2d::Point =
+                    $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::TOP_RIGHT;
+                /// Bottom-left corner coordinate.
+                pub const BOTTOM_LEFT: $crate::led2d::Point =
+                    $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::BOTTOM_LEFT;
+                /// Bottom-right corner coordinate.
+                pub const BOTTOM_RIGHT: $crate::led2d::Point =
+                    $crate::led2d::Frame2d::<{ $led_layout_const.width() }, { $led_layout_const.height() }>::BOTTOM_RIGHT;
+
                 // Public so led2d_from_strip! expansions in downstream crates can call it.
                 #[doc(hidden)]
                 $vis fn from_strip(

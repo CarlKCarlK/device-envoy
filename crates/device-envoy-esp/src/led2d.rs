@@ -10,6 +10,7 @@
 //! - [`Led2d::write_frame`](`crate::led2d::Led2d::write_frame`)
 //! - [`Led2d::write_text`](`crate::led2d::Led2d::write_text`)
 //! - [`Led2d::animate`](`crate::led2d::Led2d::animate`)
+//! - [`Led2dGenerated`](led2d_generated::Led2dGenerated)
 
 pub mod layout {
     pub use device_envoy_core::led2d::layout::*;
@@ -20,6 +21,7 @@ pub use device_envoy_core::led2d::{
     bit_matrix3x4_font, render_text_to_frame, Frame2d, Led2dFont, Led2dStripAdapter,
     Led2dStripBacked, LedLayout, Point, Size,
 };
+pub mod led2d_generated;
 
 pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 

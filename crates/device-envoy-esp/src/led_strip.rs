@@ -7,8 +7,12 @@
 //! The [`led_strip!`](macro@crate::led_strip) macro generates a fully async, Embassy-based strip
 //! controller. Use `engine: Engine::Spi` to select the SPI variant backed by
 //! the [`spi`] sub-module.
+//!
+//! See also [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a
+//! sample generated type with constructor, constants, and trait methods.
 
 pub use device_envoy_core::led_strip::*;
+pub mod led_strip_generated;
 
 /// Internal runtime handle for macro-generated LED strip types.
 ///
@@ -482,7 +486,33 @@ macro_rules! __led_strip_first_or_default {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __led2d_strip_methods {
-    ($_leds:expr, $_max_frames:expr, [$led_layout:expr], [$font:expr]) => {};
+    ($_leds:expr, $max_frames:expr, [$led_layout:expr], [$font:expr]) => {
+        /// Default font used by text helpers.
+        pub const FONT: $crate::led2d::Led2dFont = $font;
+        /// Panel width in pixels.
+        pub const WIDTH: usize = $led_layout.width();
+        /// Panel height in pixels.
+        pub const HEIGHT: usize = $led_layout.height();
+        /// Panel dimensions.
+        pub const SIZE: $crate::led2d::Size =
+            $crate::led2d::Frame2d::<{ $led_layout.width() }, { $led_layout.height() }>::SIZE;
+        /// Top-left corner coordinate.
+        pub const TOP_LEFT: $crate::led2d::Point =
+            $crate::led2d::Frame2d::<{ $led_layout.width() }, { $led_layout.height() }>::TOP_LEFT;
+        /// Top-right corner coordinate.
+        pub const TOP_RIGHT: $crate::led2d::Point =
+            $crate::led2d::Frame2d::<{ $led_layout.width() }, { $led_layout.height() }>::TOP_RIGHT;
+        /// Bottom-left corner coordinate.
+        pub const BOTTOM_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<
+            { $led_layout.width() },
+            { $led_layout.height() },
+        >::BOTTOM_LEFT;
+        /// Bottom-right corner coordinate.
+        pub const BOTTOM_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<
+            { $led_layout.width() },
+            { $led_layout.height() },
+        >::BOTTOM_RIGHT;
+    };
     ($_leds:expr, $_max_frames:expr, [], []) => {};
 }
 
@@ -494,6 +524,14 @@ macro_rules! __led2d_strip_trait_impl {
         impl $crate::led2d::Led2d<{ $led_layout.width() }, { $led_layout.height() }>
             for &'static $name
         {
+            const WIDTH: usize = $name::WIDTH;
+            const HEIGHT: usize = $name::HEIGHT;
+            const LEN: usize = $name::LEN;
+            const SIZE: $crate::led2d::Size = $name::SIZE;
+            const TOP_LEFT: $crate::led2d::Point = $name::TOP_LEFT;
+            const TOP_RIGHT: $crate::led2d::Point = $name::TOP_RIGHT;
+            const BOTTOM_LEFT: $crate::led2d::Point = $name::BOTTOM_LEFT;
+            const BOTTOM_RIGHT: $crate::led2d::Point = $name::BOTTOM_RIGHT;
             const MAX_FRAMES: usize = $max_frames;
             const MAX_BRIGHTNESS: u8 = $name::MAX_BRIGHTNESS;
             const FONT: $crate::led2d::Led2dFont = $font;

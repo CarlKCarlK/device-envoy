@@ -4,6 +4,8 @@
 
 mod adpcm_clip_generated;
 mod audio_player_generated;
+mod led2d_generated;
+mod led_strip_generated;
 mod pcm_clip_generated;
 mod servo_player_generated;
 mod video_frames_gen;
@@ -192,6 +194,14 @@ fn check_quick() -> ExitCode {
         eprintln!("Error generating audio_player_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
+    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
+        eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
+        eprintln!("Error generating led_strip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
         eprintln!("Error generating servo_player_generated.rs: {}", err);
         return ExitCode::FAILURE;
@@ -339,6 +349,14 @@ fn check_all() -> ExitCode {
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
         eprintln!("Error generating audio_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
+        eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
+        eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
@@ -639,6 +657,14 @@ fn check_docs() -> ExitCode {
     }
     if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
         eprintln!("Error generating audio_player_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
+        eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
+        eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
@@ -1154,7 +1180,12 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
         GeneratedDocStubExpectation {
             relative_path: "src/audio_player/audio_player_generated.rs",
             required_fragments: &[
+                "pub const SAMPLE_RATE_HZ: u32",
+                "pub const MAX_CLIPS: usize",
+                "pub const INITIAL_VOLUME: Volume",
+                "pub const MAX_VOLUME: Volume",
                 "impl AudioPlayer<VOICE_22050_HZ> for AudioPlayerGenerated",
+                "const SAMPLE_RATE_HZ: u32",
                 "const MAX_CLIPS: usize",
                 "const INITIAL_VOLUME: Volume",
                 "const MAX_VOLUME: Volume",
@@ -1162,6 +1193,40 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "async fn wait_until_stopped(&self)",
                 "fn set_volume(&self, volume: Volume)",
                 "fn volume(&self) -> Volume",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/led2d/led2d_generated.rs",
+            required_fragments: &[
+                "pub struct Led2dGenerated",
+                "pub const MAX_FRAMES: usize",
+                "pub const MAX_BRIGHTNESS: u8",
+                "pub const FONT: Led2dFont",
+                "pub const WIDTH: usize",
+                "pub const HEIGHT: usize",
+                "pub const LEN: usize",
+                "pub const SIZE: Size",
+                "pub const TOP_LEFT: Point",
+                "pub const TOP_RIGHT: Point",
+                "pub const BOTTOM_LEFT: Point",
+                "pub const BOTTOM_RIGHT: Point",
+                "pub fn new(",
+                "impl Led2d<12, 4> for Led2dGenerated",
+                "fn write_frame(&self, frame2d: Frame2d<12, 4>)",
+                "fn animate<I>(&self, frames: I)",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/led_strip/led_strip_generated.rs",
+            required_fragments: &[
+                "pub struct LedStripGenerated",
+                "pub const LEN: usize",
+                "pub const MAX_FRAMES: usize",
+                "pub const MAX_BRIGHTNESS: u8",
+                "pub fn new(",
+                "impl LedStrip<8> for LedStripGenerated",
+                "fn write_frame(&self, frame: Frame1d<8>)",
+                "fn animate<I>(&self, frames: I)",
             ],
         },
         GeneratedDocStubExpectation {

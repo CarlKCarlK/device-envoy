@@ -1111,6 +1111,8 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// playback operations resolve through trait methods instead of inherent methods.
 #[allow(async_fn_in_trait)]
 pub trait AudioPlayer<const SAMPLE_RATE_HZ: u32> {
+    /// Sample rate in hertz for this generated player type.
+    const SAMPLE_RATE_HZ: u32;
     /// Maximum number of clips accepted by `play(...)` for this generated type.
     const MAX_CLIPS: usize;
     /// Initial runtime volume relative to [`Self::MAX_VOLUME`].

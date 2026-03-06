@@ -286,12 +286,17 @@ Runtime naming rule: when such platform runtime structs are needed, name them us
 11. Move docs to the trait as the API reference:
    - Update module "Start Here" links to point at the trait and trait methods
    - Replace references to generated sample types with trait references in macro docs and module docs
-12. Remove generated doc stub flow when it no longer represents the API:
+   - For macro-backed abstractions, keep a representative generated doc page when it improves constructor discoverability (`new`, `new_static`) or sample-type navigation in rustdoc.
+12. Keep associated constants visible in both places when useful:
+   - Keep canonical semantics on the trait (for generic code and UFCS access).
+   - Also expose matching inherent constants on generated types when users commonly read them before construction or from generated-type pages.
+   - Keep names and values aligned between trait and generated type; avoid one-off aliases.
+13. Remove generated doc stub flow when it no longer represents the API:
    - Delete the abstraction's `*_generated.rs` generator/template and generated stub module
    - Remove `xtask` generation/check hooks for that stub, including `check_generated_doc_stubs` expectations
    - Update crate `AGENTS.md` generated-file lists accordingly
-13. Keep compatibility aliases only when needed for migration, and document canonical names.
-14. Verify with crate/workspace checks (`cargo xtask check-all` and docs checks) so trait-const access and imports are validated across examples/demos/tests.
+14. Keep compatibility aliases only when needed for migration, and document canonical names.
+15. Verify with crate/workspace checks (`cargo xtask check-all` and docs checks) so trait-const access and imports are validated across examples/demos/tests.
 
 ## Async Coordination
 

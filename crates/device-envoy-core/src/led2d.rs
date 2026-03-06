@@ -99,7 +99,7 @@ pub trait Led2d<const W: usize, const H: usize> {
 
     /// Write a frame to the LED panel.
     ///
-    /// See your platform crate's `led2d` module docs for usage examples.
+    /// See your platform crate's led2d module docs for possible usage examples. //TODO00 consider adding examples here
     fn write_frame(&self, frame2d: Frame2d<W, H>);
 
     /// Animate frames on the LED panel.
@@ -107,7 +107,7 @@ pub trait Led2d<const W: usize, const H: usize> {
     /// The duration type is [`embassy_time::Duration`], and `frames` can be any iterator whose
     /// items borrow `(Frame2d<W, H>, embassy_time::Duration)`.
     ///
-    /// See your platform crate's `led2d` module docs for usage examples.
+    /// See your platform crate's led2d module docs for possible usage examples. //TODO00 consider adding examples here
     fn animate<I>(&self, frames: I)
     where
         I: IntoIterator,

@@ -46,6 +46,17 @@ use crate::audio_player::{AtEnd, AudioPlayer, Playable, Volume, VOICE_22050_HZ};
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {
+    /// Sample rate used for playback by this generated player type.
+    ///
+    /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
+    pub const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
+    /// Maximum number of clips accepted by `play(...)`.
+    pub const MAX_CLIPS: usize = 16;
+    /// Initial runtime volume relative to [`Self::MAX_VOLUME`].
+    pub const INITIAL_VOLUME: Volume = Volume::MAX;
+    /// Runtime volume ceiling for this generated player type.
+    pub const MAX_VOLUME: Volume = Volume::MAX;
+
     /// Creates and spawns the generated audio player instance.
     ///
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
@@ -61,11 +72,11 @@ impl AudioPlayerGenerated {
         let _ = (data_pin, bit_clock_pin, word_select_pin, pio, dma, spawner);
         Ok(&INSTANCE)
     }
-
 }
 
 #[cfg(doc)]
 impl AudioPlayer<VOICE_22050_HZ> for AudioPlayerGenerated {
+    const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
     const MAX_CLIPS: usize = 16;
     const INITIAL_VOLUME: Volume = Volume::MAX;
     const MAX_VOLUME: Volume = Volume::MAX;

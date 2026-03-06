@@ -35,6 +35,7 @@
 //!
 //! - [`led_strip!`](macro@crate::led_strip) — Macro to generate an LED strip struct type (includes syntax details).
 //! - [`LedStrip`](`crate::led_strip::LedStrip`) — Core trait defining the LED strip API surface.
+//! - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) — Sample generated strip type showing the constructor path.
 //! - [`Frame1d`] — 1D pixel array used to describe LED strip patterns.
 //! - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples).
 //!
@@ -141,6 +142,7 @@
 //! ```
 
 pub use device_envoy_core::led_strip::*;
+pub mod led_strip_generated;
 
 #[cfg(not(feature = "host"))]
 use core::cell::RefCell;

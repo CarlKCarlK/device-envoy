@@ -291,10 +291,84 @@ use heapless::Vec;
 /// Platform crates implement this for their concrete LED strip types so shared logic can
 /// drive strips without knowing the underlying hardware backend.
 ///
+/// This page serves as the definitive reference for what a generated LED strip type
+/// provides. For first-time readers, start with the `led_strip` module documentation in your
+/// platform crate (`device-envoy-rp` or `device-envoy-esp`), then return here for a
+/// complete list of available methods and associated constants.
+///
 /// Design intent:
 ///
 /// - Primitive operations are [`LedStrip::write_frame`] and [`LedStrip::animate`].
 /// - This trait is intended for static dispatch on embedded targets.
+///
+/// # Example: Write a Single 1-Dimensional Frame
+///
+/// In this example, we set every other LED to blue and gray.
+///
+/// ![LED strip preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_simple.png)
+///
+/// ```rust,no_run
+/// use device_envoy_core::led_strip::{Frame1d, LedStrip, colors};
+///
+/// fn write_alternating_blue_gray<const N: usize>(led_strip: &impl LedStrip<N>) {
+///     let mut frame = Frame1d::new();
+///     for pixel_index in 0..N {
+///         frame[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
+///     }
+///     led_strip.write_frame(frame);
+/// }
+///
+/// # struct LedStripSimple;
+/// # impl LedStrip<8> for LedStripSimple {
+/// #     const MAX_FRAMES: usize = 16;
+/// #     const MAX_BRIGHTNESS: u8 = 133;
+/// #     fn write_frame(&self, _frame: Frame1d<8>) {}
+/// #     fn animate<I>(&self, _frames: I)
+/// #     where
+/// #         I: IntoIterator,
+/// #         I::Item: core::borrow::Borrow<(Frame1d<8>, embassy_time::Duration)>,
+/// #     {
+/// #     }
+/// # }
+/// # let led_strip_simple = LedStripSimple;
+/// # write_alternating_blue_gray(&led_strip_simple);
+/// ```
+///
+/// # Example: Animate a Sequence
+///
+/// This example animates a 96-LED strip through red, green, and blue frames, cycling
+/// continuously.
+///
+/// ![LED strip preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_animated.png)
+///
+/// ```rust,no_run
+/// use device_envoy_core::led_strip::{Frame1d, LedStrip, colors};
+/// use embassy_time::Duration;
+///
+/// fn animate_rgb_cycle<const N: usize>(led_strip: &impl LedStrip<N>) {
+///     let frame_duration = Duration::from_millis(300);
+///     led_strip.animate([
+///         (Frame1d::filled(colors::RED), frame_duration),
+///         (Frame1d::filled(colors::GREEN), frame_duration),
+///         (Frame1d::filled(colors::BLUE), frame_duration),
+///     ]);
+/// }
+///
+/// # struct LedStripAnimated;
+/// # impl LedStrip<96> for LedStripAnimated {
+/// #     const MAX_FRAMES: usize = 3;
+/// #     const MAX_BRIGHTNESS: u8 = 44;
+/// #     fn write_frame(&self, _frame: Frame1d<96>) {}
+/// #     fn animate<I>(&self, _frames: I)
+/// #     where
+/// #         I: IntoIterator,
+/// #         I::Item: core::borrow::Borrow<(Frame1d<96>, embassy_time::Duration)>,
+/// #     {
+/// #     }
+/// # }
+/// # let led_strip_animated = LedStripAnimated;
+/// # animate_rgb_cycle(&led_strip_animated);
+/// ```
 pub trait LedStrip<const N: usize> {
     /// Number of LEDs in this strip.
     const LEN: usize = N;
@@ -304,12 +378,16 @@ pub trait LedStrip<const N: usize> {
     const MAX_BRIGHTNESS: u8;
 
     /// Write a frame to the LED strip.
+    ///
+    /// See the [LedStrip trait documentation](Self) for usage examples.
     fn write_frame(&self, frame: Frame1d<N>);
 
     /// Animate frames on the LED strip.
     ///
     /// The duration type is [`embassy_time::Duration`], and `frames` can be any iterator whose
     /// items borrow `(Frame1d<N>, embassy_time::Duration)`.
+    ///
+    /// See the [LedStrip trait documentation](Self) for usage examples.
     fn animate<I>(&self, frames: I)
     where
         I: IntoIterator,

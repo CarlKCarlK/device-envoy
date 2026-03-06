@@ -34,12 +34,15 @@ led2d! {
 }
 
 fn animate_go_go<const W: usize, const H: usize>(led2d: &impl Led2d<W, H>) {
+    // First frame: "Go" with the default color behavior.
     let mut frame_0 = Frame2d::new();
     led2d.write_text_to_frame("Go", &[], &mut frame_0);
 
+    // Second frame: "\nGo" with explicit colors.
     let mut frame_1 = Frame2d::new();
     led2d.write_text_to_frame("\nGo", &[colors::HOT_PINK, colors::LIME], &mut frame_1);
 
+    // Animate the two frames.
     let frame_duration = embassy_time::Duration::from_secs(1);
     led2d.animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
 }

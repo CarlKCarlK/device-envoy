@@ -14,7 +14,7 @@ use device_envoy_rp::{
     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND, h12_m_s},
     flash_block::FlashBlockRp,
     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
-    wifi_auto::{WifiAuto, WifiAutoEvent},
+    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -35,7 +35,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,
         p.PIN_24,
         p.PIN_25,
@@ -54,13 +54,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .connect(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    info!("WifiAuto: setup mode ready");
+                    info!("WifiAutoRp: setup mode ready");
                 }
                 WifiAutoEvent::Connecting { .. } => {
-                    info!("WifiAuto: connecting");
+                    info!("WifiAutoRp: connecting");
                 }
                 WifiAutoEvent::ConnectionFailed => {
-                    info!("WifiAuto: connection failed");
+                    info!("WifiAutoRp: connection failed");
                 }
             }
             Ok(())

@@ -14,7 +14,7 @@ use device_envoy_rp::{
     Result,
     button::PressedTo,
     flash_block::FlashBlockRp,
-    wifi_auto::{WifiAuto, WifiAutoEvent},
+    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 };
 use embassy_net::dns::DnsQueryType;
 use embassy_time::{Duration, Timer};
@@ -30,7 +30,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
         p.PIN_25,  // CYW43 chip select

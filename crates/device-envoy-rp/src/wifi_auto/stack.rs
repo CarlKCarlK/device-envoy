@@ -1,6 +1,6 @@
-//! A device abstraction for WiFi connectivity used internally by [`crate::wifi_auto::WifiAuto`].
+//! A device abstraction for WiFi connectivity used internally by [`crate::wifi_auto::WifiAutoRp`].
 //!
-//! See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+//! See the [WifiAutoRp struct example](crate::wifi_auto::WifiAutoRp) for usage.
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 #![allow(
@@ -151,7 +151,7 @@ pub struct WifiStatic {
 
 /// A device abstraction that manages WiFi connectivity and network stack in both captive portal and client modes.
 ///
-/// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+/// See the [WifiAutoRp struct example](crate::wifi_auto::WifiAutoRp) for usage.
 pub struct Wifi {
     events: &'static WifiEvents,
     stack: &'static StackStorage,
@@ -164,7 +164,7 @@ impl Wifi {
     /// This must be called once to create a static `WifiStatic` that will be passed to
     /// [`Wifi::new_with_captive_portal_ssid`].
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoRp struct example](crate::wifi_auto::WifiAutoRp) for usage.
     #[must_use]
     pub const fn new_static() -> WifiStatic {
         WifiStatic {
@@ -181,7 +181,7 @@ impl Wifi {
     /// - In captive portal mode: static IP 192.168.4.1
     /// - In client mode: DHCP-assigned IP
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoRp struct example](crate::wifi_auto::WifiAutoRp) for usage.
     pub async fn wait_for_stack(&self) -> &'static Stack<'static> {
         self.stack.get().await
     }
@@ -192,7 +192,7 @@ impl Wifi {
     /// - [`WifiEvent::CaptivePortalReady`] when captive portal mode is initialized
     /// - [`WifiEvent::ClientReady`] when connected to WiFi and DHCP is configured
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoRp struct example](crate::wifi_auto::WifiAutoRp) for usage.
     pub async fn wait_for_wifi_event(&self) -> WifiEvent {
         self.events.wait().await
     }

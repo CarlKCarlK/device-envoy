@@ -9,3 +9,5 @@ This repository is a Rust workspace for platform-specific crates and a shared co
 Current migration intent:
 
 - Keep platform crates working as-is while moving toward shared functionality in `device-envoy-core`.
+
+todo0 Thank Brad

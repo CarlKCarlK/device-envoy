@@ -28,7 +28,7 @@ use device_envoy_rp::led2d::Frame2d;
 use device_envoy_rp::led2d::Led2dFont;
 use device_envoy_rp::led2d::layout::LedLayout;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result, led2d::Led2d as _};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -76,7 +76,7 @@ pub async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    info!("Starting Wi-Fi 12x4 LED clock (WifiAuto)");
+    info!("Starting Wi-Fi 12x4 LED clock (WifiAutoRp)");
     let p = embassy_rp::init(Default::default());
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
@@ -87,7 +87,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal. The button pin is used to reset stored credentials.
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
         p.PIN_25,  // CYW43 chip select
@@ -136,7 +136,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("WiFi: connected successfully, displaying DONE");
     show_connected(&led12x4).await;
 
-    // Convert the Button from WifiAuto into a ButtonWatch for background monitoring
+    // Convert the Button from WifiAutoRp into a ButtonWatch for background monitoring
     let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
 
     // Read the timezone offset, an extra field that WiFi portal saved to flash.

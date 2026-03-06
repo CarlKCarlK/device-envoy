@@ -15,7 +15,7 @@ use device_envoy_rp::{
     led2d,
     led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},
-    wifi_auto::{WifiAuto, WifiAutoEvent},
+    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
@@ -50,10 +50,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Flash stores WiFi credentials after first setup
     let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
-    // Create a WifiAuto instance.
+    // Create a WifiAutoRp instance.
     // A button is used to force reconfiguration via setup web page.
     // Pico W uses the CYW43 chip wired to fixed GPIOs; we pass those here.
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,
         p.PIN_24,
         p.PIN_25,

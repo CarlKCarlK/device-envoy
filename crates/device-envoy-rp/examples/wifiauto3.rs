@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-//! WifiAuto example with a custom website field for DNS lookups.
+//! WifiAutoRp example with a custom website field for DNS lookups.
 
 #![cfg(feature = "wifi")]
 #![no_std]
@@ -14,7 +14,7 @@ use device_envoy_rp::{
     button::PressedTo,
     flash_block::FlashBlockRp,
     wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
-    wifi_auto::{WifiAuto, WifiAutoEvent},
+    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 };
 
 #[embassy_executor::main]
@@ -41,7 +41,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
         p.PIN_25,  // CYW43 chip select

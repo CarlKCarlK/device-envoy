@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-//! Minimal example that provisions Wi-Fi credentials using the `WifiAuto`
+//! Minimal example that provisions Wi-Fi credentials using the `WifiAutoRp`
 //! abstraction and displays connection status on a 4-digit LED display.
 
 #![cfg(feature = "wifi")]
@@ -20,7 +20,7 @@ use device_envoy_rp::led4::{
 use device_envoy_rp::wifi_auto::fields::{
     TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic,
 };
-use device_envoy_rp::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_net::{Stack, dns::DnsQueryType, udp};
@@ -89,7 +89,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         "Living Room",
     );
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,                     // CYW43 power
         p.PIN_24,                     // CYW43 clock
         p.PIN_25,                     // CYW43 chip select

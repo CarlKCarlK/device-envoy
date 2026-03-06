@@ -1,7 +1,7 @@
 //! A device abstraction that connects a Pico with WiFi to the Internet and, when needed,
 //! creates a temporary WiFi network to enter credentials.
 //!
-//! See [`WifiAuto`] for the main struct and usage examples.
+//! See [`WifiAutoRp`] for the main struct and usage examples.
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
@@ -39,6 +39,7 @@ use stack::WifiStatic as InnerWifiStatic;
 pub use stack::WifiPio;
 pub(crate) use stack::{Wifi, WifiEvent};
 
+pub use device_envoy_core::wifi_auto::WifiAuto;
 pub use device_envoy_core::wifi_auto::WifiAutoEvent;
 pub use portal::WifiAutoField;
 
@@ -49,7 +50,7 @@ const RETRY_JITTER_MAX: Duration = Duration::from_millis(500);
 
 const MAX_WIFI_AUTO_FIELDS: usize = 8;
 
-/// Static for [`WifiAuto`]. See [`WifiAuto`] for usage example.
+/// Static for [`WifiAutoRp`]. See [`WifiAutoRp`] for usage example.
 pub(crate) struct WifiAutoStatic {
     wifi: InnerWifiStatic,
     wifi_auto_cell: StaticCell<WifiAutoInner>,
@@ -61,23 +62,23 @@ pub(crate) struct WifiAutoStatic {
 /// A device abstraction that connects a Pico with WiFi to the Internet and, when needed,
 /// creates a temporary WiFi network to enter credentials.
 ///
-/// `WifiAuto` handles WiFi connections end-to-end. It normally connects using
+/// `WifiAutoRp` handles WiFi connections end-to-end. It normally connects using
 /// a saved WiFi network name (SSID) and password. If those values are missing
 /// or invalid, it temporarily creates its own WiFi network (a “captive
 /// portal”) and hosts a web form where the user can enter the local WiFi
 /// ssid and password.
 ///
-/// `WifiAuto` works on the Pico 1 W and Pico 2 W, which include the CYW43 WiFi chip.
+/// `WifiAutoRp` works on the Pico 1 W and Pico 2 W, which include the CYW43 WiFi chip.
 ///
 /// The typical usage pattern is:
 ///
 /// 0. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
 /// 1. Construct a [`FlashBlockRp`] to store WiFi credentials.
-/// 2. Use [`WifiAuto::new`] to construct a `WifiAuto`.
+/// 2. Use [`WifiAutoRp::new`] to construct a `WifiAutoRp`.
 /// 3. Use [`WifiAuto::connect`] to connect to WiFi while optionally showing status.
 ///
 /// The [`WifiAuto::connect`] method returns a network stack and the button, and it consumes
-/// the `WifiAuto`. See its documentation for examples and details.
+/// the `WifiAutoRp`. See its documentation for examples and details.
 ///
 /// Let’s look at an example. Following the example, we’ll explain the details.
 /// (For additional examples, see the [wifi_auto::fields module example](crate::wifi_auto::fields)
@@ -95,7 +96,7 @@ pub(crate) struct WifiAutoStatic {
 ///     Result,
 ///     button::PressedTo,
 ///     flash_block::FlashBlockRp,
-///     wifi_auto::{WifiAuto, WifiAutoEvent},
+///     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 /// };
 /// use embassy_time::Duration;
 ///
@@ -106,8 +107,8 @@ pub(crate) struct WifiAutoStatic {
 ///     // Set up flash storage for WiFi credentials
 ///     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 ///
-///     // Construct WifiAuto
-///     let wifi_auto = WifiAuto::new(
+///     // Construct WifiAutoRp
+///     let wifi_auto = WifiAutoRp::new(
 ///         p.PIN_23,          // CYW43 power
 ///         p.PIN_24,          // CYW43 clock
 ///         p.PIN_25,          // CYW43 chip select
@@ -192,9 +193,9 @@ pub(crate) struct WifiAutoStatic {
 /// On the Pico W, the CYW43 WiFi chip is wired to fixed GPIOs. You must
 /// also provide a PIO instance and a DMA channel for the WiFi driver.
 ///
-/// These are supplied explicitly to [`WifiAuto::new`]. The chosen PIO/DMA
+/// These are supplied explicitly to [`WifiAutoRp::new`]. The chosen PIO/DMA
 /// pair cannot be shared with other uses; the compiler enforces this.
-pub struct WifiAuto {
+pub struct WifiAutoRp {
     wifi_auto: &'static WifiAutoInner,
 }
 
@@ -237,7 +238,7 @@ impl WifiAutoStatic {
     }
 }
 
-impl WifiAuto {
+impl WifiAutoRp {
     /// Initialize WiFi auto-provisioning with custom configuration fields.
     ///
     /// # Parameters
@@ -245,8 +246,8 @@ impl WifiAuto {
     /// - `pin_23`, `pin_24`, `pin_25`, `pin_29`: the internal GPIO pins for the CYW43 WiFi chip.
     /// - `pio`: PIO resource used for WiFi.
     /// - `dma`: DMA resource for WiFi.
-    /// - `wifi_credentials_flash_block`: [`FlashBlockRp`] reserved
-    ///   for WiFi credentials.
+    /// - `wifi_credentials_flash_block`: a flash block implementing
+    ///   [`crate::flash_block::FlashBlock`] for WiFi credentials.
     /// - `button_pin`: Button pin used to force setup mode on boot.
     /// - `button_pressed_to`: Wiring for the button (ground or VCC).
     /// - `captive_portal_ssid`: SSID shown when the device starts setup mode.
@@ -254,22 +255,26 @@ impl WifiAuto {
     ///   [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
     /// - `spawner`: Embassy task spawner for background work.
     ///
-    /// See the [WifiAuto struct example](Self) for a complete example.
+    /// See the [WifiAutoRp struct example](Self) for a complete example.
     #[allow(clippy::too_many_arguments)]
-    pub fn new<const N: usize, PIO: WifiPio, DMA: Channel>(
+    pub fn new<const N: usize, PIO: WifiPio, DMA: Channel, FlashBlockType>(
         pin_23: Peri<'static, PIN_23>,
         pin_24: Peri<'static, PIN_24>,
         pin_25: Peri<'static, PIN_25>,
         pin_29: Peri<'static, PIN_29>,
         pio: Peri<'static, PIO>,
         dma: Peri<'static, DMA>,
-        mut wifi_credentials_flash_block: FlashBlockRp,
+        wifi_credentials_flash_block: FlashBlockType,
         button_pin: Peri<'static, impl Pin>,
         button_pressed_to: PressedTo,
         captive_portal_ssid: &'static str,
         custom_fields: [&'static dyn WifiAutoField; N],
         spawner: Spawner,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        FlashBlockType: crate::flash_block::FlashBlock<Error = Error> + Into<FlashBlockRp>,
+    {
+        let mut wifi_credentials_flash_block = wifi_credentials_flash_block.into();
         static WIFI_AUTO_STATIC: WifiAutoStatic = WifiAutoInner::new_static();
         let wifi_auto_static = &WIFI_AUTO_STATIC;
 
@@ -328,7 +333,7 @@ impl WifiAuto {
         let fields_ref: &'static [&'static dyn WifiAutoField] = if N > 0 {
             assert!(
                 N <= MAX_WIFI_AUTO_FIELDS,
-                "WifiAuto supports at most {} custom fields",
+                "WifiAutoRp supports at most {} custom fields",
                 MAX_WIFI_AUTO_FIELDS
             );
             let mut storage: Vec<&'static dyn WifiAutoField, MAX_WIFI_AUTO_FIELDS> = Vec::new();
@@ -359,11 +364,17 @@ impl WifiAuto {
         })
     }
 
-    device_envoy_core::__impl_wifi_auto_connect! {
+}
+
+impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
+    type Error = Error;
+    type Stack = &'static Stack<'static>;
+    type Button = ButtonRp<'static>;
+
     /// Connects to WiFi (if possible), reports status, and returns the
-    /// network stack and button, consuming the `WifiAuto`.
+    /// network stack and button, consuming the `WifiAutoRp`.
     ///
-    /// See the [WifiAuto struct example](Self) for a usage example.
+    /// See the [WifiAutoRp struct example](Self) for a usage example.
     ///
     /// This method does not return until WiFi is connected. It may briefly
     /// restart the Pico while switching between normal WiFi operation
@@ -383,7 +394,7 @@ impl WifiAuto {
     ///
     /// The first example uses a handler that does nothing.
     /// The second example shows how to use an LED panel to display status messages.
-    /// The example on the [`WifiAuto`] struct shows simple logging.
+    /// The example on the [`WifiAutoRp`] struct shows simple logging.
     ///
     /// # Example 1: No-op event handler
     /// ```rust,no_run
@@ -395,13 +406,13 @@ impl WifiAuto {
     /// #     Result,
     /// #     button::PressedTo,
     /// #     flash_block::FlashBlockRp,
-    /// #     wifi_auto::WifiAuto,
+    /// #     wifi_auto::{WifiAuto as _, WifiAutoRp},
     /// # };
     /// # use embassy_executor::Spawner;
     /// # use embassy_rp::Peripherals;
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
     /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    /// # let wifi_auto = WifiAuto::new(
+    /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,
     /// #     p.PIN_25,
@@ -433,7 +444,7 @@ impl WifiAuto {
     /// #     button::PressedTo,
     /// #     flash_block::FlashBlockRp,
     /// #     led_strip::colors,
-    /// #     wifi_auto::{WifiAuto, WifiAutoEvent},
+    /// #     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
     /// # };
     /// # use smart_leds::RGB8;
     /// # use embassy_executor::Spawner;
@@ -446,7 +457,7 @@ impl WifiAuto {
     /// # const COLORS: &[RGB8] = &[colors::WHITE];
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
     /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    /// # let wifi_auto = WifiAuto::new(
+    /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,
     /// #     p.PIN_25,
@@ -484,9 +495,15 @@ impl WifiAuto {
     /// # Ok(())
     /// # }
     /// ```
-    fn connect(self as wifi_auto, on_event) -> Result<(&'static Stack<'static>, ButtonRp<'static>)> {
-        wifi_auto.wifi_auto.connect(on_event).await
-    }
+    async fn connect<OnEvent, OnEventFuture>(
+        self,
+        on_event: OnEvent,
+    ) -> Result<(Self::Stack, Self::Button)>
+    where
+        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
+        OnEventFuture: Future<Output = Result<()>>,
+    {
+        self.wifi_auto.connect(on_event).await
     }
 }
 
@@ -508,12 +525,12 @@ impl WifiAutoInner {
         for field in self.fields {
             let satisfied = field.is_satisfied().map_err(|_| Error::StorageCorrupted)?;
             if !satisfied {
-                info!("WifiAuto: custom field not satisfied, forcing captive portal");
+                info!("WifiAutoRp: custom field not satisfied, forcing captive portal");
                 return Ok(false);
             }
         }
         info!(
-            "WifiAuto: all {} custom fields satisfied",
+            "WifiAutoRp: all {} custom fields satisfied",
             self.fields.len()
         );
         Ok(true)
@@ -548,7 +565,7 @@ impl WifiAutoInner {
                 extras_ready,
             );
             info!(
-                "WifiAuto: force={} has_credentials={} extras_ready={} enter_captive_portal={}",
+                "WifiAutoRp: force={} has_credentials={} extras_ready={} enter_captive_portal={}",
                 force_captive_portal, has_credentials, extras_ready, enter_captive_portal
             );
 
@@ -603,7 +620,7 @@ impl WifiAutoInner {
                     async move {
                         let attempt = try_index + 1;
                         info!(
-                            "WifiAuto: connection attempt {}/{}",
+                            "WifiAutoRp: connection attempt {}/{}",
                             attempt, MAX_CONNECT_ATTEMPTS
                         );
                         if self
@@ -613,10 +630,10 @@ impl WifiAutoInner {
                         {
                             return Ok(true);
                         }
-                        warn!("WifiAuto: connection attempt {} timed out", attempt);
+                        warn!("WifiAutoRp: connection attempt {} timed out", attempt);
                         let retry_delay = retry_delay_with_jitter(try_index);
                         info!(
-                            "WifiAuto: retrying after {} ms (attempt {})",
+                            "WifiAutoRp: retrying after {} ms (attempt {})",
                             retry_delay.as_millis(),
                             attempt
                         );
@@ -658,7 +675,7 @@ impl WifiAutoInner {
             }
 
             info!(
-                "WifiAuto: failed to connect after {} attempts, returning to captive portal",
+                "WifiAutoRp: failed to connect after {} attempts, returning to captive portal",
                 MAX_CONNECT_ATTEMPTS
             );
             if let Some(credentials) = self.wifi.load_persisted_credentials() {
@@ -666,13 +683,13 @@ impl WifiAutoInner {
                     *cell.borrow_mut() = Some(credentials);
                 });
             }
-            info!("WifiAuto: writing CaptivePortal mode to flash");
+            info!("WifiAutoRp: writing CaptivePortal mode to flash");
             self.wifi
                 .set_start_mode(WifiStartMode::CaptivePortal)
                 .map_err(|_| Error::StorageCorrupted)?;
-            info!("WifiAuto: flash write complete, waiting 1 second before reset");
+            info!("WifiAutoRp: flash write complete, waiting 1 second before reset");
             Timer::after_secs(1).await;
-            info!("WifiAuto: resetting device now");
+            info!("WifiAutoRp: resetting device now");
             SCB::sys_reset();
         }
     }
@@ -684,7 +701,7 @@ impl WifiAutoInner {
                     WifiEvent::ClientReady => break,
                     WifiEvent::CaptivePortalReady => {
                         info!(
-                            "WifiAuto: received captive-portal-ready event while waiting for client mode"
+                            "WifiAutoRp: received captive-portal-ready event while waiting for client mode"
                         );
                     }
                 }
@@ -704,7 +721,7 @@ impl WifiAutoInner {
             .spawner
             .spawn(dns_server_task(stack, captive_portal_ip))
         {
-            info!("WifiAuto: DNS server task spawn failed: {:?}", err);
+            info!("WifiAutoRp: DNS server task spawn failed: {:?}", err);
         }
 
         let defaults_owned = self

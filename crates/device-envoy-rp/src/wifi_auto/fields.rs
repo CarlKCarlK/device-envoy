@@ -1,5 +1,5 @@
-//! A device abstraction for extra setup fields used by [`crate::wifi_auto::WifiAuto`].
-//! See the [`WifiAuto` struct example](crate::wifi_auto::WifiAuto) for the full setup.
+//! A device abstraction for extra setup fields used by [`crate::wifi_auto::WifiAutoRp`].
+//! See the [`WifiAutoRp` struct example](crate::wifi_auto::WifiAutoRp) for the full setup.
 
 #![allow(
     unsafe_code,
@@ -22,7 +22,7 @@ __impl_wifi_auto_fields!(
 impl TimezoneField {
     /// Initialize a timezone field backed by a flash block.
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoRp struct example](crate::wifi_auto::WifiAutoRp) for usage.
     pub fn new(
         timezone_field_static: &'static TimezoneFieldStatic,
         timezone_flash_block: FlashBlockRp,
@@ -34,7 +34,7 @@ impl TimezoneField {
 impl<const N: usize> TextField<N> {
     /// Initialize a text field backed by a flash block.
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoRp struct example](crate::wifi_auto::WifiAutoRp) for usage.
     pub fn new(
         text_field_static: &'static TextFieldStatic<N>,
         text_flash_block: FlashBlockRp,

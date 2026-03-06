@@ -16,7 +16,7 @@ use defmt_rtt as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
-use device_envoy_rp::wifi_auto::WifiAuto;
+use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoRp};
 use device_envoy_rp::wifi_auto::WifiAutoEvent;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::{Error, Result};
@@ -43,7 +43,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up WiFi via captive portal
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
         p.PIN_25,  // CYW43 chip select

@@ -152,6 +152,29 @@ impl Default for WifiAutoPersistedState {
     }
 }
 
+/// Platform-agnostic Wi-Fi auto-connect contract.
+///
+/// Platform crates implement this trait for their concrete runtime handles.
+/// Constructors remain inherent on platform types.
+#[allow(async_fn_in_trait)]
+pub trait WifiAuto {
+    /// Platform-specific error type.
+    type Error;
+    /// Platform-specific network stack handle returned on successful connection.
+    type Stack;
+    /// Platform-specific button handle returned alongside the stack.
+    type Button;
+
+    /// Connect to Wi-Fi, emitting progress events to `on_event`.
+    async fn connect<OnEvent, OnEventFuture>(
+        self,
+        on_event: OnEvent,
+    ) -> Result<(Self::Stack, Self::Button), Self::Error>
+    where
+        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
+        OnEventFuture: Future<Output = Result<(), Self::Error>>;
+}
+
 /// Backend contract for platform-specific Wi-Fi auto-connect operations.
 pub trait WifiAutoBackend {
     /// Platform-specific error type.

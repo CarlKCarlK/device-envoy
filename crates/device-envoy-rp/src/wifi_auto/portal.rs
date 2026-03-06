@@ -13,7 +13,7 @@ use static_cell::StaticCell;
 use crate::Result;
 use device_envoy_core::wifi_auto::{HtmlBuffer, WifiCredentials};
 
-/// Traits for custom extra information that [`WifiAuto`](crate::wifi_auto::WifiAuto) can ask the
+/// Traits for custom extra information that [`WifiAutoRp`](crate::wifi_auto::WifiAutoRp) can ask the
 /// user for on its setup web page. Supports HTML snippets.
 ///
 /// Implement this trait to collect additional configuration beyond WiFi credentials
@@ -53,7 +53,7 @@ pub async fn collect_credentials(
     defaults: Option<&WifiCredentials>,
     fields: &'static [&'static dyn WifiAutoField],
 ) -> Result<WifiCredentials> {
-    info!("WifiAuto portal registering {} custom fields", fields.len());
+    info!("WifiAutoRp portal registering {} custom fields", fields.len());
     FORM_STATE.lock(|state| {
         state.borrow_mut().defaults = defaults.cloned();
     });
@@ -69,7 +69,7 @@ pub async fn collect_credentials(
 
 #[embassy_executor::task]
 async fn http_server_task(stack: &'static Stack<'static>) -> ! {
-    info!("WifiAuto HTTP portal starting");
+    info!("WifiAutoRp HTTP portal starting");
 
     static RX_BUFFER: StaticCell<[u8; 2048]> = StaticCell::new();
     static TX_BUFFER: StaticCell<[u8; 4096]> = StaticCell::new();
@@ -125,7 +125,7 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
                     CREDENTIAL_CHANNEL.send(credentials).await;
                     static_page(generate_success_page())
                 } else {
-                    warn!("WifiAuto portal failed to parse POST");
+                    warn!("WifiAutoRp portal failed to parse POST");
                     static_page(generate_error_page())
                 }
             }
@@ -151,7 +151,7 @@ fn generate_config_page(
     defaults: Option<&WifiCredentials>,
     fields: &[&'static dyn WifiAutoField],
 ) -> Option<HtmlBuffer> {
-    info!("WifiAuto portal rendering {} fields", fields.len());
+    info!("WifiAutoRp portal rendering {} fields", fields.len());
     let core_fields = core_fields(fields)?;
     Some(device_envoy_core::wifi_auto::generate_config_page(
         defaults,
@@ -226,7 +226,7 @@ fn core_fields(
             .push(*field as &'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>)
             .is_err()
         {
-            warn!("WifiAuto portal has too many fields to parse");
+            warn!("WifiAutoRp portal has too many fields to parse");
             return None;
         }
     }

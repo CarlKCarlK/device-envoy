@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 //! Wi-Fi enabled clock that visualizes time with two servos.
 //!
-//! This example combines the `WifiAuto` captive-portal workflow with a servo-based
+//! This example combines the `WifiAutoRp` captive-portal workflow with a servo-based
 //! display. Because the servos are mounted reversed, the left servo shows minutes/seconds
 //! and the right servo shows hours/minutes with 180° reflections applied.
 
@@ -22,7 +22,7 @@ use device_envoy_rp::clock_sync::{
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::servo_player::{AtEnd, combine, linear, servo_player};
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAuto, WifiAutoEvent};
+use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -60,7 +60,7 @@ pub async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    info!("Starting Wi-Fi servo clock (WifiAuto)");
+    info!("Starting Wi-Fi servo clock (WifiAutoRp)");
     let p = embassy_rp::init(Default::default());
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
@@ -71,7 +71,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal. The button pin is used to reset stored credentials.
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
         p.PIN_25,  // CYW43 chip select
@@ -113,7 +113,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("WiFi connected");
 
-    // Convert the Button from WifiAuto into a ButtonWatch for background monitoring
+    // Convert the Button from WifiAutoRp into a ButtonWatch for background monitoring
     let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
 
     // Read the timezone offset, an extra field that WiFi portal saved to flash.

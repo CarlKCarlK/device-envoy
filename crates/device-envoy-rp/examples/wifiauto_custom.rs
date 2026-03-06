@@ -17,7 +17,7 @@ use device_envoy_rp::{
     led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},
     wifi_auto::fields::{TextField, TextFieldStatic},
-    wifi_auto::{WifiAuto, WifiAutoEvent},
+    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 };
 use embassy_executor::Spawner;
 use embassy_net::{
@@ -74,8 +74,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         "PICO",
     );
 
-    // Initialize WifiAuto
-    let wifi_auto = WifiAuto::new(
+    // Initialize WifiAutoRp
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
         p.PIN_25,  // CYW43 chip select

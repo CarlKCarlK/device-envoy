@@ -31,7 +31,7 @@ use device_envoy_rp::{
     led2d::Led2dFont,
     led2d::layout::LedLayout,
     wifi_auto::{
-        WifiAuto, WifiAutoEvent,
+        WifiAuto as _, WifiAutoEvent, WifiAutoRp,
         fields::{TimezoneField, TimezoneFieldStatic},
     },
 };
@@ -96,7 +96,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal.
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
         p.PIN_25,  // CYW43 chip select
@@ -145,7 +145,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("WiFi: connected successfully, displaying DONE");
     show_connected(&led8x12).await;
 
-    // Convert the Button from WifiAuto into a ButtonWatch for background monitoring
+    // Convert the Button from WifiAutoRp into a ButtonWatch for background monitoring
     let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
 
     // Read the timezone offset, an extra field that WiFi portal saved to flash.

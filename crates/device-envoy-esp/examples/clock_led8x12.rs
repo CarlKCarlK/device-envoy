@@ -25,7 +25,7 @@ use device_envoy_esp::{
     led_strip::{colors, Current, Gamma},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
-        WifiAuto, WifiAutoEvent,
+        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
     },
 };
 
@@ -78,7 +78,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
         p.GPIO6,

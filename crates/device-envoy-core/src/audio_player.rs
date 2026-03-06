@@ -1109,6 +1109,231 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 ///
 /// Platform crates implement this trait for generated audio player types so
 /// playback operations resolve through trait methods instead of inherent methods.
+///
+/// # Example: Play "Mary Had a Little Lamb" (Phrase) Once
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use panic_probe as _;
+/// use device_envoy_rp::audio_player::{
+///     AtEnd, AudioPlayer, Playable, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
+/// };
+/// use device_envoy_rp::tone;
+/// use core::time::Duration as StdDuration;
+///
+/// # audio_player! {
+/// #     AudioPlayer8 {
+/// #         data_pin: PIN_8,
+/// #         bit_clock_pin: PIN_9,
+/// #         word_select_pin: PIN_10,
+/// #         sample_rate_hz: VOICE_22050_HZ,
+/// #         max_volume: Volume::percent(50),
+/// #     }
+/// # }
+///
+/// fn play_mary_phrase<AudioPlayerType>(audio_player: &AudioPlayerType)
+/// where
+///     AudioPlayerType: AudioPlayer<{ VOICE_22050_HZ }>,
+/// {
+///     const REST: &'static dyn Playable<{ VOICE_22050_HZ }> =
+///         &SilenceClip::new(StdDuration::from_millis(80));
+///     const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
+///     const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
+///     const NOTE_E4: &'static dyn Playable<{ VOICE_22050_HZ }> =
+///         &tone!(330, SAMPLE_RATE_HZ, NOTE_DURATION);
+///     const NOTE_D4: &'static dyn Playable<{ VOICE_22050_HZ }> =
+///         &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
+///     const NOTE_C4: &'static dyn Playable<{ VOICE_22050_HZ }> =
+///         &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
+///
+///     audio_player.play(
+///         [
+///             NOTE_E4, REST, NOTE_D4, REST, NOTE_C4, REST, NOTE_D4, REST, NOTE_E4, REST,
+///             NOTE_E4, REST, NOTE_E4,
+///         ],
+///         AtEnd::Stop,
+///     );
+/// }
+///
+/// # #[embassy_executor::main]
+/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
+/// #     let p = embassy_rp::init(Default::default());
+/// #     let audio_player =
+/// #         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner).unwrap();
+/// #     play_mary_phrase(&audio_player);
+/// #     core::future::pending().await
+/// # }
+/// ```
+///
+/// # Example: Compiled-in Clip and Runtime Volume Control
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use panic_probe as _;
+/// use device_envoy_rp::audio_player::{
+///     AtEnd, AudioPlayer, Gain, Playable, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
+///     pcm_clip,
+/// };
+/// use device_envoy_rp::button::{Button as _, ButtonRp, PressedTo};
+/// use device_envoy_rp::tone;
+/// use core::time::Duration as StdDuration;
+/// use embassy_futures::select::{Either, select};
+/// use embassy_time::{Duration, Timer};
+///
+/// # audio_player! {
+/// #     AudioPlayer8 {
+/// #         data_pin: PIN_8,
+/// #         bit_clock_pin: PIN_9,
+/// #         word_select_pin: PIN_10,
+/// #         sample_rate_hz: VOICE_22050_HZ,
+/// #         pio: PIO0,
+/// #         dma: DMA_CH1,
+/// #         max_clips: 8,
+/// #         max_volume: Volume::spinal_tap(11),
+/// #         initial_volume: Volume::spinal_tap(5),
+/// #     }
+/// # }
+///
+/// pcm_clip! {
+///     Nasa {
+///         file: concat!(
+///             env!("CARGO_MANIFEST_DIR"),
+///             "/../device-envoy-rp/examples/data/audio/nasa_22k.s16"
+///         ),
+///         source_sample_rate_hz: VOICE_22050_HZ,
+///     }
+/// }
+///
+/// async fn play_nasa_with_runtime_volume<AudioPlayerType>(
+///     audio_player: &AudioPlayerType,
+///     button: &mut ButtonRp<'_>,
+/// ) where
+///     AudioPlayerType: AudioPlayer<{ VOICE_22050_HZ }>,
+/// {
+///     const fn ms(milliseconds: u64) -> StdDuration {
+///         StdDuration::from_millis(milliseconds)
+///     }
+///     const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
+///     const NASA: &'static dyn Playable<{ VOICE_22050_HZ }> = &Nasa::adpcm_clip();
+///     const GAP: &'static dyn Playable<{ VOICE_22050_HZ }> = &SilenceClip::new(ms(80));
+///     const CHIME: &'static dyn Playable<{ VOICE_22050_HZ }> =
+///         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
+///     const VOLUME_STEPS_PERCENT: [u8; 7] = [50, 25, 12, 6, 3, 1, 0];
+///
+///     button.wait_for_press().await;
+///     audio_player.play([CHIME, NASA, GAP], AtEnd::Loop);
+///
+///     for volume_percent in VOLUME_STEPS_PERCENT {
+///         match select(button.wait_for_press(), Timer::after(Duration::from_secs(1))).await {
+///             Either::First(()) => break,
+///             Either::Second(()) => audio_player.set_volume(Volume::percent(volume_percent)),
+///         }
+///     }
+///
+///     audio_player.stop();
+///     audio_player.set_volume(<AudioPlayerType as AudioPlayer<{ VOICE_22050_HZ }>>::INITIAL_VOLUME);
+/// }
+///
+/// # #[embassy_executor::main]
+/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
+/// #     let p = embassy_rp::init(Default::default());
+/// #     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+/// #     let audio_player =
+/// #         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner).unwrap();
+/// #     play_nasa_with_runtime_volume(&audio_player, &mut button).await;
+/// #     core::future::pending().await
+/// # }
+/// ```
+///
+/// # Example: Resample and Play Countdown Once
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use panic_probe as _;
+/// use device_envoy_rp::audio_player::{
+///     AtEnd, AudioPlayer, Gain, NARROWBAND_8000_HZ, Playable, VOICE_22050_HZ, Volume,
+///     audio_player, pcm_clip,
+/// };
+///
+/// # audio_player! {
+/// #     AudioPlayer8 {
+/// #         data_pin: PIN_8,
+/// #         bit_clock_pin: PIN_9,
+/// #         word_select_pin: PIN_10,
+/// #         sample_rate_hz: NARROWBAND_8000_HZ,
+/// #         max_volume: Volume::percent(50),
+/// #     }
+/// # }
+///
+/// pcm_clip! {
+///     Digit0 {
+///         file: concat!(
+///             env!("CARGO_MANIFEST_DIR"),
+///             "/../device-envoy-rp/examples/data/audio/0_22050.s16"
+///         ),
+///         source_sample_rate_hz: VOICE_22050_HZ,
+///         target_sample_rate_hz: NARROWBAND_8000_HZ,
+///     }
+/// }
+///
+/// pcm_clip! {
+///     Digit1 {
+///         file: concat!(
+///             env!("CARGO_MANIFEST_DIR"),
+///             "/../device-envoy-rp/examples/data/audio/1_22050.s16"
+///         ),
+///         source_sample_rate_hz: VOICE_22050_HZ,
+///         target_sample_rate_hz: NARROWBAND_8000_HZ,
+///     }
+/// }
+///
+/// pcm_clip! {
+///     Digit2 {
+///         file: concat!(
+///             env!("CARGO_MANIFEST_DIR"),
+///             "/../device-envoy-rp/examples/data/audio/2_22050.s16"
+///         ),
+///         source_sample_rate_hz: VOICE_22050_HZ,
+///         target_sample_rate_hz: NARROWBAND_8000_HZ,
+///     }
+/// }
+///
+/// pcm_clip! {
+///     Nasa {
+///         file: concat!(
+///             env!("CARGO_MANIFEST_DIR"),
+///             "/../device-envoy-rp/examples/data/audio/nasa_22k.s16"
+///         ),
+///         source_sample_rate_hz: VOICE_22050_HZ,
+///         target_sample_rate_hz: NARROWBAND_8000_HZ,
+///     }
+/// }
+///
+/// fn play_resampled_countdown<AudioPlayerType>(audio_player: &AudioPlayerType)
+/// where
+///     AudioPlayerType: AudioPlayer<{ NARROWBAND_8000_HZ }>,
+/// {
+///     const DIGITS: [&'static dyn Playable<{ NARROWBAND_8000_HZ }>; 3] =
+///         [&Digit0::adpcm_clip(), &Digit1::adpcm_clip(), &Digit2::adpcm_clip()];
+///     const NASA: &'static dyn Playable<{ NARROWBAND_8000_HZ }> = &Nasa::pcm_clip()
+///         .with_gain(Gain::percent(25))
+///         .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
+///
+///     audio_player.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);
+/// }
+///
+/// # #[embassy_executor::main]
+/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
+/// #     let p = embassy_rp::init(Default::default());
+/// #     let audio_player =
+/// #         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner).unwrap();
+/// #     play_resampled_countdown(&audio_player);
+/// #     core::future::pending().await
+/// # }
+/// ```
 #[allow(async_fn_in_trait)]
 pub trait AudioPlayer<const SAMPLE_RATE_HZ: u32> {
     /// Sample rate in hertz for this generated player type.
@@ -1124,20 +1349,30 @@ pub trait AudioPlayer<const SAMPLE_RATE_HZ: u32> {
     ///
     /// Accepts any array-like or iterator input. The maximum number of clips
     /// is determined by the generated type configuration.
+    ///
+    /// See the [AudioPlayer trait documentation](Self) for usage examples.
     fn play<I>(&self, audio_clips: I, at_end: AtEnd)
     where
         I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>;
 
     /// Stops current playback as soon as possible.
+    ///
+    /// See the [AudioPlayer trait documentation](Self) for usage examples.
     fn stop(&self);
 
     /// Waits until playback is stopped.
+    ///
+    /// See the [AudioPlayer trait documentation](Self) for usage examples.
     async fn wait_until_stopped(&self);
 
     /// Sets runtime playback volume relative to the generated player's max volume.
+    ///
+    /// See the [AudioPlayer trait documentation](Self) for usage examples.
     fn set_volume(&self, volume: Volume);
 
     /// Returns the current runtime playback volume relative to max volume.
+    ///
+    /// See the [AudioPlayer trait documentation](Self) for usage examples.
     fn volume(&self) -> Volume;
 }
 

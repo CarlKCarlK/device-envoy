@@ -30,7 +30,7 @@ use device_envoy_esp::{
     servo_player::{combine, linear, servo_player, AtEnd, ServoPlayer as _, ServoPlayerHandle},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
-        WifiAuto, WifiAutoEvent,
+        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
     },
     Error, Result,
 };
@@ -79,7 +79,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
         p.GPIO6,
@@ -142,7 +142,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, &mut button_watch, &servo_clock_display)
+                    .execute_hours_minutes(
+                        speed,
+                        &clock_sync,
+                        &mut button_watch,
+                        &servo_clock_display,
+                    )
                     .await?
             }
             State::MinutesSeconds => {

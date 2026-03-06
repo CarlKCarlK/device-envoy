@@ -1,5 +1,5 @@
 //! A device abstraction for automatic Wi-Fi credential collection workflows.
-//! See [`WifiAuto`] for the main struct and usage.
+//! See [`WifiAutoEsp`] for the main struct and usage.
 
 #[cfg(target_os = "none")]
 mod dhcp;
@@ -38,8 +38,8 @@ use alloc::string::String;
 use embassy_futures::select::{select4, Either4};
 
 pub use device_envoy_core::wifi_auto::{
-    FormData, HtmlBuffer, WifiAutoError, WifiAutoEvent, WifiAutoField, WifiAutoPersistedState,
-    WifiCredentials, WifiStartMode,
+    FormData, HtmlBuffer, WifiAuto, WifiAutoError, WifiAutoEvent, WifiAutoField,
+    WifiAutoPersistedState, WifiCredentials, WifiStartMode,
 };
 
 const MAX_WIFI_AUTO_FIELDS: usize = 8;
@@ -53,9 +53,11 @@ enum WifiAutoStorage {
 /// Captive-portal workflow configuration and parsing helpers.
 ///
 /// This is the ESP32 port of the Pico `wifi_auto` setup surface for parsing
-/// form submissions and rendering setup pages. Networking/backend connection
-/// orchestration is intentionally separate from this type.
-pub struct WifiAuto<'a> {
+/// form submissions and rendering setup pages.
+///
+/// Create this type using inherent constructors (`new` / `new_in_memory`), then
+/// call [`WifiAuto::connect`] from the re-exported trait for connection flow.
+pub struct WifiAutoEsp<'a> {
     captive_portal_ssid: &'static str,
     fields: Vec<&'a dyn WifiAutoField<Error = crate::Error>, MAX_WIFI_AUTO_FIELDS>,
     storage: WifiAutoStorage,
@@ -69,10 +71,10 @@ pub struct WifiAuto<'a> {
     button: RefCell<Option<ButtonEsp<'static>>>,
 }
 
-impl<'a> WifiAuto<'a> {
+impl<'a> WifiAutoEsp<'a> {
     /// Create a new setup flow configuration.
     ///
-    /// See the [WifiAuto struct example](Self) for usage.
+    /// See the [WifiAutoEsp struct example](Self) for usage.
     #[cfg(not(target_os = "none"))]
     #[must_use]
     pub fn new(
@@ -204,7 +206,7 @@ impl<'a> WifiAuto<'a> {
 
     /// Return the SSID shown in captive-portal mode.
     ///
-    /// See the [WifiAuto struct example](Self) for usage.
+    /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
     pub const fn captive_portal_ssid(&self) -> &'static str {
         self.captive_portal_ssid
@@ -212,7 +214,7 @@ impl<'a> WifiAuto<'a> {
 
     /// Render the captive-portal HTML page.
     ///
-    /// See the [WifiAuto struct example](Self) for usage.
+    /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
     pub fn generate_config_page(&self, defaults: Option<&WifiCredentials>) -> HtmlBuffer {
         device_envoy_core::wifi_auto::generate_config_page(defaults, self.fields.as_slice())
@@ -223,7 +225,7 @@ impl<'a> WifiAuto<'a> {
     /// Returns `None` when the request body is malformed, the SSID is missing,
     /// or any custom field parser reports an error.
     ///
-    /// See the [WifiAuto struct example](Self) for usage.
+    /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
     pub fn parse_post(&self, request: &str) -> Option<WifiCredentials> {
         device_envoy_core::wifi_auto::parse_post(request, self.fields.as_slice())
@@ -286,7 +288,7 @@ impl<'a> WifiAuto<'a> {
 
     /// Check whether every custom field reports a satisfied state.
     ///
-    /// See the [WifiAuto struct example](Self) for usage.
+    /// See the [WifiAutoEsp struct example](Self) for usage.
     pub fn custom_fields_satisfied(&self) -> Result<bool> {
         for field in self.fields.as_slice() {
             if !field.is_satisfied()? {
@@ -329,22 +331,27 @@ impl<'a> WifiAuto<'a> {
     }
 
     #[cfg(target_os = "none")]
-    device_envoy_core::__impl_wifi_auto_connect! {
-    /// Connect using persisted credentials or captive-portal setup flow.
-    fn connect(&self as wifi_auto, on_event) -> Result<(&'static Stack<'static>, ButtonEsp<'static>)> {
+    async fn connect_inner<OnEvent, OnEventFuture>(
+        &self,
+        mut on_event: OnEvent,
+    ) -> Result<(&'static Stack<'static>, ButtonEsp<'static>)>
+    where
+        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
+        OnEventFuture: Future<Output = Result<()>>,
+    {
         Self::initialize_wifi_heap_once();
-        let wifi = wifi_auto
+        let wifi = self
             .wifi
             .borrow_mut()
             .take()
             .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
-        let button = wifi_auto
+        let button = self
             .button
             .borrow_mut()
             .take()
             .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
-        let spawner = wifi_auto.spawner;
-        let force_captive_portal = wifi_auto.force_captive_portal;
+        let spawner = self.spawner;
+        let force_captive_portal = self.force_captive_portal;
 
         static ESP_RADIO_CONTROLLER: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
         let esp_radio_controller = ESP_RADIO_CONTROLLER.init(esp_radio::init()?);
@@ -356,7 +363,7 @@ impl<'a> WifiAuto<'a> {
 
         const TRY_COUNT: u8 = 10;
         struct EspWifiAutoBackend<'a, 'b> {
-            wifi_auto: &'b WifiAuto<'b>,
+            wifi_auto: &'b WifiAutoEsp<'b>,
             wifi_controller: &'a mut esp_radio::wifi::WifiController<'static>,
             access_point_device: Option<esp_radio::wifi::WifiDevice<'static>>,
             station_device: Option<esp_radio::wifi::WifiDevice<'static>>,
@@ -387,10 +394,7 @@ impl<'a> WifiAuto<'a> {
                 self.wifi_auto.load_persisted_credentials()
             }
 
-            fn persist_credentials(
-                &self,
-                wifi_credentials: &WifiCredentials,
-            ) -> crate::Result<()> {
+            fn persist_credentials(&self, wifi_credentials: &WifiCredentials) -> crate::Result<()> {
                 self.wifi_auto.persist_credentials(wifi_credentials)
             }
 
@@ -398,7 +402,9 @@ impl<'a> WifiAuto<'a> {
                 self.wifi_auto.set_start_mode(wifi_start_mode)
             }
 
-            fn run_captive_portal(&mut self) -> impl Future<Output = crate::Result<WifiCredentials>> + '_ {
+            fn run_captive_portal(
+                &mut self,
+            ) -> impl Future<Output = crate::Result<WifiCredentials>> + '_ {
                 async move {
                     let access_point_device = self
                         .access_point_device
@@ -415,42 +421,42 @@ impl<'a> WifiAuto<'a> {
                 try_index: u8,
             ) -> impl Future<Output = crate::Result<bool>> + '_ {
                 async move {
-                info!("wifi_auto connect attempt {}/{}", try_index + 1, TRY_COUNT);
-                match self.wifi_controller.connect_async().await {
-                    Ok(()) => {
-                        info!("wifi_auto client connected on try {}", try_index + 1);
-                        let station_device = self
-                            .station_device
-                            .take()
-                            .expect("station device should be consumed only once");
-                        static STA_STACK_RESOURCES: StaticCell<StackResources<4>> =
-                            StaticCell::new();
-                        let (stack, runner) = embassy_net::new(
-                            station_device,
-                            Config::dhcpv4(Default::default()),
-                            STA_STACK_RESOURCES.init(StackResources::new()),
-                            0xD1D1_C1C1_5151_4242,
-                        );
-                        static STA_STACK: StaticCell<Stack<'static>> = StaticCell::new();
-                        let stack = STA_STACK.init(stack);
-                        self.spawner.spawn(wifi_auto_net_task(runner))?;
-                        self.connected_stack = Some(stack);
-                        Ok(true)
-                    }
-                    Err(error) => {
-                        warn!(
-                            "wifi_auto connect failed on try {}: {:?}",
-                            try_index + 1,
-                            error
-                        );
-                        warn!(
-                            "wifi_auto hint: verify AP is 2.4GHz and security mode is compatible (for example WPA2/WPA3 mixed, not WPA3-only)"
-                        );
-                        Timer::after(Duration::from_millis(800)).await;
-                        Ok(false)
+                    info!("wifi_auto connect attempt {}/{}", try_index + 1, TRY_COUNT);
+                    match self.wifi_controller.connect_async().await {
+                        Ok(()) => {
+                            info!("wifi_auto client connected on try {}", try_index + 1);
+                            let station_device = self
+                                .station_device
+                                .take()
+                                .expect("station device should be consumed only once");
+                            static STA_STACK_RESOURCES: StaticCell<StackResources<4>> =
+                                StaticCell::new();
+                            let (stack, runner) = embassy_net::new(
+                                station_device,
+                                Config::dhcpv4(Default::default()),
+                                STA_STACK_RESOURCES.init(StackResources::new()),
+                                0xD1D1_C1C1_5151_4242,
+                            );
+                            static STA_STACK: StaticCell<Stack<'static>> = StaticCell::new();
+                            let stack = STA_STACK.init(stack);
+                            self.spawner.spawn(wifi_auto_net_task(runner))?;
+                            self.connected_stack = Some(stack);
+                            Ok(true)
+                        }
+                        Err(error) => {
+                            warn!(
+                                "wifi_auto connect failed on try {}: {:?}",
+                                try_index + 1,
+                                error
+                            );
+                            warn!(
+                                "wifi_auto hint: verify AP is 2.4GHz and security mode is compatible (for example WPA2/WPA3 mixed, not WPA3-only)"
+                            );
+                            Timer::after(Duration::from_millis(800)).await;
+                            Ok(false)
+                        }
                     }
                 }
-            }
             }
 
             fn on_resolved_credentials(
@@ -476,7 +482,7 @@ impl<'a> WifiAuto<'a> {
         }
 
         let mut wifi_auto_backend = EspWifiAutoBackend {
-            wifi_auto,
+            wifi_auto: self,
             wifi_controller: &mut wifi_controller,
             access_point_device: Some(interfaces.ap),
             station_device: Some(interfaces.sta),
@@ -484,15 +490,17 @@ impl<'a> WifiAuto<'a> {
             connected_stack: None,
             force_captive_portal,
         };
-        let connected =
-            device_envoy_core::wifi_auto::connect_with_backend(&mut wifi_auto_backend, &mut on_event)
-                .await?;
+        let connected = device_envoy_core::wifi_auto::connect_with_backend(
+            &mut wifi_auto_backend,
+            &mut on_event,
+        )
+        .await?;
         if !connected {
             warn!(
                 "wifi_auto failed to connect after {} attempts; switching startup mode to CaptivePortal and resetting",
                 TRY_COUNT
             );
-            wifi_auto.set_start_mode(WifiStartMode::CaptivePortal)?;
+            self.set_start_mode(WifiStartMode::CaptivePortal)?;
             info!("wifi_auto wrote startup mode CaptivePortal to storage");
             let _ = wifi_auto_backend.wifi_controller.stop_async().await;
             info!("wifi_auto resetting in 1 second");
@@ -503,14 +511,13 @@ impl<'a> WifiAuto<'a> {
         let stack = wifi_auto_backend
             .connected_stack
             .expect("stack should be initialized after successful connect");
-        wifi_auto.set_start_mode(WifiStartMode::Client)?;
+        self.set_start_mode(WifiStartMode::Client)?;
 
         // Keep the Wi-Fi controller alive for the lifetime of the returned stack.
         // Dropping it would shut Wi-Fi down.
         core::mem::forget(wifi_controller);
 
         Ok((stack, button))
-    }
     }
 
     #[cfg(target_os = "none")]
@@ -658,6 +665,27 @@ impl<'a> WifiAuto<'a> {
 }
 
 #[cfg(target_os = "none")]
+impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
+    type Error = crate::Error;
+    type Stack = &'static Stack<'static>;
+    type Button = ButtonEsp<'static>;
+
+    /// Connect using persisted credentials or captive-portal setup flow.
+    ///
+    /// See the [WifiAutoEsp struct example](Self) for setup.
+    async fn connect<OnEvent, OnEventFuture>(
+        self,
+        on_event: OnEvent,
+    ) -> Result<(Self::Stack, Self::Button)>
+    where
+        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
+        OnEventFuture: Future<Output = Result<()>>,
+    {
+        self.connect_inner(on_event).await
+    }
+}
+
+#[cfg(target_os = "none")]
 #[embassy_executor::task]
 async fn wifi_auto_net_task(
     mut runner: embassy_net::Runner<'static, esp_radio::wifi::WifiDevice<'static>>,
@@ -667,11 +695,11 @@ async fn wifi_auto_net_task(
 
 #[cfg(all(test, not(target_os = "none")))]
 mod tests {
-    use super::{WifiAuto, WifiStartMode};
+    use super::{WifiAutoEsp, WifiStartMode};
 
     #[test]
     fn force_captive_portal_when_pressed_sets_mode() {
-        let wifi_auto = WifiAuto::new("PortalSsid", &[]);
+        let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
         let changed = wifi_auto
             .force_captive_portal_if_pressed_state(true)
             .expect("force should succeed");
@@ -684,7 +712,7 @@ mod tests {
 
     #[test]
     fn force_captive_portal_when_not_pressed_keeps_mode() {
-        let wifi_auto = WifiAuto::new("PortalSsid", &[]);
+        let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
         let changed = wifi_auto
             .force_captive_portal_if_pressed_state(false)
             .expect("force should succeed");

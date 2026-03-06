@@ -46,7 +46,8 @@ impl ButtonWatchGenerated {
         pressed_to: crate::button::PressedTo,
         spawner: embassy_executor::Spawner,
     ) -> crate::Result<&'static mut Self> {
-        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> = static_cell::StaticCell::new();
+        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> =
+            static_cell::StaticCell::new();
         let instance = INSTANCE.init(ButtonWatchGenerated {
             button_watch: super::ButtonWatchRp {
                 signal: &embassy_sync::signal::Signal::new(),
@@ -75,7 +76,8 @@ impl ButtonWatchGenerated {
         button: crate::button::ButtonRp<'static>,
         spawner: embassy_executor::Spawner,
     ) -> crate::Result<&'static mut Self> {
-        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> = static_cell::StaticCell::new();
+        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> =
+            static_cell::StaticCell::new();
         let instance = INSTANCE.init(ButtonWatchGenerated {
             button_watch: super::ButtonWatchRp {
                 signal: &embassy_sync::signal::Signal::new(),

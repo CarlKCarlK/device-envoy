@@ -3,13 +3,13 @@
 //! See [`ButtonWatchEsp`] for usage.
 
 #[cfg(target_os = "none")]
+use core::sync::atomic::{AtomicBool, Ordering};
+#[cfg(target_os = "none")]
 use embassy_executor::Spawner;
 #[cfg(target_os = "none")]
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 #[cfg(target_os = "none")]
 use embassy_time::Timer;
-#[cfg(target_os = "none")]
-use core::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "none")]
 use super::{ButtonEsp, PressDuration, PressedTo};

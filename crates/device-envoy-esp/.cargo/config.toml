@@ -47,6 +47,12 @@ led16x16-and-builtin-spi = "run   --example led16x16_and_builtin_spi --target ri
 led16x16-and-builtin-spi-check = "check --example led16x16_and_builtin_spi --target riscv32imac-unknown-none-elf --no-default-features"
 audio-example1 = "run   --example audio_example1 --target riscv32imac-unknown-none-elf --release --no-default-features"
 audio-example1-check = "check --example audio_example1 --target riscv32imac-unknown-none-elf --no-default-features"
+audio-example1-trait = "run   --example audio_example1_trait --target riscv32imac-unknown-none-elf --release --no-default-features"
+audio-example1-trait-check = "check --example audio_example1_trait --target riscv32imac-unknown-none-elf --no-default-features"
+audio-example2-trait = "run   --example audio_example2_trait --target riscv32imac-unknown-none-elf --release --no-default-features"
+audio-example2-trait-check = "check --example audio_example2_trait --target riscv32imac-unknown-none-elf --no-default-features"
+audio-example3-trait = "run   --example audio_example3_trait --target riscv32imac-unknown-none-elf --release --no-default-features"
+audio-example3-trait-check = "check --example audio_example3_trait --target riscv32imac-unknown-none-elf --no-default-features"
 audio = "run   --example audio --target riscv32imac-unknown-none-elf --release --no-default-features"
 audio-check = "check --example audio --target riscv32imac-unknown-none-elf --no-default-features"
 

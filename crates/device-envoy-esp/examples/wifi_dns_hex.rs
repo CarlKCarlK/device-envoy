@@ -25,7 +25,7 @@ use device_envoy_esp::{
     led2d::Led2d as _,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::{colors, Current, Gamma},
-    wifi_auto::{WifiAuto, WifiAutoEvent},
+    wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -63,7 +63,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     let led12x8_dns = Led12x8Dns::new(p.GPIO18, rmt80.channel0, spawner)?;
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
         p.GPIO6,

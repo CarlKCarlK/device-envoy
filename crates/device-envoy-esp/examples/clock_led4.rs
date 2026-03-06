@@ -29,7 +29,7 @@ use device_envoy_esp::{
     led4::{circular_outline_animation, BlinkState, Led4, Led4Static, OutputArray},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
-        WifiAuto, WifiAutoEvent,
+        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
     },
     Error, Result,
 };
@@ -60,7 +60,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
         p.GPIO6,

@@ -1,9 +1,9 @@
 use device_envoy_esp::wifi_auto::fields::{TextField, TimezoneField};
-use device_envoy_esp::wifi_auto::{WifiAuto, WifiAutoField, WifiCredentials, WifiStartMode};
+use device_envoy_esp::wifi_auto::{WifiAutoEsp, WifiAutoField, WifiCredentials, WifiStartMode};
 
 #[test]
 fn parse_post_decodes_credentials() {
-    let wifi_auto = WifiAuto::new("PortalSsid", &[]);
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\nContent-Length: 29\r\n\r\nssid=Home+WiFi&password=s3cr%21";
     let wifi_credentials = wifi_auto
         .parse_post(request)
@@ -18,7 +18,7 @@ fn parse_post_applies_custom_field_parsing() {
     let timezone_field_static = Box::leak(Box::new(TimezoneField::new_static()));
     let timezone_field = TimezoneField::new(timezone_field_static);
     let fields: [&'static dyn WifiAutoField<Error = device_envoy_esp::Error>; 1] = [timezone_field];
-    let wifi_auto = WifiAuto::new("PortalSsid", &fields);
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &fields);
 
     let request =
         "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&password=abc123&timezone=-300";
@@ -39,7 +39,7 @@ fn parse_post_applies_custom_field_parsing() {
 
 #[test]
 fn parse_post_requires_ssid() {
-    let wifi_auto = WifiAuto::new("PortalSsid", &[]);
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\npassword=s3cr3t";
 
     assert!(wifi_auto.parse_post(request).is_none());
@@ -47,7 +47,7 @@ fn parse_post_requires_ssid() {
 
 #[test]
 fn generate_config_page_escapes_defaults() {
-    let wifi_auto = WifiAuto::new("PortalSsid", &[]);
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let wifi_credentials =
         device_envoy_esp::wifi_auto::WifiCredentials::new("A&B\"<ssid>", "p@ss<word>&\"");
 
@@ -67,7 +67,7 @@ fn text_field_roundtrip_from_post() {
         "DeskSensor",
     );
     let fields: [&'static dyn WifiAutoField<Error = device_envoy_esp::Error>; 1] = [text_field];
-    let wifi_auto = WifiAuto::new("PortalSsid", &fields);
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &fields);
 
     let request =
         "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Lab&password=abc123&device_name=Panel01";
@@ -90,7 +90,7 @@ fn text_field_roundtrip_from_post() {
 
 #[test]
 fn wifi_auto_credentials_roundtrip_in_memory() {
-    let wifi_auto = WifiAuto::new("PortalSsid", &[]);
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let wifi_credentials = WifiCredentials::new("OfficeWifi", "supersecret");
 
     assert!(wifi_auto
@@ -119,7 +119,7 @@ fn wifi_auto_credentials_roundtrip_in_memory() {
 
 #[test]
 fn wifi_auto_start_mode_roundtrip_in_memory() {
-    let wifi_auto = WifiAuto::new("PortalSsid", &[]);
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
 
     assert_eq!(
         wifi_auto

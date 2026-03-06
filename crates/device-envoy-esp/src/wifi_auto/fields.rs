@@ -1,5 +1,5 @@
-//! A device abstraction for extra setup fields used by [`crate::wifi_auto::WifiAuto`].
-//! See the [`WifiAuto` struct example](crate::wifi_auto::WifiAuto) for the full setup.
+//! A device abstraction for extra setup fields used by [`crate::wifi_auto::WifiAutoEsp`].
+//! See the [`WifiAutoEsp` struct example](crate::wifi_auto::WifiAutoEsp) for the full setup.
 
 #![allow(
     unsafe_code,
@@ -25,7 +25,7 @@ __impl_wifi_auto_fields!(
 impl TimezoneField {
     /// Initialize a timezone field backed by a flash block.
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoEsp struct example](crate::wifi_auto::WifiAutoEsp) for usage.
     pub fn new(
         timezone_field_static: &'static TimezoneFieldStatic,
         timezone_flash_block: FlashBlockEsp,
@@ -38,7 +38,7 @@ impl TimezoneField {
 impl TimezoneField {
     /// Initialize a timezone field backed by in-memory state.
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoEsp struct example](crate::wifi_auto::WifiAutoEsp) for usage.
     pub fn new(timezone_field_static: &'static TimezoneFieldStatic) -> &'static Self {
         Self::new_in_memory(timezone_field_static)
     }
@@ -48,7 +48,7 @@ impl TimezoneField {
 impl<const N: usize> TextField<N> {
     /// Initialize a text field backed by a flash block.
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoEsp struct example](crate::wifi_auto::WifiAutoEsp) for usage.
     pub fn new(
         text_field_static: &'static TextFieldStatic<N>,
         text_flash_block: FlashBlockEsp,
@@ -70,7 +70,7 @@ impl<const N: usize> TextField<N> {
 impl<const N: usize> TextField<N> {
     /// Initialize a text field backed by in-memory state.
     ///
-    /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+    /// See the [WifiAutoEsp struct example](crate::wifi_auto::WifiAutoEsp) for usage.
     pub fn new(
         text_field_static: &'static TextFieldStatic<N>,
         field_name: &'static str,

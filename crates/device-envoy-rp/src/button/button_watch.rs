@@ -3,12 +3,12 @@
 //! See the [`button_watch!`](crate::button_watch!) macro for usage and
 //! [`ButtonWatchGenerated`](super::button_watch_generated::ButtonWatchGenerated) for a sample of a generated type.
 
+use core::sync::atomic::{AtomicBool, Ordering};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Pin, Pull};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::Timer;
-use core::sync::atomic::{AtomicBool, Ordering};
 
 use super::{PressDuration, PressedTo};
 

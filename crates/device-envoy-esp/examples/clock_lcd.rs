@@ -23,7 +23,7 @@ use device_envoy_esp::{
     init_and_start,
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
-        WifiAuto,
+        WifiAuto as _, WifiAutoEsp,
     },
     Error, Result,
 };
@@ -59,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
-    let wifi_auto = WifiAuto::new(
+    let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
         p.GPIO6,

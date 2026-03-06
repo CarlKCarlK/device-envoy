@@ -50,7 +50,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
-    let [wifi_credentials_flash_block, timezone_flash_block] = FlashBlockRp::new_array::<2>(p.FLASH)?;
+    let [wifi_credentials_flash_block, timezone_flash_block] =
+        FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     // Define HTML to ask for timezone on the captive portal.
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();

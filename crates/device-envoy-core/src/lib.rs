@@ -13,6 +13,7 @@ pub mod ir;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;
+pub mod servo;
 pub mod servo_player;
 #[cfg(feature = "wifi")]
 pub mod time_sync;

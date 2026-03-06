@@ -1,5 +1,6 @@
 //! A device abstraction for hobby servos that can animate motion sequences.
 //!
+//! todo00 merge servo and servo_player into same module.
 //! This page provides the primary documentation and examples for controlling servos that can
 //! animate motion sequences. The device abstraction supports moving to angles,
 //! holding/relaxing position, and sequenced animation.
@@ -13,7 +14,7 @@
 //!   type showing all methods and associated constants.
 //! - [`combine!`](macro@crate::servo_player::combine) & [`linear`] — Macro and function for creating
 //!   complex motion sequences.
-//! - [`Servo`] — Direct servo control without animation support. Use `Servo` for direct,
+//! - [`ServoRp`] — Direct servo control without animation support. Use `ServoRp` for direct,
 //!   immediate control; use `servo_player` when you want motion to continue in the background.
 
 #![doc = include_str!("../docs/how_servos_work.md")]
@@ -41,7 +42,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_envoy_rp::{Result, servo_player::{AtEnd, servo_player}};
+//! use device_envoy_rp::{Result, servo_player::{AtEnd, ServoPlayer as _, servo_player}};
 //! use embassy_time::{Duration, Timer};
 //!
 //! // Define ServoPlayer11, a struct type for a servo on PIN_11.
@@ -94,7 +95,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_envoy_rp::{Result, servo_player::{AtEnd, combine, linear, servo_player}};
+//! use device_envoy_rp::{Result, servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player}};
 //! use embassy_time::Duration;
 //!
 //! // Define ServoSweep, a struct type for a servo on PIN_12.
@@ -137,9 +138,14 @@
 //! }
 //! ```
 
-use crate::servo::Servo;
+use crate::servo::ServoRp;
+use device_envoy_core::servo_player::device_loop as device_loop_core;
+#[doc(hidden)]
+pub use device_envoy_core::servo_player::{
+    __servo_player_animate, __servo_player_hold, __servo_player_relax, __servo_player_set_degrees,
+    ServoPlayerHandle,
+};
 pub use device_envoy_core::servo_player::{AtEnd, ServoPlayer, ServoPlayerStatic, combine, linear};
-use device_envoy_core::servo_player::{ServoPlayerOutput, device_loop as device_loop_core};
 
 #[doc(inline)]
 pub use crate::combine;
@@ -268,7 +274,7 @@ macro_rules! __servo_player_impl {
             channel: _UNSET_,
             min_us: $crate::servo::SERVO_MIN_US_DEFAULT,
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
-            max_degrees: $crate::servo::Servo::DEFAULT_MAX_DEGREES,
+            max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
             max_steps: 16,
             fields: [ $($fields)* ]
         }
@@ -289,7 +295,7 @@ macro_rules! __servo_player_impl {
             channel: _UNSET_,
             min_us: $crate::servo::SERVO_MIN_US_DEFAULT,
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
-            max_degrees: $crate::servo::Servo::DEFAULT_MAX_DEGREES,
+            max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
             max_steps: 16,
             fields: [ $($fields)* ]
         }
@@ -898,17 +904,19 @@ macro_rules! __servo_player_impl {
     ) => {
         $crate::servo_player::paste::paste! {
             static [<$name:upper _SERVO_PLAYER_STATIC>]: $crate::servo_player::ServoPlayerStatic<$max_steps> =
-                $crate::servo_player::ServoPlayer::<$max_steps>::new_static();
+                $crate::servo_player::ServoPlayerHandle::<$max_steps>::new_static();
             static [<$name:upper _SERVO_PLAYER_CELL>]: ::static_cell::StaticCell<$name> =
                 ::static_cell::StaticCell::new();
 
             #[allow(missing_docs)]
             $vis struct $name {
-                player: $crate::servo_player::ServoPlayer<$max_steps>,
+                servo_player_handle: $crate::servo_player::ServoPlayerHandle<$max_steps>,
             }
 
             #[allow(missing_docs)]
             impl $name {
+                pub const MAX_STEPS: usize = $max_steps;
+
                 /// Create the servo player and spawn its background task.
                 ///
                 /// The slice is automatically determined from the pin via the type
@@ -947,23 +955,40 @@ macro_rules! __servo_player_impl {
                     );
                     let token = [<$name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
                     spawner.spawn(token)?;
-                    let player = $crate::servo_player::ServoPlayer::new(&[<$name:upper _SERVO_PLAYER_STATIC>]);
-                    Ok([<$name:upper _SERVO_PLAYER_CELL>].init(Self { player }))
+                    let servo_player_handle =
+                        $crate::servo_player::ServoPlayerHandle::new(&[<$name:upper _SERVO_PLAYER_STATIC>]);
+                    Ok([<$name:upper _SERVO_PLAYER_CELL>].init(Self { servo_player_handle }))
                 }
             }
 
-            impl ::core::ops::Deref for $name {
-                type Target = $crate::servo_player::ServoPlayer<$max_steps>;
+            impl $crate::servo_player::ServoPlayer<$max_steps> for $name {
+                const MAX_STEPS: usize = Self::MAX_STEPS;
 
-                fn deref(&self) -> &Self::Target {
-                    &self.player
+                fn set_degrees(&self, degrees: u16) {
+                    $crate::servo_player::__servo_player_set_degrees(&self.servo_player_handle, degrees);
+                }
+
+                fn hold(&self) {
+                    $crate::servo_player::__servo_player_hold(&self.servo_player_handle);
+                }
+
+                fn relax(&self) {
+                    $crate::servo_player::__servo_player_relax(&self.servo_player_handle);
+                }
+
+                fn animate<I>(&self, steps: I, at_end: $crate::servo_player::AtEnd)
+                where
+                    I: ::core::iter::IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(u16, ::embassy_time::Duration)>,
+                {
+                    $crate::servo_player::__servo_player_animate(&self.servo_player_handle, steps, at_end);
                 }
             }
 
             #[::embassy_executor::task]
             async fn [<$name:snake _servo_player_task>](
                 servo_player_static: &'static $crate::servo_player::ServoPlayerStatic<$max_steps>,
-                servo: $crate::servo::Servo<'static>,
+                servo: $crate::servo::ServoRp<'static>,
             ) -> ! {
                 $crate::servo_player::device_loop(servo_player_static, servo).await
             }
@@ -983,17 +1008,19 @@ macro_rules! __servo_player_impl {
     ) => {
         $crate::servo_player::paste::paste! {
             static [<$name:upper _SERVO_PLAYER_STATIC>]: $crate::servo_player::ServoPlayerStatic<$max_steps> =
-                $crate::servo_player::ServoPlayer::<$max_steps>::new_static();
+                $crate::servo_player::ServoPlayerHandle::<$max_steps>::new_static();
             static [<$name:upper _SERVO_PLAYER_CELL>]: ::static_cell::StaticCell<$name> =
                 ::static_cell::StaticCell::new();
 
             #[allow(missing_docs)]
             $vis struct $name {
-                player: $crate::servo_player::ServoPlayer<$max_steps>,
+                servo_player_handle: $crate::servo_player::ServoPlayerHandle<$max_steps>,
             }
 
             #[allow(missing_docs)]
             impl $name {
+                pub const MAX_STEPS: usize = $max_steps;
+
                 /// Create the servo player and spawn its background task.
                 ///
                 /// # PWM Slice Calculation
@@ -1027,23 +1054,40 @@ macro_rules! __servo_player_impl {
                     };
                     let token = [<$name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
                     spawner.spawn(token)?;
-                    let player = $crate::servo_player::ServoPlayer::new(&[<$name:upper _SERVO_PLAYER_STATIC>]);
-                    Ok([<$name:upper _SERVO_PLAYER_CELL>].init(Self { player }))
+                    let servo_player_handle =
+                        $crate::servo_player::ServoPlayerHandle::new(&[<$name:upper _SERVO_PLAYER_STATIC>]);
+                    Ok([<$name:upper _SERVO_PLAYER_CELL>].init(Self { servo_player_handle }))
                 }
             }
 
-            impl ::core::ops::Deref for $name {
-                type Target = $crate::servo_player::ServoPlayer<$max_steps>;
+            impl $crate::servo_player::ServoPlayer<$max_steps> for $name {
+                const MAX_STEPS: usize = Self::MAX_STEPS;
 
-                fn deref(&self) -> &Self::Target {
-                    &self.player
+                fn set_degrees(&self, degrees: u16) {
+                    $crate::servo_player::__servo_player_set_degrees(&self.servo_player_handle, degrees);
+                }
+
+                fn hold(&self) {
+                    $crate::servo_player::__servo_player_hold(&self.servo_player_handle);
+                }
+
+                fn relax(&self) {
+                    $crate::servo_player::__servo_player_relax(&self.servo_player_handle);
+                }
+
+                fn animate<I>(&self, steps: I, at_end: $crate::servo_player::AtEnd)
+                where
+                    I: ::core::iter::IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(u16, ::embassy_time::Duration)>,
+                {
+                    $crate::servo_player::__servo_player_animate(&self.servo_player_handle, steps, at_end);
                 }
             }
 
             #[::embassy_executor::task]
             async fn [<$name:snake _servo_player_task>](
                 servo_player_static: &'static $crate::servo_player::ServoPlayerStatic<$max_steps>,
-                servo: $crate::servo::Servo<'static>,
+                servo: $crate::servo::ServoRp<'static>,
             ) -> ! {
                 $crate::servo_player::device_loop(servo_player_static, servo).await
             }
@@ -1071,7 +1115,7 @@ macro_rules! __servo_player_impl {
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr
     ) => {
-        $crate::servo::Servo::new_output_a(
+        $crate::servo::ServoRp::new_output_a(
             embassy_rp::pwm::Pwm::new_output_a(
                 $slice,
                 $pin,
@@ -1092,7 +1136,7 @@ macro_rules! __servo_player_impl {
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr
     ) => {
-        $crate::servo::Servo::new_output_b(
+        $crate::servo::ServoRp::new_output_b(
             embassy_rp::pwm::Pwm::new_output_b(
                 $slice,
                 $pin,
@@ -1116,7 +1160,7 @@ macro_rules! __servo_player_impl {
             channel: _UNSET_,
             min_us: $crate::servo::SERVO_MIN_US_DEFAULT,
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
-            max_degrees: $crate::servo::Servo::DEFAULT_MAX_DEGREES,
+            max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
             max_steps: 16,
             fields: [ $($fields)* ]
         }
@@ -1127,21 +1171,7 @@ macro_rules! __servo_player_impl {
 #[doc(hidden)]
 pub async fn device_loop<const MAX_STEPS: usize>(
     servo_player_static: &'static ServoPlayerStatic<MAX_STEPS>,
-    servo: Servo<'static>,
+    servo: ServoRp<'static>,
 ) -> ! {
     device_loop_core(servo_player_static, servo).await
-}
-
-impl ServoPlayerOutput for Servo<'static> {
-    fn set_degrees(&mut self, degrees: u16) {
-        Servo::set_degrees(self, degrees);
-    }
-
-    fn hold(&mut self) {
-        Servo::hold(self);
-    }
-
-    fn relax(&mut self) {
-        Servo::relax(self);
-    }
 }

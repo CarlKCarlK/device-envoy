@@ -29,7 +29,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // We're going to store two blocks in flash: WiFi credentials and timezone.
-    let [wifi_credentials_flash_block, timezone_flash_block] = FlashBlockRp::new_array::<2>(p.FLASH)?;
+    let [wifi_credentials_flash_block, timezone_flash_block] =
+        FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     // Timezone is an optional field that users can set on the setup website.
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();

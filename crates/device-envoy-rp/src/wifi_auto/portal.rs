@@ -53,7 +53,10 @@ pub async fn collect_credentials(
     defaults: Option<&WifiCredentials>,
     fields: &'static [&'static dyn WifiAutoField],
 ) -> Result<WifiCredentials> {
-    info!("WifiAutoRp portal registering {} custom fields", fields.len());
+    info!(
+        "WifiAutoRp portal registering {} custom fields",
+        fields.len()
+    );
     FORM_STATE.lock(|state| {
         state.borrow_mut().defaults = defaults.cloned();
     });

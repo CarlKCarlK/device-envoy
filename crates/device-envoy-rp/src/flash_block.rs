@@ -235,7 +235,9 @@ impl CoreFlashBlock for FlashBlockRp {
 
 impl FlashBlockRp {
     /// Reserve `N` contiguous flash blocks and return them as an array.
-    pub fn new_array<const N: usize>(peripheral: Peri<'static, FLASH>) -> Result<[FlashBlockRp; N]> {
+    pub fn new_array<const N: usize>(
+        peripheral: Peri<'static, FLASH>,
+    ) -> Result<[FlashBlockRp; N]> {
         static FLASH_BLOCK_RP_STATIC: FlashBlockRpStatic = FlashBlockRpStatic::new();
         let manager = FLASH_BLOCK_RP_STATIC.manager(peripheral);
         manager.reserve::<N>()

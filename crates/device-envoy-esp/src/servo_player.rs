@@ -3,29 +3,17 @@
 //! Use [`servo_player!`] for typed servo players.
 // TODO0 Document LEDC timer/channel ownership protocol and link-time claim behavior in module docs/README.
 
-use crate::servo::Servo;
-
-use device_envoy_core::servo_player::ServoPlayerOutput;
 pub use device_envoy_core::servo_player::{combine, linear, AtEnd, ServoPlayer, ServoPlayerStatic};
+#[doc(hidden)]
+pub use device_envoy_core::servo_player::{
+    ServoPlayerHandle, __servo_player_animate, __servo_player_hold, __servo_player_relax,
+    __servo_player_set_degrees,
+};
 
 #[doc(hidden)]
 pub use device_envoy_core::servo_player::device_loop as device_loop_core;
 #[doc(hidden)]
 pub use paste;
-
-impl ServoPlayerOutput for Servo {
-    fn set_degrees(&mut self, degrees: u16) {
-        self.set_degrees(degrees);
-    }
-
-    fn hold(&mut self) {
-        self.hold();
-    }
-
-    fn relax(&mut self) {
-        self.relax();
-    }
-}
 
 /// Create a typed servo player with keyword configuration.
 #[macro_export]
@@ -74,7 +62,7 @@ macro_rules! __servo_player_impl {
 
             static [<$name:upper _SERVO_PLAYER_STATIC>]:
                 $crate::servo_player::ServoPlayerStatic<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }> =
-                    $crate::servo_player::ServoPlayer::<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }>::new_static();
+                    $crate::servo_player::ServoPlayerHandle::<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }>::new_static();
 
             impl $name {
                 pub const MAX_STEPS: usize = $crate::__servo_player_impl!(@max_steps $($max_steps)?);
@@ -83,18 +71,18 @@ macro_rules! __servo_player_impl {
                     ledc: &::esp_hal::ledc::Ledc<'static>,
                     pin: impl ::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
                     spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<$crate::servo_player::ServoPlayer<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }>> {
-                    let servo = $crate::servo::Servo::new(&[<$name:upper _SERVO_STATIC>], ledc, pin)?;
+                ) -> $crate::Result<$crate::servo_player::ServoPlayerHandle<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }>> {
+                    let servo = $crate::servo::ServoEsp::new(&[<$name:upper _SERVO_STATIC>], ledc, pin)?;
                     let token = [<__ $name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
                     spawner.spawn(token)?;
-                    Ok($crate::servo_player::ServoPlayer::new(&[<$name:upper _SERVO_PLAYER_STATIC>]))
+                    Ok($crate::servo_player::ServoPlayerHandle::new(&[<$name:upper _SERVO_PLAYER_STATIC>]))
                 }
             }
 
             #[::embassy_executor::task]
             async fn [<__ $name:snake _servo_player_task>](
                 servo_player_static: &'static $crate::servo_player::ServoPlayerStatic<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }>,
-                servo: $crate::servo::Servo,
+                servo: $crate::servo::ServoEsp,
             ) -> ! {
                 $crate::servo_player::device_loop_core(servo_player_static, servo).await
             }
@@ -106,7 +94,7 @@ macro_rules! __servo_player_impl {
     (@max_us $max_us:expr) => { $max_us };
     (@max_us) => { $crate::servo::SERVO_MAX_US_DEFAULT };
     (@max_degrees $max_degrees:expr) => { $max_degrees };
-    (@max_degrees) => { $crate::servo::Servo::DEFAULT_MAX_DEGREES };
+    (@max_degrees) => { $crate::servo::ServoEsp::DEFAULT_MAX_DEGREES };
     (@max_steps $max_steps:expr) => { $max_steps };
     (@max_steps) => { 16 };
 }

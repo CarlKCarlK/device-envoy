@@ -62,7 +62,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Set up flash storage for WiFi credentials and device name
-    let [wifi_credentials_flash_block, device_name_flash_block] = FlashBlockRp::new_array::<2>(p.FLASH)?;
+    let [wifi_credentials_flash_block, device_name_flash_block] =
+        FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     // Create device name field (max 4 characters)
     static DEVICE_NAME_STATIC: TextFieldStatic<4> = TextField::new_static();

@@ -32,15 +32,7 @@ pub struct ServoPlayerGenerated;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::servo_player::AtEnd;
-
-#[cfg(doc)]
-// Must be public for macro expansion in downstream crates, but not user-facing API.
-#[doc(hidden)]
-/// Static resources for `ServoPlayerGenerated`.
-///
-/// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
-pub struct ServoPlayerGeneratedStatic;
+use crate::servo_player::{AtEnd, ServoPlayer};
 
 #[cfg(doc)]
 impl ServoPlayerGenerated {
@@ -48,17 +40,6 @@ impl ServoPlayerGenerated {
     ///
     /// Specified in the [`servo_player!`](macro@crate::servo_player) macro.
     pub const MAX_STEPS: usize = 16;
-
-    /// Create static resources.
-    ///
-    /// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
-    #[must_use]
-    #[doc(hidden)]
-    pub const fn new_static() -> ServoPlayerGeneratedStatic {
-        ServoPlayerGeneratedStatic {
-            servo_player_static: ServoPlayerStatic::new_static(),
-        }
-    }
 
     /// Create a new servo player instance of the struct type
     /// defined by [`servo_player!`](macro@crate::servo_player).
@@ -82,23 +63,28 @@ impl ServoPlayerGenerated {
         let _ = (pin, slice, spawner);
         Ok(&INSTANCE)
     }
+}
+
+#[cfg(doc)]
+impl ServoPlayer<16> for ServoPlayerGenerated {
+    const MAX_STEPS: usize = Self::MAX_STEPS;
 
     /// Set the target angle. The most recent command always wins.
     ///
     /// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
-    pub fn set_degrees(&self, degrees: u16) {
+    fn set_degrees(&self, degrees: u16) {
         let _ = degrees;
     }
 
     /// Hold the servo at its current position.
     ///
     /// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
-    pub fn hold(&self) {}
+    fn hold(&self) {}
 
     /// Relax the servo. Servo can move freely.
     ///
     /// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
-    pub fn relax(&self) {}
+    fn relax(&self) {}
 
     /// Animate the servo through a sequence of angles with per-step hold durations.
     ///
@@ -108,7 +94,7 @@ impl ServoPlayerGenerated {
     /// This uses [`embassy_time::Duration`] for step timing.
     ///
     /// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
-    pub fn animate<I>(&self, steps: I, at_end: AtEnd)
+    fn animate<I>(&self, steps: I, at_end: AtEnd)
     where
         I: IntoIterator,
         I::Item: core::borrow::Borrow<(u16, embassy_time::Duration)>,

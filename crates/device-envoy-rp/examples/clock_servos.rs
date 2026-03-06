@@ -20,7 +20,7 @@ use device_envoy_rp::clock_sync::{
     ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
 use device_envoy_rp::flash_block::FlashBlockRp;
-use device_envoy_rp::servo_player::{AtEnd, combine, linear, servo_player};
+use device_envoy_rp::servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player};
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
@@ -64,7 +64,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
-    let [wifi_credentials_flash_block, timezone_flash_block] = FlashBlockRp::new_array::<2>(p.FLASH)?;
+    let [wifi_credentials_flash_block, timezone_flash_block] =
+        FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     // Define HTML to ask for timezone on the captive portal.
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();

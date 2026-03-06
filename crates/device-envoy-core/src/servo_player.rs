@@ -13,6 +13,8 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use heapless::Vec;
 
+use crate::servo::Servo as ServoTrait;
+
 /// Commands sent to the servo player device loop.
 enum PlayerCommand<const MAX_STEPS: usize> {
     Set {
@@ -117,11 +119,15 @@ impl<const MAX_STEPS: usize> ServoPlayerStatic<MAX_STEPS> {
 }
 
 /// Internal servo-player command handle used by platform macro-generated types.
-pub struct ServoPlayer<const MAX_STEPS: usize> {
+///
+/// This must remain `pub` because `servo_player!` macro expansions in platform crates
+/// construct this handle type.
+#[doc(hidden)]
+pub struct ServoPlayerHandle<const MAX_STEPS: usize> {
     servo_player_static: &'static ServoPlayerStatic<MAX_STEPS>,
 }
 
-impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
+impl<const MAX_STEPS: usize> ServoPlayerHandle<MAX_STEPS> {
     /// Create static resources for a servo player.
     #[must_use]
     pub const fn new_static() -> ServoPlayerStatic<MAX_STEPS> {
@@ -135,60 +141,119 @@ impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> {
             servo_player_static,
         }
     }
+}
+
+/// Platform-agnostic servo-player device contract.
+///
+/// Platform crates implement this trait for generated servo player types so servo
+/// operations resolve through trait methods instead of inherent methods.
+pub trait ServoPlayer<const MAX_STEPS: usize> {
+    /// Maximum number of animation steps accepted by [`ServoPlayer::animate`].
+    const MAX_STEPS: usize;
 
     /// Set the target angle. The most recent command always wins.
-    pub fn set_degrees(&self, degrees: u16) {
-        self.servo_player_static
-            .signal(PlayerCommand::Set { degrees });
-    }
+    fn set_degrees(&self, degrees: u16);
 
     /// Hold the servo at its current position.
-    pub fn hold(&self) {
-        self.servo_player_static.signal(PlayerCommand::Hold);
-    }
+    fn hold(&self);
 
     /// Relax the servo (stops holding position, servo can move freely).
-    pub fn relax(&self) {
-        self.servo_player_static.signal(PlayerCommand::Relax);
-    }
+    fn relax(&self);
 
     /// Animate through a sequence of angles with per-step hold durations.
     ///
     /// This uses [`embassy_time::Duration`] for step timing.
-    pub fn animate<I>(&self, steps: I, at_end: AtEnd)
+    fn animate<I>(&self, steps: I, at_end: AtEnd)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(u16, embassy_time::Duration)>;
+}
+
+// Must remain `pub` because platform-crate macro expansions call this helper.
+#[doc(hidden)]
+pub fn __servo_player_set_degrees<const MAX_STEPS: usize>(
+    servo_player_handle: &ServoPlayerHandle<MAX_STEPS>,
+    degrees: u16,
+) {
+    servo_player_handle
+        .servo_player_static
+        .signal(PlayerCommand::Set { degrees });
+}
+
+// Must remain `pub` because platform-crate macro expansions call this helper.
+#[doc(hidden)]
+pub fn __servo_player_hold<const MAX_STEPS: usize>(
+    servo_player_handle: &ServoPlayerHandle<MAX_STEPS>,
+) {
+    servo_player_handle
+        .servo_player_static
+        .signal(PlayerCommand::Hold);
+}
+
+// Must remain `pub` because platform-crate macro expansions call this helper.
+#[doc(hidden)]
+pub fn __servo_player_relax<const MAX_STEPS: usize>(
+    servo_player_handle: &ServoPlayerHandle<MAX_STEPS>,
+) {
+    servo_player_handle
+        .servo_player_static
+        .signal(PlayerCommand::Relax);
+}
+
+// Must remain `pub` because platform-crate macro expansions call this helper.
+#[doc(hidden)]
+pub fn __servo_player_animate<I, const MAX_STEPS: usize>(
+    servo_player_handle: &ServoPlayerHandle<MAX_STEPS>,
+    steps: I,
+    at_end: AtEnd,
+) where
+    I: IntoIterator,
+    I::Item: Borrow<(u16, embassy_time::Duration)>,
+{
+    assert!(MAX_STEPS > 0, "animate disabled: max_steps is 0");
+    let mut sequence: Vec<(u16, Duration), MAX_STEPS> = Vec::new();
+    for step in steps {
+        let step = *step.borrow();
+        assert!(
+            step.1.as_micros() > 0,
+            "animation step duration must be positive"
+        );
+        sequence
+            .push(step)
+            .expect("animate sequence fits within max_steps");
+    }
+    assert!(!sequence.is_empty(), "animate requires at least one step");
+
+    servo_player_handle
+        .servo_player_static
+        .signal(PlayerCommand::Animate {
+            steps: sequence,
+            mode: at_end,
+        });
+}
+
+impl<const MAX_STEPS: usize> ServoPlayer<MAX_STEPS> for ServoPlayerHandle<MAX_STEPS> {
+    const MAX_STEPS: usize = MAX_STEPS;
+
+    fn set_degrees(&self, degrees: u16) {
+        __servo_player_set_degrees(self, degrees);
+    }
+
+    fn hold(&self) {
+        __servo_player_hold(self);
+    }
+
+    fn relax(&self) {
+        __servo_player_relax(self);
+    }
+
+    fn animate<I>(&self, steps: I, at_end: AtEnd)
     where
         I: IntoIterator,
         I::Item: Borrow<(u16, embassy_time::Duration)>,
     {
-        assert!(MAX_STEPS > 0, "animate disabled: max_steps is 0");
-        let mut sequence: Vec<(u16, Duration), MAX_STEPS> = Vec::new();
-        for step in steps {
-            let step = *step.borrow();
-            assert!(
-                step.1.as_micros() > 0,
-                "animation step duration must be positive"
-            );
-            sequence
-                .push(step)
-                .expect("animate sequence fits within max_steps");
-        }
-        assert!(!sequence.is_empty(), "animate requires at least one step");
-
-        self.servo_player_static.signal(PlayerCommand::Animate {
-            steps: sequence,
-            mode: at_end,
-        });
+        __servo_player_animate(self, steps, at_end);
     }
-}
-
-/// Hardware output adapter for the shared servo-player device loop.
-pub trait ServoPlayerOutput {
-    /// Set servo target in degrees.
-    fn set_degrees(&mut self, degrees: u16);
-    /// Hold servo at current target.
-    fn hold(&mut self);
-    /// Relax servo and stop holding torque.
-    fn relax(&mut self);
 }
 
 /// Shared command loop for servo-player devices.
@@ -197,7 +262,7 @@ pub async fn device_loop<const MAX_STEPS: usize, O>(
     mut servo_player_output: O,
 ) -> !
 where
-    O: ServoPlayerOutput,
+    O: ServoTrait,
 {
     let mut current_degrees: u16 = 0;
     servo_player_output.set_degrees(current_degrees);
@@ -240,7 +305,7 @@ async fn run_animation<const MAX_STEPS: usize, O>(
     current_degrees: &mut u16,
 ) -> PlayerCommand<MAX_STEPS>
 where
-    O: ServoPlayerOutput,
+    O: ServoTrait,
 {
     loop {
         for step in steps {

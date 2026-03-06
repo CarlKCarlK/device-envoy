@@ -363,7 +363,6 @@ impl WifiAutoRp {
             wifi_auto: instance,
         })
     }
-
 }
 
 impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {

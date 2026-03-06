@@ -9,7 +9,7 @@ use core::convert::Infallible;
 use core::default::Default;
 use device_envoy_rp::{
     Result,
-    servo_player::{AtEnd, combine, linear, servo_player},
+    servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
 };
 use embassy_executor::Spawner;
 use embassy_time::Duration;

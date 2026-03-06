@@ -26,7 +26,7 @@ use device_envoy_esp::{
     clock_sync::{h12_m_s, ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start,
-    servo_player::{combine, linear, servo_player, AtEnd, ServoPlayer},
+    servo_player::{combine, linear, servo_player, AtEnd, ServoPlayer as _, ServoPlayerHandle},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto, WifiAutoEvent,
@@ -41,7 +41,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 const FAST_MODE_SPEED: f32 = 720.0;
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyServoClock";
 const SERVO_MAX_STEPS: usize = 30;
-type ClockServoPlayer = ServoPlayer<SERVO_MAX_STEPS>;
+type ClockServoPlayer = ServoPlayerHandle<SERVO_MAX_STEPS>;
 
 servo_player! {
     BottomServoPlayer {

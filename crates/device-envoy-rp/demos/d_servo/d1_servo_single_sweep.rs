@@ -8,6 +8,7 @@ use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressDuration, PressedTo},
     servo,
+    servo::Servo as _,
 };
 use embassy_executor::Spawner;
 use embassy_time::Timer;

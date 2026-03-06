@@ -3,6 +3,7 @@
 //! Use [`servo!`] for a keyword-driven typed constructor.
 
 use crate::Result;
+pub use device_envoy_core::servo::Servo;
 use esp_hal::gpio::{interconnect::PeripheralOutput, DriveMode};
 use esp_hal::ledc::{channel, timer, LowSpeed};
 use esp_hal::ledc::{channel::ChannelIFace, timer::TimerIFace};
@@ -53,16 +54,16 @@ impl ServoStatic {
 }
 
 /// A direct servo output using one LEDC timer and one LEDC channel.
-pub struct Servo {
+pub struct ServoEsp {
     channel: &'static mut channel::Channel<'static, LowSpeed>,
     min_us: u32,
     max_us: u32,
     max_degrees: u16,
 }
 
-impl Servo {
+impl ServoEsp {
     /// Default maximum rotation range in degrees.
-    pub const DEFAULT_MAX_DEGREES: u16 = 180;
+    pub const DEFAULT_MAX_DEGREES: u16 = <Self as Servo>::DEFAULT_MAX_DEGREES;
 
     /// Create a servo from static resources and a GPIO output pin.
     pub fn new(
@@ -96,25 +97,6 @@ impl Servo {
         })
     }
 
-    /// Set position in degrees `0..=max_degrees`.
-    pub fn set_degrees(&mut self, degrees: u16) {
-        assert!(degrees <= self.max_degrees);
-        let duty_pct = self.degrees_to_duty_pct(degrees);
-        self.channel
-            .set_duty(duty_pct)
-            .expect("LEDC set_duty failed in Servo::set_degrees");
-    }
-
-    /// Keep driving pulses at the last commanded angle.
-    pub fn hold(&mut self) {}
-
-    /// Stop driving pulses.
-    pub fn relax(&mut self) {
-        self.channel
-            .set_duty(0)
-            .expect("LEDC set_duty failed in Servo::relax");
-    }
-
     fn pulse_for_degrees(&self, degrees: u16) -> u32 {
         let pulse_span = self.max_us - self.min_us;
         self.min_us
@@ -127,6 +109,29 @@ impl Servo {
         let duty_pct = ((pulse_us * 100) + (SERVO_PERIOD_US / 2)) / SERVO_PERIOD_US;
         assert!(duty_pct <= u8::MAX as u32);
         duty_pct as u8
+    }
+}
+
+impl Servo for ServoEsp {
+    const DEFAULT_MAX_DEGREES: u16 = 180;
+
+    /// Set position in degrees `0..=max_degrees`.
+    fn set_degrees(&mut self, degrees: u16) {
+        assert!(degrees <= self.max_degrees);
+        let duty_pct = self.degrees_to_duty_pct(degrees);
+        self.channel
+            .set_duty(duty_pct)
+            .expect("LEDC set_duty failed in Servo::set_degrees");
+    }
+
+    /// Keep driving pulses at the last commanded angle.
+    fn hold(&mut self) {}
+
+    /// Stop driving pulses.
+    fn relax(&mut self) {
+        self.channel
+            .set_duty(0)
+            .expect("LEDC set_duty failed in Servo::relax");
     }
 }
 
@@ -191,8 +196,8 @@ macro_rules! __servo_impl {
                 pub fn new(
                     ledc: &::esp_hal::ledc::Ledc<'static>,
                     pin: impl ::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
-                ) -> $crate::Result<$crate::servo::Servo> {
-                    $crate::servo::Servo::new(&[<$name:upper _SERVO_STATIC>].servo_static, ledc, pin)
+                ) -> $crate::Result<$crate::servo::ServoEsp> {
+                    $crate::servo::ServoEsp::new(&[<$name:upper _SERVO_STATIC>].servo_static, ledc, pin)
                 }
             }
         }
@@ -203,5 +208,5 @@ macro_rules! __servo_impl {
     (@max_us $max_us:expr) => { $max_us };
     (@max_us) => { $crate::servo::SERVO_MAX_US_DEFAULT };
     (@max_degrees $max_degrees:expr) => { $max_degrees };
-    (@max_degrees) => { $crate::servo::Servo::DEFAULT_MAX_DEGREES };
+    (@max_degrees) => { $crate::servo::ServoEsp::DEFAULT_MAX_DEGREES };
 }

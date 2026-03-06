@@ -1,11 +1,12 @@
 //! A device abstraction for hobby servos.
 //!
 //! This module provides a simple interface for controlling hobby positional servo motors
-//! like the SG90. See [`Servo`] for usage examples.
+//! like the SG90. See [`ServoRp`] for usage examples.
 //!
 //! Use the [`servo!`] macro for a keyword-driven constructor with defaults.
 
 use defmt::info;
+pub use device_envoy_core::servo::Servo;
 use embassy_rp::clocks::clk_sys_freq;
 use embassy_rp::pwm::{Config, Pwm};
 
@@ -37,10 +38,10 @@ pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 /// Required fields: `pin`, `slice`.
 ///
 /// Optional fields: `min_us`, `max_us`, `max_degrees` (defaults to
-/// [`SERVO_MIN_US_DEFAULT`]/[`SERVO_MAX_US_DEFAULT`]/[`Servo::DEFAULT_MAX_DEGREES`]),
+/// [`SERVO_MIN_US_DEFAULT`]/[`SERVO_MAX_US_DEFAULT`]/[`ServoRp::DEFAULT_MAX_DEGREES`]),
 /// plus `channel: A/B` or `odd`/`even` to override the inferred channel.
 ///
-/// See [`Servo`] for details and examples.
+/// See [`ServoRp`] for details and examples.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! servo {
@@ -492,7 +493,7 @@ macro_rules! __servo_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr
     ) => {
-        $crate::servo::Servo::new_output_a(
+        $crate::servo::ServoRp::new_output_a(
             embassy_rp::pwm::Pwm::new_output_a(
                 $slice,
                 $pin,
@@ -512,7 +513,7 @@ macro_rules! __servo_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr
     ) => {
-        $crate::servo::Servo::new_output_b(
+        $crate::servo::ServoRp::new_output_b(
             embassy_rp::pwm::Pwm::new_output_b(
                 $slice,
                 $pin,
@@ -534,7 +535,7 @@ macro_rules! __servo_impl {
             channel: _UNSET_,
             min_us: $crate::servo::SERVO_MIN_US_DEFAULT,
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
-            max_degrees: $crate::servo::Servo::DEFAULT_MAX_DEGREES,
+            max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
             fields: [ $($fields)* ]
         }
     };
@@ -555,16 +556,16 @@ pub fn servo_from_pin_slice<'d, P, S>(
     min_us: u16,
     max_us: u16,
     max_degrees: u16,
-) -> Servo<'d>
+) -> ServoRp<'d>
 where
     P: ServoPwmPin<S>,
     S: embassy_rp::PeripheralType,
 {
     let pwm = P::new_pwm(slice, pin);
     if P::IS_CHANNEL_A {
-        Servo::new_output_a(pwm, min_us, max_us, max_degrees)
+        ServoRp::new_output_a(pwm, min_us, max_us, max_degrees)
     } else {
-        Servo::new_output_b(pwm, min_us, max_us, max_degrees)
+        ServoRp::new_output_b(pwm, min_us, max_us, max_degrees)
     }
 }
 
@@ -663,7 +664,7 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 
 /// A device abstraction for hobby servos.
 ///
-/// Use `Servo` for direct, immediate control when you want to manually manage servo
+/// Use `ServoRp` for direct, immediate control when you want to manually manage servo
 /// positioning. Use [`servo_player`](mod@crate::servo_player) instead when you need
 /// background animation sequences or want motion to continue while your code does other work.
 ///
@@ -673,7 +674,7 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_rp::{servo, servo::Servo};
+/// use device_envoy_rp::{servo, servo::Servo as _};
 /// use embassy_time::{Duration, Timer};
 /// # use core::panic::PanicInfo;
 /// # #[panic_handler]
@@ -693,7 +694,7 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 ///     servo.relax();                                  // Let the servo relax. It will re-enable on next set_degrees()
 /// }
 /// ```
-pub struct Servo<'d> {
+pub struct ServoRp<'d> {
     pwm: Pwm<'d>,
     cfg: Config, // Store config to avoid recreating default (which resets divider)
     top: u16,
@@ -716,20 +717,20 @@ enum ServoState {
     Enabled,
 }
 
-impl<'d> Servo<'d> {
+impl<'d> ServoRp<'d> {
     /// Default maximum rotation range in degrees (180°).
-    pub const DEFAULT_MAX_DEGREES: u16 = 180;
+    pub const DEFAULT_MAX_DEGREES: u16 = <Self as Servo>::DEFAULT_MAX_DEGREES;
 
     /// Create a servo on a PWM output A channel.
     ///
-    /// See the [`Servo`] example for usage.
+    /// See the [`ServoRp`] example for usage.
     pub(crate) fn new_output_a(pwm: Pwm<'d>, min_us: u16, max_us: u16, max_degrees: u16) -> Self {
         Self::init(pwm, ServoChannel::A, min_us, max_us, max_degrees)
     }
 
     /// Create a servo on a PWM output B channel.
     ///
-    /// See the [`Servo`] example for usage.
+    /// See the [`ServoRp`] example for usage.
     pub(crate) fn new_output_b(pwm: Pwm<'d>, min_us: u16, max_us: u16, max_degrees: u16) -> Self {
         Self::init(pwm, ServoChannel::B, min_us, max_us, max_degrees)
     }
@@ -794,24 +795,9 @@ impl<'d> Servo<'d> {
         servo
     }
 
-    /// Set position in degrees 0..=max_degrees mapped into [min_us, max_us].
-    ///
-    /// Automatically enables the servo if it was disabled.
-    ///
-    /// See the [`Servo`] example for usage.
-    pub fn set_degrees(&mut self, degrees: u16) {
-        assert!((0..=self.max_degrees).contains(&degrees));
-        self.ensure_enabled();
-        let us = self.min_us as u32
-            + (u32::from(degrees)) * (u32::from(self.max_us) - u32::from(self.min_us))
-                / u32::from(self.max_degrees);
-        info!("Servo set_degrees({}) -> {}µs", degrees, us);
-        self.set_pulse_us(us as u16);
-    }
-
     /// Set raw pulse width in microseconds.
     ///
-    /// See the [`Servo`] example for usage.
+    /// See the [`ServoRp`] example for usage.
     /// NOTE: only update the *compare* register; do not reconfigure the slice.
     #[doc(hidden)]
     pub fn set_pulse_us(&mut self, us: u16) {
@@ -835,14 +821,33 @@ impl<'d> Servo<'d> {
         self.pwm.set_config(&self.cfg);
         self.state = ServoState::Enabled;
     }
+}
+
+impl<'d> Servo for ServoRp<'d> {
+    const DEFAULT_MAX_DEGREES: u16 = 180;
+
+    /// Set position in degrees 0..=max_degrees mapped into [min_us, max_us].
+    ///
+    /// Automatically enables the servo if it was disabled.
+    ///
+    /// See the [`ServoRp`] example for usage.
+    fn set_degrees(&mut self, degrees: u16) {
+        assert!((0..=self.max_degrees).contains(&degrees));
+        self.ensure_enabled();
+        let us = self.min_us as u32
+            + (u32::from(degrees)) * (u32::from(self.max_us) - u32::from(self.min_us))
+                / u32::from(self.max_degrees);
+        info!("Servo set_degrees({}) -> {}µs", degrees, us);
+        self.set_pulse_us(us as u16);
+    }
 
     /// Stop sending control signals to the servo.
     ///
     /// This allows the servo to relax and move freely, reducing power consumption
     /// and mechanical stress.
     ///
-    /// See the [`Servo`] example for usage.
-    pub fn relax(&mut self) {
+    /// See the [`ServoRp`] example for usage.
+    fn relax(&mut self) {
         if self.state == ServoState::Disabled {
             return;
         }
@@ -855,7 +860,7 @@ impl<'d> Servo<'d> {
     /// Resume sending control signals to the servo.
     ///
     /// The servo will move back to its last commanded position.
-    pub fn hold(&mut self) {
+    fn hold(&mut self) {
         if self.state == ServoState::Enabled {
             return;
         }

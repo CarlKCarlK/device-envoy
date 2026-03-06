@@ -17,7 +17,7 @@ use panic_probe as _;
 use serde::{Deserialize, Serialize};
 
 use device_envoy_rp::Result;
-use device_envoy_rp::flash_block::{FlashBlockRp, FlashBlock as _};
+use device_envoy_rp::flash_block::{FlashBlock as _, FlashBlockRp};
 
 // ============================================================================
 // Test Data Structures

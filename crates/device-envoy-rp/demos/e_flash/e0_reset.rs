@@ -6,7 +6,7 @@
 use core::{convert::Infallible, future, panic};
 use device_envoy_rp::{
     Result,
-    flash_array::FlashArray,
+    flash_array::{FlashArray, FlashBlock as _},
     led2d,
     led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},

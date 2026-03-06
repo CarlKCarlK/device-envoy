@@ -23,7 +23,7 @@ use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
 use crate::button::{ButtonDevice as _, ButtonRp, PressedTo};
-use crate::flash_array::FlashBlock;
+use crate::flash_array::FlashBlockRp;
 use crate::{Error, Result};
 use device_envoy_core::wifi_auto::{WifiCredentials as InnerWifiCredentials, WifiStartMode};
 
@@ -245,7 +245,7 @@ impl WifiAuto {
     /// - `pin_23`, `pin_24`, `pin_25`, `pin_29`: the internal GPIO pins for the CYW43 WiFi chip.
     /// - `pio`: PIO resource used for WiFi.
     /// - `dma`: DMA resource for WiFi.
-    /// - `wifi_credentials_flash_block`: [`FlashBlock`] reserved
+    /// - `wifi_credentials_flash_block`: [`FlashBlockRp`] reserved
     ///   for WiFi credentials.
     /// - `button_pin`: Button pin used to force setup mode on boot.
     /// - `button_pressed_to`: Wiring for the button (ground or VCC).
@@ -263,7 +263,7 @@ impl WifiAuto {
         pin_29: Peri<'static, PIN_29>,
         pio: Peri<'static, PIO>,
         dma: Peri<'static, DMA>,
-        mut wifi_credentials_flash_block: FlashBlock,
+        mut wifi_credentials_flash_block: FlashBlockRp,
         button_pin: Peri<'static, impl Pin>,
         button_pressed_to: PressedTo,
         captive_portal_ssid: &'static str,

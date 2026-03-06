@@ -18,8 +18,11 @@ use static_cell::StaticCell;
 use crate::{Error, Result};
 #[cfg(target_os = "none")]
 use device_envoy_core::flash_array::{
-    self as core_flash, FlashBlockError, FlashDevice, FLASH_BLOCK_SIZE_U32,
+    self as core_flash, FlashBlock as CoreFlashBlock, FlashBlockError, FlashDevice,
+    FLASH_BLOCK_SIZE_U32,
 };
+
+pub use device_envoy_core::flash_array::FlashBlock;
 
 #[cfg(target_os = "none")]
 const DEFAULT_FLASH_REGION_BYTES: u32 = 16 * core_flash::FLASH_BLOCK_SIZE_U32;
@@ -141,7 +144,7 @@ impl FlashManager {
         })
     }
 
-    fn reserve<const N: usize>(&'static self) -> Result<[FlashBlock; N]> {
+    fn reserve<const N: usize>(&'static self) -> Result<[FlashBlockEsp; N]> {
         let start_block = self
             .next_block
             .fetch_add(N as u32, core::sync::atomic::Ordering::SeqCst);
@@ -154,7 +157,7 @@ impl FlashManager {
             return Err(Error::IndexOutOfBounds);
         }
 
-        Ok(core::array::from_fn(|block_index| FlashBlock {
+        Ok(core::array::from_fn(|block_index| FlashBlockEsp {
             manager: self,
             block_id: start_block + block_index as u32,
         }))
@@ -219,6 +222,7 @@ impl FlashArrayStatic {
 /// # #![no_std]
 /// # #![no_main]
 /// use device_envoy_esp::flash_array::FlashArray;
+/// use device_envoy_esp::flash_array::FlashBlock as _;
 ///
 /// #[derive(serde::Serialize, serde::Deserialize, Clone)]
 /// struct WifiPersistedState {
@@ -252,7 +256,7 @@ impl<const N: usize> FlashArray<N> {
     /// Reserve `N` blocks in the default tail region.
     ///
     /// See the [FlashArray struct example](Self) for usage.
-    pub fn new(flash: esp_hal::peripherals::FLASH<'static>) -> Result<[FlashBlock; N]> {
+    pub fn new(flash: esp_hal::peripherals::FLASH<'static>) -> Result<[FlashBlockEsp; N]> {
         Self::new_with_request(
             flash,
             FlashRegionRequest::Tail {
@@ -269,7 +273,7 @@ impl<const N: usize> FlashArray<N> {
         flash: esp_hal::peripherals::FLASH<'static>,
         start_offset: u32,
         byte_len: u32,
-    ) -> Result<[FlashBlock; N]> {
+    ) -> Result<[FlashBlockEsp; N]> {
         Self::new_with_request(
             flash,
             FlashRegionRequest::Explicit {
@@ -282,7 +286,7 @@ impl<const N: usize> FlashArray<N> {
     fn new_with_request(
         flash: esp_hal::peripherals::FLASH<'static>,
         requested_region: FlashRegionRequest,
-    ) -> Result<[FlashBlock; N]> {
+    ) -> Result<[FlashBlockEsp; N]> {
         static FLASH_ARRAY_STATIC: FlashArrayStatic = FlashArrayStatic::new();
         let manager = FLASH_ARRAY_STATIC.manager(flash, requested_region)?;
         manager.reserve::<N>()
@@ -290,17 +294,16 @@ impl<const N: usize> FlashArray<N> {
 }
 
 #[cfg(target_os = "none")]
-pub struct FlashBlock {
+pub struct FlashBlockEsp {
     manager: &'static FlashManager,
     block_id: u32,
 }
 
 #[cfg(target_os = "none")]
-impl FlashBlock {
-    /// Load a typed value from this block.
-    ///
-    /// See the [FlashArray struct example](crate::flash_array::FlashArray) for usage.
-    pub fn load<T>(&mut self) -> Result<Option<T>>
+impl CoreFlashBlock for FlashBlockEsp {
+    type Error = Error;
+
+    fn load<T>(&mut self) -> Result<Option<T>>
     where
         T: Serialize + for<'de> Deserialize<'de>,
     {
@@ -312,10 +315,7 @@ impl FlashBlock {
         })
     }
 
-    /// Save a typed value to this block.
-    ///
-    /// See the [FlashArray struct example](crate::flash_array::FlashArray) for usage.
-    pub fn save<T>(&mut self, value: &T) -> Result<()>
+    fn save<T>(&mut self, value: &T) -> Result<()>
     where
         T: Serialize + for<'de> Deserialize<'de>,
     {
@@ -327,10 +327,7 @@ impl FlashBlock {
         })
     }
 
-    /// Clear this block.
-    ///
-    /// See the [FlashArray struct example](crate::flash_array::FlashArray) for usage.
-    pub fn clear(&mut self) -> Result<()> {
+    fn clear(&mut self) -> Result<()> {
         let block_offset = self.manager.block_offset(self.block_id)?;
         self.manager.with_flash(|flash_storage| {
             let mut adapter = EspFlashAdapter(flash_storage);

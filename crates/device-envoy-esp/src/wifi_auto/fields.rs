@@ -7,13 +7,13 @@
 )]
 
 #[cfg(target_os = "none")]
-use crate::flash_array::FlashBlock;
+use crate::flash_array::FlashBlockEsp;
 use crate::Error;
 use device_envoy_core::__impl_wifi_auto_fields;
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer, WifiAutoField};
 
 __impl_wifi_auto_fields!(
-    flash_block = FlashBlock,
+    flash_block = FlashBlockEsp,
     error = Error,
     wifi_auto_field = WifiAutoField,
     form_data = FormData<'_>,
@@ -28,7 +28,7 @@ impl TimezoneField {
     /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
     pub fn new(
         timezone_field_static: &'static TimezoneFieldStatic,
-        timezone_flash_block: FlashBlock,
+        timezone_flash_block: FlashBlockEsp,
     ) -> &'static Self {
         Self::new_with_flash(timezone_field_static, timezone_flash_block)
     }
@@ -51,7 +51,7 @@ impl<const N: usize> TextField<N> {
     /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
     pub fn new(
         text_field_static: &'static TextFieldStatic<N>,
-        text_flash_block: FlashBlock,
+        text_flash_block: FlashBlockEsp,
         field_name: &'static str,
         label: &'static str,
         default_value: &'static str,

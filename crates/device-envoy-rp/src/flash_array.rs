@@ -19,7 +19,11 @@ use serde::{Deserialize, Serialize};
 use static_cell::StaticCell;
 
 use crate::{Error, Result};
-use device_envoy_core::flash_array::{self as core_flash, FlashBlockError, FlashDevice};
+use device_envoy_core::flash_array::{
+    self as core_flash, FlashBlock as CoreFlashBlock, FlashBlockError, FlashDevice,
+};
+
+pub use device_envoy_core::flash_array::FlashBlock;
 
 // Internal flash size for Raspberry Pi Pico 2 (4 MB).
 #[cfg(feature = "pico2")]
@@ -92,7 +96,7 @@ impl FlashManager {
         })
     }
 
-    fn reserve<const N: usize>(&'static self) -> Result<[FlashBlock; N]> {
+    fn reserve<const N: usize>(&'static self) -> Result<[FlashBlockRp; N]> {
         let start = self.next_block.fetch_add(N as u32, Ordering::SeqCst);
         let end = start.checked_add(N as u32).ok_or(Error::IndexOutOfBounds)?;
         if end > TOTAL_BLOCKS {
@@ -100,26 +104,30 @@ impl FlashManager {
             self.next_block.fetch_sub(N as u32, Ordering::SeqCst);
             return Err(Error::IndexOutOfBounds);
         }
-        Ok(array::from_fn(|idx| FlashBlock {
+        Ok(array::from_fn(|idx| FlashBlockRp {
             manager: self,
             block: start + idx as u32,
         }))
     }
 }
 
-/// Type of a [`FlashArray`] block, with methods such as [`load`](Self::load), [`save`](Self::save), and [`clear`](Self::clear).
+/// Type of a [`FlashArray`] block.
+///
+/// Implements [`device_envoy_core::flash_array::FlashBlock`] for typed
+/// [`load`](device_envoy_core::flash_array::FlashBlock::load),
+/// [`save`](device_envoy_core::flash_array::FlashBlock::save), and
+/// [`clear`](device_envoy_core::flash_array::FlashBlock::clear) operations.
 ///
 /// See [`FlashArray`] for usage examples.
-pub struct FlashBlock {
+pub struct FlashBlockRp {
     manager: &'static FlashManager,
     block: u32,
 }
 
-impl FlashBlock {
-    /// Load data stored in this block.
-    ///
-    /// See [`FlashArray`] for usage examples.
-    pub fn load<T>(&mut self) -> Result<Option<T>>
+impl CoreFlashBlock for FlashBlockRp {
+    type Error = Error;
+
+    fn load<T>(&mut self) -> Result<Option<T>>
     where
         T: Serialize + for<'de> Deserialize<'de>,
     {
@@ -137,10 +145,7 @@ impl FlashBlock {
         Ok(result)
     }
 
-    /// Save data to this block.
-    ///
-    /// See [`FlashArray`] for usage examples.
-    pub fn save<T>(&mut self, value: &T) -> Result<()>
+    fn save<T>(&mut self, value: &T) -> Result<()>
     where
         T: Serialize + for<'de> Deserialize<'de>,
     {
@@ -154,8 +159,7 @@ impl FlashBlock {
         Ok(())
     }
 
-    /// Clear this block.
-    pub fn clear(&mut self) -> Result<()> {
+    fn clear(&mut self) -> Result<()> {
         let offset = block_offset(self.block);
         self.manager.with_flash(|flash| {
             let mut adapter = RpFlashAdapter(flash);
@@ -203,6 +207,14 @@ impl FlashArrayStatic {
 /// 4,082 bytes of postcard-serialized data (a hardware-determined 4 KB flash block
 /// minus metadata space).
 ///
+/// # Trait-based block operations
+///
+/// [`FlashArray::new`] returns [`FlashBlockRp`] values. Block operations like
+/// `load`, `save`, and `clear` are provided by [`FlashBlock`], so bring the
+/// trait into scope:
+///
+/// `use device_envoy_rp::flash_array::FlashBlock as _;`
+///
 /// # Features
 ///
 /// - **Type safety**: Hash-based type checking prevents reading data written under a
@@ -230,6 +242,7 @@ impl FlashArrayStatic {
 /// # use defmt_rtt as _;
 /// # use core::{convert::Infallible, future};
 /// use device_envoy_rp::flash_array::FlashArray;
+/// use device_envoy_rp::flash_array::FlashBlock as _;
 /// # use defmt::info;
 ///
 /// /// Boot counter (newtype) that wraps at 10.
@@ -275,8 +288,9 @@ pub struct FlashArray<const N: usize>;
 impl<const N: usize> FlashArray<N> {
     /// Reserve `N` contiguous blocks and return them as an array that you can destructure however you like.
     ///
-    /// See [`FlashArray`] for usage examples.
-    pub fn new(peripheral: Peri<'static, FLASH>) -> Result<[FlashBlock; N]> {
+    /// `FlashBlockRp` operations are trait methods from [`FlashBlock`].
+    /// See [`FlashArray`] for the required import and usage example.
+    pub fn new(peripheral: Peri<'static, FLASH>) -> Result<[FlashBlockRp; N]> {
         static FLASH_STATIC: FlashArrayStatic = FlashArrayStatic::new();
         let manager = FLASH_STATIC.manager(peripheral);
         manager.reserve::<N>()

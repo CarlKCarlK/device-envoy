@@ -38,6 +38,33 @@ pub enum FlashBlockError<E> {
     StorageCorrupted,
 }
 
+/// Canonical typed block operations for flash-backed persistence.
+///
+/// Platform crates implement this trait on their concrete flash block handle
+/// types (for example, `device_envoy_rp::flash_array::FlashBlock`).
+///
+/// Constructors and hardware wiring remain platform-specific; this trait
+/// defines the shared operation surface used by higher-level abstractions.
+pub trait FlashBlock {
+    /// Error returned by block operations.
+    type Error;
+
+    /// Load a typed value from this block.
+    ///
+    /// Returns `Ok(None)` when the block is empty or contains a different type.
+    fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
+    where
+        T: Serialize + for<'de> Deserialize<'de>;
+
+    /// Save a typed value to this block.
+    fn save<T>(&mut self, value: &T) -> Result<(), Self::Error>
+    where
+        T: Serialize + for<'de> Deserialize<'de>;
+
+    /// Clear this block.
+    fn clear(&mut self) -> Result<(), Self::Error>;
+}
+
 /// Low-level read/write/erase interface for a flash device.
 ///
 /// Implement this trait in the platform crate to connect the shared block

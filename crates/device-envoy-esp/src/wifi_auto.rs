@@ -16,7 +16,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 #[cfg(target_os = "none")]
 use crate::button::{ButtonDevice as _, ButtonEsp, PressedTo};
 #[cfg(target_os = "none")]
-use crate::flash_array::FlashBlock;
+use crate::flash_array::{FlashBlock as _, FlashBlockEsp};
 use crate::Result;
 #[cfg(target_os = "none")]
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4};
@@ -46,7 +46,7 @@ const MAX_WIFI_AUTO_FIELDS: usize = 8;
 
 enum WifiAutoStorage {
     #[cfg(target_os = "none")]
-    Flash(RefCell<FlashBlock>),
+    Flash(RefCell<FlashBlockEsp>),
     Memory(RefCell<WifiAutoPersistedState>),
 }
 
@@ -162,7 +162,7 @@ impl<'a> WifiAuto<'a> {
     #[must_use]
     pub fn new<const N: usize>(
         wifi: esp_hal::peripherals::WIFI<'static>,
-        wifi_auto_flash_block: FlashBlock,
+        wifi_auto_flash_block: FlashBlockEsp,
         button_pin: impl InputPin + 'static,
         button_pressed_to: PressedTo,
         captive_portal_ssid: &'static str,

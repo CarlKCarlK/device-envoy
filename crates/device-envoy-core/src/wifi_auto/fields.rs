@@ -13,6 +13,7 @@ macro_rules! __impl_wifi_auto_fields {
         $(, flash_cfg = $flash_cfg:meta)?
     ) => {
         use core::{cell::RefCell, fmt::Write};
+        use $crate::flash_array::FlashBlock as _;
 
         use heapless::String;
         use static_cell::StaticCell;

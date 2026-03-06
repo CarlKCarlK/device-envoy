@@ -151,6 +151,102 @@ impl<const MAX_STEPS: usize> ServoPlayerHandle<MAX_STEPS> {
 /// This trait extends [`Servo`], so a servo player always supports the base
 /// servo control operations (`set_degrees`, `hold`, and `relax`) in addition to
 /// [`ServoPlayer::animate`].
+///
+/// # Example: Basic Servo Control
+///
+/// This example demonstrates basic servo control: moving to a position, relaxing,
+/// and using animation.
+///
+/// ```rust,no_run
+/// use device_envoy_core::servo_player::{AtEnd, ServoPlayer};
+/// use embassy_time::{Duration, Timer};
+///
+/// async fn basic_servo_control<const MAX_STEPS: usize>(servo_player: &impl ServoPlayer<MAX_STEPS>) {
+///     // Move to 90 degrees, wait 1 second, then relax.
+///     servo_player.set_degrees(90);
+///     Timer::after(Duration::from_secs(1)).await;
+///     servo_player.relax();
+///
+///     // Animate: hold at 180 degrees for 1 second, then 0 degrees for 1 second, then relax.
+///     const STEPS: [(u16, Duration); 2] = [
+///         (180, Duration::from_secs(1)),
+///         (0, Duration::from_secs(1)),
+///     ];
+///     // AtEnd::Relax quiets the servo; AtEnd::Hold keeps driving pulses to hold
+///     // position; AtEnd::Loop repeats.
+///     servo_player.animate(STEPS, AtEnd::Relax);
+/// }
+///
+/// # use device_envoy_core::servo::Servo;
+/// # struct ServoPlayerMock;
+/// # impl Servo for ServoPlayerMock {
+/// #     const DEFAULT_MAX_DEGREES: u16 = 180;
+/// #     fn set_degrees(&self, _degrees: u16) {}
+/// #     fn hold(&self) {}
+/// #     fn relax(&self) {}
+/// # }
+/// # impl ServoPlayer<40> for ServoPlayerMock {
+/// #     const MAX_STEPS: usize = 40;
+/// #     fn animate<I>(&self, _steps: I, _at_end: AtEnd)
+/// #     where
+/// #         I: IntoIterator,
+/// #         I::Item: core::borrow::Borrow<(u16, embassy_time::Duration)>,
+/// #     {
+/// #     }
+/// # }
+/// # let servo_player = ServoPlayerMock;
+/// # let _future = basic_servo_control(&servo_player);
+/// ```
+///
+/// # Example: Multi-Step Animation
+///
+/// This example combines 40 animation steps using [`linear`] and [`combine`] to
+/// sweep up, hold, sweep down, hold.
+///
+/// ```rust,no_run
+/// use device_envoy_core::servo_player::{AtEnd, ServoPlayer, combine, linear};
+/// use embassy_time::Duration;
+///
+/// async fn run_sweep_animation(servo_player: &impl ServoPlayer<40>) {
+///     // Combine 40 animation steps into one array.
+///     const STEPS_UP_AND_HOLD: [(u16, Duration); 20] = combine::<19, 1, 20>(
+///         linear::<19>(0, 180, Duration::from_secs(2)), // 19 steps from 0 degrees to 180 degrees
+///         [(180, Duration::from_millis(400))],          // Hold at 180 degrees for 400 ms
+///     );
+///     const STEPS_DOWN_AND_HOLD: [(u16, Duration); 20] = combine::<19, 1, 20>(
+///         linear::<19>(180, 0, Duration::from_secs(2)), // 19 steps from 180 degrees to 0 degrees
+///         [(0, Duration::from_millis(400))],            // Hold at 0 degrees for 400 ms
+///     );
+///     const STEPS: [(u16, Duration); 40] =
+///         combine::<20, 20, 40>(STEPS_UP_AND_HOLD, STEPS_DOWN_AND_HOLD);
+///
+///     servo_player.animate(STEPS, AtEnd::Loop); // Loop the sweep animation
+///
+///     // Let it run in the background for 10 seconds, then relax.
+///     embassy_time::Timer::after(Duration::from_secs(10)).await;
+///     servo_player.relax();
+/// }
+///
+/// # use device_envoy_core::servo::Servo;
+/// # struct ServoPlayerMock;
+/// # impl Servo for ServoPlayerMock {
+/// #     const DEFAULT_MAX_DEGREES: u16 = 180;
+/// #     fn set_degrees(&self, _degrees: u16) {}
+/// #     fn hold(&self) {}
+/// #     fn relax(&self) {}
+/// # }
+/// # impl ServoPlayer<40> for ServoPlayerMock {
+/// #     const MAX_STEPS: usize = 40;
+/// #     fn animate<I>(&self, _steps: I, _at_end: AtEnd)
+/// #     where
+/// #         I: IntoIterator,
+/// #         I::Item: core::borrow::Borrow<(u16, embassy_time::Duration)>,
+/// #     {
+/// #     }
+/// # }
+/// # let servo_player = ServoPlayerMock;
+/// # let _future = run_sweep_animation(&servo_player);
+/// ```
 pub trait ServoPlayer<const MAX_STEPS: usize>: Servo {
     /// Maximum number of animation steps accepted by [`ServoPlayer::animate`].
     const MAX_STEPS: usize;
@@ -158,6 +254,8 @@ pub trait ServoPlayer<const MAX_STEPS: usize>: Servo {
     /// Animate through a sequence of angles with per-step hold durations.
     ///
     /// This uses [`embassy_time::Duration`] for step timing.
+    ///
+    /// See the [ServoPlayer trait documentation](Self) for usage examples.
     fn animate<I>(&self, steps: I, at_end: AtEnd)
     where
         I: IntoIterator,

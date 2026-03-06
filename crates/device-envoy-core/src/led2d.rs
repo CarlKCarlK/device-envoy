@@ -1,8 +1,16 @@
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!("led2d1", "docs/assets/led2d1.png"),
+    doc = ::embed_doc_image::embed_image!("led2d2", "docs/assets/led2d2.png")
+)]
 //! Shared 2D LED panel building blocks used across all device-envoy platforms.
 //!
 //! This module provides platform-independent types for NeoPixel-style (WS2812) LED panel
 //! displays. See the platform crate (`device-envoy-rp` or `device-envoy-esp`) for the
 //! primary documentation and examples.
+//!
+//! [led2d1]: https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d1.png
+//! [led2d2]: https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d2.png
 
 pub mod layout;
 
@@ -54,6 +62,82 @@ use crate::led_strip::{Frame1d as StripFrame, LedStrip as LedStripTrait};
 ///
 /// The trait takes `const W` and `const H` so dimensions remain compile-time constants and
 /// can be used in frame types like [`Frame2d<W, H>`].
+///
+/// # Example: Write Text
+///
+/// In this example, we render text on a 12x4 panel.
+///
+/// ![LED panel preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d1.png)
+///
+/// ```rust,no_run
+/// use device_envoy_core::led2d::Led2d;
+/// use smart_leds::RGB8;
+///
+/// fn write_rust<const W: usize, const H: usize>(led2d: &impl Led2d<W, H>) {
+///     let colors = [
+///         RGB8::new(0, 255, 255),
+///         RGB8::new(255, 0, 0),
+///         RGB8::new(255, 255, 0),
+///     ];
+///     led2d.write_text("Rust", &colors);
+/// }
+///
+/// # use device_envoy_core::led2d::{Frame2d, Led2dFont};
+/// # struct Led12x4;
+/// # impl Led2d<12, 4> for Led12x4 {
+/// #     const MAX_FRAMES: usize = 2;
+/// #     const MAX_BRIGHTNESS: u8 = 22;
+/// #     const FONT: Led2dFont = Led2dFont::Font3x4Trim;
+/// #     fn write_frame(&self, _frame2d: Frame2d<12, 4>) {}
+/// #     fn animate<I>(&self, _frames: I)
+/// #     where
+/// #         I: IntoIterator,
+/// #         I::Item: core::borrow::Borrow<(Frame2d<12, 4>, embassy_time::Duration)>,
+/// #     {
+/// #     }
+/// # }
+/// # let led12x4 = Led12x4;
+/// # write_rust(&led12x4);
+/// ```
+///
+/// # Example: Animated Text
+///
+/// This example animates text on an LED panel.
+///
+/// ![LED panel preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d2.png)
+///
+/// ```rust,no_run
+/// use device_envoy_core::led2d::{Frame2d, Led2d};
+/// use smart_leds::colors;
+///
+/// fn animate_go_go<const W: usize, const H: usize>(led2d: &impl Led2d<W, H>) {
+///     let mut frame_0 = Frame2d::new();
+///     led2d.write_text_to_frame("Go", &[], &mut frame_0);
+///
+///     let mut frame_1 = Frame2d::new();
+///     led2d.write_text_to_frame("\nGo", &[colors::HOT_PINK, colors::LIME], &mut frame_1);
+///
+///     let frame_duration = embassy_time::Duration::from_secs(1);
+///     led2d.animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
+/// }
+///
+/// # use device_envoy_core::led2d::Led2dFont;
+/// # struct Led8x12;
+/// # impl Led2d<8, 12> for Led8x12 {
+/// #     const MAX_FRAMES: usize = 2;
+/// #     const MAX_BRIGHTNESS: u8 = 22;
+/// #     const FONT: Led2dFont = Led2dFont::Font4x6Trim;
+/// #     fn write_frame(&self, _frame2d: Frame2d<8, 12>) {}
+/// #     fn animate<I>(&self, _frames: I)
+/// #     where
+/// #         I: IntoIterator,
+/// #         I::Item: core::borrow::Borrow<(Frame2d<8, 12>, embassy_time::Duration)>,
+/// #     {
+/// #     }
+/// # }
+/// # let led8x12 = Led8x12;
+/// # animate_go_go(&led8x12);
+/// ```
 // TODO000 Consider splitting this into separate traits if animation semantics diverge from
 // simple frame writes across platforms.
 pub trait Led2d<const W: usize, const H: usize> {
@@ -107,7 +191,7 @@ pub trait Led2d<const W: usize, const H: usize> {
     /// The duration type is [`embassy_time::Duration`], and `frames` can be any iterator whose
     /// items borrow `(Frame2d<W, H>, embassy_time::Duration)`.
     ///
-    /// See your platform crate's led2d module docs for possible usage examples. //TODO00 consider adding examples here
+    /// See the [Led2d trait documentation](Self) for usage examples.
     fn animate<I>(&self, frames: I)
     where
         I: IntoIterator,
@@ -123,6 +207,8 @@ pub trait Led2d<const W: usize, const H: usize> {
     /// - `colors` cycles one color per character; an empty slice defaults to white.
     /// - A `\n` character starts a new line.
     /// - Characters beyond frame width are clipped.
+    ///
+    /// See the [Led2d trait documentation](Self) for usage examples.
     fn write_text_to_frame(&self, text: &str, colors: &[RGB8], frame: &mut Frame2d<W, H>) {
         // TODO0000 should render_text_to_frame be rolled into here?
         render_text_to_frame(
@@ -141,6 +227,8 @@ pub trait Led2d<const W: usize, const H: usize> {
     /// 1. Create `Frame2d::<W, H>::new()`.
     /// 2. Call [`Led2d::write_text_to_frame`].
     /// 3. Call [`Led2d::write_frame`].
+    ///
+    /// See the [Led2d trait documentation](Self) for usage examples.
     fn write_text(&self, text: &str, colors: &[RGB8]) {
         let mut frame = Frame2d::<W, H>::new();
         self.write_text_to_frame(text, colors, &mut frame);

@@ -685,6 +685,7 @@ dependencies = [
  "embassy-net",
  "embassy-sync 0.7.2",
  "embassy-time",
+ "embed-doc-image",
  "embedded-graphics",
  "heapless 0.8.0",
  "paste",

@@ -1,0 +1,60 @@
+#![allow(missing_docs)]
+#![no_std]
+#![no_main]
+
+use core::convert::Infallible;
+
+use embassy_executor::Spawner;
+use esp_backtrace as _;
+use log::info;
+
+use device_envoy_core::led2d::Led2d;
+use device_envoy_esp::{
+    init_and_start, led2d,
+    led2d::{Led2dFont, layout::LedLayout},
+    led_strip::Current,
+};
+use smart_leds::RGB8;
+
+esp_bootloader_esp_idf::esp_app_desc!();
+
+const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
+
+led2d! {
+    Led12x4 {
+        len: 48,
+        led_layout: LED_LAYOUT_12X4,
+        max_current: Current::Milliamps(250),
+        font: Led2dFont::Font3x4Trim,
+    }
+}
+
+fn write_rust<const W: usize, const H: usize>(led2d: &impl Led2d<W, H>) {
+    let colors = [
+        RGB8::new(0, 255, 255),
+        RGB8::new(255, 0, 0),
+        RGB8::new(255, 255, 0),
+    ];
+    led2d.write_text("Rust", &colors);
+}
+
+#[esp_rtos::main]
+async fn main(spawner: Spawner) -> ! {
+    match inner_main(spawner).await {
+        Ok(infallible) => match infallible {},
+        Err(error) => panic!("{error:?}"),
+    }
+}
+
+async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
+    init_and_start!(p, rmt80, rmt_mode::Blocking);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
+
+    info!("LED 2D trait example 1: Write text on a 12x4 panel via GPIO17");
+
+    let led12x4 = Led12x4::new(p.GPIO17, rmt80.channel0, spawner)?;
+
+    write_rust(&led12x4);
+
+    core::future::pending().await
+}

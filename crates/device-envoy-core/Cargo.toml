@@ -12,6 +12,7 @@ path = "src/lib.rs"
 host = ["dep:png"]
 defmt = ["dep:defmt"]
 wifi = ["dep:embassy-net"]
+doc-images = ["dep:embed-doc-image"]
 
 [dependencies]
 smart-leds = "0.4.0"
@@ -32,6 +33,7 @@ png = { version = "0.17", optional = true }
 portable-atomic = { version = "1.11.1", features = ["critical-section"] }
 static_cell = "2.1.0"
 time = { version = "0.3", default-features = false }
+embed-doc-image = { version = "0.1.4", optional = true }
 
 [dev-dependencies]
 critical-section = { version = "1.2.0", features = ["std"] }

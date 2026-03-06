@@ -53,10 +53,10 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     let led12x8_animated = Led12x8Animated::new(p.GPIO18, rmt80.channel0, spawner)?;
 
-    let mut frame_0 = Frame2d::<8, 12>::new();
+    let mut frame_0 = Frame2d::new();
     led12x8_animated.write_text_to_frame("Go", &[], &mut frame_0);
 
-    let mut frame_1 = Frame2d::<8, 12>::new();
+    let mut frame_1 = Frame2d::new();
     led12x8_animated.write_text_to_frame("\nGo", &[colors::HOT_PINK, colors::LIME], &mut frame_1);
 
     let frame_duration = Duration::from_secs(1);

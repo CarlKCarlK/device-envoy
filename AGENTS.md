@@ -147,6 +147,15 @@ When adding new examples, also add the standard cargo aliases in `.cargo/config.
 - Examples must show the actual `use` statements for the module being documented (bring types into scope explicitly rather than relying on hidden imports).
 - In all demos, examples, and doctests, prefer condensed `use` statements (group related imports on a single `use` line where it stays readable).
 
+### Core-Only Trait Example Workflow
+
+- When creating core-only trait examples for a device abstraction, first extract the canonical struct/module examples from `device-envoy-rp` into `device-envoy-esp/examples` as `*_exampleN_trait.rs` files.
+- Treat these ESP trait examples as an editable staging area and let the user iterate on them before changing docs.
+- Only after explicit user approval, move the finalized examples into trait documentation and reuse the introductory wording from the RP struct docs where applicable.
+- Before writing or editing any `*_trait.rs` example, review all existing `*_trait.rs` examples in the crate to match the established style and structure.
+- For `*_trait.rs` examples, include a core-only example function that uses core-only imports for the trait-facing API; follow the `audio_exampleNUM_trait.rs` pattern.
+- When migrating staged examples into a trait's documentation, add `See the FILLIN trait documentation for usage examples.` (with a proper link) on every method or constant doc that is demonstrated by those examples.
+
 Spelling: use American over British spelling.
 
 When making up variable names for examples and elsewhere, never use the prefix "My". Avoid this prefix.

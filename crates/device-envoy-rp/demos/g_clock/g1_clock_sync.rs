@@ -12,7 +12,7 @@ use device_envoy_rp::{
     Error, Result,
     button::PressedTo,
     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND, h12_m_s},
-    flash_array::FlashArray,
+    flash_block::FlashBlockRp,
     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
     wifi_auto::{WifiAuto, WifiAutoEvent},
 };
@@ -29,7 +29,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // We're going to store two blocks in flash: WiFi credentials and timezone.
-    let [wifi_credentials_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
+    let [wifi_credentials_flash_block, timezone_flash_block] = FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     // Timezone is an optional field that users can set on the setup website.
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();

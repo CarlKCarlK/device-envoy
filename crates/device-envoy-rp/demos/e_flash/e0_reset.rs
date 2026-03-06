@@ -6,7 +6,7 @@
 use core::{convert::Infallible, future, panic};
 use device_envoy_rp::{
     Result,
-    flash_array::{FlashArray, FlashBlock as _},
+    flash_block::{FlashBlockRp, FlashBlock as _},
     led2d,
     led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},
@@ -42,11 +42,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Create a flash array with one element.
-    let mut flash_array = FlashArray::<1>::new(p.FLASH)?;
+    let mut flash_block_array = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
     // Write a ResetMarker (different type than BootCounter) to flash.
-    // This clears any existing BootCounter since FlashArray type-checks on load.
-    flash_array[0].save(&ResetMarker(0))?;
+    // This clears any existing BootCounter since FlashBlockRp type-checks on load.
+    flash_block_array[0].save(&ResetMarker(0))?;
 
     // Display black (turn off all LEDs) on the panel
     let led12x8 = Led12x8::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;

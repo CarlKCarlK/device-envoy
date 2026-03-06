@@ -46,7 +46,7 @@ pub mod char_lcd;
 pub mod clock_sync;
 mod error;
 #[cfg(target_os = "none")]
-pub mod flash_array;
+pub mod flash_block;
 #[cfg(target_os = "none")]
 pub mod ir;
 #[cfg(target_os = "none")]

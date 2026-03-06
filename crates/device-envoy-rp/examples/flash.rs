@@ -17,7 +17,7 @@ use panic_probe as _;
 use serde::{Deserialize, Serialize};
 
 use device_envoy_rp::Result;
-use device_envoy_rp::flash_array::{FlashArray, FlashBlock as _};
+use device_envoy_rp::flash_block::{FlashBlockRp, FlashBlock as _};
 
 // ============================================================================
 // Test Data Structures
@@ -44,7 +44,7 @@ async fn inner_main(_spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     // Initialize Flash device
-    let [_, _, _, mut string_block, mut config_block] = FlashArray::<5>::new(p.FLASH)?;
+    let [_, _, _, mut string_block, mut config_block] = FlashBlockRp::new_array::<5>(p.FLASH)?;
 
     info!("Part 1: Storing data to flash");
     string_block.save(&String::<64>::try_from("Hello, Flash Storage!")?)?;

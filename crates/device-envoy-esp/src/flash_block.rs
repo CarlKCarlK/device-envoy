@@ -1,6 +1,6 @@
 //! A device abstraction for type-safe persistent storage in flash memory.
 //!
-//! See [`FlashArray`] for details and usage.
+//! See [`FlashBlockEsp`] for details and usage.
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
 #[cfg(target_os = "none")]
@@ -17,12 +17,12 @@ use static_cell::StaticCell;
 #[cfg(target_os = "none")]
 use crate::{Error, Result};
 #[cfg(target_os = "none")]
-use device_envoy_core::flash_array::{
+use device_envoy_core::flash_block::{
     self as core_flash, FlashBlock as CoreFlashBlock, FlashBlockError, FlashDevice,
     FLASH_BLOCK_SIZE_U32,
 };
 
-pub use device_envoy_core::flash_array::FlashBlock;
+pub use device_envoy_core::flash_block::FlashBlock;
 
 #[cfg(target_os = "none")]
 const DEFAULT_FLASH_REGION_BYTES: u32 = 16 * core_flash::FLASH_BLOCK_SIZE_U32;
@@ -173,13 +173,13 @@ impl FlashManager {
 }
 
 #[cfg(target_os = "none")]
-struct FlashArrayStatic {
+struct FlashBlockEspStatic {
     manager_cell: StaticCell<FlashManager>,
     manager_ref: Mutex<CriticalSectionRawMutex, core::cell::RefCell<Option<&'static FlashManager>>>,
 }
 
 #[cfg(target_os = "none")]
-impl FlashArrayStatic {
+impl FlashBlockEspStatic {
     const fn new() -> Self {
         Self {
             manager_cell: StaticCell::new(),
@@ -211,7 +211,7 @@ impl FlashArrayStatic {
 }
 
 #[cfg(target_os = "none")]
-/// A device abstraction for type-safe persistent storage in flash memory.
+/// A type-safe flash block for persistent storage.
 ///
 /// See this API for storing values such as Wi-Fi credentials and additional
 /// setup field values used by `wifi_auto`.
@@ -221,8 +221,7 @@ impl FlashArrayStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_esp::flash_array::FlashArray;
-/// use device_envoy_esp::flash_array::FlashBlock as _;
+/// use device_envoy_esp::flash_block::{FlashBlockEsp, FlashBlock as _};
 ///
 /// #[derive(serde::Serialize, serde::Deserialize, Clone)]
 /// struct WifiPersistedState {
@@ -233,7 +232,8 @@ impl FlashArrayStatic {
 ///
 /// # async fn example() -> device_envoy_esp::Result<core::convert::Infallible> {
 /// device_envoy_esp::init_and_start!(p);
-/// let [mut wifi_persisted_state_flash_block, mut fields_flash_block] = FlashArray::<2>::new(p.FLASH)?;
+/// let [mut wifi_persisted_state_flash_block, mut fields_flash_block] =
+///     FlashBlockEsp::new_array::<2>(p.FLASH)?;
 ///
 /// let wifi_persisted_state = wifi_persisted_state_flash_block.load::<WifiPersistedState>()?;
 /// if wifi_persisted_state.is_none() {
@@ -249,49 +249,6 @@ impl FlashArrayStatic {
 /// # core::future::pending().await
 /// # }
 /// ```
-pub struct FlashArray<const N: usize>;
-
-#[cfg(target_os = "none")]
-impl<const N: usize> FlashArray<N> {
-    /// Reserve `N` blocks in the default tail region.
-    ///
-    /// See the [FlashArray struct example](Self) for usage.
-    pub fn new(flash: esp_hal::peripherals::FLASH<'static>) -> Result<[FlashBlockEsp; N]> {
-        Self::new_with_request(
-            flash,
-            FlashRegionRequest::Tail {
-                byte_len: DEFAULT_FLASH_REGION_BYTES,
-            },
-        )
-    }
-
-    /// Reserve `N` blocks in an explicit flash region.
-    ///
-    /// Both `start_offset` and `byte_len` must be multiples of 4096 bytes.
-    /// See the [FlashArray struct example](Self) for usage.
-    pub fn new_with_region(
-        flash: esp_hal::peripherals::FLASH<'static>,
-        start_offset: u32,
-        byte_len: u32,
-    ) -> Result<[FlashBlockEsp; N]> {
-        Self::new_with_request(
-            flash,
-            FlashRegionRequest::Explicit {
-                start_offset,
-                byte_len,
-            },
-        )
-    }
-
-    fn new_with_request(
-        flash: esp_hal::peripherals::FLASH<'static>,
-        requested_region: FlashRegionRequest,
-    ) -> Result<[FlashBlockEsp; N]> {
-        static FLASH_ARRAY_STATIC: FlashArrayStatic = FlashArrayStatic::new();
-        let manager = FLASH_ARRAY_STATIC.manager(flash, requested_region)?;
-        manager.reserve::<N>()
-    }
-}
 
 #[cfg(target_os = "none")]
 pub struct FlashBlockEsp {
@@ -333,5 +290,46 @@ impl CoreFlashBlock for FlashBlockEsp {
             let mut adapter = EspFlashAdapter(flash_storage);
             core_flash::clear_block(&mut adapter, block_offset).map_err(convert_flash_block_error)
         })
+    }
+}
+
+#[cfg(target_os = "none")]
+impl FlashBlockEsp {
+    /// Reserve `N` blocks in the default tail region.
+    pub fn new_array<const N: usize>(
+        flash: esp_hal::peripherals::FLASH<'static>,
+    ) -> Result<[FlashBlockEsp; N]> {
+        Self::new_array_with_request(
+            flash,
+            FlashRegionRequest::Tail {
+                byte_len: DEFAULT_FLASH_REGION_BYTES,
+            },
+        )
+    }
+
+    /// Reserve `N` blocks in an explicit flash region.
+    ///
+    /// Both `start_offset` and `byte_len` must be multiples of 4096 bytes.
+    pub fn new_array_with_region<const N: usize>(
+        flash: esp_hal::peripherals::FLASH<'static>,
+        start_offset: u32,
+        byte_len: u32,
+    ) -> Result<[FlashBlockEsp; N]> {
+        Self::new_array_with_request(
+            flash,
+            FlashRegionRequest::Explicit {
+                start_offset,
+                byte_len,
+            },
+        )
+    }
+
+    fn new_array_with_request<const N: usize>(
+        flash: esp_hal::peripherals::FLASH<'static>,
+        requested_region: FlashRegionRequest,
+    ) -> Result<[FlashBlockEsp; N]> {
+        static FLASH_BLOCK_ESP_STATIC: FlashBlockEspStatic = FlashBlockEspStatic::new();
+        let manager = FLASH_BLOCK_ESP_STATIC.manager(flash, requested_region)?;
+        manager.reserve::<N>()
     }
 }

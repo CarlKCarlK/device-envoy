@@ -8,7 +8,7 @@ pub mod char_lcd;
 pub mod clock;
 #[cfg(feature = "wifi")]
 pub mod clock_sync;
-pub mod flash_array;
+pub mod flash_block;
 pub mod ir;
 pub mod led2d;
 pub mod led4;

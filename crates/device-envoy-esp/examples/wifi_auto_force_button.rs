@@ -12,7 +12,7 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    button::PressedTo, flash_array::FlashArray, init_and_start, wifi_auto::WifiAuto,
+    button::PressedTo, flash_block::FlashBlockEsp, init_and_start, wifi_auto::WifiAuto,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -29,7 +29,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let [wifi_auto_flash_block] = FlashArray::<1>::new(p.FLASH)?;
+    let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
     let wifi_auto = WifiAuto::new(
         p.WIFI,
         wifi_auto_flash_block,

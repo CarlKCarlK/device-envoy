@@ -13,7 +13,7 @@ use defmt_rtt as _;
 use device_envoy_rp::button::ButtonDevice as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::clock_sync::UnixSeconds;
-use device_envoy_rp::flash_array::FlashArray;
+use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::led4::{
     BlinkState, Led4, Led4Static, OutputArray, circular_outline_animation,
 };
@@ -66,7 +66,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         timezone_flash_block,
         device_name_flash_block,
         location_flash_block,
-    ] = FlashArray::<4>::new(p.FLASH)?;
+    ] = FlashBlockRp::new_array::<4>(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);

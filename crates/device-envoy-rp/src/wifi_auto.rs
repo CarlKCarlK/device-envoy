@@ -23,7 +23,7 @@ use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
 use crate::button::{ButtonDevice as _, ButtonRp, PressedTo};
-use crate::flash_array::FlashBlockRp;
+use crate::flash_block::FlashBlockRp;
 use crate::{Error, Result};
 use device_envoy_core::wifi_auto::{WifiCredentials as InnerWifiCredentials, WifiStartMode};
 
@@ -72,7 +72,7 @@ pub(crate) struct WifiAutoStatic {
 /// The typical usage pattern is:
 ///
 /// 0. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
-/// 1. Construct a [`FlashArray`](crate::flash_array::FlashArray) to store WiFi credentials.
+/// 1. Construct a [`FlashBlockRp`] to store WiFi credentials.
 /// 2. Use [`WifiAuto::new`] to construct a `WifiAuto`.
 /// 3. Use [`WifiAuto::connect`] to connect to WiFi while optionally showing status.
 ///
@@ -94,7 +94,7 @@ pub(crate) struct WifiAutoStatic {
 /// use device_envoy_rp::{
 ///     Result,
 ///     button::PressedTo,
-///     flash_array::FlashArray,
+///     flash_block::FlashBlockRp,
 ///     wifi_auto::{WifiAuto, WifiAutoEvent},
 /// };
 /// use embassy_time::Duration;
@@ -104,7 +104,7 @@ pub(crate) struct WifiAutoStatic {
 ///     p: embassy_rp::Peripherals,
 /// ) -> Result<()> {
 ///     // Set up flash storage for WiFi credentials
-///     let [wifi_flash] = FlashArray::<1>::new(p.FLASH)?;
+///     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 ///
 ///     // Construct WifiAuto
 ///     let wifi_auto = WifiAuto::new(
@@ -394,13 +394,13 @@ impl WifiAuto {
     /// # use device_envoy_rp::{
     /// #     Result,
     /// #     button::PressedTo,
-    /// #     flash_array::FlashArray,
+    /// #     flash_block::FlashBlockRp,
     /// #     wifi_auto::WifiAuto,
     /// # };
     /// # use embassy_executor::Spawner;
     /// # use embassy_rp::Peripherals;
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
-    /// # let [wifi_flash] = FlashArray::<1>::new(p.FLASH)?;
+    /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     /// # let wifi_auto = WifiAuto::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,
@@ -431,7 +431,7 @@ impl WifiAuto {
     /// # use device_envoy_rp::{
     /// #     Result,
     /// #     button::PressedTo,
-    /// #     flash_array::FlashArray,
+    /// #     flash_block::FlashBlockRp,
     /// #     led_strip::colors,
     /// #     wifi_auto::{WifiAuto, WifiAutoEvent},
     /// # };
@@ -445,7 +445,7 @@ impl WifiAuto {
     /// # async fn show_animated_dots(_led8x12: &Led8x12) -> Result<()> { Ok(()) }
     /// # const COLORS: &[RGB8] = &[colors::WHITE];
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
-    /// # let [wifi_flash] = FlashArray::<1>::new(p.FLASH)?;
+    /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     /// # let wifi_auto = WifiAuto::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,

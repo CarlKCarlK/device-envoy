@@ -6,7 +6,7 @@
 use core::{convert::Infallible, future, panic};
 use device_envoy_rp::{
     Result,
-    flash_array::{FlashArray, FlashBlock as _},
+    flash_block::{FlashBlockRp, FlashBlock as _},
     led_strip::colors,
     led2d,
     led2d::Led2d as _,
@@ -45,9 +45,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Create a one-block flash array. Each block holds up to 3900 bytes
     // of serialized data (one 4 KB flash block minus metadata).
-    let flash_array = FlashArray::<1>::new(p.FLASH)?;
+    let flash_block_array = FlashBlockRp::new_array::<1>(p.FLASH)?;
     // Can destructure the array.
-    let [mut boot_counter_block] = flash_array;
+    let [mut boot_counter_block] = flash_block_array;
 
     // Read the boot counter. Wrong type -> None -> BootCounter(0).
     let mut boot_counter = boot_counter_block.load()?.unwrap_or(BootCounter(0));

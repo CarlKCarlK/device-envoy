@@ -1,7 +1,7 @@
 //! Shared low-level flash block protocol for type-safe persistent storage.
 //!
 //! This module provides the platform-independent protocol layer for
-//! [`device_envoy_rp::flash_array`] and `device_envoy_esp::flash_array`. See those
+//! [`device_envoy_rp::flash_block`] and `device_envoy_esp::flash_block`. See those
 //! platform crates for constructors, hardware wiring, and usage examples.
 
 use core::any::type_name;
@@ -41,7 +41,7 @@ pub enum FlashBlockError<E> {
 /// Canonical typed block operations for flash-backed persistence.
 ///
 /// Platform crates implement this trait on their concrete flash block handle
-/// types (for example, `device_envoy_rp::flash_array::FlashBlock`).
+/// types (for example, `device_envoy_rp::flash_block::FlashBlock`).
 ///
 /// Constructors and hardware wiring remain platform-specific; this trait
 /// defines the shared operation surface used by higher-level abstractions.

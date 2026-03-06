@@ -13,7 +13,7 @@ use core::convert::Infallible;
 use device_envoy_rp::{
     Result,
     button::PressedTo,
-    flash_array::FlashArray,
+    flash_block::FlashBlockRp,
     wifi_auto::{WifiAuto, WifiAutoEvent},
 };
 use embassy_net::dns::DnsQueryType;
@@ -28,7 +28,7 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let [wifi_flash] = FlashArray::<1>::new(p.FLASH)?;
+    let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
     let wifi_auto = WifiAuto::new(
         p.PIN_23,  // CYW43 power

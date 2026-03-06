@@ -26,7 +26,7 @@ use device_envoy_rp::audio_player::{
 use device_envoy_rp::button::ButtonDevice as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s};
-use device_envoy_rp::flash_array::FlashArray;
+use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAuto, WifiAutoEvent};
 use device_envoy_rp::{Error, Result, tone};
@@ -138,7 +138,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let audio_player8 = AudioPlayer10::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH1, spawner)?;
 
-    let [wifi_credentials_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
+    let [wifi_credentials_flash_block, timezone_flash_block] = FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);

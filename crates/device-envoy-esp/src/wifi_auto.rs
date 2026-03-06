@@ -16,7 +16,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 #[cfg(target_os = "none")]
 use crate::button::{ButtonDevice as _, ButtonEsp, PressedTo};
 #[cfg(target_os = "none")]
-use crate::flash_array::{FlashBlock as _, FlashBlockEsp};
+use crate::flash_block::{FlashBlock as _, FlashBlockEsp};
 use crate::Result;
 #[cfg(target_os = "none")]
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4};

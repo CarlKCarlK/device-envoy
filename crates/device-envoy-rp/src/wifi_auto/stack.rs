@@ -29,7 +29,7 @@ use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
 use super::dhcp::dhcp_server_task;
-use crate::flash_array::{FlashBlock as _, FlashBlockRp};
+use crate::flash_block::{FlashBlock as _, FlashBlockRp};
 use device_envoy_core::wifi_auto::{WifiCredentials, WifiStartMode};
 
 // ============================================================================

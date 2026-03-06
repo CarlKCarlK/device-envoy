@@ -20,7 +20,7 @@ use log::{info, warn};
 
 use device_envoy_esp::{
     button::PressedTo,
-    flash_array::FlashArray,
+    flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
     led2d::{layout::LedLayout, Led2dFont},
@@ -62,7 +62,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let led12x8_dns = Led12x8Dns::new(p.GPIO18, rmt80.channel0, spawner)?;
-    let [wifi_auto_flash_block] = FlashArray::<1>::new(p.FLASH)?;
+    let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
     let wifi_auto = WifiAuto::new(
         p.WIFI,
         wifi_auto_flash_block,

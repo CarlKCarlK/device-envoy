@@ -7,7 +7,7 @@
 )]
 
 #[cfg(target_os = "none")]
-use crate::flash_array::FlashBlockEsp;
+use crate::flash_block::FlashBlockEsp;
 use crate::Error;
 use device_envoy_core::__impl_wifi_auto_fields;
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer, WifiAutoField};

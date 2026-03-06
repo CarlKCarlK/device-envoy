@@ -7,7 +7,7 @@
 )]
 
 use crate::Error;
-use crate::flash_array::FlashBlockRp;
+use crate::flash_block::FlashBlockRp;
 use device_envoy_core::__impl_wifi_auto_fields;
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer};
 

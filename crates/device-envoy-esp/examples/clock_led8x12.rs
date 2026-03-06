@@ -18,7 +18,7 @@ use log::{info, warn};
 
 use device_envoy_esp::{
     button::PressedTo,
-    flash_array::FlashArray,
+    flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
     led2d::{layout::LedLayout, Led2dFont},
@@ -74,7 +74,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     let led8x12_clock = Led8x12Clock::new(p.GPIO18, rmt80.channel0, spawner)?;
 
-    let [wifi_auto_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
+    let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 

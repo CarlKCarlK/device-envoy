@@ -14,7 +14,7 @@
 //!     Result,
 //!     button::PressedTo,
 //!     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND, h12_m_s},
-//!     flash_array::FlashArray,
+//!     flash_block::FlashBlockRp,
 //!     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
 //!     wifi_auto::{WifiAuto, WifiAutoEvent},
 //! };
@@ -24,7 +24,7 @@
 //!     spawner: embassy_executor::Spawner,
 //!     p: embassy_rp::Peripherals,
 //! ) -> Result<(), device_envoy_rp::Error> {
-//!     let [wifi_credentials_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
+//!     let [wifi_credentials_flash_block, timezone_flash_block] = FlashBlockRp::new_array::<2>(p.FLASH)?;
 //!
 //!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
 //!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);

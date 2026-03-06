@@ -27,7 +27,7 @@ pub mod time_sync {
     pub use device_envoy_core::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 }
 pub mod audio_player;
-pub mod flash_array;
+pub mod flash_block;
 pub mod ir;
 pub mod led2d;
 pub mod led4;

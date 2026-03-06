@@ -19,7 +19,7 @@ use device_envoy_esp::{
     button::PressedTo,
     char_lcd::{CharLcd, CharLcdStatic},
     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND},
-    flash_array::FlashArray,
+    flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
@@ -54,7 +54,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static CHAR_LCD_STATIC: CharLcdStatic = CharLcd::new_static();
     let char_lcd = CharLcd::new(&CHAR_LCD_STATIC, i2c, spawner)?;
 
-    let [wifi_auto_flash_block, timezone_flash_block] = FlashArray::<2>::new(p.FLASH)?;
+    let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);

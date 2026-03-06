@@ -33,8 +33,8 @@ audio_player! {
 const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
 //todo0000000 remove temporary 1% byte-scale verification block (may no longer apply; block already removed after hardware fix).
 
-fn play_mary_phrase(audio_player: &impl AudioPlayer<{ SAMPLE_RATE_HZ }>) {
-    type PlayableRef = &'static dyn Playable<{ SAMPLE_RATE_HZ }>;
+fn play_mary_phrase(audio_player: &impl AudioPlayer<SAMPLE_RATE_HZ>) {
+    type PlayableRef = &'static dyn Playable<SAMPLE_RATE_HZ>;
 
     const REST: PlayableRef = &SilenceClip::new(StdDuration::from_millis(80));
     const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);

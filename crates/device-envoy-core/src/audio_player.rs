@@ -1172,11 +1172,12 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_envoy_rp::audio_player::{
-///     AtEnd, AudioPlayer, Gain, Playable, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
-///     pcm_clip,
+/// use device_envoy_core::audio_player::{
+///     AtEnd, AudioPlayer, Gain, Playable, SilenceClip, VOICE_22050_HZ, Volume,
 /// };
-/// use device_envoy_rp::button::{Button as _, ButtonRp, PressedTo};
+/// use device_envoy_core::button::Button;
+/// use device_envoy_rp::audio_player::{audio_player, pcm_clip};
+/// use device_envoy_rp::button::{ButtonRp, PressedTo};
 /// use device_envoy_rp::tone;
 /// use core::time::Duration as StdDuration;
 /// use embassy_futures::select::{Either, select};
@@ -1206,34 +1207,36 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 ///     }
 /// }
 ///
-/// async fn play_nasa_with_runtime_volume<AudioPlayerType>(
-///     audio_player: &AudioPlayerType,
-///     button: &mut ButtonRp<'_>,
-/// ) where
-///     AudioPlayerType: AudioPlayer<{ VOICE_22050_HZ }>,
-/// {
+/// async fn play_nasa_with_runtime_volume(
+///     audio_player: &impl AudioPlayer<{ VOICE_22050_HZ }>,
+///     button: &mut impl Button,
+/// ) {
+///     type PlayableRef = &'static dyn Playable<{ VOICE_22050_HZ }>;
+///
 ///     const fn ms(milliseconds: u64) -> StdDuration {
 ///         StdDuration::from_millis(milliseconds)
 ///     }
-///     const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
-///     const NASA: &'static dyn Playable<{ VOICE_22050_HZ }> = &Nasa::adpcm_clip();
-///     const GAP: &'static dyn Playable<{ VOICE_22050_HZ }> = &SilenceClip::new(ms(80));
-///     const CHIME: &'static dyn Playable<{ VOICE_22050_HZ }> =
-///         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
+///
+///     const NASA: PlayableRef = &Nasa::adpcm_clip();
+///     const GAP: PlayableRef = &SilenceClip::new(ms(80));
+///     const CHIME: PlayableRef = &tone!(880, VOICE_22050_HZ, ms(100)).with_gain(Gain::percent(20));
 ///     const VOLUME_STEPS_PERCENT: [u8; 7] = [50, 25, 12, 6, 3, 1, 0];
+///     let initial_volume = audio_player.volume();
 ///
-///     button.wait_for_press().await;
-///     audio_player.play([CHIME, NASA, GAP], AtEnd::Loop);
+///     loop {
+///         button.wait_for_press().await;
+///         audio_player.play([CHIME, NASA, GAP], AtEnd::Loop);
 ///
-///     for volume_percent in VOLUME_STEPS_PERCENT {
-///         match select(button.wait_for_press(), Timer::after(Duration::from_secs(1))).await {
-///             Either::First(()) => break,
-///             Either::Second(()) => audio_player.set_volume(Volume::percent(volume_percent)),
+///         for volume_percent in VOLUME_STEPS_PERCENT {
+///             match select(button.wait_for_press(), Timer::after(Duration::from_secs(1))).await {
+///                 Either::First(()) => break,
+///                 Either::Second(()) => audio_player.set_volume(Volume::percent(volume_percent)),
+///             }
 ///         }
-///     }
 ///
-///     audio_player.stop();
-///     audio_player.set_volume(<AudioPlayerType as AudioPlayer<{ VOICE_22050_HZ }>>::INITIAL_VOLUME);
+///         audio_player.stop();
+///         audio_player.set_volume(initial_volume);
+///     }
 /// }
 ///
 /// # #[embassy_executor::main]

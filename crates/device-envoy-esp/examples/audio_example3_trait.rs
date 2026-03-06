@@ -71,13 +71,13 @@ pcm_clip! {
 
 fn play_resampled_countdown<AudioPlayerType>(audio_player: &AudioPlayerType)
 where
-    AudioPlayerType: AudioPlayer<{ NARROWBAND_8000_HZ }>,
+    AudioPlayerType: AudioPlayer<NARROWBAND_8000_HZ>,
 {
-    const DIGITS: [&'static dyn Playable<{ NARROWBAND_8000_HZ }>; 3] =
+    const DIGITS: [&'static dyn Playable<NARROWBAND_8000_HZ>; 3] =
         [&Digit0::adpcm_clip(), &Digit1::adpcm_clip(), &Digit2::adpcm_clip()];
-    const NASA: &'static dyn Playable<{ NARROWBAND_8000_HZ }> = &Nasa::pcm_clip()
+    const NASA: &'static dyn Playable<NARROWBAND_8000_HZ> = &Nasa::pcm_clip()
         .with_gain(Gain::percent(25))
-        .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
+        .with_adpcm::<Nasa::ADPCM_DATA_LEN>();
 
     audio_player.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);
 }

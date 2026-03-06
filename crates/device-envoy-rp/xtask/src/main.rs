@@ -1154,13 +1154,14 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
         GeneratedDocStubExpectation {
             relative_path: "src/audio_player/audio_player_generated.rs",
             required_fragments: &[
-                "pub const SAMPLE_RATE_HZ: u32",
-                "pub const INITIAL_VOLUME: Volume",
-                "pub const MAX_VOLUME: Volume",
-                "pub fn play<I>(",
-                "pub async fn wait_until_stopped(&self)",
-                "pub fn set_volume(&self, volume: Volume)",
-                "pub fn volume(&self) -> Volume",
+                "impl AudioPlayer<VOICE_22050_HZ> for AudioPlayerGenerated",
+                "const MAX_CLIPS: usize",
+                "const INITIAL_VOLUME: Volume",
+                "const MAX_VOLUME: Volume",
+                "fn play<I>(&self, audio_clips: I, at_end: AtEnd)",
+                "async fn wait_until_stopped(&self)",
+                "fn set_volume(&self, volume: Volume)",
+                "fn volume(&self) -> Volume",
             ],
         },
         GeneratedDocStubExpectation {

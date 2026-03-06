@@ -15,7 +15,8 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy_rp::Result;
 use device_envoy_rp::audio_player::{
-    AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
+    AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player,
+    pcm_clip,
 };
 use device_envoy_rp::button::ButtonDevice as _;
 use device_envoy_rp::button::{ButtonRp, PressedTo};

@@ -7,7 +7,9 @@ use core::time::Duration as StdDuration;
 
 use device_envoy_rp::{
     Result,
-    audio_player::{AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip},
+    audio_player::{
+        AtEnd, AudioPlayer as _, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
+    },
     button::{ButtonRp, PressedTo},
     tone,
 };
@@ -95,6 +97,10 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
             }
         }
         audio_player8.stop();
-        audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
+        audio_player8.set_volume(
+            <AudioPlayer8 as device_envoy_rp::audio_player::AudioPlayer<
+                { AudioPlayer8::SAMPLE_RATE_HZ },
+            >>::INITIAL_VOLUME,
+        );
     }
 }

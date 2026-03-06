@@ -16,7 +16,8 @@ use core::time::Duration as StdDuration;
 
 use device_envoy_rp::Result;
 use device_envoy_rp::audio_player::{
-    AtEnd, Gain, SilenceClip, VOICE_22050_HZ, Volume, adpcm_clip, audio_player, pcm_clip,
+    AtEnd, AudioPlayer as _, Gain, SilenceClip, VOICE_22050_HZ, Volume, adpcm_clip, audio_player,
+    pcm_clip,
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};

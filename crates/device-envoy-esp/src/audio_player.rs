@@ -30,11 +30,10 @@
 //!   [`AudioPlayerGenerated`](audio_player_generated::AudioPlayerGenerated)
 //!   for sample generated methods and associated constants.
 //! - [`AudioPlayerGenerated`](audio_player_generated::AudioPlayerGenerated) - Sample
-//!   generated audio player struct type, showing available methods (for example
-//!   [`new`](audio_player_generated::AudioPlayerGenerated::new) and
-//!   [`play`](audio_player_generated::AudioPlayerGenerated::play))
-//!   and associated constants (for example
-//!   [`SAMPLE_RATE_HZ`](audio_player_generated::AudioPlayerGenerated::SAMPLE_RATE_HZ)).
+//!   generated audio player struct type, showing constructor/associated constants
+//!   (for example [`new`](audio_player_generated::AudioPlayerGenerated::new)).
+//! - [`AudioPlayer`] - Trait providing playback operations
+//!   (`play`, `stop`, `wait_until_stopped`, runtime volume controls) for generated types.
 //! - [`pcm_clip!`] - Macro to "compile in" an uncompressed (PCM) clip from an external file
 //!   (includes syntax details). See
 //!   [`PcmClipGenerated`](pcm_clip_generated::PcmClipGenerated)
@@ -60,7 +59,7 @@
 //! # use core::result::Result::Ok;
 //! use device_envoy::{
 //!     Result,
-//!     audio_player::{AtEnd, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
+//!     audio_player::{AudioPlayer as _,AtEnd, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
 //!     tone,
 //! };
 //! use core::time::Duration as StdDuration;
@@ -125,7 +124,7 @@
 //! # use core::result::Result::Ok;
 //! use device_envoy::{
 //!     Result,
-//!     audio_player::{
+//!     audio_player::{AudioPlayer as _,
 //!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
 //!     button::{ButtonEsp, PressedTo},
@@ -213,7 +212,7 @@
 //!             }
 //!         }
 //!         audio_player8.stop();
-//!         audio_player8.set_volume(AudioPlayer8::INITIAL_VOLUME);
+//!         audio_player8.set_volume(<AudioPlayer8 as device_envoy::audio_player::AudioPlayer<{ AudioPlayer8::SAMPLE_RATE_HZ }>>::INITIAL_VOLUME);
 //!
 //!     }
 //! }
@@ -238,7 +237,7 @@
 //! # use core::result::Result::Ok;
 //! use device_envoy::{
 //!     Result,
-//!     audio_player::{
+//!     audio_player::{AudioPlayer as _,
 //!         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip,
 //!         audio_player,
 //!     },
@@ -344,6 +343,53 @@ type AudioI2sTxTransfer = esp_hal::i2s::master::asynch::I2sWriteDmaTransferAsync
     &'static mut [u8; DMA_TX_BYTES],
 >;
 
+/// Internal runtime handle for macro-generated audio player types.
+///
+/// Must remain `pub` because `audio_player!` expands in downstream crates and
+/// references this type directly. `#[doc(hidden)]` keeps it out of user-facing docs.
+#[doc(hidden)]
+pub struct AudioPlayerEsp<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+}
+
+impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayerEsp<MAX_CLIPS, SAMPLE_RATE_HZ> {
+    #[doc(hidden)]
+    pub const fn new_static() -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static()
+    }
+
+    #[doc(hidden)]
+    pub const fn new_static_with_max_volume(
+        max_volume: Volume,
+    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static_with_max_volume(max_volume)
+    }
+
+    #[doc(hidden)]
+    pub const fn new_static_with_max_volume_and_initial_volume(
+        max_volume: Volume,
+        initial_volume: Volume,
+    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static_with_max_volume_and_initial_volume(max_volume, initial_volume)
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub const fn new(
+        audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+    ) -> Self {
+        Self {
+            audio_player_static,
+        }
+    }
+
+    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
+    #[doc(hidden)]
+    pub fn __audio_player_static(&self) -> &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        self.audio_player_static
+    }
+}
+
 #[cfg(target_os = "none")]
 struct EspAudioOutputSink<'a> {
     i2s_tx_transfer: &'a mut AudioI2sTxTransfer,
@@ -371,17 +417,17 @@ impl AudioOutputSink<SAMPLE_BUFFER_LEN> for EspAudioOutputSink<'_> {
 pub async fn device_loop<
     const MAX_CLIPS: usize,
     const SAMPLE_RATE_HZ: u32,
-    DmaChannel: DmaChannelFor<AnyI2s<'static>>,
-    DinPin: PeripheralOutput<'static>,
-    BclkPin: PeripheralOutput<'static>,
-    WsPin: PeripheralOutput<'static>,
+    Dma: DmaChannelFor<AnyI2s<'static>>,
+    DataPin: PeripheralOutput<'static>,
+    BitBlockPin: PeripheralOutput<'static>,
+    WordSelectPin: PeripheralOutput<'static>,
 >(
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
     i2s: esp_hal::peripherals::I2S0<'static>,
-    dma: DmaChannel,
-    data_pin: DinPin,
-    bit_clock_pin: BclkPin,
-    word_select_pin: WsPin,
+    dma: Dma,
+    data_pin: DataPin,
+    bit_clock_pin: BitBlockPin,
+    word_select_pin: WordSelectPin,
 ) -> ! {
     let i2s = I2s::new(
         i2s,
@@ -625,9 +671,10 @@ async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) ->
 ///
 /// - `<Name>` - generated player struct type
 /// - `<Name>Playable` - trait-object clip source alias at this player's sample rate
-/// - associated constants and methods on `<Name>` (for example:
-///   `SAMPLE_RATE_HZ`, `new(...)`, `play(...)`,
-///   `wait_until_stopped(...)`, and runtime volume controls)
+/// - associated constants and constructor on `<Name>` (for example:
+///   `SAMPLE_RATE_HZ`, `new(...)`)
+/// - playback operations via [`AudioPlayer`](crate::audio_player::AudioPlayer) trait
+///   (`play(...)`, `stop()`, `wait_until_stopped(...)`, volume controls)
 ///
 /// The generated type contains static resources and spawns its background device
 /// task from `new(...)`.
@@ -1052,7 +1099,7 @@ macro_rules! __audio_player_impl {
         $crate::audio_player::paste::paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]:
                 $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }> =
-                $crate::audio_player::AudioPlayer::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
+                $crate::audio_player::AudioPlayerEsp::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
                     $max_volume,
                     $initial_volume,
                 );
@@ -1064,7 +1111,7 @@ macro_rules! __audio_player_impl {
                 "See the [audio_player module documentation](mod@crate::audio_player) for usage and examples."
             )]
             $vis struct $name {
-                player: $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>,
+                player: $crate::audio_player::AudioPlayerEsp<$max_clips, { $sample_rate_hz }>,
             }
 
             #[doc = concat!(
@@ -1085,10 +1132,6 @@ macro_rules! __audio_player_impl {
             impl $name {
                 /// Sample rate used for audio playback by this generated player type.
                 pub const SAMPLE_RATE_HZ: u32 = $sample_rate_hz;
-                /// Initial runtime volume relative to [`Self::MAX_VOLUME`].
-                pub const INITIAL_VOLUME: $crate::audio_player::Volume = $initial_volume;
-                /// Runtime volume ceiling for this generated player type.
-                pub const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;
 
                 /// Creates and spawns the generated audio player instance.
                 ///
@@ -1112,24 +1155,47 @@ macro_rules! __audio_player_impl {
                     );
                     spawner.spawn(token)?;
                     let player =
-                        $crate::audio_player::AudioPlayer::new(&[<$name:upper _AUDIO_PLAYER_STATIC>]);
+                        $crate::audio_player::AudioPlayerEsp::new(&[<$name:upper _AUDIO_PLAYER_STATIC>]);
                     Ok([<$name:upper _AUDIO_PLAYER_CELL>].init(Self { player }))
-                }
-
-                /// Waits until current playback has fully stopped.
-                ///
-                /// See the [audio_player module documentation](mod@crate::audio_player)
-                /// for example usage.
-                pub async fn wait_until_stopped(&self) {
-                    self.player.wait_until_stopped().await;
                 }
             }
 
-            impl ::core::ops::Deref for $name {
-                type Target = $crate::audio_player::AudioPlayer<$max_clips, { $sample_rate_hz }>;
+            impl $crate::audio_player::AudioPlayer<{ $sample_rate_hz }> for $name {
+                const MAX_CLIPS: usize = $max_clips;
+                const INITIAL_VOLUME: $crate::audio_player::Volume = $initial_volume;
+                const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;
 
-                fn deref(&self) -> &Self::Target {
-                    &self.player
+                fn play<I>(&self, audio_clips: I, at_end: $crate::audio_player::AtEnd)
+                where
+                    I: IntoIterator<Item = &'static dyn $crate::audio_player::Playable<{ $sample_rate_hz }>>,
+                {
+                    $crate::audio_player::__audio_player_play(
+                        self.player.__audio_player_static(),
+                        audio_clips,
+                        at_end,
+                    );
+                }
+
+                fn stop(&self) {
+                    $crate::audio_player::__audio_player_stop(self.player.__audio_player_static());
+                }
+
+                async fn wait_until_stopped(&self) {
+                    $crate::audio_player::__audio_player_wait_until_stopped(
+                        self.player.__audio_player_static(),
+                    )
+                    .await;
+                }
+
+                fn set_volume(&self, volume: $crate::audio_player::Volume) {
+                    $crate::audio_player::__audio_player_set_volume(
+                        self.player.__audio_player_static(),
+                        volume,
+                    );
+                }
+
+                fn volume(&self) -> $crate::audio_player::Volume {
+                    $crate::audio_player::__audio_player_volume(self.player.__audio_player_static())
                 }
             }
 

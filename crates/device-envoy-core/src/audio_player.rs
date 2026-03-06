@@ -46,7 +46,7 @@ pub const PRO_48000_HZ: u32 = 48_000;
 ///
 /// `Volume` is used by the player-level controls
 /// [`max_volume`, `initial_volume`](macro@crate::audio_player), and
-/// [`set_volume`](audio_player_generated::AudioPlayerGenerated::set_volume),
+/// [`set_volume`](AudioPlayer::set_volume),
 /// which set the absolute playback loudness behavior for the whole player.
 ///
 /// This is different from [`Gain`] and [`PcmClipBuf::with_gain`], which
@@ -132,7 +132,7 @@ impl Volume {
 ///
 /// This is different from [`Volume`] used by
 /// [`max_volume`, `initial_volume`](macro@crate::audio_player), and
-/// [`set_volume`](audio_player_generated::AudioPlayerGenerated::set_volume),
+/// [`set_volume`](AudioPlayer::set_volume),
 /// which set the absolute playback loudness behavior for the whole player.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
@@ -604,7 +604,7 @@ fn read_i16_le(bytes: &[u8], byte_offset: usize) -> Option<i16> {
 
 /// End-of-sequence behavior for playback.
 ///
-/// `AudioPlayer` supports looping or stopping at the end of a clip sequence.
+/// Generated audio player types support looping or stopping at the end of a clip sequence.
 ///
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
@@ -1091,7 +1091,7 @@ impl SilenceClip {
     }
 }
 
-/// A clip source trait for [`AudioPlayer::play`](crate::audio_player::AudioPlayer::play).
+/// A clip source trait for generated audio player `play(...)` methods.
 ///
 /// This trait let's us pass audio clips of different types (PCM, ADPCM, or silence) in a single heterogeneous sequence to `play`.
 ///
@@ -1103,6 +1103,40 @@ pub trait Playable<const SAMPLE_RATE_HZ: u32>: sealed::PlayableSealed<SAMPLE_RAT
 impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
     T: sealed::PlayableSealed<SAMPLE_RATE_HZ>
 {
+}
+
+/// Platform-agnostic audio player device contract.
+///
+/// Platform crates implement this trait for generated audio player types so
+/// playback operations resolve through trait methods instead of inherent methods.
+#[allow(async_fn_in_trait)]
+pub trait AudioPlayer<const SAMPLE_RATE_HZ: u32> {
+    /// Maximum number of clips accepted by `play(...)` for this generated type.
+    const MAX_CLIPS: usize;
+    /// Initial runtime volume relative to [`Self::MAX_VOLUME`].
+    const INITIAL_VOLUME: Volume;
+    /// Runtime volume ceiling for this generated player type.
+    const MAX_VOLUME: Volume;
+
+    /// Starts playback of one or more static audio clips.
+    ///
+    /// Accepts any array-like or iterator input. The maximum number of clips
+    /// is determined by the generated type configuration.
+    fn play<I>(&self, audio_clips: I, at_end: AtEnd)
+    where
+        I: IntoIterator<Item = &'static dyn Playable<SAMPLE_RATE_HZ>>;
+
+    /// Stops current playback as soon as possible.
+    fn stop(&self);
+
+    /// Waits until playback is stopped.
+    async fn wait_until_stopped(&self);
+
+    /// Sets runtime playback volume relative to the generated player's max volume.
+    fn set_volume(&self, volume: Volume);
+
+    /// Returns the current runtime playback volume relative to max volume.
+    fn volume(&self) -> Volume;
 }
 
 mod sealed {
@@ -1491,11 +1525,7 @@ impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>
 
 // Must be `pub` so platform runtime handles can call this from another crate.
 #[doc(hidden)]
-pub fn __audio_player_play<
-    I,
-    const MAX_CLIPS: usize,
-    const SAMPLE_RATE_HZ: u32,
->(
+pub fn __audio_player_play<I, const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
     audio_clips: I,
     at_end: AtEnd,
@@ -1534,7 +1564,10 @@ pub fn __audio_player_stop<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
 
 // Must be `pub` so platform runtime handles can call this from another crate.
 #[doc(hidden)]
-pub async fn __audio_player_wait_until_stopped<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>(
+pub async fn __audio_player_wait_until_stopped<
+    const MAX_CLIPS: usize,
+    const SAMPLE_RATE_HZ: u32,
+>(
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
 ) {
     audio_player_static.wait_until_stopped().await;

@@ -7,7 +7,7 @@ use core::time::Duration as StdDuration;
 
 use device_envoy_rp::{
     Result,
-    audio_player::{AtEnd, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
+    audio_player::{AtEnd, AudioPlayer as _, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
     tone,
 };
 use embassy_executor::Spawner;

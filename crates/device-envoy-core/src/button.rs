@@ -96,13 +96,6 @@ pub trait Button {
     }
 }
 
-/// Platform-agnostic background button monitor contract.
-#[allow(async_fn_in_trait)]
-pub trait ButtonWatch {
-    /// Wait for the next short/long press event from the background monitor.
-    async fn wait_for_press_duration(&self) -> PressDuration;
-}
-
 // ============================================================================
 // PressedTo - How the button is wired
 // ============================================================================

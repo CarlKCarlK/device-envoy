@@ -22,11 +22,11 @@ pub async fn main(_spawner: Spawner) -> ! {
     // Create servos on GPIO 11 and GPIO 12
     // GPIO 11 → PWM_SLICE5 (channel B)
     // GPIO 12 → PWM_SLICE6 (channel A)
-    let mut servo11 = servo! {
+    let servo11 = servo! {
         pin: p.PIN_11,
         slice: p.PWM_SLICE5,
     };
-    let mut servo12 = servo! {
+    let servo12 = servo! {
         pin: p.PIN_12,
         slice: p.PWM_SLICE6,
     };

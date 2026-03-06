@@ -34,7 +34,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, ledc: ledc);
 
-    let mut basic_servo = BasicServo::new(&ledc, p.GPIO10)?;
+    let basic_servo = BasicServo::new(&ledc, p.GPIO10)?;
 
     basic_servo.set_degrees(45); // Move to 45 degrees and hold.
     Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position

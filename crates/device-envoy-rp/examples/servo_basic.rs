@@ -19,7 +19,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     // Create a servo on GPIO 11.
     // GPIO 11 → (11/2) % 8 = 5 → PWM_SLICE5
-    let mut servo = servo! {
+    let servo = servo! {
         pin: p.PIN_11,
         slice: p.PWM_SLICE5,
     };

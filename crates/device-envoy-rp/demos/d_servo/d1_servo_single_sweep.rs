@@ -29,7 +29,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     // Create a servo on GPIO 11. Must also give "PWM slice".
     // rule: slice = (gpio/2) % 8; GPIO11 -> 5
-    let mut servo = servo! { pin: p.PIN_11, slice: p.PWM_SLICE5 };
+    let servo = servo! { pin: p.PIN_11, slice: p.PWM_SLICE5 };
 
     // Start a background *hardware* control signal that says:
     // "To as fast as you can to 180 degrees and hold"

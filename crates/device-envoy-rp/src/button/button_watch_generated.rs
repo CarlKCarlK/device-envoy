@@ -45,14 +45,17 @@ impl ButtonWatchGenerated {
         pin: impl Into<embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_13>>,
         pressed_to: crate::button::PressedTo,
         spawner: embassy_executor::Spawner,
-    ) -> crate::Result<&'static Self> {
-        static INSTANCE: ButtonWatchGenerated = ButtonWatchGenerated {
+    ) -> crate::Result<&'static mut Self> {
+        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> = static_cell::StaticCell::new();
+        let instance = INSTANCE.init(ButtonWatchGenerated {
             button_watch: super::ButtonWatchRp {
                 signal: &embassy_sync::signal::Signal::new(),
+                state_signal: &embassy_sync::signal::Signal::new(),
+                is_pressed: &core::sync::atomic::AtomicBool::new(false),
             },
-        };
+        });
         let _ = (pin, pressed_to, spawner);
-        Ok(&INSTANCE)
+        Ok(instance)
     }
 
     /// A device abstraction for buttons that uses a background task to monitor presses.
@@ -71,14 +74,17 @@ impl ButtonWatchGenerated {
     pub fn from_button(
         button: crate::button::ButtonRp<'static>,
         spawner: embassy_executor::Spawner,
-    ) -> crate::Result<&'static Self> {
-        static INSTANCE: ButtonWatchGenerated = ButtonWatchGenerated {
+    ) -> crate::Result<&'static mut Self> {
+        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> = static_cell::StaticCell::new();
+        let instance = INSTANCE.init(ButtonWatchGenerated {
             button_watch: super::ButtonWatchRp {
                 signal: &embassy_sync::signal::Signal::new(),
+                state_signal: &embassy_sync::signal::Signal::new(),
+                is_pressed: &core::sync::atomic::AtomicBool::new(false),
             },
-        };
+        });
         let _ = (button, spawner);
-        Ok(&INSTANCE)
+        Ok(instance)
     }
 }
 
@@ -88,5 +94,27 @@ impl core::ops::Deref for ButtonWatchGenerated {
 
     fn deref(&self) -> &Self::Target {
         &self.button_watch
+    }
+}
+
+#[cfg(doc)]
+impl crate::button::Button for ButtonWatchGenerated {
+    fn is_pressed(&self) -> bool {
+        <super::ButtonWatchRp as crate::button::Button>::is_pressed(&self.button_watch)
+    }
+
+    async fn wait_for_press_duration(&mut self) -> crate::button::PressDuration {
+        <super::ButtonWatchRp as crate::button::Button>::wait_for_press_duration(
+            &mut self.button_watch,
+        )
+        .await
+    }
+
+    async fn wait_until_pressed_state(&mut self, pressed: bool) {
+        <super::ButtonWatchRp as crate::button::Button>::wait_until_pressed_state(
+            &mut self.button_watch,
+            pressed,
+        )
+        .await
     }
 }

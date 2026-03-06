@@ -9,11 +9,11 @@ pub trait Servo {
     const DEFAULT_MAX_DEGREES: u16;
 
     /// Set position in degrees `0..=max_degrees`.
-    fn set_degrees(&mut self, degrees: u16);
+    fn set_degrees(&self, degrees: u16);
 
     /// Keep driving pulses at the last commanded angle.
-    fn hold(&mut self);
+    fn hold(&self);
 
     /// Stop driving pulses.
-    fn relax(&mut self);
+    fn relax(&self);
 }

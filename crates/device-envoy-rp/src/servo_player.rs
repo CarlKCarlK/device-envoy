@@ -42,7 +42,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_envoy_rp::{Result, servo_player::{AtEnd, ServoPlayer as _, servo_player}};
+//! use device_envoy_rp::{Result, servo::{Servo as _}, servo_player::{AtEnd, ServoPlayer as _, servo_player}};
 //! use embassy_time::{Duration, Timer};
 //!
 //! // Define ServoPlayer11, a struct type for a servo on PIN_11.
@@ -95,7 +95,7 @@
 //! # use core::convert::Infallible;
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_envoy_rp::{Result, servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player}};
+//! use device_envoy_rp::{Result, servo::{Servo as _}, servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player}};
 //! use embassy_time::Duration;
 //!
 //! // Define ServoSweep, a struct type for a servo on PIN_12.
@@ -961,8 +961,8 @@ macro_rules! __servo_player_impl {
                 }
             }
 
-            impl $crate::servo_player::ServoPlayer<$max_steps> for $name {
-                const MAX_STEPS: usize = Self::MAX_STEPS;
+            impl $crate::servo::Servo for $name {
+                const DEFAULT_MAX_DEGREES: u16 = $max_degrees;
 
                 fn set_degrees(&self, degrees: u16) {
                     $crate::servo_player::__servo_player_set_degrees(&self.servo_player_handle, degrees);
@@ -975,6 +975,10 @@ macro_rules! __servo_player_impl {
                 fn relax(&self) {
                     $crate::servo_player::__servo_player_relax(&self.servo_player_handle);
                 }
+            }
+
+            impl $crate::servo_player::ServoPlayer<$max_steps> for $name {
+                const MAX_STEPS: usize = Self::MAX_STEPS;
 
                 fn animate<I>(&self, steps: I, at_end: $crate::servo_player::AtEnd)
                 where
@@ -1060,8 +1064,8 @@ macro_rules! __servo_player_impl {
                 }
             }
 
-            impl $crate::servo_player::ServoPlayer<$max_steps> for $name {
-                const MAX_STEPS: usize = Self::MAX_STEPS;
+            impl $crate::servo::Servo for $name {
+                const DEFAULT_MAX_DEGREES: u16 = $max_degrees;
 
                 fn set_degrees(&self, degrees: u16) {
                     $crate::servo_player::__servo_player_set_degrees(&self.servo_player_handle, degrees);
@@ -1074,6 +1078,10 @@ macro_rules! __servo_player_impl {
                 fn relax(&self) {
                     $crate::servo_player::__servo_player_relax(&self.servo_player_handle);
                 }
+            }
+
+            impl $crate::servo_player::ServoPlayer<$max_steps> for $name {
+                const MAX_STEPS: usize = Self::MAX_STEPS;
 
                 fn animate<I>(&self, steps: I, at_end: $crate::servo_player::AtEnd)
                 where

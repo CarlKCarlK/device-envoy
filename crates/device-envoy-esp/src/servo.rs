@@ -3,6 +3,7 @@
 //! Use [`servo!`] for a keyword-driven typed constructor.
 
 use crate::Result;
+use core::cell::RefCell;
 pub use device_envoy_core::servo::Servo;
 use esp_hal::gpio::{interconnect::PeripheralOutput, DriveMode};
 use esp_hal::ledc::{channel, timer, LowSpeed};
@@ -55,7 +56,7 @@ impl ServoStatic {
 
 /// A direct servo output using one LEDC timer and one LEDC channel.
 pub struct ServoEsp {
-    channel: &'static mut channel::Channel<'static, LowSpeed>,
+    channel: RefCell<&'static mut channel::Channel<'static, LowSpeed>>,
     min_us: u32,
     max_us: u32,
     max_degrees: u16,
@@ -90,7 +91,7 @@ impl ServoEsp {
         })?;
 
         Ok(Self {
-            channel,
+            channel: RefCell::new(channel),
             min_us: servo_static.min_us,
             max_us: servo_static.max_us,
             max_degrees: servo_static.max_degrees,
@@ -116,20 +117,22 @@ impl Servo for ServoEsp {
     const DEFAULT_MAX_DEGREES: u16 = 180;
 
     /// Set position in degrees `0..=max_degrees`.
-    fn set_degrees(&mut self, degrees: u16) {
+    fn set_degrees(&self, degrees: u16) {
         assert!(degrees <= self.max_degrees);
         let duty_pct = self.degrees_to_duty_pct(degrees);
         self.channel
+            .borrow_mut()
             .set_duty(duty_pct)
             .expect("LEDC set_duty failed in Servo::set_degrees");
     }
 
     /// Keep driving pulses at the last commanded angle.
-    fn hold(&mut self) {}
+    fn hold(&self) {}
 
     /// Stop driving pulses.
-    fn relax(&mut self) {
+    fn relax(&self) {
         self.channel
+            .borrow_mut()
             .set_duty(0)
             .expect("LEDC set_duty failed in Servo::relax");
     }

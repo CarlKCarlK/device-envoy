@@ -13,7 +13,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::ButtonWatch as _;
+use device_envoy_rp::button::Button as _;
 use device_envoy_rp::button::{PressDuration, PressedTo};
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
@@ -138,7 +138,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     show_connected(&led12x4).await;
 
     // Convert the Button from WifiAutoRp into a ButtonWatch for background monitoring
-    let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
+    let mut button_watch13 = ButtonWatch13::from_button(button, spawner)?;
 
     // Read the timezone offset, an extra field that WiFi portal saved to flash.
     let offset_minutes = timezone_field
@@ -161,17 +161,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, button_watch13, &led12x4)
+                    .execute_hours_minutes(speed, &clock_sync, &mut button_watch13, &led12x4)
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, button_watch13, &led12x4)
+                    .execute_minutes_seconds(&clock_sync, &mut button_watch13, &led12x4)
                     .await?
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(&clock_sync, button_watch13, &timezone_field, &led12x4)
+                    .execute_edit_offset(&clock_sync, &mut button_watch13, &timezone_field, &led12x4)
                     .await?
             }
         };
@@ -193,7 +193,7 @@ impl State {
         self,
         speed: f32,
         clock_sync: &ClockSync,
-        button_watch13: &ButtonWatch13,
+        button_watch13: &mut ButtonWatch13,
         led12x4: &Led12x4,
     ) -> Result<Self> {
         clock_sync.set_speed(speed).await;
@@ -241,7 +241,7 @@ impl State {
     async fn execute_minutes_seconds(
         self,
         clock_sync: &ClockSync,
-        button_watch13: &ButtonWatch13,
+        button_watch13: &mut ButtonWatch13,
         led12x4: &Led12x4,
     ) -> Result<Self> {
         clock_sync.set_speed(1.0).await;
@@ -286,7 +286,7 @@ impl State {
     async fn execute_edit_offset(
         self,
         clock_sync: &ClockSync,
-        button_watch13: &ButtonWatch13,
+        button_watch13: &mut ButtonWatch13,
         timezone_field: &TimezoneField,
         led12x4: &Led12x4,
     ) -> Result<Self> {

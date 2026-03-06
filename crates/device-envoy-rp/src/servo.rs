@@ -5,6 +5,7 @@
 //!
 //! Use the [`servo!`] macro for a keyword-driven constructor with defaults.
 
+use core::cell::{Cell, RefCell};
 use defmt::info;
 pub use device_envoy_core::servo::Servo;
 use embassy_rp::clocks::clk_sys_freq;
@@ -695,14 +696,14 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 /// }
 /// ```
 pub struct ServoRp<'d> {
-    pwm: Pwm<'d>,
-    cfg: Config, // Store config to avoid recreating default (which resets divider)
+    pwm: RefCell<Pwm<'d>>,
+    cfg: RefCell<Config>, // Store config to avoid recreating default (which resets divider)
     top: u16,
     min_us: u16,
     max_us: u16,
     max_degrees: u16,
     channel: ServoChannel, // Track which channel (A or B) this servo uses
-    state: ServoState,
+    state: Cell<ServoState>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -780,15 +781,15 @@ impl<'d> ServoRp<'d> {
             clk, div_int, div_frac, top
         );
 
-        let mut servo = Self {
-            pwm,
-            cfg, // Store config to avoid losing divider on reconfiguration
+        let servo = Self {
+            pwm: RefCell::new(pwm),
+            cfg: RefCell::new(cfg), // Store config to avoid losing divider on reconfiguration
             top,
             min_us,
             max_us,
             max_degrees,
             channel,
-            state: ServoState::Enabled,
+            state: Cell::new(ServoState::Enabled),
         };
         let center_us = min_us + (max_us - min_us) / 2;
         servo.set_pulse_us(center_us);
@@ -800,26 +801,28 @@ impl<'d> ServoRp<'d> {
     /// See the [`ServoRp`] example for usage.
     /// NOTE: only update the *compare* register; do not reconfigure the slice.
     #[doc(hidden)]
-    pub fn set_pulse_us(&mut self, us: u16) {
+    pub fn set_pulse_us(&self, us: u16) {
         assert!(us <= self.top, "pulse width must fit in the PWM frame");
         // One tick ≈ 1 µs, so compare = us.
         // CRITICAL: Update our stored config and reapply it WITH the divider intact.
         // This prevents the divider from being reset to default.
+        let mut cfg = self.cfg.borrow_mut();
         match self.channel {
-            ServoChannel::A => self.cfg.compare_a = us,
-            ServoChannel::B => self.cfg.compare_b = us,
+            ServoChannel::A => cfg.compare_a = us,
+            ServoChannel::B => cfg.compare_b = us,
         }
-        self.pwm.set_config(&self.cfg);
+        self.pwm.borrow_mut().set_config(&cfg);
     }
 
-    fn ensure_enabled(&mut self) {
-        if self.state == ServoState::Enabled {
+    fn ensure_enabled(&self) {
+        if self.state.get() == ServoState::Enabled {
             return;
         }
 
-        self.cfg.enable = true;
-        self.pwm.set_config(&self.cfg);
-        self.state = ServoState::Enabled;
+        let mut cfg = self.cfg.borrow_mut();
+        cfg.enable = true;
+        self.pwm.borrow_mut().set_config(&cfg);
+        self.state.set(ServoState::Enabled);
     }
 }
 
@@ -831,7 +834,7 @@ impl<'d> Servo for ServoRp<'d> {
     /// Automatically enables the servo if it was disabled.
     ///
     /// See the [`ServoRp`] example for usage.
-    fn set_degrees(&mut self, degrees: u16) {
+    fn set_degrees(&self, degrees: u16) {
         assert!((0..=self.max_degrees).contains(&degrees));
         self.ensure_enabled();
         let us = self.min_us as u32
@@ -847,26 +850,28 @@ impl<'d> Servo for ServoRp<'d> {
     /// and mechanical stress.
     ///
     /// See the [`ServoRp`] example for usage.
-    fn relax(&mut self) {
-        if self.state == ServoState::Disabled {
+    fn relax(&self) {
+        if self.state.get() == ServoState::Disabled {
             return;
         }
 
-        self.cfg.enable = false;
-        self.pwm.set_config(&self.cfg);
-        self.state = ServoState::Disabled;
+        let mut cfg = self.cfg.borrow_mut();
+        cfg.enable = false;
+        self.pwm.borrow_mut().set_config(&cfg);
+        self.state.set(ServoState::Disabled);
     }
 
     /// Resume sending control signals to the servo.
     ///
     /// The servo will move back to its last commanded position.
-    fn hold(&mut self) {
-        if self.state == ServoState::Enabled {
+    fn hold(&self) {
+        if self.state.get() == ServoState::Enabled {
             return;
         }
 
-        self.cfg.enable = true;
-        self.pwm.set_config(&self.cfg);
-        self.state = ServoState::Enabled;
+        let mut cfg = self.cfg.borrow_mut();
+        cfg.enable = true;
+        self.pwm.borrow_mut().set_config(&cfg);
+        self.state.set(ServoState::Enabled);
     }
 }

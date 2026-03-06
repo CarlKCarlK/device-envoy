@@ -32,6 +32,8 @@ pub struct ServoPlayerGenerated;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
+use crate::servo::Servo;
+#[cfg(doc)]
 use crate::servo_player::{AtEnd, ServoPlayer};
 
 #[cfg(doc)]
@@ -66,8 +68,8 @@ impl ServoPlayerGenerated {
 }
 
 #[cfg(doc)]
-impl ServoPlayer<16> for ServoPlayerGenerated {
-    const MAX_STEPS: usize = Self::MAX_STEPS;
+impl Servo for ServoPlayerGenerated {
+    const DEFAULT_MAX_DEGREES: u16 = 180;
 
     /// Set the target angle. The most recent command always wins.
     ///
@@ -85,6 +87,11 @@ impl ServoPlayer<16> for ServoPlayerGenerated {
     ///
     /// See the [`servo_player`](mod@crate::servo_player) module docs for usage.
     fn relax(&self) {}
+}
+
+#[cfg(doc)]
+impl ServoPlayer<16> for ServoPlayerGenerated {
+    const MAX_STEPS: usize = Self::MAX_STEPS;
 
     /// Animate the servo through a sequence of angles with per-step hold durations.
     ///

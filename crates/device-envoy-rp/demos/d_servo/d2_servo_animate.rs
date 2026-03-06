@@ -7,6 +7,7 @@ use core::{convert::Infallible, panic};
 use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressDuration, PressedTo},
+    servo::Servo as _,
     servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
 };
 use embassy_executor::Spawner;

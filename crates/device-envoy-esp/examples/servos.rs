@@ -48,8 +48,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting dual servo example");
 
-    let mut servo_a = ServoA::new(&ledc, p.GPIO10)?;
-    let mut servo_b = ServoB::new(&ledc, p.GPIO18)?;
+    let servo_a = ServoA::new(&ledc, p.GPIO10)?;
+    let servo_b = ServoB::new(&ledc, p.GPIO18)?;
 
     info!("Moving servos in opposite directions for 2 seconds");
 

@@ -9,7 +9,7 @@ mod button_watch;
 
 #[cfg(target_os = "none")]
 pub use button_watch::{ButtonWatchEsp, ButtonWatchStaticEsp};
-pub use device_envoy_core::button::{Button, ButtonWatch};
+pub use device_envoy_core::button::Button;
 pub use device_envoy_core::button::{
     PressDuration, PressedTo, BUTTON_DEBOUNCE_DELAY, BUTTON_POLL_INTERVAL, LONG_PRESS_DURATION,
 };

@@ -9,6 +9,7 @@ use core::convert::Infallible;
 use core::default::Default;
 use device_envoy_rp::{
     Result,
+    servo::Servo as _,
     servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
 };
 use embassy_executor::Spawner;

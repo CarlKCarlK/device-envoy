@@ -1233,6 +1233,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             relative_path: "src/servo_player/servo_player_generated.rs",
             required_fragments: &[
                 "pub const MAX_STEPS: usize",
+                "impl Servo for ServoPlayerGenerated",
                 "impl ServoPlayer<16> for ServoPlayerGenerated",
                 "fn set_degrees(&self, degrees: u16)",
                 "fn hold(&self)",

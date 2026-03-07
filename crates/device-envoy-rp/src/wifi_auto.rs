@@ -9,7 +9,7 @@ use core::{cell::RefCell, convert::Infallible, future::Future};
 use cortex_m::peripheral::SCB;
 use defmt::{info, warn};
 use embassy_executor::Spawner;
-use embassy_net::{Ipv4Address, Stack};
+use embassy_net::Ipv4Address;
 use embassy_rp::{
     Peri,
     dma::Channel,
@@ -41,6 +41,7 @@ pub(crate) use stack::{Wifi, WifiEvent};
 
 pub use device_envoy_core::wifi_auto::WifiAuto;
 pub use device_envoy_core::wifi_auto::WifiAutoEvent;
+pub use device_envoy_core::wifi_auto::WifiStack;
 pub use portal::WifiAutoField;
 
 const MAX_CONNECT_ATTEMPTS: u8 = 4;
@@ -367,8 +368,6 @@ impl WifiAutoRp {
 
 impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     type Error = Error;
-    type Stack = &'static Stack<'static>;
-    type Button = ButtonRp<'static>;
 
     /// Connects to WiFi (if possible), reports status, and returns the
     /// network stack and button, consuming the `WifiAutoRp`.
@@ -497,7 +496,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     async fn connect<OnEvent, OnEventFuture>(
         self,
         on_event: OnEvent,
-    ) -> Result<(Self::Stack, Self::Button)>
+    ) -> Result<(WifiStack, impl device_envoy_core::button::Button)>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,
@@ -536,7 +535,7 @@ impl WifiAutoInner {
     }
 
     device_envoy_core::__impl_wifi_auto_connect! {
-    fn connect(&self as wifi_auto_inner, on_event) -> Result<(&'static Stack<'static>, ButtonRp<'static>)> {
+    fn connect(&self as wifi_auto_inner, on_event) -> Result<(WifiStack, ButtonRp<'static>)> {
         wifi_auto_inner.ensure_connected_with(&mut on_event).await?;
         let stack = wifi_auto_inner.wifi.wait_for_stack().await;
         let button = wifi_auto_inner

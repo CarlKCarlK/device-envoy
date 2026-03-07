@@ -3,11 +3,15 @@
 //! See [`WifiCredentials`] for the primary shared data type.
 
 use core::future::Future;
+use crate::button::Button;
 
 pub mod fields;
 pub mod portal;
 
 pub use portal::{FormData, HtmlBuffer, WifiAutoField, generate_config_page, parse_post};
+
+/// Canonical network stack type returned by [`WifiAuto::connect`].
+pub type WifiStack = &'static embassy_net::Stack<'static>;
 
 // This helper macro must be `pub` because downstream crates expand it in impl blocks.
 #[doc(hidden)]
@@ -156,20 +160,92 @@ impl Default for WifiAutoPersistedState {
 ///
 /// Platform crates implement this trait for their concrete runtime handles.
 /// Constructors remain inherent on platform types.
+///
+/// `WifiAuto::connect` handles Wi-Fi setup end-to-end. It usually tries saved
+/// credentials first, and if credentials are missing or invalid it can run a
+/// captive portal so the user can submit new credentials.
+///
+/// While `connect` runs, `on_event` receives progress updates:
+///
+/// - [`WifiAutoEvent::CaptivePortalReady`]: captive portal is ready for user input.
+/// - [`WifiAutoEvent::Connecting`]: a Wi-Fi connection attempt is in progress.
+/// - [`WifiAutoEvent::ConnectionFailed`]: all connection attempts failed.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use core::future::Future;
+/// use core::convert::Infallible;
+/// use device_envoy_core::{
+///     button::Button,
+///     wifi_auto::{WifiAuto, WifiAutoEvent, WifiStack},
+/// };
+///
+/// async fn connect_with_status(
+///     wifi_auto: impl WifiAuto<Error = Infallible>,
+/// ) -> Result<(WifiStack, impl Button), Infallible> {
+///     wifi_auto
+///         .connect(|wifi_auto_event| async move {
+///             match wifi_auto_event {
+///                 WifiAutoEvent::CaptivePortalReady => {
+///                     // Captive portal is ready for Wi-Fi credential entry.
+///                 }
+///                 WifiAutoEvent::Connecting { .. } => {
+///                     // A Wi-Fi connection attempt is in progress.
+///                 }
+///                 WifiAutoEvent::ConnectionFailed => {
+///                     // All connection attempts failed.
+///                 }
+///             }
+///             Ok(())
+///         })
+///         .await
+/// }
+///
+/// # use device_envoy_core::button::Button;
+/// # struct DemoButton;
+/// # impl Button for DemoButton {
+/// #     fn is_pressed(&self) -> bool {
+/// #         false
+/// #     }
+/// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
+/// # }
+/// # struct DemoWifiAuto;
+/// # impl WifiAuto for DemoWifiAuto {
+/// #     type Error = Infallible;
+/// #     async fn connect<
+/// #         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
+/// #         OnEventFuture: Future<Output = Result<(), Self::Error>>,
+/// #     >(
+/// #         self,
+/// #         mut on_event: OnEvent,
+/// #     ) -> Result<(WifiStack, impl Button), Self::Error>
+/// #     {
+/// #         on_event(WifiAutoEvent::Connecting {
+/// #             try_index: 0,
+/// #             try_count: 1,
+/// #         })
+/// #         .await?;
+/// #         todo!()
+/// #     }
+/// # }
+/// # fn main() {
+/// #     let wifi_auto = DemoWifiAuto;
+/// #     let _future = connect_with_status(wifi_auto);
+/// # }
+/// ```
 #[allow(async_fn_in_trait)]
 pub trait WifiAuto {
     /// Platform-specific error type.
     type Error;
-    /// Platform-specific network stack handle returned on successful connection.
-    type Stack;
-    /// Platform-specific button handle returned alongside the stack.
-    type Button;
 
     /// Connect to Wi-Fi, emitting progress events to `on_event`.
+    ///
+    /// See the [WifiAuto trait documentation](Self) for usage examples.
     async fn connect<OnEvent, OnEventFuture>(
         self,
         on_event: OnEvent,
-    ) -> Result<(Self::Stack, Self::Button), Self::Error>
+    ) -> Result<(WifiStack, impl Button), Self::Error>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<(), Self::Error>>;

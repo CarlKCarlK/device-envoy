@@ -155,6 +155,8 @@ When adding new examples, also add the standard cargo aliases in `.cargo/config.
 - Before writing or editing any `*_trait.rs` example, review all existing `*_trait.rs` examples in the crate to match the established style and structure.
 - For `*_trait.rs` examples, include a core-only example function that uses core-only imports for the trait-facing API; follow the `audio_exampleNUM_trait.rs` pattern.
 - When migrating staged examples into a trait's documentation, add `See the FILLIN trait documentation for usage examples.` (with a proper link) on every method or constant doc that is demonstrated by those examples.
+- In trait-migration examples and doctests, prefer inline trait bounds (`impl Trait<...>`) over `where` clauses when readability allows.
+- In trait-migration examples and doctests, avoid placeholder generic type names like `WifiAutoType`; use `impl Trait` or a concrete descriptive type name when a type parameter is required.
 
 Spelling: use American over British spelling.
 

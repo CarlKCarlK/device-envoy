@@ -39,7 +39,7 @@ use embassy_futures::select::{select4, Either4};
 
 pub use device_envoy_core::wifi_auto::{
     FormData, HtmlBuffer, WifiAuto, WifiAutoError, WifiAutoEvent, WifiAutoField,
-    WifiAutoPersistedState, WifiCredentials, WifiStartMode,
+    WifiAutoPersistedState, WifiCredentials, WifiStack, WifiStartMode,
 };
 
 const MAX_WIFI_AUTO_FIELDS: usize = 8;
@@ -334,7 +334,7 @@ impl<'a> WifiAutoEsp<'a> {
     async fn connect_inner<OnEvent, OnEventFuture>(
         &self,
         mut on_event: OnEvent,
-    ) -> Result<(&'static Stack<'static>, ButtonEsp<'static>)>
+    ) -> Result<(WifiStack, ButtonEsp<'static>)>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,
@@ -667,8 +667,6 @@ impl<'a> WifiAutoEsp<'a> {
 #[cfg(target_os = "none")]
 impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     type Error = crate::Error;
-    type Stack = &'static Stack<'static>;
-    type Button = ButtonEsp<'static>;
 
     /// Connect using persisted credentials or captive-portal setup flow.
     ///
@@ -676,7 +674,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     async fn connect<OnEvent, OnEventFuture>(
         self,
         on_event: OnEvent,
-    ) -> Result<(Self::Stack, Self::Button)>
+    ) -> Result<(WifiStack, impl device_envoy_core::button::Button)>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,

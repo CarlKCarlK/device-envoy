@@ -11,7 +11,7 @@ path = "src/lib.rs"
 [features]
 host = ["dep:png"]
 defmt = ["dep:defmt"]
-wifi = ["dep:embassy-net"]
+wifi = []
 doc-images = ["dep:embed-doc-image"]
 
 [dependencies]
@@ -21,7 +21,7 @@ embassy-executor = { version = "0.9.0", default-features = false }
 embassy-futures = "0.1.2"
 embassy-sync = "0.7.2"
 embassy-time = { version = "0.5.0" }
-embassy-net = { version = "0.8.0", features = ["dns", "udp", "proto-ipv4", "medium-ip"], optional = true }
+embassy-net = { version = "0.8.0", features = ["dns", "udp", "proto-ipv4", "medium-ip"] }
 heapless = { version = "0.8.0", features = ["serde"] }
 paste = { version = "1.0" }
 serde = { version = "1.0", default-features = false, features = ["derive"] }

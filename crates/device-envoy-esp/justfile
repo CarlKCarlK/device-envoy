@@ -38,6 +38,12 @@ button-example1-trait-s3:
 button-example1-trait-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
 
+wifi-auto-example1-trait-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_auto_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+wifi-auto-example1-trait-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example wifi_auto_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
 ir-example1-trait-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
 

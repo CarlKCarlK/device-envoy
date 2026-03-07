@@ -24,6 +24,57 @@ pub const BUTTON_POLL_INTERVAL: Duration = Duration::from_millis(1);
 ///
 /// Platform crates implement this for concrete button types and inherit the default
 /// debouncing and press-duration behavior from shared core logic.
+///
+/// # Hardware Requirements
+///
+/// The button can be wired in two ways:
+///
+/// - [`PressedTo::Voltage`]: Button connects pin to voltage when pressed (active-high)
+/// - [`PressedTo::Ground`]: Button connects pin to ground when pressed (active-low)
+///
+/// # Usage
+///
+/// Use [`Button::wait_for_press`] when you only need a debounced
+/// press event. It returns on the down edge and does not wait for release.
+///
+/// Use [`Button::wait_for_press_duration`] when you need to
+/// distinguish short vs. long presses. It returns as soon as it can decide, so long
+/// presses are reported before the button is released.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::button::{Button, PressDuration};
+///
+/// async fn log_button_presses(button: &mut impl Button) -> ! {
+///     // Wait for a press without measuring duration.
+///     button.wait_for_press().await;
+///
+///     // Measure press durations in a loop.
+///     loop {
+///         match button.wait_for_press_duration().await {
+///             PressDuration::Short => {
+///                 // Handle short press.
+///             }
+///             PressDuration::Long => {
+///                 // Handle long press (fires before button is released).
+///             }
+///         }
+///     }
+/// }
+///
+/// # struct DemoButton;
+/// # impl Button for DemoButton {
+/// #     fn is_pressed(&self) -> bool {
+/// #         false
+/// #     }
+/// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
+/// # }
+/// # fn main() {
+/// #     let mut button = DemoButton;
+/// #     let _future = log_button_presses(&mut button);
+/// # }
+/// ```
 #[allow(async_fn_in_trait)]
 pub trait Button {
     /// Returns whether the button is currently pressed.
@@ -72,6 +123,8 @@ pub trait Button {
     }
 
     /// Waits for the next press (button goes down, debounced). Does not wait for release.
+    ///
+    /// See the [Button trait documentation](Self) for usage examples.
     async fn wait_for_press(&mut self) {
         self.wait_for_stable_up().await;
         self.wait_for_stable_down().await;
@@ -80,6 +133,8 @@ pub trait Button {
     /// Waits for the next press and returns whether it was short or long (debounced).
     ///
     /// Returns as soon as it can decide, so long presses are reported before release.
+    ///
+    /// See the [Button trait documentation](Self) for usage examples.
     async fn wait_for_press_duration(&mut self) -> PressDuration {
         self.wait_for_stable_up().await;
         self.wait_for_stable_down().await;

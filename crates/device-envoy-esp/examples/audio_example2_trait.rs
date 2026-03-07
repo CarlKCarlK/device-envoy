@@ -46,7 +46,7 @@ pcm_clip! {
 async fn play_nasa_with_runtime_volume(
     audio_player: &impl AudioPlayer<VOICE_22050_HZ>,
     button: &mut impl Button,
-) {
+) -> ! {
     const fn ms(milliseconds: u64) -> StdDuration {
         StdDuration::from_millis(milliseconds)
     }
@@ -77,7 +77,7 @@ async fn play_nasa_with_runtime_volume(
         audio_player.set_volume(initial_volume);
         info!("Press the button to play again.");
         button.wait_for_press().await;
-        }
+    }
 }
 
 #[esp_rtos::main]
@@ -95,6 +95,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let audio_player21 = AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
 
-    play_nasa_with_runtime_volume(audio_player21, &mut button).await;
-    core::future::pending().await
+    play_nasa_with_runtime_volume(audio_player21, &mut button).await
 }

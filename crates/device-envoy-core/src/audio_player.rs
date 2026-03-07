@@ -1186,7 +1186,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// async fn play_nasa_with_runtime_volume(
 ///     audio_player: &impl AudioPlayer<VOICE_22050_HZ>,
 ///     button: &mut impl Button,
-/// ) {
+/// ) -> ! {
 ///     type PlayableRef = &'static dyn Playable<VOICE_22050_HZ>;
 ///
 ///     const fn ms(milliseconds: u64) -> StdDuration {

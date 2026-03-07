@@ -27,7 +27,7 @@ use device_envoy_esp::{
     flash_block::FlashBlockEsp,
     init_and_start,
     servo::Servo as _,
-    servo_player::{combine, linear, servo_player, AtEnd, ServoPlayer as _, ServoPlayerHandle},
+    servo::{combine, linear, servo_player, AtEnd, ServoPlayer as _, ServoPlayerHandle},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,

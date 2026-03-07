@@ -1,6 +1,78 @@
 //! A device abstraction for hobby servos on ESP LEDC PWM.
 //!
+//! This module provides both direct servo control (`servo!`, [`ServoEsp`]) and
+//! servo-player animation control (`servo_player!`, [`ServoPlayer`], [`AtEnd`], [`linear`], `combine!`).
+//!
 //! Use [`servo!`] for a keyword-driven typed constructor.
+//!
+//! # Example: Direct Servo Control
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use esp_backtrace as _;
+//! # use core::convert::Infallible;
+//! use device_envoy_esp::{Result, init_and_start, servo::{Servo as _, servo}};
+//! use embassy_time::{Duration, Timer};
+//!
+//! servo! {
+//!     Servo11 {
+//!         timer: Timer0,
+//!         channel: Channel0,
+//!     }
+//! }
+//!
+//! # #[esp_rtos::main]
+//! # async fn main(_spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = inner_main().await.unwrap_err();
+//! #     panic!("{err:?}");
+//! # }
+//! async fn inner_main() -> Result<Infallible> {
+//!     init_and_start!(p, ledc: ledc);
+//!     let servo11 = Servo11::new(&ledc, p.GPIO11)?;
+//!     servo11.set_degrees(45);
+//!     Timer::after(Duration::from_secs(1)).await;
+//!     servo11.relax();
+//!     core::future::pending().await
+//! }
+//! ```
+//!
+//! # Example: Servo Player Animation
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use esp_backtrace as _;
+//! # use core::convert::Infallible;
+//! use device_envoy_esp::{Result, init_and_start, servo::{AtEnd, Servo as _, ServoPlayer as _, combine, linear, servo_player}};
+//! use embassy_time::Duration;
+//!
+//! servo_player! {
+//!     ServoSweep {
+//!         timer: Timer1,
+//!         channel: Channel1,
+//!         max_steps: 40,
+//!     }
+//! }
+//!
+//! # #[esp_rtos::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = inner_main(spawner).await.unwrap_err();
+//! #     panic!("{err:?}");
+//! # }
+//! async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     init_and_start!(p, ledc: ledc);
+//!     let servo_sweep = ServoSweep::new(&ledc, p.GPIO12, spawner)?;
+//!     const STEPS: [(u16, Duration); 40] = combine!(
+//!         linear::<19>(0, 180, Duration::from_secs(2)),
+//!         [(180, Duration::from_millis(400))],
+//!         linear::<19>(180, 0, Duration::from_secs(2)),
+//!         [(0, Duration::from_millis(400))]
+//!     );
+//!     servo_sweep.animate(STEPS, AtEnd::Loop);
+//!     core::future::pending().await
+//! }
+//! ```
 
 use crate::Result;
 use core::cell::RefCell;
@@ -10,6 +82,17 @@ use esp_hal::ledc::{channel, timer, LowSpeed};
 use esp_hal::ledc::{channel::ChannelIFace, timer::TimerIFace};
 use esp_hal::time::Rate;
 use static_cell::StaticCell;
+
+#[doc(inline)]
+pub use crate::servo_player::servo_player;
+pub use device_envoy_core::servo::{
+    AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic, combine, linear,
+};
+#[doc(hidden)]
+pub use device_envoy_core::servo::{
+    __servo_player_animate, __servo_player_hold, __servo_player_relax, __servo_player_set_degrees,
+    device_loop,
+};
 
 const SERVO_PERIOD_US: u32 = 20_000;
 

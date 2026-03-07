@@ -1,5 +1,14 @@
 //! Platform-agnostic servo control trait shared across platforms.
 
+#[doc(hidden)]
+pub use crate::servo_player::{
+    __servo_player_animate, __servo_player_hold, __servo_player_relax, __servo_player_set_degrees,
+    device_loop,
+};
+pub use crate::servo_player::{
+    AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic, combine, linear,
+};
+
 /// Platform-agnostic servo device contract.
 ///
 /// Platform crates implement this trait for their concrete servo types so direct

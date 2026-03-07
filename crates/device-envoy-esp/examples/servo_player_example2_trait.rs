@@ -9,12 +9,12 @@ use embassy_time::Duration;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_core::servo_player::ServoPlayer;
+use device_envoy_core::servo::ServoPlayer;
 use device_envoy_esp::{
-    Result,
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start,
-    servo_player::{AtEnd, combine, linear, servo_player},
+    servo::{combine, linear, servo_player, AtEnd},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

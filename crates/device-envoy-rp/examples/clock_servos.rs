@@ -25,7 +25,7 @@ use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use device_envoy_rp::{
     servo::Servo as _,
-    servo_player::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
+    servo::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
 };
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};

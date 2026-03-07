@@ -1,0 +1,5 @@
+[alias]
+audio-example2-trait = "run --example audio_example2_trait"
+audio-example2-trait-check = "check --example audio_example2_trait"
+audio-example3-trait = "run --example audio_example3_trait"
+audio-example3-trait-check = "check --example audio_example3_trait"

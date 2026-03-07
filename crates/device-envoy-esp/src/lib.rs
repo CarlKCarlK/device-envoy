@@ -37,7 +37,7 @@ pub mod rmt_mode;
 #[cfg(target_os = "none")]
 pub mod servo;
 #[cfg(target_os = "none")]
-pub mod servo_player;
+mod servo_player;
 pub mod wifi_auto;
 
 pub use device_envoy_core::tone;

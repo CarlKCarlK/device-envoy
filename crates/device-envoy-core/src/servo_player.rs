@@ -158,7 +158,7 @@ impl<const MAX_STEPS: usize> ServoPlayerHandle<MAX_STEPS> {
 /// and using animation.
 ///
 /// ```rust,no_run
-/// use device_envoy_core::servo_player::{AtEnd, ServoPlayer};
+/// use device_envoy_core::servo::{AtEnd, ServoPlayer};
 /// use embassy_time::{Duration, Timer};
 ///
 /// async fn basic_servo_control<const MAX_STEPS: usize>(servo_player: &impl ServoPlayer<MAX_STEPS>) {
@@ -204,7 +204,7 @@ impl<const MAX_STEPS: usize> ServoPlayerHandle<MAX_STEPS> {
 /// sweep up, hold, sweep down, hold.
 ///
 /// ```rust,no_run
-/// use device_envoy_core::servo_player::{AtEnd, ServoPlayer, combine, linear};
+/// use device_envoy_core::servo::{AtEnd, ServoPlayer, combine, linear};
 /// use embassy_time::Duration;
 ///
 /// async fn run_sweep_animation(servo_player: &impl ServoPlayer<40>) {

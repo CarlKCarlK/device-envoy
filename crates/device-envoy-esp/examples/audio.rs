@@ -94,7 +94,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         audio_player_gpio21.stop();
         Timer::after(Duration::from_secs(1)).await;
         audio_player_gpio21.set_volume(
-            <AudioPlayerGpio21 as device_envoy::audio_player::AudioPlayer<
+            <AudioPlayerGpio21 as device_envoy_esp::audio_player::AudioPlayer<
                 { AudioPlayerGpio21::SAMPLE_RATE_HZ },
             >>::INITIAL_VOLUME,
         );

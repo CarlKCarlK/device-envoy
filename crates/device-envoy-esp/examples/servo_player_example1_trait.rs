@@ -9,12 +9,12 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_core::servo_player::ServoPlayer;
+use device_envoy_core::servo::ServoPlayer;
 use device_envoy_esp::{
-    Result,
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start,
-    servo_player::{AtEnd, servo_player},
+    servo::{servo_player, AtEnd},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -33,10 +33,8 @@ async fn basic_servo_control<const MAX_STEPS: usize>(servo_player: &impl ServoPl
     servo_player.relax();
 
     // Animate: hold at 180 degrees for 1 second, then 0 degrees for 1 second, then relax.
-    const STEPS: [(u16, Duration); 2] = [
-        (180, Duration::from_secs(1)),
-        (0, Duration::from_secs(1)),
-    ];
+    const STEPS: [(u16, Duration); 2] =
+        [(180, Duration::from_secs(1)), (0, Duration::from_secs(1))];
     // AtEnd::Relax quiets the servo; AtEnd::Hold keeps driving pulses to hold
     // position; AtEnd::Loop repeats.
     servo_player.animate(STEPS, AtEnd::Relax);

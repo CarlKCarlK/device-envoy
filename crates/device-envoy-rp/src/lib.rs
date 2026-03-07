@@ -60,7 +60,7 @@ pub mod rfid;
 #[cfg(target_os = "none")]
 pub mod servo;
 #[cfg(target_os = "none")]
-pub mod servo_player;
+mod servo_player;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod wifi_auto;
 

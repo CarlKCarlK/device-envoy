@@ -1115,9 +1115,6 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// This example plays the opening phrase (`E D C D E E E`) and then stops.
 ///
 /// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
 /// use device_envoy_core::audio_player::{
 ///     AtEnd, AudioPlayer, Playable, SilenceClip, VOICE_22050_HZ, Volume, tone,
 /// };
@@ -1161,13 +1158,8 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// #         Self::INITIAL_VOLUME
 /// #     }
 /// # }
-/// # #[embassy_executor::main]
-/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
-/// #     let _ = spawner;
-/// #     let audio_player = DemoAudioPlayer;
-/// #     play_mary_phrase(&audio_player);
-/// #     core::future::pending().await
-/// # }
+    /// # let audio_player = DemoAudioPlayer;
+    /// # play_mary_phrase(&audio_player);
 /// ```
 ///
 /// # Example: Compiling in an External Audio Clip and Runtime Volume Changes
@@ -1175,10 +1167,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// This example shows how to compile in an external clip, play it in a loop,
 /// change volume at runtime, and then stop/reset playback settings.
 ///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
+/// ```rust,no_run,standalone_crate
 /// use device_envoy_core::audio_player::{
 ///     AtEnd, AudioPlayer, Gain, Playable, SilenceClip, VOICE_22050_HZ, Volume, pcm_clip, tone,
 /// };
@@ -1189,10 +1178,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 ///
 /// pcm_clip! {
 ///     Nasa {
-///         file: concat!(
-///             env!("CARGO_MANIFEST_DIR"),
-///             "/../device-envoy-rp/examples/data/audio/nasa_22k.s16"
-///         ),
+///         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 ///         source_sample_rate_hz: VOICE_22050_HZ,
 ///     }
 /// }
@@ -1254,14 +1240,11 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// #     }
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
-/// # #[embassy_executor::main]
-/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
-/// #     let _ = spawner;
-/// #     let mut button = DemoButton;
-/// #     let audio_player = DemoAudioPlayer;
-/// #     play_nasa_with_runtime_volume(&audio_player, &mut button).await;
-/// #     core::future::pending().await
-/// # }
+/// fn main() {
+///     let mut button = DemoButton;
+///     let audio_player = DemoAudioPlayer;
+///     let _future = play_nasa_with_runtime_volume(&audio_player, &mut button);
+/// }
 /// ```
 ///
 /// # Example: Resample and Play Countdown Once
@@ -1269,10 +1252,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// This example compiles in `2`, `1`, `0`, and NASA at `22.05 kHz`, resamples
 /// them to narrowband (`8 kHz`) at compile time, and then plays the sequence.
 ///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
+/// ```rust,no_run,standalone_crate
 /// use device_envoy_core::audio_player::{
 ///     AtEnd, AudioPlayer, Gain, NARROWBAND_8000_HZ, Playable, VOICE_22050_HZ, Volume, pcm_clip,
 /// };
@@ -1280,10 +1260,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 ///
 /// pcm_clip! {
 ///     Digit0 {
-///         file: concat!(
-///             env!("CARGO_MANIFEST_DIR"),
-///             "/../device-envoy-rp/examples/data/audio/0_22050.s16"
-///         ),
+///         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/0_22050.s16"),
 ///         source_sample_rate_hz: VOICE_22050_HZ,
 ///         target_sample_rate_hz: NARROWBAND_8000_HZ,
 ///     }
@@ -1291,10 +1268,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 ///
 /// pcm_clip! {
 ///     Digit1 {
-///         file: concat!(
-///             env!("CARGO_MANIFEST_DIR"),
-///             "/../device-envoy-rp/examples/data/audio/1_22050.s16"
-///         ),
+///         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/1_22050.s16"),
 ///         source_sample_rate_hz: VOICE_22050_HZ,
 ///         target_sample_rate_hz: NARROWBAND_8000_HZ,
 ///     }
@@ -1302,10 +1276,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 ///
 /// pcm_clip! {
 ///     Digit2 {
-///         file: concat!(
-///             env!("CARGO_MANIFEST_DIR"),
-///             "/../device-envoy-rp/examples/data/audio/2_22050.s16"
-///         ),
+///         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/2_22050.s16"),
 ///         source_sample_rate_hz: VOICE_22050_HZ,
 ///         target_sample_rate_hz: NARROWBAND_8000_HZ,
 ///     }
@@ -1313,10 +1284,7 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 ///
 /// pcm_clip! {
 ///     Nasa {
-///         file: concat!(
-///             env!("CARGO_MANIFEST_DIR"),
-///             "/../device-envoy-rp/examples/data/audio/nasa_22k.s16"
-///         ),
+///         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 ///         source_sample_rate_hz: VOICE_22050_HZ,
 ///         target_sample_rate_hz: NARROWBAND_8000_HZ,
 ///     }
@@ -1359,16 +1327,12 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// #     }
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
-/// # #[embassy_executor::main]
-/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
-/// #     let _ = spawner;
-/// #     let mut button = DemoButton;
-/// #     let audio_player = DemoAudioPlayer;
-/// #     loop {
-/// #         play_resampled_countdown(&audio_player);
-/// #         button.wait_for_press().await;
-/// #     }
-/// # }
+/// fn main() {
+///     let mut button = DemoButton;
+///     let audio_player = DemoAudioPlayer;
+///     play_resampled_countdown(&audio_player);
+///     let _future = button.wait_for_press();
+/// }
 /// ```
 #[allow(async_fn_in_trait)]
 pub trait AudioPlayer<const SAMPLE_RATE_HZ: u32> {

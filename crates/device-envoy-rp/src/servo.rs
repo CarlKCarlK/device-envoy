@@ -1,15 +1,156 @@
 //! A device abstraction for hobby servos.
 //!
-//! This module provides a simple interface for controlling hobby positional servo motors
-//! like the SG90. See [`ServoRp`] for usage examples.
+//! This module provides both direct servo control (`servo!`, [`ServoRp`]) and
+//! servo-player animation control (`servo_player!`, [`ServoPlayer`], [`AtEnd`], [`linear`], [`combine!`]).
 //!
 //! Use the [`servo!`] macro for a keyword-driven constructor with defaults.
-
+//!
+//! **After reading the examples below, see also:**
+//!
+//! - [`servo_player!`](macro@crate::servo::servo_player) — Macro to generate a servo player struct
+//!   type (includes syntax details). See [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated)
+//!   for a sample of a generated type.
+//! - [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) — Sample struct
+//!   type showing all methods and associated constants.
+//! - [`combine!`](macro@crate::servo::combine) & [`linear`] — Macro and function for creating
+//!   complex motion sequences.
+//! - [`ServoRp`] — Direct servo control without animation support. Use `ServoRp` for direct,
+//!   immediate control; use `servo_player` when you want motion to continue in the background.
+//!
+#![doc = include_str!("../docs/how_servos_work.md")]
+//!
+//! This device abstraction, `servo_player`, adds a background software task around the hardware
+//! control signal.
+//!
+//! # Controlling Multiple Servos
+//!
+//! Supports up to eight servos, one per [PWM slice](crate#glossary) resource. To calculate which PWM slice a pin uses,
+//! use the formula: `PWM slice = (pin / 2) % 8`. For example, PIN_10 and PIN_11 must both use PWM_SLICE5
+//! ((10 / 2) % 8 = 5, (11 / 2) % 8 = 5). Therefore, either of these these two pins can have a servo, but not both.
+//!
+//! # Example: Basic Servo Control
+//!
+//! This example demonstrates basic servo control: moving to a position, holding, relaxing,
+//! and using animation. Here, the generated struct type is named `ServoPlayer11`.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use defmt_rtt as _;
+//! # use core::convert::Infallible;
+//! # use core::default::Default;
+//! # use core::result::Result::Ok;
+//! use device_envoy_rp::{Result, servo::{AtEnd, Servo as _, ServoPlayer as _, servo_player}};
+//! use embassy_time::{Duration, Timer};
+//!
+//! // Define ServoPlayer11, a struct type for a servo on PIN_11.
+//! servo_player! {
+//!     ServoPlayer11 {
+//!         pin: PIN_11,  // GPIO pin for servo
+//!         // other inputs set to their defaults
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!
+//!     // PIN_11 uses PWM_SLICE5 (pin / 2) % 8 = (11 / 2) % 8 = 5 % 8 = 5)
+//!     let servo_player11 = ServoPlayer11::new(p.PIN_11, p.PWM_SLICE5, spawner)?;
+//!
+//!     // Move to 90°, wait 1 second, then relax.
+//!     servo_player11.set_degrees(90);
+//!     Timer::after(Duration::from_secs(1)).await;
+//!     servo_player11.relax();
+//!
+//!     // Animate: hold at 180° for 1 second, then 0° for 1 second, then relax.
+//!     const STEPS: [(u16, Duration); 2] = [
+//!         (180, Duration::from_secs(1)),
+//!         (0, Duration::from_secs(1)),
+//!     ];
+//!     // AtEnd::Relax quiets the servo; AtEnd::Hold keeps driving pulses to hold
+//!     // position; AtEnd::Loop repeats.
+//!     servo_player11.animate(STEPS, AtEnd::Relax);
+//!
+//!     core::future::pending().await // run forever
+//! }
+//! ```
+//!
+//! # Example: Multi-Step Animation
+//!
+//! This example combines 40 animation steps using `linear` and `combine!` to
+//! sweep up, hold, sweep down, hold pattern. Here, the generated struct type is named
+//! `ServoSweep`.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use defmt_rtt as _;
+//! # use core::convert::Infallible;
+//! # use core::default::Default;
+//! # use core::result::Result::Ok;
+//! use device_envoy_rp::{Result, servo::{AtEnd, Servo as _, ServoPlayer as _, combine, linear, servo_player}};
+//! use embassy_time::Duration;
+//!
+//! servo_player! {
+//!     ServoSweep {
+//!         pin: PIN_12,
+//!         max_steps: 40,
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     core::panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let servo_sweep = ServoSweep::new(p.PIN_12, p.PWM_SLICE6, spawner)?;
+//!
+//!     const STEPS: [(u16, Duration); 40] = combine!(
+//!         linear::<19>(0, 180, Duration::from_secs(2)),
+//!         [(180, Duration::from_millis(400))],
+//!         linear::<19>(180, 0, Duration::from_secs(2)),
+//!         [(0, Duration::from_millis(400))]
+//!     );
+//!
+//!     servo_sweep.animate(STEPS, AtEnd::Loop);
+//!     core::future::pending().await
+//! }
+//! ```
 use core::cell::{Cell, RefCell};
 use defmt::info;
 pub use device_envoy_core::servo::Servo;
 use embassy_rp::clocks::clk_sys_freq;
 use embassy_rp::pwm::{Config, Pwm};
+
+#[doc(inline)]
+pub use crate::combine;
+#[doc(inline)]
+pub use crate::servo_player::servo_player;
+pub use device_envoy_core::servo::{
+    AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic, combine, linear,
+};
+
+/// Sample generated servo-player type documentation.
+pub mod servo_player_generated {
+    #[cfg(doc)]
+    pub use crate::servo_player::servo_player_generated::*;
+}
+#[doc(hidden)]
+pub use device_envoy_core::servo::{
+    __servo_player_animate, __servo_player_hold, __servo_player_relax, __servo_player_set_degrees,
+    device_loop,
+};
+#[doc(hidden)]
+pub use paste;
 
 const SERVO_PERIOD_US: u16 = 20_000; // 20 ms
 
@@ -666,7 +807,7 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 /// A device abstraction for hobby servos.
 ///
 /// Use `ServoRp` for direct, immediate control when you want to manually manage servo
-/// positioning. Use [`servo_player`](mod@crate::servo_player) instead when you need
+/// positioning. Use [`servo_player`](mod@crate::servo) instead when you need
 /// background animation sequences or want motion to continue while your code does other work.
 ///
 #[doc = include_str!("../docs/how_servos_work.md")]

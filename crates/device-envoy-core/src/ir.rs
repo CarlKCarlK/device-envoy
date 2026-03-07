@@ -32,9 +32,42 @@ pub enum IrEvent {
 ///
 /// Platform crates implement this for their concrete `Ir` types so shared logic can wait for
 /// NEC button press events without depending on platform-specific modules.
+///
+/// This trait is the core `wait_for_press` surface used by platform IR receiver wrappers.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::ir::{Ir, IrEvent};
+///
+/// async fn handle_ir_presses(ir: &impl Ir) -> ! {
+///     loop {
+///         let ir_event = ir.wait_for_press().await;
+///         match ir_event {
+///             IrEvent::Press { addr, cmd } => {
+///                 // Handle decoded NEC press event.
+///                 let _ = (addr, cmd);
+///             }
+///         }
+///     }
+/// }
+///
+/// # struct DemoIr;
+/// # impl Ir for DemoIr {
+/// #     async fn wait_for_press(&self) -> IrEvent {
+/// #         IrEvent::Press { addr: 0, cmd: 0 }
+/// #     }
+/// # }
+/// # fn main() {
+/// #     let ir = DemoIr;
+/// #     let _future = handle_ir_presses(&ir);
+/// # }
+/// ```
 #[allow(async_fn_in_trait)]
 pub trait Ir {
     /// Wait for the next IR event.
+    ///
+    /// See the [Ir trait documentation](Self) for usage examples.
     async fn wait_for_press(&self) -> IrEvent;
 }
 

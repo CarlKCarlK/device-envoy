@@ -9,9 +9,56 @@ use heapless::LinearMap;
 ///
 /// Platform crates implement this for their concrete `IrMapping` types so shared logic can wait
 /// for mapped button presses without depending on platform-specific modules.
+///
+/// This trait is intended for app-level button enums mapped from `(addr, cmd)` pairs
+/// in platform-specific constructors.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::ir::IrMapping;
+///
+/// #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// enum RemoteButton {
+///     Power,
+///     Play,
+///     Stop,
+/// }
+///
+/// async fn handle_mapped_button_presses(ir_mapping: &impl IrMapping<RemoteButton>) -> ! {
+///     loop {
+///         let remote_button = ir_mapping.wait_for_press().await;
+///         // Use mapped button in app logic.
+///         match remote_button {
+///             RemoteButton::Power => {
+///                 // Handle power.
+///             }
+///             RemoteButton::Play => {
+///                 // Handle play.
+///             }
+///             RemoteButton::Stop => {
+///                 // Handle stop.
+///             }
+///         }
+///     }
+/// }
+///
+/// # struct DemoIrMapping;
+/// # impl IrMapping<RemoteButton> for DemoIrMapping {
+/// #     async fn wait_for_press(&self) -> RemoteButton {
+/// #         RemoteButton::Power
+/// #     }
+/// # }
+/// # fn main() {
+/// #     let ir_mapping = DemoIrMapping;
+/// #     let _future = handle_mapped_button_presses(&ir_mapping);
+/// # }
+/// ```
 #[allow(async_fn_in_trait)]
 pub trait IrMapping<Button> {
     /// Wait for the next recognized mapped button press.
+    ///
+    /// See the [IrMapping trait documentation](Self) for usage examples.
     async fn wait_for_press(&self) -> Button;
 }
 

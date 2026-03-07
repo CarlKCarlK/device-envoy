@@ -38,6 +38,24 @@ button-example1-trait-s3:
 button-example1-trait-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
 
+ir-example1-trait-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+ir-example1-trait-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+ir-mapping-example1-trait-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_mapping_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+ir-mapping-example1-trait-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_mapping_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+ir-kepler-example1-trait-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_kepler_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+ir-kepler-example1-trait-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_kepler_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
 flash-block-example1-trait-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
 

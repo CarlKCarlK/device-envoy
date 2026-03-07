@@ -38,9 +38,48 @@ pub enum KeplerButton {
 ///
 /// Platform crates implement this for their concrete `IrKepler` types so shared logic can wait
 /// for button presses without depending on platform-specific modules.
+///
+/// This trait provides a simple interface with built-in Kepler button mappings.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::ir::{IrKepler, KeplerButton};
+///
+/// async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
+///     loop {
+///         let kepler_button = ir_kepler.wait_for_press().await;
+///         // Use mapped Kepler button in app logic.
+///         match kepler_button {
+///             KeplerButton::Power => {
+///                 // Handle power.
+///             }
+///             KeplerButton::PlayPause => {
+///                 // Handle play/pause.
+///             }
+///             _ => {
+///                 // Handle all other Kepler buttons.
+///             }
+///         }
+///     }
+/// }
+///
+/// # struct DemoIrKepler;
+/// # impl IrKepler for DemoIrKepler {
+/// #     async fn wait_for_press(&self) -> KeplerButton {
+/// #         KeplerButton::Power
+/// #     }
+/// # }
+/// # fn main() {
+/// #     let ir_kepler = DemoIrKepler;
+/// #     let _future = handle_kepler_button_presses(&ir_kepler);
+/// # }
+/// ```
 #[allow(async_fn_in_trait)]
 pub trait IrKepler {
     /// Wait for the next recognized Kepler button press.
+    ///
+    /// See the [IrKepler trait documentation](Self) for usage examples.
     async fn wait_for_press(&self) -> KeplerButton;
 }
 

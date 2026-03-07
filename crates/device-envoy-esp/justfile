@@ -32,6 +32,18 @@ button-read-s3:
 button-read-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features
 
+button-example1-trait-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+button-example1-trait-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+flash-block-example1-trait-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+flash-block-example1-trait-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
 char-lcd-simple-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example char_lcd_simple --target xtensa-esp32s3-none-elf --release --no-default-features
 

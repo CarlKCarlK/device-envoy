@@ -1,8 +1,8 @@
 //! Shared low-level flash block protocol for type-safe persistent storage.
 //!
 //! This module provides the platform-independent protocol layer for
-//! [`device_envoy_rp::flash_block`] and `device_envoy_esp::flash_block`. See those
-//! platform crates for constructors, hardware wiring, and usage examples.
+//! platform crates. See your platform crate's `flash_block` module for
+//! constructors, hardware wiring, and usage examples.
 
 use core::any::type_name;
 
@@ -41,10 +41,86 @@ pub enum FlashBlockError<E> {
 /// Canonical typed block operations for flash-backed persistence.
 ///
 /// Platform crates implement this trait on their concrete flash block handle
-/// types (for example, `device_envoy_rp::flash_block::FlashBlock`).
+/// types.
 ///
 /// Constructors and hardware wiring remain platform-specific; this trait
 /// defines the shared operation surface used by higher-level abstractions.
+///
+/// # Features
+///
+/// - Type safety: hash-based type checking prevents reading data written under a
+///   different Rust type name. Trying to read a different type returns `Ok(None)`.
+/// - Postcard serialization: compact, `no_std`-friendly binary format.
+///
+/// This example increments a persisted boot counter and clears a separate
+/// scratch block in the same helper.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use core::convert::Infallible;
+/// use device_envoy_core::flash_block::FlashBlock;
+///
+/// #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy)]
+/// struct BootCounter(u8);
+///
+/// impl BootCounter {
+///     const fn new(value: u8) -> Self {
+///         Self(value)
+///     }
+///
+///     fn increment(self) -> Self {
+///         Self((self.0 + 1) % 10)
+///     }
+/// }
+///
+/// fn update_boot_counter_and_clear_scratch(
+///     boot_counter_flash_block: &mut impl FlashBlock<Error = Infallible>,
+///     scratch_flash_block: &mut impl FlashBlock<Error = Infallible>,
+/// ) -> Result<BootCounter, Infallible> {
+///     // Load the typed value, defaulting to 0 when the block is empty.
+///     let boot_counter = boot_counter_flash_block
+///         .load()?
+///         .unwrap_or(BootCounter::new(0))
+///         .increment();
+///
+///     // Save the updated value back to flash.
+///     boot_counter_flash_block.save(&boot_counter)?;
+///
+///     // Clear the extra scratch block.
+///     scratch_flash_block.clear()?;
+///
+///     Ok(boot_counter)
+/// }
+///
+/// # struct DemoFlashBlock;
+/// # impl FlashBlock for DemoFlashBlock {
+/// #     type Error = Infallible;
+/// #     fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
+/// #     where
+/// #         T: serde::Serialize + for<'de> serde::Deserialize<'de>,
+/// #     {
+/// #         Ok(None)
+/// #     }
+/// #     fn save<T>(&mut self, _value: &T) -> Result<(), Self::Error>
+/// #     where
+/// #         T: serde::Serialize + for<'de> serde::Deserialize<'de>,
+/// #     {
+/// #         Ok(())
+/// #     }
+/// #     fn clear(&mut self) -> Result<(), Self::Error> {
+/// #         Ok(())
+/// #     }
+/// # }
+/// # fn main() {
+/// #     let mut boot_counter_flash_block = DemoFlashBlock;
+/// #     let mut scratch_flash_block = DemoFlashBlock;
+/// #     let _ = update_boot_counter_and_clear_scratch(
+/// #         &mut boot_counter_flash_block,
+/// #         &mut scratch_flash_block,
+/// #     );
+/// # }
+/// ```
 pub trait FlashBlock {
     /// Error returned by block operations.
     type Error;
@@ -52,16 +128,22 @@ pub trait FlashBlock {
     /// Load a typed value from this block.
     ///
     /// Returns `Ok(None)` when the block is empty or contains a different type.
+    ///
+    /// See the [FlashBlock trait documentation](Self) for usage examples.
     fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
     where
         T: Serialize + for<'de> Deserialize<'de>;
 
     /// Save a typed value to this block.
+    ///
+    /// See the [FlashBlock trait documentation](Self) for usage examples.
     fn save<T>(&mut self, value: &T) -> Result<(), Self::Error>
     where
         T: Serialize + for<'de> Deserialize<'de>;
 
     /// Clear this block.
+    ///
+    /// See the [FlashBlock trait documentation](Self) for usage examples.
     fn clear(&mut self) -> Result<(), Self::Error>;
 }
 

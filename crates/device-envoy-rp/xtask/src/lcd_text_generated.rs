@@ -44,6 +44,7 @@ pub struct LcdTextGenerated20x4;
 #[cfg(doc)]
 impl I2csGenerated {
     /// Construct all generated LCD text devices in this group.
+    /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
     pub fn new(
         i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::I2C0>,
         sda: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_4>,

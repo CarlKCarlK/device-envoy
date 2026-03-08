@@ -63,6 +63,7 @@ impl LcdTextGenerated {
     pub const ADDRESS: u8 = 0x27;
 
     /// Create this generated LCD text instance.
+    /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
     pub fn new(
         i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::I2C0>,
         sda: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_4>,
@@ -75,6 +76,7 @@ impl LcdTextGenerated {
     }
 
     /// Write text to the display using clamp-to-frame behavior.
+    /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
     pub fn write_text(&self, text: impl AsRef<str>) {
         let _ = text;
     }
@@ -90,6 +92,7 @@ impl LcdTextGenerated20x4 {
     pub const ADDRESS: u8 = 0x3F;
 
     /// Create this generated LCD text instance.
+    /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
     pub fn new(
         i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::I2C0>,
         sda: embassy_rp::Peri<'static, embassy_rp::peripherals::PIN_4>,
@@ -102,6 +105,7 @@ impl LcdTextGenerated20x4 {
     }
 
     /// Write text to the display using clamp-to-frame behavior.
+    /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
     pub fn write_text(&self, text: impl AsRef<str>) {
         let _ = text;
     }

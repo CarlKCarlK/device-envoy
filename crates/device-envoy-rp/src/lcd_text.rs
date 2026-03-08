@@ -14,10 +14,15 @@
 //! - [`I2csGenerated`](lcd_text_generated::I2csGenerated) — Sample generated
 //!   I2C group type for multiple LCD text devices.
 //!
-//! - [`LcdTextDriver`] — low-level
-//!   HD44780-over-PCF8574 write driver used by generated types.
-//! - [`LcdTextFrame`] — fixed-size
-//!   character frame payload sent to the runtime task.
+//! # Text Behavior
+//!
+//! `write_text(...)` behavior:
+//!
+//! - `\n` starts a new LCD row.
+//! - Characters past `WIDTH` on a row are `"ignored"`.
+//! - Rows past `HEIGHT` are `"ignored"`.
+//! - Non-ASCII Unicode characters are replaced with `?`.
+//! - Missing characters are padded with spaces.
 //!
 //! # Example: Write Text on One LCD
 //!
@@ -97,24 +102,25 @@
 
 use embassy_rp::i2c;
 
-pub use device_envoy_core::lcd_text::{LcdTextError, LcdTextFrame, LcdTextStatic, MAX_LCD_CHARS};
-use device_envoy_core::lcd_text::{LcdTextDriver, LcdTextWrite};
+use device_envoy_core::lcd_text::{LcdTextDriver, LcdTextError, LcdTextFrame, LcdTextWrite};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use heapless::Vec;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
 pub use paste;
 
 pub mod lcd_text_generated;
 
+// Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
-#[derive(Clone, Copy)]
-pub struct I2cLcdTextCommand {
-    pub address: u8,
-    pub frame: LcdTextFrame,
-}
-
+pub const __MAX_LCD_CHARS: usize = device_envoy_core::lcd_text::MAX_LCD_CHARS;
+// Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
-pub type I2cLcdTextCommandSignal = Signal<CriticalSectionRawMutex, I2cLcdTextCommand>;
+pub type __I2csSignal<T> = Signal<CriticalSectionRawMutex, T>;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::lcd_text::LcdTextDriver as __LcdTextDriver;
 
 #[doc(hidden)]
 pub fn __render_lcd_text_frame<const W: usize, const H: usize>(text: &str) -> LcdTextFrame {
@@ -137,36 +143,50 @@ pub fn __render_lcd_text_frame<const W: usize, const H: usize>(text: &str) -> Lc
 }
 
 #[doc(hidden)]
-pub async fn __i2cs_device_loop<T: i2c::Instance + 'static>(
-    i2c: i2c::I2c<'static, T, i2c::Blocking>,
-    command_signal: &'static I2cLcdTextCommandSignal,
-) -> ! {
-    let mut rp_lcd_text_write = RpLcdTextWrite { i2c };
-    let mut lcd_text_driver = LcdTextDriver::new(0x27);
-    let mut initialized_addresses: Vec<u8, 8> = Vec::new();
+pub async fn __write_lcd_text_cells(
+    lcd_text_driver: &mut LcdTextDriver,
+    lcd_text_write: &mut impl LcdTextWrite,
+    initialized_addresses: &mut Vec<u8, 8>,
+    address: u8,
+    width: usize,
+    height: usize,
+    cells: &[u8],
+) {
+    let first_use_of_address = !initialized_addresses
+        .iter()
+        .any(|initialized_address| *initialized_address == address);
 
-    loop {
-        let i2c_lcd_text_command = command_signal.wait().await;
-        let first_use_of_address = !initialized_addresses
-            .iter()
-            .any(|initialized_address| *initialized_address == i2c_lcd_text_command.address);
-
-        lcd_text_driver.set_address(i2c_lcd_text_command.address);
-        if first_use_of_address {
-            if lcd_text_driver.init(&mut rp_lcd_text_write).await.is_err() {
-                continue;
-            }
-            let _ = initialized_addresses.push(i2c_lcd_text_command.address);
+    lcd_text_driver.set_address(address);
+    if first_use_of_address {
+        if lcd_text_driver.init(lcd_text_write).await.is_err() {
+            return;
         }
-
-        let _ = lcd_text_driver
-            .write_frame(&mut rp_lcd_text_write, &i2c_lcd_text_command.frame)
-            .await;
+        let _ = initialized_addresses.push(address);
     }
+
+    let mut lcd_text_frame = LcdTextFrame::new_blank(width, height);
+    let cell_count = core::cmp::min(width * height, cells.len());
+    for cell_index in 0..cell_count {
+        lcd_text_frame.cells[cell_index] = cells[cell_index];
+    }
+
+    let _ = lcd_text_driver
+        .write_frame(lcd_text_write, &lcd_text_frame)
+        .await;
 }
 
-struct RpLcdTextWrite<T: i2c::Instance + 'static> {
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub struct RpLcdTextWrite<T: i2c::Instance + 'static> {
     i2c: i2c::I2c<'static, T, i2c::Blocking>,
+}
+
+impl<T: i2c::Instance + 'static> RpLcdTextWrite<T> {
+    // Must be `pub` for macro expansion at downstream call sites.
+    #[doc(hidden)]
+    pub fn __new(i2c: i2c::I2c<'static, T, i2c::Blocking>) -> Self {
+        Self { i2c }
+    }
 }
 
 impl<T: i2c::Instance + 'static> LcdTextWrite for RpLcdTextWrite<T> {
@@ -201,51 +221,22 @@ impl<T: i2c::Instance + 'static> LcdTextWrite for RpLcdTextWrite<T> {
 /// }
 /// ```
 ///
-/// **After reading the example below, see also:**
+/// For a single LCD type, see [`lcd_text!`](macro@crate::lcd_text).
 ///
-/// - [`lcd_text!`](macro@crate::lcd_text) — Simpler single-device wrapper
-/// - [`LcdTextGenerated`](crate::lcd_text::lcd_text_generated::LcdTextGenerated)
-/// - [`I2csGenerated`](crate::lcd_text::lcd_text_generated::I2csGenerated)
-///
-/// # Example: Two LCDs on One I2C Peripheral
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// # use defmt_rtt as _;
-/// # use core::convert::Infallible;
-/// use device_envoy_rp::{Result, i2cs};
-///
-/// i2cs! {
-///     i2c: I2C0,
-///     sda_pin: PIN_4,
-///     scl_pin: PIN_5,
-///     LcdTexts0 {
-///         LcdText16x2 { width: 16, height: 2, address: 0x27 },
-///         LcdText20x4 { width: 20, height: 4, address: 0x3F },
-///     }
-/// }
-///
-/// # #[embassy_executor::main]
-/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
-/// #     let _ = example(spawner).await;
-/// #     core::panic!("done");
-/// # }
-/// async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-///     let p = embassy_rp::init(Default::default());
-///     let (lcd_text16x2, lcd_text20x4) = LcdTexts0::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
-///
-///     lcd_text16x2.write_text("16x2\nready");
-///     lcd_text20x4.write_text("20x4\nshared i2c\naddress 0x3F");
-///
-///     core::future::pending().await
-/// }
-/// ```
+/// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
+/// examples.**
 #[cfg(not(feature = "host"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! i2cs {
+    ($($tt:tt)*) => { $crate::__i2cs_impl! { $($tt)* } };
+}
+
+/// Implementation macro. Not part of the public API; use [`i2cs!`] instead.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __i2cs_impl {
     (
         i2c: $i2c:ident,
         sda_pin: $sda_pin:ident,
@@ -261,9 +252,19 @@ macro_rules! i2cs {
         }
     ) => {
         $crate::lcd_text::paste::paste! {
+            #[doc(hidden)]
+            #[derive(Clone, Copy)]
+            enum [<$group_name I2cLcdTextCommand>] {
+                $(
+                    [<$lcd_name Command>] {
+                        cells: [u8; $width * $height],
+                    },
+                )+
+            }
+
             static [<$group_name:upper _I2C_LCD_TEXT_COMMAND_SIGNAL>]:
-                $crate::lcd_text::I2cLcdTextCommandSignal =
-                $crate::lcd_text::I2cLcdTextCommandSignal::new();
+                $crate::lcd_text::__I2csSignal<[<$group_name I2cLcdTextCommand>]> =
+                $crate::lcd_text::__I2csSignal::new();
 
             #[doc = "A generated group of LCD text devices that share one I2C peripheral and pin pair."]
             $group_vis struct $group_name;
@@ -336,6 +337,7 @@ macro_rules! i2cs {
                     pub const ADDRESS: u8 = $address;
 
                     /// Construct this LCD text device and spawn its shared I2C task.
+                    /// See the [lcd_text module documentation](mod@crate::lcd_text) for usage examples.
                     pub fn new(
                         i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::$i2c>,
                         sda: embassy_rp::Peri<'static, embassy_rp::peripherals::$sda_pin>,
@@ -348,6 +350,7 @@ macro_rules! i2cs {
                     }
 
                     /// Write text to this LCD using clamp-to-frame behavior.
+                    /// See the [lcd_text module documentation](mod@crate::lcd_text) for usage examples.
                     pub fn write_text(&self, text: impl AsRef<str>) {
                         ::core::assert!($width > 0, "lcd_text width must be > 0");
                         ::core::assert!($height > 0, "lcd_text height must be > 0");
@@ -356,16 +359,19 @@ macro_rules! i2cs {
                             "lcd_text height must be <= 4 for HD44780 row map"
                         );
                         ::core::assert!(
-                            $width * $height <= $crate::lcd_text::MAX_LCD_CHARS,
+                            $width * $height <= $crate::lcd_text::__MAX_LCD_CHARS,
                             "lcd_text width*height must fit MAX_LCD_CHARS"
                         );
 
                         let lcd_text_frame =
                             $crate::lcd_text::__render_lcd_text_frame::<$width, $height>(text.as_ref());
+                        let mut cells = [b' '; $width * $height];
+                        for cell_index in 0..($width * $height) {
+                            cells[cell_index] = lcd_text_frame.cells[cell_index];
+                        }
                         [<$group_name:upper _I2C_LCD_TEXT_COMMAND_SIGNAL>].signal(
-                            $crate::lcd_text::I2cLcdTextCommand {
-                                address: $address,
-                                frame: lcd_text_frame,
+                            [<$group_name I2cLcdTextCommand>]::[<$lcd_name Command>] {
+                                cells,
                             },
                         );
                     }
@@ -376,11 +382,29 @@ macro_rules! i2cs {
             async fn [<__i2cs_task_ $group_name:snake>](
                 i2c: embassy_rp::i2c::I2c<'static, embassy_rp::peripherals::$i2c, embassy_rp::i2c::Blocking>,
             ) -> ! {
-                $crate::lcd_text::__i2cs_device_loop(
-                    i2c,
-                    &[<$group_name:upper _I2C_LCD_TEXT_COMMAND_SIGNAL>],
-                )
-                .await
+                let mut rp_lcd_text_write = $crate::lcd_text::RpLcdTextWrite::__new(i2c);
+                let mut lcd_text_driver = $crate::lcd_text::__LcdTextDriver::new(0x27);
+                let mut initialized_addresses: heapless::Vec<u8, 8> = heapless::Vec::new();
+
+                loop {
+                    let i2c_lcd_text_command =
+                        [<$group_name:upper _I2C_LCD_TEXT_COMMAND_SIGNAL>].wait().await;
+                    match i2c_lcd_text_command {
+                        $(
+                            [<$group_name I2cLcdTextCommand>]::[<$lcd_name Command>] { cells } => {
+                                $crate::lcd_text::__write_lcd_text_cells(
+                                    &mut lcd_text_driver,
+                                    &mut rp_lcd_text_write,
+                                    &mut initialized_addresses,
+                                    $address,
+                                    $width,
+                                    $height,
+                                    &cells,
+                                ).await;
+                            }
+                        )+
+                    }
+                }
             }
         }
     };
@@ -392,8 +416,8 @@ pub use i2cs;
 
 /// Macro to generate a single LCD text device type with a direct constructor.
 ///
-/// This is a thin wrapper over [`i2cs!`](macro@crate::i2cs) that avoids tuple
-/// destructuring for single-device setups.
+/// For multiple LCD types sharing one I2C peripheral, see
+/// [`i2cs!`](macro@crate::i2cs).
 ///
 /// **Syntax:**
 ///
@@ -410,45 +434,20 @@ pub use i2cs;
 /// }
 /// ```
 ///
-/// # Example: One LCD with the Simplest Constructor Path
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// # use defmt_rtt as _;
-/// # use core::convert::Infallible;
-/// use device_envoy_rp::{Result, lcd_text};
-///
-/// lcd_text! {
-///     i2c: I2C0,
-///     sda_pin: PIN_4,
-///     scl_pin: PIN_5,
-///     LcdTextSimple {
-///         width: 16,
-///         height: 2,
-///         address: 0x27
-///     }
-/// }
-///
-/// # #[embassy_executor::main]
-/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
-/// #     let _ = example(spawner).await;
-/// #     core::panic!("done");
-/// # }
-/// async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-///     let p = embassy_rp::init(Default::default());
-///     let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
-///
-///     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
-///
-///     core::future::pending().await
-/// }
-/// ```
+/// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
+/// examples.**
 #[cfg(not(feature = "host"))]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! lcd_text {
+    ($($tt:tt)*) => { $crate::__lcd_text_impl! { $($tt)* } };
+}
+
+/// Implementation macro. Not part of the public API; use [`lcd_text!`] instead.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lcd_text_impl {
     (
         i2c: $i2c:ident,
         sda_pin: $sda_pin:ident,

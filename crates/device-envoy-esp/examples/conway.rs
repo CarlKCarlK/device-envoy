@@ -9,10 +9,8 @@ use device_envoy_esp::led_strip::Engine;
 use device_envoy_example_common::conway::conway_with_led2d_ir_kepler;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
-use log::info;
 
 use device_envoy_esp::{
-    esp_hal::gpio::{Level, Output, OutputConfig},
     init_and_start,
     ir::{IrKeplerEsp, IrKeplerStatic},
     led2d,

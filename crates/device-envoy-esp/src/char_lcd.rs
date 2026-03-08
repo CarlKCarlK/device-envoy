@@ -53,9 +53,9 @@ struct EspCharLcdWrite {
 #[cfg(target_os = "none")]
 impl CharLcdWrite for EspCharLcdWrite {
     fn write(&mut self, address: u8, data: u8) {
-        if self.i2c.write(address, &[data]).is_err() {
-            // Keep the background task running if one bus write fails.
-        }
+        self.i2c
+            .write(address, &[data])
+            .unwrap_or_else(|error| panic!("char_lcd i2c write failed at 0x{address:02X}: {error:?}"));
     }
 }
 

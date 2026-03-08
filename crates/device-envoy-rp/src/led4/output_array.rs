@@ -5,7 +5,7 @@ use embassy_rp::gpio::{self, Level};
 
 /// Array of GPIO output pins for LED displays.
 ///
-/// See the [`Led4`](crate::led4::Led4) documentation for usage examples.
+/// See the [`Led4Rp`](crate::led4::Led4Rp) documentation for usage examples.
 pub struct OutputArray<'a, const N: usize>([gpio::Output<'a>; N]);
 
 impl<'a, const N: usize> OutputArray<'a, N> {

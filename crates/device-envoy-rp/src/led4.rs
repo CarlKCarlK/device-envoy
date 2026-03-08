@@ -1,6 +1,6 @@
 //! A device abstraction for a 4-digit, 7-segment LED display for text with optional animation and blinking.
 //!
-//! See [`Led4`] for the primary text/blinking example and [`Led4::animate_text`] for the animation example.
+//! See [`Led4Rp`] for the primary text/blinking example and [`Led4`] for trait methods.
 //!
 //! This module provides device abstraction for controlling common-cathode
 //! 4-digit 7-segment LED displays. Supports displaying text and numbers with
@@ -26,7 +26,7 @@ use self::led4_simple::{Led4Simple, Led4SimpleStatic};
 // ============================================================================
 
 mod output_array;
-pub use device_envoy_core::led4::{AnimationFrame, BlinkState, circular_outline_animation};
+pub use device_envoy_core::led4::{AnimationFrame, BlinkState, Led4, circular_outline_animation};
 pub use output_array::OutputArray;
 
 // ============================================================================
@@ -57,7 +57,8 @@ pub(crate) const SEGMENT_COUNT: usize = 8;
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_rp::{Error, led4::{BlinkState, Led4, Led4Static, OutputArray}};
+/// use embassy_time::{Duration, Timer};
+/// use device_envoy_rp::{Error, led4::{BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation}};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///
@@ -83,34 +84,38 @@ pub(crate) const SEGMENT_COUNT: usize = 8;
 ///     ]);
 ///
 ///     // Create the display
-///     static LED4_STATIC: Led4Static = Led4::new_static();
-///     let display = Led4::new(&LED4_STATIC, cells, segments, spawner)?;
+///     static LED4_STATIC: Led4RpStatic = Led4Rp::new_static();
+///     let display = Led4Rp::new(&LED4_STATIC, cells, segments, spawner)?;
 ///
-///     // Display "1234" (solid)
-///     display.write_text(['1', '2', '3', '4'], BlinkState::Solid);
-///     
-///     // Display "rUSt" blinking
-///     display.write_text(['r', 'U', 'S', 't'], BlinkState::BlinkingAndOn);
-///     
-///     Ok(())
+///     // Blink "1234" for three seconds.
+///     display.write_text(['1', '2', '3', '4'], BlinkState::BlinkingAndOn);
+///     Timer::after(Duration::from_secs(3)).await;
+///
+///     // Run the circular outline animation for three seconds.
+///     display.animate_text(circular_outline_animation(true));
+///     Timer::after(Duration::from_secs(3)).await;
+///
+///     // Show "rUSt" solid forever.
+///     display.write_text(['r', 'U', 'S', 't'], BlinkState::Solid);
+///     core::future::pending().await
 /// }
 /// ```
 ///
 /// Beyond simple text, the driver can loop animations via [`Led4::animate_text`].
 /// The struct owns the background task and signal wiring; create it once with
-/// [`Led4::new`] and use the returned handle for all display updates.
-pub struct Led4<'a>(&'a Led4OuterStatic);
+/// [`Led4Rp::new`] and use the returned handle for all display updates.
+pub struct Led4Rp<'a>(&'a Led4RpOuterStatic);
 
-/// Signal for sending display commands to the [`Led4`] device.
-pub(crate) type Led4OuterStatic = device_envoy_core::led4::Led4CommandSignal;
+/// Signal for sending display commands to the [`Led4Rp`] device.
+pub(crate) type Led4RpOuterStatic = device_envoy_core::led4::Led4CommandSignal;
 
-/// Static for the [`Led4`] device.
-pub struct Led4Static {
-    outer: Led4OuterStatic,
+/// Static for the [`Led4Rp`] device.
+pub struct Led4RpStatic {
+    outer: Led4RpOuterStatic,
     display: Led4SimpleStatic,
 }
 
-impl Led4Static {
+impl Led4RpStatic {
     /// Creates static resources for the 4-digit LED display device.
     pub(crate) const fn new() -> Self {
         Self {
@@ -119,16 +124,16 @@ impl Led4Static {
         }
     }
 
-    fn split(&self) -> (&Led4OuterStatic, &Led4SimpleStatic) {
+    fn split(&self) -> (&Led4RpOuterStatic, &Led4SimpleStatic) {
         (&self.outer, &self.display)
     }
 }
 
-impl Led4<'_> {
-    /// Creates the display device and spawns its background task; see [`Led4`] docs.
+impl Led4Rp<'_> {
+    /// Creates the display device and spawns its background task; see [`Led4Rp`] docs.
     #[must_use = "Must be used to manage the spawned task"]
     pub fn new(
-        led4_static: &'static Led4Static,
+        led4_static: &'static Led4RpStatic,
         cell_pins: OutputArray<'static, CELL_COUNT>,
         segment_pins: OutputArray<'static, SEGMENT_COUNT>,
         spawner: Spawner,
@@ -140,64 +145,21 @@ impl Led4<'_> {
         Ok(Self(outer_static))
     }
 
-    /// Creates static channel resources for [`Led4::new`]; see [`Led4`] docs.
+    /// Creates static channel resources for [`Led4Rp::new`]; see [`Led4Rp`] docs.
     #[must_use]
-    pub const fn new_static() -> Led4Static {
-        Led4Static::new()
+    pub const fn new_static() -> Led4RpStatic {
+        Led4RpStatic::new()
     }
+}
 
-    /// Sends text to the display with optional blinking.
-    ///
-    /// See the main [`Led4`] example for end-to-end usage.
-    pub fn write_text(&self, text: [char; CELL_COUNT], blink_state: BlinkState) {
+impl device_envoy_core::led4::Led4 for Led4Rp<'_> {
+    fn write_text(&self, text: [char; CELL_COUNT], blink_state: BlinkState) {
         #[cfg(feature = "display-trace")]
         info!("blink_state: {:?}, text: {:?}", blink_state, text);
         signal_text(self.0, text, blink_state);
     }
 
-    /// Plays a looped text animation using the provided frames.
-    ///
-    /// # Example
-    ///
-    /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// # use panic_probe as _;
-    /// # use embassy_rp::gpio::{Level, Output};
-    /// # use embassy_executor::Spawner;
-    /// use device_envoy_rp::{Result, led4::{AnimationFrame, Led4, Led4Static, OutputArray}};
-    /// use embassy_time::Duration;
-    /// async fn demo(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    ///     let cells = OutputArray::new([
-    ///         Output::new(p.PIN_1, Level::High),
-    ///         Output::new(p.PIN_2, Level::High),
-    ///         Output::new(p.PIN_3, Level::High),
-    ///         Output::new(p.PIN_4, Level::High),
-    ///     ]);
-    ///     let segments = OutputArray::new([
-    ///         Output::new(p.PIN_5, Level::Low),
-    ///         Output::new(p.PIN_6, Level::Low),
-    ///         Output::new(p.PIN_7, Level::Low),
-    ///         Output::new(p.PIN_8, Level::Low),
-    ///         Output::new(p.PIN_9, Level::Low),
-    ///         Output::new(p.PIN_10, Level::Low),
-    ///         Output::new(p.PIN_11, Level::Low),
-    ///         Output::new(p.PIN_12, Level::Low),
-    ///     ]);
-    ///     static LED4_STATIC: Led4Static = Led4::new_static();
-    ///     let display = Led4::new(&LED4_STATIC, cells, segments, spawner)?;
-    ///     const FRAME_DURATION: Duration = Duration::from_millis(120);
-    ///     let animation = [
-    ///         AnimationFrame::new(['-', '-', '-', '-'], FRAME_DURATION),
-    ///         AnimationFrame::new([' ', ' ', ' ', ' '], FRAME_DURATION),
-    ///         AnimationFrame::new(['1', '2', '3', '4'], FRAME_DURATION),
-    ///     ];
-    ///     display.animate_text(animation);
-    ///     Ok(())
-    /// }
-    /// ```
-    /// See the example below for how to build animations.
-    pub fn animate_text<I>(&self, animation: I)
+    fn animate_text<I>(&self, animation: I)
     where
         I: IntoIterator,
         I::Item: core::borrow::Borrow<AnimationFrame>,
@@ -207,6 +169,9 @@ impl Led4<'_> {
 }
 
 #[embassy_executor::task]
-async fn device_loop(outer_static: &'static Led4OuterStatic, display: Led4Simple<'static>) -> ! {
+async fn device_loop(
+    outer_static: &'static Led4RpOuterStatic,
+    display: Led4Simple<'static>,
+) -> ! {
     run_command_loop(outer_static, |text| display.write_text(text)).await
 }

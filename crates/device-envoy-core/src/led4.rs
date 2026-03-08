@@ -138,6 +138,59 @@ where
     led4_command_signal.signal(Led4Command::Animation(frames));
 }
 
+/// Platform-agnostic 4-digit display contract.
+///
+/// Platform crates implement this trait for their concrete runtime handles.
+/// Constructors (`new`, `new_static`) remain inherent on platform types.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::led4::{AnimationFrame, BlinkState, Led4, circular_outline_animation};
+/// use embassy_time::{Duration, Timer};
+///
+/// async fn show_status(led4: &impl Led4) -> ! {
+///     // Blink "1234" for three seconds.
+///     led4.write_text(['1', '2', '3', '4'], BlinkState::BlinkingAndOn);
+///     Timer::after(Duration::from_secs(3)).await;
+///
+///     // Run the circular outline animation for three seconds.
+///     led4.animate_text(circular_outline_animation(true));
+///     Timer::after(Duration::from_secs(3)).await;
+///
+///     // Show "rUSt" solid forever.
+///     led4.write_text(['r', 'U', 'S', 't'], BlinkState::Solid);
+///     core::future::pending().await
+/// }
+///
+/// # struct DemoLed4;
+/// # impl Led4 for DemoLed4 {
+/// #     fn write_text(&self, _text: [char; 4], _blink_state: BlinkState) {}
+/// #     fn animate_text<I>(&self, _animation: I)
+/// #     where
+/// #         I: IntoIterator,
+/// #         I::Item: core::borrow::Borrow<AnimationFrame>,
+/// #     {
+/// #     }
+/// # }
+/// # let led4 = DemoLed4;
+/// # let _future = show_status(&led4);
+/// ```
+pub trait Led4 {
+    /// Send text to the display with optional blinking.
+    ///
+    /// See the [Led4 trait documentation](Self) for usage examples.
+    fn write_text(&self, text: [char; CELL_COUNT], blink_state: BlinkState);
+
+    /// Play a looped text animation from the provided frames.
+    ///
+    /// See the [Led4 trait documentation](Self) for usage examples.
+    fn animate_text<I>(&self, animation: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<AnimationFrame>;
+}
+
 /// Shared command loop for blinking/animated led4 text.
 pub async fn run_command_loop<F>(
     led4_command_signal: &'static Led4CommandSignal,

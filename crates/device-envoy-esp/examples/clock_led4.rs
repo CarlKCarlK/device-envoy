@@ -26,7 +26,7 @@ use device_envoy_esp::{
     clock_sync::{h12_m_s, ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start,
-    led4::{circular_outline_animation, BlinkState, Led4, Led4Static, OutputArray},
+    led4::{circular_outline_animation, BlinkState, Led4 as _, Led4Esp, Led4EspStatic, OutputArray},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
@@ -91,8 +91,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         Output::new(p.GPIO16, Level::Low, OutputConfig::default()),
     ]);
 
-    static LED4_STATIC: Led4Static = Led4::new_static();
-    let led4 = Led4::new(&LED4_STATIC, cell_pins, segment_pins, spawner)?;
+    static LED4_STATIC: Led4EspStatic = Led4Esp::new_static();
+    let led4 = Led4Esp::new(&LED4_STATIC, cell_pins, segment_pins, spawner)?;
 
     let led4_ref = &led4;
     let (stack, button) = wifi_auto
@@ -171,7 +171,7 @@ impl State {
         speed: f32,
         clock_sync: &ClockSync,
         button_watch: &mut ButtonWatchEsp<'_>,
-        led4: &Led4<'_>,
+        led4: &Led4Esp<'_>,
     ) -> Result<Self> {
         clock_sync.set_speed(speed).await;
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
@@ -224,7 +224,7 @@ impl State {
         self,
         clock_sync: &ClockSync,
         button_watch: &mut ButtonWatchEsp<'_>,
-        led4: &Led4<'_>,
+        led4: &Led4Esp<'_>,
     ) -> Result<Self> {
         clock_sync.set_speed(1.0).await;
         let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
@@ -275,7 +275,7 @@ impl State {
         clock_sync: &ClockSync,
         button_watch: &mut ButtonWatchEsp<'_>,
         timezone_field: &TimezoneField,
-        led4: &Led4<'_>,
+        led4: &Led4Esp<'_>,
     ) -> Result<Self> {
         info!("Entering edit offset mode");
 

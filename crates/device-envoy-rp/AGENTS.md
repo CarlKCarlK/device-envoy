@@ -76,7 +76,7 @@ When working directly with the `embedded_graphics` crate, using `colors::RED.to_
 ## Device/Static Pair Pattern (RP-specific)
 
 - **Hardware singletons** (e.g., `WifiAuto` — one WiFi chip per device) hide the static inside `Type::new()` using a function-scoped static, so users never see `TypeStatic`.
-- **Multi-instance devices** (e.g., `Led4` — can have multiple) require passing `&TypeStatic` as the **first** argument when implementing or calling `Type::new`, named `<type>_static` (e.g., `led4_static: &'static Led4Static`).
+- **Multi-instance devices** (e.g., `Led4Rp` — can have multiple) require passing `&TypeStatic` as the **first** argument when implementing or calling `Type::new`, named `<type>_static` (e.g., `led4_static: &'static Led4RpStatic`).
 
 Hardware singleton (static hidden inside `new()`):
 
@@ -93,8 +93,8 @@ let wifi_auto = WifiAuto::new(
 Multi-instance device (static passed as first argument):
 
 ```rust
-static LED4_STATIC: Led4Static = Led4::new_static();
-let led4 = Led4::new(&LED4_STATIC, cells, segments, spawner)?;
+static LED4_STATIC: Led4RpStatic = Led4Rp::new_static();
+let led4 = Led4Rp::new(&LED4_STATIC, cells, segments, spawner)?;
 ```
 
 ## Documentation (RP-specific)

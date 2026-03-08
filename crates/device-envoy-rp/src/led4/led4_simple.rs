@@ -32,9 +32,9 @@ impl Led4SimpleStatic {
 
 /// A device abstraction for a non-blinking 4-digit 7-segment LED display.
 ///
-/// Use this if you don't need animation or blinking. For blinking or animation support, use [`Led4`](crate::led4::Led4) instead.
+/// Use this if you don't need animation or blinking. For blinking or animation support, use [`Led4Rp`](crate::led4::Led4Rp) instead.
 ///
-/// This is an internal struct. Users should use [`Led4`](crate::led4::Led4) instead.
+/// This is an internal struct. Users should use [`Led4Rp`](crate::led4::Led4Rp) instead.
 pub struct Led4Simple<'a>(&'a Led4SimpleStatic);
 
 impl Led4Simple<'_> {

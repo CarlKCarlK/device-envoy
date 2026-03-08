@@ -1,10 +1,10 @@
 //! A device abstraction for a 4-digit, 7-segment LED display.
 //!
-//! See [`Led4`] for text, blinking, and animation control on ESP32.
+//! See [`Led4Esp`] for construction and [`device_envoy_core::led4::Led4`] for text, blinking, and animation control.
 
 pub use device_envoy_core::led4::{
-    circular_outline_animation, AnimationFrame, BlinkState, ANIMATION_MAX_FRAMES, CELL_COUNT,
-    SEGMENT_COUNT,
+    circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES,
+    CELL_COUNT, SEGMENT_COUNT,
 };
 
 #[cfg(target_os = "none")]
@@ -132,20 +132,20 @@ impl From<Led4SimpleLoopError<Error>> for Error {
 
 /// A device abstraction for a 4-digit, 7-segment LED display with blinking.
 #[cfg(target_os = "none")]
-pub struct Led4<'a>(&'a Led4OuterStatic);
+pub struct Led4Esp<'a>(&'a Led4EspOuterStatic);
 
 #[cfg(target_os = "none")]
-type Led4OuterStatic = device_envoy_core::led4::Led4CommandSignal;
+type Led4EspOuterStatic = device_envoy_core::led4::Led4CommandSignal;
 
-/// Static for the [`Led4`] device.
+/// Static for the [`Led4Esp`] device.
 #[cfg(target_os = "none")]
-pub struct Led4Static {
-    outer: Led4OuterStatic,
+pub struct Led4EspStatic {
+    outer: Led4EspOuterStatic,
     display: Led4SimpleStatic,
 }
 
 #[cfg(target_os = "none")]
-impl Led4Static {
+impl Led4EspStatic {
     const fn new() -> Self {
         Self {
             outer: device_envoy_core::led4::Led4CommandSignal::new(),
@@ -153,17 +153,17 @@ impl Led4Static {
         }
     }
 
-    fn split(&self) -> (&Led4OuterStatic, &Led4SimpleStatic) {
+    fn split(&self) -> (&Led4EspOuterStatic, &Led4SimpleStatic) {
         (&self.outer, &self.display)
     }
 }
 
 #[cfg(target_os = "none")]
-impl Led4<'_> {
+impl Led4Esp<'_> {
     /// Creates the display device and spawns its background task.
     #[must_use = "Must be used to manage the spawned task"]
     pub fn new(
-        led4_static: &'static Led4Static,
+        led4_static: &'static Led4EspStatic,
         cell_pins: OutputArray<'static, CELL_COUNT>,
         segment_pins: OutputArray<'static, SEGMENT_COUNT>,
         spawner: Spawner,
@@ -175,19 +175,20 @@ impl Led4<'_> {
         Ok(Self(outer_static))
     }
 
-    /// Creates static channel resources for [`Led4::new`].
+    /// Creates static channel resources for [`Led4Esp::new`].
     #[must_use]
-    pub const fn new_static() -> Led4Static {
-        Led4Static::new()
+    pub const fn new_static() -> Led4EspStatic {
+        Led4EspStatic::new()
     }
+}
 
-    /// Sends text to the display with optional blinking.
-    pub fn write_text(&self, text: [char; CELL_COUNT], blink_state: BlinkState) {
+#[cfg(target_os = "none")]
+impl device_envoy_core::led4::Led4 for Led4Esp<'_> {
+    fn write_text(&self, text: [char; CELL_COUNT], blink_state: BlinkState) {
         signal_text(self.0, text, blink_state);
     }
 
-    /// Plays a looped text animation using the provided frames.
-    pub fn animate_text<I>(&self, animation: I)
+    fn animate_text<I>(&self, animation: I)
     where
         I: IntoIterator,
         I::Item: core::borrow::Borrow<AnimationFrame>,
@@ -199,7 +200,7 @@ impl Led4<'_> {
 #[embassy_executor::task]
 #[cfg(target_os = "none")]
 async fn led4_device_loop(
-    outer_static: &'static Led4OuterStatic,
+    outer_static: &'static Led4EspOuterStatic,
     display: Led4Simple<'static>,
 ) -> ! {
     run_command_loop(outer_static, |text| display.write_text(text)).await

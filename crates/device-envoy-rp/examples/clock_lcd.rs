@@ -49,6 +49,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Initialize LcdText
     let (lcd_text,) = LcdTexts0::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+    lcd_text.write_text("Booting...\nLCD Clock");
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
     let [wifi_credentials_flash_block, timezone_flash_block] =
@@ -75,7 +76,26 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     // Connect to WiFi
-    let (stack, _button) = wifi_auto.connect(|_event| async move { Ok(()) }).await?;
+    let lcd_text_ref = lcd_text;
+    let (stack, _button) = wifi_auto
+        .connect(|wifi_auto_event| {
+            let lcd_text_ref = lcd_text_ref;
+            async move {
+                match wifi_auto_event {
+                    device_envoy_rp::wifi_auto::WifiAutoEvent::CaptivePortalReady => {
+                        lcd_text_ref.write_text("Join WiFi:\nwww.picoclock.net");
+                    }
+                    device_envoy_rp::wifi_auto::WifiAutoEvent::Connecting { .. } => {
+                        lcd_text_ref.write_text("Connecting...\nPlease wait");
+                    }
+                    device_envoy_rp::wifi_auto::WifiAutoEvent::ConnectionFailed => {
+                        lcd_text_ref.write_text("WiFi failed\nRetry setup");
+                    }
+                }
+                Ok(())
+            }
+        })
+        .await?;
 
     // Create ClockSync device with timezone from WiFi portal
     let timezone_offset_minutes = timezone_field
@@ -91,6 +111,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
 
     info!("Entering main event loop");
+    lcd_text.write_text("WiFi connected\nWaiting NTP");
 
     // Main orchestrator loop - owns LCD and displays the clock
     loop {

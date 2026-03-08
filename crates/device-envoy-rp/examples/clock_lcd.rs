@@ -10,7 +10,7 @@ use core::{convert::Infallible, fmt};
 use defmt::*;
 use defmt_rtt as _;
 use device_envoy_rp::button::PressedTo;
-use device_envoy_rp::char_lcd::{CharLcd, CharLcdStatic};
+use device_envoy_rp::lcd_text::{LcdText, LcdTextStatic};
 use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
@@ -37,9 +37,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Initialize RP2040 peripherals
     let p = embassy_rp::init(Default::default());
 
-    // Initialize CharLcd
-    static CHAR_LCD_STATIC: CharLcdStatic = CharLcd::new_static();
-    let char_lcd = CharLcd::new(&CHAR_LCD_STATIC, p.I2C0, p.PIN_5, p.PIN_4, spawner)?;
+    // Initialize LcdText
+    static LCD_TEXT_STATIC: LcdTextStatic = LcdText::new_static();
+    let lcd_text = LcdText::new(&LCD_TEXT_STATIC, p.I2C0, p.PIN_5, p.PIN_4, spawner)?;
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
     let [wifi_credentials_flash_block, timezone_flash_block] =
@@ -114,6 +114,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             ),
         )
         .map_err(|_| Error::FormatError)?;
-        char_lcd.write_text(text, 0).await?;
+        lcd_text.write_text(text, 0).await?;
     }
 }

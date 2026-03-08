@@ -4,7 +4,7 @@
 
 pub mod audio_player;
 pub mod button;
-pub mod char_lcd;
+pub mod lcd_text;
 pub mod clock;
 #[cfg(feature = "wifi")]
 pub mod clock_sync;

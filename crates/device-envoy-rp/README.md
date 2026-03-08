@@ -35,7 +35,7 @@ The API is actively evolving. Not recommended for production use, but excellent 
 - **[Button Input](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/button/)** - Button handling with debouncing
 - **[Servo Control](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/servo/)** - Servo positioning and animation
 - **[Flash Storage](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/flash_block/)** - Type-safe, on-board persist storage
-- **[LCD Display](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/char_lcd/)** - Text display (HD44780)
+- **[LCD Display](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/lcd_text/)** - Text display (HD44780)
 - **[IR Remote](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/ir/)** - Remote control decoder (NEC protocol)
 - **[RFID Reader](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/rfid/)** - Card detection and reading (MFRC522)
 - **[Clock Sync](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/clock_sync/)** - Network time synchronization utilities

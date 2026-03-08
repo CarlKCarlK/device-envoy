@@ -41,7 +41,7 @@ pub mod audio_player;
 #[cfg(target_os = "none")]
 pub mod button;
 #[cfg(target_os = "none")]
-pub mod char_lcd;
+pub mod lcd_text;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 mod error;

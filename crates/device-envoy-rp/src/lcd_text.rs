@@ -1,14 +1,99 @@
 //! A device abstraction for HD44780-compatible character LCDs (e.g., 16x2, 20x2, 20x4).
 //!
-//! This page provides the primary documentation for generated LCD text device
-//! types.
+//! This page provides the primary documentation and examples for LCD text
+//! devices.
 //!
-//! **After reading the generated type pages above, see also:**
+//! **After reading the examples below, see also:**
+//!
+//! - [`lcd_text!`](macro@crate::lcd_text) — Macro to generate a single LCD
+//!   text type (includes syntax details).
+//! - [`i2cs!`](macro@crate::i2cs) — Macro to generate multiple LCD text types
+//!   sharing one I2C resource (includes syntax details).
+//! - [`LcdTextGenerated`](lcd_text_generated::LcdTextGenerated) — Sample
+//!   generated LCD text type showing the constructor path.
+//! - [`I2csGenerated`](lcd_text_generated::I2csGenerated) — Sample generated
+//!   I2C group type for multiple LCD text devices.
 //!
 //! - [`LcdTextDriver`] — low-level
 //!   HD44780-over-PCF8574 write driver used by generated types.
 //! - [`LcdTextFrame`] — fixed-size
 //!   character frame payload sent to the runtime task.
+//!
+//! # Example: Write Text on One LCD
+//!
+//! In this example, the generated type is `LcdTextSimple`.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use defmt_rtt as _;
+//! # use core::convert::Infallible;
+//! use device_envoy_rp::{Result, lcd_text};
+//!
+//! lcd_text! {
+//!     i2c: I2C0,
+//!     sda_pin: PIN_4,
+//!     scl_pin: PIN_5,
+//!     LcdTextSimple {
+//!         width: 16,
+//!         height: 2,
+//!         address: 0x27
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let _ = example(spawner).await;
+//! #     core::panic!("done");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+//!
+//!     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
+//!
+//!     core::future::pending().await
+//! }
+//! ```
+//!
+//! # Example: Two LCDs Sharing One I2C Peripheral
+//!
+//! In this example, the generated group type is `LcdTexts0`.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use panic_probe as _;
+//! # use defmt_rtt as _;
+//! # use core::convert::Infallible;
+//! use device_envoy_rp::{Result, i2cs};
+//!
+//! i2cs! {
+//!     i2c: I2C0,
+//!     sda_pin: PIN_4,
+//!     scl_pin: PIN_5,
+//!     LcdTexts0 {
+//!         LcdText16x2 { width: 16, height: 2, address: 0x27 },
+//!         LcdText20x4 { width: 20, height: 4, address: 0x3F },
+//!     }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let _ = example(spawner).await;
+//! #     core::panic!("done");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let (lcd_text16x2, lcd_text20x4) = LcdTexts0::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+//!
+//!     lcd_text16x2.write_text("16x2\nready");
+//!     lcd_text20x4.write_text("20x4\nshared i2c\naddress 0x3F");
+//!
+//!     core::future::pending().await
+//! }
+//! ```
 
 use embassy_rp::i2c;
 

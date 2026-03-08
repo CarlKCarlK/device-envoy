@@ -112,6 +112,11 @@ impl LcdTextDriver {
         Self { address }
     }
 
+    /// Set the active LCD I2C address for subsequent writes.
+    pub fn set_address(&mut self, address: u8) {
+        self.address = address;
+    }
+
     /// Initialize the LCD in 4-bit mode and clear it.
     pub async fn init(&mut self, lcd_text_write: &mut impl LcdTextWrite) -> Result<(), LcdTextError> {
         Timer::after_millis(50).await;

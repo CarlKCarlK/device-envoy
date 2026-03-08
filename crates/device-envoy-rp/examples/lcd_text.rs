@@ -11,12 +11,13 @@ use {defmt_rtt as _, panic_probe as _};
 // todo000 be sure none of the esp's would allow you to use a macro struct twice because they don't include pins.
 
 lcd_text! {
+    i2c: I2C0,
+    sda_pin: PIN_4,
+    scl_pin: PIN_5,
     LcdTextSimple {
         width: 16,
         height: 2,
-        i2c: I2C0,
-        sda_pin: PIN_4,
-        scl_pin: PIN_5,
+        address: 0x27
     }
 }
 
@@ -29,16 +30,7 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let lcd_text_simple = LcdTextSimple::new(
-        p.I2C0,
-        p.PIN_4,
-        p.PIN_5,
-        0x27, // Common backpack addresses: 0x27 or 0x3F.
-        spawner,
-    )?;
-
-    lcd_text_simple.write_text("Hello from\ndevice-envoy!");
-    Timer::after(Duration::from_secs(1)).await;
+    let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
 
     lcd_text_simple.write_text("This line is definitely longer than sixteen\nAnd this one too");
     Timer::after(Duration::from_secs(1)).await;
@@ -50,6 +42,9 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     Timer::after(Duration::from_secs(1)).await;
 
     lcd_text_simple.write_text("");
+    Timer::after(Duration::from_secs(1)).await;
+
+    lcd_text_simple.write_text("Hello from\ndevice-envoy!");
 
     core::future::pending().await
 }

@@ -10,7 +10,7 @@ use core::{convert::Infallible, fmt};
 use defmt::*;
 use defmt_rtt as _;
 use device_envoy_rp::button::PressedTo;
-use device_envoy_rp::lcd_text;
+use device_envoy_rp::i2cs;
 use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
@@ -20,13 +20,12 @@ use embassy_executor::Spawner;
 use heapless::String;
 use panic_probe as _;
 
-lcd_text! {
-    LcdTextClock {
-        width: 16,
-        height: 2,
-        i2c: I2C0,
-        sda_pin: PIN_4,
-        scl_pin: PIN_5,
+i2cs! {
+    i2c: I2C0,
+    sda_pin: PIN_4,
+    scl_pin: PIN_5,
+    LcdTexts0 {
+        LcdTextClock { width: 16, height: 2, address: 0x27 },
     }
 }
 
@@ -48,14 +47,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Initialize LcdText
-    const LCD_ADDRESS: u8 = 0x27;
-    let lcd_text = LcdTextClock::new(
-        p.I2C0,
-        p.PIN_4,
-        p.PIN_5,
-        LCD_ADDRESS,
-        spawner,
-    )?;
+    let (lcd_text,) = LcdTexts0::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
     let [wifi_credentials_flash_block, timezone_flash_block] =

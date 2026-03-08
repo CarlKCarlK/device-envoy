@@ -98,3 +98,18 @@ required-features = ["pico1"]
 name = "audio_player_with_resampled_wrong_count_should_fail"
 path = "audio_player_with_resampled_wrong_count_should_fail.rs"
 required-features = ["pico1"]
+
+[[bin]]
+name = "lcd_text_one"
+path = "lcd_text_one.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "lcd_text_two"
+path = "lcd_text_two.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "lcd_text_single_then_group_should_fail"
+path = "lcd_text_single_then_group_should_fail.rs"
+required-features = ["pico1"]

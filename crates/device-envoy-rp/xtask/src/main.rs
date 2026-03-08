@@ -1236,7 +1236,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub const WIDTH: usize",
                 "pub const HEIGHT: usize",
                 "pub fn new(",
-                "pub fn write_text(&self, text: impl AsRef<str>)",
+                "impl crate::lcd_text::LcdText<16, 2> for LcdTextGenerated",
             ],
         },
         GeneratedDocStubExpectation {

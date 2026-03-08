@@ -9,6 +9,7 @@
 //!   text type (includes syntax details).
 //! - [`i2cs!`](macro@crate::i2cs) — Macro to generate multiple LCD text types
 //!   sharing one I2C resource (includes syntax details).
+//! - [`LcdText`] — Core LCD text trait implemented by generated types.
 //!
 //! # Text Behavior
 //!
@@ -29,6 +30,7 @@
 //! # #![no_main]
 //! # use core::convert::Infallible;
 //! # use esp_backtrace as _;
+//! use device_envoy_esp::lcd_text::LcdText as _;
 //! use device_envoy_esp::{Result, init_and_start, lcd_text};
 //!
 //! lcd_text! {
@@ -68,6 +70,7 @@
 //! # #![no_main]
 //! # use core::convert::Infallible;
 //! # use esp_backtrace as _;
+//! use device_envoy_esp::lcd_text::LcdText as _;
 //! use device_envoy_esp::{Result, i2cs, init_and_start};
 //!
 //! i2cs! {
@@ -317,12 +320,6 @@ macro_rules! __i2cs_impl {
                         Ok([<__ $group_name:snake _devices>].[<$lcd_name:snake>])
                     }
 
-                    pub fn write_text(&self, text: impl AsRef<str>) {
-                        <Self as $crate::lcd_text::__LcdText<$width, $height>>::write_text(
-                            self,
-                            text,
-                        );
-                    }
                 }
             )+
 

@@ -3,6 +3,7 @@
 #![no_main]
 
 use core::{convert::Infallible, panic};
+use device_envoy_rp::lcd_text::LcdText as _;
 use device_envoy_rp::lcd_text;
 use device_envoy_rp::Result;
 use embassy_time::{Duration, Timer};

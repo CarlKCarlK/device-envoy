@@ -92,9 +92,36 @@ pub fn render_lcd_text_frame<const W: usize, const H: usize>(text: &str) -> LcdT
     LcdTextFrame::from_rows(rows)
 }
 
-/// A fixed-geometry LCD text device API.
+/// Platform-agnostic LCD text device contract.
 ///
-/// Platform crates implement this trait for their generated LCD text types.
+/// Platform crates implement this trait for their generated LCD text types so
+/// shared logic can write text without knowing the hardware backend.
+///
+/// Design intent:
+///
+/// - This trait is intended for static dispatch on embedded targets.
+/// - Dimensions are const generics so geometry remains compile-time.
+/// - `write_text` accepts any string-like input via `AsRef<str>`.
+///
+/// # Example: Write Text
+///
+/// This example writes text through a generic trait-bound helper.
+///
+/// ```rust,no_run
+/// use device_envoy_core::lcd_text::LcdText;
+///
+/// fn write_message<const W: usize, const H: usize>(lcd_text: &impl LcdText<W, H>) {
+///     lcd_text.write_text("Hello from\ndevice-envoy!");
+/// }
+///
+/// # struct LcdTextSimple;
+/// # impl LcdText<16, 2> for LcdTextSimple {
+/// #     const ADDRESS: u8 = 0x27;
+/// #     fn write_text(&self, _text: impl AsRef<str>) {}
+/// # }
+/// # let lcd_text_simple = LcdTextSimple;
+/// # write_message(&lcd_text_simple);
+/// ```
 pub trait LcdText<const W: usize, const H: usize> {
     /// Display width in characters.
     const WIDTH: usize = W;
@@ -104,6 +131,7 @@ pub trait LcdText<const W: usize, const H: usize> {
     const ADDRESS: u8;
 
     /// Write text to the display.
+    /// See the [LcdText trait documentation](Self) for usage examples.
     fn write_text(&self, text: impl AsRef<str>);
 }
 

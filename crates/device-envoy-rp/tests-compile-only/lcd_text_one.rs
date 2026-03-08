@@ -8,6 +8,7 @@
 
 use device_envoy_rp::Result;
 use device_envoy_rp::i2cs;
+use device_envoy_rp::lcd_text::LcdText as _;
 use embassy_executor::Spawner;
 
 i2cs! {

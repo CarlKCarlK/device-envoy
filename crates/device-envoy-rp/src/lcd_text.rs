@@ -13,6 +13,7 @@
 //!   generated LCD text type showing the constructor path.
 //! - [`I2csGenerated`](lcd_text_generated::I2csGenerated) — Sample generated
 //!   I2C group type for multiple LCD text devices.
+//! - [`LcdText`] — Core LCD text trait implemented by generated types.
 //!
 //! # Text Behavior
 //!
@@ -34,6 +35,7 @@
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
 //! # use core::convert::Infallible;
+//! use device_envoy_rp::lcd_text::LcdText as _;
 //! use device_envoy_rp::{Result, lcd_text};
 //!
 //! lcd_text! {
@@ -72,6 +74,7 @@
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
 //! # use core::convert::Infallible;
+//! use device_envoy_rp::lcd_text::LcdText as _;
 //! use device_envoy_rp::{Result, i2cs};
 //!
 //! i2cs! {
@@ -360,14 +363,6 @@ macro_rules! __i2cs_impl {
                         Ok([<__ $group_name:snake _devices>].[<$lcd_name:snake>])
                     }
 
-                    /// Write text to this LCD using clamp-to-frame behavior.
-                    /// See the [lcd_text module documentation](mod@crate::lcd_text) for usage examples.
-                    pub fn write_text(&self, text: impl AsRef<str>) {
-                        <Self as $crate::lcd_text::__LcdText<$width, $height>>::write_text(
-                            self,
-                            text,
-                        );
-                    }
                 }
             )+
 

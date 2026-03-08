@@ -11,6 +11,7 @@ use defmt::*;
 use defmt_rtt as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::i2cs;
+use device_envoy_rp::lcd_text::LcdText as _;
 use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};

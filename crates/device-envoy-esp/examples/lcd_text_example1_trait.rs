@@ -23,8 +23,8 @@ lcd_text! {
     }
 }
 
-fn write_trait_text<const W: usize, const H: usize>(lcd_text: &impl LcdText<W, H>) {
-    lcd_text.write_text("Trait call\nfrom core");
+fn write_message<const W: usize, const H: usize>(lcd_text: &impl LcdText<W, H>) {
+    lcd_text.write_text("Hello from\ndevice-envoy!");
 }
 
 #[esp_rtos::main]
@@ -39,7 +39,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
 
     let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
-    write_trait_text(lcd_text_simple);
+    write_message(lcd_text_simple);
 
     core::future::pending().await
 }

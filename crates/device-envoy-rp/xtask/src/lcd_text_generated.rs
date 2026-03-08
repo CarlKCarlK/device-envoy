@@ -79,10 +79,13 @@ impl LcdTextGenerated {
         let _ = (i2c_peripheral, sda, scl, spawner);
         Ok(&INSTANCE)
     }
+}
 
-    /// Write text to the display using clamp-to-frame behavior.
-    /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
-    pub fn write_text(&self, text: impl AsRef<str>) {
+#[cfg(doc)]
+impl crate::lcd_text::LcdText<16, 2> for LcdTextGenerated {
+    const ADDRESS: u8 = 0x27;
+
+    fn write_text(&self, text: impl AsRef<str>) {
         let _ = text;
     }
 }
@@ -108,10 +111,13 @@ impl LcdTextGenerated20x4 {
         let _ = (i2c_peripheral, sda, scl, spawner);
         Ok(&INSTANCE)
     }
+}
 
-    /// Write text to the display using clamp-to-frame behavior.
-    /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
-    pub fn write_text(&self, text: impl AsRef<str>) {
+#[cfg(doc)]
+impl crate::lcd_text::LcdText<20, 4> for LcdTextGenerated20x4 {
+    const ADDRESS: u8 = 0x3F;
+
+    fn write_text(&self, text: impl AsRef<str>) {
         let _ = text;
     }
 }

@@ -114,6 +114,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             ),
         )
         .map_err(|_| Error::FormatError)?;
-        char_lcd.write_text(text, 0).await;
+        char_lcd.write_text(text, 0).await?;
     }
 }

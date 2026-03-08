@@ -13,9 +13,7 @@
 use core::convert::{Infallible, TryFrom};
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::Button as _;
 use device_envoy_rp::button::{PressDuration, PressedTo};
-use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
@@ -33,13 +31,6 @@ use embassy_time::{Duration, Timer};
 use panic_probe as _;
 
 const FAST_MODE_SPEED: f32 = 720.0;
-
-// todo0 this differs between rp and esp; should we unify them?
-button_watch! {
-    ButtonWatch13 {
-        pin: PIN_13,
-    }
-}
 
 // Define two typed servo players at module scope
 servo_player! {
@@ -97,7 +88,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect Wi-Fi, using the servos for status indications.
     let servo_display_ref = &servo_display;
-    let (stack, button) = wifi_auto
+    // TODO00 review this possible material change: use WifiAuto's returned trait button directly
+    // instead of converting into ButtonWatch13.
+    let (stack, mut button) = wifi_auto
         .connect(|event| {
             let servo_display_ref = servo_display_ref;
             async move {
@@ -116,9 +109,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .await?;
 
     info!("WiFi connected");
-
-    // Convert the Button from WifiAutoRp into a ButtonWatch for background monitoring
-    let mut button_watch13 = ButtonWatch13::from_button(button, spawner)?;
 
     // Read the timezone offset, an extra field that WiFi portal saved to flash.
     let offset_minutes = timezone_field
@@ -141,19 +131,19 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, &mut button_watch13, &servo_display)
+                    .execute_hours_minutes(speed, &clock_sync, &mut button, &servo_display)
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, &mut button_watch13, &servo_display)
+                    .execute_minutes_seconds(&clock_sync, &mut button, &servo_display)
                     .await?
             }
             State::EditOffset => {
                 state
                     .execute_edit_offset(
                         &clock_sync,
-                        button_watch13,
+                        &mut button,
                         &timezone_field,
                         &servo_display,
                     )
@@ -174,11 +164,11 @@ pub enum State {
 }
 
 impl State {
-    async fn execute_hours_minutes(
+    async fn execute_hours_minutes<B: device_envoy_core::button::Button>(
         self,
         speed: f32,
         clock_sync: &ClockSync,
-        button_watch13: &mut ButtonWatch13,
+        button: &mut B,
         servo_display: &ServoClockDisplay,
     ) -> Result<Self> {
         clock_sync.set_speed(speed).await;
@@ -187,7 +177,7 @@ impl State {
         clock_sync.set_tick_interval(Some(ONE_MINUTE)).await;
         loop {
             match select(
-                button_watch13.wait_for_press_duration(),
+                button.wait_for_press_duration(),
                 clock_sync.wait_for_tick(),
             )
             .await
@@ -213,10 +203,10 @@ impl State {
         }
     }
 
-    async fn execute_minutes_seconds(
+    async fn execute_minutes_seconds<B: device_envoy_core::button::Button>(
         self,
         clock_sync: &ClockSync,
-        button_watch13: &mut ButtonWatch13,
+        button: &mut B,
         servo_display: &ServoClockDisplay,
     ) -> Result<Self> {
         clock_sync.set_speed(1.0).await;
@@ -225,7 +215,7 @@ impl State {
         clock_sync.set_tick_interval(Some(ONE_SECOND)).await;
         loop {
             match select(
-                button_watch13.wait_for_press_duration(),
+                button.wait_for_press_duration(),
                 clock_sync.wait_for_tick(),
             )
             .await
@@ -248,10 +238,10 @@ impl State {
         }
     }
 
-    async fn execute_edit_offset(
+    async fn execute_edit_offset<B: device_envoy_core::button::Button>(
         self,
         clock_sync: &ClockSync,
-        button_watch13: &mut ButtonWatch13,
+        button: &mut B,
         timezone_field: &TimezoneField,
         servo_display: &ServoClockDisplay,
     ) -> Result<Self> {
@@ -277,7 +267,7 @@ impl State {
         clock_sync.set_tick_interval(None).await; // Disable ticks in edit mode
         loop {
             info!("Waiting for button press in edit mode");
-            match button_watch13.wait_for_press_duration().await {
+            match button.wait_for_press_duration().await {
                 PressDuration::Short => {
                     info!("Short press detected - incrementing offset");
                     // Increment the offset by 1 hour

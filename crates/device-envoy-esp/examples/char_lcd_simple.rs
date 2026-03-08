@@ -49,34 +49,28 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static CHAR_LCD_STATIC: CharLcdStatic = CharLcd::new_static();
     let char_lcd = CharLcd::new(&CHAR_LCD_STATIC, i2c, spawner)?;
 
+    let hello_text: heapless::String<64> = "Hello\nDevice Envoy"
+        .try_into()
+        .expect("initial text must fit");
     char_lcd
-        .write_text(
-            "Hello\nDevice Envoy"
-                .try_into()
-                .expect("initial text must fit"),
-            0,
-        )
-        .await;
+        .write_text(hello_text, 0)
+        .await?;
 
     loop {
+        let counting_text: heapless::String<64> = "LCD test\ncounting..."
+            .try_into()
+            .expect("loop text must fit");
         char_lcd
-            .write_text(
-                "LCD test\ncounting..."
-                    .try_into()
-                    .expect("loop text must fit"),
-                1500,
-            )
-            .await;
+            .write_text(counting_text, 1500)
+            .await?;
         Timer::after(Duration::from_millis(1500)).await;
 
+        let blank_hint_text: heapless::String<64> = "If blank,\ncheck addr"
+            .try_into()
+            .expect("loop text must fit");
         char_lcd
-            .write_text(
-                "If blank,\ncheck addr"
-                    .try_into()
-                    .expect("loop text must fit"),
-                1500,
-            )
-            .await;
+            .write_text(blank_hint_text, 1500)
+            .await?;
         Timer::after(Duration::from_millis(1500)).await;
     }
 }

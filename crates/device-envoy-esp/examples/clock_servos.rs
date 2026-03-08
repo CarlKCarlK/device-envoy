@@ -22,7 +22,7 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    button::{ButtonWatchEsp, ButtonWatchStaticEsp, PressDuration, PressedTo},
+    button::{PressDuration, PressedTo},
     clock_sync::{h12_m_s, ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start,
@@ -34,9 +34,6 @@ use device_envoy_esp::{
     },
     Error, Result,
 };
-
-use device_envoy_esp::button::Button as _;
-
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const FAST_MODE_SPEED: f32 = 720.0;
@@ -95,7 +92,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let servo_clock_display = ServoClockDisplay::new(bottom_servo_player, top_servo_player);
     let servo_clock_display_ref = &servo_clock_display;
 
-    let (stack, button) = wifi_auto
+    // TODO00 review this possible material change: use WifiAuto's returned trait button directly
+    // instead of wrapping it in ButtonWatchEsp so this example works with trait-returning connect().
+    let (stack, mut button) = wifi_auto
         .connect(|wifi_auto_event| {
             let servo_clock_display_ref = servo_clock_display_ref;
             async move {
@@ -121,9 +120,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("WiFi connected");
     servo_clock_display.show_portal_ready();
 
-    static BUTTON_WATCH_STATIC: ButtonWatchStaticEsp = ButtonWatchEsp::new_static();
-    let mut button_watch = ButtonWatchEsp::new(&BUTTON_WATCH_STATIC, button, spawner)?;
-
     let offset_minutes = timezone_field
         .offset_minutes()?
         .ok_or(Error::MissingCustomWifiAutoField)?;
@@ -145,21 +141,21 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     .execute_hours_minutes(
                         speed,
                         &clock_sync,
-                        &mut button_watch,
+                        &mut button,
                         &servo_clock_display,
                     )
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, &mut button_watch, &servo_clock_display)
+                    .execute_minutes_seconds(&clock_sync, &mut button, &servo_clock_display)
                     .await?
             }
             State::EditOffset => {
                 state
                     .execute_edit_offset(
                         &clock_sync,
-                        &mut button_watch,
+                        &mut button,
                         timezone_field,
                         &servo_clock_display,
                     )
@@ -177,11 +173,11 @@ enum State {
 }
 
 impl State {
-    async fn execute_hours_minutes(
+    async fn execute_hours_minutes<B: device_envoy_esp::button::Button>(
         self,
         speed: f32,
         clock_sync: &ClockSync,
-        button_watch: &mut ButtonWatchEsp<'_>,
+        button: &mut B,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
         clock_sync.set_speed(speed).await;
@@ -191,7 +187,7 @@ impl State {
 
         loop {
             match select(
-                button_watch.wait_for_press_duration(),
+                button.wait_for_press_duration(),
                 clock_sync.wait_for_tick(),
             )
             .await
@@ -215,10 +211,10 @@ impl State {
         }
     }
 
-    async fn execute_minutes_seconds(
+    async fn execute_minutes_seconds<B: device_envoy_esp::button::Button>(
         self,
         clock_sync: &ClockSync,
-        button_watch: &mut ButtonWatchEsp<'_>,
+        button: &mut B,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
         clock_sync.set_speed(1.0).await;
@@ -228,7 +224,7 @@ impl State {
 
         loop {
             match select(
-                button_watch.wait_for_press_duration(),
+                button.wait_for_press_duration(),
                 clock_sync.wait_for_tick(),
             )
             .await
@@ -249,10 +245,10 @@ impl State {
         }
     }
 
-    async fn execute_edit_offset(
+    async fn execute_edit_offset<B: device_envoy_esp::button::Button>(
         self,
         clock_sync: &ClockSync,
-        button_watch: &mut ButtonWatchEsp<'_>,
+        button: &mut B,
         timezone_field: &TimezoneField,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
@@ -274,7 +270,7 @@ impl State {
 
         clock_sync.set_tick_interval(None).await;
         loop {
-            match button_watch.wait_for_press_duration().await {
+            match button.wait_for_press_duration().await {
                 PressDuration::Short => {
                     offset_minutes += 60;
                     const ONE_DAY_MINUTES: i32 = ONE_DAY.as_secs() as i32 / 60;

@@ -202,7 +202,6 @@ impl Default for WifiAutoPersistedState {
 ///         .await
 /// }
 ///
-/// # use device_envoy_core::button::Button;
 /// # struct DemoButton;
 /// # impl Button for DemoButton {
 /// #     fn is_pressed(&self) -> bool {
@@ -219,14 +218,15 @@ impl Default for WifiAutoPersistedState {
 /// #     >(
 /// #         self,
 /// #         mut on_event: OnEvent,
-/// #     ) -> Result<(WifiStack, impl Button), Self::Error>
+/// #     ) -> Result<(WifiStack, DemoButton), Self::Error>
 /// #     {
 /// #         on_event(WifiAutoEvent::Connecting {
 /// #             try_index: 0,
 /// #             try_count: 1,
 /// #         })
 /// #         .await?;
-/// #         todo!()
+/// #         let _todo_result: Result<(WifiStack, DemoButton), Self::Error> = todo!();
+/// #         _todo_result
 /// #     }
 /// # }
 /// # fn main() {

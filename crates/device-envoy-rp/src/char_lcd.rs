@@ -9,7 +9,7 @@ use embassy_rp::peripherals::I2C0;
 use heapless::String;
 
 pub use device_envoy_core::char_lcd::CharLcdStatic;
-use device_envoy_core::char_lcd::{CharLcdDriver, CharLcdMessage, CharLcdWrite};
+use device_envoy_core::char_lcd::{CharLcdDriver, CharLcdError, CharLcdMessage, CharLcdWrite};
 
 use crate::{Error, Result};
 
@@ -28,7 +28,7 @@ use crate::{Error, Result};
 ///     static CHAR_LCD_STATIC: CharLcdStatic = CharLcd::new_static();
 ///     let lcd = CharLcd::new(&CHAR_LCD_STATIC, p.I2C0, p.PIN_1, p.PIN_0, spawner)?;
 ///     let text: heapless::String<64> = "Hello!".try_into().unwrap();
-///     lcd.write_text(text, 1_000).await;
+///     lcd.write_text(text, 1_000).await?;
 ///     Ok(())
 /// }
 /// ```
@@ -65,10 +65,12 @@ impl CharLcd {
     }
 
     /// Send a message to the LCD (async, waits until queued).
-    pub async fn write_text(&self, text: String<64>, duration_ms: u32) {
+    pub async fn write_text(&self, text: String<64>, duration_ms: u32) -> Result<()> {
         self.char_lcd_static
-            .send(CharLcdMessage::Display { text, duration_ms })
+            .send_request(CharLcdMessage::Display { text, duration_ms })
             .await;
+        self.char_lcd_static.receive_response().await?;
+        Ok(())
     }
 }
 
@@ -77,10 +79,10 @@ struct RpCharLcdWrite {
 }
 
 impl CharLcdWrite for RpCharLcdWrite {
-    fn write(&mut self, address: u8, data: u8) {
+    fn write(&mut self, address: u8, data: u8) -> core::result::Result<(), CharLcdError> {
         self.i2c
             .blocking_write(address, &[data])
-            .unwrap_or_else(|error| panic!("char_lcd i2c write failed at 0x{address:02X}: {error:?}"));
+            .map_err(|_| CharLcdError::I2cWrite { address })
     }
 }
 
@@ -91,12 +93,16 @@ async fn lcd_task(
 ) -> ! {
     let mut rp_char_lcd_write = RpCharLcdWrite { i2c };
     let mut char_lcd_driver = CharLcdDriver::new_default();
-    char_lcd_driver.init(&mut rp_char_lcd_write).await;
+    if let Err(error) = char_lcd_driver.init(&mut rp_char_lcd_write).await {
+        char_lcd_static.send_response(Err(error)).await;
+        core::future::pending().await
+    }
 
     loop {
-        let char_lcd_message = char_lcd_static.receive().await;
-        char_lcd_driver
+        let char_lcd_message = char_lcd_static.receive_request().await;
+        let write_result = char_lcd_driver
             .process_message(&mut rp_char_lcd_write, char_lcd_message)
             .await;
+        char_lcd_static.send_response(write_result).await;
     }
 }

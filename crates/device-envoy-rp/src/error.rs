@@ -2,6 +2,7 @@
 use core::convert::Infallible;
 
 use derive_more::derive::{Display, Error};
+use device_envoy_core::char_lcd::CharLcdError;
 use device_envoy_core::wifi_auto::WifiAutoError;
 use esp_hal_mfrc522::consts::PCDErrorCode;
 
@@ -40,6 +41,9 @@ pub enum Error {
 
     #[display("Format error")]
     FormatError,
+
+    #[display("Character LCD operation failed: {_0:?}")]
+    CharLcd(#[error(not(source))] CharLcdError),
 
     #[display("Custom WiFi Auto field missing")]
     MissingCustomWifiAutoField,
@@ -89,5 +93,11 @@ impl From<WifiAutoError> for Error {
             WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
             WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
         }
+    }
+}
+
+impl From<CharLcdError> for Error {
+    fn from(error: CharLcdError) -> Self {
+        Self::CharLcd(error)
     }
 }

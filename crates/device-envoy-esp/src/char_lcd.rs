@@ -5,7 +5,7 @@
 pub use device_envoy_core::char_lcd::CharLcdStatic;
 
 #[cfg(target_os = "none")]
-use device_envoy_core::char_lcd::{CharLcdDriver, CharLcdMessage, CharLcdWrite};
+use device_envoy_core::char_lcd::{CharLcdDriver, CharLcdError, CharLcdMessage, CharLcdWrite};
 #[cfg(target_os = "none")]
 use heapless::String;
 
@@ -38,10 +38,12 @@ impl CharLcd {
     }
 
     /// Send a message to the LCD (async, waits until queued).
-    pub async fn write_text(&self, text: String<64>, duration_ms: u32) {
+    pub async fn write_text(&self, text: String<64>, duration_ms: u32) -> Result<()> {
         self.char_lcd_static
-            .send(CharLcdMessage::Display { text, duration_ms })
+            .send_request(CharLcdMessage::Display { text, duration_ms })
             .await;
+        self.char_lcd_static.receive_response().await?;
+        Ok(())
     }
 }
 
@@ -52,10 +54,8 @@ struct EspCharLcdWrite {
 
 #[cfg(target_os = "none")]
 impl CharLcdWrite for EspCharLcdWrite {
-    fn write(&mut self, address: u8, data: u8) {
-        self.i2c
-            .write(address, &[data])
-            .unwrap_or_else(|error| panic!("char_lcd i2c write failed at 0x{address:02X}: {error:?}"));
+    fn write(&mut self, address: u8, data: u8) -> core::result::Result<(), CharLcdError> {
+        self.i2c.write(address, &[data]).map_err(|_| CharLcdError::I2cWrite { address })
     }
 }
 
@@ -67,12 +67,16 @@ async fn lcd_task(
 ) -> ! {
     let mut esp_char_lcd_write = EspCharLcdWrite { i2c };
     let mut char_lcd_driver = CharLcdDriver::new_default();
-    char_lcd_driver.init(&mut esp_char_lcd_write).await;
+    if let Err(error) = char_lcd_driver.init(&mut esp_char_lcd_write).await {
+        char_lcd_static.send_response(Err(error)).await;
+        core::future::pending().await
+    }
 
     loop {
-        let char_lcd_message = char_lcd_static.receive().await;
-        char_lcd_driver
+        let char_lcd_message = char_lcd_static.receive_request().await;
+        let write_result = char_lcd_driver
             .process_message(&mut esp_char_lcd_write, char_lcd_message)
             .await;
+        char_lcd_static.send_response(write_result).await;
     }
 }

@@ -133,3 +133,21 @@ audio-example1-s3:
 
 audio-example1-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example audio_example1 --target xtensa-esp32s3-none-elf --release --no-default-features
+
+lcd-text-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_text --target xtensa-esp32s3-none-elf --release --no-default-features
+
+lcd-text-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_text --target xtensa-esp32s3-none-elf --release --no-default-features
+
+led-texts-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_texts --target xtensa-esp32s3-none-elf --release --no-default-features
+
+led-texts-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_texts --target xtensa-esp32s3-none-elf --release --no-default-features
+
+lcd-text-example1-trait-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_text_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+
+lcd-text-example1-trait-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_text_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features

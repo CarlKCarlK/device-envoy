@@ -64,6 +64,49 @@ impl LcdTextFrame {
     }
 }
 
+/// Render text into a fixed-size LCD frame using `W x H` geometry.
+///
+/// Behavior:
+/// - `\n` starts a new row.
+/// - Characters past `W` on a row are ignored.
+/// - Rows past `H` are ignored.
+/// - Non-ASCII Unicode characters are replaced with `?`.
+/// - Missing characters are padded with spaces.
+#[must_use]
+pub fn render_lcd_text_frame<const W: usize, const H: usize>(text: &str) -> LcdTextFrame {
+    let mut rows = [[b' '; W]; H];
+
+    for (row_index, line) in text.split('\n').enumerate() {
+        if row_index >= H {
+            break;
+        }
+
+        for (column_index, ch) in line.chars().enumerate() {
+            if column_index >= W {
+                break;
+            }
+            rows[row_index][column_index] = if ch.is_ascii() { ch as u8 } else { b'?' };
+        }
+    }
+
+    LcdTextFrame::from_rows(rows)
+}
+
+/// A fixed-geometry LCD text device API.
+///
+/// Platform crates implement this trait for their generated LCD text types.
+pub trait LcdText<const W: usize, const H: usize> {
+    /// Display width in characters.
+    const WIDTH: usize = W;
+    /// Display height in characters.
+    const HEIGHT: usize = H;
+    /// LCD I2C address.
+    const ADDRESS: u8;
+
+    /// Write text to the display.
+    fn write_text(&self, text: impl AsRef<str>);
+}
+
 /// Static signal resources for LCD frame delivery.
 pub struct LcdTextStatic {
     frame_signal: Signal<CriticalSectionRawMutex, LcdTextFrame>,

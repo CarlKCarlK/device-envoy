@@ -27,6 +27,8 @@ pub mod time_sync {
 pub mod audio_player;
 pub mod flash_block;
 pub mod ir;
+#[cfg(target_os = "none")]
+pub mod lcd_text;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;
@@ -158,6 +160,8 @@ pub enum Error {
     #[cfg(target_os = "none")]
     Spi(esp_hal::spi::Error),
     #[cfg(target_os = "none")]
+    I2cConfig(esp_hal::i2c::master::ConfigError),
+    #[cfg(target_os = "none")]
     LedcTimer(esp_hal::ledc::timer::Error),
     #[cfg(target_os = "none")]
     LedcChannel(esp_hal::ledc::channel::Error),
@@ -216,6 +220,13 @@ impl From<esp_hal::rmt::Error> for Error {
 impl From<esp_hal::spi::master::ConfigError> for Error {
     fn from(error: esp_hal::spi::master::ConfigError) -> Self {
         Self::SpiConfig(error)
+    }
+}
+
+#[cfg(target_os = "none")]
+impl From<esp_hal::i2c::master::ConfigError> for Error {
+    fn from(error: esp_hal::i2c::master::ConfigError) -> Self {
+        Self::I2cConfig(error)
     }
 }
 

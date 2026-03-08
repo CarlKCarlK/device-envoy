@@ -12,6 +12,20 @@ use heapless::String;
 pub enum LcdTextError {
     /// I2C write failed for the given 7-bit address.
     I2cWrite { address: u8 },
+    /// Display geometry is invalid.
+    InvalidGeometry { width: usize, height: usize },
+    /// Display row count is unsupported by the HD44780 address map in this driver.
+    UnsupportedRows { rows: usize },
+    /// Input text contains more lines than the display height.
+    TooManyLines { max_lines: usize },
+    /// Input text line is too long for the display width.
+    LineTooLong {
+        line_index: usize,
+        width: usize,
+        line_len: usize,
+    },
+    /// Attempted to set cursor to an out-of-range row.
+    RowOutOfBounds { row: usize },
 }
 
 /// Messages sent to the character LCD device task.
@@ -19,6 +33,10 @@ pub enum LcdTextError {
 pub enum LcdTextMessage {
     /// Display a message for the specified duration (0 = until next message).
     Display {
+        /// Display width in characters.
+        width: usize,
+        /// Display height in characters.
+        height: usize,
         /// Text to render on the LCD.
         text: String<64>,
         /// Minimum display duration in milliseconds.
@@ -80,10 +98,16 @@ pub struct LcdTextDriver {
 }
 
 impl LcdTextDriver {
+    /// Creates a driver for a specific PCF8574 backpack address.
+    #[must_use]
+    pub const fn new(address: u8) -> Self {
+        Self { address }
+    }
+
     /// Creates a driver for the default PCF8574 backpack address (`0x27`).
     #[must_use]
     pub const fn new_default() -> Self {
-        Self { address: 0x27 }
+        Self::new(0x27)
     }
 
     /// Initialize the LCD in 4-bit mode and clear it.
@@ -116,14 +140,35 @@ impl LcdTextDriver {
         lcd_text_message: LcdTextMessage,
     ) -> Result<(), LcdTextError> {
         match lcd_text_message {
-            LcdTextMessage::Display { text, duration_ms } => {
+            LcdTextMessage::Display {
+                width,
+                height,
+                text,
+                duration_ms,
+            } => {
+                if width == 0 || height == 0 {
+                    return Err(LcdTextError::InvalidGeometry { width, height });
+                }
+                if height > 4 {
+                    return Err(LcdTextError::UnsupportedRows { rows: height });
+                }
                 self.clear(lcd_text_write).await?;
-                if let Some((line1, line2)) = text.as_str().split_once('\n') {
-                    self.print(lcd_text_write, line1).await?;
-                    self.set_cursor(lcd_text_write, 1, 0).await?;
-                    self.print(lcd_text_write, line2).await?;
-                } else {
-                    self.print(lcd_text_write, text.as_str()).await?;
+
+                for (line_index, line_text) in text.as_str().split('\n').enumerate() {
+                    if line_index >= height {
+                        return Err(LcdTextError::TooManyLines { max_lines: height });
+                    }
+                    let line_len = line_text.len();
+                    if line_len > width {
+                        return Err(LcdTextError::LineTooLong {
+                            line_index,
+                            width,
+                            line_len,
+                        });
+                    }
+
+                    self.set_cursor(lcd_text_write, line_index, 0).await?;
+                    self.print(lcd_text_write, line_text).await?;
                 }
 
                 if duration_ms > 0 {
@@ -176,15 +221,15 @@ impl LcdTextDriver {
     async fn set_cursor(
         &mut self,
         lcd_text_write: &mut impl LcdTextWrite,
-        row: u8,
+        row: usize,
         col: u8,
     ) -> Result<(), LcdTextError> {
         let address = match row {
             0 => col,
-            1 => 0x40 + col,
-            2 => 0x14 + col,
-            3 => 0x54 + col,
-            _ => 0,
+            1 => 0x40_u8 + col,
+            2 => 0x14_u8 + col,
+            3 => 0x54_u8 + col,
+            _ => return Err(LcdTextError::RowOutOfBounds { row }),
         };
         self.write_byte(lcd_text_write, 0x80 | address, false).await?;
         Ok(())

@@ -25,18 +25,26 @@ use crate::{Error, Result};
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
-///     static LCD_TEXT_STATIC: LcdTextStatic = LcdText::new_static();
-///     let lcd = LcdText::new(&LCD_TEXT_STATIC, p.I2C0, p.PIN_1, p.PIN_0, spawner)?;
+///     const LCD_ADDRESS: u8 = 0x27;
+///     static LCD_TEXT_STATIC: LcdTextStatic = LcdText::<16, 2>::new_static();
+///     let lcd = LcdText::<16, 2>::new(
+///         &LCD_TEXT_STATIC,
+///         p.I2C0,
+///         p.PIN_0,
+///         p.PIN_1,
+///         LCD_ADDRESS,
+///         spawner,
+///     )?;
 ///     let text: heapless::String<64> = "Hello!".try_into().unwrap();
 ///     lcd.write_text(text, 1_000).await?;
 ///     Ok(())
 /// }
 /// ```
-pub struct LcdText {
+pub struct LcdText<const W: usize, const H: usize> {
     lcd_text_static: &'static LcdTextStatic,
 }
 
-impl LcdText {
+impl<const W: usize, const H: usize> LcdText<W, H> {
     /// Create LcdText resources.
     #[must_use]
     pub const fn new_static() -> LcdTextStatic {
@@ -46,20 +54,23 @@ impl LcdText {
     /// Create a new LcdText device.
     ///
     /// Note: Hardcoded to I2C0 peripheral (like WiFi's internal pins).
-    /// However, SCL and SDA can be any pins compatible with I2C0.
-    pub fn new<SCL, SDA>(
+    /// However, SDA and SCL can be any pins compatible with I2C0.
+    pub fn new<SDA, SCL>(
         lcd_text_static: &'static LcdTextStatic,
         i2c_peripheral: Peri<'static, I2C0>,
-        scl: Peri<'static, SCL>,
         sda: Peri<'static, SDA>,
+        scl: Peri<'static, SCL>,
+        address: u8,
         spawner: Spawner,
     ) -> Result<Self>
     where
-        SCL: SclPin<I2C0>,
         SDA: SdaPin<I2C0>,
+        SCL: SclPin<I2C0>,
     {
+        assert!(W > 0, "lcd_text width must be > 0");
+        assert!(H > 0, "lcd_text height must be > 0");
         let i2c = i2c::I2c::new_blocking(i2c_peripheral, scl, sda, I2cConfig::default());
-        let token = lcd_task(i2c, lcd_text_static);
+        let token = lcd_task(i2c, lcd_text_static, address);
         spawner.spawn(token).map_err(Error::TaskSpawn)?;
         Ok(Self { lcd_text_static })
     }
@@ -67,7 +78,12 @@ impl LcdText {
     /// Send a message to the LCD (async, waits until queued).
     pub async fn write_text(&self, text: String<64>, duration_ms: u32) -> Result<()> {
         self.lcd_text_static
-            .send_request(LcdTextMessage::Display { text, duration_ms })
+            .send_request(LcdTextMessage::Display {
+                width: W,
+                height: H,
+                text,
+                duration_ms,
+            })
             .await;
         self.lcd_text_static.receive_response().await?;
         Ok(())
@@ -90,9 +106,10 @@ impl LcdTextWrite for RpLcdTextWrite {
 async fn lcd_task(
     i2c: i2c::I2c<'static, I2C0, i2c::Blocking>,
     lcd_text_static: &'static LcdTextStatic,
+    address: u8,
 ) -> ! {
     let mut rp_lcd_text_write = RpLcdTextWrite { i2c };
-    let mut lcd_text_driver = LcdTextDriver::new_default();
+    let mut lcd_text_driver = LcdTextDriver::new(address);
     if let Err(error) = lcd_text_driver.init(&mut rp_lcd_text_write).await {
         lcd_text_static.send_response(Err(error)).await;
         core::future::pending().await

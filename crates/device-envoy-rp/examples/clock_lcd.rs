@@ -38,8 +38,16 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Initialize LcdText
-    static LCD_TEXT_STATIC: LcdTextStatic = LcdText::new_static();
-    let lcd_text = LcdText::new(&LCD_TEXT_STATIC, p.I2C0, p.PIN_5, p.PIN_4, spawner)?;
+    const LCD_ADDRESS: u8 = 0x27;
+    static LCD_TEXT_STATIC: LcdTextStatic = LcdText::<16, 2>::new_static();
+    let lcd_text = LcdText::<16, 2>::new(
+        &LCD_TEXT_STATIC,
+        p.I2C0,
+        p.PIN_4,
+        p.PIN_5,
+        LCD_ADDRESS,
+        spawner,
+    )?;
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
     let [wifi_credentials_flash_block, timezone_flash_block] =

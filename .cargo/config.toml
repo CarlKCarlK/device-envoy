@@ -1,0 +1,3 @@
+[alias]
+lcd-text-2 = "run --package device-envoy-rp --example lcd_text --release --target thumbv8m.main-none-eabihf --features pico2,arm --no-default-features"
+lcd-text-2-check = "check --package device-envoy-rp --example lcd_text --release --target thumbv8m.main-none-eabihf --features pico2,arm --no-default-features"

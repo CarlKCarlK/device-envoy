@@ -9,15 +9,6 @@
 //! This page provides the primary documentation and examples for programming LED panels.
 //! The device abstraction supports text, graphics, and animation.
 //!
-//! # Start Here
-//!
-//! If rustdoc jumps into generated source and you want the key API quickly, start with:
-//!
-//! - [`Led2d`](`crate::led2d::Led2d`)
-//! - [`Led2d::write_frame`](`crate::led2d::Led2d::write_frame`)
-//! - [`Led2d::write_text`](`crate::led2d::Led2d::write_text`)
-//! - [`Led2d::animate`](`crate::led2d::Led2d::animate`)
-//!
 //! **After reading the examples below, see also:**
 //!
 //! - [`led2d!`](macro@crate::led2d) — Macro to generate an LED-panel struct type (includes syntax details).

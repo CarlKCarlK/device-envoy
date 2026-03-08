@@ -2,12 +2,6 @@
 //!
 //! See [`IrEsp`], [`IrMappingEsp`], and [`IrKeplerEsp`] for usage examples.
 //!
-//! # Start Here
-//!
-//! - [`Ir`](`crate::ir::Ir`)
-//! - [`Ir::wait_for_press`](`crate::ir::Ir::wait_for_press`)
-//! - [`IrMapping`](`crate::ir::IrMapping`)
-//! - [`IrKepler`](`crate::ir::IrKepler`)
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
 mod kepler;

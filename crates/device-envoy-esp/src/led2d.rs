@@ -2,16 +2,6 @@
 //! See [`Led2dEsp`] for the runtime adapter and [`layout::LedLayout`] for compile-time
 //! panel wiring and geometry.
 //!
-//! # Start Here
-//!
-//! If rustdoc lands on generated source, jump straight to:
-//!
-//! - [`Led2d`](`crate::led2d::Led2d`)
-//! - [`Led2d::write_frame`](`crate::led2d::Led2d::write_frame`)
-//! - [`Led2d::write_text`](`crate::led2d::Led2d::write_text`)
-//! - [`Led2d::animate`](`crate::led2d::Led2d::animate`)
-//! - [`Led2dGenerated`](led2d_generated::Led2dGenerated)
-
 pub mod layout {
     pub use device_envoy_core::led2d::layout::*;
 }

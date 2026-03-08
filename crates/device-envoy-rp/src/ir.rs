@@ -2,13 +2,6 @@
 //!
 //! See [`IrRp`], [`IrMappingRp`], and [`IrKeplerRp`] for usage examples.
 //!
-//! # Start Here
-//!
-//! - [`Ir`](`crate::ir::Ir`)
-//! - [`Ir::wait_for_press`](`crate::ir::Ir::wait_for_press`)
-//! - [`IrMapping`](`crate::ir::IrMapping`)
-//! - [`IrKepler`](`crate::ir::IrKepler`)
-
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Pin, Pull};

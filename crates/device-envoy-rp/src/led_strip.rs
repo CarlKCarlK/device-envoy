@@ -23,14 +23,6 @@
 //! This page provides the primary documentation and examples for programming LED strips.
 //! The device abstraction supports pixel patterns and animation on the LED strip.
 //!
-//! # Start Here
-//!
-//! If rustdoc jumps into generated source and you want the key API quickly, start with:
-//!
-//! - [`LedStrip`](`crate::led_strip::LedStrip`)
-//! - [`LedStrip::write_frame`](`crate::led_strip::LedStrip::write_frame`)
-//! - [`LedStrip::animate`](`crate::led_strip::LedStrip::animate`)
-//!
 //! **After reading the examples below, see also:**
 //!
 //! - [`led_strip!`](macro@crate::led_strip) — Macro to generate an LED strip struct type (includes syntax details).

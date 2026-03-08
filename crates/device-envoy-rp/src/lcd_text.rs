@@ -3,16 +3,6 @@
 //! This page provides the primary documentation for generated LCD text device
 //! types.
 //!
-//! # Start Here
-//!
-//! If rustdoc jumps into generated source and you want the key API quickly,
-//! start with:
-//!
-//! - [`i2cs!`](macro@crate::i2cs)
-//! - [`lcd_text!`](macro@crate::lcd_text)
-//! - [`lcd_text_generated::LcdTextGenerated`]
-//! - [`lcd_text_generated::I2csGenerated`]
-//!
 //! **After reading the generated type pages above, see also:**
 //!
 //! - [`LcdTextDriver`] — low-level

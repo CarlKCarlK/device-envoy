@@ -9,3 +9,5 @@ lcd-texts-c6 = "run --package device-envoy-esp --example lcd_texts --release --t
 lcd-texts-c6-check = "check --package device-envoy-esp --example lcd_texts --release --target riscv32imac-unknown-none-elf --no-default-features"
 lcd-text-trait-c6 = "run --package device-envoy-esp --example lcd_text_example1_trait --release --target riscv32imac-unknown-none-elf --no-default-features"
 lcd-text-trait-c6-check = "check --package device-envoy-esp --example lcd_text_example1_trait --release --target riscv32imac-unknown-none-elf --no-default-features"
+led-trait-c6 = "run --package device-envoy-esp --example led_example1_trait --release --target riscv32imac-unknown-none-elf --no-default-features"
+led-trait-c6-check = "check --package device-envoy-esp --example led_example1_trait --release --target riscv32imac-unknown-none-elf --no-default-features"

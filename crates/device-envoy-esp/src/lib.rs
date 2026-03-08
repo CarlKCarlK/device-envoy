@@ -29,6 +29,8 @@ pub mod flash_block;
 pub mod ir;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
+#[cfg(target_os = "none")]
+pub mod led;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;

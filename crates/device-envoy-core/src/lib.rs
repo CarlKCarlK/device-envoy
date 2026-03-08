@@ -4,12 +4,13 @@
 
 pub mod audio_player;
 pub mod button;
-pub mod lcd_text;
 pub mod clock;
 #[cfg(feature = "wifi")]
 pub mod clock_sync;
 pub mod flash_block;
 pub mod ir;
+pub mod lcd_text;
+pub mod led;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;

@@ -25,7 +25,7 @@ exposed as peripherals in esp-hal on ESP32-S3.
 - This built-in LED mapping is board-dependent. On ESP32-C6, `GPIO8` is also a strapping pin, so it is not a general-purpose default for new external wiring.
 - `GPIO10` - External 8-pixel NeoPixel-style (WS2812) strip
 - `GPIO18` - 12x8 panel examples
-- `GPIO2` - 16x16 panel examples
+- `GPIO2` - 16x16 panel examples and the singular `led_example1_trait` external LED example
 
 ### Peripheral resource defaults used in current examples
 

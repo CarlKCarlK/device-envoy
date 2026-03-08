@@ -8,10 +8,9 @@ use core::convert::Infallible;
 use defmt_rtt as _;
 use device_envoy_rp::{
     Result,
-    led::{Led, LedStatic, OnLevel},
+    led::{Led as _, LedLevel, LedRp, LedRpStatic, OnLevel},
 };
 use embassy_executor::Spawner;
-use embassy_rp::gpio::Level;
 use embassy_time::{Duration, Timer};
 use panic_probe as _;
 
@@ -24,21 +23,21 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    static LED_STATIC: LedStatic = Led::new_static();
-    let led = Led::new(&LED_STATIC, p.PIN_1, OnLevel::High, spawner)?;
+    static LED_RP_STATIC: LedRpStatic = LedRp::new_static();
+    let led_rp = LedRp::new(&LED_RP_STATIC, p.PIN_1, OnLevel::High, spawner)?;
 
-    // Turn on for 1 second
-    led.set_level(Level::High);
+    // Turn the LED on
+    led_rp.set_level(LedLevel::On);
     Timer::after(Duration::from_secs(1)).await;
 
-    // Turn off for 1 second
-    led.set_level(Level::Low);
-    Timer::after(Duration::from_secs(1)).await;
+    // Turn the LED off
+    led_rp.set_level(LedLevel::Off);
+    Timer::after(Duration::from_millis(500)).await;
 
-    // Blink: 200ms on, 200ms off (repeating)
-    led.animate(&[
-        (Level::High, Duration::from_millis(200)),
-        (Level::Low, Duration::from_millis(200)),
+    // Play a blinking animation (looping: 200ms on, 200ms off)
+    led_rp.animate([
+        (LedLevel::On, Duration::from_millis(200)),
+        (LedLevel::Off, Duration::from_millis(200)),
     ]);
 
     // Run forever; animation loops continuously

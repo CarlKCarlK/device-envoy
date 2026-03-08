@@ -9,8 +9,6 @@
 
 pub mod button;
 #[cfg(target_os = "none")]
-pub mod char_lcd;
-#[cfg(target_os = "none")]
 pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.
     //! See [`ClockSync`] for the full API and usage.
@@ -42,8 +40,6 @@ pub mod wifi_auto;
 
 pub use device_envoy_core::tone;
 use device_envoy_core::wifi_auto::WifiAutoError;
-#[cfg(target_os = "none")]
-use device_envoy_core::char_lcd::CharLcdError;
 pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
@@ -150,8 +146,6 @@ pub enum Error {
     InvalidFlashRegion,
     IndexOutOfBounds,
     FormatError,
-    #[cfg(target_os = "none")]
-    CharLcd(CharLcdError),
     StorageCorrupted,
     FlashRegionMismatch,
     Led4BitsToIndexesFull,
@@ -194,13 +188,6 @@ impl From<WifiAutoError> for Error {
             WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
             WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
         }
-    }
-}
-
-#[cfg(target_os = "none")]
-impl From<CharLcdError> for Error {
-    fn from(error: CharLcdError) -> Self {
-        Self::CharLcd(error)
     }
 }
 

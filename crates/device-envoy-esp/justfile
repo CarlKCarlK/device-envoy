@@ -68,12 +68,6 @@ flash-block-example1-trait-s3:
 flash-block-example1-trait-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
 
-char-lcd-simple-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example char_lcd_simple --target xtensa-esp32s3-none-elf --release --no-default-features
-
-char-lcd-simple-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example char_lcd_simple --target xtensa-esp32s3-none-elf --release --no-default-features
-
 clock-led8x12-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features
 
@@ -91,12 +85,6 @@ clock-servos-s3:
 
 clock-servos-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_servos --target xtensa-esp32s3-none-elf --release --no-default-features
-
-clock-lcd-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_lcd --target xtensa-esp32s3-none-elf --release --no-default-features
-
-clock-lcd-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_lcd --target xtensa-esp32s3-none-elf --release --no-default-features
 
 servo-basic-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_basic --target xtensa-esp32s3-none-elf --release --no-default-features

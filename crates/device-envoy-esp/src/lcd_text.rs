@@ -118,6 +118,15 @@ pub use device_envoy_core::lcd_text::LcdTextDriver as __LcdTextDriver;
 pub use device_envoy_core::lcd_text::LcdText as __LcdText;
 #[doc(hidden)]
 pub use device_envoy_core::lcd_text::render_lcd_text_frame as __render_lcd_text_frame;
+#[doc(hidden)]
+pub use device_envoy_core::lcd_text::LcdTextFrame as __LcdTextFrame;
+#[doc(hidden)]
+pub async fn __select_array<Fut, const N: usize>(futures: [Fut; N]) -> (Fut::Output, usize)
+where
+    Fut: core::future::Future,
+{
+    embassy_futures::select::select_array(futures).await
+}
 
 #[doc(hidden)]
 pub async fn __write_lcd_text_cells(
@@ -205,19 +214,11 @@ macro_rules! __i2cs_impl {
         }
     ) => {
         $crate::lcd_text::paste::paste! {
-            #[doc(hidden)]
-            #[derive(Clone, Copy)]
-            enum [<$group_name I2cLcdTextCommand>] {
-                $(
-                    [<$lcd_name Command>] {
-                        cells: [u8; $width * $height],
-                    },
-                )+
-            }
-
-            static [<$group_name:upper _I2C_LCD_TEXT_COMMAND_SIGNAL>]:
-                $crate::lcd_text::__I2csSignal<[<$group_name I2cLcdTextCommand>]> =
-                $crate::lcd_text::__I2csSignal::new();
+            $(
+                static [<$lcd_name:upper _FRAME_SIGNAL>]:
+                    $crate::lcd_text::__I2csSignal<$crate::lcd_text::__LcdTextFrame> =
+                    $crate::lcd_text::__I2csSignal::new();
+            )+
 
             $group_vis struct $group_name;
 
@@ -296,15 +297,7 @@ macro_rules! __i2cs_impl {
 
                         let lcd_text_frame =
                             $crate::lcd_text::__render_lcd_text_frame::<$width, $height>(text.as_ref());
-                        let mut cells = [b' '; $width * $height];
-                        for cell_index in 0..($width * $height) {
-                            cells[cell_index] = lcd_text_frame.cells[cell_index];
-                        }
-                        [<$group_name:upper _I2C_LCD_TEXT_COMMAND_SIGNAL>].signal(
-                            [<$group_name I2cLcdTextCommand>]::[<$lcd_name Command>] {
-                                cells,
-                            },
-                        );
+                        [<$lcd_name:upper _FRAME_SIGNAL>].signal(lcd_text_frame);
                     }
                 }
 
@@ -340,25 +333,23 @@ macro_rules! __i2cs_impl {
                 let mut esp_lcd_text_write = $crate::lcd_text::EspLcdTextWrite::__new(i2c);
                 let mut lcd_text_driver = $crate::lcd_text::__LcdTextDriver::new(0x27);
                 let mut initialized_addresses: heapless::Vec<u8, 8> = heapless::Vec::new();
+                let addresses = [$($address,)+];
+                let widths = [$($width,)+];
+                let heights = [$($height,)+];
 
                 loop {
-                    let i2c_lcd_text_command =
-                        [<$group_name:upper _I2C_LCD_TEXT_COMMAND_SIGNAL>].wait().await;
-                    match i2c_lcd_text_command {
-                        $(
-                            [<$group_name I2cLcdTextCommand>]::[<$lcd_name Command>] { cells } => {
-                                $crate::lcd_text::__write_lcd_text_cells(
-                                    &mut lcd_text_driver,
-                                    &mut esp_lcd_text_write,
-                                    &mut initialized_addresses,
-                                    $address,
-                                    $width,
-                                    $height,
-                                    &cells,
-                                ).await;
-                            }
-                        )+
-                    }
+                    let (lcd_text_frame, ready_index) = $crate::lcd_text::__select_array([
+                        $([<$lcd_name:upper _FRAME_SIGNAL>].wait(),)+
+                    ]).await;
+                    $crate::lcd_text::__write_lcd_text_cells(
+                        &mut lcd_text_driver,
+                        &mut esp_lcd_text_write,
+                        &mut initialized_addresses,
+                        addresses[ready_index],
+                        widths[ready_index],
+                        heights[ready_index],
+                        &lcd_text_frame.cells,
+                    ).await;
                 }
             }
         }

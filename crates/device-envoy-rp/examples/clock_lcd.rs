@@ -12,7 +12,7 @@ use defmt_rtt as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::i2cs;
 use device_envoy_rp::lcd_text::LcdText as _;
-use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
+use device_envoy_rp::clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoRp};
@@ -81,8 +81,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_offset_minutes = timezone_field
         .offset_minutes()?
         .ok_or(Error::MissingCustomWifiAutoField)?;
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSync::new_static();
-    let clock_sync = ClockSync::new(
+    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+    let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,
         stack,
         timezone_offset_minutes,

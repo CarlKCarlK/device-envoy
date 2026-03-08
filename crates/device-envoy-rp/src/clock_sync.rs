@@ -1,6 +1,6 @@
 //! A device abstraction that combines NTP time synchronization with a local clock.
 //!
-//! See [`ClockSync`] for the full API.
+//! See [`ClockSync`] for clock operations and [`ClockSyncRp`] for constructors.
 //!
 //! # Example: WiFi + ClockSync logging
 //!
@@ -13,7 +13,7 @@
 //!     Error,
 //!     Result,
 //!     button::PressedTo,
-//!     clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND, h12_m_s},
+//!     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND, h12_m_s},
 //!     flash_block::FlashBlockRp,
 //!     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
 //!     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
@@ -64,8 +64,8 @@
 //!     let offset_minutes = timezone_field
 //!         .offset_minutes()?
 //!         .ok_or(Error::MissingCustomWifiAutoField)?;
-//!     static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSync::new_static();
-//!     let clock_sync = ClockSync::new(
+//!     static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+//!     let clock_sync = ClockSyncRp::new(
 //!         &CLOCK_SYNC_STATIC,
 //!         stack,
 //!         offset_minutes,
@@ -90,6 +90,6 @@
 #![cfg(feature = "wifi")]
 
 pub use device_envoy_core::clock_sync::{
-    ClockSync, ClockSyncStatic, ClockSyncTick, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds,
-    h12_m_s,
+    ClockSync, ClockSyncRuntime as ClockSyncRp, ClockSyncStatic, ClockSyncTick, ONE_DAY,
+    ONE_MINUTE, ONE_SECOND, UnixSeconds, h12_m_s,
 };

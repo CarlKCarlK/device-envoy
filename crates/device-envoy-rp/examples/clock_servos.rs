@@ -15,7 +15,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::button::{PressDuration, PressedTo};
 use device_envoy_rp::clock_sync::{
-    ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
+    ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
@@ -116,8 +116,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .ok_or(Error::MissingCustomWifiAutoField)?;
 
     // Create a ClockSync device that knows its timezone offset.
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSync::new_static();
-    let clock_sync = ClockSync::new(
+    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+    let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,
         stack,
         offset_minutes,
@@ -167,14 +167,14 @@ impl State {
     async fn execute_hours_minutes<B: device_envoy_core::button::Button>(
         self,
         speed: f32,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncRp,
         button: &mut B,
         servo_display: &ServoClockDisplay,
     ) -> Result<Self> {
-        clock_sync.set_speed(speed).await;
+        clock_sync.set_speed(speed);
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
         servo_display.show_hours_minutes(hours, minutes).await;
-        clock_sync.set_tick_interval(Some(ONE_MINUTE)).await;
+        clock_sync.set_tick_interval(Some(ONE_MINUTE));
         loop {
             match select(
                 button.wait_for_press_duration(),
@@ -205,14 +205,14 @@ impl State {
 
     async fn execute_minutes_seconds<B: device_envoy_core::button::Button>(
         self,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncRp,
         button: &mut B,
         servo_display: &ServoClockDisplay,
     ) -> Result<Self> {
-        clock_sync.set_speed(1.0).await;
+        clock_sync.set_speed(1.0);
         let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
         servo_display.show_minutes_seconds(minutes, seconds).await;
-        clock_sync.set_tick_interval(Some(ONE_SECOND)).await;
+        clock_sync.set_tick_interval(Some(ONE_SECOND));
         loop {
             match select(
                 button.wait_for_press_duration(),
@@ -240,13 +240,13 @@ impl State {
 
     async fn execute_edit_offset<B: device_envoy_core::button::Button>(
         self,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncRp,
         button: &mut B,
         timezone_field: &TimezoneField,
         servo_display: &ServoClockDisplay,
     ) -> Result<Self> {
         info!("Entering edit offset mode");
-        clock_sync.set_speed(1.0).await;
+        clock_sync.set_speed(1.0);
 
         // Show current hours and minutes
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
@@ -264,7 +264,7 @@ impl State {
         let mut offset_minutes = clock_sync.offset_minutes();
         info!("Current offset: {} minutes", offset_minutes);
 
-        clock_sync.set_tick_interval(None).await; // Disable ticks in edit mode
+        clock_sync.set_tick_interval(None); // Disable ticks in edit mode
         loop {
             info!("Waiting for button press in edit mode");
             match button.wait_for_press_duration().await {
@@ -276,7 +276,7 @@ impl State {
                     if offset_minutes >= ONE_DAY_MINUTES {
                         offset_minutes -= ONE_DAY_MINUTES;
                     }
-                    clock_sync.set_offset_minutes(offset_minutes).await;
+                    clock_sync.set_offset_minutes(offset_minutes);
                     info!("New offset: {} minutes", offset_minutes);
 
                     // Update display (atomic already updated, can use now_local)

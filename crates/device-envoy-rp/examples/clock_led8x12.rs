@@ -21,7 +21,9 @@ use defmt_rtt as _;
 use device_envoy_rp::{
     Error, Result,
     button::{PressDuration, PressedTo},
-    clock_sync::{ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s},
+    clock_sync::{
+        ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
+    },
     flash_block::FlashBlockRp,
     led_strip::{Current, Gamma, colors},
     led2d,
@@ -145,8 +147,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .ok_or(Error::MissingCustomWifiAutoField)?;
 
     // Create a clock synced over WiFi.
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSync::new_static();
-    let clock_sync = ClockSync::new(
+    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+    let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,
         stack,
         offset_minutes,
@@ -196,14 +198,14 @@ impl State {
     async fn execute_hours_minutes<B: device_envoy_core::button::Button>(
         self,
         speed: f32,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncRp,
         button: &mut B,
         led8x12: &Led8x12,
     ) -> Result<Self> {
-        clock_sync.set_speed(speed).await;
+        clock_sync.set_speed(speed);
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
         show_hours_minutes(led8x12, hours, minutes).await;
-        clock_sync.set_tick_interval(Some(ONE_MINUTE)).await;
+        clock_sync.set_tick_interval(Some(ONE_MINUTE));
         loop {
             match select(
                 button.wait_for_press_duration(),
@@ -244,14 +246,14 @@ impl State {
 
     async fn execute_minutes_seconds<B: device_envoy_core::button::Button>(
         self,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncRp,
         button: &mut B,
         led8x12: &Led8x12,
     ) -> Result<Self> {
-        clock_sync.set_speed(1.0).await;
+        clock_sync.set_speed(1.0);
         let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
         show_minutes_seconds(led8x12, minutes, seconds).await;
-        clock_sync.set_tick_interval(Some(ONE_SECOND)).await;
+        clock_sync.set_tick_interval(Some(ONE_SECOND));
         loop {
             match select(
                 button.wait_for_press_duration(),
@@ -289,13 +291,13 @@ impl State {
 
     async fn execute_edit_offset<B: device_envoy_core::button::Button>(
         self,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncRp,
         button: &mut B,
         timezone_field: &TimezoneField,
         led8x12: &Led8x12,
     ) -> Result<Self> {
         info!("Entering edit offset mode");
-        clock_sync.set_speed(1.0).await;
+        clock_sync.set_speed(1.0);
 
         // Blink current hours and minutes with edit color accent.
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
@@ -305,7 +307,7 @@ impl State {
         let mut offset_minutes = clock_sync.offset_minutes();
         info!("Current offset: {} minutes", offset_minutes);
 
-        clock_sync.set_tick_interval(None).await; // Disable ticks in edit mode
+        clock_sync.set_tick_interval(None); // Disable ticks in edit mode
         loop {
             info!("Waiting for button press in edit mode");
             match button.wait_for_press_duration().await {
@@ -317,7 +319,7 @@ impl State {
                     if offset_minutes >= ONE_DAY_MINUTES {
                         offset_minutes -= ONE_DAY_MINUTES;
                     }
-                    clock_sync.set_offset_minutes(offset_minutes).await;
+                    clock_sync.set_offset_minutes(offset_minutes);
                     info!("New offset: {} minutes", offset_minutes);
 
                     // Update display

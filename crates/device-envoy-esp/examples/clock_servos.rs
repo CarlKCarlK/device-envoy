@@ -23,7 +23,9 @@ use log::info;
 
 use device_envoy_esp::{
     button::{PressDuration, PressedTo},
-    clock_sync::{h12_m_s, ClockSync, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND},
+    clock_sync::{
+        h12_m_s, ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND,
+    },
     flash_block::FlashBlockEsp,
     init_and_start,
     servo::Servo as _,
@@ -124,8 +126,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .offset_minutes()?
         .ok_or(Error::MissingCustomWifiAutoField)?;
 
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSync::new_static();
-    let clock_sync = ClockSync::new(
+    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncEsp::new_static();
+    let clock_sync = ClockSyncEsp::new(
         &CLOCK_SYNC_STATIC,
         stack,
         offset_minutes,
@@ -176,14 +178,14 @@ impl State {
     async fn execute_hours_minutes<B: device_envoy_esp::button::Button>(
         self,
         speed: f32,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncEsp,
         button: &mut B,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
-        clock_sync.set_speed(speed).await;
+        clock_sync.set_speed(speed);
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
         servo_clock_display.show_hours_minutes(hours, minutes).await;
-        clock_sync.set_tick_interval(Some(ONE_MINUTE)).await;
+        clock_sync.set_tick_interval(Some(ONE_MINUTE));
 
         loop {
             match select(
@@ -213,14 +215,14 @@ impl State {
 
     async fn execute_minutes_seconds<B: device_envoy_esp::button::Button>(
         self,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncEsp,
         button: &mut B,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
-        clock_sync.set_speed(1.0).await;
+        clock_sync.set_speed(1.0);
         let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
         servo_clock_display.show_minutes_seconds(minutes, seconds);
-        clock_sync.set_tick_interval(Some(ONE_SECOND)).await;
+        clock_sync.set_tick_interval(Some(ONE_SECOND));
 
         loop {
             match select(
@@ -247,13 +249,13 @@ impl State {
 
     async fn execute_edit_offset<B: device_envoy_esp::button::Button>(
         self,
-        clock_sync: &ClockSync,
+        clock_sync: &ClockSyncEsp,
         button: &mut B,
         timezone_field: &TimezoneField,
         servo_clock_display: &ServoClockDisplay,
     ) -> Result<Self> {
         info!("Entering edit offset mode");
-        clock_sync.set_speed(1.0).await;
+        clock_sync.set_speed(1.0);
 
         let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
         servo_clock_display
@@ -268,7 +270,7 @@ impl State {
 
         let mut offset_minutes = clock_sync.offset_minutes();
 
-        clock_sync.set_tick_interval(None).await;
+        clock_sync.set_tick_interval(None);
         loop {
             match button.wait_for_press_duration().await {
                 PressDuration::Short => {
@@ -277,7 +279,7 @@ impl State {
                     if offset_minutes >= ONE_DAY_MINUTES {
                         offset_minutes -= ONE_DAY_MINUTES;
                     }
-                    clock_sync.set_offset_minutes(offset_minutes).await;
+                    clock_sync.set_offset_minutes(offset_minutes);
 
                     let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
                     servo_clock_display

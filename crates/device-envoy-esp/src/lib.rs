@@ -11,10 +11,10 @@ pub mod button;
 #[cfg(target_os = "none")]
 pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.
-    //! See [`ClockSync`] for the full API and usage.
+    //! See [`ClockSync`] for clock operations and [`ClockSyncEsp`] for constructors.
     pub use device_envoy_core::clock_sync::{
-        h12_m_s, ClockSync, ClockSyncStatic, ClockSyncTick, UnixSeconds, ONE_DAY, ONE_MINUTE,
-        ONE_SECOND,
+        h12_m_s, ClockSync, ClockSyncRuntime as ClockSyncEsp, ClockSyncStatic, ClockSyncTick,
+        UnixSeconds, ONE_DAY, ONE_MINUTE, ONE_SECOND,
     };
 }
 #[cfg(target_os = "none")]

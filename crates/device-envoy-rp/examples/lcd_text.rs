@@ -3,9 +3,22 @@
 #![no_main]
 
 use core::{convert::Infallible, panic};
-use device_envoy_rp::lcd_text::{LcdText, LcdTextStatic};
-use device_envoy_rp::{Error, Result};
+use device_envoy_rp::lcd_text;
+use device_envoy_rp::Result;
+use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
+
+// todo000 be sure none of the esp's would allow you to use a macro struct twice because they don't include pins.
+
+lcd_text! {
+    LcdTextSimple {
+        width: 16,
+        height: 2,
+        i2c: I2C0,
+        sda_pin: PIN_4,
+        scl_pin: PIN_5,
+    }
+}
 
 #[embassy_executor::main]
 async fn main(spawner: embassy_executor::Spawner) -> ! {
@@ -16,24 +29,27 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    // Common backpack addresses: 0x27 or 0x3F.
-    const LCD_ADDRESS: u8 = 0x27;
-    static LCD_TEXT_STATIC: LcdTextStatic = LcdText::<16, 2>::new_static();
-    let lcd_text = LcdText::<16, 2>::new(
-        &LCD_TEXT_STATIC,
+    let lcd_text_simple = LcdTextSimple::new(
         p.I2C0,
         p.PIN_4,
         p.PIN_5,
-        LCD_ADDRESS,
+        0x27, // Common backpack addresses: 0x27 or 0x3F.
         spawner,
     )?;
 
-    let mut text = heapless::String::<64>::new();
-    text.push_str("Hello from\n").map_err(|_| Error::FormatError)?;
-    text.push_str("device-envoy!")
-        .map_err(|_| Error::FormatError)?;
+    lcd_text_simple.write_text("Hello from\ndevice-envoy!");
+    Timer::after(Duration::from_secs(1)).await;
 
-    lcd_text.write_text(text, 0).await?;
+    lcd_text_simple.write_text("This line is definitely longer than sixteen\nAnd this one too");
+    Timer::after(Duration::from_secs(1)).await;
+
+    lcd_text_simple.write_text("Unicode: cafe\u{301} ☕\nnaive — piñata");
+    Timer::after(Duration::from_secs(1)).await;
+
+    lcd_text_simple.write_text("Line 1\nLine 2\nLine 3\nLine 4");
+    Timer::after(Duration::from_secs(1)).await;
+
+    lcd_text_simple.write_text("");
 
     core::future::pending().await
 }

@@ -11,7 +11,7 @@ Shared rules are in the root [`AGENTS.md`](../../AGENTS.md). This file contains 
 
 ## Generated Files
 
-For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, and `servo_player_generated`.
+For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `lcd_text_generated`, and `servo_player_generated`.
 
 ## Const-Only APIs
 

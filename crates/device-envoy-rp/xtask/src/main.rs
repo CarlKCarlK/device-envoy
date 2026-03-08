@@ -4,6 +4,7 @@
 
 mod adpcm_clip_generated;
 mod audio_player_generated;
+mod lcd_text_generated;
 mod led2d_generated;
 mod led_strip_generated;
 mod pcm_clip_generated;
@@ -198,6 +199,10 @@ fn check_quick() -> ExitCode {
         eprintln!("Error generating led2d_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
+    if let Err(err) = lcd_text_generated::generate_lcd_text_generated(&workspace_root) {
+        eprintln!("Error generating lcd_text_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
         eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
@@ -353,6 +358,10 @@ fn check_all() -> ExitCode {
     }
     if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
         eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = lcd_text_generated::generate_lcd_text_generated(&workspace_root) {
+        eprintln!("Error generating lcd_text_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
@@ -661,6 +670,10 @@ fn check_docs() -> ExitCode {
     }
     if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
         eprintln!("Error generating led2d_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = lcd_text_generated::generate_lcd_text_generated(&workspace_root) {
+        eprintln!("Error generating lcd_text_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
@@ -1214,6 +1227,16 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "impl Led2d<12, 4> for Led2dGenerated",
                 "fn write_frame(&self, frame2d: Frame2d<12, 4>)",
                 "fn animate<I>(&self, frames: I)",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/lcd_text/lcd_text_generated.rs",
+            required_fragments: &[
+                "pub struct LcdTextGenerated",
+                "pub const WIDTH: usize",
+                "pub const HEIGHT: usize",
+                "pub fn new(",
+                "pub fn write_text(&self, text: impl AsRef<str>)",
             ],
         },
         GeneratedDocStubExpectation {

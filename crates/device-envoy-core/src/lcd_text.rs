@@ -3,51 +3,70 @@
 //! See `device_envoy_rp::lcd_text` for constructors and usage examples.
 
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
+use embassy_sync::signal::Signal;
 use embassy_time::Timer;
-use heapless::String;
+
+/// Maximum characters supported by this shared frame container (20x4).
+pub const MAX_LCD_CHARS: usize = 80;
 
 /// Character LCD operation errors shared across platform crates.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LcdTextError {
     /// I2C write failed for the given 7-bit address.
     I2cWrite { address: u8 },
-    /// Display geometry is invalid.
-    InvalidGeometry { width: usize, height: usize },
-    /// Display row count is unsupported by the HD44780 address map in this driver.
-    UnsupportedRows { rows: usize },
-    /// Input text contains more lines than the display height.
-    TooManyLines { max_lines: usize },
-    /// Input text line is too long for the display width.
-    LineTooLong {
-        line_index: usize,
-        width: usize,
-        line_len: usize,
-    },
     /// Attempted to set cursor to an out-of-range row.
     RowOutOfBounds { row: usize },
 }
 
-/// Messages sent to the character LCD device task.
-#[derive(Clone, Debug)]
-pub enum LcdTextMessage {
-    /// Display a message for the specified duration (0 = until next message).
-    Display {
-        /// Display width in characters.
-        width: usize,
-        /// Display height in characters.
-        height: usize,
-        /// Text to render on the LCD.
-        text: String<64>,
-        /// Minimum display duration in milliseconds.
-        duration_ms: u32,
-    },
+/// A packed text frame for an HD44780 display.
+#[derive(Clone, Copy, Debug)]
+pub struct LcdTextFrame {
+    /// Frame width in characters.
+    pub width: usize,
+    /// Frame height in characters.
+    pub height: usize,
+    /// Packed row-major cell bytes.
+    pub cells: [u8; MAX_LCD_CHARS],
 }
 
-/// Static channel resources for character LCD command delivery.
+impl LcdTextFrame {
+    /// Create a blank frame with spaces.
+    #[must_use]
+    pub const fn new_blank(width: usize, height: usize) -> Self {
+        Self {
+            width,
+            height,
+            cells: [b' '; MAX_LCD_CHARS],
+        }
+    }
+
+    /// Build a packed frame from a fixed `W x H` buffer.
+    #[must_use]
+    pub fn from_rows<const W: usize, const H: usize>(rows: [[u8; W]; H]) -> Self {
+        let mut lcd_text_frame = Self::new_blank(W, H);
+        let mut row_index = 0;
+        while row_index < H {
+            let mut column_index = 0;
+            while column_index < W {
+                let flat_index = row_index * W + column_index;
+                lcd_text_frame.cells[flat_index] = rows[row_index][column_index];
+                column_index += 1;
+            }
+            row_index += 1;
+        }
+        lcd_text_frame
+    }
+
+    /// Returns the byte at `(row, col)` in this frame.
+    #[must_use]
+    pub fn cell(&self, row: usize, col: usize) -> u8 {
+        self.cells[row * self.width + col]
+    }
+}
+
+/// Static signal resources for LCD frame delivery.
 pub struct LcdTextStatic {
-    request_channel: Channel<CriticalSectionRawMutex, LcdTextMessage, 8>,
-    response_channel: Channel<CriticalSectionRawMutex, Result<(), LcdTextError>, 8>,
+    frame_signal: Signal<CriticalSectionRawMutex, LcdTextFrame>,
 }
 
 impl LcdTextStatic {
@@ -55,29 +74,18 @@ impl LcdTextStatic {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            request_channel: Channel::new(),
-            response_channel: Channel::new(),
+            frame_signal: Signal::new(),
         }
     }
 
-    /// Queue one message to the LCD task.
-    pub async fn send_request(&self, message: LcdTextMessage) {
-        self.request_channel.send(message).await;
+    /// Signal one full frame to the LCD task.
+    pub fn signal_frame(&self, frame: LcdTextFrame) {
+        self.frame_signal.signal(frame);
     }
 
-    /// Wait for the next message for the LCD task.
-    pub async fn receive_request(&self) -> LcdTextMessage {
-        self.request_channel.receive().await
-    }
-
-    /// Queue one operation result from the LCD task.
-    pub async fn send_response(&self, response: Result<(), LcdTextError>) {
-        self.response_channel.send(response).await;
-    }
-
-    /// Wait for the next operation result from the LCD task.
-    pub async fn receive_response(&self) -> Result<(), LcdTextError> {
-        self.response_channel.receive().await
+    /// Wait for the next frame signaled to the LCD task.
+    pub async fn wait_frame(&self) -> LcdTextFrame {
+        self.frame_signal.wait().await
     }
 }
 
@@ -104,12 +112,6 @@ impl LcdTextDriver {
         Self { address }
     }
 
-    /// Creates a driver for the default PCF8574 backpack address (`0x27`).
-    #[must_use]
-    pub const fn new_default() -> Self {
-        Self::new(0x27)
-    }
-
     /// Initialize the LCD in 4-bit mode and clear it.
     pub async fn init(&mut self, lcd_text_write: &mut impl LcdTextWrite) -> Result<(), LcdTextError> {
         Timer::after_millis(50).await;
@@ -133,49 +135,22 @@ impl LcdTextDriver {
         Ok(())
     }
 
-    /// Process one queued LCD message.
-    pub async fn process_message(
+    /// Write one full frame to the LCD.
+    pub async fn write_frame(
         &mut self,
         lcd_text_write: &mut impl LcdTextWrite,
-        lcd_text_message: LcdTextMessage,
+        lcd_text_frame: &LcdTextFrame,
     ) -> Result<(), LcdTextError> {
-        match lcd_text_message {
-            LcdTextMessage::Display {
-                width,
-                height,
-                text,
-                duration_ms,
-            } => {
-                if width == 0 || height == 0 {
-                    return Err(LcdTextError::InvalidGeometry { width, height });
-                }
-                if height > 4 {
-                    return Err(LcdTextError::UnsupportedRows { rows: height });
-                }
-                self.clear(lcd_text_write).await?;
+        self.clear(lcd_text_write).await?;
 
-                for (line_index, line_text) in text.as_str().split('\n').enumerate() {
-                    if line_index >= height {
-                        return Err(LcdTextError::TooManyLines { max_lines: height });
-                    }
-                    let line_len = line_text.len();
-                    if line_len > width {
-                        return Err(LcdTextError::LineTooLong {
-                            line_index,
-                            width,
-                            line_len,
-                        });
-                    }
-
-                    self.set_cursor(lcd_text_write, line_index, 0).await?;
-                    self.print(lcd_text_write, line_text).await?;
-                }
-
-                if duration_ms > 0 {
-                    Timer::after_millis(duration_ms.into()).await;
-                }
+        for row_index in 0..lcd_text_frame.height {
+            self.set_cursor(lcd_text_write, row_index, 0).await?;
+            for column_index in 0..lcd_text_frame.width {
+                self.write_byte(lcd_text_write, lcd_text_frame.cell(row_index, column_index), true)
+                    .await?;
             }
         }
+
         Ok(())
     }
 
@@ -232,13 +207,6 @@ impl LcdTextDriver {
             _ => return Err(LcdTextError::RowOutOfBounds { row }),
         };
         self.write_byte(lcd_text_write, 0x80 | address, false).await?;
-        Ok(())
-    }
-
-    async fn print(&mut self, lcd_text_write: &mut impl LcdTextWrite, text: &str) -> Result<(), LcdTextError> {
-        for ch in text.bytes() {
-            self.write_byte(lcd_text_write, ch, true).await?;
-        }
         Ok(())
     }
 }

@@ -62,7 +62,8 @@
 //!     tone,
 //! };
 //! use core::time::Duration as StdDuration;
-//!
+//! 
+//! // todo0000 why can't pins be generic and not given until later?
 //! // Generate `AudioPlayer8`, a struct type with the specified configuration.
 //! audio_player! {
 //!     AudioPlayer8 {

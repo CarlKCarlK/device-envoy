@@ -10,7 +10,7 @@ use core::{convert::Infallible, fmt};
 use defmt::*;
 use defmt_rtt as _;
 use device_envoy_rp::button::PressedTo;
-use device_envoy_rp::lcd_text::{LcdText, LcdTextStatic};
+use device_envoy_rp::lcd_text;
 use device_envoy_rp::clock_sync::{ClockSync, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
@@ -19,6 +19,16 @@ use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use heapless::String;
 use panic_probe as _;
+
+lcd_text! {
+    LcdTextClock {
+        width: 16,
+        height: 2,
+        i2c: I2C0,
+        sda_pin: PIN_4,
+        scl_pin: PIN_5,
+    }
+}
 
 // ============================================================================
 // Main Orchestrator
@@ -39,9 +49,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Initialize LcdText
     const LCD_ADDRESS: u8 = 0x27;
-    static LCD_TEXT_STATIC: LcdTextStatic = LcdText::<16, 2>::new_static();
-    let lcd_text = LcdText::<16, 2>::new(
-        &LCD_TEXT_STATIC,
+    let lcd_text = LcdTextClock::new(
         p.I2C0,
         p.PIN_4,
         p.PIN_5,
@@ -122,6 +130,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             ),
         )
         .map_err(|_| Error::FormatError)?;
-        lcd_text.write_text(text, 0).await?;
+        lcd_text.write_text(text.as_str());
     }
 }

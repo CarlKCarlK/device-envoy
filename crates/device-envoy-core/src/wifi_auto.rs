@@ -2,8 +2,8 @@
 //!
 //! See [`WifiCredentials`] for the primary shared data type.
 
-use core::future::Future;
 use crate::button::Button;
+use core::future::Future;
 
 pub mod fields;
 pub mod portal;

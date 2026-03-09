@@ -9,16 +9,16 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Error, Result,
     button::PressedTo,
     clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start, lcd_text,
     lcd_text::LcdText as _,
     wifi_auto::{
-        WifiAuto as _, WifiAutoEsp,
         fields::{TimezoneField, TimezoneFieldStatic},
+        WifiAuto as _, WifiAutoEsp,
     },
+    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

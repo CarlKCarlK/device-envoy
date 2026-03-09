@@ -38,7 +38,12 @@ async fn play_nasa_with_runtime_volume(
         audio_player.play([CHIME, NASA, GAP], AtEnd::Loop);
 
         for volume_percent in VOLUME_STEPS_PERCENT {
-            match select(button.wait_for_press(), Timer::after(Duration::from_secs(1))).await {
+            match select(
+                button.wait_for_press(),
+                Timer::after(Duration::from_secs(1)),
+            )
+            .await
+            {
                 Either::First(()) => break,
                 Either::Second(()) => audio_player.set_volume(Volume::percent(volume_percent)),
             }

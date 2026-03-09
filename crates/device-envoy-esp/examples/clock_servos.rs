@@ -140,12 +140,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(
-                        speed,
-                        &clock_sync,
-                        &mut button,
-                        &servo_clock_display,
-                    )
+                    .execute_hours_minutes(speed, &clock_sync, &mut button, &servo_clock_display)
                     .await?
             }
             State::MinutesSeconds => {
@@ -188,12 +183,7 @@ impl State {
         clock_sync.set_tick_interval(Some(ONE_MINUTE));
 
         loop {
-            match select(
-                button.wait_for_press_duration(),
-                clock_sync.wait_for_tick(),
-            )
-            .await
-            {
+            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
                 Either::First(press_duration) => match (press_duration, speed.to_bits()) {
                     (PressDuration::Short, bits) if bits == 1.0f32.to_bits() => {
                         return Ok(Self::MinutesSeconds);
@@ -225,12 +215,7 @@ impl State {
         clock_sync.set_tick_interval(Some(ONE_SECOND));
 
         loop {
-            match select(
-                button.wait_for_press_duration(),
-                clock_sync.wait_for_tick(),
-            )
-            .await
-            {
+            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
                 Either::First(PressDuration::Short) => {
                     return Ok(Self::HoursMinutes {
                         speed: FAST_MODE_SPEED,

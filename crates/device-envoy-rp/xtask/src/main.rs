@@ -4,6 +4,7 @@
 
 mod adpcm_clip_generated;
 mod audio_player_generated;
+mod ir_generated;
 mod lcd_text_generated;
 mod led2d_generated;
 mod led_strip_generated;
@@ -207,6 +208,10 @@ fn check_quick() -> ExitCode {
         eprintln!("Error generating led_strip_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
+    if let Err(err) = ir_generated::generate_ir_generated(&workspace_root) {
+        eprintln!("Error generating ir_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
         eprintln!("Error generating servo_player_generated.rs: {}", err);
         return ExitCode::FAILURE;
@@ -366,6 +371,10 @@ fn check_all() -> ExitCode {
     }
     if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
         eprintln!("Error generating led_strip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = ir_generated::generate_ir_generated(&workspace_root) {
+        eprintln!("Error generating ir_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
@@ -678,6 +687,10 @@ fn check_docs() -> ExitCode {
     }
     if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
         eprintln!("Error generating led_strip_generated.rs: {}", err);
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = ir_generated::generate_ir_generated(&workspace_root) {
+        eprintln!("Error generating ir_generated.rs: {}", err);
         return ExitCode::FAILURE;
     }
     if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
@@ -1250,6 +1263,18 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "impl LedStrip<8> for LedStripGenerated",
                 "fn write_frame(&self, frame: Frame1d<8>)",
                 "fn animate<I>(&self, frames: I)",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/ir/ir_generated.rs",
+            required_fragments: &[
+                "pub struct IrGenerated",
+                "impl Ir for IrGenerated",
+                "pub struct IrMappingGenerated",
+                "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
+                "pub struct IrKeplerGenerated",
+                "impl IrKepler for IrKeplerGenerated",
+                "pub fn new(",
             ],
         },
         GeneratedDocStubExpectation {

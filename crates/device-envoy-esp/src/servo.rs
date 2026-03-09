@@ -85,13 +85,13 @@ use static_cell::StaticCell;
 
 #[doc(inline)]
 pub use crate::servo_player::servo_player;
-pub use device_envoy_core::servo::{
-    AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic, combine, linear,
-};
 #[doc(hidden)]
 pub use device_envoy_core::servo::{
     __servo_player_animate, __servo_player_hold, __servo_player_relax, __servo_player_set_degrees,
     device_loop,
+};
+pub use device_envoy_core::servo::{
+    combine, linear, AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic,
 };
 
 const SERVO_PERIOD_US: u32 = 20_000;

@@ -189,7 +189,10 @@ impl LcdTextDriver {
     }
 
     /// Initialize the LCD in 4-bit mode and clear it.
-    pub async fn init(&mut self, lcd_text_write: &mut impl LcdTextWrite) -> Result<(), LcdTextError> {
+    pub async fn init(
+        &mut self,
+        lcd_text_write: &mut impl LcdTextWrite,
+    ) -> Result<(), LcdTextError> {
         Timer::after_millis(50).await;
 
         self.write_nibble(lcd_text_write, 0x03, false).await?;
@@ -222,8 +225,12 @@ impl LcdTextDriver {
         for row_index in 0..lcd_text_frame.height {
             self.set_cursor(lcd_text_write, row_index, 0).await?;
             for column_index in 0..lcd_text_frame.width {
-                self.write_byte(lcd_text_write, lcd_text_frame.cell(row_index, column_index), true)
-                    .await?;
+                self.write_byte(
+                    lcd_text_write,
+                    lcd_text_frame.cell(row_index, column_index),
+                    true,
+                )
+                .await?;
             }
         }
 
@@ -282,7 +289,8 @@ impl LcdTextDriver {
             3 => 0x54_u8 + col,
             _ => return Err(LcdTextError::RowOutOfBounds { row }),
         };
-        self.write_byte(lcd_text_write, 0x80 | address, false).await?;
+        self.write_byte(lcd_text_write, 0x80 | address, false)
+            .await?;
         Ok(())
     }
 }

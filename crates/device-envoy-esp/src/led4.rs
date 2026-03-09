@@ -3,8 +3,8 @@
 //! See [`Led4Esp`] for construction and [`device_envoy_core::led4::Led4`] for text, blinking, and animation control.
 
 pub use device_envoy_core::led4::{
-    circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES,
-    CELL_COUNT, SEGMENT_COUNT,
+    circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES, CELL_COUNT,
+    SEGMENT_COUNT,
 };
 
 #[cfg(target_os = "none")]

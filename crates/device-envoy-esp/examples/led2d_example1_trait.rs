@@ -11,7 +11,7 @@ use log::info;
 use device_envoy_core::led2d::Led2d;
 use device_envoy_esp::{
     init_and_start, led2d,
-    led2d::{Led2dFont, layout::LedLayout},
+    led2d::{layout::LedLayout, Led2dFont},
     led_strip::Current,
 };
 use smart_leds::RGB8;

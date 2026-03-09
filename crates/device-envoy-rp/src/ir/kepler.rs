@@ -1,57 +1,19 @@
 //! A device abstraction for the SunFounder Kepler Kit IR remote control.
 //!
-//! See [`IrKeplerRp`] for usage examples.
-
-use device_envoy_core::ir::{IrKepler, IrMapping as _};
-use crate::ir::mapping::IrMappingRp;
+//! See [`IrKepler`](trait@crate::ir::IrKepler) and this module's macros for generated types.
 
 pub use device_envoy_core::ir::kepler::KeplerKeys;
-
-/// Type alias for the Kepler button mapping.
-///
-/// See [`IrKeplerRp`] for usage examples.
-type IrKeplerMapping<'a> = IrMappingRp<'a, KeplerKeys, 21>;
-
-/// A device abstraction for the SunFounder Kepler Kit IR remote.
-///
-/// This provides a simple interface for the Kepler remote with built-in button mappings.
-///
-/// # Examples
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// use device_envoy_rp::{ir::IrKepler as _, ir_kepler};
-///
-/// ir_kepler! {
-///     IrKepler15: { pio: PIO0, pin: PIN_15 }
-/// }
-///
-/// async fn example(
-///     p: embassy_rp::Peripherals,
-///     spawner: embassy_executor::Spawner,
-/// ) -> device_envoy_rp::Result<()> {
-///     let ir_kepler15 = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
-///
-///     loop {
-///         let button = ir_kepler15.wait_for_press().await;
-///         defmt::info!("Button: {:?}", button);
-///     }
-/// }
-/// ```
-pub struct IrKeplerRp<'a> {
-    mapping: IrKeplerMapping<'a>,
-}
-
-impl IrKepler for IrKeplerRp<'_> {
-    async fn wait_for_press(&self) -> KeplerKeys {
-        self.mapping.wait_for_press().await
-    }
-}
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_keplers {
+    ($($tt:tt)*) => { $crate::__ir_keplers_impl! { $($tt)* } };
+}
+
+/// Internal implementation helper for [`ir_keplers!`].
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __ir_keplers_impl {
     (
         pio: $pio:ident,
         $group_name:ident {
@@ -234,6 +196,6 @@ macro_rules! ir_kepler {
 #[doc(inline)]
 pub use ir_kepler;
 #[allow(unused_imports)]
-/// Alternative macro to share one PIO resource with other Kepler IR receivers (includes examples).
+/// Alternative macro to share one PIO resource with other Kepler IR receivers (includes syntax details).
 #[doc(inline)]
 pub use ir_keplers;

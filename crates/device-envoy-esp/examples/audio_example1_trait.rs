@@ -10,12 +10,11 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Result,
     audio_player::{
-        AtEnd, AudioPlayer, Playable, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
+        audio_player, AtEnd, AudioPlayer, Playable, SilenceClip, Volume, VOICE_22050_HZ,
     },
     button::{Button as _, ButtonEsp, PressedTo},
-    init_and_start, tone,
+    init_and_start, tone, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -64,7 +63,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    let audio_player21 = AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
+    let audio_player21 =
+        AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
 
     loop {
         play_mary_phrase(audio_player21);

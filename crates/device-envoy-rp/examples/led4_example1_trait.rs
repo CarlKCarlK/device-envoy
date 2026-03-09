@@ -8,9 +8,7 @@ use defmt_rtt as _;
 use device_envoy_core::led4::Led4;
 use device_envoy_rp::{
     Result,
-    led4::{
-        BlinkState, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
-    },
+    led4::{BlinkState, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation},
 };
 use embassy_executor::Spawner;
 use embassy_rp::gpio::{Level, Output};

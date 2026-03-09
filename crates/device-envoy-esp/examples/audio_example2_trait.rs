@@ -6,20 +6,19 @@ use core::convert::Infallible;
 use core::time::Duration as StdDuration;
 
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
+use embassy_futures::select::{select, Either};
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
 use device_envoy_core::{
-    audio_player::{AtEnd, AudioPlayer, Gain, Playable, SilenceClip, VOICE_22050_HZ, Volume},
+    audio_player::{AtEnd, AudioPlayer, Gain, Playable, SilenceClip, Volume, VOICE_22050_HZ},
     button::Button,
 };
 use device_envoy_esp::{
-    Result,
     audio_player::{audio_player, pcm_clip},
     button::{ButtonEsp, PressedTo},
-    init_and_start, tone,
+    init_and_start, tone, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -93,7 +92,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    let audio_player21 = AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
+    let audio_player21 =
+        AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
 
     play_nasa_with_runtime_volume(audio_player21, &mut button).await
 }

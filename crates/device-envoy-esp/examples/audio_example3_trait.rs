@@ -9,13 +9,12 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_core::audio_player::{
-    AtEnd, AudioPlayer, Gain, NARROWBAND_8000_HZ, Playable, VOICE_22050_HZ, Volume,
+    AtEnd, AudioPlayer, Gain, Playable, Volume, NARROWBAND_8000_HZ, VOICE_22050_HZ,
 };
 use device_envoy_esp::{
-    Result,
     audio_player::{audio_player, pcm_clip},
     button::{Button as _, ButtonEsp, PressedTo},
-    init_and_start,
+    init_and_start, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -74,8 +73,11 @@ pcm_clip! {
 fn play_resampled_countdown(audio_player: &impl AudioPlayer<NARROWBAND_8000_HZ>) {
     type PlayableRef = &'static dyn Playable<NARROWBAND_8000_HZ>;
 
-    const DIGITS: [PlayableRef; 3] =
-        [&Digit0::adpcm_clip(), &Digit1::adpcm_clip(), &Digit2::adpcm_clip()];
+    const DIGITS: [PlayableRef; 3] = [
+        &Digit0::adpcm_clip(),
+        &Digit1::adpcm_clip(),
+        &Digit2::adpcm_clip(),
+    ];
     const NASA: PlayableRef = &Nasa::pcm_clip()
         .with_gain(Gain::percent(25))
         .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
@@ -96,7 +98,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
 
-    let audio_player21 = AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
+    let audio_player21 =
+        AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
 
     loop {
         play_resampled_countdown(audio_player21);

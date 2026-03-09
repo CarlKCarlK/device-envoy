@@ -1,6 +1,14 @@
 //! A device abstraction for infrared receivers using the NEC protocol.
 //!
-//! See [`IrRp`], [`IrMappingRp`], and [`IrKeplerRp`] for usage examples.
+//! See [`Ir`](trait@crate::ir::Ir), [`IrMapping`](trait@crate::ir::IrMapping), and
+//! [`IrKepler`](trait@crate::ir::IrKepler), plus this module's macros for generated types.
+//!
+//! - [`ir!`](macro@crate::ir) — Macro to generate an IR receiver struct type (includes syntax details).
+//! - [`ir_mapping!`](macro@crate::ir_mapping) — Macro to generate an IR mapping struct type (includes syntax details).
+//! - [`ir_kepler!`](macro@crate::ir_kepler) — Macro to generate a Kepler IR struct type (includes syntax details).
+//! - [`IrGenerated`](ir_generated::IrGenerated) — Sample generated IR receiver type showing the constructor path.
+//! - [`IrMappingGenerated`](ir_generated::IrMappingGenerated) — Sample generated IR mapping type showing the constructor path.
+//! - [`IrKeplerGenerated`](ir_generated::IrKeplerGenerated) — Sample generated Kepler IR type showing the constructor path.
 //!
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
@@ -12,8 +20,8 @@ use fixed::traits::ToFixed;
 
 use crate::{Error, Result};
 
-use device_envoy_core::ir::decode_nec_frame;
 use device_envoy_core::ir::IrStatic;
+use device_envoy_core::ir::decode_nec_frame;
 pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping};
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
@@ -29,11 +37,12 @@ pub use device_envoy_core::ir::kepler::KEPLER_MAPPING as __KEPLER_MAPPING;
 // Submodules
 // ============================================================================
 
+pub mod ir_generated;
 mod kepler;
 mod mapping;
 
-pub use kepler::{IrKeplerRp, KeplerKeys};
-pub use mapping::{IrMappingRp, __build_button_map};
+pub use kepler::KeplerKeys;
+pub use mapping::__build_button_map;
 
 // ===== NEC Receiver (forward declaration) ==================================
 
@@ -194,40 +203,6 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
     }
 }
 
-/// A device abstraction for an infrared receiver for NEC protocol decoding.
-///
-/// This implementation uses the RP2040's PIO state machine to decode NEC IR signals in hardware,
-/// making decoding reliable even when the CPU is busy with other tasks. Works with any PIO
-/// peripheral (PIO0, PIO1, or PIO2 on Pico 2).
-///
-/// # Examples
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// use device_envoy_rp::{ir, ir::Ir as _, ir::IrEvent};
-/// # #[panic_handler]
-/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-///
-/// ir! {
-///     Ir15: { pio: PIO0, pin: PIN_15 }
-/// }
-///
-/// async fn example(
-///     p: embassy_rp::Peripherals,
-///     spawner: embassy_executor::Spawner,
-/// ) -> device_envoy_rp::Result<()> {
-///     let ir15 = Ir15::new(p.PIO0, p.PIN_15, spawner)?;
-///
-///     loop {
-///         let IrEvent::Press { addr, cmd } = ir15.wait_for_press().await;
-///         defmt::info!("IR: addr=0x{:04X}, cmd=0x{:02X}", addr, cmd);
-///     }
-/// }
-/// ```
-pub struct IrRp<'a> {
-    ir_static: &'a IrStatic,
-}
-
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
 pub fn __new_receiver<P, PIO, const SM: usize>(
@@ -252,7 +227,7 @@ pub fn __new_ir_on_sm0<P, PIO>(
     pin: Peri<'static, P>,
     pio: Peri<'static, PIO>,
     spawner: Spawner,
-) -> Result<IrRp<'static>>
+) -> Result<()>
 where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
@@ -263,7 +238,7 @@ where
     } = pio_instance;
     let nec_receiver = __new_receiver(&mut common, sm0, pin);
     PIO::spawn_task_sm0(nec_receiver, ir_static, spawner)?;
-    Ok(IrRp { ir_static })
+    Ok(())
 }
 
 // Must be `pub` for macro expansion at downstream call sites.
@@ -273,7 +248,7 @@ pub fn __new_ir_on_sm1<P, PIO>(
     pin: Peri<'static, P>,
     pio: Peri<'static, PIO>,
     spawner: Spawner,
-) -> Result<IrRp<'static>>
+) -> Result<()>
 where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
@@ -284,7 +259,7 @@ where
     } = pio_instance;
     let nec_receiver = __new_receiver(&mut common, sm1, pin);
     PIO::spawn_task_sm1(nec_receiver, ir_static, spawner)?;
-    Ok(IrRp { ir_static })
+    Ok(())
 }
 
 // Must be `pub` for macro expansion at downstream call sites.
@@ -294,7 +269,7 @@ pub fn __new_ir_on_sm2<P, PIO>(
     pin: Peri<'static, P>,
     pio: Peri<'static, PIO>,
     spawner: Spawner,
-) -> Result<IrRp<'static>>
+) -> Result<()>
 where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
@@ -305,7 +280,7 @@ where
     } = pio_instance;
     let nec_receiver = __new_receiver(&mut common, sm2, pin);
     PIO::spawn_task_sm2(nec_receiver, ir_static, spawner)?;
-    Ok(IrRp { ir_static })
+    Ok(())
 }
 
 // Must be `pub` for macro expansion at downstream call sites.
@@ -315,7 +290,7 @@ pub fn __new_ir_on_sm3<P, PIO>(
     pin: Peri<'static, P>,
     pio: Peri<'static, PIO>,
     spawner: Spawner,
-) -> Result<IrRp<'static>>
+) -> Result<()>
 where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
@@ -326,13 +301,7 @@ where
     } = pio_instance;
     let nec_receiver = __new_receiver(&mut common, sm3, pin);
     PIO::spawn_task_sm3(nec_receiver, ir_static, spawner)?;
-    Ok(IrRp { ir_static })
-}
-
-impl Ir for IrRp<'_> {
-    async fn wait_for_press(&self) -> IrEvent {
-        self.ir_static.receive().await
-    }
+    Ok(())
 }
 
 #[doc(hidden)]
@@ -526,30 +495,185 @@ macro_rules! ir {
     };
 }
 
-/// Macro to generate an IR receiver struct type (includes syntax details).
-#[allow(unused_imports)]
-#[doc(inline)]
-pub use ir;
-/// Alternative macro to share one PIO resource with other IR receivers (includes syntax details).
-#[allow(unused_imports)]
-#[doc(inline)]
-pub use irs;
-/// Macro to generate an IR mapping struct type (includes syntax details).
-#[allow(unused_imports)]
-#[doc(inline)]
-pub use crate::ir_mapping;
-/// Alternative macro to share one PIO resource with other IR mappings (includes syntax details).
-#[allow(unused_imports)]
-#[doc(inline)]
-pub use crate::ir_mappings;
 /// Macro to generate a Kepler IR struct type (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_kepler! {
+///     <Name>: {
+///         pio: <pio_ident>,
+///         pin: <pin_ident>,
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pio` — PIO resource (for example `PIO0` or `PIO1`)
+/// - `pin` — GPIO input pin connected to the IR receiver
+///
+/// # Related Macros
+///
+/// - [`ir_keplers!`](crate::ir_keplers) — Share one PIO resource with multiple Kepler IR receivers
+/// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use crate::ir_kepler;
-/// Alternative macro to share one PIO resource with other Kepler IR receivers (includes syntax details).
+/// Macro to generate multiple Kepler IR struct types that share one PIO resource (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_keplers! {
+///     pio: <pio_ident>,
+///     <GroupName> {
+///         <Name0>: { pin: <pin0_ident> },
+///         <Name1>: { pin: <pin1_ident> }, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pio` — Shared PIO resource (for example `PIO0` or `PIO1`)
+/// - `pin` — One pin entry per generated receiver
+///
+/// Supports one or two generated receivers per invocation.
+///
+/// # Related Macros
+///
+/// - [`ir_kepler!`](crate::ir_kepler) — Generate a single Kepler IR receiver type
+/// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use crate::ir_keplers;
+/// Macro to generate an IR mapping struct type (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_mapping! {
+///     <Name>: {
+///         pio: <pio_ident>,
+///         pin: <pin_ident>,
+///         button: <button_type>,
+///         capacity: <usize_expr>,
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pio` — PIO resource (for example `PIO0` or `PIO1`)
+/// - `pin` — GPIO input pin connected to the IR receiver
+/// - `button` — Output button/key type for mapping
+/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
+///
+/// # Related Macros
+///
+/// - [`ir_mappings!`](crate::ir_mappings) — Share one PIO resource with multiple mapping receivers
+/// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_mapping;
+/// Macro to generate multiple IR mapping struct types that share one PIO resource (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_mappings! {
+///     pio: <pio_ident>,
+///     button: <button_type>,
+///     capacity: <usize_expr>,
+///     <GroupName> {
+///         <Name0>: { pin: <pin0_ident> },
+///         <Name1>: { pin: <pin1_ident> }, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pio` — Shared PIO resource (for example `PIO0` or `PIO1`)
+/// - `button` — Output button/key type for all generated mappings
+/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
+/// - `pin` — One pin entry per generated mapping receiver
+///
+/// Supports one or two generated mapping receivers per invocation.
+///
+/// # Related Macros
+///
+/// - [`ir_mapping!`](crate::ir_mapping) — Generate a single IR mapping receiver type
+/// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_mappings;
+/// Macro to generate an IR receiver struct type (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir! {
+///     <Name>: {
+///         pio: <pio_ident>,
+///         pin: <pin_ident>,
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pio` — PIO resource (for example `PIO0` or `PIO1`)
+/// - `pin` — GPIO input pin connected to the IR receiver
+///
+/// # Related Macros
+///
+/// - [`irs!`](crate::irs) — Share one PIO resource with multiple IR receivers
+/// - [`ir_mapping!`](crate::ir_mapping) — Generate a mapped-button IR receiver type
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use ir;
+/// Macro to generate multiple IR receiver struct types that share one PIO resource (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// irs! {
+///     pio: <pio_ident>,
+///     <GroupName> {
+///         <Name0>: { pin: <pin0_ident> },
+///         <Name1>: { pin: <pin1_ident> }, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pio` — Shared PIO resource (for example `PIO0` or `PIO1`)
+/// - `pin` — One pin entry per generated receiver
+///
+/// Supports one or two generated receivers per invocation.
+///
+/// # Related Macros
+///
+/// - [`ir!`](crate::ir!) — Generate a single IR receiver type
+/// - [`ir_mappings!`](crate::ir_mappings) — Generate mapped-button receivers sharing one PIO
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use irs;
 
 macro_rules! __define_ir_task {
     ($task_name:ident, $pio:ty, $sm:literal) => {

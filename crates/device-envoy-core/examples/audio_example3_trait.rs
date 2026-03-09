@@ -42,8 +42,11 @@ pcm_clip! {
 fn play_resampled_countdown(audio_player: &impl AudioPlayer<NARROWBAND_8000_HZ>) {
     type PlayableRef = &'static dyn Playable<NARROWBAND_8000_HZ>;
 
-    const DIGITS: [PlayableRef; 3] =
-        [&Digit0::adpcm_clip(), &Digit1::adpcm_clip(), &Digit2::adpcm_clip()];
+    const DIGITS: [PlayableRef; 3] = [
+        &Digit0::adpcm_clip(),
+        &Digit1::adpcm_clip(),
+        &Digit2::adpcm_clip(),
+    ];
     const NASA: PlayableRef = &Nasa::pcm_clip()
         .with_gain(Gain::percent(25))
         .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();

@@ -7,11 +7,11 @@ use core::convert::Infallible;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    Error, Result,
     button::{Button, PressedTo},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto, WifiAutoEsp, WifiAutoEvent, WifiStack},
+    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

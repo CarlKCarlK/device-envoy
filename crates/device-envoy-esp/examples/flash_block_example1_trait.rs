@@ -9,9 +9,8 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Error, Result,
     flash_block::{FlashBlock, FlashBlockEsp},
-    init_and_start,
+    init_and_start, Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -60,7 +59,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let [mut boot_counter_flash_block, mut scratch_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
+    let [mut boot_counter_flash_block, mut scratch_flash_block] =
+        FlashBlockEsp::new_array::<2>(p.FLASH)?;
 
     let boot_counter = update_boot_counter_and_clear_scratch(
         &mut boot_counter_flash_block,

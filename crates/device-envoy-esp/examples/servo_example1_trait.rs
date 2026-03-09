@@ -10,10 +10,10 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Result,
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start, servo,
     servo::Servo,
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -26,11 +26,11 @@ servo! {
 }
 
 async fn move_and_relax(servo: &impl Servo) {
-    servo.set_degrees(45);                          // Move to 45 degrees and hold.
-    Timer::after(Duration::from_secs(1)).await;     // Give servo reasonable time to reach position
-    servo.set_degrees(90);                          // Move to 90 degrees and hold.
-    Timer::after(Duration::from_secs(1)).await;     // Give servo reasonable time to reach position
-    servo.relax();                                  // Let the servo relax. It will re-enable on next set_degrees()
+    servo.set_degrees(45); // Move to 45 degrees and hold.
+    Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position
+    servo.set_degrees(90); // Move to 90 degrees and hold.
+    Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position
+    servo.relax(); // Let the servo relax. It will re-enable on next set_degrees()
 }
 
 #[esp_rtos::main]

@@ -1,63 +1,8 @@
 //! A device abstraction for mapping IR remote buttons to application-specific actions.
 //!
-//! See [`IrMappingRp`] for usage examples.
+//! See [`IrMapping`](trait@crate::ir::IrMapping) and this module's macros for generated types.
 
 use heapless::LinearMap;
-
-use crate::ir::{IrMapping, IrRp};
-use device_envoy_core::ir::mapping::IrMappingAdapter;
-
-/// A generic device abstraction that maps IR remote button presses to user-defined button types.
-///
-/// # Examples
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// use device_envoy_rp::{ir::IrMapping as _, ir_mapping};
-/// # #[panic_handler]
-/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-/// #[derive(Debug, Clone, Copy)]
-/// enum RemoteKeys { Power, Play, Stop }
-///
-/// ir_mapping! {
-///     IrMapping15: {
-///         pio: PIO0,
-///         pin: PIN_15,
-///         button: RemoteKeys,
-///         capacity: 3,
-///     }
-/// }
-///
-/// async fn example(
-///     p: embassy_rp::Peripherals,
-///     spawner: embassy_executor::Spawner,
-/// ) -> device_envoy_rp::Result<()> {
-///     let button_map = [
-///         (0x0000, 0x45, RemoteKeys::Power),
-///         (0x0000, 0x0C, RemoteKeys::Play),
-///         (0x0000, 0x08, RemoteKeys::Stop),
-///     ];
-///
-///     let ir_mapping15 = IrMapping15::new(p.PIO0, p.PIN_15, &button_map, spawner)?;
-///
-///     loop {
-///         let button = ir_mapping15.wait_for_press().await;
-///         // Use button...
-///     }
-/// }
-/// ```
-pub struct IrMappingRp<'a, B, const N: usize> {
-    mapping: IrMappingAdapter<IrRp<'a>, B, N>,
-}
-
-impl<B, const N: usize> IrMapping<B> for IrMappingRp<'_, B, N>
-where
-    B: Copy,
-{
-    async fn wait_for_press(&self) -> B {
-        self.mapping.wait_for_press().await
-    }
-}
 
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
@@ -81,6 +26,13 @@ pub fn __build_button_map<B: Copy, const N: usize>(
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_mappings {
+    ($($tt:tt)*) => { $crate::__ir_mappings_impl! { $($tt)* } };
+}
+
+/// Internal implementation helper for [`ir_mappings!`].
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __ir_mappings_impl {
     (
         pio: $pio:ident,
         button: $button_ty:ty,
@@ -302,6 +254,6 @@ macro_rules! ir_mapping {
 #[doc(inline)]
 pub use ir_mapping;
 #[allow(unused_imports)]
-/// Alternative macro to share one PIO resource with other IR mappings (includes examples).
+/// Alternative macro to share one PIO resource with other IR mappings (includes syntax details).
 #[doc(inline)]
 pub use ir_mappings;

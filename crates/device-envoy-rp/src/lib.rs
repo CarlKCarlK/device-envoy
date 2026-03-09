@@ -40,8 +40,6 @@ pub mod pio_irqs;
 pub mod audio_player;
 #[cfg(target_os = "none")]
 pub mod button;
-#[cfg(target_os = "none")]
-pub mod lcd_text;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 mod error;
@@ -49,6 +47,8 @@ mod error;
 pub mod flash_block;
 #[cfg(target_os = "none")]
 pub mod ir;
+#[cfg(target_os = "none")]
+pub mod lcd_text;
 #[cfg(target_os = "none")]
 pub mod led;
 pub mod led2d;

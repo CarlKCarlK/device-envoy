@@ -172,12 +172,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(
-                        &clock_sync,
-                        &mut button,
-                        &timezone_field,
-                        &led8x12,
-                    )
+                    .execute_edit_offset(&clock_sync, &mut button, &timezone_field, &led8x12)
                     .await?
             }
         };
@@ -207,12 +202,7 @@ impl State {
         show_hours_minutes(led8x12, hours, minutes).await;
         clock_sync.set_tick_interval(Some(ONE_MINUTE));
         loop {
-            match select(
-                button.wait_for_press_duration(),
-                clock_sync.wait_for_tick(),
-            )
-            .await
-            {
+            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
                 // Button pushes
                 Either::First(press_duration) => {
                     info!(
@@ -255,12 +245,7 @@ impl State {
         show_minutes_seconds(led8x12, minutes, seconds).await;
         clock_sync.set_tick_interval(Some(ONE_SECOND));
         loop {
-            match select(
-                button.wait_for_press_duration(),
-                clock_sync.wait_for_tick(),
-            )
-            .await
-            {
+            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
                 // Button pushes
                 Either::First(press_duration) => {
                     info!(

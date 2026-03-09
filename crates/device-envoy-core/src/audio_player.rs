@@ -1158,8 +1158,8 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// #         Self::INITIAL_VOLUME
 /// #     }
 /// # }
-    /// # let audio_player = DemoAudioPlayer;
-    /// # play_mary_phrase(&audio_player);
+/// # let audio_player = DemoAudioPlayer;
+/// # play_mary_phrase(&audio_player);
 /// ```
 ///
 /// # Example: Compiling in an External Audio Clip and Runtime Volume Changes

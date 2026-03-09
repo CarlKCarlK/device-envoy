@@ -7,8 +7,8 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::{Result, ir::IrKepler as _, ir_keplers};
-use embassy_futures::select::{Either, select};
 use embassy_executor::Spawner;
+use embassy_futures::select::{Either, select};
 use panic_probe as _;
 
 ir_keplers! {

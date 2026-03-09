@@ -116,11 +116,11 @@ pub const __MAX_LCD_CHARS: usize = device_envoy_core::lcd_text::MAX_LCD_CHARS;
 #[doc(hidden)]
 pub type __I2csSignal<T> = Signal<CriticalSectionRawMutex, T>;
 #[doc(hidden)]
-pub use device_envoy_core::lcd_text::LcdTextDriver as __LcdTextDriver;
+pub use device_envoy_core::lcd_text::render_lcd_text_frame as __render_lcd_text_frame;
 #[doc(hidden)]
 pub use device_envoy_core::lcd_text::LcdText as __LcdText;
 #[doc(hidden)]
-pub use device_envoy_core::lcd_text::render_lcd_text_frame as __render_lcd_text_frame;
+pub use device_envoy_core::lcd_text::LcdTextDriver as __LcdTextDriver;
 #[doc(hidden)]
 pub use device_envoy_core::lcd_text::LcdTextFrame as __LcdTextFrame;
 #[doc(hidden)]

@@ -44,6 +44,7 @@ pub type RfidStatic = EmbassyChannel<CriticalSectionRawMutex, RfidEvent, 4>;
 /// ```rust,no_run
 /// # #![no_std]
 /// # use panic_probe as _;
+/// # use defmt::info;
 /// # fn main() {}
 /// use device_envoy_rp::rfid::{Rfid, RfidEvent, RfidStatic};
 ///
@@ -68,7 +69,7 @@ pub type RfidStatic = EmbassyChannel<CriticalSectionRawMutex, RfidEvent, 4>;
 ///
 ///     loop {
 ///         let RfidEvent::CardDetected { uid } = rfid.wait_for_tap().await;
-///         defmt::info!("RFID uid: {:?}", uid);
+///         info!("RFID uid: {:?}", uid);
 ///     }
 /// }
 /// ```

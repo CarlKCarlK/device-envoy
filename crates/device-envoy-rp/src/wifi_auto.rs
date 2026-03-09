@@ -93,6 +93,7 @@ pub(crate) struct WifiAutoStatic {
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
+/// # use defmt::info;
 /// use device_envoy_rp::{
 ///     Result,
 ///     button::PressedTo,
@@ -129,23 +130,23 @@ pub(crate) struct WifiAutoStatic {
 ///         .connect(|event| async move {
 ///             match event {
 ///                 WifiAutoEvent::CaptivePortalReady =>
-///                     defmt::info!("Captive portal ready"),
+///                     info!("Captive portal ready"),
 ///                 WifiAutoEvent::Connecting { .. } =>
-///                     defmt::info!("Connecting to WiFi"),
+///                     info!("Connecting to WiFi"),
 ///                 WifiAutoEvent::ConnectionFailed =>
-///                     defmt::info!("WiFi connection failed"),
+///                     info!("WiFi connection failed"),
 ///             }
 ///             Ok(())
 ///         })
 ///         .await?;
 ///
-///     defmt::info!("WiFi connected");
+///     info!("WiFi connected");
 ///
 ///     loop {
 ///         if let Ok(addresses) = stack.dns_query("google.com", embassy_net::dns::DnsQueryType::A).await {
-///             defmt::info!("google.com: {:?}", addresses);
+///             info!("google.com: {:?}", addresses);
 ///         } else {
-///             defmt::info!("google.com: lookup failed");
+///             info!("google.com: lookup failed");
 ///         }
 ///         embassy_time::Timer::after(Duration::from_secs(15)).await;
 ///     }

@@ -1,17 +1,145 @@
 //! A device abstraction for infrared receivers using the NEC protocol.
 //!
-//! todo000 shouldn't link to traits
-//! todo000 put the examples back somewhere
-//! See [`Ir`](trait@crate::ir::Ir), [`IrMapping`](trait@crate::ir::IrMapping), and
-//! [`IrKepler`](trait@crate::ir::IrKepler), plus this module's macros for generated types.
+//! This page provides the primary documentation and examples for receiving NEC infrared input on RP devices.
+//! It covers raw address/command events, mapped application keys, and Kepler remote keys.
 //!
-//! todo000 label this list, consider the the order, include the plurals.
-//! - [`ir!`](macro@crate::ir) — Macro to generate an IR receiver struct type (includes syntax details).
-//! - [`ir_mapping!`](macro@crate::ir_mapping) — Macro to generate an IR mapping struct type (includes syntax details).
-//! - [`ir_kepler!`](macro@crate::ir_kepler) — Macro to generate a Kepler IR struct type (includes syntax details).
-//! - [`IrGenerated`](ir_generated::IrGenerated) — Sample generated IR receiver type showing the constructor path.
-//! - [`IrMappingGenerated`](ir_generated::IrMappingGenerated) — Sample generated IR mapping type showing the constructor path.
-//! - [`IrKeplerGenerated`](ir_generated::IrKeplerGenerated) — Sample generated Kepler IR type showing the constructor path.
+//! **After reading the examples below, see also:**
+//!
+//! - **IR: Raw events**
+//! - [`ir!`](macro@crate::ir) — Generate an IR receiver type that yields raw NEC press events (`addr`, `cmd`).
+//! - [`Ir`](trait@crate::ir::Ir) — Core trait for raw IR receiver behavior.
+//! - [`IrGenerated`](ir_generated::IrGenerated) — Sample generated raw IR type showing constructors and trait methods.
+//!
+//! - **IrMapping: Mapped events**
+//! - [`ir_mapping!`](macro@crate::ir_mapping) — Generate an IR mapping receiver type that maps raw NEC events to app keys.
+//! - [`IrMapping`](trait@crate::ir::IrMapping) — Core trait for mapped-button IR behavior.
+//! - [`IrMappingGenerated`](ir_generated::IrMappingGenerated) — Sample generated mapped IR type showing constructors and trait methods.
+//!
+//! - **IrKepler: Kepler mapped events**
+//! - [`ir_kepler!`](macro@crate::ir_kepler) — Generate a Kepler remote receiver type with built-in key mapping.
+//! - [`IrKepler`](trait@crate::ir::IrKepler) — Core trait for Kepler remote behavior.
+//! - [`IrKeplerGenerated`](ir_generated::IrKeplerGenerated) — Sample generated Kepler IR type showing constructors and trait methods.
+
+//!
+//! # Example: Read Raw NEC Events
+//!
+//! In this example, the generated `Ir15` type emits raw NEC press events with address and command bytes.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_rp::{Result, ir, ir::Ir as _, ir::IrEvent};
+//! # use panic_probe as _;
+//! # use defmt::info;
+//! #
+//! ir! {
+//!     Ir15: { pio: PIO0, pin: PIN_15 }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let ir15 = Ir15::new(p.PIO0, p.PIN_15, spawner)?;
+//!
+//!     loop {
+//!         let IrEvent::Press { addr, cmd } = ir15.wait_for_press().await;
+//!         info!("IR press: addr=0x{:04X}, cmd=0x{:02X}", addr, cmd);
+//!     }
+//! }
+//! ```
+//!
+//! # Example: Map NEC Events To App Keys
+//!
+//! In this example, the generated `IrMapping15` type maps raw NEC address/command pairs into
+//! an application-defined enum.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_rp::{Result, ir::IrMapping as _, ir_mapping};
+//! # use panic_probe as _;
+//! #
+//! #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+//! enum RemoteKeys {
+//!     Power,
+//!     Plus,
+//!     Minus,
+//! }
+//!
+//! ir_mapping! {
+//!     IrMapping15: {
+//!         pio: PIO0,
+//!         pin: PIN_15,
+//!         button: RemoteKeys,
+//!         capacity: 3,
+//!     }
+//! }
+//!
+//! const REMOTE_KEYS_MAP: [(u16, u8, RemoteKeys); 3] = [
+//!     (0x0000, 0x45, RemoteKeys::Power),
+//!     (0x0000, 0x09, RemoteKeys::Plus),
+//!     (0x0000, 0x15, RemoteKeys::Minus),
+//! ];
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let ir_mapping15 = IrMapping15::new(p.PIO0, p.PIN_15, &REMOTE_KEYS_MAP, spawner)?;
+//!
+//!     loop {
+//!         let remote_key = ir_mapping15.wait_for_press().await;
+//!         match remote_key {
+//!             RemoteKeys::Power => {}
+//!             RemoteKeys::Plus => {}
+//!             RemoteKeys::Minus => {}
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! # Example: Read Kepler Remote Keys
+//!
+//! In this example, the generated `IrKepler15` type returns typed keys from the SunFounder
+//! Kepler remote key mapping.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_rp::{Result, ir::IrKepler as _, ir::KeplerKeys, ir_kepler};
+//! # use panic_probe as _;
+//! # use defmt::info;
+//! #
+//! ir_kepler! {
+//!     IrKepler15: { pio: PIO0, pin: PIN_15 }
+//! }
+//!
+//! # #[embassy_executor::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err}");
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//!     let p = embassy_rp::init(Default::default());
+//!     let ir_kepler15 = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
+//!
+//!     loop {
+//!         let kepler_key = ir_kepler15.wait_for_press().await;
+//!         match kepler_key {
+//!             KeplerKeys::Power => info!("Power"),
+//!             KeplerKeys::PlayPause => info!("PlayPause"),
+//!             _ => info!("Other: {:?}", kepler_key),
+//!         }
+//!     }
+//! }
+//! ```
 //!
 use embassy_executor::Spawner;
 use embassy_rp::Peri;

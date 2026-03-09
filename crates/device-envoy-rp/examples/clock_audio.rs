@@ -226,7 +226,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 clock_audio_mode = clock_audio_mode.toggled();
                 clock_sync
                     .set_tick_interval(Some(clock_audio_mode.tick_interval()))
-                    .await;
+                    ;
 
                 match clock_audio_mode {
                     ClockAudioMode::HoursMinutes => {

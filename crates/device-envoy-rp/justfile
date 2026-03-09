@@ -11,6 +11,14 @@ show-docs-rp:
 	just update-docs-rp
 	./scripts/open-docs-rp.sh
 
+# ESP docs only (pass-through)
+update-docs-esp:
+	cd ../device-envoy-esp && just update-docs-esp
+
+# Build ESP docs and open them in a browser (pass-through)
+show-docs-esp:
+	cd ../device-envoy-esp && just show-docs-esp
+
 regenerate-text-pngs:
 	./scripts/regenerate-text-pngs.sh
 

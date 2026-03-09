@@ -2,23 +2,16 @@
 //!
 //! This page provides the primary documentation and examples for receiving NEC infrared input on RP devices.
 //! It covers raw address/command events, mapped application keys, and Kepler remote keys.
+//! Traits define the shared API; macros generate concrete device types.
+//! Choose [`ir!`](macro@crate::ir) for raw NEC events, [`ir_mapping!`](macro@crate::ir_mapping)
+//! when mapping to your own enum, and [`ir_kepler!`](macro@crate::ir_kepler) for the
+//! SunFounder Kepler remote.
 //!
 //! **After reading the examples below, see also:**
 //!
-//! - **IR: Raw events**
-//! - [`ir!`](macro@crate::ir) — Generate an IR receiver type that yields raw NEC press events (`addr`, `cmd`).
-//! - [`Ir`](trait@crate::ir::Ir) — Core trait for raw IR receiver behavior.
-//! - [`IrGenerated`](ir_generated::IrGenerated) — Sample generated raw IR type showing constructors and trait methods.
-//!
-//! - **IrMapping: Mapped events**
-//! - [`ir_mapping!`](macro@crate::ir_mapping) — Generate an IR mapping receiver type that maps raw NEC events to app keys.
-//! - [`IrMapping`](trait@crate::ir::IrMapping) — Core trait for mapped-button IR behavior.
-//! - [`IrMappingGenerated`](ir_generated::IrMappingGenerated) — Sample generated mapped IR type showing constructors and trait methods.
-//!
-//! - **IrKepler: Kepler mapped events**
-//! - [`ir_kepler!`](macro@crate::ir_kepler) — Generate a Kepler remote receiver type with built-in key mapping.
-//! - [`IrKepler`](trait@crate::ir::IrKepler) — Core trait for Kepler remote behavior.
-//! - [`IrKeplerGenerated`](ir_generated::IrKeplerGenerated) — Sample generated Kepler IR type showing constructors and trait methods.
+//! - **IR: Raw events** — [`ir!`](macro@crate::ir), [`Ir`](trait@crate::ir::Ir), [`IrGenerated`](ir_generated::IrGenerated)
+//! - **IrMapping: Mapped events** — [`ir_mapping!`](macro@crate::ir_mapping), [`IrMapping`](trait@crate::ir::IrMapping), [`IrMappingGenerated`](ir_generated::IrMappingGenerated)
+//! - **IrKepler: Kepler mapped events** — [`ir_kepler!`](macro@crate::ir_kepler), [`IrKepler`](trait@crate::ir::IrKepler), [`IrKeplerGenerated`](ir_generated::IrKeplerGenerated)
 
 //!
 //! # Example: Read Raw NEC Events
@@ -52,7 +45,7 @@
 //! }
 //! ```
 //!
-//! # Example: Map NEC Events To App Keys
+//! # Example: Map NEC Events to App Keys
 //!
 //! In this example, the generated `IrMapping15` type maps raw NEC address/command pairs into
 //! an application-defined enum.

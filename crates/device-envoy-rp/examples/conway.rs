@@ -8,8 +8,7 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_example_common::conway::conway_with_led2d_ir_kepler;
-use device_envoy_rp::Result;
-use device_envoy_rp::ir_kepler;
+use device_envoy_rp::{Result, ir_kepler};
 use device_envoy_rp::led_strip::Current;
 use device_envoy_rp::led2d;
 use device_envoy_rp::led2d::{Led2dFont, layout::LedLayout};
@@ -30,7 +29,7 @@ led2d! {
 }
 
 ir_kepler! {
-    IrKepler00: { pio: PIO1, pin: PIN_15 }
+    IrKepler15: { pio: PIO1, pin: PIN_15 }
 }
 
 #[embassy_executor::main]
@@ -44,6 +43,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = init(Default::default());
 
     let led16x16 = Led16x16::new(p.PIN_6, p.PIO0, p.DMA_CH0, spawner)?;
-    let ir_kepler00 = IrKepler00::new(p.PIO1, p.PIN_15, spawner)?;
-    conway_with_led2d_ir_kepler(led16x16, ir_kepler00).await
+    let ir_kepler15 = IrKepler15::new(p.PIO1, p.PIN_15, spawner)?;
+    conway_with_led2d_ir_kepler(led16x16, ir_kepler15).await
 }

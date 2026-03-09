@@ -8,7 +8,7 @@ use esp_backtrace as _;
 
 use device_envoy_esp::{
     Result, init_and_start,
-    ir::{IrKepler, IrKeplerEsp, IrKeplerStatic, KeplerButton},
+    ir::{IrKepler, IrKeplerEsp, IrKeplerStatic, KeplerKeys},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -17,10 +17,10 @@ async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
     loop {
         let kepler_button = ir_kepler.wait_for_press().await;
         match kepler_button {
-            KeplerButton::Power => {
+            KeplerKeys::Power => {
                 // Handle power.
             }
-            KeplerButton::PlayPause => {
+            KeplerKeys::PlayPause => {
                 // Handle play/pause.
             }
             _ => {

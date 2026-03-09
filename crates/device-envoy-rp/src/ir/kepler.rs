@@ -3,15 +3,14 @@
 //! See [`IrKeplerRp`] for usage examples.
 
 use device_envoy_core::ir::{IrKepler, IrMapping as _};
-
 use crate::ir::mapping::IrMappingRp;
 
-pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
+pub use device_envoy_core::ir::kepler::KeplerKeys;
 
 /// Type alias for the Kepler button mapping.
 ///
 /// See [`IrKeplerRp`] for usage examples.
-type IrKeplerMapping<'a> = IrMappingRp<'a, KeplerButton, 21>;
+type IrKeplerMapping<'a> = IrMappingRp<'a, KeplerKeys, 21>;
 
 /// A device abstraction for the SunFounder Kepler Kit IR remote.
 ///
@@ -22,21 +21,20 @@ type IrKeplerMapping<'a> = IrMappingRp<'a, KeplerButton, 21>;
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_envoy_rp::ir::{IrKepler as _};
-/// use device_envoy_rp::ir_kepler;
+/// use device_envoy_rp::{ir::IrKepler as _, ir_kepler};
 ///
 /// ir_kepler! {
-///     IrKepler00: { pio: PIO0, pin: PIN_15 }
+///     IrKepler15: { pio: PIO0, pin: PIN_15 }
 /// }
 ///
 /// async fn example(
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
-///     let ir_kepler00 = IrKepler00::new(p.PIO0, p.PIN_15, spawner)?;
+///     let ir_kepler15 = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
 ///
 ///     loop {
-///         let button = ir_kepler00.wait_for_press().await;
+///         let button = ir_kepler15.wait_for_press().await;
 ///         defmt::info!("Button: {:?}", button);
 ///     }
 /// }
@@ -46,14 +44,11 @@ pub struct IrKeplerRp<'a> {
 }
 
 impl IrKepler for IrKeplerRp<'_> {
-    async fn wait_for_press(&self) -> KeplerButton {
+    async fn wait_for_press(&self) -> KeplerKeys {
         self.mapping.wait_for_press().await
     }
 }
 
-/// Generate one or more typed Kepler IR constructors sharing one PIO resource.
-///
-/// This macro is built on top of [`ir_mappings!`](macro@crate::ir_mappings).
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_keplers {
@@ -67,7 +62,7 @@ macro_rules! ir_keplers {
         $crate::ir::paste::paste! {
             $crate::ir_mappings! {
                 pio: $pio,
-                button: $crate::ir::KeplerButton,
+                button: $crate::ir::KeplerKeys,
                 capacity: 21,
                 [<__ $group_name _MAPPINGS>] {
                     [<__ $name0 _MAPPING>]: { pin: $pin0 }
@@ -75,8 +70,8 @@ macro_rules! ir_keplers {
             }
 
             impl $crate::ir::IrKepler for $name0 {
-                async fn wait_for_press(&self) -> $crate::ir::KeplerButton {
-                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerButton>>::wait_for_press(self.mapping).await
+                async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
+                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
                 }
             }
 
@@ -96,7 +91,7 @@ macro_rules! ir_keplers {
                     let mapping = [<__ $name0 _MAPPING>]::new(
                         pio,
                         pin,
-                        &$crate::ir::KEPLER_MAPPING,
+                        &$crate::ir::__KEPLER_MAPPING,
                         spawner,
                     )?;
                     Ok([<$name0:upper _KEPLER_CELL>].init(Self { mapping }))
@@ -127,7 +122,7 @@ macro_rules! ir_keplers {
         $crate::ir::paste::paste! {
             $crate::ir_mappings! {
                 pio: $pio,
-                button: $crate::ir::KeplerButton,
+                button: $crate::ir::KeplerKeys,
                 capacity: 21,
                 [<__ $group_name _MAPPINGS>] {
                     [<__ $name0 _MAPPING>]: { pin: $pin0 },
@@ -157,7 +152,7 @@ macro_rules! ir_keplers {
                     let mapping = [<__ $name0 _MAPPING>]::new(
                         pio,
                         pin,
-                        &$crate::ir::KEPLER_MAPPING,
+                        &$crate::ir::__KEPLER_MAPPING,
                         spawner,
                     )?;
                     Ok([<$name0:upper _KEPLER_CELL>].init(Self { mapping }))
@@ -173,7 +168,7 @@ macro_rules! ir_keplers {
                     let mapping = [<__ $name1 _MAPPING>]::new(
                         pio,
                         pin,
-                        &$crate::ir::KEPLER_MAPPING,
+                        &$crate::ir::__KEPLER_MAPPING,
                         spawner,
                     )?;
                     Ok([<$name1:upper _KEPLER_CELL>].init(Self { mapping }))
@@ -181,14 +176,14 @@ macro_rules! ir_keplers {
             }
 
             impl $crate::ir::IrKepler for $name0 {
-                async fn wait_for_press(&self) -> $crate::ir::KeplerButton {
-                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerButton>>::wait_for_press(self.mapping).await
+                async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
+                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
                 }
             }
 
             impl $crate::ir::IrKepler for $name1 {
-                async fn wait_for_press(&self) -> $crate::ir::KeplerButton {
-                    <[<__ $name1 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerButton>>::wait_for_press(self.mapping).await
+                async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
+                    <[<__ $name1 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
                 }
             }
 
@@ -204,8 +199,8 @@ macro_rules! ir_keplers {
                         pio,
                         pin0,
                         pin1,
-                        &$crate::ir::KEPLER_MAPPING,
-                        &$crate::ir::KEPLER_MAPPING,
+                        &$crate::ir::__KEPLER_MAPPING,
+                        &$crate::ir::__KEPLER_MAPPING,
                         spawner,
                     )?;
                     let name0 = [<$name0:upper _KEPLER_CELL>].init($name0 { mapping: mapping0 });
@@ -217,7 +212,6 @@ macro_rules! ir_keplers {
     };
 }
 
-/// Generate one typed Kepler IR constructor.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_kepler {
@@ -236,14 +230,10 @@ macro_rules! ir_kepler {
 }
 
 #[allow(unused_imports)]
-/// Macro to generate one Kepler IR type.
-///
-/// Use this when you need one Kepler receiver.
+/// Macro to generate a Kepler IR struct type (includes syntax details).
 #[doc(inline)]
 pub use ir_kepler;
 #[allow(unused_imports)]
-/// Macro to generate multiple Kepler IR types on one PIO resource.
-///
-/// Use this when you need multiple Kepler receivers sharing one PIO resource.
+/// Alternative macro to share one PIO resource with other Kepler IR receivers (includes examples).
 #[doc(inline)]
 pub use ir_keplers;

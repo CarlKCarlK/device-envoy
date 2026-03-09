@@ -7,7 +7,7 @@ use crate::ir::mapping::IrMappingStatic;
 /// Button types for the SunFounder Kepler Kit remote control.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum KeplerButton {
+pub enum KeplerKeys {
     /// Power button.
     Power,
     /// Mode button.
@@ -44,17 +44,17 @@ pub enum KeplerButton {
 /// # Example
 ///
 /// ```rust,no_run
-/// use device_envoy_core::ir::{IrKepler, KeplerButton};
+/// use device_envoy_core::ir::{IrKepler, KeplerKeys};
 ///
 /// async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
 ///     loop {
 ///         let kepler_button = ir_kepler.wait_for_press().await;
 ///         // Use mapped Kepler button in app logic.
 ///         match kepler_button {
-///             KeplerButton::Power => {
+///             KeplerKeys::Power => {
 ///                 // Handle power.
 ///             }
-///             KeplerButton::PlayPause => {
+///             KeplerKeys::PlayPause => {
 ///                 // Handle play/pause.
 ///             }
 ///             _ => {
@@ -66,8 +66,8 @@ pub enum KeplerButton {
 ///
 /// # struct DemoIrKepler;
 /// # impl IrKepler for DemoIrKepler {
-/// #     async fn wait_for_press(&self) -> KeplerButton {
-/// #         KeplerButton::Power
+/// #     async fn wait_for_press(&self) -> KeplerKeys {
+/// #         KeplerKeys::Power
 /// #     }
 /// # }
 /// # fn main() {
@@ -80,14 +80,14 @@ pub trait IrKepler {
     /// Wait for the next recognized Kepler button press.
     ///
     /// See the [IrKepler trait documentation](Self) for usage examples.
-    async fn wait_for_press(&self) -> KeplerButton;
+    async fn wait_for_press(&self) -> KeplerKeys;
 }
 
 impl<T> IrKepler for &T
 where
     T: IrKepler + ?Sized,
 {
-    async fn wait_for_press(&self) -> KeplerButton {
+    async fn wait_for_press(&self) -> KeplerKeys {
         (*self).wait_for_press().await
     }
 }
@@ -112,33 +112,33 @@ impl IrKeplerStatic {
 }
 
 /// Button mapping for the SunFounder Kepler Kit remote (ordered to match physical layout).
-pub const KEPLER_MAPPING: [(u16, u8, KeplerButton); 21] = [
+pub const KEPLER_MAPPING: [(u16, u8, KeplerKeys); 21] = [
     // Row 1: Power, Mode, Mute
-    (0x0000, 0x45, KeplerButton::Power),
-    (0x0000, 0x46, KeplerButton::Mode),
-    (0x0000, 0x47, KeplerButton::Mute),
+    (0x0000, 0x45, KeplerKeys::Power),
+    (0x0000, 0x46, KeplerKeys::Mode),
+    (0x0000, 0x47, KeplerKeys::Mute),
     // Row 2: PlayPause, Prev, Next
-    (0x0000, 0x44, KeplerButton::PlayPause),
-    (0x0000, 0x40, KeplerButton::Prev),
-    (0x0000, 0x43, KeplerButton::Next),
+    (0x0000, 0x44, KeplerKeys::PlayPause),
+    (0x0000, 0x40, KeplerKeys::Prev),
+    (0x0000, 0x43, KeplerKeys::Next),
     // Row 3: EQ, Minus, Plus
-    (0x0000, 0x07, KeplerButton::Eq),
-    (0x0000, 0x15, KeplerButton::Minus),
-    (0x0000, 0x09, KeplerButton::Plus),
+    (0x0000, 0x07, KeplerKeys::Eq),
+    (0x0000, 0x15, KeplerKeys::Minus),
+    (0x0000, 0x09, KeplerKeys::Plus),
     // Row 4: 0, Repeat, U/SD
-    (0x0000, 0x16, KeplerButton::Num(0)),
-    (0x0000, 0x19, KeplerButton::Repeat),
-    (0x0000, 0x0D, KeplerButton::USd),
+    (0x0000, 0x16, KeplerKeys::Num(0)),
+    (0x0000, 0x19, KeplerKeys::Repeat),
+    (0x0000, 0x0D, KeplerKeys::USd),
     // Row 5: 1, 2, 3
-    (0x0000, 0x0C, KeplerButton::Num(1)),
-    (0x0000, 0x18, KeplerButton::Num(2)),
-    (0x0000, 0x5E, KeplerButton::Num(3)),
+    (0x0000, 0x0C, KeplerKeys::Num(1)),
+    (0x0000, 0x18, KeplerKeys::Num(2)),
+    (0x0000, 0x5E, KeplerKeys::Num(3)),
     // Row 6: 4, 5, 6
-    (0x0000, 0x08, KeplerButton::Num(4)),
-    (0x0000, 0x1C, KeplerButton::Num(5)),
-    (0x0000, 0x5A, KeplerButton::Num(6)),
+    (0x0000, 0x08, KeplerKeys::Num(4)),
+    (0x0000, 0x1C, KeplerKeys::Num(5)),
+    (0x0000, 0x5A, KeplerKeys::Num(6)),
     // Row 7: 7, 8, 9
-    (0x0000, 0x42, KeplerButton::Num(7)),
-    (0x0000, 0x52, KeplerButton::Num(8)),
-    (0x0000, 0x4A, KeplerButton::Num(9)),
+    (0x0000, 0x42, KeplerKeys::Num(7)),
+    (0x0000, 0x52, KeplerKeys::Num(8)),
+    (0x0000, 0x4A, KeplerKeys::Num(9)),
 ];

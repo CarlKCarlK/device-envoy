@@ -8,7 +8,7 @@ mod kepler;
 mod mapping;
 
 pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrMappingAdapter, IrStatic};
-pub use kepler::{IrKeplerEsp, IrKeplerStatic, KeplerButton};
+pub use kepler::{IrKeplerEsp, IrKeplerStatic, KeplerKeys};
 pub use mapping::{IrMappingEsp, IrMappingStatic};
 
 #[cfg(target_os = "none")]

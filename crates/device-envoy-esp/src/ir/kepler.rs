@@ -10,9 +10,9 @@ use embassy_executor::Spawner;
 use crate::ir::mapping::IrMappingEsp;
 #[cfg(target_os = "none")]
 use crate::Result;
-pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KeplerButton};
+pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KeplerKeys};
 
-type IrKeplerMapping<'a> = IrMappingEsp<'a, KeplerButton, 21>;
+type IrKeplerMapping<'a> = IrMappingEsp<'a, KeplerKeys, 21>;
 
 /// A device abstraction for the SunFounder Kepler Kit IR remote.
 pub struct IrKeplerEsp<'a> {
@@ -50,7 +50,7 @@ impl<'a> IrKeplerEsp<'a> {
 }
 
 impl IrKepler for IrKeplerEsp<'_> {
-    async fn wait_for_press(&self) -> KeplerButton {
+    async fn wait_for_press(&self) -> KeplerKeys {
         self.mapping.wait_for_press().await
     }
 }

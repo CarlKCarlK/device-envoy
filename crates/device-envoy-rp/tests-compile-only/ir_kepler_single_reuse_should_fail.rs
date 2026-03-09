@@ -11,12 +11,12 @@ use device_envoy_rp::ir_kepler;
 use embassy_executor::Spawner;
 
 ir_kepler! {
-    IrKepler00: { pio: PIO0, pin: PIN_15 }
+    IrKepler15: { pio: PIO0, pin: PIN_15 }
 }
 
 async fn test_reuse_single_ir_kepler(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let _first = IrKepler00::new(p.PIO0, p.PIN_15, spawner)?;
-    let _second = IrKepler00::new(p.PIO0, p.PIN_15, spawner)?;
+    let _first = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
+    let _second = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
     Ok(())
 }
 

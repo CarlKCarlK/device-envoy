@@ -19,24 +19,24 @@ use heapless::LinearMap;
 /// use device_envoy_core::ir::IrMapping;
 ///
 /// #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-/// enum RemoteButton {
+/// enum RemoteKeys {
 ///     Power,
 ///     Play,
 ///     Stop,
 /// }
 ///
-/// async fn handle_mapped_button_presses(ir_mapping: &impl IrMapping<RemoteButton>) -> ! {
+/// async fn handle_mapped_button_presses(ir_mapping: &impl IrMapping<RemoteKeys>) -> ! {
 ///     loop {
-///         let remote_button = ir_mapping.wait_for_press().await;
-///         // Use mapped button in app logic.
-///         match remote_button {
-///             RemoteButton::Power => {
+///         let remote_key = ir_mapping.wait_for_press().await;
+///         // Use mapped key in app logic.
+///         match remote_key {
+///             RemoteKeys::Power => {
 ///                 // Handle power.
 ///             }
-///             RemoteButton::Play => {
+///             RemoteKeys::Play => {
 ///                 // Handle play.
 ///             }
-///             RemoteButton::Stop => {
+///             RemoteKeys::Stop => {
 ///                 // Handle stop.
 ///             }
 ///         }
@@ -44,9 +44,9 @@ use heapless::LinearMap;
 /// }
 ///
 /// # struct DemoIrMapping;
-/// # impl IrMapping<RemoteButton> for DemoIrMapping {
-/// #     async fn wait_for_press(&self) -> RemoteButton {
-/// #         RemoteButton::Power
+/// # impl IrMapping<RemoteKeys> for DemoIrMapping {
+/// #     async fn wait_for_press(&self) -> RemoteKeys {
+/// #         RemoteKeys::Power
 /// #     }
 /// # }
 /// # fn main() {

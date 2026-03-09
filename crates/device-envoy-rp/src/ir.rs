@@ -13,10 +13,17 @@ use fixed::traits::ToFixed;
 use crate::{Error, Result};
 
 use device_envoy_core::ir::decode_nec_frame;
-pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrMappingAdapter, IrStatic};
+use device_envoy_core::ir::IrStatic;
+pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping};
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
 pub use paste;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::ir::IrStatic as __IrStatic;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::ir::kepler::KEPLER_MAPPING as __KEPLER_MAPPING;
 
 // ============================================================================
 // Submodules
@@ -25,8 +32,8 @@ pub use paste;
 mod kepler;
 mod mapping;
 
-pub use kepler::{IrKeplerRp, IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
-pub use mapping::{IrMappingRp, IrMappingStatic, __build_button_map};
+pub use kepler::{IrKeplerRp, KeplerKeys};
+pub use mapping::{IrMappingRp, __build_button_map};
 
 // ===== NEC Receiver (forward declaration) ==================================
 
@@ -197,8 +204,7 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_rp::ir;
-/// use device_envoy_rp::ir::{Ir as _, IrEvent};
+/// use device_envoy_rp::{ir, ir::Ir as _, ir::IrEvent};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 ///
@@ -329,9 +335,6 @@ impl Ir for IrRp<'_> {
     }
 }
 
-/// Generate one or more typed IR receiver constructors sharing a single PIO resource.
-///
-/// See the [`IrRp`] struct example for base usage and the generated `new(...)` constructors.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! irs {
@@ -360,11 +363,11 @@ macro_rules! __irs_impl {
         [($name0:ident, $pin0:ident)]
     ) => {
         $crate::ir::paste::paste! {
-            static [<$name0:upper _IR_STATIC>]: $crate::ir::IrStatic = $crate::ir::IrStatic::new();
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
             static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
 
             pub struct $name0 {
-                ir_static: &'static $crate::ir::IrStatic,
+                ir_static: &'static $crate::ir::__IrStatic,
             }
 
             impl $name0 {
@@ -405,17 +408,17 @@ macro_rules! __irs_impl {
         [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident)]
     ) => {
         $crate::ir::paste::paste! {
-            static [<$name0:upper _IR_STATIC>]: $crate::ir::IrStatic = $crate::ir::IrStatic::new();
-            static [<$name1:upper _IR_STATIC>]: $crate::ir::IrStatic = $crate::ir::IrStatic::new();
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
 
             static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
             static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
 
             pub struct $name0 {
-                ir_static: &'static $crate::ir::IrStatic,
+                ir_static: &'static $crate::ir::__IrStatic,
             }
             pub struct $name1 {
-                ir_static: &'static $crate::ir::IrStatic,
+                ir_static: &'static $crate::ir::__IrStatic,
             }
 
             impl $name0 {
@@ -506,7 +509,6 @@ macro_rules! __irs_impl {
     };
 }
 
-/// Generate one typed IR receiver constructor.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir {
@@ -524,31 +526,27 @@ macro_rules! ir {
     };
 }
 
-/// Macro to generate one IR receiver type.
-///
-/// Use this when you need a single receiver.
+/// Macro to generate an IR receiver struct type (includes syntax details).
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use ir;
-/// Macro to generate multiple IR receiver types on one PIO resource.
-///
-/// Use this when you need more than one receiver sharing the same PIO resource.
+/// Alternative macro to share one PIO resource with other IR receivers (includes syntax details).
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use irs;
-/// Macro to generate one IR-mapping type.
+/// Macro to generate an IR mapping struct type (includes syntax details).
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use crate::ir_mapping;
-/// Macro to generate multiple IR-mapping types on one PIO resource.
+/// Alternative macro to share one PIO resource with other IR mappings (includes syntax details).
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use crate::ir_mappings;
-/// Macro to generate one Kepler IR type.
+/// Macro to generate a Kepler IR struct type (includes syntax details).
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use crate::ir_kepler;
-/// Macro to generate multiple Kepler IR types on one PIO resource.
+/// Alternative macro to share one PIO resource with other Kepler IR receivers (includes syntax details).
 #[allow(unused_imports)]
 #[doc(inline)]
 pub use crate::ir_keplers;

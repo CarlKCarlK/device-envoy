@@ -4,9 +4,8 @@
 
 use heapless::LinearMap;
 
-use crate::ir::{IrMapping, IrMappingAdapter, IrRp};
-
-pub use device_envoy_core::ir::mapping::IrMappingStatic;
+use crate::ir::{IrMapping, IrRp};
+use device_envoy_core::ir::mapping::IrMappingAdapter;
 
 /// A generic device abstraction that maps IR remote button presses to user-defined button types.
 ///
@@ -14,18 +13,17 @@ pub use device_envoy_core::ir::mapping::IrMappingStatic;
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_rp::ir::{IrMapping as _};
-/// use device_envoy_rp::ir_mapping;
+/// use device_envoy_rp::{ir::IrMapping as _, ir_mapping};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// #[derive(Debug, Clone, Copy)]
-/// enum RemoteButton { Power, Play, Stop }
+/// enum RemoteKeys { Power, Play, Stop }
 ///
 /// ir_mapping! {
-///     IrMapping00: {
+///     IrMapping15: {
 ///         pio: PIO0,
 ///         pin: PIN_15,
-///         button: RemoteButton,
+///         button: RemoteKeys,
 ///         capacity: 3,
 ///     }
 /// }
@@ -35,15 +33,15 @@ pub use device_envoy_core::ir::mapping::IrMappingStatic;
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
 ///     let button_map = [
-///         (0x0000, 0x45, RemoteButton::Power),
-///         (0x0000, 0x0C, RemoteButton::Play),
-///         (0x0000, 0x08, RemoteButton::Stop),
+///         (0x0000, 0x45, RemoteKeys::Power),
+///         (0x0000, 0x0C, RemoteKeys::Play),
+///         (0x0000, 0x08, RemoteKeys::Stop),
 ///     ];
 ///
-///     let ir_mapping00 = IrMapping00::new(p.PIO0, p.PIN_15, &button_map, spawner)?;
+///     let ir_mapping15 = IrMapping15::new(p.PIO0, p.PIN_15, &button_map, spawner)?;
 ///
 ///     loop {
-///         let button = ir_mapping00.wait_for_press().await;
+///         let button = ir_mapping15.wait_for_press().await;
 ///         // Use button...
 ///     }
 /// }
@@ -80,9 +78,6 @@ pub fn __build_button_map<B: Copy, const N: usize>(
     linear_map
 }
 
-/// Generate one or more typed IR-mapping constructors sharing one PIO resource.
-///
-/// This macro is built on top of [`irs!`](macro@crate::irs).
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_mappings {
@@ -278,7 +273,6 @@ macro_rules! ir_mappings {
     };
 }
 
-/// Generate one typed IR-mapping constructor.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_mapping {
@@ -304,14 +298,10 @@ macro_rules! ir_mapping {
 }
 
 #[allow(unused_imports)]
-/// Macro to generate one IR-mapping type.
-///
-/// Use this when you need one mapped IR receiver.
+/// Macro to generate an IR mapping struct type (includes syntax details).
 #[doc(inline)]
 pub use ir_mapping;
 #[allow(unused_imports)]
-/// Macro to generate multiple IR-mapping types on one PIO resource.
-///
-/// Use this when you need multiple mapped receivers sharing one PIO resource.
+/// Alternative macro to share one PIO resource with other IR mappings (includes examples).
 #[doc(inline)]
 pub use ir_mappings;

@@ -1,5 +1,5 @@
 use device_envoy_core::{
-    ir::kepler::{IrKepler, KeplerButton},
+    ir::kepler::{IrKepler, KeplerKeys},
     led_strip::RGB8,
     led2d::{Frame2d, Led2d},
 };
@@ -74,7 +74,7 @@ where
                 );
             }
             Either::Second(button) => match button {
-                KeplerButton::Num(number) => {
+                KeplerKeys::Num(number) => {
                     if number < PATTERNS.len() as u8 {
                         pattern_index = number as usize;
                         reset_board_for_pattern(
@@ -85,13 +85,13 @@ where
                         );
                     }
                 }
-                KeplerButton::Minus => {
+                KeplerKeys::Minus => {
                     speed_mode = speed_mode.slower();
                 }
-                KeplerButton::Plus => {
+                KeplerKeys::Plus => {
                     speed_mode = speed_mode.faster();
                 }
-                KeplerButton::Next => {
+                KeplerKeys::Next => {
                     if paused {
                         board.step();
                     } else {
@@ -104,7 +104,7 @@ where
                         );
                     }
                 }
-                KeplerButton::Prev => {
+                KeplerKeys::Prev => {
                     if !paused {
                         pattern_index = (pattern_index + PATTERNS.len() - 1) % PATTERNS.len();
                         reset_board_for_pattern(
@@ -115,10 +115,10 @@ where
                         );
                     }
                 }
-                KeplerButton::PlayPause => {
+                KeplerKeys::PlayPause => {
                     paused = !paused;
                 }
-                KeplerButton::Mode => {
+                KeplerKeys::Mode => {
                     color_index = (color_index + 1) % ALIVE_COLORS.len();
                     alive_color = ALIVE_COLORS[color_index];
                 }

@@ -1,10 +1,12 @@
 {
   "cSpell.words": [
+    "BCLK",
     "deinit",
     "ledc",
     "Lwss",
     "mmss",
     "mosi",
+    "poolind",
     "timg",
     "Vecs"
   ],

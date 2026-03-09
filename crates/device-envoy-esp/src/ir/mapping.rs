@@ -43,8 +43,8 @@ macro_rules! __ir_mappings_impl {
     ) => {
         $crate::ir::paste::paste! {
             $crate::irs! {
-                [<__ $group_name _IRS>] {
-                    [<__ $name0 _IR>]: { pin: $pin0 }
+                [<__ $group_name:camel Irs>] {
+                    [<__ $name0:camel Ir>]: { pin: $pin0 }
                 }
             }
 
@@ -52,7 +52,7 @@ macro_rules! __ir_mappings_impl {
                 ::static_cell::StaticCell::new();
 
             pub struct $name0 {
-                ir: &'static [<__ $name0 _IR>],
+                ir: &'static [<__ $name0:camel Ir>],
                 button_map: ::heapless::LinearMap<(u16, u8), $button_ty, $capacity>,
             }
 
@@ -63,7 +63,7 @@ macro_rules! __ir_mappings_impl {
                     button_map: &[(u16, u8, $button_ty)],
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    let ir = [<__ $name0 _IR>]::new(pin, channel_creator, spawner)?;
+                    let ir = [<__ $name0:camel Ir>]::new(pin, channel_creator, spawner)?;
                     Ok([<$name0:upper _MAPPING_CELL>].init(Self {
                         ir,
                         button_map: $crate::ir::__build_button_map::<$button_ty, $capacity>(
@@ -77,7 +77,7 @@ macro_rules! __ir_mappings_impl {
                 async fn wait_for_press(&self) -> $button_ty {
                     loop {
                         let $crate::ir::IrEvent::Press { addr, cmd } =
-                            <[<__ $name0 _IR>] as $crate::ir::Ir>::wait_for_press(self.ir).await;
+                            <[<__ $name0:camel Ir>] as $crate::ir::Ir>::wait_for_press(self.ir).await;
                         if let Some(&button) = self.button_map.get(&(addr, cmd)) {
                             return button;
                         }
@@ -111,9 +111,9 @@ macro_rules! __ir_mappings_impl {
     ) => {
         $crate::ir::paste::paste! {
             $crate::irs! {
-                [<__ $group_name _IRS>] {
-                    [<__ $name0 _IR>]: { pin: $pin0 },
-                    [<__ $name1 _IR>]: { pin: $pin1 }
+                [<__ $group_name:camel Irs>] {
+                    [<__ $name0:camel Ir>]: { pin: $pin0 },
+                    [<__ $name1:camel Ir>]: { pin: $pin1 }
                 }
             }
 
@@ -123,12 +123,12 @@ macro_rules! __ir_mappings_impl {
                 ::static_cell::StaticCell::new();
 
             pub struct $name0 {
-                ir: &'static [<__ $name0 _IR>],
+                ir: &'static [<__ $name0:camel Ir>],
                 button_map: ::heapless::LinearMap<(u16, u8), $button_ty, $capacity>,
             }
 
             pub struct $name1 {
-                ir: &'static [<__ $name1 _IR>],
+                ir: &'static [<__ $name1:camel Ir>],
                 button_map: ::heapless::LinearMap<(u16, u8), $button_ty, $capacity>,
             }
 
@@ -139,7 +139,7 @@ macro_rules! __ir_mappings_impl {
                     button_map: &[(u16, u8, $button_ty)],
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    let ir = [<__ $name0 _IR>]::new(pin, channel_creator, spawner)?;
+                    let ir = [<__ $name0:camel Ir>]::new(pin, channel_creator, spawner)?;
                     Ok([<$name0:upper _MAPPING_CELL>].init(Self {
                         ir,
                         button_map: $crate::ir::__build_button_map::<$button_ty, $capacity>(
@@ -156,7 +156,7 @@ macro_rules! __ir_mappings_impl {
                     button_map: &[(u16, u8, $button_ty)],
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    let ir = [<__ $name1 _IR>]::new(pin, channel_creator, spawner)?;
+                    let ir = [<__ $name1:camel Ir>]::new(pin, channel_creator, spawner)?;
                     Ok([<$name1:upper _MAPPING_CELL>].init(Self {
                         ir,
                         button_map: $crate::ir::__build_button_map::<$button_ty, $capacity>(
@@ -170,7 +170,7 @@ macro_rules! __ir_mappings_impl {
                 async fn wait_for_press(&self) -> $button_ty {
                     loop {
                         let $crate::ir::IrEvent::Press { addr, cmd } =
-                            <[<__ $name0 _IR>] as $crate::ir::Ir>::wait_for_press(self.ir).await;
+                            <[<__ $name0:camel Ir>] as $crate::ir::Ir>::wait_for_press(self.ir).await;
                         if let Some(&button) = self.button_map.get(&(addr, cmd)) {
                             return button;
                         }
@@ -182,7 +182,7 @@ macro_rules! __ir_mappings_impl {
                 async fn wait_for_press(&self) -> $button_ty {
                     loop {
                         let $crate::ir::IrEvent::Press { addr, cmd } =
-                            <[<__ $name1 _IR>] as $crate::ir::Ir>::wait_for_press(self.ir).await;
+                            <[<__ $name1:camel Ir>] as $crate::ir::Ir>::wait_for_press(self.ir).await;
                         if let Some(&button) = self.button_map.get(&(addr, cmd)) {
                             return button;
                         }
@@ -202,7 +202,7 @@ macro_rules! __ir_mappings_impl {
                     button_map1: &[(u16, u8, $button_ty)],
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<(&'static $name0, &'static $name1)> {
-                    let (ir0, ir1) = [<__ $group_name _IRS>]::new(
+                    let (ir0, ir1) = [<__ $group_name:camel Irs>]::new(
                         pin0,
                         channel_creator0,
                         pin1,
@@ -242,7 +242,7 @@ macro_rules! ir_mapping {
             $crate::ir_mappings! {
                 button: $button_ty,
                 capacity: $capacity,
-                [<__ $name _MAPPINGS>] {
+                [<__ $name:camel Mappings>] {
                     $name: { pin: $pin }
                 }
             }

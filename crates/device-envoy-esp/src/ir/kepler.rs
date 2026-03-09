@@ -24,14 +24,14 @@ macro_rules! __ir_keplers_impl {
             $crate::ir_mappings! {
                 button: $crate::ir::KeplerKeys,
                 capacity: 21,
-                [<__ $group_name _MAPPINGS>] {
-                    [<__ $name0 _MAPPING>]: { pin: $pin0 }
+                [<__ $group_name:camel Mappings>] {
+                    [<__ $name0:camel Mapping>]: { pin: $pin0 }
                 }
             }
 
             impl $crate::ir::IrKepler for $name0 {
                 async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
-                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
+                    <[<__ $name0:camel Mapping>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
                 }
             }
 
@@ -39,7 +39,7 @@ macro_rules! __ir_keplers_impl {
                 ::static_cell::StaticCell::new();
 
             pub struct $name0 {
-                mapping: &'static [<__ $name0 _MAPPING>],
+                mapping: &'static [<__ $name0:camel Mapping>],
             }
 
             impl $name0 {
@@ -48,7 +48,7 @@ macro_rules! __ir_keplers_impl {
                     channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    let mapping = [<__ $name0 _MAPPING>]::new(
+                    let mapping = [<__ $name0:camel Mapping>]::new(
                         pin,
                         channel_creator,
                         &$crate::ir::__KEPLER_MAPPING,
@@ -82,9 +82,9 @@ macro_rules! __ir_keplers_impl {
             $crate::ir_mappings! {
                 button: $crate::ir::KeplerKeys,
                 capacity: 21,
-                [<__ $group_name _MAPPINGS>] {
-                    [<__ $name0 _MAPPING>]: { pin: $pin0 },
-                    [<__ $name1 _MAPPING>]: { pin: $pin1 }
+                [<__ $group_name:camel Mappings>] {
+                    [<__ $name0:camel Mapping>]: { pin: $pin0 },
+                    [<__ $name1:camel Mapping>]: { pin: $pin1 }
                 }
             }
 
@@ -94,11 +94,11 @@ macro_rules! __ir_keplers_impl {
                 ::static_cell::StaticCell::new();
 
             pub struct $name0 {
-                mapping: &'static [<__ $name0 _MAPPING>],
+                mapping: &'static [<__ $name0:camel Mapping>],
             }
 
             pub struct $name1 {
-                mapping: &'static [<__ $name1 _MAPPING>],
+                mapping: &'static [<__ $name1:camel Mapping>],
             }
 
             impl $name0 {
@@ -107,7 +107,7 @@ macro_rules! __ir_keplers_impl {
                     channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    let mapping = [<__ $name0 _MAPPING>]::new(
+                    let mapping = [<__ $name0:camel Mapping>]::new(
                         pin,
                         channel_creator,
                         &$crate::ir::__KEPLER_MAPPING,
@@ -123,7 +123,7 @@ macro_rules! __ir_keplers_impl {
                     channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    let mapping = [<__ $name1 _MAPPING>]::new(
+                    let mapping = [<__ $name1:camel Mapping>]::new(
                         pin,
                         channel_creator,
                         &$crate::ir::__KEPLER_MAPPING,
@@ -135,13 +135,13 @@ macro_rules! __ir_keplers_impl {
 
             impl $crate::ir::IrKepler for $name0 {
                 async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
-                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
+                    <[<__ $name0:camel Mapping>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
                 }
             }
 
             impl $crate::ir::IrKepler for $name1 {
                 async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
-                    <[<__ $name1 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
+                    <[<__ $name1:camel Mapping>] as $crate::ir::IrMapping<$crate::ir::KeplerKeys>>::wait_for_press(self.mapping).await
                 }
             }
 
@@ -154,7 +154,7 @@ macro_rules! __ir_keplers_impl {
                     channel_creator1: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<(&'static $name0, &'static $name1)> {
-                    let (mapping0, mapping1) = [<__ $group_name _MAPPINGS>]::new(
+                    let (mapping0, mapping1) = [<__ $group_name:camel Mappings>]::new(
                         pin0,
                         channel_creator0,
                         pin1,
@@ -180,7 +180,7 @@ macro_rules! ir_kepler {
     ) => {
         $crate::ir::paste::paste! {
             $crate::ir_keplers! {
-                [<__ $name _KEPLERS>] {
+                [<__ $name:camel Keplers>] {
                     $name: { pin: $pin }
                 }
             }

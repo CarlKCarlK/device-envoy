@@ -496,7 +496,7 @@ macro_rules! ir {
     ) => {
         $crate::ir::paste::paste! {
             $crate::irs! {
-                [<__ $name _GROUP>] {
+                [<__ $name:camel Group>] {
                     $name: { pin: $pin }
                 }
             }

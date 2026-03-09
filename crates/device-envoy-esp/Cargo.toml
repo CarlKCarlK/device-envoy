@@ -5,6 +5,7 @@ edition = "2021"
 
 [features]
 host = []
+compile-fail-tests = []
 
 [dependencies]
 embassy-executor = { version = "0.9.0" }
@@ -68,3 +69,14 @@ esp-backtrace = { version = "0.18.1", features = [
 esp-println = { version = "0.16.1", default-features = false, features = ["esp32s3", "uart", "log-04"] }
 log = { version = "0.4", default-features = false }
 esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32s3"] }
+
+[[test]]
+name = "ir_two_receivers_compile"
+path = "tests/embedded/ir_two_receivers_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_duplicate_channel_compile_fail"
+path = "tests/embedded/ir_duplicate_channel_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]

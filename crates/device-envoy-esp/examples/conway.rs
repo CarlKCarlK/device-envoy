@@ -50,11 +50,11 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     let led16x16 = Led16x16::new(p.GPIO2, p.SPI2, spawner)?;
 
     #[cfg(target_arch = "xtensa")]
-    let ir_rmt_channel = rmt80.channel4; // On ESP32-S3, RMT channels 0–3 are TX-only; RX requires channel 4+.
+    let channel_creator = rmt80.channel4; // On ESP32-S3, RMT channels 0–3 are TX-only; RX requires channel 4+.
     #[cfg(not(target_arch = "xtensa"))]
-    let ir_rmt_channel = rmt80.channel2; // On ESP32-C6, channels 0–3 all support RX.
+    let channel_creator = rmt80.channel2; // On ESP32-C6, channels 0–3 all support RX.
 
-    let ir_kepler7 = IrKepler7::new(p.GPIO7, ir_rmt_channel, spawner)?;
+    let ir_kepler7 = IrKepler7::new(p.GPIO7, channel_creator, spawner)?;
 
     conway_with_led2d_ir_kepler(led16x16, ir_kepler7).await
 }

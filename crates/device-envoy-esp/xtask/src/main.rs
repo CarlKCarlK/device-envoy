@@ -176,6 +176,10 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    if check_embedded_tests() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+
     if check_host_tests() != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
@@ -245,6 +249,93 @@ fn check_examples() -> ExitCode {
                 cmd.arg("-Zbuild-std=core,alloc");
             }
             if !run(&mut cmd) {
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+
+    ExitCode::SUCCESS
+}
+
+fn check_embedded_tests() -> ExitCode {
+    let root = workspace_root();
+    println!(
+        "{}",
+        "--> embedded tests (compile-pass + expected compile-fail)".cyan()
+    );
+
+    let compile_pass_tests = ["ir_two_receivers_compile"];
+    let compile_fail_tests = ["ir_duplicate_channel_compile_fail"];
+    let Some(s3_linker_dir) = require_s3_toolchain() else {
+        return ExitCode::FAILURE;
+    };
+    // (label, target, toolchain_override, build_std)
+    let targets: &[(&str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, None, false),
+        ("s3", TARGET_S3, Some("+esp"), true),
+    ];
+    for (label, target, toolchain, build_std) in targets {
+        println!("{}", format!("    target: {label}").cyan());
+        for embedded_test in &compile_pass_tests {
+            println!("      compile-pass test: {embedded_test}");
+            let mut cmd = Command::new("cargo");
+            cmd.current_dir(&root);
+            if *build_std {
+                prepend_path(&mut cmd, &s3_linker_dir);
+            }
+            if let Some(tc) = toolchain {
+                cmd.arg(tc);
+            }
+            cmd.args([
+                "build",
+                "--test",
+                embedded_test,
+                "--release",
+                "--target",
+                target,
+                "--no-default-features",
+            ]);
+            if *build_std {
+                cmd.arg("-Zbuild-std=core,alloc");
+            }
+            if !run(&mut cmd) {
+                return ExitCode::FAILURE;
+            }
+        }
+
+        for embedded_test in &compile_fail_tests {
+            println!("      compile-fail test: {embedded_test}");
+            let mut cmd = Command::new("cargo");
+            cmd.current_dir(&root);
+            if *build_std {
+                prepend_path(&mut cmd, &s3_linker_dir);
+            }
+            if let Some(tc) = toolchain {
+                cmd.arg(tc);
+            }
+            cmd.args([
+                "build",
+                "--test",
+                embedded_test,
+                "--release",
+                "--target",
+                target,
+                "--no-default-features",
+                "--features",
+                "compile-fail-tests",
+            ]);
+            if *build_std {
+                cmd.arg("-Zbuild-std=core,alloc");
+            }
+            if run(&mut cmd) {
+                eprintln!(
+                    "{}",
+                    format!(
+                        "error: compile-fail test `{embedded_test}` unexpectedly compiled for target `{target}`"
+                    )
+                    .red()
+                    .bold()
+                );
                 return ExitCode::FAILURE;
             }
         }

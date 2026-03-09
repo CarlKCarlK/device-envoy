@@ -312,6 +312,9 @@ fn check_embedded_tests() -> ExitCode {
             println!("      compile-fail test: {embedded_test}");
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
+            // Compile-fail tests are expected to fail. Keep their output non-colored so
+            // expected rustc errors do not show as alarming red blocks in the check log.
+            cmd.env("CARGO_TERM_COLOR", "never");
             if *build_std {
                 prepend_path(&mut cmd, &s3_linker_dir);
             }
@@ -332,7 +335,7 @@ fn check_embedded_tests() -> ExitCode {
             if *build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
             }
-            if run(&mut cmd) {
+            if run_expect_failure(&mut cmd) {
                 eprintln!(
                     "{}",
                     format!(
@@ -429,6 +432,32 @@ fn run(cmd: &mut Command) -> bool {
         eprintln!("{}", format!("    FAILED: {display}").red().bold());
     }
     status.success()
+}
+
+fn run_expect_failure(cmd: &mut Command) -> bool {
+    let display = format!(
+        "{} {}",
+        cmd.get_program().to_string_lossy(),
+        cmd.get_args()
+            .map(|a| a.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
+    println!("    $ {}", display.dimmed());
+
+    let status = cmd
+        .status()
+        .unwrap_or_else(|e| panic!("failed to run command: {e}"));
+    if status.success() {
+        eprintln!(
+            "{}",
+            format!("    UNEXPECTED SUCCESS: {display}").red().bold()
+        );
+        true
+    } else {
+        println!("{}", "    expected failure (pass)".green());
+        false
+    }
 }
 
 struct GeneratedDocStubExpectation {

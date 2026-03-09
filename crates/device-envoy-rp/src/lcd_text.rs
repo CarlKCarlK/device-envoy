@@ -294,9 +294,8 @@ macro_rules! __i2cs_impl {
                     spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
 
                     $(
-                        static [<$lcd_name:upper _CELL>]: ::static_cell::StaticCell<$lcd_name> =
-                            ::static_cell::StaticCell::new();
-                        let [<$lcd_name:snake>] = [<$lcd_name:upper _CELL>].init($lcd_name);
+                        static [<$lcd_name:upper _INSTANCE>]: $lcd_name = $lcd_name;
+                        let [<$lcd_name:snake>] = &[<$lcd_name:upper _INSTANCE>];
                     )+
 
                     Ok([<__ $group_name Devices>] {

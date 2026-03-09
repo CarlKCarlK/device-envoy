@@ -1,6 +1,8 @@
 #![cfg_attr(target_os = "none", no_std)]
 
 //! Shared building blocks for the device-envoy workspace.
+// TODO0 Audit remaining StaticCell usage across device abstractions and remove
+// TODO0 it where const/static initialization can replace runtime init safely.
 
 pub mod audio_player;
 pub mod button;

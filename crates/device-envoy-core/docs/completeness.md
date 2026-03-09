@@ -5,10 +5,10 @@
 | led_strip | [x] | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
 | led_strip_spi | *na* | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
 | led2d | [x] | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
-| audio_player | [x] | [x] | [x] | [x] | [x] | [x] | [90%](#note-audio-player) | ? |
-| ir | [x] | [x] | [x] | [x] | ? | [x] | [x] | [ ] ([note](#note-ir)) |
-| ir/mapping | [x] | [x] | [x] | [x] | ? | [x] | [x] | [ ] ([note](#note-ir)) |
-| ir/kepler | [x] | [x] | [x] | [x] | ? | [x] | [x] | [ ] ([note](#note-ir)) |
+| audio_player | [x] | [x] | [x] | [x] | ? | [x] | [90%](#note-audio-player) | ? |
+| ir | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
+| ir/mapping | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
+| ir/kepler | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | flash_block | [x] | [x] | [x] | [x] | ? | *na* | [x] | ? |
 | button | [x] | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
 | servo | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | ? |
@@ -45,10 +45,6 @@
 ### Note: audio-player
 
 `audio_player`: Effectively 100% efficient on ESP for its chosen resource model (`I2S0` + DMA). On RP it is not 100% because the current implementation uses one PIO state machine (`sm0`) per instance rather than spreading across all four state machines. In principle a PIO block can run up to four independent programs, but practical multi-I2S constraints (timing/clocking, DMA feed pressure, pin routing, jitter risk) make full four-stream utilization non-trivial for reliable audio.
-
-### Note: ir
-
-`ir` / `ir/mapping` / `ir/kepler`: Marked `PoolInd [x]` because ESP and RP now use per-type task entries (no shared task-pool bottleneck), so instance scaling is no longer constrained by Embassy task `pool_size`. `EspPar` remains `?` until the remaining RP/ESP doc and behavior gaps are closed. Marked `Own [ ]` because generated types still rely on one-time static initialization (`StaticCell::init`) and can fail at runtime if `new` is called again for the same generated type, rather than always producing a compile-time ownership error.
 
 ### Note: servo-player-poolind
 

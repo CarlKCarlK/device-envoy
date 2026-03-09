@@ -330,7 +330,7 @@ macro_rules! __irs_impl {
     ) => {
         $crate::ir::paste::paste! {
             static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
 
             #[embassy_executor::task]
             async fn [<__ $name0:lower _ir_receiver_task>](
@@ -356,9 +356,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -389,8 +387,8 @@ macro_rules! __irs_impl {
             static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
             static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
 
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
-            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
+            static [<$name1:upper _IR>]: $name1 = $name1 { ir_static: &[<$name1:upper _IR_STATIC>] };
 
             #[embassy_executor::task]
             async fn [<__ $name0:lower _ir_receiver_task>](
@@ -428,9 +426,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -446,9 +442,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name1:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name1:upper _IR>])
                 }
             }
 
@@ -489,9 +483,9 @@ macro_rules! __irs_impl {
             static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
             static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
 
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
-            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
-            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
+            static [<$name1:upper _IR>]: $name1 = $name1 { ir_static: &[<$name1:upper _IR_STATIC>] };
+            static [<$name2:upper _IR>]: $name2 = $name2 { ir_static: &[<$name2:upper _IR_STATIC>] };
 
             #[embassy_executor::task]
             async fn [<__ $name0:lower _ir_receiver_task>](
@@ -541,9 +535,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -559,9 +551,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name1:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name1:upper _IR>])
                 }
             }
 
@@ -577,9 +567,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name2:lower _ir_receiver_task>](channel, &[<$name2:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name2:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name2:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name2:upper _IR>])
                 }
             }
 
@@ -630,10 +618,10 @@ macro_rules! __irs_impl {
             static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
             static [<$name3:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
 
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
-            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
-            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
-            static [<$name3:upper _IR_CELL>]: ::static_cell::StaticCell<$name3> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
+            static [<$name1:upper _IR>]: $name1 = $name1 { ir_static: &[<$name1:upper _IR_STATIC>] };
+            static [<$name2:upper _IR>]: $name2 = $name2 { ir_static: &[<$name2:upper _IR_STATIC>] };
+            static [<$name3:upper _IR>]: $name3 = $name3 { ir_static: &[<$name3:upper _IR_STATIC>] };
 
             #[embassy_executor::task]
             async fn [<__ $name0:lower _ir_receiver_task>](
@@ -695,9 +683,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -713,9 +699,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name1:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name1:upper _IR>])
                 }
             }
 
@@ -731,9 +715,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name2:lower _ir_receiver_task>](channel, &[<$name2:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name2:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name2:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name2:upper _IR>])
                 }
             }
 
@@ -749,9 +731,7 @@ macro_rules! __irs_impl {
                     spawner
                         .spawn([<__ $name3:lower _ir_receiver_task>](channel, &[<$name3:upper _IR_STATIC>]))
                         .map_err($crate::Error::TaskSpawn)?;
-                    Ok([<$name3:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name3:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name3:upper _IR>])
                 }
             }
 

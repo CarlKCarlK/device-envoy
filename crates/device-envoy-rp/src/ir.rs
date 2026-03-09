@@ -457,7 +457,7 @@ macro_rules! __irs_impl {
     ) => {
         $crate::ir::paste::paste! {
             static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
 
             pub struct $name0 {
                 ir_static: &'static $crate::ir::__IrStatic,
@@ -470,9 +470,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -504,8 +502,8 @@ macro_rules! __irs_impl {
             static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
             static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
 
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
-            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
+            static [<$name1:upper _IR>]: $name1 = $name1 { ir_static: &[<$name1:upper _IR_STATIC>] };
 
             pub struct $name0 {
                 ir_static: &'static $crate::ir::__IrStatic,
@@ -521,9 +519,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -534,9 +530,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm1(&[<$name1:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name1:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name1:upper _IR>])
                 }
             }
 
@@ -582,12 +576,8 @@ macro_rules! __irs_impl {
                         spawner,
                     )?;
 
-                    let ir0 = [<$name0:upper _IR_CELL>].init($name0 {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    });
-                    let ir1 = [<$name1:upper _IR_CELL>].init($name1 {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    });
+                    let ir0 = &[<$name0:upper _IR>];
+                    let ir1 = &[<$name1:upper _IR>];
                     Ok((ir0, ir1))
                 }
             }
@@ -603,9 +593,9 @@ macro_rules! __irs_impl {
             static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
             static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
 
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
-            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
-            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
+            static [<$name1:upper _IR>]: $name1 = $name1 { ir_static: &[<$name1:upper _IR_STATIC>] };
+            static [<$name2:upper _IR>]: $name2 = $name2 { ir_static: &[<$name2:upper _IR_STATIC>] };
 
             pub struct $name0 {
                 ir_static: &'static $crate::ir::__IrStatic,
@@ -624,9 +614,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -637,9 +625,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm1(&[<$name1:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name1:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name1:upper _IR>])
                 }
             }
 
@@ -650,9 +636,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm2(&[<$name2:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name2:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name2:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name2:upper _IR>])
                 }
             }
 
@@ -712,15 +696,9 @@ macro_rules! __irs_impl {
                         spawner,
                     )?;
 
-                    let ir0 = [<$name0:upper _IR_CELL>].init($name0 {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    });
-                    let ir1 = [<$name1:upper _IR_CELL>].init($name1 {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    });
-                    let ir2 = [<$name2:upper _IR_CELL>].init($name2 {
-                        ir_static: &[<$name2:upper _IR_STATIC>],
-                    });
+                    let ir0 = &[<$name0:upper _IR>];
+                    let ir1 = &[<$name1:upper _IR>];
+                    let ir2 = &[<$name2:upper _IR>];
                     Ok((ir0, ir1, ir2))
                 }
             }
@@ -737,10 +715,10 @@ macro_rules! __irs_impl {
             static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
             static [<$name3:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
 
-            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
-            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
-            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
-            static [<$name3:upper _IR_CELL>]: ::static_cell::StaticCell<$name3> = ::static_cell::StaticCell::new();
+            static [<$name0:upper _IR>]: $name0 = $name0 { ir_static: &[<$name0:upper _IR_STATIC>] };
+            static [<$name1:upper _IR>]: $name1 = $name1 { ir_static: &[<$name1:upper _IR_STATIC>] };
+            static [<$name2:upper _IR>]: $name2 = $name2 { ir_static: &[<$name2:upper _IR_STATIC>] };
+            static [<$name3:upper _IR>]: $name3 = $name3 { ir_static: &[<$name3:upper _IR_STATIC>] };
 
             pub struct $name0 {
                 ir_static: &'static $crate::ir::__IrStatic,
@@ -762,9 +740,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name0:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name0:upper _IR>])
                 }
             }
 
@@ -775,9 +751,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm1(&[<$name1:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name1:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name1:upper _IR>])
                 }
             }
 
@@ -788,9 +762,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm2(&[<$name2:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name2:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name2:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name2:upper _IR>])
                 }
             }
 
@@ -801,9 +773,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let _ = $crate::ir::__new_ir_on_sm3(&[<$name3:upper _IR_STATIC>], pin, pio, spawner)?;
-                    Ok([<$name3:upper _IR_CELL>].init(Self {
-                        ir_static: &[<$name3:upper _IR_STATIC>],
-                    }))
+                    Ok(&[<$name3:upper _IR>])
                 }
             }
 
@@ -877,18 +847,10 @@ macro_rules! __irs_impl {
                         spawner,
                     )?;
 
-                    let ir0 = [<$name0:upper _IR_CELL>].init($name0 {
-                        ir_static: &[<$name0:upper _IR_STATIC>],
-                    });
-                    let ir1 = [<$name1:upper _IR_CELL>].init($name1 {
-                        ir_static: &[<$name1:upper _IR_STATIC>],
-                    });
-                    let ir2 = [<$name2:upper _IR_CELL>].init($name2 {
-                        ir_static: &[<$name2:upper _IR_STATIC>],
-                    });
-                    let ir3 = [<$name3:upper _IR_CELL>].init($name3 {
-                        ir_static: &[<$name3:upper _IR_STATIC>],
-                    });
+                    let ir0 = &[<$name0:upper _IR>];
+                    let ir1 = &[<$name1:upper _IR>];
+                    let ir2 = &[<$name2:upper _IR>];
+                    let ir3 = &[<$name3:upper _IR>];
                     Ok((ir0, ir1, ir2, ir3))
                 }
             }

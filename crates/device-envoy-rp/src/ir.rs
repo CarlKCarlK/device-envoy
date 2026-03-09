@@ -1,8 +1,11 @@
 //! A device abstraction for infrared receivers using the NEC protocol.
 //!
+//! todo000 shouldn't link to traits
+//! todo000 put the examples back somewhere
 //! See [`Ir`](trait@crate::ir::Ir), [`IrMapping`](trait@crate::ir::IrMapping), and
 //! [`IrKepler`](trait@crate::ir::IrKepler), plus this module's macros for generated types.
 //!
+//! todo000 label this list, consider the the order, include the plurals.
 //! - [`ir!`](macro@crate::ir) — Macro to generate an IR receiver struct type (includes syntax details).
 //! - [`ir_mapping!`](macro@crate::ir_mapping) — Macro to generate an IR mapping struct type (includes syntax details).
 //! - [`ir_kepler!`](macro@crate::ir_kepler) — Macro to generate a Kepler IR struct type (includes syntax details).

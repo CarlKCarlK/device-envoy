@@ -596,9 +596,310 @@ macro_rules! __irs_impl {
     (
         pio: $pio:ident,
         $group_name:ident,
-        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($($tail:tt)+)]
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($name2:ident, $pin2:ident)]
     ) => {
-        compile_error!("irs! currently supports up to 2 receivers in one group.");
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
+
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+            pub struct $name1 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+            pub struct $name2 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name1 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm1(&[<$name1:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name1:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name2 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin2>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm2(&[<$name2:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name2:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name2:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name1 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name2 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin0: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    pin1: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    pin2: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin2>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0, &'static $name1, &'static $name2)> {
+                    let pio_instance = embassy_rp::pio::Pio::new(
+                        pio,
+                        <embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                    );
+                    let embassy_rp::pio::Pio {
+                        mut common, sm0, sm1, sm2, ..
+                    } = pio_instance;
+
+                    let receiver0 = $crate::ir::__new_receiver(&mut common, sm0, pin0);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm0(
+                        receiver0,
+                        &[<$name0:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let receiver1 = $crate::ir::__new_receiver(&mut common, sm1, pin1);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm1(
+                        receiver1,
+                        &[<$name1:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let receiver2 = $crate::ir::__new_receiver(&mut common, sm2, pin2);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm2(
+                        receiver2,
+                        &[<$name2:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let ir0 = [<$name0:upper _IR_CELL>].init($name0 {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    });
+                    let ir1 = [<$name1:upper _IR_CELL>].init($name1 {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    });
+                    let ir2 = [<$name2:upper _IR_CELL>].init($name2 {
+                        ir_static: &[<$name2:upper _IR_STATIC>],
+                    });
+                    Ok((ir0, ir1, ir2))
+                }
+            }
+        }
+    };
+    (
+        pio: $pio:ident,
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($name2:ident, $pin2:ident), ($name3:ident, $pin3:ident)]
+    ) => {
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name3:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
+            static [<$name3:upper _IR_CELL>]: ::static_cell::StaticCell<$name3> = ::static_cell::StaticCell::new();
+
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+            pub struct $name1 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+            pub struct $name2 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+            pub struct $name3 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name1 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm1(&[<$name1:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name1:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name2 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin2>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm2(&[<$name2:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name2:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name2:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name3 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin3>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm3(&[<$name3:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name3:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name3:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name1 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name2 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name3 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin0: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    pin1: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    pin2: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin2>,
+                    pin3: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin3>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0, &'static $name1, &'static $name2, &'static $name3)> {
+                    let pio_instance = embassy_rp::pio::Pio::new(
+                        pio,
+                        <embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                    );
+                    let embassy_rp::pio::Pio {
+                        mut common, sm0, sm1, sm2, sm3, ..
+                    } = pio_instance;
+
+                    let receiver0 = $crate::ir::__new_receiver(&mut common, sm0, pin0);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm0(
+                        receiver0,
+                        &[<$name0:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let receiver1 = $crate::ir::__new_receiver(&mut common, sm1, pin1);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm1(
+                        receiver1,
+                        &[<$name1:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let receiver2 = $crate::ir::__new_receiver(&mut common, sm2, pin2);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm2(
+                        receiver2,
+                        &[<$name2:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let receiver3 = $crate::ir::__new_receiver(&mut common, sm3, pin3);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm3(
+                        receiver3,
+                        &[<$name3:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let ir0 = [<$name0:upper _IR_CELL>].init($name0 {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    });
+                    let ir1 = [<$name1:upper _IR_CELL>].init($name1 {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    });
+                    let ir2 = [<$name2:upper _IR_CELL>].init($name2 {
+                        ir_static: &[<$name2:upper _IR_STATIC>],
+                    });
+                    let ir3 = [<$name3:upper _IR_CELL>].init($name3 {
+                        ir_static: &[<$name3:upper _IR_STATIC>],
+                    });
+                    Ok((ir0, ir1, ir2, ir3))
+                }
+            }
+        }
+    };
+    (
+        pio: $pio:ident,
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($name2:ident, $pin2:ident), ($name3:ident, $pin3:ident), ($($tail:tt)+)]
+    ) => {
+        compile_error!("irs! currently supports up to 4 receivers in one group.");
     };
 }
 
@@ -658,6 +959,8 @@ pub use crate::ir_kepler;
 ///     <GroupName> {
 ///         <Name0>: { pin: <pin0_ident> },
 ///         <Name1>: { pin: <pin1_ident> }, // optional
+///         <Name2>: { pin: <pin2_ident> }, // optional
+///         <Name3>: { pin: <pin3_ident> }, // optional
 ///     }
 /// }
 /// ```
@@ -667,7 +970,7 @@ pub use crate::ir_kepler;
 /// - `pio` — Shared PIO resource (for example `PIO0` or `PIO1`)
 /// - `pin` — One pin entry per generated receiver
 ///
-/// Supports one or two generated receivers per invocation.
+/// Supports one to four generated receivers per invocation.
 ///
 /// # Related Macros
 ///
@@ -721,6 +1024,8 @@ pub use crate::ir_mapping;
 ///     <GroupName> {
 ///         <Name0>: { pin: <pin0_ident> },
 ///         <Name1>: { pin: <pin1_ident> }, // optional
+///         <Name2>: { pin: <pin2_ident> }, // optional
+///         <Name3>: { pin: <pin3_ident> }, // optional
 ///     }
 /// }
 /// ```
@@ -732,7 +1037,7 @@ pub use crate::ir_mapping;
 /// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
 /// - `pin` — One pin entry per generated mapping receiver
 ///
-/// Supports one or two generated mapping receivers per invocation.
+/// Supports one to four generated mapping receivers per invocation.
 ///
 /// # Related Macros
 ///
@@ -780,6 +1085,8 @@ pub use ir;
 ///     <GroupName> {
 ///         <Name0>: { pin: <pin0_ident> },
 ///         <Name1>: { pin: <pin1_ident> }, // optional
+///         <Name2>: { pin: <pin2_ident> }, // optional
+///         <Name3>: { pin: <pin3_ident> }, // optional
 ///     }
 /// }
 /// ```
@@ -789,7 +1096,7 @@ pub use ir;
 /// - `pio` — Shared PIO resource (for example `PIO0` or `PIO1`)
 /// - `pin` — One pin entry per generated receiver
 ///
-/// Supports one or two generated receivers per invocation.
+/// Supports one to four generated receivers per invocation.
 ///
 /// # Related Macros
 ///

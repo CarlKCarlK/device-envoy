@@ -120,6 +120,16 @@ path = "ir_two.rs"
 required-features = ["pico1"]
 
 [[bin]]
+name = "ir_four"
+path = "ir_four.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "ir_kepler_four"
+path = "ir_kepler_four.rs"
+required-features = ["pico1"]
+
+[[bin]]
 name = "ir_kepler_single_reuse_should_fail"
 path = "ir_kepler_single_reuse_should_fail.rs"
 required-features = ["pico1"]

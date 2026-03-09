@@ -482,9 +482,330 @@ macro_rules! __irs_impl {
     };
     (
         $group_name:ident,
-        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($($tail:tt)+)]
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($name2:ident, $pin2:ident)]
     ) => {
-        compile_error!("irs! currently supports up to 2 receivers in one group.");
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
+
+            #[embassy_executor::task]
+            async fn [<__ $name0:lower _ir_receiver_task>](
+                channel: $crate::esp_hal::rmt::Channel<'static, $crate::esp_hal::Async, $crate::esp_hal::rmt::Rx>,
+                ir_static: &'static $crate::ir::__IrStatic,
+            ) -> ! {
+                $crate::ir::__ir_receiver_task_loop(channel, ir_static).await
+            }
+
+            #[embassy_executor::task]
+            async fn [<__ $name1:lower _ir_receiver_task>](
+                channel: $crate::esp_hal::rmt::Channel<'static, $crate::esp_hal::Async, $crate::esp_hal::rmt::Rx>,
+                ir_static: &'static $crate::ir::__IrStatic,
+            ) -> ! {
+                $crate::ir::__ir_receiver_task_loop(channel, ir_static).await
+            }
+
+            #[embassy_executor::task]
+            async fn [<__ $name2:lower _ir_receiver_task>](
+                channel: $crate::esp_hal::rmt::Channel<'static, $crate::esp_hal::Async, $crate::esp_hal::rmt::Rx>,
+                ir_static: &'static $crate::ir::__IrStatic,
+            ) -> ! {
+                $crate::ir::__ir_receiver_task_loop(channel, ir_static).await
+            }
+
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            pub struct $name1 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            pub struct $name2 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let channel = channel_creator
+                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .map_err($crate::Error::Rmt)?;
+                    spawner
+                        .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
+                        .map_err($crate::Error::TaskSpawn)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name1 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin1<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let channel = channel_creator
+                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .map_err($crate::Error::Rmt)?;
+                    spawner
+                        .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
+                        .map_err($crate::Error::TaskSpawn)?;
+                    Ok([<$name1:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name2 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin2<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let channel = channel_creator
+                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .map_err($crate::Error::Rmt)?;
+                    spawner
+                        .spawn([<__ $name2:lower _ir_receiver_task>](channel, &[<$name2:upper _IR_STATIC>]))
+                        .map_err($crate::Error::TaskSpawn)?;
+                    Ok([<$name2:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name2:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name1 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name2 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pin0: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator0: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    pin1: $crate::esp_hal::peripherals::$pin1<'static>,
+                    channel_creator1: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    pin2: $crate::esp_hal::peripherals::$pin2<'static>,
+                    channel_creator2: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0, &'static $name1, &'static $name2)> {
+                    let name0 = $name0::new(pin0, channel_creator0, spawner)?;
+                    let name1 = $name1::new(pin1, channel_creator1, spawner)?;
+                    let name2 = $name2::new(pin2, channel_creator2, spawner)?;
+                    Ok((name0, name1, name2))
+                }
+            }
+        }
+    };
+    (
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($name2:ident, $pin2:ident), ($name3:ident, $pin3:ident)]
+    ) => {
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name2:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name3:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+            static [<$name2:upper _IR_CELL>]: ::static_cell::StaticCell<$name2> = ::static_cell::StaticCell::new();
+            static [<$name3:upper _IR_CELL>]: ::static_cell::StaticCell<$name3> = ::static_cell::StaticCell::new();
+
+            #[embassy_executor::task]
+            async fn [<__ $name0:lower _ir_receiver_task>](
+                channel: $crate::esp_hal::rmt::Channel<'static, $crate::esp_hal::Async, $crate::esp_hal::rmt::Rx>,
+                ir_static: &'static $crate::ir::__IrStatic,
+            ) -> ! {
+                $crate::ir::__ir_receiver_task_loop(channel, ir_static).await
+            }
+
+            #[embassy_executor::task]
+            async fn [<__ $name1:lower _ir_receiver_task>](
+                channel: $crate::esp_hal::rmt::Channel<'static, $crate::esp_hal::Async, $crate::esp_hal::rmt::Rx>,
+                ir_static: &'static $crate::ir::__IrStatic,
+            ) -> ! {
+                $crate::ir::__ir_receiver_task_loop(channel, ir_static).await
+            }
+
+            #[embassy_executor::task]
+            async fn [<__ $name2:lower _ir_receiver_task>](
+                channel: $crate::esp_hal::rmt::Channel<'static, $crate::esp_hal::Async, $crate::esp_hal::rmt::Rx>,
+                ir_static: &'static $crate::ir::__IrStatic,
+            ) -> ! {
+                $crate::ir::__ir_receiver_task_loop(channel, ir_static).await
+            }
+
+            #[embassy_executor::task]
+            async fn [<__ $name3:lower _ir_receiver_task>](
+                channel: $crate::esp_hal::rmt::Channel<'static, $crate::esp_hal::Async, $crate::esp_hal::rmt::Rx>,
+                ir_static: &'static $crate::ir::__IrStatic,
+            ) -> ! {
+                $crate::ir::__ir_receiver_task_loop(channel, ir_static).await
+            }
+
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            pub struct $name1 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            pub struct $name2 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            pub struct $name3 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let channel = channel_creator
+                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .map_err($crate::Error::Rmt)?;
+                    spawner
+                        .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
+                        .map_err($crate::Error::TaskSpawn)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name1 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin1<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let channel = channel_creator
+                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .map_err($crate::Error::Rmt)?;
+                    spawner
+                        .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
+                        .map_err($crate::Error::TaskSpawn)?;
+                    Ok([<$name1:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name2 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin2<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let channel = channel_creator
+                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .map_err($crate::Error::Rmt)?;
+                    spawner
+                        .spawn([<__ $name2:lower _ir_receiver_task>](channel, &[<$name2:upper _IR_STATIC>]))
+                        .map_err($crate::Error::TaskSpawn)?;
+                    Ok([<$name2:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name2:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name3 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin3<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let channel = channel_creator
+                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .map_err($crate::Error::Rmt)?;
+                    spawner
+                        .spawn([<__ $name3:lower _ir_receiver_task>](channel, &[<$name3:upper _IR_STATIC>]))
+                        .map_err($crate::Error::TaskSpawn)?;
+                    Ok([<$name3:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name3:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name1 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name2 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name3 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pin0: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator0: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    pin1: $crate::esp_hal::peripherals::$pin1<'static>,
+                    channel_creator1: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    pin2: $crate::esp_hal::peripherals::$pin2<'static>,
+                    channel_creator2: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    pin3: $crate::esp_hal::peripherals::$pin3<'static>,
+                    channel_creator3: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0, &'static $name1, &'static $name2, &'static $name3)> {
+                    let name0 = $name0::new(pin0, channel_creator0, spawner)?;
+                    let name1 = $name1::new(pin1, channel_creator1, spawner)?;
+                    let name2 = $name2::new(pin2, channel_creator2, spawner)?;
+                    let name3 = $name3::new(pin3, channel_creator3, spawner)?;
+                    Ok((name0, name1, name2, name3))
+                }
+            }
+        }
+    };
+    (
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($name2:ident, $pin2:ident), ($name3:ident, $pin3:ident), ($($tail:tt)+)]
+    ) => {
+        compile_error!("irs! currently supports up to 4 receivers in one group.");
     };
 }
 
@@ -540,6 +861,8 @@ pub use crate::ir_kepler;
 ///     <GroupName> {
 ///         <Name0>: { pin: <pin0_ident> },
 ///         <Name1>: { pin: <pin1_ident> }, // optional
+///         <Name2>: { pin: <pin2_ident> }, // optional
+///         <Name3>: { pin: <pin3_ident> }, // optional
 ///     }
 /// }
 /// ```
@@ -548,7 +871,7 @@ pub use crate::ir_kepler;
 ///
 /// - `pin` — One pin entry per generated Kepler receiver
 ///
-/// Supports one or two generated receivers per invocation.
+/// Supports one to four generated receivers per invocation.
 ///
 /// # Related Macros
 ///
@@ -599,6 +922,8 @@ pub use crate::ir_mapping;
 ///     <GroupName> {
 ///         <Name0>: { pin: <pin0_ident> },
 ///         <Name1>: { pin: <pin1_ident> }, // optional
+///         <Name2>: { pin: <pin2_ident> }, // optional
+///         <Name3>: { pin: <pin3_ident> }, // optional
 ///     }
 /// }
 /// ```
@@ -609,7 +934,7 @@ pub use crate::ir_mapping;
 /// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
 /// - `pin` — One pin entry per generated mapping receiver
 ///
-/// Supports one or two generated mapping receivers per invocation.
+/// Supports one to four generated mapping receivers per invocation.
 ///
 /// # Related Macros
 ///
@@ -654,6 +979,8 @@ pub use ir;
 ///     <GroupName> {
 ///         <Name0>: { pin: <pin0_ident> },
 ///         <Name1>: { pin: <pin1_ident> }, // optional
+///         <Name2>: { pin: <pin2_ident> }, // optional
+///         <Name3>: { pin: <pin3_ident> }, // optional
 ///     }
 /// }
 /// ```
@@ -662,7 +989,7 @@ pub use ir;
 ///
 /// - `pin` — One pin entry per generated receiver
 ///
-/// Supports one or two generated receivers per invocation.
+/// Supports one to four generated receivers per invocation.
 ///
 /// # Related Macros
 ///

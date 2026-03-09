@@ -264,7 +264,12 @@ fn check_embedded_tests() -> ExitCode {
         "--> embedded tests (compile-pass + expected compile-fail)".cyan()
     );
 
-    let compile_pass_tests = ["ir_two_receivers_compile"];
+    let compile_pass_tests = [
+        "ir_two_receivers_compile",
+        "ir_four_receivers_compile",
+        "ir_mapping_four_receivers_compile",
+        "ir_kepler_four_receivers_compile",
+    ];
     let compile_fail_tests = ["ir_duplicate_channel_compile_fail"];
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;

@@ -76,6 +76,21 @@ path = "tests/embedded/ir_two_receivers_compile.rs"
 harness = false
 
 [[test]]
+name = "ir_four_receivers_compile"
+path = "tests/embedded/ir_four_receivers_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_mapping_four_receivers_compile"
+path = "tests/embedded/ir_mapping_four_receivers_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_kepler_four_receivers_compile"
+path = "tests/embedded/ir_kepler_four_receivers_compile.rs"
+harness = false
+
+[[test]]
 name = "ir_duplicate_channel_compile_fail"
 path = "tests/embedded/ir_duplicate_channel_compile_fail.rs"
 harness = false

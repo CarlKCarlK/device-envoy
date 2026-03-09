@@ -2,15 +2,8 @@
 //!
 //! See [`IrKeplerRp`] for usage examples.
 
-use embassy_executor::Spawner;
-use embassy_rp::Peri;
-use embassy_rp::gpio::Pin;
-use embassy_rp::pio::PioPin;
-
 use device_envoy_core::ir::{IrKepler, IrMapping as _};
 
-use crate::Result;
-use crate::ir::IrPioPeripheral;
 use crate::ir::mapping::IrMappingRp;
 
 pub use device_envoy_core::ir::kepler::{IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
@@ -29,17 +22,21 @@ type IrKeplerMapping<'a> = IrMappingRp<'a, KeplerButton, 21>;
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// use device_envoy_rp::ir::{IrKepler as _, IrKeplerRp, IrKeplerStatic};
+/// use device_envoy_rp::ir::{IrKepler as _};
+/// use device_envoy_rp::ir_kepler;
+///
+/// ir_kepler! {
+///     IrKepler00: { pio: PIO0, pin: PIN_15 }
+/// }
 ///
 /// async fn example(
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
-///     static IR_KEPLER_STATIC: IrKeplerStatic = IrKeplerRp::new_static();
-///     let ir_kepler = IrKeplerRp::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO0, spawner)?;
+///     let ir_kepler00 = IrKepler00::new(p.PIO0, p.PIN_15, spawner)?;
 ///
 ///     loop {
-///         let button = ir_kepler.wait_for_press().await;
+///         let button = ir_kepler00.wait_for_press().await;
 ///         defmt::info!("Button: {:?}", button);
 ///     }
 /// }
@@ -48,45 +45,205 @@ pub struct IrKeplerRp<'a> {
     mapping: IrKeplerMapping<'a>,
 }
 
-impl<'a> IrKeplerRp<'a> {
-    /// Create static channel resources for IR events.
-    ///
-    /// See [`IrKeplerRp`] for usage examples.
-    #[must_use]
-    pub const fn new_static() -> IrKeplerStatic {
-        IrKeplerStatic::new()
-    }
-
-    /// Create a new Kepler remote handler.
-    ///
-    /// # Parameters
-    /// - `ir_kepler_static`: Static reference to the channel resources
-    /// - `pin`: GPIO pin connected to the IR receiver
-    /// - `pio`: PIO peripheral to use (PIO0, PIO1, or PIO2)
-    /// - `spawner`: Embassy spawner for background task
-    ///
-    /// See [`IrKeplerRp`] for usage examples.
-    ///
-    /// # Errors
-    /// Returns an error if the background task cannot be spawned.
-    pub fn new<P, PIO>(
-        ir_kepler_static: &'static IrKeplerStatic,
-        pin: Peri<'static, P>,
-        pio: Peri<'static, PIO>,
-        spawner: Spawner,
-    ) -> Result<Self>
-    where
-        P: Pin + PioPin,
-        PIO: IrPioPeripheral,
-    {
-        let mapping =
-            IrMappingRp::new(ir_kepler_static.inner(), pin, pio, &KEPLER_MAPPING, spawner)?;
-        Ok(Self { mapping })
-    }
-}
-
 impl IrKepler for IrKeplerRp<'_> {
     async fn wait_for_press(&self) -> KeplerButton {
         self.mapping.wait_for_press().await
     }
 }
+
+/// Generate one or more typed Kepler IR constructors sharing one PIO resource.
+///
+/// This macro is built on top of [`ir_mappings!`](macro@crate::ir_mappings).
+#[doc(hidden)]
+#[macro_export]
+macro_rules! ir_keplers {
+    (
+        pio: $pio:ident,
+        $group_name:ident {
+            $name0:ident : { pin: $pin0:ident $(,)? }
+        }
+        $(,)?
+    ) => {
+        $crate::ir::paste::paste! {
+            $crate::ir_mappings! {
+                pio: $pio,
+                button: $crate::ir::KeplerButton,
+                capacity: 21,
+                [<__ $group_name _MAPPINGS>] {
+                    [<__ $name0 _MAPPING>]: { pin: $pin0 }
+                }
+            }
+
+            impl $crate::ir::IrKepler for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::KeplerButton {
+                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerButton>>::wait_for_press(self.mapping).await
+                }
+            }
+
+            static [<$name0:upper _KEPLER_CELL>]: ::static_cell::StaticCell<$name0> =
+                ::static_cell::StaticCell::new();
+
+            pub struct $name0 {
+                mapping: &'static [<__ $name0 _MAPPING>],
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let mapping = [<__ $name0 _MAPPING>]::new(
+                        pio,
+                        pin,
+                        &$crate::ir::KEPLER_MAPPING,
+                        spawner,
+                    )?;
+                    Ok([<$name0:upper _KEPLER_CELL>].init(Self { mapping }))
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin0: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0,)> {
+                    let name0 = $name0::new(pio, pin0, spawner)?;
+                    Ok((name0,))
+                }
+            }
+        }
+    };
+    (
+        pio: $pio:ident,
+        $group_name:ident {
+            $name0:ident : { pin: $pin0:ident $(,)? },
+            $name1:ident : { pin: $pin1:ident $(,)? }
+        }
+        $(,)?
+    ) => {
+        $crate::ir::paste::paste! {
+            $crate::ir_mappings! {
+                pio: $pio,
+                button: $crate::ir::KeplerButton,
+                capacity: 21,
+                [<__ $group_name _MAPPINGS>] {
+                    [<__ $name0 _MAPPING>]: { pin: $pin0 },
+                    [<__ $name1 _MAPPING>]: { pin: $pin1 }
+                }
+            }
+
+            static [<$name0:upper _KEPLER_CELL>]: ::static_cell::StaticCell<$name0> =
+                ::static_cell::StaticCell::new();
+            static [<$name1:upper _KEPLER_CELL>]: ::static_cell::StaticCell<$name1> =
+                ::static_cell::StaticCell::new();
+
+            pub struct $name0 {
+                mapping: &'static [<__ $name0 _MAPPING>],
+            }
+
+            pub struct $name1 {
+                mapping: &'static [<__ $name1 _MAPPING>],
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let mapping = [<__ $name0 _MAPPING>]::new(
+                        pio,
+                        pin,
+                        &$crate::ir::KEPLER_MAPPING,
+                        spawner,
+                    )?;
+                    Ok([<$name0:upper _KEPLER_CELL>].init(Self { mapping }))
+                }
+            }
+
+            impl $name1 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let mapping = [<__ $name1 _MAPPING>]::new(
+                        pio,
+                        pin,
+                        &$crate::ir::KEPLER_MAPPING,
+                        spawner,
+                    )?;
+                    Ok([<$name1:upper _KEPLER_CELL>].init(Self { mapping }))
+                }
+            }
+
+            impl $crate::ir::IrKepler for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::KeplerButton {
+                    <[<__ $name0 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerButton>>::wait_for_press(self.mapping).await
+                }
+            }
+
+            impl $crate::ir::IrKepler for $name1 {
+                async fn wait_for_press(&self) -> $crate::ir::KeplerButton {
+                    <[<__ $name1 _MAPPING>] as $crate::ir::IrMapping<$crate::ir::KeplerButton>>::wait_for_press(self.mapping).await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin0: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    pin1: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0, &'static $name1)> {
+                    let (mapping0, mapping1) = [<__ $group_name _MAPPINGS>]::new(
+                        pio,
+                        pin0,
+                        pin1,
+                        &$crate::ir::KEPLER_MAPPING,
+                        &$crate::ir::KEPLER_MAPPING,
+                        spawner,
+                    )?;
+                    let name0 = [<$name0:upper _KEPLER_CELL>].init($name0 { mapping: mapping0 });
+                    let name1 = [<$name1:upper _KEPLER_CELL>].init($name1 { mapping: mapping1 });
+                    Ok((name0, name1))
+                }
+            }
+        }
+    };
+}
+
+/// Generate one typed Kepler IR constructor.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! ir_kepler {
+    (
+        $name:ident : { pio: $pio:ident, pin: $pin:ident $(,)? }
+    ) => {
+        $crate::ir::paste::paste! {
+            $crate::ir_keplers! {
+                pio: $pio,
+                [<__ $name _KEPLERS>] {
+                    $name: { pin: $pin }
+                }
+            }
+        }
+    };
+}
+
+#[allow(unused_imports)]
+/// Macro to generate one Kepler IR type.
+///
+/// Use this when you need one Kepler receiver.
+#[doc(inline)]
+pub use ir_kepler;
+#[allow(unused_imports)]
+/// Macro to generate multiple Kepler IR types on one PIO resource.
+///
+/// Use this when you need multiple Kepler receivers sharing one PIO resource.
+#[doc(inline)]
+pub use ir_keplers;

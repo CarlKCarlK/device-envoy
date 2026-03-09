@@ -5,10 +5,15 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
+use device_envoy_rp::ir;
 use device_envoy_rp::Result;
-use device_envoy_rp::ir::{Ir as _, IrEvent, IrRp, IrStatic};
+use device_envoy_rp::ir::{Ir as _, IrEvent};
 use embassy_executor::Spawner;
 use panic_probe as _;
+
+ir! {
+    Ir15: { pio: PIO0, pin: PIN_15 }
+}
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -21,14 +26,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("IR NEC decoder example starting...");
 
-    static IR_STATIC: IrStatic = IrRp::new_static();
-    let ir = IrRp::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
+    let ir15 = Ir15::new(p.PIO0, p.PIN_15, spawner)?;
 
     info!("IR receiver initialized on GP15");
 
     // Main loop: process IR events
     loop {
-        let event = ir.wait_for_press().await;
+        let event = ir15.wait_for_press().await;
         match event {
             IrEvent::Press { addr, cmd } => {
                 info!("IR Button Press - addr=0x{:04X} cmd=0x{:02X}", addr, cmd);

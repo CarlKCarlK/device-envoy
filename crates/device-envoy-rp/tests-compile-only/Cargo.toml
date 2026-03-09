@@ -113,3 +113,13 @@ required-features = ["pico1"]
 name = "lcd_text_single_then_group_should_fail"
 path = "lcd_text_single_then_group_should_fail.rs"
 required-features = ["pico1"]
+
+[[bin]]
+name = "ir_two"
+path = "ir_two.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "ir_kepler_single_reuse_should_fail"
+path = "ir_kepler_single_reuse_should_fail.rs"
+required-features = ["pico1"]

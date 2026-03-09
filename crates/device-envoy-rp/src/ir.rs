@@ -14,6 +14,9 @@ use crate::{Error, Result};
 
 use device_envoy_core::ir::decode_nec_frame;
 pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrMappingAdapter, IrStatic};
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use paste;
 
 // ============================================================================
 // Submodules
@@ -22,8 +25,8 @@ pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrMappingAdapt
 mod kepler;
 mod mapping;
 
-pub use kepler::{IrKeplerRp, IrKeplerStatic, KeplerButton};
-pub use mapping::{IrMappingRp, IrMappingStatic};
+pub use kepler::{IrKeplerRp, IrKeplerStatic, KEPLER_MAPPING, KeplerButton};
+pub use mapping::{IrMappingRp, IrMappingStatic, __build_button_map};
 
 // ===== NEC Receiver (forward declaration) ==================================
 
@@ -40,44 +43,146 @@ pub struct NecReceiver<'d, PIO: Instance, const SM: usize> {
 /// This trait associates each PIO peripheral with its interrupt bindings.
 #[doc(hidden)]
 pub trait IrPioPeripheral: crate::pio_irqs::PioIrqMap {
-    /// Spawn the task for this PIO
-    fn spawn_task(
+    /// Spawn SM0 receive task for this PIO.
+    fn spawn_task_sm0(
         receiver: NecReceiver<'static, Self, 0>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()>;
+
+    /// Spawn SM1 receive task for this PIO.
+    fn spawn_task_sm1(
+        receiver: NecReceiver<'static, Self, 1>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()>;
+
+    /// Spawn SM2 receive task for this PIO.
+    fn spawn_task_sm2(
+        receiver: NecReceiver<'static, Self, 2>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()>;
+
+    /// Spawn SM3 receive task for this PIO.
+    fn spawn_task_sm3(
+        receiver: NecReceiver<'static, Self, 3>,
         ir_static: &'static IrStatic,
         spawner: Spawner,
     ) -> Result<()>;
 }
 
 impl IrPioPeripheral for embassy_rp::peripherals::PIO0 {
-    fn spawn_task(
+    fn spawn_task_sm0(
         receiver: NecReceiver<'static, Self, 0>,
         ir_static: &'static IrStatic,
         spawner: Spawner,
     ) -> Result<()> {
-        let token = ir_pio0_task(receiver, ir_static);
+        let token = ir_pio0_sm0_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm1(
+        receiver: NecReceiver<'static, Self, 1>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio0_sm1_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm2(
+        receiver: NecReceiver<'static, Self, 2>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio0_sm2_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm3(
+        receiver: NecReceiver<'static, Self, 3>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio0_sm3_task(receiver, ir_static);
         spawner.spawn(token).map_err(Error::TaskSpawn)
     }
 }
 
 impl IrPioPeripheral for embassy_rp::peripherals::PIO1 {
-    fn spawn_task(
+    fn spawn_task_sm0(
         receiver: NecReceiver<'static, Self, 0>,
         ir_static: &'static IrStatic,
         spawner: Spawner,
     ) -> Result<()> {
-        let token = ir_pio1_task(receiver, ir_static);
+        let token = ir_pio1_sm0_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm1(
+        receiver: NecReceiver<'static, Self, 1>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio1_sm1_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm2(
+        receiver: NecReceiver<'static, Self, 2>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio1_sm2_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm3(
+        receiver: NecReceiver<'static, Self, 3>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio1_sm3_task(receiver, ir_static);
         spawner.spawn(token).map_err(Error::TaskSpawn)
     }
 }
 
 #[cfg(feature = "pico2")]
 impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
-    fn spawn_task(
+    fn spawn_task_sm0(
         receiver: NecReceiver<'static, Self, 0>,
         ir_static: &'static IrStatic,
         spawner: Spawner,
     ) -> Result<()> {
-        let token = ir_pio2_task(receiver, ir_static);
+        let token = ir_pio2_sm0_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm1(
+        receiver: NecReceiver<'static, Self, 1>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio2_sm1_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm2(
+        receiver: NecReceiver<'static, Self, 2>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio2_sm2_task(receiver, ir_static);
+        spawner.spawn(token).map_err(Error::TaskSpawn)
+    }
+
+    fn spawn_task_sm3(
+        receiver: NecReceiver<'static, Self, 3>,
+        ir_static: &'static IrStatic,
+        spawner: Spawner,
+    ) -> Result<()> {
+        let token = ir_pio2_sm3_task(receiver, ir_static);
         spawner.spawn(token).map_err(Error::TaskSpawn)
     }
 }
@@ -92,19 +197,23 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_rp::ir::{Ir as _, IrEvent, IrRp, IrStatic};
+/// use device_envoy_rp::ir;
+/// use device_envoy_rp::ir::{Ir as _, IrEvent};
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+///
+/// ir! {
+///     Ir15: { pio: PIO0, pin: PIN_15 }
+/// }
 ///
 /// async fn example(
 ///     p: embassy_rp::Peripherals,
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
-///     static IR_STATIC: IrStatic = IrRp::new_static();
-///     let ir = IrRp::new(&IR_STATIC, p.PIN_15, p.PIO0, spawner)?;
+///     let ir15 = Ir15::new(p.PIO0, p.PIN_15, spawner)?;
 ///
 ///     loop {
-///         let IrEvent::Press { addr, cmd } = ir.wait_for_press().await;
+///         let IrEvent::Press { addr, cmd } = ir15.wait_for_press().await;
 ///         defmt::info!("IR: addr=0x{:04X}, cmd=0x{:02X}", addr, cmd);
 ///     }
 /// }
@@ -113,51 +222,105 @@ pub struct IrRp<'a> {
     ir_static: &'a IrStatic,
 }
 
-impl IrRp<'_> {
-    /// Create static channel resources for IR events.
-    ///
-    /// See [`IrRp`] for usage examples.
-    #[must_use]
-    pub const fn new_static() -> IrStatic {
-        IrStatic::new()
-    }
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub fn __new_receiver<P, PIO, const SM: usize>(
+    common: &mut Common<'static, PIO>,
+    sm: StateMachine<'static, PIO, SM>,
+    pin: Peri<'static, P>,
+) -> NecReceiver<'static, PIO, SM>
+where
+    P: Pin + PioPin,
+    PIO: Instance,
+{
+    let mut ir_pin = common.make_pio_pin(pin);
+    // IR receivers idle HIGH and pull LOW when carrier is detected.
+    ir_pin.set_pull(Pull::Up);
+    NecReceiver::new(common, sm, ir_pin)
+}
 
-    /// Create a new PIO-based IR receiver on the specified pin.
-    ///
-    /// See [`IrRp`] for usage examples.
-    ///
-    /// # Errors
-    /// Returns an error if the background task cannot be spawned.
-    pub fn new<P, PIO>(
-        ir_static: &'static IrStatic,
-        pin: Peri<'static, P>,
-        pio: Peri<'static, PIO>,
-        spawner: Spawner,
-    ) -> Result<Self>
-    where
-        P: Pin + PioPin,
-        PIO: IrPioPeripheral,
-    {
-        // Set up PIO in the generic context where we have the concrete pin type
-        let pio_instance =
-            embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
-        let embassy_rp::pio::Pio {
-            mut common, sm0, ..
-        } = pio_instance;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub fn __new_ir_on_sm0<P, PIO>(
+    ir_static: &'static IrStatic,
+    pin: Peri<'static, P>,
+    pio: Peri<'static, PIO>,
+    spawner: Spawner,
+) -> Result<IrRp<'static>>
+where
+    P: Pin + PioPin,
+    PIO: IrPioPeripheral,
+{
+    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let embassy_rp::pio::Pio {
+        mut common, sm0, ..
+    } = pio_instance;
+    let nec_receiver = __new_receiver(&mut common, sm0, pin);
+    PIO::spawn_task_sm0(nec_receiver, ir_static, spawner)?;
+    Ok(IrRp { ir_static })
+}
 
-        // Configure pin for IR receiver input with pull-up
-        // IR receivers idle HIGH and pull LOW when detecting carrier
-        let mut ir_pin = common.make_pio_pin(pin);
-        ir_pin.set_pull(Pull::Up);
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub fn __new_ir_on_sm1<P, PIO>(
+    ir_static: &'static IrStatic,
+    pin: Peri<'static, P>,
+    pio: Peri<'static, PIO>,
+    spawner: Spawner,
+) -> Result<IrRp<'static>>
+where
+    P: Pin + PioPin,
+    PIO: IrPioPeripheral,
+{
+    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let embassy_rp::pio::Pio {
+        mut common, sm1, ..
+    } = pio_instance;
+    let nec_receiver = __new_receiver(&mut common, sm1, pin);
+    PIO::spawn_task_sm1(nec_receiver, ir_static, spawner)?;
+    Ok(IrRp { ir_static })
+}
 
-        // Load and configure the PIO program
-        let nec_receiver = NecReceiver::new(&mut common, sm0, ir_pin);
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub fn __new_ir_on_sm2<P, PIO>(
+    ir_static: &'static IrStatic,
+    pin: Peri<'static, P>,
+    pio: Peri<'static, PIO>,
+    spawner: Spawner,
+) -> Result<IrRp<'static>>
+where
+    P: Pin + PioPin,
+    PIO: IrPioPeripheral,
+{
+    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let embassy_rp::pio::Pio {
+        mut common, sm2, ..
+    } = pio_instance;
+    let nec_receiver = __new_receiver(&mut common, sm2, pin);
+    PIO::spawn_task_sm2(nec_receiver, ir_static, spawner)?;
+    Ok(IrRp { ir_static })
+}
 
-        // Spawn the task with the configured receiver (dispatch to PIO-specific task)
-        PIO::spawn_task(nec_receiver, ir_static, spawner)?;
-
-        Ok(Self { ir_static })
-    }
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub fn __new_ir_on_sm3<P, PIO>(
+    ir_static: &'static IrStatic,
+    pin: Peri<'static, P>,
+    pio: Peri<'static, PIO>,
+    spawner: Spawner,
+) -> Result<IrRp<'static>>
+where
+    P: Pin + PioPin,
+    PIO: IrPioPeripheral,
+{
+    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let embassy_rp::pio::Pio {
+        mut common, sm3, ..
+    } = pio_instance;
+    let nec_receiver = __new_receiver(&mut common, sm3, pin);
+    PIO::spawn_task_sm3(nec_receiver, ir_static, spawner)?;
+    Ok(IrRp { ir_static })
 }
 
 impl Ir for IrRp<'_> {
@@ -166,54 +329,265 @@ impl Ir for IrRp<'_> {
     }
 }
 
-#[embassy_executor::task]
-async fn ir_pio0_task(
-    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO0, 0>,
-    ir_static: &'static IrStatic,
-) -> ! {
-    loop {
-        // Wait for a frame from the PIO FIFO
-        let raw_frame = nec_receiver.receive_frame().await;
-
-        // Decode and validate the frame
-        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
-            ir_static.send(IrEvent::Press { addr, cmd }).await;
+/// Generate one or more typed IR receiver constructors sharing a single PIO resource.
+///
+/// See the [`IrRp`] struct example for base usage and the generated `new(...)` constructors.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! irs {
+    (
+        pio: $pio:ident,
+        $group_name:ident {
+            $first_name:ident : { pin: $first_pin:ident $(,)? }
+            $(, $rest_name:ident : { pin: $rest_pin:ident $(,)? })* $(,)?
         }
-    }
+    ) => {
+        $crate::__irs_impl! {
+            pio: $pio,
+            $group_name,
+            [($first_name, $first_pin) $(, ($rest_name, $rest_pin))*]
+        }
+    };
 }
 
-#[embassy_executor::task]
-async fn ir_pio1_task(
-    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO1, 0>,
-    ir_static: &'static IrStatic,
-) -> ! {
-    loop {
-        // Wait for a frame from the PIO FIFO
-        let raw_frame = nec_receiver.receive_frame().await;
+/// Internal implementation helper for [`irs!`].
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __irs_impl {
+    (
+        pio: $pio:ident,
+        $group_name:ident,
+        [($name0:ident, $pin0:ident)]
+    ) => {
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::IrStatic = $crate::ir::IrStatic::new();
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
 
-        // Decode and validate the frame
-        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
-            ir_static.send(IrEvent::Press { addr, cmd }).await;
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin0: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0,)> {
+                    let name0 = $name0::new(pio, pin0, spawner)?;
+                    Ok((name0,))
+                }
+            }
         }
-    }
+    };
+    (
+        pio: $pio:ident,
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident)]
+    ) => {
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::IrStatic = $crate::ir::IrStatic::new();
+            static [<$name1:upper _IR_STATIC>]: $crate::ir::IrStatic = $crate::ir::IrStatic::new();
+
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::IrStatic,
+            }
+            pub struct $name1 {
+                ir_static: &'static $crate::ir::IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm0(&[<$name0:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name1 {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    let _ = $crate::ir::__new_ir_on_sm1(&[<$name1:upper _IR_STATIC>], pin, pio, spawner)?;
+                    Ok([<$name1:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name1 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pio: embassy_rp::Peri<'static, embassy_rp::peripherals::$pio>,
+                    pin0: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin0>,
+                    pin1: embassy_rp::Peri<'static, embassy_rp::peripherals::$pin1>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0, &'static $name1)> {
+                    let pio_instance = embassy_rp::pio::Pio::new(
+                        pio,
+                        <embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                    );
+                    let embassy_rp::pio::Pio {
+                        mut common, sm0, sm1, ..
+                    } = pio_instance;
+
+                    let receiver0 = $crate::ir::__new_receiver(&mut common, sm0, pin0);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm0(
+                        receiver0,
+                        &[<$name0:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let receiver1 = $crate::ir::__new_receiver(&mut common, sm1, pin1);
+                    <embassy_rp::peripherals::$pio as $crate::ir::IrPioPeripheral>::spawn_task_sm1(
+                        receiver1,
+                        &[<$name1:upper _IR_STATIC>],
+                        spawner,
+                    )?;
+
+                    let ir0 = [<$name0:upper _IR_CELL>].init($name0 {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    });
+                    let ir1 = [<$name1:upper _IR_CELL>].init($name1 {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    });
+                    Ok((ir0, ir1))
+                }
+            }
+        }
+    };
+    (
+        pio: $pio:ident,
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($($tail:tt)+)]
+    ) => {
+        compile_error!("irs! currently supports up to 2 receivers in one group.");
+    };
 }
+
+/// Generate one typed IR receiver constructor.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! ir {
+    (
+        $name:ident : { pio: $pio:ident, pin: $pin:ident $(,)? }
+    ) => {
+        $crate::ir::paste::paste! {
+            $crate::irs! {
+                pio: $pio,
+                [<__ $name _GROUP>] {
+                    $name: { pin: $pin }
+                }
+            }
+        }
+    };
+}
+
+/// Macro to generate one IR receiver type.
+///
+/// Use this when you need a single receiver.
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use ir;
+/// Macro to generate multiple IR receiver types on one PIO resource.
+///
+/// Use this when you need more than one receiver sharing the same PIO resource.
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use irs;
+/// Macro to generate one IR-mapping type.
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_mapping;
+/// Macro to generate multiple IR-mapping types on one PIO resource.
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_mappings;
+/// Macro to generate one Kepler IR type.
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_kepler;
+/// Macro to generate multiple Kepler IR types on one PIO resource.
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_keplers;
+
+macro_rules! __define_ir_task {
+    ($task_name:ident, $pio:ty, $sm:literal) => {
+        #[embassy_executor::task]
+        async fn $task_name(
+            mut nec_receiver: NecReceiver<'static, $pio, $sm>,
+            ir_static: &'static IrStatic,
+        ) -> ! {
+            loop {
+                let raw_frame = nec_receiver.receive_frame().await;
+                if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
+                    ir_static.send(IrEvent::Press { addr, cmd }).await;
+                }
+            }
+        }
+    };
+}
+
+__define_ir_task!(ir_pio0_sm0_task, embassy_rp::peripherals::PIO0, 0);
+__define_ir_task!(ir_pio0_sm1_task, embassy_rp::peripherals::PIO0, 1);
+__define_ir_task!(ir_pio0_sm2_task, embassy_rp::peripherals::PIO0, 2);
+__define_ir_task!(ir_pio0_sm3_task, embassy_rp::peripherals::PIO0, 3);
+
+__define_ir_task!(ir_pio1_sm0_task, embassy_rp::peripherals::PIO1, 0);
+__define_ir_task!(ir_pio1_sm1_task, embassy_rp::peripherals::PIO1, 1);
+__define_ir_task!(ir_pio1_sm2_task, embassy_rp::peripherals::PIO1, 2);
+__define_ir_task!(ir_pio1_sm3_task, embassy_rp::peripherals::PIO1, 3);
 
 #[cfg(feature = "pico2")]
-#[embassy_executor::task]
-async fn ir_pio2_task(
-    mut nec_receiver: NecReceiver<'static, embassy_rp::peripherals::PIO2, 0>,
-    ir_static: &'static IrStatic,
-) -> ! {
-    loop {
-        // Wait for a frame from the PIO FIFO
-        let raw_frame = nec_receiver.receive_frame().await;
-
-        // Decode and validate the frame
-        if let Some((addr, cmd)) = decode_nec_frame(raw_frame) {
-            ir_static.send(IrEvent::Press { addr, cmd }).await;
-        }
-    }
-}
+__define_ir_task!(ir_pio2_sm0_task, embassy_rp::peripherals::PIO2, 0);
+#[cfg(feature = "pico2")]
+__define_ir_task!(ir_pio2_sm1_task, embassy_rp::peripherals::PIO2, 1);
+#[cfg(feature = "pico2")]
+__define_ir_task!(ir_pio2_sm2_task, embassy_rp::peripherals::PIO2, 2);
+#[cfg(feature = "pico2")]
+__define_ir_task!(ir_pio2_sm3_task, embassy_rp::peripherals::PIO2, 3);
 
 // ===== NEC Receiver Implementation =========================================
 

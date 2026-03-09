@@ -19,7 +19,7 @@ i2cs! {
     scl_pin: GPIO17,
     LcdTexts0 {
         LcdText16x2 { width: 16, height: 2, address: 0x27 },
-        LcdText20x4 { width: 20, height: 4, address: 0x3F },
+        LcdText20x4 { width: 20, height: 4, address: 0x26 },
     }
 }
 

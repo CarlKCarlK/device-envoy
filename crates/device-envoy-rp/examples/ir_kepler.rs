@@ -6,10 +6,20 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
+use device_envoy_rp::ir_keplers;
 use device_envoy_rp::Result;
-use device_envoy_rp::ir::{IrKepler as _, IrKeplerRp, IrKeplerStatic};
+use device_envoy_rp::ir::IrKepler as _;
+use embassy_futures::select::{Either, select};
 use embassy_executor::Spawner;
 use panic_probe as _;
+
+ir_keplers! {
+    pio: PIO0,
+    IrKeplers0 {
+        IrKepler00: { pin: PIN_15 },
+        IrKepler01: { pin: PIN_16 }
+    }
+}
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -22,14 +32,15 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting Kepler IR Remote Example");
 
-    static IR_KEPLER_STATIC: IrKeplerStatic = IrKeplerRp::new_static();
-    let ir_kepler = IrKeplerRp::new(&IR_KEPLER_STATIC, p.PIN_15, p.PIO0, spawner)?;
+    let (ir_kepler00, ir_kepler01) = IrKeplers0::new(p.PIO0, p.PIN_15, p.PIN_16, spawner)?;
 
-    info!("Kepler remote initialized on GPIO 15");
+    info!("Kepler remotes initialized on GPIO 15 and 16");
     info!("Press buttons on the remote control...");
 
     loop {
-        let button = ir_kepler.wait_for_press().await;
-        info!("Button pressed: {:?}", button);
+        match select(ir_kepler00.wait_for_press(), ir_kepler01.wait_for_press()).await {
+            Either::First(button0) => info!("Kepler00 button pressed: {:?}", button0),
+            Either::Second(button1) => info!("Kepler01 button pressed: {:?}", button1),
+        }
     }
 }

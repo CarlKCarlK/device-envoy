@@ -250,7 +250,7 @@ macro_rules! ir_mapping {
 }
 
 #[allow(unused_imports)]
-/// Macro to generate an IR mapping struct type (includes syntax details).
+/// Macro to generate an IR mapping struct type (includes syntax details). TODO000 make macro shorter in docs.
 #[doc(inline)]
 pub use ir_mapping;
 #[allow(unused_imports)]

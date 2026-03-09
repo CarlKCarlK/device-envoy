@@ -11,9 +11,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start,
-    ir::{IrKeplerEsp, IrKeplerStatic},
-    led2d,
+    init_and_start, ir_kepler, led2d,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::Current,
 };
@@ -31,6 +29,10 @@ led2d! {
         engine: Engine::Spi,
         max_frames: 30,
     }
+}
+
+ir_kepler! {
+    IrKepler7: { pin: GPIO7 }
 }
 
 #[esp_rtos::main]
@@ -52,8 +54,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     #[cfg(not(target_arch = "xtensa"))]
     let ir_rmt_channel = rmt80.channel2; // On ESP32-C6, channels 0–3 all support RX.
 
-    static IR_KEPLER_STATIC: IrKeplerStatic = IrKeplerEsp::new_static();
-    let ir_kepler = IrKeplerEsp::new(&IR_KEPLER_STATIC, p.GPIO7, ir_rmt_channel, spawner)?;
+    let ir_kepler7 = IrKepler7::new(p.GPIO7, ir_rmt_channel, spawner)?;
 
-    conway_with_led2d_ir_kepler(led16x16, ir_kepler).await
+    conway_with_led2d_ir_kepler(led16x16, ir_kepler7).await
 }

@@ -6,11 +6,7 @@ use core::convert::Infallible;
 
 use esp_backtrace as _;
 
-use device_envoy_esp::{
-    init_and_start,
-    ir::{IrMapping, IrMappingEsp, IrMappingStatic},
-    Result,
-};
+use device_envoy_esp::{init_and_start, ir::IrMapping, ir_mapping, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -26,6 +22,14 @@ const APP_BUTTON_MAP: [(u16, u8, AppButton); 3] = [
     (0x0000, 0x09, AppButton::Plus),
     (0x0000, 0x15, AppButton::Minus),
 ];
+
+ir_mapping! {
+    IrMapping7: {
+        pin: GPIO7,
+        button: AppButton,
+        capacity: 3,
+    }
+}
 
 async fn handle_mapped_button_presses(ir_mapping: &impl IrMapping<AppButton>) -> ! {
     loop {
@@ -55,20 +59,13 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80, rmt_mode::Async);
 
-    static IR_MAPPING_STATIC: IrMappingStatic = IrMappingEsp::<AppButton, 3>::new_static();
     // On ESP32-S3, RMT channels 0-3 are TX-only; RX requires channel 4+.
     // On ESP32-C6, channels 0-3 all support RX.
     #[cfg(target_arch = "xtensa")]
     let ir_rmt_channel = rmt80.channel4;
     #[cfg(not(target_arch = "xtensa"))]
     let ir_rmt_channel = rmt80.channel2;
-    let ir_mapping = IrMappingEsp::<AppButton, 3>::new(
-        &IR_MAPPING_STATIC,
-        p.GPIO7,
-        ir_rmt_channel,
-        &APP_BUTTON_MAP,
-        spawner,
-    )?;
+    let ir_mapping7 = IrMapping7::new(p.GPIO7, ir_rmt_channel, &APP_BUTTON_MAP, spawner)?;
 
-    handle_mapped_button_presses(&ir_mapping).await
+    handle_mapped_button_presses(ir_mapping7).await
 }

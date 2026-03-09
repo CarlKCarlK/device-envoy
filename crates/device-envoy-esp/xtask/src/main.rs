@@ -2,8 +2,11 @@
 //!
 //! Run with: `cargo xtask <command>`
 
+mod ir_generated;
+
 use clap::{Parser, Subcommand};
 use owo_colors::OwoColorize;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -123,6 +126,15 @@ fn check_all() -> ExitCode {
     let root = workspace_root();
 
     println!("{}", "==> cargo check-all: device-envoy-esp".cyan().bold());
+
+    if let Err(err) = ir_generated::generate_ir_generated(&root) {
+        eprintln!("Error generating ir_generated.rs: {err}");
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = check_generated_doc_stubs(&root) {
+        eprintln!("Generated doc stub consistency check failed:\n{err}");
+        return ExitCode::FAILURE;
+    }
 
     // Build the library itself for both supported chips.
     // S3 uses -Zbuild-std because the `esp` toolchain ships no prebuilt Xtensa sysroot.
@@ -321,4 +333,57 @@ fn run(cmd: &mut Command) -> bool {
         eprintln!("{}", format!("    FAILED: {display}").red().bold());
     }
     status.success()
+}
+
+struct GeneratedDocStubExpectation {
+    relative_path: &'static str,
+    required_fragments: &'static [&'static str],
+}
+
+fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
+    let generated_doc_stub_expectations = [GeneratedDocStubExpectation {
+        relative_path: "src/ir/ir_generated.rs",
+        required_fragments: &[
+            "pub struct IrGenerated",
+            "impl Ir for IrGenerated",
+            "pub struct IrMappingGenerated",
+            "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
+            "pub struct IrKeplerGenerated",
+            "impl IrKepler for IrKeplerGenerated",
+            "pub fn new(",
+        ],
+    }];
+
+    let mut failure_messages = Vec::new();
+    for generated_doc_stub_expectation in generated_doc_stub_expectations {
+        let generated_doc_stub_path =
+            workspace_root.join(generated_doc_stub_expectation.relative_path);
+        let generated_doc_stub_source = match fs::read_to_string(&generated_doc_stub_path) {
+            Ok(source) => source,
+            Err(read_error) => {
+                failure_messages.push(format!(
+                    "{}: failed to read ({})",
+                    generated_doc_stub_path.display(),
+                    read_error
+                ));
+                continue;
+            }
+        };
+
+        for required_fragment in generated_doc_stub_expectation.required_fragments {
+            if !generated_doc_stub_source.contains(required_fragment) {
+                failure_messages.push(format!(
+                    "{}: missing required fragment `{}`",
+                    generated_doc_stub_path.display(),
+                    required_fragment
+                ));
+            }
+        }
+    }
+
+    if failure_messages.is_empty() {
+        Ok(())
+    } else {
+        Err(failure_messages.join("\n"))
+    }
 }

@@ -8,11 +8,15 @@ use esp_backtrace as _;
 
 use device_envoy_esp::{
     init_and_start,
-    ir::{IrKepler, IrKeplerEsp, IrKeplerStatic, KeplerKeys},
-    Result,
+    ir::{IrKepler, KeplerKeys},
+    ir_kepler, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
+
+ir_kepler! {
+    IrKepler7: { pin: GPIO7 }
+}
 
 async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
     loop {
@@ -42,14 +46,13 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80, rmt_mode::Async);
 
-    static IR_KEPLER_STATIC: IrKeplerStatic = IrKeplerEsp::new_static();
     // On ESP32-S3, RMT channels 0-3 are TX-only; RX requires channel 4+.
     // On ESP32-C6, channels 0-3 all support RX.
     #[cfg(target_arch = "xtensa")]
     let ir_rmt_channel = rmt80.channel4;
     #[cfg(not(target_arch = "xtensa"))]
     let ir_rmt_channel = rmt80.channel2;
-    let ir_kepler = IrKeplerEsp::new(&IR_KEPLER_STATIC, p.GPIO7, ir_rmt_channel, spawner)?;
+    let ir_kepler7 = IrKepler7::new(p.GPIO7, ir_rmt_channel, spawner)?;
 
-    handle_kepler_button_presses(&ir_kepler).await
+    handle_kepler_button_presses(ir_kepler7).await
 }

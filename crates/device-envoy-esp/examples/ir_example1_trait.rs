@@ -7,12 +7,16 @@ use core::convert::Infallible;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start,
-    ir::{Ir, IrEsp, IrEvent, IrStatic},
+    init_and_start, ir,
+    ir::{Ir, IrEvent},
     Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
+
+ir! {
+    Ir7: { pin: GPIO7 }
+}
 
 async fn handle_ir_presses(ir: &impl Ir) -> ! {
     loop {
@@ -37,14 +41,13 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80, rmt_mode::Async);
 
-    static IR_STATIC: IrStatic = IrEsp::new_static();
     // On ESP32-S3, RMT channels 0-3 are TX-only; RX requires channel 4+.
     // On ESP32-C6, channels 0-3 all support RX.
     #[cfg(target_arch = "xtensa")]
     let ir_rmt_channel = rmt80.channel4;
     #[cfg(not(target_arch = "xtensa"))]
     let ir_rmt_channel = rmt80.channel2;
-    let ir = IrEsp::new(&IR_STATIC, p.GPIO7, ir_rmt_channel, spawner)?;
+    let ir7 = Ir7::new(p.GPIO7, ir_rmt_channel, spawner)?;
 
-    handle_ir_presses(&ir).await
+    handle_ir_presses(ir7).await
 }

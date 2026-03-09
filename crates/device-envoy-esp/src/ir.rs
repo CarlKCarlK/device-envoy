@@ -1,76 +1,212 @@
 //! A device abstraction for infrared receivers using the NEC protocol.
 //!
-//! See [`IrEsp`], [`IrMappingEsp`], and [`IrKeplerEsp`] for usage examples.
+//! This page provides the primary documentation and examples for receiving NEC infrared input on ESP devices.
+//! It covers raw address/command events, mapped application keys, and Kepler remote keys.
+//! Traits define the shared API; macros generate concrete device types.
+//! Choose [`ir!`](macro@crate::ir) for raw NEC events, [`ir_mapping!`](macro@crate::ir_mapping)
+//! when mapping to your own enum, and [`ir_kepler!`](macro@crate::ir_kepler) for the
+//! SunFounder Kepler remote.
 //!
+//! **After reading the examples below, see also:**
+//!
+//! - **IR: Raw events** — [`ir!`](macro@crate::ir), [`Ir`](trait@crate::ir::Ir), [`IrGenerated`](ir_generated::IrGenerated)
+//! - **IrMapping: Mapped events** — [`ir_mapping!`](macro@crate::ir_mapping), [`IrMapping`](trait@crate::ir::IrMapping), [`IrMappingGenerated`](ir_generated::IrMappingGenerated)
+//! - **IrKepler: Kepler mapped events** — [`ir_kepler!`](macro@crate::ir_kepler), [`IrKepler`](trait@crate::ir::IrKepler), [`IrKeplerGenerated`](ir_generated::IrKeplerGenerated)
+//!
+//! # Example: Read Raw NEC Events
+//!
+//! In this example, the generated `Ir7` type emits raw NEC press events with address and command bytes.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_esp::{Result, init_and_start, ir, ir::{Ir as _, IrEvent}};
+//! # use esp_backtrace as _;
+//! # use log::info;
+//! #
+//! ir! {
+//!     Ir7: { pin: GPIO7 }
+//! }
+//!
+//! # #[esp_rtos::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     match example(spawner).await {
+//! #         Ok(infallible) => match infallible {},
+//! #         Err(error) => panic!("{error:?}"),
+//! #     }
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//!     init_and_start!(p, rmt80, rmt_mode::Async);
+//!     esp_println::logger::init_logger(log::LevelFilter::Info);
+//!
+//!     #[cfg(target_arch = "xtensa")]
+//!     let ir_rmt_channel = rmt80.channel4;
+//!     #[cfg(not(target_arch = "xtensa"))]
+//!     let ir_rmt_channel = rmt80.channel2;
+//!
+//!     let ir7 = Ir7::new(p.GPIO7, ir_rmt_channel, spawner)?;
+//!
+//!     loop {
+//!         let IrEvent::Press { addr, cmd } = ir7.wait_for_press().await;
+//!         info!("IR press: addr=0x{:04X}, cmd=0x{:02X}", addr, cmd);
+//!     }
+//! }
+//! ```
+//!
+//! # Example: Map NEC Events to App Keys
+//!
+//! In this example, the generated `IrMapping7` type maps raw NEC address/command pairs into
+//! an application-defined enum.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_esp::{Result, init_and_start, ir::IrMapping as _, ir_mapping};
+//! # use esp_backtrace as _;
+//! #
+//! #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+//! enum RemoteKeys {
+//!     Power,
+//!     Plus,
+//!     Minus,
+//! }
+//!
+//! ir_mapping! {
+//!     IrMapping7: {
+//!         pin: GPIO7,
+//!         button: RemoteKeys,
+//!         capacity: 3,
+//!     }
+//! }
+//!
+//! const REMOTE_KEYS_MAP: [(u16, u8, RemoteKeys); 3] = [
+//!     (0x0000, 0x45, RemoteKeys::Power),
+//!     (0x0000, 0x09, RemoteKeys::Plus),
+//!     (0x0000, 0x15, RemoteKeys::Minus),
+//! ];
+//!
+//! # #[esp_rtos::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     match example(spawner).await {
+//! #         Ok(infallible) => match infallible {},
+//! #         Err(error) => panic!("{error:?}"),
+//! #     }
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//!     init_and_start!(p, rmt80, rmt_mode::Async);
+//!
+//!     #[cfg(target_arch = "xtensa")]
+//!     let ir_rmt_channel = rmt80.channel4;
+//!     #[cfg(not(target_arch = "xtensa"))]
+//!     let ir_rmt_channel = rmt80.channel2;
+//!
+//!     let ir_mapping7 = IrMapping7::new(p.GPIO7, ir_rmt_channel, &REMOTE_KEYS_MAP, spawner)?;
+//!
+//!     loop {
+//!         let remote_key = ir_mapping7.wait_for_press().await;
+//!         match remote_key {
+//!             RemoteKeys::Power => {}
+//!             RemoteKeys::Plus => {}
+//!             RemoteKeys::Minus => {}
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//! # Example: Read Kepler Remote Keys
+//!
+//! In this example, the generated `IrKepler7` type returns typed keys from the SunFounder
+//! Kepler remote key mapping.
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_esp::{Result, init_and_start, ir::IrKepler as _, ir::KeplerKeys, ir_kepler};
+//! # use esp_backtrace as _;
+//! # use log::info;
+//! #
+//! ir_kepler! {
+//!     IrKepler7: { pin: GPIO7 }
+//! }
+//!
+//! # #[esp_rtos::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     match example(spawner).await {
+//! #         Ok(infallible) => match infallible {},
+//! #         Err(error) => panic!("{error:?}"),
+//! #     }
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//!     init_and_start!(p, rmt80, rmt_mode::Async);
+//!     esp_println::logger::init_logger(log::LevelFilter::Info);
+//!
+//!     #[cfg(target_arch = "xtensa")]
+//!     let ir_rmt_channel = rmt80.channel4;
+//!     #[cfg(not(target_arch = "xtensa"))]
+//!     let ir_rmt_channel = rmt80.channel2;
+//!
+//!     let ir_kepler7 = IrKepler7::new(p.GPIO7, ir_rmt_channel, spawner)?;
+//!
+//!     loop {
+//!         let kepler_key = ir_kepler7.wait_for_press().await;
+//!         match kepler_key {
+//!             KeplerKeys::Power => info!("Power"),
+//!             KeplerKeys::PlayPause => info!("PlayPause"),
+//!             _ => info!("Other: {:?}", kepler_key),
+//!         }
+//!     }
+//! }
+//! ```
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
+pub mod ir_generated;
 mod kepler;
 mod mapping;
 
-pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping, IrMappingAdapter, IrStatic};
-pub use kepler::{IrKeplerEsp, IrKeplerStatic, KeplerKeys};
-pub use mapping::{IrMappingEsp, IrMappingStatic};
+pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping};
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::ir::IrStatic as __IrStatic;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::ir::kepler::KEPLER_MAPPING as __KEPLER_MAPPING;
+// Must be `pub` for macro expansion at downstream call sites.
+pub use kepler::KeplerKeys;
+pub use mapping::__build_button_map;
+#[doc(hidden)]
+pub use paste;
 
 #[cfg(target_os = "none")]
 use device_envoy_core::ir::decode_nec_frame;
 #[cfg(target_os = "none")]
 use embassy_executor::Spawner;
-#[cfg(target_os = "none")]
-use log::info;
 
 #[cfg(target_os = "none")]
 use crate::Result;
 
-/// A device abstraction for an infrared receiver for NEC protocol decoding.
-///
-/// The caller owns RMT lifecycle and passes an owned RX channel.
-pub struct IrEsp<'a> {
-    ir_static: &'a IrStatic,
-}
-
-impl IrEsp<'_> {
-    /// Create static channel resources for IR events.
-    #[must_use]
-    pub const fn new_static() -> IrStatic {
-        IrStatic::new()
-    }
-
-    /// Create a new RMT-based IR receiver from an RX channel creator and GPIO pin.
-    ///
-    /// This configures an async RX channel using [`crate::rmt::nec_rx_config`].
-    ///
-    /// # Errors
-    /// Returns an error if the background task cannot be spawned.
-    #[cfg(target_os = "none")]
-    pub fn new(
-        ir_static: &'static IrStatic,
-        pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
-        channel_creator: impl esp_hal::rmt::RxChannelCreator<'static, esp_hal::Async>,
-        spawner: Spawner,
-    ) -> Result<Self> {
-        let channel = channel_creator
-            .configure_rx(pin, crate::rmt::nec_rx_config())
-            .map_err(crate::Error::Rmt)?;
-        info!("IR: receiver task started");
-        spawner
-            .spawn(ir_receiver_task(channel, ir_static))
-            .map_err(crate::Error::TaskSpawn)?;
-
-        Ok(Self { ir_static })
-    }
-}
-
-impl Ir for IrEsp<'_> {
-    async fn wait_for_press(&self) -> IrEvent {
-        self.ir_static.receive().await
-    }
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+#[cfg(target_os = "none")]
+pub fn __new_ir(
+    ir_static: &'static __IrStatic,
+    pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
+    channel_creator: impl esp_hal::rmt::RxChannelCreator<'static, esp_hal::Async>,
+    spawner: Spawner,
+) -> Result<()> {
+    let channel = channel_creator
+        .configure_rx(pin, crate::rmt::nec_rx_config())
+        .map_err(crate::Error::Rmt)?;
+    spawner
+        .spawn(ir_receiver_task(channel, ir_static))
+        .map_err(crate::Error::TaskSpawn)?;
+    Ok(())
 }
 
 #[cfg(target_os = "none")]
 #[embassy_executor::task]
 async fn ir_receiver_task(
     mut channel: esp_hal::rmt::Channel<'static, esp_hal::Async, esp_hal::rmt::Rx>,
-    ir_static: &'static IrStatic,
+    ir_static: &'static __IrStatic,
 ) -> ! {
     let mut pulse_codes = [esp_hal::rmt::PulseCode::default(); 96];
 
@@ -79,14 +215,9 @@ async fn ir_receiver_task(
             pulse_code.reset();
         }
 
-        match channel.receive(&mut pulse_codes).await {
-            Ok(symbol_count) => {
-                if let Some((addr, cmd)) = decode_nec_from_pulses(&pulse_codes[..symbol_count]) {
-                    ir_static.send(IrEvent::Press { addr, cmd }).await;
-                }
-            }
-            Err(_) => {
-                embassy_time::Timer::after(embassy_time::Duration::from_millis(2)).await;
+        if let Ok(symbol_count) = channel.receive(&mut pulse_codes).await {
+            if let Some((addr, cmd)) = decode_nec_from_pulses(&pulse_codes[..symbol_count]) {
+                ir_static.send(IrEvent::Press { addr, cmd }).await;
             }
         }
     }
@@ -124,9 +255,6 @@ fn decode_nec_from_pulses(pulse_codes: &[esp_hal::rmt::PulseCode]) -> Option<(u1
         return None;
     }
 
-    // Typical demodulated NEC from IR receiver:
-    // - Leader mark: low ~9000us
-    // - Leader space: high ~4500us
     let mut leader_index = None;
     for run_index in 0..(run_count - 1) {
         let (level0, duration0) = runs[run_index];
@@ -192,9 +320,337 @@ fn is_nec_repeat_runs(runs: &[(esp_hal::gpio::Level, u16)]) -> bool {
     let (level0, duration0) = runs[0];
     let (level1, duration1) = runs[1];
 
-    // NEC repeat frame: 9ms leader mark + 2.25ms space (+ trailing 560us mark).
     level0 == Level::Low
         && level1 == Level::High
         && within(duration0, 9000, 2200)
         && within(duration1, 2250, 1000)
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! irs {
+    (
+        $group_name:ident {
+            $first_name:ident : { pin: $first_pin:ident $(,)? }
+            $(, $rest_name:ident : { pin: $rest_pin:ident $(,)? })* $(,)?
+        }
+    ) => {
+        $crate::__irs_impl! {
+            $group_name,
+            [($first_name, $first_pin) $(, ($rest_name, $rest_pin))*]
+        }
+    };
+}
+
+/// Internal implementation helper for [`irs!`].
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __irs_impl {
+    (
+        $group_name:ident,
+        [($name0:ident, $pin0:ident)]
+    ) => {
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    $crate::ir::__new_ir(&[<$name0:upper _IR_STATIC>], pin, channel_creator, spawner)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pin0: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator0: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0,)> {
+                    let name0 = $name0::new(pin0, channel_creator0, spawner)?;
+                    Ok((name0,))
+                }
+            }
+        }
+    };
+    (
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident)]
+    ) => {
+        $crate::ir::paste::paste! {
+            static [<$name0:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+            static [<$name1:upper _IR_STATIC>]: $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
+
+            static [<$name0:upper _IR_CELL>]: ::static_cell::StaticCell<$name0> = ::static_cell::StaticCell::new();
+            static [<$name1:upper _IR_CELL>]: ::static_cell::StaticCell<$name1> = ::static_cell::StaticCell::new();
+
+            pub struct $name0 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            pub struct $name1 {
+                ir_static: &'static $crate::ir::__IrStatic,
+            }
+
+            impl $name0 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    $crate::ir::__new_ir(&[<$name0:upper _IR_STATIC>], pin, channel_creator, spawner)?;
+                    Ok([<$name0:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name0:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $name1 {
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$pin1<'static>,
+                    channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    $crate::ir::__new_ir(&[<$name1:upper _IR_STATIC>], pin, channel_creator, spawner)?;
+                    Ok([<$name1:upper _IR_CELL>].init(Self {
+                        ir_static: &[<$name1:upper _IR_STATIC>],
+                    }))
+                }
+            }
+
+            impl $crate::ir::Ir for $name0 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            impl $crate::ir::Ir for $name1 {
+                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                    self.ir_static.receive().await
+                }
+            }
+
+            pub struct $group_name;
+            impl $group_name {
+                pub fn new(
+                    pin0: $crate::esp_hal::peripherals::$pin0<'static>,
+                    channel_creator0: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    pin1: $crate::esp_hal::peripherals::$pin1<'static>,
+                    channel_creator1: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
+                    spawner: embassy_executor::Spawner,
+                ) -> $crate::Result<(&'static $name0, &'static $name1)> {
+                    let name0 = $name0::new(pin0, channel_creator0, spawner)?;
+                    let name1 = $name1::new(pin1, channel_creator1, spawner)?;
+                    Ok((name0, name1))
+                }
+            }
+        }
+    };
+    (
+        $group_name:ident,
+        [($name0:ident, $pin0:ident), ($name1:ident, $pin1:ident), ($($tail:tt)+)]
+    ) => {
+        compile_error!("irs! currently supports up to 2 receivers in one group.");
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! ir {
+    (
+        $name:ident : { pin: $pin:ident $(,)? }
+    ) => {
+        $crate::ir::paste::paste! {
+            $crate::irs! {
+                [<__ $name _GROUP>] {
+                    $name: { pin: $pin }
+                }
+            }
+        }
+    };
+}
+
+/// Macro to generate a Kepler IR struct type (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_kepler! {
+///     <Name>: {
+///         pin: <pin_ident>,
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` — GPIO input pin connected to the IR receiver
+///
+/// # Related Macros
+///
+/// - [`ir_keplers!`](crate::ir_keplers) — Build multiple Kepler IR receivers
+/// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_kepler;
+/// Macro to generate multiple Kepler IR struct types (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_keplers! {
+///     <GroupName> {
+///         <Name0>: { pin: <pin0_ident> },
+///         <Name1>: { pin: <pin1_ident> }, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` — One pin entry per generated Kepler receiver
+///
+/// Supports one or two generated receivers per invocation.
+///
+/// # Related Macros
+///
+/// - [`ir_kepler!`](crate::ir_kepler) — Generate a single Kepler IR receiver type
+/// - [`irs!`](crate::irs) — Generate raw IR receivers
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_keplers;
+/// Macro to generate an IR mapping struct type (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_mapping! {
+///     <Name>: {
+///         pin: <pin_ident>,
+///         button: <button_type>,
+///         capacity: <usize_expr>,
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` — GPIO input pin connected to the IR receiver
+/// - `button` — Output button/key type for mapping
+/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
+///
+/// # Related Macros
+///
+/// - [`ir_mappings!`](crate::ir_mappings) — Generate multiple mapping receivers
+/// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_mapping;
+/// Macro to generate multiple IR mapping struct types (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir_mappings! {
+///     button: <button_type>,
+///     capacity: <usize_expr>,
+///     <GroupName> {
+///         <Name0>: { pin: <pin0_ident> },
+///         <Name1>: { pin: <pin1_ident> }, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `button` — Output button/key type for all generated mappings
+/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
+/// - `pin` — One pin entry per generated mapping receiver
+///
+/// Supports one or two generated mapping receivers per invocation.
+///
+/// # Related Macros
+///
+/// - [`ir_mapping!`](crate::ir_mapping) — Generate a single IR mapping receiver type
+/// - [`irs!`](crate::irs) — Generate raw IR receivers
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use crate::ir_mappings;
+/// Macro to generate an IR receiver struct type (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// ir! {
+///     <Name>: {
+///         pin: <pin_ident>,
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` — GPIO input pin connected to the IR receiver
+///
+/// # Related Macros
+///
+/// - [`irs!`](crate::irs) — Generate multiple IR receivers
+/// - [`ir_mapping!`](crate::ir_mapping) — Generate a mapped-button IR receiver type
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use ir;
+/// Macro to generate multiple IR receiver struct types (includes syntax details).
+///
+/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// irs! {
+///     <GroupName> {
+///         <Name0>: { pin: <pin0_ident> },
+///         <Name1>: { pin: <pin1_ident> }, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` — One pin entry per generated receiver
+///
+/// Supports one or two generated receivers per invocation.
+///
+/// # Related Macros
+///
+/// - [`ir!`](crate::ir!) — Generate a single IR receiver type
+/// - [`ir_mappings!`](crate::ir_mappings) — Generate mapped-button receivers
+#[allow(unused_imports)]
+#[doc(inline)]
+pub use irs;

@@ -12,9 +12,9 @@
 | flash_block | [x] | [x] | [x] | [x] | ? | *na* | [x] | [x] |
 | button | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | servo | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | [x] |
-| servo_player | [x] | [x] | [x] | [x] | [  ] | [x] | [75%](#note-servo-density) | [x] |
+| servo_player | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | [x] |
 | wifi_auto | [x] | [x] | [x] | [x] | ? | *na* | [x](#note-wifi-auto-eff) | ? |
-| led4 | [x] | [x] | [x] | [x] | ? | [ ] | [xTest] | ? |
+| led4 | [x] | [x] | [x] | [x] | ? | [2] ([note](#note-led4-limit)) | [x] | [2] ([note](#note-led4-limit)) |
 | lcd_text | [x] | [x] | [x] | [x] | ? | [x] | [xAsk] | [x] |
 | clock_sync | [x] | [x] | [x] | [x] | [  ] | [x] | [xTest] | [ ] ([note](#note-clock-sync-own)) |
 | led | [x] | ? | [  ] | [ ] | [  ] | [ ] | ? | ? |
@@ -61,6 +61,10 @@
 ### Note: servo-density
 
 `servo` / `servo_player`: Marked `75%` because ESP currently enforces unique LEDC timer claims per generated type. This is safe, but not timer-dense. In principle, multiple channels could share one timer when PWM base settings match, improving density.
+
+### Note: led4-limit
+
+`led4`: Runtime task pools are set to `pool_size = 2` (both simple loop and command loop layers), so two instances are supported concurrently. A third `new(...)` call may still compile if enough pins are available, but it is expected to fail at runtime with task spawn busy/full behavior.
 
 ### Note: rfid
 

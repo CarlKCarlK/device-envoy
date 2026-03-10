@@ -68,7 +68,7 @@ impl Led4Simple<'_> {
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 2)]
 #[cfg(target_os = "none")]
 async fn led4_simple_device_loop(
     cell_pins: OutputArray<'static, CELL_COUNT>,
@@ -197,7 +197,7 @@ impl device_envoy_core::led4::Led4 for Led4Esp<'_> {
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 2)]
 #[cfg(target_os = "none")]
 async fn led4_device_loop(
     outer_static: &'static Led4EspOuterStatic,

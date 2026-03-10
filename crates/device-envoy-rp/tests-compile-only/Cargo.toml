@@ -149,3 +149,8 @@ required-features = ["pico1"]
 name = "button_watch_five"
 path = "button_watch_five.rs"
 required-features = ["pico1"]
+
+[[bin]]
+name = "led4_two"
+path = "led4_two.rs"
+required-features = ["pico1"]

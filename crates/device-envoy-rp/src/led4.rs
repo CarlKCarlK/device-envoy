@@ -168,7 +168,7 @@ impl device_envoy_core::led4::Led4 for Led4Rp<'_> {
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 2)]
 async fn device_loop(outer_static: &'static Led4RpOuterStatic, display: Led4Simple<'static>) -> ! {
     run_command_loop(outer_static, |text| display.write_text(text)).await
 }

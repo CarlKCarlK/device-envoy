@@ -269,6 +269,7 @@ fn check_embedded_tests() -> ExitCode {
         "led_strip_two_strips_compile",
         "led_strip_spi_two_strips_compile",
         "led2d_two_panels_compile",
+        "led4_two_displays_compile",
         "button_five_compile",
         "button_watch_five_compile",
         "ir_four_receivers_compile",

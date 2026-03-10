@@ -69,7 +69,7 @@ impl Led4Simple<'_> {
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 2)]
 pub(crate) async fn device_loop(
     cell_pins: OutputArray<'static, CELL_COUNT>,
     segment_pins: OutputArray<'static, SEGMENT_COUNT>,

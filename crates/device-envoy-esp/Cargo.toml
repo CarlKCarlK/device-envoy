@@ -91,6 +91,11 @@ path = "tests/embedded/led2d_two_panels_compile.rs"
 harness = false
 
 [[test]]
+name = "led4_two_displays_compile"
+path = "tests/embedded/led4_two_displays_compile.rs"
+harness = false
+
+[[test]]
 name = "button_five_compile"
 path = "tests/embedded/button_five_compile.rs"
 harness = false

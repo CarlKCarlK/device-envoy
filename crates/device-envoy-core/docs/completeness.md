@@ -18,7 +18,7 @@
 | lcd_text | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | clock_sync | [x] | [x] | [x] | [x] | [  ] | [2] ([note](#note-runtime-pool-limit-2)) | [x] | [2] ([note](#note-runtime-pool-limit-2)) |
 | led | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
-| rfid | [x] | ? | [  ] | [ ] | [  ] | [ ] ([note](#note-rfid)) | [x](#note-rfid) | [x](#note-rfid) |
+| rfid | [x] | [x] | [x] | [x] | ? | [2] ([note](#note-rfid)) | [x](#note-rfid) | [x](#note-rfid) |
 
 ## Key
 
@@ -64,4 +64,4 @@
 
 ### Note: rfid
 
-`rfid`: Marked `Eff [x]` and `Own [x]` for current RP implementation because hardware resources are passed as owned tokens (`SPI0`, GPIO, DMA), preventing unsafe sharing at compile time. `PoolInd` remains `[ ]` due current `SPI0`-only API and single task-entry scaling limits.
+`rfid`: Marked `Eff [x]` and `Own [x]` because hardware resources are passed as owned tokens (SPI peripheral + GPIO + DMA), preventing unsafe sharing at compile time in safe Rust. `PoolInd` is `[2]` because the RFID polling task runs with `pool_size = 2`, so two concurrent instances are supported; a third concurrent spawn is expected to fail at runtime.

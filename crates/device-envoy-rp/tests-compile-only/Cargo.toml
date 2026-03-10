@@ -180,3 +180,8 @@ required-features = ["pico1"]
 name = "clock_sync_two"
 path = "clock_sync_two.rs"
 required-features = ["pico1"]
+
+[[bin]]
+name = "rfid_two"
+path = "rfid_two.rs"
+required-features = ["pico1"]

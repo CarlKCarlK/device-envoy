@@ -34,6 +34,8 @@ pub mod led;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;
+#[cfg(target_os = "none")]
+pub mod rfid;
 pub mod rmt;
 pub mod rmt_mode;
 #[cfg(target_os = "none")]
@@ -161,6 +163,10 @@ pub enum Error {
     SpiConfig(esp_hal::spi::master::ConfigError),
     #[cfg(target_os = "none")]
     Spi(esp_hal::spi::Error),
+    #[cfg(target_os = "none")]
+    Mfrc522Init(esp_hal_mfrc522::consts::PCDErrorCode),
+    #[cfg(target_os = "none")]
+    Mfrc522Version(esp_hal_mfrc522::consts::PCDErrorCode),
     #[cfg(target_os = "none")]
     I2cConfig(esp_hal::i2c::master::ConfigError),
     #[cfg(target_os = "none")]

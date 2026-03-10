@@ -280,6 +280,7 @@ fn check_embedded_tests() -> ExitCode {
         "clock_sync_two_compile",
         "button_five_compile",
         "button_watch_five_compile",
+        "rfid_one_compile",
         "ir_four_receivers_compile",
         "ir_mapping_four_receivers_compile",
         "ir_kepler_four_receivers_compile",

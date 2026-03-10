@@ -18,6 +18,7 @@ pub mod led;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;
+pub mod rfid;
 pub mod servo;
 #[doc(hidden)]
 pub mod servo_player;

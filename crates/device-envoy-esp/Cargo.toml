@@ -31,6 +31,8 @@ esp-alloc = { version = "0.9.0", features = ["esp32c6"] }
 esp-radio = { version = "0.17.0", default-features = false, features = ["esp32c6", "wifi", "esp-alloc", "log-04", "unstable"] }
 embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
 log = { version = "0.4", default-features = false }
+embedded-hal-bus = { version = "0.3.0", features = ["async"] }
+esp-hal-mfrc522 = "0.3.3"
 
 [target.'cfg(all(target_os = "none", target_arch = "xtensa"))'.dependencies]
 esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable"] }
@@ -40,6 +42,8 @@ esp-alloc = { version = "0.9.0", features = ["esp32s3"] }
 esp-radio = { version = "0.17.0", default-features = false, features = ["esp32s3", "wifi", "esp-alloc", "log-04", "unstable"] }
 embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
 log = { version = "0.4", default-features = false }
+embedded-hal-bus = { version = "0.3.0", features = ["async"] }
+esp-hal-mfrc522 = "0.3.3"
 
 [dev-dependencies]
 device-envoy-example-common = { path = "../device-envoy-example-common" }
@@ -118,6 +122,11 @@ harness = false
 [[test]]
 name = "button_watch_five_compile"
 path = "tests/embedded/button_watch_five_compile.rs"
+harness = false
+
+[[test]]
+name = "rfid_one_compile"
+path = "tests/embedded/rfid_one_compile.rs"
 harness = false
 
 [[test]]

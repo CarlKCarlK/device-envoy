@@ -76,6 +76,31 @@ path = "tests/embedded/ir_two_receivers_compile.rs"
 harness = false
 
 [[test]]
+name = "led_strip_two_strips_compile"
+path = "tests/embedded/led_strip_two_strips_compile.rs"
+harness = false
+
+[[test]]
+name = "led_strip_spi_two_strips_compile"
+path = "tests/embedded/led_strip_spi_two_strips_compile.rs"
+harness = false
+
+[[test]]
+name = "led2d_two_panels_compile"
+path = "tests/embedded/led2d_two_panels_compile.rs"
+harness = false
+
+[[test]]
+name = "button_five_compile"
+path = "tests/embedded/button_five_compile.rs"
+harness = false
+
+[[test]]
+name = "button_watch_five_compile"
+path = "tests/embedded/button_watch_five_compile.rs"
+harness = false
+
+[[test]]
 name = "ir_four_receivers_compile"
 path = "tests/embedded/ir_four_receivers_compile.rs"
 harness = false

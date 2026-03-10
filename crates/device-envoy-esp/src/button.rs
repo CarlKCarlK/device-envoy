@@ -3,6 +3,7 @@
 //! This module provides:
 //! - [`ButtonEsp`] for direct debounced polling
 //! - [`ButtonWatchEsp`] for background monitoring that avoids future-cancellation starvation
+//! - [`button_watch!`](crate::button_watch!) for RP-style generated button-watch types
 
 #[cfg(target_os = "none")]
 mod button_watch;
@@ -74,3 +75,7 @@ impl device_envoy_core::button::Button for ButtonEsp<'_> {
         }
     }
 }
+
+#[cfg(target_os = "none")]
+#[doc(inline)]
+pub use crate::button_watch;

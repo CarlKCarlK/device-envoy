@@ -266,6 +266,11 @@ fn check_embedded_tests() -> ExitCode {
 
     let compile_pass_tests = [
         "ir_two_receivers_compile",
+        "led_strip_two_strips_compile",
+        "led_strip_spi_two_strips_compile",
+        "led2d_two_panels_compile",
+        "button_five_compile",
+        "button_watch_five_compile",
         "ir_four_receivers_compile",
         "ir_mapping_four_receivers_compile",
         "ir_kepler_four_receivers_compile",

@@ -663,6 +663,7 @@ dependencies = [
  "device-envoy-rp",
  "embassy-executor",
  "embassy-rp",
+ "embassy-sync 0.7.2",
  "embassy-time",
  "embedded-graphics",
  "heapless 0.8.0",

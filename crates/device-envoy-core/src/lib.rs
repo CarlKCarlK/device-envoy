@@ -3,6 +3,8 @@
 //! Shared building blocks for the device-envoy workspace.
 // TODO0 Audit remaining StaticCell usage across device abstractions and remove
 // TODO0 it where const/static initialization can replace runtime init safely.
+// TODO0 Audit all device macros to ensure optional keyword fields are accepted
+// TODO0 in any order, with consistent duplicate/unknown-field diagnostics.
 
 pub mod audio_player;
 pub mod button;

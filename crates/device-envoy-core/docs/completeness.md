@@ -2,15 +2,15 @@
 
 | Submodule | Rp | Esp | Trait | TDTest | EspPar | PoolInd | Eff | Own |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| led_strip | [x] | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
-| led_strip_spi | *na* | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
-| led2d | [x] | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
-| audio_player | [x] | [x] | [x] | [x] | ? | [x] | [90%](#note-audio-player) | ? |
+| led_strip | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
+| led_strip_spi | *na* | [x] | [x] | [x] | ? | [x] | [x] | [x] |
+| led2d | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
+| audio_player | [x] | [x] | [x] | [x] | ? | [x] | [90%](#note-audio-player) | [x] |
 | ir | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | ir/mapping | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | ir/kepler | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
-| flash_block | [x] | [x] | [x] | [x] | ? | *na* | [x] | ? |
-| button | [x] | [x] | [x] | [x] | ? | [x] | [xTest] | ? |
+| flash_block | [x] | [x] | [x] | [x] | ? | *na* | [x] | [x] |
+| button | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | servo | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | ? |
 | servo_player | [x] | [x] | [x] | [x] | [  ] | [x](#note-servo-player-poolind) | [75%](#note-servo-density) | [ ] ([note](#note-servo-player-own)) |
 | wifi_auto | [x] | [x] | [x] | [x] | ? | *na* | [x](#note-wifi-auto-eff) | ? |

@@ -41,6 +41,7 @@ smart-leds = "0.4.0"
 paste = "1.0"
 heapless = "0.8.0"
 static_cell = "2.1.0"
+embassy-sync = { version = "0.7.2", default-features = false }
 cortex-m-rt = "0.7.5"
 riscv-rt = { version = "0.16", optional = true }
 
@@ -95,6 +96,11 @@ path = "led_strip_two_one.rs"
 required-features = ["pico1"]
 
 [[bin]]
+name = "led_strip_four_on_one_pio"
+path = "led_strip_four_on_one_pio.rs"
+required-features = ["pico1"]
+
+[[bin]]
 name = "audio_player_with_resampled_wrong_count_should_fail"
 path = "audio_player_with_resampled_wrong_count_should_fail.rs"
 required-features = ["pico1"]
@@ -132,4 +138,14 @@ required-features = ["pico1"]
 [[bin]]
 name = "ir_kepler_single_reuse_should_fail"
 path = "ir_kepler_single_reuse_should_fail.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "button_five"
+path = "button_five.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "button_watch_five"
+path = "button_watch_five.rs"
 required-features = ["pico1"]

@@ -283,151 +283,33 @@ macro_rules! led_strip {
         $name:ident {
             len: $len:expr,
             max_current: $max_current:expr,
-            engine: device_envoy_esp::led_strip::Engine::Spi
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
-            $(,)?
+            $($options:tt)+
         }
     ) => {
-        $crate::led_strip::spi::__led_strip_spi_inner!{
-            $name,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [],
+        $crate::__led_strip_parse_options!{
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [],
+            gamma = [],
+            max_frames = [],
+            $($options)+
         }
-    };
-    (
-        $name:ident {
-            len: $len:expr,
-            max_current: $max_current:expr,
-            engine: Engine::Spi
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
-            $(,)?
-        }
-    ) => {
-        $crate::led_strip::spi::__led_strip_spi_inner!{
-            $name,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [],
-        }
-    };
-    (
-        $name:ident {
-            len: $len:expr,
-            max_current: $max_current:expr,
-            engine: $crate::led_strip::Engine::Spi
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
-            $(,)?
-        }
-    ) => {
-        $crate::led_strip::spi::__led_strip_spi_inner!{
-            $name,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [],
-        }
-    };
-    (
-        $name:ident {
-            len: $len:expr,
-            max_current: $max_current:expr,
-            engine: device_envoy_esp::led_strip::Engine::Rmt
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
-            $(,)?
-        }
-    ) => {
-        $crate::led_strip::__led_strip_inner!{
-            $name,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [],
-        }
-    };
-    (
-        $name:ident {
-            len: $len:expr,
-            max_current: $max_current:expr,
-            engine: Engine::Rmt
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
-            $(,)?
-        }
-    ) => {
-        $crate::led_strip::__led_strip_inner!{
-            $name,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [],
-        }
-    };
-    (
-        $name:ident {
-            len: $len:expr,
-            max_current: $max_current:expr,
-            engine: $crate::led_strip::Engine::Rmt
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
-            $(,)?
-        }
-    ) => {
-        $crate::led_strip::__led_strip_inner!{
-            $name,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [],
-        }
-    };
-    (
-        $name:ident {
-            len: $len:expr,
-            max_current: $max_current:expr,
-            engine: $engine:path
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
-            $(,)?
-        }
-    ) => {
-        compile_error!("led_strip! engine must be Engine::Rmt or Engine::Spi");
     };
     (
         $name:ident {
             len: $len:expr,
             max_current: $max_current:expr
-            $(, gamma: $gamma:expr)?
-            $(, max_frames: $max_frames:expr)?
             $(,)?
         }
     ) => {
-        $crate::led_strip::__led_strip_inner!{
-            $name,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [],
+        $crate::__led_strip_parse_options!{
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [],
+            gamma = [],
+            max_frames = [],
         }
     };
 }
@@ -464,6 +346,313 @@ macro_rules! __led_strip_inner {
                           ),
             led2d_layout = [$($led2d_layout)?],
             led2d_font = [$($led2d_font)?],
+        }
+    };
+}
+
+/// Parse optional led_strip! fields (`engine`, `gamma`, `max_frames`) in any order.
+///
+/// This is `pub` for downstream macro expansion at call sites.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strip_parse_options {
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+    ) => {
+        $crate::__led_strip_dispatch_engine! {
+            $name,
+            $len,
+            $max_current,
+            [$($engine)*],
+            [$($gamma)?],
+            [$($max_frames)?],
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: Engine::Spi
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [Spi],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: $crate::led_strip::Engine::Spi
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [Spi],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: device_envoy_esp::led_strip::Engine::Spi
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [Spi],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: Engine::Rmt
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [Rmt],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: $crate::led_strip::Engine::Rmt
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [Rmt],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: device_envoy_esp::led_strip::Engine::Rmt
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [Rmt],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)+],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: $ignored:path
+        $(, $($tail:tt)*)?
+    ) => {
+        compile_error!("led_strip! duplicate `engine` field");
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        engine: $ignored:path
+        $(, $($tail:tt)*)?
+    ) => {
+        compile_error!("led_strip! engine must be Engine::Rmt or Engine::Spi");
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [],
+        max_frames = [$($max_frames:expr)?],
+        gamma: $gamma:expr
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [$($engine)*],
+            gamma = [$gamma],
+            max_frames = [$($max_frames)?],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [$already_gamma:expr],
+        max_frames = [$($max_frames:expr)?],
+        gamma: $gamma:expr
+        $(, $($tail:tt)*)?
+    ) => {
+        compile_error!("led_strip! duplicate `gamma` field");
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [$($gamma:expr)?],
+        max_frames = [],
+        max_frames: $max_frames:expr
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            len = $len,
+            max_current = $max_current,
+            engine = [$($engine)*],
+            gamma = [$($gamma)?],
+            max_frames = [$max_frames],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$already_max_frames:expr],
+        max_frames: $max_frames:expr
+        $(, $($tail:tt)*)?
+    ) => {
+        compile_error!("led_strip! duplicate `max_frames` field");
+    };
+    (
+        name = $name:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        $field:ident : $value:expr
+        $(, $($tail:tt)*)?
+    ) => {
+        compile_error!("led_strip! unknown field; expected `engine`, `gamma`, or `max_frames`");
+    };
+}
+
+/// Dispatch parsed led_strip! options to RMT or SPI backend.
+///
+/// This is `pub` for downstream macro expansion at call sites.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strip_dispatch_engine {
+    (
+        $name:ident,
+        $len:expr,
+        $max_current:expr,
+        [Spi],
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
+        $crate::led_strip::spi::__led_strip_spi_inner!{
+            $name,
+            $len,
+            $max_current,
+            [$($gamma)?],
+            [$($max_frames)?],
+            [],
+            [],
+        }
+    };
+    (
+        $name:ident,
+        $len:expr,
+        $max_current:expr,
+        [Rmt],
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
+        $crate::led_strip::__led_strip_inner!{
+            $name,
+            $len,
+            $max_current,
+            [$($gamma)?],
+            [$($max_frames)?],
+            [],
+            [],
+        }
+    };
+    (
+        $name:ident,
+        $len:expr,
+        $max_current:expr,
+        [],
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
+        $crate::led_strip::__led_strip_inner!{
+            $name,
+            $len,
+            $max_current,
+            [$($gamma)?],
+            [$($max_frames)?],
+            [],
+            [],
         }
     };
 }
@@ -741,6 +930,6 @@ pub mod spi;
 
 // Re-export macros so they are visible from the `led_strip` module path.
 pub use crate::{
-    __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_first_or_default,
-    __led_strip_impl, __led_strip_inner,
+    __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_dispatch_engine,
+    __led_strip_first_or_default, __led_strip_impl, __led_strip_inner, __led_strip_parse_options,
 };

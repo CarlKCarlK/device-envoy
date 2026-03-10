@@ -2,13 +2,16 @@
   "cSpell.words": [
     "BCLK",
     "deinit",
+    "espup",
     "ledc",
     "Lwss",
     "mmss",
     "mosi",
     "poolind",
+    "rustlib",
     "timg",
-    "Vecs"
+    "Vecs",
+    "Zbuild"
   ],
   "rust-analyzer.check.workspace": false,
   "rust-analyzer.cargo.allTargets": false,

@@ -132,10 +132,25 @@ where
 }
 
 #[doc(hidden)]
-pub async fn __write_lcd_text_cells(
+pub const fn __assert_unique_addresses<const N: usize>(addresses: [u8; N]) {
+    let mut first_index = 0;
+    while first_index < N {
+        let mut second_index = first_index + 1;
+        while second_index < N {
+            if addresses[first_index] == addresses[second_index] {
+                panic!("duplicate lcd_text I2C address in i2cs! group");
+            }
+            second_index += 1;
+        }
+        first_index += 1;
+    }
+}
+
+#[doc(hidden)]
+pub async fn __write_lcd_text_cells<const ADDRESS_COUNT: usize>(
     lcd_text_driver: &mut LcdTextDriver,
     lcd_text_write: &mut impl LcdTextWrite,
-    initialized_addresses: &mut Vec<u8, 8>,
+    initialized_addresses: &mut Vec<u8, ADDRESS_COUNT>,
     address: u8,
     width: usize,
     height: usize,
@@ -217,6 +232,10 @@ macro_rules! __i2cs_impl {
         }
     ) => {
         $crate::lcd_text::paste::paste! {
+            const _: () = {
+                $crate::lcd_text::__assert_unique_addresses([$($address,)+]);
+            };
+
             $(
                 static [<$lcd_name:upper _FRAME_SIGNAL>]:
                     $crate::lcd_text::__I2csSignal<$crate::lcd_text::__LcdTextFrame> =
@@ -328,7 +347,8 @@ macro_rules! __i2cs_impl {
             ) -> ! {
                 let mut esp_lcd_text_write = $crate::lcd_text::EspLcdTextWrite::__new(i2c);
                 let mut lcd_text_driver = $crate::lcd_text::__LcdTextDriver::new(0x27);
-                let mut initialized_addresses: heapless::Vec<u8, 8> = heapless::Vec::new();
+                const ADDRESS_COUNT: usize = [$($address,)+].len();
+                let mut initialized_addresses: heapless::Vec<u8, ADDRESS_COUNT> = heapless::Vec::new();
                 let addresses = [$($address,)+];
                 let widths = [$($width,)+];
                 let heights = [$($height,)+];

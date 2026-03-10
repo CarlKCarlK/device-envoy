@@ -96,7 +96,7 @@ impl TimeSync {
 // Task
 // ============================================================================
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 2)]
 async fn time_sync_stack_loop(
     stack: &'static Stack<'static>,
     sync_events: &'static TimeSyncEvents,

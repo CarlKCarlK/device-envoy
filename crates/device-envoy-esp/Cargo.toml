@@ -96,6 +96,16 @@ path = "tests/embedded/led4_two_displays_compile.rs"
 harness = false
 
 [[test]]
+name = "lcd_text_four_addresses_compile"
+path = "tests/embedded/lcd_text_four_addresses_compile.rs"
+harness = false
+
+[[test]]
+name = "clock_sync_two_compile"
+path = "tests/embedded/clock_sync_two_compile.rs"
+harness = false
+
+[[test]]
 name = "button_five_compile"
 path = "tests/embedded/button_five_compile.rs"
 harness = false
@@ -123,5 +133,11 @@ harness = false
 [[test]]
 name = "ir_duplicate_channel_compile_fail"
 path = "tests/embedded/ir_duplicate_channel_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]
+
+[[test]]
+name = "lcd_text_duplicate_address_compile_fail"
+path = "tests/embedded/lcd_text_duplicate_address_compile_fail.rs"
 harness = false
 required-features = ["compile-fail-tests"]

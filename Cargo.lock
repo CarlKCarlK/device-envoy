@@ -662,6 +662,7 @@ dependencies = [
  "defmt-rtt",
  "device-envoy-rp",
  "embassy-executor",
+ "embassy-net",
  "embassy-rp",
  "embassy-sync 0.7.2",
  "embassy-time",

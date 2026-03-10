@@ -287,7 +287,7 @@ impl ClockSync for ClockSyncRuntime {
 // Task
 // ============================================================================
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 2)]
 async fn clock_sync_loop(
     clock: &'static Clock,
     time_sync: &'static TimeSync,

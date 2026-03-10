@@ -14,9 +14,9 @@
 | servo | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | [x] |
 | servo_player | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | [x] |
 | wifi_auto | [x] | [x] | [x] | [x] | ? | *na* | [x](#note-wifi-auto-eff) | ? |
-| led4 | [x] | [x] | [x] | [x] | ? | [2] ([note](#note-led4-limit)) | [x] | [2] ([note](#note-led4-limit)) |
-| lcd_text | [x] | [x] | [x] | [x] | ? | [x] | [xAsk] | [x] |
-| clock_sync | [x] | [x] | [x] | [x] | [  ] | [x] | [xTest] | [ ] ([note](#note-clock-sync-own)) |
+| led4 | [x] | [x] | [x] | [x] | ? | [2] ([note](#note-runtime-pool-limit-2)) | [x] | [2] ([note](#note-runtime-pool-limit-2)) |
+| lcd_text | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
+| clock_sync | [x] | [x] | [x] | [x] | [  ] | [2] ([note](#note-runtime-pool-limit-2)) | [x] | [2] ([note](#note-runtime-pool-limit-2)) |
 | led | [x] | ? | [  ] | [ ] | [  ] | [ ] | ? | ? |
 | rfid | [x] | ? | [  ] | [ ] | [  ] | [ ] ([note](#note-rfid)) | [x](#note-rfid) | [x](#note-rfid) |
 
@@ -54,17 +54,13 @@
 
 `wifi_auto`: Marked `Eff [x]` under the current RP design assumption because it takes a whole PIO block and the remaining state machines are not treated as practically shareable for this abstraction.
 
-### Note: clock-sync-own
-
-`clock_sync`: Marked `Own [ ]` because constructor safety relies on one-time static initialization patterns (`StaticCell::init`) that fail at runtime if reused, rather than producing a compile-time ownership error.
-
 ### Note: servo-density
 
 `servo` / `servo_player`: Marked `75%` because ESP currently enforces unique LEDC timer claims per generated type. This is safe, but not timer-dense. In principle, multiple channels could share one timer when PWM base settings match, improving density.
 
-### Note: led4-limit
+### Note: runtime-pool-limit-2
 
-`led4`: Runtime task pools are set to `pool_size = 2` (both simple loop and command loop layers), so two instances are supported concurrently. A third `new(...)` call may still compile if enough pins are available, but it is expected to fail at runtime with task spawn busy/full behavior.
+`led4` and `clock_sync`: Runtime task pools are set to `pool_size = 2` for their task paths, so two instances are supported concurrently. A third `new(...)` call may still compile if resources exist, but it is expected to fail at runtime with task spawn busy/full behavior.
 
 ### Note: rfid
 

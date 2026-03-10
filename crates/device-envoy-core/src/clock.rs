@@ -302,7 +302,7 @@ impl Clock {
     }
 }
 
-#[embassy_executor::task]
+#[embassy_executor::task(pool_size = 2)]
 async fn clock_device_loop(resources: &'static ClockStatic) -> ! {
     inner_clock_device_loop(resources).await
 }

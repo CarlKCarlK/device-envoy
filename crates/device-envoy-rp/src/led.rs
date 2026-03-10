@@ -1,172 +1,104 @@
 //! A device abstraction for a single digital LED with animation support.
 //!
-//! This module provides a simple interface for controlling a single GPIO-connected LED
-//! with support for on/off control and animated blinking sequences.
+//! Use the [`led!`](macro@crate::led) macro to generate one or more concrete LED
+//! device types.
 //!
-//! See [`LedRp`] for the primary example and usage.
+//! See [`LedGenerated`](led_generated::LedGenerated) for a sample generated type.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_rp::{
+//!     Result,
+//!     led,
+//!     led::{Led as _, LedLevel, OnLevel},
+//! };
+//! use embassy_time::Duration;
+//! # #[panic_handler]
+//! # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+//!
+//! led!(pub LedOne { pin: PIN_1 });
+//! led!(pub LedTwo {
+//!     pin: PIN_2,
+//!     max_steps: 2,
+//! });
+//!
+//! async fn example(p: embassy_rp::Peripherals, spawner: embassy_executor::Spawner) -> Result<()> {
+//!     let led_one = LedOne::new(p.PIN_1, OnLevel::High, spawner)?;
+//!     let led_two = LedTwo::new(p.PIN_2, OnLevel::High, spawner)?;
+//!
+//!     led_one.set_level(LedLevel::On);
+//!     led_two.set_level(LedLevel::Off);
+//!     embassy_time::Timer::after(Duration::from_millis(250)).await;
+//!
+//!     led_one.animate([
+//!         (LedLevel::On, Duration::from_millis(200)),
+//!         (LedLevel::Off, Duration::from_millis(200)),
+//!     ]);
+//!     led_two.animate([
+//!         (LedLevel::Off, Duration::from_millis(150)),
+//!         (LedLevel::On, Duration::from_millis(150)),
+//!     ]);
+//!
+//!     core::future::pending().await
+//! }
+//! ```
 
-use core::borrow::Borrow;
-use embassy_executor::Spawner;
-use embassy_rp::Peri;
 use embassy_rp::gpio::{Level, Output};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, Timer};
 use heapless::Vec;
 
 pub use device_envoy_core::led::{Led, LedLevel, OnLevel};
-
-use crate::{Error, Result};
+pub mod led_generated;
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+pub use paste;
 
 /// Maximum number of animation frames allowed.
-const MAX_FRAMES: usize = 32;
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+pub const DEFAULT_MAX_STEPS: usize = 32;
 
 #[derive(Clone)]
-pub(crate) enum LedCommand {
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+pub enum LedCommand<const MAX_STEPS: usize> {
     /// Set LED level immediately.
     Set(LedLevel),
     /// Play an animation sequence (looping).
-    Animate(Vec<(LedLevel, Duration), MAX_FRAMES>),
+    Animate(Vec<(LedLevel, Duration), MAX_STEPS>),
 }
 
-/// A device abstraction for a single digital LED with animation support.
-///
-/// # Hardware Requirements
-///
-/// This device requires a single GPIO pin connected to an LED. The LED can be wired
-/// for either active-high (default) or active-low operation. The device supports both
-/// polarities and controls the pin internally.
-///
-/// **Active-high wiring (default):** LED anode (long leg) -> 220 ohm resistor -> GPIO pin, LED cathode (short leg) -> GND
-/// **Active-low wiring:** LED anode (long leg) -> 3.3V, LED cathode (short leg) -> 220 ohm resistor -> GPIO pin
-///
-/// # Example
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// use device_envoy_rp::{Result, led::{Led as _, LedLevel, LedRp, LedRpStatic, OnLevel}};
-/// use embassy_time::Duration;
-/// # #[panic_handler]
-/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-///
-/// async fn example(p: embassy_rp::Peripherals, spawner: embassy_executor::Spawner) -> Result<()> {
-///     static LED_RP_STATIC: LedRpStatic = LedRp::new_static();
-///     let led_rp = LedRp::new(&LED_RP_STATIC, p.PIN_1, OnLevel::High, spawner)?;
-///
-///     // Turn the LED on
-///     led_rp.set_level(LedLevel::On);
-///     embassy_time::Timer::after(Duration::from_secs(1)).await;
-///
-///     // Turn the LED off
-///     led_rp.set_level(LedLevel::Off);
-///     embassy_time::Timer::after(Duration::from_millis(500)).await;
-///
-///     // Play a blinking animation (looping: 200ms on, 200ms off)
-///     led_rp.animate([
-///         (LedLevel::On, Duration::from_millis(200)),
-///         (LedLevel::Off, Duration::from_millis(200)),
-///     ]);
-///
-///     core::future::pending().await // run forever
-/// }
-/// ```
-///
-/// The device runs a background task that handles state transitions and animations.
-/// Create the device once with [`LedRp::new`] and use the returned handle for all updates.
-pub struct LedRp<'a>(&'a LedOuterStatic);
+/// Signal for sending LED commands to macro-generated LED devices.
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+pub type LedOuterStatic<const MAX_STEPS: usize> =
+    Signal<CriticalSectionRawMutex, LedCommand<MAX_STEPS>>;
 
-/// Signal for sending LED commands to the [`LedRp`] device.
-pub(crate) type LedOuterStatic = Signal<CriticalSectionRawMutex, LedCommand>;
-
-/// Static resources for the [`LedRp`] device.
-pub struct LedRpStatic {
-    outer: LedOuterStatic,
+/// Static resources for a macro-generated LED device.
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+pub struct LedStatic<const MAX_STEPS: usize> {
+    outer: LedOuterStatic<MAX_STEPS>,
 }
 
-impl LedRpStatic {
+impl<const MAX_STEPS: usize> LedStatic<MAX_STEPS> {
     /// Creates static resources for a single LED device.
-    pub(crate) const fn new() -> Self {
+    #[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+    pub const fn new() -> Self {
         Self {
             outer: Signal::new(),
         }
     }
-}
 
-impl LedRp<'_> {
-    /// Creates a single LED device and spawns its background task; see [`LedRp`] docs.
-    #[must_use = "Must be used to manage the spawned task"]
-    pub fn new<P: embassy_rp::gpio::Pin>(
-        led_rp_static: &'static LedRpStatic,
-        pin: Peri<'static, P>,
-        on_level: OnLevel,
-        spawner: Spawner,
-    ) -> Result<Self> {
-        let pin_output = Output::new(pin, Level::Low);
-        let token = device_loop(&led_rp_static.outer, pin_output, on_level);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
-        Ok(Self(&led_rp_static.outer))
-    }
-
-    /// Creates static resources for [`LedRp::new`]; see [`LedRp`] docs.
-    #[must_use]
-    pub const fn new_static() -> LedRpStatic {
-        LedRpStatic::new()
-    }
-}
-
-impl Led for LedRp<'_> {
-    /// Set the LED level immediately, replacing any running animation.
-    ///
-    /// See [LedRp struct example](LedRp) for usage.
-    fn set_level(&self, led_level: LedLevel) {
-        self.0.signal(LedCommand::Set(led_level));
-    }
-
-    /// Play a looped animation sequence of LED levels with durations.
-    ///
-    /// Accepts any iterator yielding (LedLevel, Duration) pairs or references, up to 32 frames.
-    /// The animation will loop continuously until replaced by another command.
-    /// This uses [`embassy_time::Duration`] for frame timing.
-    /// See [LedRp struct example](LedRp) for usage.
-    fn animate<I>(&self, frames: I)
-    where
-        I: IntoIterator,
-        I::Item: Borrow<(LedLevel, embassy_time::Duration)>,
-    {
-        let mut animation: Vec<(LedLevel, embassy_time::Duration), MAX_FRAMES> = Vec::new();
-        for frame in frames {
-            let frame = *frame.borrow();
-            animation
-                .push(frame)
-                .expect("LED animation fits within MAX_FRAMES");
-        }
-        self.0.signal(LedCommand::Animate(animation));
-    }
-}
-
-#[embassy_executor::task]
-async fn device_loop(
-    outer_static: &'static LedOuterStatic,
-    mut pin: Output<'static>,
-    on_level: OnLevel,
-) -> ! {
-    let mut command = LedCommand::Set(LedLevel::Off);
-    set_pin_for_led_level(LedLevel::Off, &mut pin, on_level);
-
-    loop {
-        command = match command {
-            LedCommand::Set(led_level) => {
-                run_set_level_loop(led_level, outer_static, &mut pin, on_level).await
-            }
-            LedCommand::Animate(animation) => {
-                run_animation_loop(animation, outer_static, &mut pin, on_level).await
-            }
-        };
+    #[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+    pub fn outer(&self) -> &LedOuterStatic<MAX_STEPS> {
+        &self.outer
     }
 }
 
 /// Set the physical pin state based on desired LED level and on_level.
-fn set_pin_for_led_level(led_level: LedLevel, pin: &mut Output<'_>, on_level: OnLevel) {
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+pub fn set_pin_for_led_level(led_level: LedLevel, pin: &mut Output<'_>, on_level: OnLevel) {
     let pin_level = match (led_level, on_level) {
         (LedLevel::On, OnLevel::High) | (LedLevel::Off, OnLevel::Low) => Level::High,
         (LedLevel::Off, OnLevel::High) | (LedLevel::On, OnLevel::Low) => Level::Low,
@@ -174,12 +106,13 @@ fn set_pin_for_led_level(led_level: LedLevel, pin: &mut Output<'_>, on_level: On
     pin.set_level(pin_level);
 }
 
-async fn run_set_level_loop(
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+pub async fn run_set_level_loop<const MAX_STEPS: usize>(
     led_level: LedLevel,
-    outer_static: &'static LedOuterStatic,
+    outer_static: &'static LedOuterStatic<MAX_STEPS>,
     pin: &mut Output<'_>,
     on_level: OnLevel,
-) -> LedCommand {
+) -> LedCommand<MAX_STEPS> {
     set_pin_for_led_level(led_level, pin, on_level);
 
     loop {
@@ -195,12 +128,13 @@ async fn run_set_level_loop(
     }
 }
 
-async fn run_animation_loop(
-    animation: Vec<(LedLevel, Duration), MAX_FRAMES>,
-    outer_static: &'static LedOuterStatic,
+#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
+pub async fn run_animation_loop<const MAX_STEPS: usize>(
+    animation: Vec<(LedLevel, Duration), MAX_STEPS>,
+    outer_static: &'static LedOuterStatic<MAX_STEPS>,
     pin: &mut Output<'_>,
     on_level: OnLevel,
-) -> LedCommand {
+) -> LedCommand<MAX_STEPS> {
     if animation.is_empty() {
         return LedCommand::Animate(animation);
     }
@@ -222,3 +156,159 @@ async fn run_animation_loop(
         }
     }
 }
+
+/// Macro to generate a single LED struct type (includes syntax details).
+///
+/// **See the [led module documentation](mod@crate::led) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// led! {
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///         max_steps: <usize_expr>, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` — GPIO pin resource type for this generated LED.
+///
+/// **Optional fields:**
+///
+/// - `max_steps` — Maximum number of animation frames (default: 32).
+///
+/// `max_steps = 0` disables animation storage; `set_level()` is still supported.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! led {
+    // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
+    // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
+    // so macro visibility and helper exposure can be controlled more precisely.
+    ($($tt:tt)*) => { $crate::__led_impl! { $($tt)* } };
+}
+
+/// Implementation macro. Not part of the public API; use [`led!`] instead.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_impl {
+    (
+        $vis:vis $name:ident {
+            pin: $pin:ident,
+            max_steps: $max_steps:expr $(,)?
+        }
+    ) => {
+        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
+    };
+    (
+        $vis:vis $name:ident {
+            max_steps: $max_steps:expr,
+            pin: $pin:ident $(,)?
+        }
+    ) => {
+        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
+    };
+    (
+        $vis:vis $name:ident {
+            pin: $pin:ident $(,)?
+        }
+    ) => {
+        $crate::__led_impl!(
+            @__emit
+            vis: $vis,
+            name: $name,
+            pin: $pin,
+            max_steps: $crate::led::DEFAULT_MAX_STEPS
+        );
+    };
+    (
+        @__emit
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: $pin:ident,
+        max_steps: $max_steps:expr
+    ) => {
+        $crate::led::paste::paste! {
+            const [<$name:upper _MAX_STEPS>]: usize = $max_steps;
+
+            #[allow(non_upper_case_globals)]
+            static [<$name:upper _STATIC>]: $crate::led::LedStatic<{ [<$name:upper _MAX_STEPS>] }> =
+                $crate::led::LedStatic::new();
+
+            #[allow(non_camel_case_types)]
+            $vis struct $name(&'static $crate::led::LedOuterStatic<{ [<$name:upper _MAX_STEPS>] }>);
+
+            impl $name {
+                $vis const MAX_STEPS: usize = [<$name:upper _MAX_STEPS>];
+
+                $vis fn new(
+                    pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
+                    on_level: $crate::led::OnLevel,
+                    spawner: ::embassy_executor::Spawner,
+                ) -> $crate::Result<Self> {
+                    let pin_output = ::embassy_rp::gpio::Output::new(pin, ::embassy_rp::gpio::Level::Low);
+                    let token = [<__led_task_ $name:snake>](
+                        [<$name:upper _STATIC>].outer(),
+                        pin_output,
+                        on_level,
+                    );
+                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
+                    Ok(Self([<$name:upper _STATIC>].outer()))
+                }
+            }
+
+            impl $crate::led::Led for $name {
+                fn set_level(&self, led_level: $crate::led::LedLevel) {
+                    self.0.signal($crate::led::LedCommand::Set(led_level));
+                }
+
+                fn animate<I>(&self, frames: I)
+                where
+                    I: IntoIterator,
+                    I::Item: ::core::borrow::Borrow<(
+                        $crate::led::LedLevel,
+                        ::embassy_time::Duration,
+                    )>,
+                {
+                    let mut animation: ::heapless::Vec<
+                        ($crate::led::LedLevel, ::embassy_time::Duration),
+                        { [<$name:upper _MAX_STEPS>] },
+                    > = ::heapless::Vec::new();
+                    for frame in frames {
+                        let frame = *::core::borrow::Borrow::borrow(&frame);
+                        animation
+                            .push(frame)
+                            .expect("LED animation fits within MAX_STEPS");
+                    }
+                    self.0.signal($crate::led::LedCommand::Animate(animation));
+                }
+            }
+
+            #[::embassy_executor::task]
+            async fn [<__led_task_ $name:snake>](
+                outer_static: &'static $crate::led::LedOuterStatic<{ [<$name:upper _MAX_STEPS>] }>,
+                mut pin: ::embassy_rp::gpio::Output<'static>,
+                on_level: $crate::led::OnLevel,
+            ) -> ! {
+                let mut command = $crate::led::LedCommand::Set($crate::led::LedLevel::Off);
+                $crate::led::set_pin_for_led_level($crate::led::LedLevel::Off, &mut pin, on_level);
+
+                loop {
+                    command = match command {
+                        $crate::led::LedCommand::Set(led_level) => {
+                            $crate::led::run_set_level_loop(led_level, outer_static, &mut pin, on_level).await
+                        }
+                        $crate::led::LedCommand::Animate(animation) => {
+                            $crate::led::run_animation_loop(animation, outer_static, &mut pin, on_level).await
+                        }
+                    };
+                }
+            }
+        }
+    };
+}
+
+#[doc(inline)]
+pub use led;

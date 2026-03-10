@@ -17,7 +17,7 @@
 | led4 | [x] | [x] | [x] | [x] | ? | [2] ([note](#note-runtime-pool-limit-2)) | [x] | [2] ([note](#note-runtime-pool-limit-2)) |
 | lcd_text | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | clock_sync | [x] | [x] | [x] | [x] | [  ] | [2] ([note](#note-runtime-pool-limit-2)) | [x] | [2] ([note](#note-runtime-pool-limit-2)) |
-| led | [x] | ? | [  ] | [ ] | [  ] | [ ] | ? | ? |
+| led | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | rfid | [x] | ? | [  ] | [ ] | [  ] | [ ] ([note](#note-rfid)) | [x](#note-rfid) | [x](#note-rfid) |
 
 ## Key

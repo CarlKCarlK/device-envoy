@@ -10,7 +10,7 @@ Shared rules are in the root [`AGENTS.md`](../../AGENTS.md). This file contains 
 
 ## Generated Files
 
-For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, and `ir_generated`.
+For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `ir_generated`, and `led_generated`.
 
 ## main/inner_main Pattern
 

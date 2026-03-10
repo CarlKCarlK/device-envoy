@@ -167,6 +167,16 @@ path = "led4_two.rs"
 required-features = ["pico1"]
 
 [[bin]]
+name = "led_two"
+path = "led_two.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_five"
+path = "led_five.rs"
+required-features = ["pico1"]
+
+[[bin]]
 name = "clock_sync_two"
 path = "clock_sync_two.rs"
 required-features = ["pico1"]

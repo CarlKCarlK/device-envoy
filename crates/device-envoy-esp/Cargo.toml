@@ -96,6 +96,11 @@ path = "tests/embedded/led4_two_displays_compile.rs"
 harness = false
 
 [[test]]
+name = "led_five_compile"
+path = "tests/embedded/led_five_compile.rs"
+harness = false
+
+[[test]]
 name = "lcd_text_four_addresses_compile"
 path = "tests/embedded/lcd_text_four_addresses_compile.rs"
 harness = false

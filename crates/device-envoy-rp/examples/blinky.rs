@@ -20,7 +20,8 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::{
     Result,
-    led::{Led as _, LedLevel, LedRp, LedRpStatic, OnLevel},
+    led,
+    led::{Led as _, LedLevel, OnLevel},
 };
 use embassy_executor::Spawner;
 use embassy_time::Duration;
@@ -62,6 +63,8 @@ const SOS_PATTERN: [(LedLevel, Duration); 18] = [
     (LedLevel::Off, WORD_GAP_DURATION),
 ];
 
+led!(LedExample { pin: PIN_1, max_steps: 32 });
+
 #[embassy_executor::main]
 pub async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -71,11 +74,10 @@ pub async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    static LED_RP_STATIC: LedRpStatic = LedRp::new_static();
-    let led_rp = LedRp::new(&LED_RP_STATIC, p.PIN_1, OnLevel::High, spawner)?;
+    let led_example = LedExample::new(p.PIN_1, OnLevel::High, spawner)?;
 
     info!("Emitting SOS in Morse code");
-    led_rp.animate(SOS_PATTERN);
+    led_example.animate(SOS_PATTERN);
 
     // Animation loops continuously in background task
     core::future::pending().await

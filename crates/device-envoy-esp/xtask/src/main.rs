@@ -3,6 +3,7 @@
 //! Run with: `cargo xtask <command>`
 
 mod ir_generated;
+mod led_generated;
 
 use clap::{Parser, Subcommand};
 use owo_colors::OwoColorize;
@@ -129,6 +130,10 @@ fn check_all() -> ExitCode {
 
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
         eprintln!("Error generating ir_generated.rs: {err}");
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_generated::generate_led_generated(&root) {
+        eprintln!("Error generating led_generated.rs: {err}");
         return ExitCode::FAILURE;
     }
     if let Err(err) = check_generated_doc_stubs(&root) {
@@ -266,6 +271,7 @@ fn check_embedded_tests() -> ExitCode {
 
     let compile_pass_tests = [
         "ir_two_receivers_compile",
+        "led_five_compile",
         "led_strip_two_strips_compile",
         "led_strip_spi_two_strips_compile",
         "led2d_two_panels_compile",
@@ -486,6 +492,16 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
             "pub struct IrKeplerGenerated",
             "impl IrKepler for IrKeplerGenerated",
+            "pub fn new(",
+        ],
+    },
+    GeneratedDocStubExpectation {
+        relative_path: "src/led/led_generated.rs",
+        required_fragments: &[
+            "pub struct LedGenerated",
+            "impl LedGenerated",
+            "pub const MAX_STEPS: usize",
+            "impl Led for LedGenerated",
             "pub fn new(",
         ],
     }];

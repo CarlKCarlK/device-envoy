@@ -24,7 +24,8 @@ use device_envoy_rp::audio_player::{
     AtEnd, AudioPlayer as _, Gain, VOICE_22050_HZ, Volume, audio_player,
 };
 use device_envoy_rp::button::Button as _;
-use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button::{PressedTo};
+use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
@@ -36,6 +37,12 @@ use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::Duration;
 use panic_probe as _;
+
+button_watch! {
+    ButtonWatch13 {
+        pin: PIN_13,
+    }
+}
 
 audio_player! {
     AudioPlayer10 {
@@ -154,15 +161,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,
         p.DMA_CH0,
         wifi_credentials_flash_block,
-        p.PIN_13,
-        PressedTo::Ground,
+        ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?,
         "www.picoclock.net",
         [timezone_field],
         spawner,
     )?;
 
     let audio_player10_ref = audio_player8;
-    let (stack, mut button) = wifi_auto
+    let (stack, mut button_watch13) = wifi_auto
         .connect(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
@@ -221,7 +227,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
 
     loop {
-        match select(button.wait_for_press(), clock_sync.wait_for_tick()).await {
+        match select(button_watch13.wait_for_press(), clock_sync.wait_for_tick()).await {
             Either::First(()) => {
                 clock_audio_mode = clock_audio_mode.toggled();
                 clock_sync

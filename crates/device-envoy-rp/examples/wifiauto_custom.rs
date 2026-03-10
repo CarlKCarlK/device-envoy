@@ -10,7 +10,7 @@ use core::{convert::Infallible, panic};
 use defmt::{info, warn};
 use device_envoy_rp::{
     Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
     led_strip::colors,
     led2d,
@@ -84,8 +84,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface (required)
         p.DMA_CH0, // CYW43 DMA (required)
         wifi_credentials_flash_block,
-        p.PIN_13, // Button for forced reconfiguration
-        PressedTo::Ground,
+        ButtonRp::new(p.PIN_13, PressedTo::Ground),
         "PicoTime", // Captive-portal SSID
         [device_name_field],
         spawner,

@@ -151,6 +151,19 @@ pub trait Button {
     }
 }
 
+impl<T> Button for &mut T
+where
+    T: Button + ?Sized,
+{
+    fn is_pressed(&self) -> bool {
+        (**self).is_pressed()
+    }
+
+    async fn wait_until_pressed_state(&mut self, pressed: bool) {
+        (**self).wait_until_pressed_state(pressed).await;
+    }
+}
+
 // ============================================================================
 // PressedTo - How the button is wired
 // ============================================================================

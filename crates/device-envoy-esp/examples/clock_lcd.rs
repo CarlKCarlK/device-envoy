@@ -9,7 +9,8 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    button::PressedTo,
+    button::{PressedTo},
+    button_watch,
     clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start, lcd_text,
@@ -31,6 +32,12 @@ lcd_text! {
         width: 16,
         height: 2,
         address: 0x27
+    }
+}
+
+button_watch! {
+    ButtonWatch6 {
+        pin: GPIO6,
     }
 }
 
@@ -59,8 +66,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
+        ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?,
         "EnvoyClockLcd",
         [timezone_field],
         spawner,

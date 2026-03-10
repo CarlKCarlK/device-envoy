@@ -13,7 +13,6 @@ use embassy_net::Ipv4Address;
 use embassy_rp::{
     Peri,
     dma::Channel,
-    gpio::Pin,
     peripherals::{PIN_23, PIN_24, PIN_25, PIN_29},
 };
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
@@ -22,7 +21,7 @@ use heapless::Vec;
 use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
-use crate::button::{Button as _, ButtonRp, PressedTo};
+use crate::button::{Button, ButtonRp};
 use crate::flash_block::FlashBlockRp;
 use crate::{Error, Result};
 use device_envoy_core::wifi_auto::{WifiCredentials as InnerWifiCredentials, WifiStartMode};
@@ -57,7 +56,6 @@ pub(crate) struct WifiAutoStatic {
     wifi_auto_cell: StaticCell<WifiAutoInner>,
     force_captive_portal: AtomicBool,
     defaults: Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>>,
-    button: Mutex<CriticalSectionRawMutex, RefCell<Option<ButtonRp<'static>>>>,
     fields_storage: StaticCell<Vec<&'static dyn WifiAutoField, MAX_WIFI_AUTO_FIELDS>>,
 }
 /// A device abstraction that connects a Pico with WiFi to the Internet and, when needed,
@@ -96,7 +94,7 @@ pub(crate) struct WifiAutoStatic {
 /// # use defmt::info;
 /// use device_envoy_rp::{
 ///     Result,
-///     button::PressedTo,
+///     button::{ButtonRp, PressedTo},
 ///     flash_block::FlashBlockRp,
 ///     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 /// };
@@ -118,8 +116,7 @@ pub(crate) struct WifiAutoStatic {
 ///         p.PIO0,            // WiFi PIO
 ///         p.DMA_CH0,         // WiFi DMA
 ///         wifi_flash,
-///         p.PIN_13,          // Button for reconfiguration
-///         PressedTo::Ground,
+///         ButtonRp::new(p.PIN_13, PressedTo::Ground), // Button for reconfiguration
 ///         "PicoAccess",      // Captive-portal SSID
 ///         [],                // Any extra fields
 ///         spawner,
@@ -197,8 +194,9 @@ pub(crate) struct WifiAutoStatic {
 ///
 /// These are supplied explicitly to [`WifiAutoRp::new`]. The chosen PIO/DMA
 /// pair cannot be shared with other uses; the compiler enforces this.
-pub struct WifiAutoRp {
+pub struct WifiAutoRp<ButtonType = ButtonRp<'static>> {
     wifi_auto: &'static WifiAutoInner,
+    button: Option<ButtonType>,
 }
 
 struct WifiAutoInner {
@@ -206,7 +204,6 @@ struct WifiAutoInner {
     spawner: Spawner,
     force_captive_portal: &'static AtomicBool,
     defaults: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>>,
-    button: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<ButtonRp<'static>>>>,
     fields: &'static [&'static dyn WifiAutoField],
 }
 
@@ -218,7 +215,6 @@ impl WifiAutoStatic {
             wifi_auto_cell: StaticCell::new(),
             force_captive_portal: AtomicBool::new(false),
             defaults: Mutex::new(RefCell::new(None)),
-            button: Mutex::new(RefCell::new(None)),
             fields_storage: StaticCell::new(),
         }
     }
@@ -233,11 +229,6 @@ impl WifiAutoStatic {
         &self.defaults
     }
 
-    fn button(
-        &'static self,
-    ) -> &'static Mutex<CriticalSectionRawMutex, RefCell<Option<ButtonRp<'static>>>> {
-        &self.button
-    }
 }
 
 impl WifiAutoRp {
@@ -250,8 +241,8 @@ impl WifiAutoRp {
     /// - `dma`: DMA resource for WiFi.
     /// - `wifi_credentials_flash_block`: a flash block implementing
     ///   [`crate::flash_block::FlashBlock`] for WiFi credentials.
-    /// - `button_pin`: Button pin used to force setup mode on boot.
-    /// - `button_pressed_to`: Wiring for the button (ground or VCC).
+    /// - `button`: Any button implementation used to force setup mode on boot
+    ///   (for example [`crate::button::ButtonRp`] or [`crate::button::ButtonWatchRp`]).
     /// - `captive_portal_ssid`: SSID shown when the device starts setup mode.
     /// - `custom_fields`: Extra fields collected in the setup page. See the
     ///   [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
@@ -259,7 +250,7 @@ impl WifiAutoRp {
     ///
     /// See the [WifiAutoRp struct example](Self) for a complete example.
     #[allow(clippy::too_many_arguments)]
-    pub fn new<const N: usize, PIO: WifiPio, DMA: Channel, FlashBlockType>(
+    pub fn new<const N: usize, PIO: WifiPio, DMA: Channel, FlashBlockType, ButtonType>(
         pin_23: Peri<'static, PIN_23>,
         pin_24: Peri<'static, PIN_24>,
         pin_25: Peri<'static, PIN_25>,
@@ -267,14 +258,14 @@ impl WifiAutoRp {
         pio: Peri<'static, PIO>,
         dma: Peri<'static, DMA>,
         wifi_credentials_flash_block: FlashBlockType,
-        button_pin: Peri<'static, impl Pin>,
-        button_pressed_to: PressedTo,
+        button: ButtonType,
         captive_portal_ssid: &'static str,
         custom_fields: [&'static dyn WifiAutoField; N],
         spawner: Spawner,
-    ) -> Result<Self>
+    ) -> Result<WifiAutoRp<ButtonType>>
     where
         FlashBlockType: crate::flash_block::FlashBlock<Error = Error> + Into<FlashBlockRp>,
+        ButtonType: Button + 'static,
     {
         let mut wifi_credentials_flash_block = wifi_credentials_flash_block.into();
         static WIFI_AUTO_STATIC: WifiAutoStatic = WifiAutoInner::new_static();
@@ -291,7 +282,6 @@ impl WifiAutoRp {
         }
 
         // Allow the pull-up to stabilize after reset before sampling the button.
-        let button = ButtonRp::new(button_pin, button_pressed_to);
         let button_reset_stabilize_cycles: u32 = 300_000;
         cortex_m::asm::delay(button_reset_stabilize_cycles);
         let force_captive_portal = button.is_pressed();
@@ -327,10 +317,6 @@ impl WifiAutoRp {
             spawner,
         );
 
-        wifi_auto_static.button.lock(|cell| {
-            *cell.borrow_mut() = Some(button);
-        });
-
         // Store fields array and convert to slice
         let fields_ref: &'static [&'static dyn WifiAutoField] = if N > 0 {
             assert!(
@@ -353,7 +339,6 @@ impl WifiAutoRp {
             spawner,
             force_captive_portal: wifi_auto_static.force_captive_portal_flag(),
             defaults: wifi_auto_static.defaults(),
-            button: wifi_auto_static.button(),
             fields: fields_ref,
         });
 
@@ -361,13 +346,17 @@ impl WifiAutoRp {
             instance.force_captive_portal();
         }
 
-        Ok(Self {
+        Ok(WifiAutoRp {
             wifi_auto: instance,
+            button: Some(button),
         })
     }
 }
 
-impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
+impl<ButtonType> device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp<ButtonType>
+where
+    ButtonType: Button,
+{
     type Error = Error;
 
     /// Connects to WiFi (if possible), reports status, and returns the
@@ -403,7 +392,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # use panic_probe as _;
     /// # use device_envoy_rp::{
     /// #     Result,
-    /// #     button::PressedTo,
+    /// #     button::{ButtonRp, PressedTo},
     /// #     flash_block::FlashBlockRp,
     /// #     wifi_auto::{WifiAuto as _, WifiAutoRp},
     /// # };
@@ -419,8 +408,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
     /// #     wifi_flash,
-    /// #     p.PIN_13,
-    /// #     PressedTo::Ground,
+    /// #     ButtonRp::new(p.PIN_13, PressedTo::Ground),
     /// #     "PicoAccess",
     /// #     [],
     /// #     spawner,
@@ -440,7 +428,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # use panic_probe as _;
     /// # use device_envoy_rp::{
     /// #     Result,
-    /// #     button::PressedTo,
+    /// #     button::{ButtonRp, PressedTo},
     /// #     flash_block::FlashBlockRp,
     /// #     led_strip::colors,
     /// #     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
@@ -464,8 +452,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
     /// #     wifi_flash,
-    /// #     p.PIN_13,
-    /// #     PressedTo::Ground,
+    /// #     ButtonRp::new(p.PIN_13, PressedTo::Ground),
     /// #     "PicoAccess",
     /// #     [],
     /// #     spawner,
@@ -495,14 +482,17 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # }
     /// ```
     async fn connect<OnEvent, OnEventFuture>(
-        self,
-        on_event: OnEvent,
-    ) -> Result<(WifiStack, impl device_envoy_core::button::Button)>
+        mut self,
+        mut on_event: OnEvent,
+    ) -> Result<(WifiStack, impl Button)>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,
     {
-        self.wifi_auto.connect(on_event).await
+        self.wifi_auto.ensure_connected_with(&mut on_event).await?;
+        let stack = self.wifi_auto.wifi.wait_for_stack().await;
+        let button = self.button.take().ok_or(Error::StorageCorrupted)?;
+        Ok((stack, button))
     }
 }
 
@@ -514,10 +504,6 @@ impl WifiAutoInner {
 
     fn force_captive_portal(&self) {
         self.force_captive_portal.store(true, Ordering::Relaxed);
-    }
-
-    fn take_button(&self) -> Option<ButtonRp<'static>> {
-        self.button.lock(|cell| cell.borrow_mut().take())
     }
 
     fn extra_fields_ready(&self) -> Result<bool> {
@@ -533,17 +519,6 @@ impl WifiAutoInner {
             self.fields.len()
         );
         Ok(true)
-    }
-
-    device_envoy_core::__impl_wifi_auto_connect! {
-    fn connect(&self as wifi_auto_inner, on_event) -> Result<(WifiStack, ButtonRp<'static>)> {
-        wifi_auto_inner.ensure_connected_with(&mut on_event).await?;
-        let stack = wifi_auto_inner.wifi.wait_for_stack().await;
-        let button = wifi_auto_inner
-            .take_button()
-            .ok_or(Error::StorageCorrupted)?;
-        Ok((stack, button))
-    }
     }
 
     async fn ensure_connected_with<Fut, F>(&self, on_event: &mut F) -> Result<()>

@@ -9,7 +9,8 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    button::PressedTo,
+    button::{PressedTo},
+    button_watch,
     clock_sync::{h12_m_s, ClockSync, ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start,
@@ -23,6 +24,12 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyClockSync";
+
+button_watch! {
+    ButtonWatch6 {
+        pin: GPIO6,
+    }
+}
 
 async fn log_clock_ticks(clock_sync: &impl ClockSync) -> ! {
     loop {
@@ -58,8 +65,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
+        ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?,
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,

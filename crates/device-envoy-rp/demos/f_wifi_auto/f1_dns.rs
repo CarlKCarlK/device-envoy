@@ -9,7 +9,7 @@
 use core::{convert::Infallible, fmt::Write, panic};
 use device_envoy_rp::{
     Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
     led_strip::colors,
     led2d,
@@ -61,8 +61,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO1,    // Needs a PIO resource
         p.DMA_CH1, // Needs a DMA resource
         wifi_credentials_flash_block,
-        p.PIN_15, // Button for forced reconfiguration
-        PressedTo::Ground,
+        ButtonRp::new(p.PIN_15, PressedTo::Ground),
         "PicoDemo", // Setup SSID
         [],         // Any custom fields
         spawner,

@@ -11,7 +11,7 @@ use core::convert::Infallible;
 use defmt::{info, warn};
 use defmt_rtt as _;
 use device_envoy_rp::button::Button as _;
-use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::clock_sync::UnixSeconds;
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::led4::{
@@ -97,8 +97,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,                       // CYW43 PIO interface
         p.DMA_CH0,                    // CYW43 DMA channel
         wifi_credentials_flash_block, // Flash block storing Wi-Fi creds
-        p.PIN_13,                     // Reset button pin
-        PressedTo::Ground,            // Button wiring
+        ButtonRp::new(p.PIN_13, PressedTo::Ground),            // Button wiring
         "Pico",                       // Captive portal SSID to display
         [timezone_field, device_name_field, location_field],
         spawner,

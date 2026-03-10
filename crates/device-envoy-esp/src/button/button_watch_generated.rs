@@ -58,31 +58,6 @@ impl ButtonWatchGenerated {
         Ok(instance)
     }
 
-    /// Creates a monitor from an existing button.
-    ///
-    /// # Parameters
-    ///
-    /// - `button`: Existing button instance
-    /// - `spawner`: Task spawner for background operations
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the background task cannot be spawned.
-    pub fn from_button(
-        button: crate::button::ButtonEsp<'static>,
-        spawner: embassy_executor::Spawner,
-    ) -> crate::Result<&'static mut Self> {
-        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> = static_cell::StaticCell::new();
-        let instance = INSTANCE.init(ButtonWatchGenerated {
-            button_watch: super::ButtonWatchEsp {
-                signal: &embassy_sync::signal::Signal::new(),
-                state_signal: &embassy_sync::signal::Signal::new(),
-                is_pressed: &core::sync::atomic::AtomicBool::new(false),
-            },
-        });
-        let _ = (button, spawner);
-        Ok(instance)
-    }
 }
 
 #[cfg(doc)]

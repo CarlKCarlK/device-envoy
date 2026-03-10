@@ -48,22 +48,21 @@ pub struct ButtonWatchEsp<'a> {
 
 #[cfg(target_os = "none")]
 impl ButtonWatchEsp<'_> {
-    /// Create static resources for [`ButtonWatchEsp::new`] and [`ButtonWatchEsp::new_from_pin`].
+    /// Create static resources for [`ButtonWatchEsp::new_from_pin`].
     #[must_use]
     pub const fn new_static() -> ButtonWatchStaticEsp {
         ButtonWatchStaticEsp::new()
     }
 
-    /// Create a background button monitor from an existing [`ButtonEsp`].
-    ///
-    /// This constructor spawns a dedicated task that continuously monitors the
-    /// button and signals [`PressDuration`] events.
+    /// Create a background button monitor directly from a pin.
     #[must_use = "Must be used to manage the spawned task"]
-    pub fn new(
+    pub fn new_from_pin(
         button_watch_static: &'static ButtonWatchStaticEsp,
-        button: ButtonEsp<'static>,
+        button_pin: impl esp_hal::gpio::InputPin + 'static,
+        pressed_to: PressedTo,
         spawner: Spawner,
     ) -> Result<Self> {
+        let button = ButtonEsp::new(button_pin, pressed_to);
         let (input, pressed_to) = button.into_parts();
         let token = button_watch_task_from_input(
             input,
@@ -78,18 +77,6 @@ impl ButtonWatchEsp<'_> {
             state_signal: &button_watch_static.state_signal,
             is_pressed: &button_watch_static.is_pressed,
         })
-    }
-
-    /// Create a background button monitor directly from a pin.
-    #[must_use = "Must be used to manage the spawned task"]
-    pub fn new_from_pin(
-        button_watch_static: &'static ButtonWatchStaticEsp,
-        button_pin: impl esp_hal::gpio::InputPin + 'static,
-        pressed_to: PressedTo,
-        spawner: Spawner,
-    ) -> Result<Self> {
-        let button = ButtonEsp::new(button_pin, pressed_to);
-        Self::new(button_watch_static, button, spawner)
     }
 }
 
@@ -216,7 +203,6 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
 /// # Constructors
 ///
 /// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
-/// - [`from_button()`](crate::button::button_watch_generated::ButtonWatchGenerated::from_button) — Convert from an existing [`ButtonEsp`](crate::button::ButtonEsp)
 ///
 /// Syntax:
 ///
@@ -311,29 +297,6 @@ macro_rules! __button_watch_impl {
                     Ok(instance)
                 }
 
-                /// Creates a monitor from an existing [`ButtonEsp`](crate::button::ButtonEsp).
-                ///
-                /// # Errors
-                ///
-                /// Returns an error if the background task cannot be spawned.
-                pub fn from_button(
-                    button: $crate::button::ButtonEsp<'static>,
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<&'static mut Self> {
-                    static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticEsp =
-                        $crate::button::ButtonWatchEsp::new_static();
-                    static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$name> =
-                        ::static_cell::StaticCell::new();
-
-                    let button_watch = $crate::button::ButtonWatchEsp::new(
-                        &BUTTON_WATCH_STATIC,
-                        button,
-                        spawner,
-                    )?;
-
-                    let instance = BUTTON_WATCH_CELL.init($name { button_watch });
-                    Ok(instance)
-                }
             }
 
             impl ::core::ops::Deref for $name {

@@ -7,7 +7,7 @@ use core::convert::Infallible;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    button::{Button, PressedTo},
+    button::{Button, ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto, WifiAutoEsp, WifiAutoEvent, WifiStack},
@@ -52,8 +52,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
+        ButtonEsp::new(p.GPIO6, PressedTo::Ground),
         "EnvoySetup",
         [],
         spawner,

@@ -9,7 +9,8 @@
 use core::{convert::Infallible, fmt};
 use defmt::*;
 use defmt_rtt as _;
-use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button::{PressedTo};
+use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::i2cs;
@@ -27,6 +28,12 @@ i2cs! {
     scl_pin: PIN_5,
     LcdTexts0 {
         LcdTextClock { width: 16, height: 2, address: 0x27 },
+    }
+}
+
+button_watch! {
+    ButtonWatch13 {
+        pin: PIN_13,
     }
 }
 
@@ -68,8 +75,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        p.PIN_13, // Reset button pin
-        PressedTo::Ground,
+        ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?,
         "www.picoclock.net",
         [timezone_field],
         spawner,

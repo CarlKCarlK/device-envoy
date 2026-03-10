@@ -8,13 +8,14 @@ mod dns;
 pub mod fields;
 
 use core::cell::RefCell;
+use core::marker::PhantomData;
 #[cfg(target_os = "none")]
 use core::future::Future;
 #[cfg(target_os = "none")]
 use core::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "none")]
-use crate::button::{Button as _, ButtonEsp, PressedTo};
+use crate::button::{Button, ButtonEsp};
 #[cfg(target_os = "none")]
 use crate::flash_block::{FlashBlock as _, FlashBlockEsp};
 use crate::Result;
@@ -22,8 +23,6 @@ use crate::Result;
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4};
 #[cfg(target_os = "none")]
 use embassy_time::{Duration, Timer};
-#[cfg(target_os = "none")]
-use esp_hal::gpio::InputPin;
 use heapless::Vec;
 #[cfg(target_os = "none")]
 use log::{info, warn};
@@ -57,10 +56,11 @@ enum WifiAutoStorage {
 ///
 /// Create this type using inherent constructors (`new` / `new_in_memory`), then
 /// call [`WifiAuto::connect`] from the re-exported trait for connection flow.
-pub struct WifiAutoEsp<'a> {
+pub struct WifiAutoEsp<'a, ButtonType = ()> {
     captive_portal_ssid: &'static str,
     fields: Vec<&'a dyn WifiAutoField<Error = crate::Error>, MAX_WIFI_AUTO_FIELDS>,
     storage: WifiAutoStorage,
+    _button_type: PhantomData<ButtonType>,
     #[cfg(target_os = "none")]
     wifi: RefCell<Option<esp_hal::peripherals::WIFI<'static>>>,
     #[cfg(target_os = "none")]
@@ -68,10 +68,10 @@ pub struct WifiAutoEsp<'a> {
     #[cfg(target_os = "none")]
     force_captive_portal: bool,
     #[cfg(target_os = "none")]
-    button: RefCell<Option<ButtonEsp<'static>>>,
+    button: RefCell<Option<ButtonType>>,
 }
 
-impl<'a> WifiAutoEsp<'a> {
+impl<'a> WifiAutoEsp<'a, ()> {
     /// Create a new setup flow configuration.
     ///
     /// See the [WifiAutoEsp struct example](Self) for usage.
@@ -97,9 +97,12 @@ impl<'a> WifiAutoEsp<'a> {
                 wifi_credentials: None,
                 wifi_start_mode: WifiStartMode::Client,
             })),
+            _button_type: PhantomData,
         }
     }
+}
 
+impl<'a, ButtonType> WifiAutoEsp<'a, ButtonType> {
     /// Create an in-memory setup flow for embedded targets with runtime Wi-Fi resources.
     ///
     /// This constructor is available on embedded targets (`target_os = "none"`).
@@ -112,18 +115,19 @@ impl<'a> WifiAutoEsp<'a> {
     pub fn new_in_memory<const N: usize>(
         captive_portal_ssid: &'static str,
         wifi: esp_hal::peripherals::WIFI<'static>,
-        button_pin: impl InputPin + 'static,
-        button_pressed_to: PressedTo,
+        button: ButtonType,
         custom_fields: [&'a dyn WifiAutoField<Error = crate::Error>; N],
         spawner: embassy_executor::Spawner,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        ButtonType: Button + 'static,
+    {
         assert!(
             N <= MAX_WIFI_AUTO_FIELDS,
             "custom_fields supports up to {MAX_WIFI_AUTO_FIELDS} entries"
         );
         let fields =
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
-        let button = ButtonEsp::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
         let wifi_auto = Self {
             captive_portal_ssid,
@@ -132,6 +136,7 @@ impl<'a> WifiAutoEsp<'a> {
                 wifi_credentials: None,
                 wifi_start_mode: WifiStartMode::Client,
             })),
+            _button_type: PhantomData,
             wifi: RefCell::new(Some(wifi)),
             spawner,
             force_captive_portal,
@@ -165,24 +170,26 @@ impl<'a> WifiAutoEsp<'a> {
     pub fn new<const N: usize>(
         wifi: esp_hal::peripherals::WIFI<'static>,
         wifi_auto_flash_block: FlashBlockEsp,
-        button_pin: impl InputPin + 'static,
-        button_pressed_to: PressedTo,
+        button: ButtonType,
         captive_portal_ssid: &'static str,
         custom_fields: [&'a dyn WifiAutoField<Error = crate::Error>; N],
         spawner: embassy_executor::Spawner,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        ButtonType: Button + 'static,
+    {
         assert!(
             N <= MAX_WIFI_AUTO_FIELDS,
             "custom_fields supports up to {MAX_WIFI_AUTO_FIELDS} entries"
         );
         let fields =
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
-        let button = ButtonEsp::new(button_pin, button_pressed_to);
         let force_captive_portal = button.is_pressed();
         let wifi_auto = Self {
             captive_portal_ssid,
             fields,
             storage: WifiAutoStorage::Flash(RefCell::new(wifi_auto_flash_block)),
+            _button_type: PhantomData,
             wifi: RefCell::new(Some(wifi)),
             spawner,
             force_captive_portal,
@@ -334,7 +341,7 @@ impl<'a> WifiAutoEsp<'a> {
     async fn connect_inner<OnEvent, OnEventFuture>(
         &self,
         mut on_event: OnEvent,
-    ) -> Result<(WifiStack, ButtonEsp<'static>)>
+    ) -> Result<(WifiStack, ButtonType)>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,
@@ -362,8 +369,8 @@ impl<'a> WifiAutoEsp<'a> {
         )?;
 
         const TRY_COUNT: u8 = 10;
-        struct EspWifiAutoBackend<'a, 'b> {
-            wifi_auto: &'b WifiAutoEsp<'b>,
+        struct EspWifiAutoBackend<'a, 'b, ButtonType> {
+            wifi_auto: &'b WifiAutoEsp<'b, ButtonType>,
             wifi_controller: &'a mut esp_radio::wifi::WifiController<'static>,
             access_point_device: Option<esp_radio::wifi::WifiDevice<'static>>,
             station_device: Option<esp_radio::wifi::WifiDevice<'static>>,
@@ -371,7 +378,9 @@ impl<'a> WifiAutoEsp<'a> {
             connected_stack: Option<&'static Stack<'static>>,
             force_captive_portal: bool,
         }
-        impl device_envoy_core::wifi_auto::WifiAutoBackend for EspWifiAutoBackend<'_, '_> {
+        impl<ButtonType> device_envoy_core::wifi_auto::WifiAutoBackend
+            for EspWifiAutoBackend<'_, '_, ButtonType>
+        {
             type Error = crate::Error;
 
             fn force_captive_portal(&self) -> bool {
@@ -665,7 +674,10 @@ impl<'a> WifiAutoEsp<'a> {
 }
 
 #[cfg(target_os = "none")]
-impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
+impl<ButtonType> device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_, ButtonType>
+where
+    ButtonType: Button,
+{
     type Error = crate::Error;
 
     /// Connect using persisted credentials or captive-portal setup flow.
@@ -674,7 +686,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     async fn connect<OnEvent, OnEventFuture>(
         self,
         on_event: OnEvent,
-    ) -> Result<(WifiStack, impl device_envoy_core::button::Button)>
+    ) -> Result<(WifiStack, impl Button)>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,

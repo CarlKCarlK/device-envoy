@@ -10,7 +10,7 @@ use core::{convert::Infallible, panic};
 use defmt::info;
 use device_envoy_rp::{
     Error, Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND, h12_m_s},
     flash_block::FlashBlockRp,
     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
@@ -44,8 +44,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,
         p.DMA_CH0,
         wifi_credentials_flash_block,
-        p.PIN_13,
-        PressedTo::Ground,
+        ButtonRp::new(p.PIN_13, PressedTo::Ground),
         "ClockSync",
         [timezone_field], // Additional field(s)
         spawner,

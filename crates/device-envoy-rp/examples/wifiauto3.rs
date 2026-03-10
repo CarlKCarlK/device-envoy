@@ -11,7 +11,7 @@ extern crate panic_probe as _;
 
 use device_envoy_rp::{
     Error, Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
     wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
@@ -49,8 +49,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
-        p.PIN_13, // Button for reconfiguration
-        PressedTo::Ground,
+        ButtonRp::new(p.PIN_13, PressedTo::Ground),
         "PicoAccess",                    // Captive-portal SSID
         [website_field, timezone_field], // Custom fields
         spawner,

@@ -12,7 +12,7 @@ extern crate panic_probe as _;
 use core::convert::Infallible;
 use device_envoy_rp::{
     Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 };
@@ -38,8 +38,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
-        p.PIN_13, // Button for reconfiguration
-        PressedTo::Ground,
+        ButtonRp::new(p.PIN_13, PressedTo::Ground),
         "PicoAccess", // Captive-portal SSID
         [],           // Any extra fields
         spawner,

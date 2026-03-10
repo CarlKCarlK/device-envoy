@@ -17,7 +17,8 @@ use esp_backtrace as _;
 use log::{info, warn};
 
 use device_envoy_esp::{
-    button::PressedTo,
+    button::{PressedTo},
+    button_watch,
     flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
@@ -58,6 +59,12 @@ led2d! {
     }
 }
 
+button_watch! {
+    ButtonWatch6 {
+        pin: GPIO6,
+    }
+}
+
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
     match inner_main(spawner).await {
@@ -81,8 +88,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
+        ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?,
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,

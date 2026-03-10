@@ -17,7 +17,7 @@ pub use button_watch::{ButtonWatchRp, ButtonWatchStaticRp};
 
 // Must be public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
-pub use button_watch::{button_watch_task, button_watch_task_from_input};
+pub use button_watch::button_watch_task;
 
 pub use device_envoy_core::button::Button;
 pub use device_envoy_core::button::{
@@ -109,7 +109,7 @@ impl<'a> ButtonRp<'a> {
     /// This is useful for converting a `ButtonRp` (returned from `WifiAuto::connect`)
     /// into a `ButtonWatchRp` for background monitoring.
     ///
-    /// See the [`button_watch!`](crate::button_watch!) macro documentation for usage with `from_button()`.
+    /// See the [`button_watch!`](crate::button_watch!) macro documentation for creating button monitors.
     // Must be public for macro expansion but not part of the user-facing API.
     #[doc(hidden)]
     #[must_use]

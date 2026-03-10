@@ -11,8 +11,8 @@
 | ir/kepler | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
 | flash_block | [x] | [x] | [x] | [x] | ? | *na* | [x] | [x] |
 | button | [x] | [x] | [x] | [x] | ? | [x] | [x] | [x] |
-| servo | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | ? |
-| servo_player | [x] | [x] | [x] | [x] | [  ] | [x](#note-servo-player-poolind) | [75%](#note-servo-density) | [ ] ([note](#note-servo-player-own)) |
+| servo | [x] | [x] | [x] | [x] | ? | [x] | [75%](#note-servo-density) | [x] |
+| servo_player | [x] | [x] | [x] | [x] | [  ] | [x] | [75%](#note-servo-density) | [x] |
 | wifi_auto | [x] | [x] | [x] | [x] | ? | *na* | [x](#note-wifi-auto-eff) | ? |
 | led4 | [x] | [x] | [x] | [x] | ? | [ ] | [xTest] | ? |
 | lcd_text | [x] | [x] | [x] | [x] | ? | [x] | [xAsk] | [x] |
@@ -45,10 +45,6 @@
 ### Note: audio-player
 
 `audio_player`: Effectively 100% efficient on ESP for its chosen resource model (`I2S0` + DMA). On RP it is not 100% because the current implementation uses one PIO state machine (`sm0`) per instance rather than spreading across all four state machines. In principle a PIO block can run up to four independent programs, but practical multi-I2S constraints (timing/clocking, DMA feed pressure, pin routing, jitter risk) make full four-stream utilization non-trivial for reliable audio.
-
-### Note: servo-player-poolind
-
-`servo_player`: Marked `PoolInd [x]` because multiple independent instances are achievable by generating additional typed players via the macro.
 
 ### Note: servo-player-own
 

@@ -17,6 +17,7 @@
 //!
 //! servo! {
 //!     Servo11 {
+//!         pin: GPIO11,
 //!         timer: Timer0,
 //!         channel: Channel0,
 //!     }
@@ -49,6 +50,7 @@
 //!
 //! servo_player! {
 //!     ServoSweep {
+//!         pin: GPIO12,
 //!         timer: Timer1,
 //!         channel: Channel1,
 //!         max_steps: 40,
@@ -239,6 +241,7 @@ pub use servo;
 macro_rules! __servo_impl {
     (
         $name:ident {
+            pin: $pin:ident,
             timer: $timer:ident,
             channel: $channel:ident,
             $(min_us: $min_us:expr,)?
@@ -281,7 +284,7 @@ macro_rules! __servo_impl {
 
                 pub fn new(
                     ledc: &::esp_hal::ledc::Ledc<'static>,
-                    pin: impl ::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+                    pin: ::esp_hal::peripherals::$pin<'static>,
                 ) -> $crate::Result<$crate::servo::ServoEsp> {
                     $crate::servo::ServoEsp::new(&[<$name:upper _SERVO_STATIC>].servo_static, ledc, pin)
                 }

@@ -22,6 +22,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 servo! {
     ServoA {
+        pin: GPIO10,
         timer: Timer0,
         channel: Channel0,
     }
@@ -29,6 +30,7 @@ servo! {
 
 servo! {
     ServoB {
+        pin: GPIO18,
         timer: Timer1,
         channel: Channel1,
     }

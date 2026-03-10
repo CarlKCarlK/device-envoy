@@ -210,6 +210,14 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
 /// This macro creates a generated wrapper type around [`ButtonWatchEsp`] with
 /// RP-style constructor ergonomics.
 ///
+/// See [`ButtonWatchGenerated`](crate::button::button_watch_generated::ButtonWatchGenerated)
+/// for a sample of what the macro generates.
+///
+/// # Constructors
+///
+/// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
+/// - [`from_button()`](crate::button::button_watch_generated::ButtonWatchGenerated::from_button) — Convert from an existing [`ButtonEsp`](crate::button::ButtonEsp)
+///
 /// Syntax:
 ///
 /// ```text

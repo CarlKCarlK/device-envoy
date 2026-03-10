@@ -18,6 +18,7 @@ pub use servo_player;
 macro_rules! __servo_player_impl {
     (
         $name:ident {
+            pin: $pin:ident,
             timer: $timer:ident,
             channel: $channel:ident,
             $(min_us: $min_us:expr,)?
@@ -57,7 +58,7 @@ macro_rules! __servo_player_impl {
 
                 pub fn new(
                     ledc: &::esp_hal::ledc::Ledc<'static>,
-                    pin: impl ::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+                    pin: ::esp_hal::peripherals::$pin<'static>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<$crate::servo::ServoPlayerHandle<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }>> {
                     let servo = $crate::servo::ServoEsp::new(&[<$name:upper _SERVO_STATIC>], ledc, pin)?;

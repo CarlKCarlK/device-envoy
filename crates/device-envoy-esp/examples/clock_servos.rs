@@ -45,6 +45,7 @@ type ClockServoPlayer = ServoPlayerHandle<SERVO_MAX_STEPS>;
 
 servo_player! {
     BottomServoPlayer {
+        pin: GPIO10,
         timer: Timer0,
         channel: Channel0,
         max_steps: SERVO_MAX_STEPS,
@@ -53,6 +54,7 @@ servo_player! {
 
 servo_player! {
     TopServoPlayer {
+        pin: GPIO18,
         timer: Timer1,
         channel: Channel1,
         max_steps: SERVO_MAX_STEPS,

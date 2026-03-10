@@ -7,6 +7,7 @@
 
 #[cfg(target_os = "none")]
 mod button_watch;
+pub mod button_watch_generated;
 
 #[cfg(target_os = "none")]
 pub use button_watch::{ButtonWatchEsp, ButtonWatchStaticEsp};

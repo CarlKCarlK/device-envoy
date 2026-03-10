@@ -20,6 +20,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 servo! {
     Servo10 {
+        pin: GPIO10,
         timer: Timer0,
         channel: Channel0,
     }

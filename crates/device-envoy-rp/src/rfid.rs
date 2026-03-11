@@ -196,7 +196,9 @@ async fn rfid_polling_task(mut mfrc522: Mfrc522Device, rfid_static: &'static Rfi
         };
 
         let uid_key = uid_to_fixed_array(&uid.uid_bytes);
-        rfid_static.send(RfidEvent::CardDetected { uid: uid_key }).await;
+        rfid_static
+            .send(RfidEvent::CardDetected { uid: uid_key })
+            .await;
 
         Timer::after_millis(50).await;
     }

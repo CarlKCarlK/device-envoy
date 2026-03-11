@@ -230,9 +230,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         match select(button_watch13.wait_for_press(), clock_sync.wait_for_tick()).await {
             Either::First(()) => {
                 clock_audio_mode = clock_audio_mode.toggled();
-                clock_sync
-                    .set_tick_interval(Some(clock_audio_mode.tick_interval()))
-                    ;
+                clock_sync.set_tick_interval(Some(clock_audio_mode.tick_interval()));
 
                 match clock_audio_mode {
                     ClockAudioMode::HoursMinutes => {

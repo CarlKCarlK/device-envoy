@@ -3,10 +3,10 @@
 #![no_std]
 #![no_main]
 
+use core::{convert::Infallible, future::pending};
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 use esp_hal::gpio::{Level, Output, OutputConfig};
-use core::{convert::Infallible, future::pending};
 
 use device_envoy_esp::{
     init_and_start,

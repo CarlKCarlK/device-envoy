@@ -9,15 +9,14 @@ use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::gpio::interconnect::{PeripheralInput, PeripheralOutput};
 use esp_hal::gpio::{Level, Output, OutputConfig, OutputPin};
 use esp_hal::spi::master::{Config as SpiConfig, Instance, Spi};
-use esp_hal_mfrc522::MFRC522;
 use esp_hal_mfrc522::consts::UidSize;
 use esp_hal_mfrc522::drivers::SpiDriver;
+use esp_hal_mfrc522::MFRC522;
 
 use crate::{Error, Result};
 
-type Mfrc522Device = MFRC522<
-    SpiDriver<ExclusiveDevice<Spi<'static, esp_hal::Async>, Output<'static>, NoDelay>>,
->;
+type Mfrc522Device =
+    MFRC522<SpiDriver<ExclusiveDevice<Spi<'static, esp_hal::Async>, Output<'static>, NoDelay>>>;
 
 /// A device abstraction for an RFID reader using the MFRC522 chip.
 ///
@@ -122,7 +121,9 @@ async fn rfid_polling_task(mut mfrc522: Mfrc522Device, rfid_static: &'static Rfi
         };
 
         let uid_key = uid_to_fixed_array(&uid.uid_bytes);
-        rfid_static.send(RfidEvent::CardDetected { uid: uid_key }).await;
+        rfid_static
+            .send(RfidEvent::CardDetected { uid: uid_key })
+            .await;
         Timer::after_millis(50).await;
     }
 }

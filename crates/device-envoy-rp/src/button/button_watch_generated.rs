@@ -58,7 +58,6 @@ impl ButtonWatchGenerated {
         let _ = (pin, pressed_to, spawner);
         Ok(instance)
     }
-
 }
 
 #[cfg(doc)]

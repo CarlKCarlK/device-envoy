@@ -47,7 +47,6 @@ impl<'d> ButtonEsp<'d> {
     pub async fn wait_for_any_edge(&mut self) {
         self.input.wait_for_any_edge().await;
     }
-
 }
 
 #[cfg(target_os = "none")]

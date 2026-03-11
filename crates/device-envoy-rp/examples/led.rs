@@ -7,15 +7,17 @@ use core::convert::Infallible;
 
 use defmt_rtt as _;
 use device_envoy_rp::{
-    Result,
-    led,
+    Result, led,
     led::{Led as _, LedLevel, OnLevel},
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use panic_probe as _;
 
-led!(LedExample { pin: PIN_1, max_steps: 64 });
+led!(LedExample {
+    pin: PIN_1,
+    max_steps: 64
+});
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {

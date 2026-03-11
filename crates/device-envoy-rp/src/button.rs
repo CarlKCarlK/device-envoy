@@ -103,7 +103,6 @@ impl<'a> ButtonRp<'a> {
             pressed_to,
         }
     }
-
 }
 
 impl device_envoy_core::button::Button for ButtonRp<'_> {

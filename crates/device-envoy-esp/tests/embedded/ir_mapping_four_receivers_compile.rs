@@ -42,21 +42,22 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     #[cfg(target_arch = "xtensa")]
     {
-        let (_ir_mapping7, _ir_mapping6, _ir_mapping5, _ir_mapping4) = IrMappingsFourCompileTest::new(
-            p.GPIO7,
-            rmt80.channel4,
-            p.GPIO6,
-            rmt80.channel5,
-            p.GPIO5,
-            rmt80.channel6,
-            p.GPIO4,
-            rmt80.channel7,
-            &BUTTON_MAP,
-            &BUTTON_MAP,
-            &BUTTON_MAP,
-            &BUTTON_MAP,
-            spawner,
-        )?;
+        let (_ir_mapping7, _ir_mapping6, _ir_mapping5, _ir_mapping4) =
+            IrMappingsFourCompileTest::new(
+                p.GPIO7,
+                rmt80.channel4,
+                p.GPIO6,
+                rmt80.channel5,
+                p.GPIO5,
+                rmt80.channel6,
+                p.GPIO4,
+                rmt80.channel7,
+                &BUTTON_MAP,
+                &BUTTON_MAP,
+                &BUTTON_MAP,
+                &BUTTON_MAP,
+                spawner,
+            )?;
     }
 
     #[cfg(not(target_arch = "xtensa"))]

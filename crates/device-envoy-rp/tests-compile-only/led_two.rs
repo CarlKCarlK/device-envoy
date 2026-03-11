@@ -9,8 +9,7 @@
 use core::panic::PanicInfo;
 
 use device_envoy_rp::{
-    Result,
-    led,
+    Result, led,
     led::{Led as _, LedLevel, OnLevel},
 };
 use embassy_executor::Spawner;

@@ -13,11 +13,10 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{Button as _, PressDuration, PressedTo};
+use device_envoy_example_common::clock_ui::{ClockUiConfig, ClockUiDisplay, run_clock_ui};
+use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::button_watch;
-use device_envoy_rp::clock_sync::{
-    ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
-};
+use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_MINUTE};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::led4::{
     BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
@@ -26,7 +25,6 @@ use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
 use embassy_rp::gpio::{self, Level};
 use panic_probe as _;
 
@@ -130,206 +128,45 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         spawner,
     );
 
-    // Start in HH:MM mode
-    let mut state = State::HoursMinutes { speed: 1.0 };
-    loop {
-        state = match state {
-            State::HoursMinutes { speed } => {
-                state
-                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch13, &led4)
-                    .await?
-            }
-            State::MinutesSeconds => {
-                state
-                    .execute_minutes_seconds(&clock_sync, &mut *button_watch13, &led4)
-                    .await?
-            }
-            State::EditOffset => {
-                state
-                    .execute_edit_offset(
-                        &clock_sync,
-                        &mut *button_watch13,
-                        &timezone_field,
-                        &led4,
-                    )
-                    .await?
-            }
-        };
-    }
+    let led4_clock_ui_display = Led4ClockUiDisplay::new(&led4);
+    run_clock_ui(
+        &clock_sync,
+        &mut *button_watch13,
+        &led4_clock_ui_display,
+        |offset_minutes| timezone_field.set_offset_minutes(offset_minutes),
+        ClockUiConfig {
+            fast_mode_speed: FAST_MODE_SPEED,
+            edit_offset_step_minutes: 60,
+        },
+    )
+    .await
 }
 
-// State machine for 4-digit LED clock display modes and transitions.
-
-#[derive(Debug, defmt::Format, Clone, Copy, PartialEq)]
-enum State {
-    HoursMinutes { speed: f32 },
-    MinutesSeconds,
-    EditOffset,
+struct Led4ClockUiDisplay<'a> {
+    led4: &'a Led4Rp<'a>,
 }
 
-impl State {
-    async fn execute_hours_minutes(
-        self,
-        speed: f32,
-        clock_sync: &ClockSyncRp,
-        button: &mut ButtonWatch13,
-        led4: &Led4Rp<'_>,
-    ) -> Result<Self> {
-        clock_sync.set_speed(speed);
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        led4.write_text(
-            [
-                Self::tens_hours(hours),
-                Self::ones_digit(hours),
-                Self::tens_digit(minutes),
-                Self::ones_digit(minutes),
-            ],
-            BlinkState::Solid,
-        );
-        clock_sync.set_tick_interval(Some(ONE_MINUTE));
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                // Button pushes
-                Either::First(press_duration) => match (press_duration, speed.to_bits()) {
-                    (PressDuration::Short, bits) if bits == 1.0f32.to_bits() => {
-                        return Ok(Self::MinutesSeconds);
-                    }
-                    (PressDuration::Short, _) => {
-                        return Ok(Self::HoursMinutes { speed: 1.0 });
-                    }
-                    (PressDuration::Long, _) => {
-                        return Ok(Self::EditOffset);
-                    }
-                },
-                // Clock tick
-                Either::Second(tick) => {
-                    let (hours, minutes, _) = h12_m_s(&tick.local_time);
-                    led4.write_text(
-                        [
-                            Self::tens_hours(hours),
-                            Self::ones_digit(hours),
-                            Self::tens_digit(minutes),
-                            Self::ones_digit(minutes),
-                        ],
-                        BlinkState::Solid,
-                    );
-                }
-            }
-        }
+impl<'a> Led4ClockUiDisplay<'a> {
+    const fn new(led4: &'a Led4Rp<'a>) -> Self {
+        Self { led4 }
     }
 
-    async fn execute_minutes_seconds(
-        self,
-        clock_sync: &ClockSyncRp,
-        button: &mut ButtonWatch13,
-        led4: &Led4Rp<'_>,
-    ) -> Result<Self> {
-        clock_sync.set_speed(1.0);
-        let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
-        led4.write_text(
-            [
-                Self::tens_digit(minutes),
-                Self::ones_digit(minutes),
-                Self::tens_digit(seconds),
-                Self::ones_digit(seconds),
-            ],
-            BlinkState::Solid,
-        );
-        clock_sync.set_tick_interval(Some(ONE_SECOND));
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                // Button pushes
-                Either::First(PressDuration::Short) => {
-                    return Ok(Self::HoursMinutes {
-                        speed: FAST_MODE_SPEED,
-                    });
-                }
-                Either::First(PressDuration::Long) => {
-                    return Ok(Self::EditOffset);
-                }
-                // Clock tick
-                Either::Second(tick) => {
-                    let (_, minutes, seconds) = h12_m_s(&tick.local_time);
-                    led4.write_text(
-                        [
-                            Self::tens_digit(minutes),
-                            Self::ones_digit(minutes),
-                            Self::tens_digit(seconds),
-                            Self::ones_digit(seconds),
-                        ],
-                        BlinkState::Solid,
-                    );
-                }
-            }
-        }
+    fn hours_minutes_text(hours: u8, minutes: u8) -> [char; 4] {
+        [
+            Self::tens_hours(hours),
+            Self::ones_digit(hours),
+            Self::tens_digit(minutes),
+            Self::ones_digit(minutes),
+        ]
     }
 
-    async fn execute_edit_offset(
-        self,
-        clock_sync: &ClockSyncRp,
-        button: &mut ButtonWatch13,
-        timezone_field: &TimezoneField,
-        led4: &Led4Rp<'_>,
-    ) -> Result<Self> {
-        info!("Entering edit offset mode");
-
-        // Blink current hours and minutes
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        led4.write_text(
-            [
-                Self::tens_hours(hours),
-                Self::ones_digit(hours),
-                Self::tens_digit(minutes),
-                Self::ones_digit(minutes),
-            ],
-            BlinkState::BlinkingAndOn,
-        );
-
-        // Get the current offset minutes from clock (source of truth)
-        let mut offset_minutes = clock_sync.offset_minutes();
-        info!("Current offset: {} minutes", offset_minutes);
-
-        clock_sync.set_tick_interval(None); // Disable ticks in edit mode
-        clock_sync.set_speed(1.0);
-        loop {
-            info!("Waiting for button press in edit mode");
-            match button.wait_for_press_duration().await {
-                PressDuration::Short => {
-                    info!("Short press detected - incrementing offset");
-                    // Increment the offset by 1 hour
-                    offset_minutes += 60;
-                    const ONE_DAY_MINUTES: i32 = ONE_DAY.as_secs() as i32 / 60;
-                    if offset_minutes >= ONE_DAY_MINUTES {
-                        offset_minutes -= ONE_DAY_MINUTES;
-                    }
-                    clock_sync.set_offset_minutes(offset_minutes);
-                    info!("New offset: {} minutes", offset_minutes);
-
-                    // Update display (atomic already updated, can use now_local)
-                    let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-                    info!(
-                        "Updated time after offset change: {:02}:{:02}",
-                        hours, minutes
-                    );
-                    led4.write_text(
-                        [
-                            Self::tens_hours(hours),
-                            Self::ones_digit(hours),
-                            Self::tens_digit(minutes),
-                            Self::ones_digit(minutes),
-                        ],
-                        BlinkState::BlinkingAndOn,
-                    );
-                }
-                PressDuration::Long => {
-                    info!("Long press detected - saving and exiting edit mode");
-                    // Save to flash and exit edit mode
-                    timezone_field.set_offset_minutes(offset_minutes)?;
-                    info!("Offset saved to flash: {} minutes", offset_minutes);
-                    return Ok(Self::HoursMinutes { speed: 1.0 });
-                }
-            }
-        }
+    fn minutes_seconds_text(minutes: u8, seconds: u8) -> [char; 4] {
+        [
+            Self::tens_digit(minutes),
+            Self::ones_digit(minutes),
+            Self::tens_digit(seconds),
+            Self::ones_digit(seconds),
+        ]
     }
 
     #[inline]
@@ -355,5 +192,26 @@ impl State {
     )]
     const fn ones_digit(value: u8) -> char {
         ((value % 10) + b'0') as char
+    }
+}
+
+impl ClockUiDisplay for Led4ClockUiDisplay<'_> {
+    fn show_hours_minutes(&self, hours: u8, minutes: u8) {
+        self.led4
+            .write_text(Self::hours_minutes_text(hours, minutes), BlinkState::Solid);
+    }
+
+    fn show_minutes_seconds(&self, minutes: u8, seconds: u8) {
+        self.led4.write_text(
+            Self::minutes_seconds_text(minutes, seconds),
+            BlinkState::Solid,
+        );
+    }
+
+    fn show_hours_minutes_edit(&self, hours: u8, minutes: u8) {
+        self.led4.write_text(
+            Self::hours_minutes_text(hours, minutes),
+            BlinkState::BlinkingAndOn,
+        );
     }
 }

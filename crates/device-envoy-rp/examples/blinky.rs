@@ -19,8 +19,7 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::{
-    Result,
-    led,
+    Result, led,
     led::{Led as _, LedLevel, OnLevel},
 };
 use embassy_executor::Spawner;
@@ -63,7 +62,10 @@ const SOS_PATTERN: [(LedLevel, Duration); 18] = [
     (LedLevel::Off, WORD_GAP_DURATION),
 ];
 
-led!(LedExample { pin: PIN_1, max_steps: 32 });
+led!(LedExample {
+    pin: PIN_1,
+    max_steps: 32
+});
 
 #[embassy_executor::main]
 pub async fn main(spawner: Spawner) -> ! {

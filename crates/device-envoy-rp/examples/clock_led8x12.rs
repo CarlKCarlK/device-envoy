@@ -18,6 +18,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
+use device_envoy_rp::button_watch;
 use device_envoy_rp::{
     Error, Result,
     button::{PressDuration, PressedTo},
@@ -36,7 +37,6 @@ use device_envoy_rp::{
         fields::{TimezoneField, TimezoneFieldStatic},
     },
 };
-use device_envoy_rp::button_watch;
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
 use embassy_time::Duration;

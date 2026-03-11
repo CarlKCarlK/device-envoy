@@ -15,7 +15,7 @@ use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
-    wifi_auto::{WifiAutoRp},
+    wifi_auto::WifiAutoRp,
 };
 
 #[embassy_executor::main]
@@ -43,7 +43,9 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         spawner,
     )?;
 
-    let _stack = wifi_auto.connect(&mut button, |_event| async move { Ok(()) }).await?;
+    let _stack = wifi_auto
+        .connect(&mut button, |_event| async move { Ok(()) })
+        .await?;
 
     future::pending().await // run forever
 }

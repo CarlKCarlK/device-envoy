@@ -228,7 +228,6 @@ impl WifiAutoStatic {
     ) -> &'static Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>> {
         &self.defaults
     }
-
 }
 
 impl WifiAutoRp {
@@ -405,10 +404,10 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
     /// #     wifi_flash,
-/// #     "PicoAccess",
-/// #     [],
-/// #     spawner,
-/// # )?;
+    /// #     "PicoAccess",
+    /// #     [],
+    /// #     spawner,
+    /// # )?;
     /// let _stack = wifi_auto
     ///     .connect(&mut button, |_event| async move { Ok(()) })
     ///     .await?;
@@ -449,10 +448,10 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
     /// #     wifi_flash,
-/// #     "PicoAccess",
-/// #     [],
-/// #     spawner,
-/// # )?;
+    /// #     "PicoAccess",
+    /// #     [],
+    /// #     spawner,
+    /// # )?;
     /// # let led8x12 = Led8x12;
     /// // Keep a reference so the handler can reuse the display across events.
     /// let led8x12_ref = &led8x12;

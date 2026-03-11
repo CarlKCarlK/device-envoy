@@ -10,15 +10,15 @@
 #![no_std]
 #![no_main]
 
+use device_envoy_example_common::clock_ui::{run_clock_ui, ClockUiConfig, ClockUiDisplay};
 use embassy_executor::Spawner;
-use embassy_futures::select::{select, Either};
 use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    button::{PressDuration, PressedTo},
+    button::PressedTo,
     button_watch,
-    clock_sync::{h12_m_s, ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_MINUTE, ONE_SECOND},
+    clock_sync::{ClockSyncEsp, ClockSyncStatic, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
@@ -30,13 +30,18 @@ use device_envoy_esp::{
     },
 };
 
-use device_envoy_esp::button::Button as _;
-
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyClock";
+const FAST_MODE_SPEED: f32 = 720.0;
 const DIGIT_COLORS: [smart_leds::RGB8; 4] =
     [colors::CYAN, colors::MAGENTA, colors::ORANGE, colors::LIME];
+const EDIT_COLORS: [smart_leds::RGB8; 4] = [
+    colors::FIREBRICK,
+    colors::DARK_ORANGE,
+    colors::TEAL,
+    colors::MAROON,
+];
 
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
@@ -111,7 +116,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     info!("network up: {:?}", stack.config_v4());
 
-    let mut offset_minutes = timezone_field.offset_minutes()?.unwrap_or(0);
+    let offset_minutes = timezone_field.offset_minutes()?.unwrap_or(0);
     info!("timezone offset minutes: {}", offset_minutes);
 
     static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncEsp::new_static();
@@ -123,100 +128,85 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         spawner,
     );
 
-    let mut display_mode = DisplayMode::HourMinute;
-    render_clock_text(&led8x12_clock, display_mode, &clock_sync.now_local());
+    let led8x12_clock_ui_display = Led8x12ClockUiDisplay::new(led8x12_clock);
+    run_clock_ui(
+        &clock_sync,
+        &mut *button6,
+        &led8x12_clock_ui_display,
+        |next_offset_minutes| timezone_field.set_offset_minutes(next_offset_minutes),
+        ClockUiConfig {
+            fast_mode_speed: FAST_MODE_SPEED,
+            edit_offset_step_minutes: 60,
+        },
+    )
+    .await
+}
 
-    loop {
-        match select(button6.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-            Either::First(press_duration) => match press_duration {
-                PressDuration::Short => {
-                    display_mode = match display_mode {
-                        DisplayMode::HourMinute => DisplayMode::MinuteSecond,
-                        DisplayMode::MinuteSecond => DisplayMode::HourMinute,
-                    };
-                    clock_sync.set_tick_interval(Some(match display_mode {
-                        DisplayMode::HourMinute => ONE_MINUTE,
-                        DisplayMode::MinuteSecond => ONE_SECOND,
-                    }));
-                    info!("display mode changed: {:?}", display_mode);
-                    render_clock_text(&led8x12_clock, display_mode, &clock_sync.now_local());
-                }
-                PressDuration::Long => {
-                    offset_minutes = increment_timezone_offset_minutes(offset_minutes);
-                    clock_sync.set_offset_minutes(offset_minutes);
-                    timezone_field.set_offset_minutes(offset_minutes)?;
-                    info!("timezone offset changed by button: {}", offset_minutes);
-                    render_clock_text(&led8x12_clock, display_mode, &clock_sync.now_local());
-                }
-            },
-            Either::Second(clock_sync_tick) => {
-                render_clock_text(&led8x12_clock, display_mode, &clock_sync_tick.local_time);
+struct Led8x12ClockUiDisplay {
+    led8x12_clock: &'static Led8x12Clock,
+}
+
+impl Led8x12ClockUiDisplay {
+    const fn new(led8x12_clock: &'static Led8x12Clock) -> Self {
+        Self { led8x12_clock }
+    }
+
+    fn format_hhmm(hour12: u8, minute: u8) -> heapless::String<5> {
+        let mut text = heapless::String::<5>::new();
+        if hour12 >= 10 {
+            text.push(char::from(b'0' + (hour12 / 10))).ok();
+        } else {
+            text.push(' ').ok();
+        }
+        text.push(char::from(b'0' + (hour12 % 10))).ok();
+        text.push('\n').ok();
+        text.push(char::from(b'0' + (minute / 10))).ok();
+        text.push(char::from(b'0' + (minute % 10))).ok();
+        text
+    }
+
+    fn format_mmss(minute: u8, second: u8) -> heapless::String<5> {
+        let mut text = heapless::String::<5>::new();
+        text.push(char::from(b'0' + (minute / 10))).ok();
+        text.push(char::from(b'0' + (minute % 10))).ok();
+        text.push('\n').ok();
+        text.push(char::from(b'0' + (second / 10))).ok();
+        text.push(char::from(b'0' + (second % 10))).ok();
+        text
+    }
+
+    fn format_zero_as_o(text: &str) -> heapless::String<5> {
+        let mut formatted_text = heapless::String::<5>::new();
+        for display_character in text.chars() {
+            if display_character == '0' {
+                formatted_text.push('O').ok();
+            } else {
+                formatted_text.push(display_character).ok();
             }
         }
+        formatted_text
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum DisplayMode {
-    HourMinute,
-    MinuteSecond,
-}
-
-fn format_hhmm(hour12: u8, minute: u8) -> heapless::String<5> {
-    let mut text = heapless::String::<5>::new();
-    if hour12 >= 10 {
-        text.push(char::from(b'0' + (hour12 / 10))).ok();
-    } else {
-        text.push(' ').ok();
+impl ClockUiDisplay for Led8x12ClockUiDisplay {
+    fn show_hours_minutes(&self, hours: u8, minutes: u8) {
+        let display_text = Self::format_hhmm(hours, minutes);
+        let display_text_with_o = Self::format_zero_as_o(&display_text);
+        self.led8x12_clock
+            .write_text(display_text_with_o.as_str(), &DIGIT_COLORS);
     }
-    text.push(char::from(b'0' + (hour12 % 10))).ok();
-    text.push('\n').ok();
-    text.push(char::from(b'0' + (minute / 10))).ok();
-    text.push(char::from(b'0' + (minute % 10))).ok();
-    text
-}
 
-fn format_mmss(minute: u8, second: u8) -> heapless::String<5> {
-    let mut text = heapless::String::<5>::new();
-    text.push(char::from(b'0' + (minute / 10))).ok();
-    text.push(char::from(b'0' + (minute % 10))).ok();
-    text.push('\n').ok();
-    text.push(char::from(b'0' + (second / 10))).ok();
-    text.push(char::from(b'0' + (second % 10))).ok();
-    text
-}
-
-fn format_zero_as_o(text: &str) -> heapless::String<5> {
-    let mut formatted_text = heapless::String::<5>::new();
-    for display_character in text.chars() {
-        if display_character == '0' {
-            formatted_text.push('O').ok();
-        } else {
-            formatted_text.push(display_character).ok();
-        }
+    fn show_minutes_seconds(&self, minutes: u8, seconds: u8) {
+        let display_text = Self::format_mmss(minutes, seconds);
+        let display_text_with_o = Self::format_zero_as_o(&display_text);
+        self.led8x12_clock
+            .write_text(display_text_with_o.as_str(), &DIGIT_COLORS);
     }
-    formatted_text
-}
 
-fn render_clock_text(
-    led8x12_clock: &'static Led8x12Clock,
-    display_mode: DisplayMode,
-    local_time: &time::OffsetDateTime,
-) {
-    let (hours, minutes, seconds) = h12_m_s(local_time);
-    let display_text = match display_mode {
-        DisplayMode::HourMinute => format_hhmm(hours, minutes),
-        DisplayMode::MinuteSecond => format_mmss(minutes, seconds),
-    };
-    let display_text_with_o = format_zero_as_o(&display_text);
-    led8x12_clock.write_text(display_text_with_o.as_str(), &DIGIT_COLORS);
-}
-
-fn increment_timezone_offset_minutes(offset_minutes: i32) -> i32 {
-    let next_offset_minutes = offset_minutes + 60;
-    if next_offset_minutes > 840 {
-        -720
-    } else {
-        next_offset_minutes
+    fn show_hours_minutes_edit(&self, hours: u8, minutes: u8) {
+        let display_text = Self::format_hhmm(hours, minutes);
+        let display_text_with_o = Self::format_zero_as_o(&display_text);
+        self.led8x12_clock
+            .write_text(display_text_with_o.as_str(), &EDIT_COLORS);
     }
 }

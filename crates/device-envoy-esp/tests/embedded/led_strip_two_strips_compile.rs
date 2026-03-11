@@ -8,7 +8,7 @@ use esp_backtrace as _;
 
 use device_envoy_esp::{
     init_and_start, led_strip,
-    led_strip::{Current, Frame1d, LedStrip as _, colors},
+    led_strip::{colors, Current, Frame1d, LedStrip as _},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

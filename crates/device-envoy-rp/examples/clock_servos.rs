@@ -136,12 +136,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(
-                        speed,
-                        &clock_sync,
-                        &mut *button_watch13,
-                        &servo_display,
-                    )
+                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch13, &servo_display)
                     .await?
             }
             State::MinutesSeconds => {

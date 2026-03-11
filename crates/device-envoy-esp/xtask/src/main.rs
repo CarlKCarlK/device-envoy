@@ -484,28 +484,30 @@ struct GeneratedDocStubExpectation {
 }
 
 fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
-    let generated_doc_stub_expectations = [GeneratedDocStubExpectation {
-        relative_path: "src/ir/ir_generated.rs",
-        required_fragments: &[
-            "pub struct IrGenerated",
-            "impl Ir for IrGenerated",
-            "pub struct IrMappingGenerated",
-            "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
-            "pub struct IrKeplerGenerated",
-            "impl IrKepler for IrKeplerGenerated",
-            "pub fn new(",
-        ],
-    },
-    GeneratedDocStubExpectation {
-        relative_path: "src/led/led_generated.rs",
-        required_fragments: &[
-            "pub struct LedGenerated",
-            "impl LedGenerated",
-            "pub const MAX_STEPS: usize",
-            "impl Led for LedGenerated",
-            "pub fn new(",
-        ],
-    }];
+    let generated_doc_stub_expectations = [
+        GeneratedDocStubExpectation {
+            relative_path: "src/ir/ir_generated.rs",
+            required_fragments: &[
+                "pub struct IrGenerated",
+                "impl Ir for IrGenerated",
+                "pub struct IrMappingGenerated",
+                "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
+                "pub struct IrKeplerGenerated",
+                "impl IrKepler for IrKeplerGenerated",
+                "pub fn new(",
+            ],
+        },
+        GeneratedDocStubExpectation {
+            relative_path: "src/led/led_generated.rs",
+            required_fragments: &[
+                "pub struct LedGenerated",
+                "impl LedGenerated",
+                "pub const MAX_STEPS: usize",
+                "impl Led for LedGenerated",
+                "pub fn new(",
+            ],
+        },
+    ];
 
     let mut failure_messages = Vec::new();
     for generated_doc_stub_expectation in generated_doc_stub_expectations {

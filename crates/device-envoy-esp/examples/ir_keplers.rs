@@ -10,7 +10,7 @@
 #![no_main]
 
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
+use embassy_futures::select::{select, Either};
 use esp_backtrace as _;
 use log::info;
 

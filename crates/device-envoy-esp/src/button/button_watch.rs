@@ -10,9 +10,11 @@ use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 #[cfg(target_os = "none")]
 use embassy_time::Timer;
+#[cfg(target_os = "none")]
+use device_envoy_core::button::Button;
 
 #[cfg(target_os = "none")]
-use super::{ButtonEsp, PressDuration, PressedTo};
+use super::{PressDuration, PressedTo};
 #[cfg(target_os = "none")]
 use crate::{Error, Result};
 
@@ -21,7 +23,10 @@ use crate::{Error, Result};
 pub struct ButtonWatchStaticEsp {
     signal: Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: Signal<CriticalSectionRawMutex, ()>,
     is_pressed: AtomicBool,
+    initialized: AtomicBool,
 }
 
 #[cfg(target_os = "none")]
@@ -30,7 +35,10 @@ impl ButtonWatchStaticEsp {
         Self {
             signal: Signal::new(),
             state_signal: Signal::new(),
+            state_changed_signal: Signal::new(),
+            initialized_signal: Signal::new(),
             is_pressed: AtomicBool::new(false),
+            initialized: AtomicBool::new(false),
         }
     }
 }
@@ -43,58 +51,75 @@ impl ButtonWatchStaticEsp {
 pub struct ButtonWatchEsp<'a> {
     signal: &'a Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'a Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: &'a Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: &'a Signal<CriticalSectionRawMutex, ()>,
     is_pressed: &'a AtomicBool,
+    initialized: &'a AtomicBool,
 }
 
 #[cfg(target_os = "none")]
 impl ButtonWatchEsp<'_> {
-    /// Create static resources for [`ButtonWatchEsp::new`] and [`ButtonWatchEsp::new_from_pin`].
+    /// Create static resources for [`ButtonWatchEsp::new_from_pin`].
     #[must_use]
     pub const fn new_static() -> ButtonWatchStaticEsp {
         ButtonWatchStaticEsp::new()
     }
 
-    /// Create a background button monitor from an existing [`ButtonEsp`].
-    ///
-    /// This constructor spawns a dedicated task that continuously monitors the
-    /// button and signals [`PressDuration`] events.
-    #[must_use = "Must be used to manage the spawned task"]
-    pub fn new(
-        button_watch_static: &'static ButtonWatchStaticEsp,
-        button: ButtonEsp<'static>,
-        spawner: Spawner,
-    ) -> Result<Self> {
-        let (input, pressed_to) = button.into_parts();
-        let token = button_watch_task_from_input(
-            input,
-            pressed_to,
-            &button_watch_static.signal,
-            &button_watch_static.state_signal,
-            &button_watch_static.is_pressed,
-        );
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
-        Ok(Self {
-            signal: &button_watch_static.signal,
-            state_signal: &button_watch_static.state_signal,
-            is_pressed: &button_watch_static.is_pressed,
-        })
-    }
-
     /// Create a background button monitor directly from a pin.
     #[must_use = "Must be used to manage the spawned task"]
-    pub fn new_from_pin(
+    pub async fn new_from_pin(
         button_watch_static: &'static ButtonWatchStaticEsp,
         button_pin: impl esp_hal::gpio::InputPin + 'static,
         pressed_to: PressedTo,
         spawner: Spawner,
     ) -> Result<Self> {
-        let button = ButtonEsp::new(button_pin, pressed_to);
-        Self::new(button_watch_static, button, spawner)
+        let pull = match pressed_to {
+            PressedTo::Voltage => esp_hal::gpio::Pull::Down,
+            PressedTo::Ground => esp_hal::gpio::Pull::Up,
+        };
+        let input = esp_hal::gpio::Input::new(
+            button_pin,
+            esp_hal::gpio::InputConfig::default().with_pull(pull),
+        );
+        let token = button_watch_task_from_pin(
+            input,
+            pressed_to,
+            &button_watch_static.signal,
+            &button_watch_static.state_signal,
+            &button_watch_static.state_changed_signal,
+            &button_watch_static.initialized_signal,
+            &button_watch_static.is_pressed,
+            &button_watch_static.initialized,
+        );
+        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        let button_watch = Self {
+            signal: &button_watch_static.signal,
+            state_signal: &button_watch_static.state_signal,
+            state_changed_signal: &button_watch_static.state_changed_signal,
+            initialized_signal: &button_watch_static.initialized_signal,
+            is_pressed: &button_watch_static.is_pressed,
+            initialized: &button_watch_static.initialized,
+        };
+        button_watch.wait_until_initialized().await;
+        Ok(button_watch)
+    }
+
+    /// Wait until the first sampled state has been captured by the background task.
+    pub async fn wait_until_initialized(&self) {
+        if self.initialized.load(Ordering::Acquire) {
+            return;
+        }
+        self.initialized_signal.wait().await;
+    }
+
+    /// Wait for any button state transition (press or release).
+    pub async fn wait_for_state_change(&self) {
+        self.state_changed_signal.wait().await;
     }
 }
 
 #[cfg(target_os = "none")]
-impl device_envoy_core::button::Button for ButtonWatchEsp<'_> {
+impl Button for ButtonWatchEsp<'_> {
     fn is_pressed(&self) -> bool {
         self.is_pressed.load(Ordering::Relaxed)
     }
@@ -119,18 +144,30 @@ impl device_envoy_core::button::Button for ButtonWatchEsp<'_> {
 
 #[embassy_executor::task]
 #[cfg(target_os = "none")]
-async fn button_watch_task_from_input(
+async fn button_watch_task_from_pin(
     mut input: esp_hal::gpio::Input<'static>,
     pressed_to: PressedTo,
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: &'static Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: &'static Signal<CriticalSectionRawMutex, ()>,
     is_pressed: &'static AtomicBool,
+    initialized: &'static AtomicBool,
 ) -> ! {
     let mut input_button = InputButton {
         input: &mut input,
         pressed_to,
     };
-    signal_press_durations(&mut input_button, signal, state_signal, is_pressed).await
+    signal_press_durations(
+        &mut input_button,
+        signal,
+        state_signal,
+        state_changed_signal,
+        initialized_signal,
+        is_pressed,
+        initialized,
+    )
+    .await
 }
 
 #[cfg(target_os = "none")]
@@ -140,7 +177,7 @@ struct InputButton<'a> {
 }
 
 #[cfg(target_os = "none")]
-impl device_envoy_core::button::Button for InputButton<'_> {
+impl Button for InputButton<'_> {
     fn is_pressed(&self) -> bool {
         self.pressed_to.is_pressed(self.input.is_high())
     }
@@ -158,32 +195,39 @@ impl device_envoy_core::button::Button for InputButton<'_> {
 }
 
 #[cfg(target_os = "none")]
-async fn signal_press_durations<B: device_envoy_core::button::Button>(
+async fn signal_press_durations<B: Button>(
     button: &mut B,
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: &'static Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: &'static Signal<CriticalSectionRawMutex, ()>,
     is_pressed: &'static AtomicBool,
+    initialized: &'static AtomicBool,
 ) -> ! {
     let initial_pressed = button.is_pressed();
     is_pressed.store(initial_pressed, Ordering::Relaxed);
     state_signal.signal(initial_pressed);
+    initialized.store(true, Ordering::Release);
+    initialized_signal.signal(());
 
     loop {
-        <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false).await;
+        <B as Button>::wait_until_pressed_state(button, false).await;
 
-        <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, true).await;
+        <B as Button>::wait_until_pressed_state(button, true).await;
         is_pressed.store(true, Ordering::Relaxed);
         state_signal.signal(true);
+        state_changed_signal.signal(());
 
         Timer::after(device_envoy_core::button::BUTTON_DEBOUNCE_DELAY).await;
         if !button.is_pressed() {
             is_pressed.store(false, Ordering::Relaxed);
             state_signal.signal(false);
+            state_changed_signal.signal(());
             continue;
         }
 
         let press_duration = embassy_futures::select::select(
-            <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false),
+            <B as Button>::wait_until_pressed_state(button, false),
             Timer::after(device_envoy_core::button::LONG_PRESS_DURATION),
         )
         .await;
@@ -192,14 +236,15 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
             embassy_futures::select::Either::First(()) => {
                 is_pressed.store(false, Ordering::Relaxed);
                 state_signal.signal(false);
+                state_changed_signal.signal(());
                 signal.signal(PressDuration::Short);
             }
             embassy_futures::select::Either::Second(()) => {
                 signal.signal(PressDuration::Long);
-                <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false)
-                    .await;
+                <B as Button>::wait_until_pressed_state(button, false).await;
                 is_pressed.store(false, Ordering::Relaxed);
                 state_signal.signal(false);
+                state_changed_signal.signal(());
             }
         }
     }
@@ -216,7 +261,6 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
 /// # Constructors
 ///
 /// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
-/// - [`from_button()`](crate::button::button_watch_generated::ButtonWatchGenerated::from_button) — Convert from an existing [`ButtonEsp`](crate::button::ButtonEsp)
 ///
 /// Syntax:
 ///
@@ -290,7 +334,7 @@ macro_rules! __button_watch_impl {
                 /// # Errors
                 ///
                 /// Returns an error if the background task cannot be spawned.
-                pub fn new(
+                pub async fn new(
                     button_pin: $crate::esp_hal::peripherals::$pin<'static>,
                     pressed_to: $crate::button::PressedTo,
                     spawner: ::embassy_executor::Spawner,
@@ -305,31 +349,8 @@ macro_rules! __button_watch_impl {
                         button_pin,
                         pressed_to,
                         spawner,
-                    )?;
-
-                    let instance = BUTTON_WATCH_CELL.init($name { button_watch });
-                    Ok(instance)
-                }
-
-                /// Creates a monitor from an existing [`ButtonEsp`](crate::button::ButtonEsp).
-                ///
-                /// # Errors
-                ///
-                /// Returns an error if the background task cannot be spawned.
-                pub fn from_button(
-                    button: $crate::button::ButtonEsp<'static>,
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<&'static mut Self> {
-                    static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticEsp =
-                        $crate::button::ButtonWatchEsp::new_static();
-                    static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$name> =
-                        ::static_cell::StaticCell::new();
-
-                    let button_watch = $crate::button::ButtonWatchEsp::new(
-                        &BUTTON_WATCH_STATIC,
-                        button,
-                        spawner,
-                    )?;
+                    )
+                    .await?;
 
                     let instance = BUTTON_WATCH_CELL.init($name { button_watch });
                     Ok(instance)

@@ -23,6 +23,7 @@ use log::info;
 
 use device_envoy_esp::{
     button::{PressDuration, PressedTo},
+    button_watch,
     clock_sync::{
         h12_m_s, ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND,
     },
@@ -43,6 +44,12 @@ esp_bootloader_esp_idf::esp_app_desc!();
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyClock4";
 const FAST_MODE_SPEED: f32 = 720.0;
 
+button_watch! {
+    ForcePortalButtonWatch {
+        pin: GPIO6,
+    }
+}
+
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
     match inner_main(spawner).await {
@@ -61,12 +68,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let button_watch6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,
@@ -97,10 +103,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led4 = Led4Esp::new(&LED4_STATIC, cell_pins, segment_pins, spawner)?;
 
     let led4_ref = &led4;
-    // TODO00 review this possible material change: use WifiAuto's returned trait button directly
-    // instead of wrapping it in ButtonWatchEsp so this example works with trait-returning connect().
-    let (stack, mut button) = wifi_auto
-        .connect(|wifi_auto_event| async move {
+    let stack = wifi_auto
+        .connect(&mut *button_watch6, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['j', 'o', 'i', 'n'], BlinkState::BlinkingAndOn);
@@ -142,17 +146,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, &mut button, &led4)
+                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch6, &led4)
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, &mut button, &led4)
+                    .execute_minutes_seconds(&clock_sync, &mut *button_watch6, &led4)
                     .await?
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(&clock_sync, &mut button, timezone_field, &led4)
+                    .execute_edit_offset(&clock_sync, &mut *button_watch6, timezone_field, &led4)
                     .await?
             }
         };

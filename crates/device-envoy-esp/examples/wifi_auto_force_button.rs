@@ -11,9 +11,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{
-    button::PressedTo, flash_block::FlashBlockEsp, init_and_start, wifi_auto::WifiAutoEsp,
-};
+use device_envoy_esp::{flash_block::FlashBlockEsp, init_and_start, wifi_auto::WifiAutoEsp};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -33,8 +31,6 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
         "EnvoySetup",
         [],
         spawner,

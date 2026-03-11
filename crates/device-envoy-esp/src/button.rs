@@ -48,14 +48,6 @@ impl<'d> ButtonEsp<'d> {
         self.input.wait_for_any_edge().await;
     }
 
-    /// Consumes the button and returns its internal components.
-    ///
-    /// This is useful for converting a `ButtonEsp` into a `ButtonWatchEsp`.
-    #[doc(hidden)]
-    #[must_use]
-    pub fn into_parts(self) -> (Input<'d>, PressedTo) {
-        (self.input, self.pressed_to)
-    }
 }
 
 #[cfg(target_os = "none")]

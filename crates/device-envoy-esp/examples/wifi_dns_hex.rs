@@ -19,7 +19,7 @@ use esp_backtrace as _;
 use log::{info, warn};
 
 use device_envoy_esp::{
-    button::PressedTo,
+    button::{ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
@@ -63,19 +63,18 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     let led12x8_dns = Led12x8Dns::new(p.GPIO18, rmt80.channel0, spawner)?;
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    let mut force_portal_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
         CAPTIVE_PORTAL_SSID,
         [],
         spawner,
     )?;
 
     let led12x8_dns_ref = &led12x8_dns;
-    let (stack, _button) = wifi_auto
-        .connect(|wifi_auto_event| async move {
+    let stack = wifi_auto
+        .connect(&mut force_portal_button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led12x8_dns_ref.write_text("JO\nIN", COLORS);

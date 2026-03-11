@@ -14,7 +14,7 @@ use core::future::Future;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "none")]
-use crate::button::{Button as _, ButtonEsp, PressedTo};
+use crate::button::Button;
 #[cfg(target_os = "none")]
 use crate::flash_block::{FlashBlock as _, FlashBlockEsp};
 use crate::Result;
@@ -22,8 +22,6 @@ use crate::Result;
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4};
 #[cfg(target_os = "none")]
 use embassy_time::{Duration, Timer};
-#[cfg(target_os = "none")]
-use esp_hal::gpio::InputPin;
 use heapless::Vec;
 #[cfg(target_os = "none")]
 use log::{info, warn};
@@ -65,10 +63,6 @@ pub struct WifiAutoEsp<'a> {
     wifi: RefCell<Option<esp_hal::peripherals::WIFI<'static>>>,
     #[cfg(target_os = "none")]
     spawner: embassy_executor::Spawner,
-    #[cfg(target_os = "none")]
-    force_captive_portal: bool,
-    #[cfg(target_os = "none")]
-    button: RefCell<Option<ButtonEsp<'static>>>,
 }
 
 impl<'a> WifiAutoEsp<'a> {
@@ -112,8 +106,6 @@ impl<'a> WifiAutoEsp<'a> {
     pub fn new_in_memory<const N: usize>(
         captive_portal_ssid: &'static str,
         wifi: esp_hal::peripherals::WIFI<'static>,
-        button_pin: impl InputPin + 'static,
-        button_pressed_to: PressedTo,
         custom_fields: [&'a dyn WifiAutoField<Error = crate::Error>; N],
         spawner: embassy_executor::Spawner,
     ) -> Result<Self> {
@@ -123,8 +115,6 @@ impl<'a> WifiAutoEsp<'a> {
         );
         let fields =
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
-        let button = ButtonEsp::new(button_pin, button_pressed_to);
-        let force_captive_portal = button.is_pressed();
         let wifi_auto = Self {
             captive_portal_ssid,
             fields,
@@ -134,8 +124,6 @@ impl<'a> WifiAutoEsp<'a> {
             })),
             wifi: RefCell::new(Some(wifi)),
             spawner,
-            force_captive_portal,
-            button: RefCell::new(Some(button)),
         };
 
         let wifi_start_mode = wifi_auto.start_mode()?;
@@ -143,7 +131,7 @@ impl<'a> WifiAutoEsp<'a> {
         let has_persisted_credentials = wifi_auto.load_persisted_credentials()?.is_some();
         if device_envoy_core::wifi_auto::should_enter_captive_portal(
             wifi_start_mode,
-            force_captive_portal,
+            false,
             has_persisted_credentials,
             custom_fields_satisfied,
         ) {
@@ -165,8 +153,6 @@ impl<'a> WifiAutoEsp<'a> {
     pub fn new<const N: usize>(
         wifi: esp_hal::peripherals::WIFI<'static>,
         wifi_auto_flash_block: FlashBlockEsp,
-        button_pin: impl InputPin + 'static,
-        button_pressed_to: PressedTo,
         captive_portal_ssid: &'static str,
         custom_fields: [&'a dyn WifiAutoField<Error = crate::Error>; N],
         spawner: embassy_executor::Spawner,
@@ -177,16 +163,12 @@ impl<'a> WifiAutoEsp<'a> {
         );
         let fields =
             Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
-        let button = ButtonEsp::new(button_pin, button_pressed_to);
-        let force_captive_portal = button.is_pressed();
         let wifi_auto = Self {
             captive_portal_ssid,
             fields,
             storage: WifiAutoStorage::Flash(RefCell::new(wifi_auto_flash_block)),
             wifi: RefCell::new(Some(wifi)),
             spawner,
-            force_captive_portal,
-            button: RefCell::new(Some(button)),
         };
 
         let wifi_start_mode = wifi_auto.start_mode()?;
@@ -194,7 +176,7 @@ impl<'a> WifiAutoEsp<'a> {
         let has_persisted_credentials = wifi_auto.load_persisted_credentials()?.is_some();
         if device_envoy_core::wifi_auto::should_enter_captive_portal(
             wifi_start_mode,
-            force_captive_portal,
+            false,
             has_persisted_credentials,
             custom_fields_satisfied,
         ) {
@@ -282,7 +264,7 @@ impl<'a> WifiAutoEsp<'a> {
     ///
     /// Returns `true` if startup mode was changed to [`WifiStartMode::CaptivePortal`].
     #[cfg(target_os = "none")]
-    pub fn force_captive_portal_if_pressed(&self, button: &ButtonEsp<'_>) -> Result<bool> {
+    pub fn force_captive_portal_if_pressed(&self, button: &impl Button) -> Result<bool> {
         self.force_captive_portal_if_pressed_state(button.is_pressed())
     }
 
@@ -333,8 +315,9 @@ impl<'a> WifiAutoEsp<'a> {
     #[cfg(target_os = "none")]
     async fn connect_inner<OnEvent, OnEventFuture>(
         &self,
+        force_captive_portal: bool,
         mut on_event: OnEvent,
-    ) -> Result<(WifiStack, ButtonEsp<'static>)>
+    ) -> Result<WifiStack>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,
@@ -345,13 +328,7 @@ impl<'a> WifiAutoEsp<'a> {
             .borrow_mut()
             .take()
             .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
-        let button = self
-            .button
-            .borrow_mut()
-            .take()
-            .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
         let spawner = self.spawner;
-        let force_captive_portal = self.force_captive_portal;
 
         static ESP_RADIO_CONTROLLER: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
         let esp_radio_controller = ESP_RADIO_CONTROLLER.init(esp_radio::init()?);
@@ -517,7 +494,7 @@ impl<'a> WifiAutoEsp<'a> {
         // Dropping it would shut Wi-Fi down.
         core::mem::forget(wifi_controller);
 
-        Ok((stack, button))
+        Ok(stack)
     }
 
     #[cfg(target_os = "none")]
@@ -673,13 +650,18 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     /// See the [WifiAutoEsp struct example](Self) for setup.
     async fn connect<OnEvent, OnEventFuture>(
         self,
+        button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<(WifiStack, impl device_envoy_core::button::Button)>
+    ) -> Result<WifiStack>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,
     {
-        self.connect_inner(on_event).await
+        let force_captive_portal = button.is_pressed();
+        if self.force_captive_portal_if_pressed_state(force_captive_portal)? {
+            info!("wifi_auto force-captive-portal requested via button");
+        }
+        self.connect_inner(force_captive_portal, on_event).await
     }
 }
 

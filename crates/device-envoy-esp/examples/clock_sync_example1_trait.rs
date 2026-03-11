@@ -10,6 +10,7 @@ use log::info;
 
 use device_envoy_esp::{
     button::PressedTo,
+    button_watch,
     clock_sync::{h12_m_s, ClockSync, ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start,
@@ -23,6 +24,12 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyClockSync";
+
+button_watch! {
+    ForcePortalButtonWatch {
+        pin: GPIO6,
+    }
+}
 
 async fn log_clock_ticks(clock_sync: &impl ClockSync) -> ! {
     loop {
@@ -54,19 +61,18 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let button_watch6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,
     )?;
 
-    let (stack, _button) = wifi_auto
-        .connect(|wifi_auto_event| async move {
+    let stack = wifi_auto
+        .connect(&mut *button_watch6, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => info!("WifiAuto: setup mode ready"),
                 WifiAutoEvent::Connecting { .. } => info!("WifiAuto: connecting"),

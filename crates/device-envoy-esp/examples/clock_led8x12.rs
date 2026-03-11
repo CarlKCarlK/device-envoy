@@ -18,6 +18,7 @@ use log::{info, warn};
 
 use device_envoy_esp::{
     button::PressedTo,
+    button_watch,
     flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
@@ -46,6 +47,12 @@ const NTP_PORT: u16 = 123;
 const NTP_TO_UNIX_SECONDS: i64 = 2_208_988_800;
 const BUTTON_POLL_INTERVAL: Duration = Duration::from_millis(200);
 const LONG_PRESS_THRESHOLD: Duration = Duration::from_millis(900);
+
+button_watch! {
+    ForcePortalButtonWatch {
+        pin: GPIO6,
+    }
+}
 
 led2d! {
     Led8x12Clock {
@@ -77,20 +84,19 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let force_portal_button = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,
     )?;
 
     let led8x12_clock_ref = &led8x12_clock;
-    let (stack, force_portal_button) = wifi_auto
-        .connect(|wifi_auto_event| async move {
+    let stack = wifi_auto
+        .connect(&mut *force_portal_button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);

@@ -10,6 +10,7 @@ use log::info;
 
 use device_envoy_esp::{
     button::PressedTo,
+    button_watch,
     clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start, lcd_text,
@@ -22,6 +23,12 @@ use device_envoy_esp::{
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
+
+button_watch! {
+    ForcePortalButtonWatch {
+        pin: GPIO6,
+    }
+}
 
 lcd_text! {
     i2c: I2C0,
@@ -55,20 +62,19 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let button_watch6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        p.GPIO6,
-        PressedTo::Ground,
         "EnvoyClockLcd",
         [timezone_field],
         spawner,
     )?;
 
     let lcd_text_clock_ref = lcd_text_clock;
-    let (stack, _button) = wifi_auto
-        .connect(|wifi_auto_event| {
+    let stack = wifi_auto
+        .connect(&mut *button_watch6, |wifi_auto_event| {
             let lcd_text_clock_ref = lcd_text_clock_ref;
             async move {
                 match wifi_auto_event {

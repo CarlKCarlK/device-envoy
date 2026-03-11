@@ -99,6 +99,9 @@ pub fn parse_post<E>(
 
     let password = if keep_saved_password {
         let defaults_wifi_credentials = defaults?;
+        if defaults_wifi_credentials.password.is_empty() {
+            return None;
+        }
         defaults_wifi_credentials.password.clone()
     } else {
         if submitted_password.is_empty() {
@@ -121,6 +124,10 @@ pub fn generate_config_page<E>(
         .as_ref()
         .map(|wifi_credentials| escape_html::<160>(wifi_credentials.ssid.as_str()))
         .unwrap_or_else(heapless::String::new);
+    let has_saved_password = defaults
+        .as_ref()
+        .map(|wifi_credentials| !wifi_credentials.password.is_empty())
+        .unwrap_or(false);
     write!(
         page,
         "HTTP/1.1 200 OK\r\n\
@@ -176,7 +183,7 @@ pub fn generate_config_page<E>(
     )
     .expect("page HTML exceeds capacity");
 
-    if defaults.is_some() {
+    if has_saved_password {
         page.push_str(
             "<label class=\"toggle\"><input type=\"checkbox\" id=\"keep_saved_password\" name=\"keep_saved_password\" value=\"1\" checked onclick=\"syncPasswordEditing()\">Keep current saved password</label>\
              <input type=\"password\" id=\"password\" name=\"password\" disabled>\

@@ -112,6 +112,27 @@ fn parse_post_rejects_keep_saved_password_without_defaults() {
 }
 
 #[test]
+fn generate_config_page_hides_keep_saved_password_when_saved_password_is_blank() {
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
+    let wifi_credentials = WifiCredentials::new("Office", "");
+
+    let page = wifi_auto.generate_config_page(Some(&wifi_credentials));
+
+    assert!(!page.contains("keep_saved_password"));
+}
+
+#[test]
+fn parse_post_rejects_keep_saved_password_when_saved_password_is_blank() {
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
+    let defaults_wifi_credentials = WifiCredentials::new("Office", "");
+    let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&keep_saved_password=1";
+
+    assert!(wifi_auto
+        .parse_post(request, Some(&defaults_wifi_credentials))
+        .is_none());
+}
+
+#[test]
 fn wifi_auto_credentials_roundtrip_in_memory() {
     let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let wifi_credentials = WifiCredentials::new("OfficeWifi", "supersecret");

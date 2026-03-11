@@ -489,7 +489,19 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
         let button_reset_stabilize_cycles: u32 = 300_000;
         cortex_m::asm::delay(button_reset_stabilize_cycles);
         if button.is_pressed() {
-            self.wifi_auto.force_captive_portal();
+            if self.wifi_auto.wifi.current_start_mode() != WifiStartMode::CaptivePortal {
+                info!("WifiAutoRp: force-captive-portal requested via button");
+                self.wifi_auto
+                    .wifi
+                    .set_start_mode(WifiStartMode::CaptivePortal)
+                    .map_err(|_| Error::StorageCorrupted)?;
+                // RP WiFi runtime mode is selected on boot. Reboot so AP mode actually applies.
+                info!("WifiAutoRp: rebooting now to apply CaptivePortal startup mode");
+                SCB::sys_reset();
+            } else {
+                info!("WifiAutoRp: force request ignored (already in CaptivePortal mode)");
+                self.wifi_auto.force_captive_portal();
+            }
         }
         self.wifi_auto.connect(on_event).await
     }

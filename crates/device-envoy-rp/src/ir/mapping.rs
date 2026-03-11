@@ -627,6 +627,13 @@ macro_rules! __ir_mappings_impl {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_mapping {
+    ($($tt:tt)*) => { $crate::__ir_mapping_impl! { $($tt)* } };
+}
+
+/// Internal implementation helper for [`ir_mapping!`].
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __ir_mapping_impl {
     (
         $name:ident : {
             pio: $pio:ident,
@@ -649,7 +656,7 @@ macro_rules! ir_mapping {
 }
 
 #[allow(unused_imports)]
-/// Macro to generate an IR mapping struct type (includes syntax details). TODO000 make macro shorter in docs.
+/// Macro to generate an IR mapping struct type (includes syntax details).
 #[doc(inline)]
 pub use ir_mapping;
 #[allow(unused_imports)]

@@ -9,7 +9,7 @@
 //!
 //! **After reading the examples below, see also:**
 //!
-//! - **IR: Raw events** — [`ir!`](macro@crate::ir), [`Ir`](trait@crate::ir::Ir), [`IrGenerated`](ir_generated::IrGenerated)
+//! - **Ir: Raw events** — [`ir!`](macro@crate::ir), [`Ir`](trait@crate::ir::Ir), [`IrGenerated`](ir_generated::IrGenerated)
 //! - **IrMapping: Mapped events** — [`ir_mapping!`](macro@crate::ir_mapping), [`IrMapping`](trait@crate::ir::IrMapping), [`IrMappingGenerated`](ir_generated::IrMappingGenerated)
 //! - **IrKepler: Kepler mapped events** — [`ir_kepler!`](macro@crate::ir_kepler), [`IrKepler`](trait@crate::ir::IrKepler), [`IrKeplerGenerated`](ir_generated::IrKeplerGenerated)
 
@@ -963,7 +963,7 @@ pub use crate::ir_keplers;
 /// - `pio` — PIO resource (for example `PIO0` or `PIO1`)
 /// - `pin` — GPIO input pin connected to the IR receiver
 /// - `button` — Output button/key type for mapping
-/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
+/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity); must be at least the number of mapping entries you provide
 ///
 /// # Related Macros
 ///
@@ -996,7 +996,7 @@ pub use crate::ir_mapping;
 ///
 /// - `pio` — Shared PIO resource (for example `PIO0` or `PIO1`)
 /// - `button` — Output button/key type for all generated mappings
-/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity)
+/// - `capacity` — Maximum mapping entries (`heapless::LinearMap` capacity); must be at least the number of mapping entries you provide
 /// - `pin` — One pin entry per generated mapping receiver
 ///
 /// Supports one to four generated mapping receivers per invocation.

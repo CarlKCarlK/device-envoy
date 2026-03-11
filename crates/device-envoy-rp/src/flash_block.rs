@@ -182,6 +182,7 @@ impl FlashManager {
 /// [`load`](device_envoy_core::flash_block::FlashBlock::load),
 /// [`save`](device_envoy_core::flash_block::FlashBlock::save), and
 /// [`clear`](device_envoy_core::flash_block::FlashBlock::clear) operations.
+#[derive(Clone, Copy)]
 pub struct FlashBlockRp {
     manager: &'static FlashManager,
     block: u32,

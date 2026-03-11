@@ -91,12 +91,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         StdDuration::from_millis(90)
     )
     .with_gain(Gain::percent(20));
-    const MODE_HH_MM_TONE: &AudioPlayer10Playable = &tone!(
-        698,
-        AudioPlayer10::SAMPLE_RATE_HZ,
-        StdDuration::from_millis(100)
-    )
-    .with_gain(Gain::percent(18));
     const MODE_MM_SS_TONE: &AudioPlayer10Playable = &tone!(
         988,
         AudioPlayer10::SAMPLE_RATE_HZ,
@@ -123,7 +117,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let audio_player8 = AudioPlayer10::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO1, p.DMA_CH1, spawner)?;
 
-    let [wifi_credentials_flash_block, timezone_flash_block] =
+    let [wifi_credentials_flash_block, mut timezone_flash_block] =
         FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
@@ -204,6 +198,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     run_clock_ui(
         &clock_sync,
         &mut *button_watch13,
+        &mut timezone_flash_block,
         |clock_ui_event| async move {
             match clock_ui_event {
                 ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
@@ -217,11 +212,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
                     audio_player8.play([MODE_MM_SS_TONE], AtEnd::Stop);
                     info!("edit offset {:02}:{:02}", hours, minutes);
-                }
-                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
-                    timezone_field.set_offset_minutes(offset_minutes)?;
-                    audio_player8.play([MODE_HH_MM_TONE], AtEnd::Stop);
-                    info!("saved offset minutes {}", offset_minutes);
                 }
             }
             Ok(())

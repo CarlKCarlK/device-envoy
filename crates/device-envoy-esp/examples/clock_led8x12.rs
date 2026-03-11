@@ -79,7 +79,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     let led8x12_clock = Led8x12Clock::new(p.GPIO18, rmt80.channel0, spawner)?;
 
-    let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
+    let [wifi_auto_flash_block, mut timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
     let button6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
@@ -128,23 +128,25 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     );
 
     let led8x12_clock_ref = led8x12_clock;
-    run_clock_ui(&clock_sync, &mut *button6, |clock_ui_event| async move {
-        match clock_ui_event {
-            ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
-                render_hours_minutes(led8x12_clock_ref, hours, minutes, &DIGIT_COLORS);
+    run_clock_ui(
+        &clock_sync,
+        &mut *button6,
+        &mut timezone_flash_block,
+        |clock_ui_event| async move {
+            match clock_ui_event {
+                ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                    render_hours_minutes(led8x12_clock_ref, hours, minutes, &DIGIT_COLORS);
+                }
+                ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                    render_minutes_seconds(led8x12_clock_ref, minutes, seconds, &DIGIT_COLORS);
+                }
+                ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                    render_hours_minutes(led8x12_clock_ref, hours, minutes, &EDIT_COLORS);
+                }
             }
-            ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
-                render_minutes_seconds(led8x12_clock_ref, minutes, seconds, &DIGIT_COLORS);
-            }
-            ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
-                render_hours_minutes(led8x12_clock_ref, hours, minutes, &EDIT_COLORS);
-            }
-            ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
-                timezone_field.set_offset_minutes(offset_minutes)?;
-            }
-        }
-        Ok(())
-    })
+            Ok(())
+        },
+    )
     .await
 }
 

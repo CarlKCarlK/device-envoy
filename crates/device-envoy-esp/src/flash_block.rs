@@ -251,6 +251,7 @@ impl FlashBlockEspStatic {
 /// ```
 
 #[cfg(target_os = "none")]
+#[derive(Clone, Copy)]
 pub struct FlashBlockEsp {
     manager: &'static FlashManager,
     block_id: u32,

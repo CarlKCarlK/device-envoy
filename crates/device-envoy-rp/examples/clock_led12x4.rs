@@ -76,7 +76,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
-    let [wifi_credentials_flash_block, timezone_flash_block] =
+    let [wifi_credentials_flash_block, mut timezone_flash_block] =
         FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     // Define HTML to ask for timezone on the captive portal.
@@ -152,6 +152,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     run_clock_ui(
         &clock_sync,
         &mut *button_watch13,
+        &mut timezone_flash_block,
         |clock_ui_event| async move {
             match clock_ui_event {
                 ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
@@ -162,9 +163,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 }
                 ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
                     show_hours_minutes_indicator(led12x4_ref, hours, minutes).await;
-                }
-                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
-                    timezone_field.set_offset_minutes(offset_minutes)?;
                 }
             }
             Ok(())

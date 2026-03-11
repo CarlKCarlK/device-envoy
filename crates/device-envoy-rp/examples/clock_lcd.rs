@@ -59,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     lcd_text.write_text("Booting...\nLCD Clock");
 
     // Use two blocks of flash storage: Wi-Fi credentials + timezone
-    let [wifi_credentials_flash_block, timezone_flash_block] =
+    let [wifi_credentials_flash_block, mut timezone_flash_block] =
         FlashBlockRp::new_array::<2>(p.FLASH)?;
 
     // Define timezone field for captive portal
@@ -123,12 +123,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     run_clock_ui(
         &clock_sync,
         &mut *button_watch13,
+        &mut timezone_flash_block,
         |clock_ui_event| async move {
             let text = event_text(clock_ui_event).map_err(|_| Error::FormatError)?;
             lcd_text_ref.write_text(text.as_str());
-            if let ClockUiEvent::OffsetPersistRequested { offset_minutes } = clock_ui_event {
-                timezone_field.set_offset_minutes(offset_minutes)?;
-            }
             Ok(())
         },
     )
@@ -154,12 +152,6 @@ fn event_text(clock_ui_event: ClockUiEvent) -> Result<heapless::String<32>, fmt:
             fmt::Write::write_fmt(
                 &mut text,
                 format_args!("{:>2}:{:02} TZ EDIT\nshort +1h long OK", hours, minutes),
-            )?;
-        }
-        ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
-            fmt::Write::write_fmt(
-                &mut text,
-                format_args!("Saved TZ offset\n{} minutes", offset_minutes),
             )?;
         }
     }

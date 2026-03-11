@@ -79,7 +79,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting Wi-Fi servo clock (WifiAuto)");
 
-    let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
+    let [wifi_auto_flash_block, mut timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
@@ -138,31 +138,32 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         spawner,
     );
 
-    run_clock_ui(&clock_sync, &mut *button_watch6, |clock_ui_event| {
-        let servo_clock_display_ref = &servo_clock_display;
-        async move {
-            match clock_ui_event {
-                ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
-                    servo_clock_display_ref
-                        .show_hours_minutes(hours, minutes)
-                        .await;
+    run_clock_ui(
+        &clock_sync,
+        &mut *button_watch6,
+        &mut timezone_flash_block,
+        |clock_ui_event| {
+            let servo_clock_display_ref = &servo_clock_display;
+            async move {
+                match clock_ui_event {
+                    ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                        servo_clock_display_ref
+                            .show_hours_minutes(hours, minutes)
+                            .await;
+                    }
+                    ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                        servo_clock_display_ref.show_minutes_seconds(minutes, seconds);
+                    }
+                    ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                        servo_clock_display_ref
+                            .show_hours_minutes_indicator(hours, minutes)
+                            .await;
+                    }
                 }
-                ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
-                    servo_clock_display_ref.show_minutes_seconds(minutes, seconds);
-                }
-                ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
-                    servo_clock_display_ref
-                        .show_hours_minutes_indicator(hours, minutes)
-                        .await;
-                }
-                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
-                    timezone_field.set_offset_minutes(offset_minutes)?;
-                    info!("Saved timezone offset: {offset_minutes} minutes");
-                }
+                Ok(())
             }
-            Ok(())
-        }
-    })
+        },
+    )
     .await
 }
 

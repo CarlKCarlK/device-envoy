@@ -1,9 +1,9 @@
 use core::convert::{Infallible, TryFrom};
-use core::future::Future;
 
 use device_envoy_core::{
     button::{Button, PressDuration},
     clock_sync::{ClockSync, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s},
+    flash_block::FlashBlock,
 };
 use embassy_futures::select::{Either, select};
 
@@ -20,8 +20,6 @@ pub enum ClockUiEvent {
     RenderMinutesSeconds { minutes: u8, seconds: u8 },
     /// Render hours and minutes in timezone edit mode.
     RenderHoursMinutesEdit { hours: u8, minutes: u8 },
-    /// Persist the edited timezone offset before exiting edit mode.
-    OffsetPersistRequested { offset_minutes: i32 },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -41,16 +39,18 @@ enum ClockUiState {
 /// - Any short press in HH:MM fast mode returns to HH:MM real-time mode.
 /// - Long press in HH:MM or MM:SS enters timezone edit mode.
 /// - In edit mode: short press increments offset; long press requests persist then exits.
-pub async fn run_clock_ui<B, C, OnEvent, OnEventFuture, E>(
+pub async fn run_clock_ui<B, C, F, OnEvent, OnEventFuture, E>(
     clock_sync: &C,
     button: &mut B,
+    timezone_flash_block: &mut F,
     mut on_event: OnEvent,
 ) -> Result<Infallible, E>
 where
     B: Button,
     C: ClockSync,
+    F: FlashBlock<Error = E>,
     OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), E>>,
+    OnEventFuture: core::future::Future<Output = Result<(), E>>,
 {
     let mut clock_ui_state = ClockUiState::HoursMinutes {
         speed: REAL_TIME_SPEED,
@@ -64,7 +64,8 @@ where
                 run_minutes_seconds_state(clock_sync, button, &mut on_event).await?
             }
             ClockUiState::EditOffset => {
-                run_edit_offset_state(clock_sync, button, &mut on_event).await?
+                run_edit_offset_state(clock_sync, button, timezone_flash_block, &mut on_event)
+                    .await?
             }
         };
     }
@@ -80,7 +81,7 @@ where
     B: Button,
     C: ClockSync,
     OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), E>>,
+    OnEventFuture: core::future::Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(speed);
     let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
@@ -119,7 +120,7 @@ where
     B: Button,
     C: ClockSync,
     OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), E>>,
+    OnEventFuture: core::future::Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(REAL_TIME_SPEED);
     let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
@@ -144,16 +145,18 @@ where
     }
 }
 
-async fn run_edit_offset_state<B, C, OnEvent, OnEventFuture, E>(
+async fn run_edit_offset_state<B, C, F, OnEvent, OnEventFuture, E>(
     clock_sync: &C,
     button: &mut B,
+    timezone_flash_block: &mut F,
     on_event: &mut OnEvent,
 ) -> Result<ClockUiState, E>
 where
     B: Button,
     C: ClockSync,
+    F: FlashBlock<Error = E>,
     OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), E>>,
+    OnEventFuture: core::future::Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(REAL_TIME_SPEED);
     let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
@@ -171,7 +174,7 @@ where
                 on_event(ClockUiEvent::RenderHoursMinutesEdit { hours, minutes }).await?;
             }
             PressDuration::Long => {
-                on_event(ClockUiEvent::OffsetPersistRequested { offset_minutes }).await?;
+                timezone_flash_block.save(&offset_minutes)?;
                 return Ok(ClockUiState::HoursMinutes {
                     speed: REAL_TIME_SPEED,
                 });

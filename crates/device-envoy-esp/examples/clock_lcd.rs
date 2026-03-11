@@ -59,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let lcd_text_clock = LcdTextClock::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
     lcd_text_clock.write_text("Booting...\nLCD Clock");
 
-    let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
+    let [wifi_auto_flash_block, mut timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
@@ -113,12 +113,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     run_clock_ui(
         &clock_sync,
         &mut *button_watch6,
+        &mut timezone_flash_block,
         |clock_ui_event| async move {
             let text = event_text(clock_ui_event).map_err(|_| Error::FormatError)?;
             lcd_text_clock_ref.write_text(text.as_str());
-            if let ClockUiEvent::OffsetPersistRequested { offset_minutes } = clock_ui_event {
-                timezone_field.set_offset_minutes(offset_minutes)?;
-            }
             Ok(())
         },
     )
@@ -144,12 +142,6 @@ fn event_text(clock_ui_event: ClockUiEvent) -> Result<heapless::String<32>, fmt:
             fmt::Write::write_fmt(
                 &mut text,
                 format_args!("{:>2}:{:02} TZ EDIT\nshort +1h long OK", hours, minutes),
-            )?;
-        }
-        ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
-            fmt::Write::write_fmt(
-                &mut text,
-                format_args!("Saved TZ offset\n{} minutes", offset_minutes),
             )?;
         }
     }

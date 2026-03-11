@@ -60,7 +60,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting Wi-Fi 4-digit clock (WifiAuto)");
 
-    let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
+    let [wifi_auto_flash_block, mut timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
@@ -141,6 +141,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     run_clock_ui(
         &clock_sync,
         &mut *button_watch6,
+        &mut timezone_flash_block,
         |clock_ui_event| async move {
             match clock_ui_event {
                 ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
@@ -154,9 +155,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                         hours_minutes_text(hours, minutes),
                         BlinkState::BlinkingAndOn,
                     );
-                }
-                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
-                    timezone_field.set_offset_minutes(offset_minutes)?;
                 }
             }
             Ok(())

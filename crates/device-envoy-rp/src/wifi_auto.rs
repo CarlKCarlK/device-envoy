@@ -365,6 +365,21 @@ impl WifiAutoRp {
             wifi_auto: instance,
         })
     }
+
+    /// Connect to Wi-Fi and return the network stack plus the concrete `ButtonRp`.
+    ///
+    /// Use this when you need to convert the returned button into a watcher via
+    /// [`crate::button_watch!`] `from_button`.
+    pub async fn connect<OnEvent, OnEventFuture>(
+        self,
+        on_event: OnEvent,
+    ) -> Result<(WifiStack, ButtonRp<'static>)>
+    where
+        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
+        OnEventFuture: Future<Output = Result<()>>,
+    {
+        self.wifi_auto.connect(on_event).await
+    }
 }
 
 impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {

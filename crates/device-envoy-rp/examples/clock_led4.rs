@@ -13,7 +13,8 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{PressDuration, PressedTo};
+use device_envoy_rp::button::{Button as _, PressDuration, PressedTo};
+use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
@@ -22,7 +23,7 @@ use device_envoy_rp::led4::{
     BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
 };
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
+use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -30,6 +31,11 @@ use embassy_rp::gpio::{self, Level};
 use panic_probe as _;
 
 const FAST_MODE_SPEED: f32 = 720.0;
+button_watch! {
+    ButtonWatch13 {
+        pin: PIN_13,
+    }
+}
 
 #[embassy_executor::main]
 pub async fn main(spawner: Spawner) -> ! {
@@ -91,7 +97,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led4_ref = &led4;
     // TODO00 review this possible material change: use WifiAuto's returned trait button directly
     // instead of converting into ButtonWatch13.
-    let (stack, mut button) = wifi_auto
+    let (stack, button) = wifi_auto
         .connect(|event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
@@ -107,6 +113,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             Ok(())
         })
         .await?;
+    let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
 
     led4.write_text(['D', 'O', 'N', 'E'], BlinkState::Solid);
     info!("WiFi connected");
@@ -132,17 +139,22 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, &mut button, &led4)
+                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch13, &led4)
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, &mut button, &led4)
+                    .execute_minutes_seconds(&clock_sync, &mut *button_watch13, &led4)
                     .await?
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(&clock_sync, &mut button, &timezone_field, &led4)
+                    .execute_edit_offset(
+                        &clock_sync,
+                        &mut *button_watch13,
+                        &timezone_field,
+                        &led4,
+                    )
                     .await?
             }
         };
@@ -159,11 +171,11 @@ enum State {
 }
 
 impl State {
-    async fn execute_hours_minutes<B: device_envoy_core::button::Button>(
+    async fn execute_hours_minutes(
         self,
         speed: f32,
         clock_sync: &ClockSyncRp,
-        button: &mut B,
+        button: &mut ButtonWatch13,
         led4: &Led4Rp<'_>,
     ) -> Result<Self> {
         clock_sync.set_speed(speed);
@@ -209,10 +221,10 @@ impl State {
         }
     }
 
-    async fn execute_minutes_seconds<B: device_envoy_core::button::Button>(
+    async fn execute_minutes_seconds(
         self,
         clock_sync: &ClockSyncRp,
-        button: &mut B,
+        button: &mut ButtonWatch13,
         led4: &Led4Rp<'_>,
     ) -> Result<Self> {
         clock_sync.set_speed(1.0);
@@ -255,10 +267,10 @@ impl State {
         }
     }
 
-    async fn execute_edit_offset<B: device_envoy_core::button::Button>(
+    async fn execute_edit_offset(
         self,
         clock_sync: &ClockSyncRp,
-        button: &mut B,
+        button: &mut ButtonWatch13,
         timezone_field: &TimezoneField,
         led4: &Led4Rp<'_>,
     ) -> Result<Self> {

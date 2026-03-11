@@ -13,7 +13,7 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_example_common::clock_ui::{ClockUiConfig, ClockUiDisplay, run_clock_ui};
+use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_MINUTE};
@@ -28,7 +28,6 @@ use embassy_executor::Spawner;
 use embassy_rp::gpio::{self, Level};
 use panic_probe as _;
 
-const FAST_MODE_SPEED: f32 = 720.0;
 button_watch! {
     ButtonWatch13 {
         pin: PIN_13,
@@ -128,90 +127,73 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         spawner,
     );
 
-    let led4_clock_ui_display = Led4ClockUiDisplay::new(&led4);
+    let led4_ref = &led4;
     run_clock_ui(
         &clock_sync,
         &mut *button_watch13,
-        &led4_clock_ui_display,
-        |offset_minutes| timezone_field.set_offset_minutes(offset_minutes),
-        ClockUiConfig {
-            fast_mode_speed: FAST_MODE_SPEED,
-            edit_offset_step_minutes: 60,
+        |clock_ui_event| async move {
+            match clock_ui_event {
+                ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                    led4_ref.write_text(hours_minutes_text(hours, minutes), BlinkState::Solid);
+                }
+                ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                    led4_ref.write_text(minutes_seconds_text(minutes, seconds), BlinkState::Solid);
+                }
+                ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                    led4_ref.write_text(
+                        hours_minutes_text(hours, minutes),
+                        BlinkState::BlinkingAndOn,
+                    );
+                }
+                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
+                    timezone_field.set_offset_minutes(offset_minutes)?;
+                }
+            }
+            Ok(())
         },
     )
     .await
 }
 
-struct Led4ClockUiDisplay<'a> {
-    led4: &'a Led4Rp<'a>,
+fn hours_minutes_text(hours: u8, minutes: u8) -> [char; 4] {
+    [
+        tens_hours(hours),
+        ones_digit(hours),
+        tens_digit(minutes),
+        ones_digit(minutes),
+    ]
 }
 
-impl<'a> Led4ClockUiDisplay<'a> {
-    const fn new(led4: &'a Led4Rp<'a>) -> Self {
-        Self { led4 }
-    }
-
-    fn hours_minutes_text(hours: u8, minutes: u8) -> [char; 4] {
-        [
-            Self::tens_hours(hours),
-            Self::ones_digit(hours),
-            Self::tens_digit(minutes),
-            Self::ones_digit(minutes),
-        ]
-    }
-
-    fn minutes_seconds_text(minutes: u8, seconds: u8) -> [char; 4] {
-        [
-            Self::tens_digit(minutes),
-            Self::ones_digit(minutes),
-            Self::tens_digit(seconds),
-            Self::ones_digit(seconds),
-        ]
-    }
-
-    #[inline]
-    #[expect(
-        clippy::arithmetic_side_effects,
-        clippy::integer_division_remainder_used,
-        reason = "Value < 60 ensures division is safe"
-    )]
-    const fn tens_digit(value: u8) -> char {
-        ((value / 10) + b'0') as char
-    }
-
-    #[inline]
-    const fn tens_hours(value: u8) -> char {
-        if value >= 10 { '1' } else { ' ' }
-    }
-
-    #[inline]
-    #[expect(
-        clippy::arithmetic_side_effects,
-        clippy::integer_division_remainder_used,
-        reason = "Value < 60 ensures division is safe"
-    )]
-    const fn ones_digit(value: u8) -> char {
-        ((value % 10) + b'0') as char
-    }
+fn minutes_seconds_text(minutes: u8, seconds: u8) -> [char; 4] {
+    [
+        tens_digit(minutes),
+        ones_digit(minutes),
+        tens_digit(seconds),
+        ones_digit(seconds),
+    ]
 }
 
-impl ClockUiDisplay for Led4ClockUiDisplay<'_> {
-    fn show_hours_minutes(&self, hours: u8, minutes: u8) {
-        self.led4
-            .write_text(Self::hours_minutes_text(hours, minutes), BlinkState::Solid);
-    }
+#[inline]
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::integer_division_remainder_used,
+    reason = "Value < 60 ensures division is safe"
+)]
+const fn tens_digit(value: u8) -> char {
+    ((value / 10) + b'0') as char
+}
 
-    fn show_minutes_seconds(&self, minutes: u8, seconds: u8) {
-        self.led4.write_text(
-            Self::minutes_seconds_text(minutes, seconds),
-            BlinkState::Solid,
-        );
-    }
+#[inline]
+const fn tens_hours(value: u8) -> char {
+    if value >= 10 { '1' } else { ' ' }
+}
 
-    fn show_hours_minutes_edit(&self, hours: u8, minutes: u8) {
-        self.led4.write_text(
-            Self::hours_minutes_text(hours, minutes),
-            BlinkState::BlinkingAndOn,
-        );
-    }
+#[inline]
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::integer_division_remainder_used,
+    reason = "Value < 60 ensures division is safe"
+)]
+const fn ones_digit(value: u8) -> char {
+    ((value % 10) + b'0') as char
 }

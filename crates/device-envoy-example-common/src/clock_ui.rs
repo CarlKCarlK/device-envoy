@@ -1,4 +1,5 @@
 use core::convert::{Infallible, TryFrom};
+use core::future::Future;
 
 use device_envoy_core::{
     button::{Button, PressDuration},
@@ -7,34 +8,20 @@ use device_envoy_core::{
 use embassy_futures::select::{Either, select};
 
 const REAL_TIME_SPEED: f32 = 1.0;
+const FAST_MODE_SPEED: f32 = 720.0;
+const EDIT_OFFSET_STEP_MINUTES: i32 = 60;
 
-/// Canonical clock UI configuration shared across example binaries.
-pub struct ClockUiConfig {
-    /// Speed used when switching from MM:SS back to HH:MM via short press.
-    pub fast_mode_speed: f32,
-    /// Minutes added on each short press while editing the timezone.
-    pub edit_offset_step_minutes: i32,
-}
-
-impl Default for ClockUiConfig {
-    fn default() -> Self {
-        Self {
-            fast_mode_speed: 720.0,
-            edit_offset_step_minutes: 60,
-        }
-    }
-}
-
-/// Display operations needed by the shared clock UI state machine.
-pub trait ClockUiDisplay {
+/// Events emitted by the shared clock UI state machine.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ClockUiEvent {
     /// Render hours and minutes in normal mode.
-    fn show_hours_minutes(&self, hours: u8, minutes: u8);
-
+    RenderHoursMinutes { hours: u8, minutes: u8 },
     /// Render minutes and seconds mode.
-    fn show_minutes_seconds(&self, minutes: u8, seconds: u8);
-
+    RenderMinutesSeconds { minutes: u8, seconds: u8 },
     /// Render hours and minutes in timezone edit mode.
-    fn show_hours_minutes_edit(&self, hours: u8, minutes: u8);
+    RenderHoursMinutesEdit { hours: u8, minutes: u8 },
+    /// Persist the edited timezone offset before exiting edit mode.
+    OffsetPersistRequested { offset_minutes: i32 },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -53,145 +40,124 @@ enum ClockUiState {
 /// - Short press in MM:SS returns to HH:MM with fast mode.
 /// - Any short press in HH:MM fast mode returns to HH:MM real-time mode.
 /// - Long press in HH:MM or MM:SS enters timezone edit mode.
-/// - In edit mode: short press increments offset; long press persists and exits.
-pub async fn run_clock_ui<B, C, D, PersistOffset, E>(
+/// - In edit mode: short press increments offset; long press requests persist then exits.
+pub async fn run_clock_ui<B, C, OnEvent, OnEventFuture, E>(
     clock_sync: &C,
     button: &mut B,
-    display: &D,
-    mut persist_offset_minutes: PersistOffset,
-    clock_ui_config: ClockUiConfig,
+    mut on_event: OnEvent,
 ) -> Result<Infallible, E>
 where
     B: Button,
     C: ClockSync,
-    D: ClockUiDisplay,
-    PersistOffset: FnMut(i32) -> Result<(), E>,
+    OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
+    OnEventFuture: Future<Output = Result<(), E>>,
 {
-    assert!(
-        clock_ui_config.edit_offset_step_minutes > 0,
-        "edit_offset_step_minutes must be positive"
-    );
-
     let mut clock_ui_state = ClockUiState::HoursMinutes {
         speed: REAL_TIME_SPEED,
     };
     loop {
         clock_ui_state = match clock_ui_state {
             ClockUiState::HoursMinutes { speed } => {
-                run_hours_minutes_state(speed, clock_sync, button, display).await
+                run_hours_minutes_state(speed, clock_sync, button, &mut on_event).await?
             }
             ClockUiState::MinutesSeconds => {
-                run_minutes_seconds_state(
-                    clock_sync,
-                    button,
-                    display,
-                    clock_ui_config.fast_mode_speed,
-                )
-                .await
+                run_minutes_seconds_state(clock_sync, button, &mut on_event).await?
             }
             ClockUiState::EditOffset => {
-                run_edit_offset_state(
-                    clock_sync,
-                    button,
-                    display,
-                    &mut persist_offset_minutes,
-                    clock_ui_config.edit_offset_step_minutes,
-                )
-                .await?
+                run_edit_offset_state(clock_sync, button, &mut on_event).await?
             }
         };
     }
 }
 
-async fn run_hours_minutes_state<B, C, D>(
+async fn run_hours_minutes_state<B, C, OnEvent, OnEventFuture, E>(
     speed: f32,
     clock_sync: &C,
     button: &mut B,
-    display: &D,
-) -> ClockUiState
+    on_event: &mut OnEvent,
+) -> Result<ClockUiState, E>
 where
     B: Button,
     C: ClockSync,
-    D: ClockUiDisplay,
+    OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
+    OnEventFuture: Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(speed);
     let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-    display.show_hours_minutes(hours, minutes);
+    on_event(ClockUiEvent::RenderHoursMinutes { hours, minutes }).await?;
     clock_sync.set_tick_interval(Some(ONE_MINUTE));
 
     loop {
         match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
             Either::First(press_duration) => match (press_duration, speed.to_bits()) {
                 (PressDuration::Short, bits) if bits == REAL_TIME_SPEED.to_bits() => {
-                    return ClockUiState::MinutesSeconds;
+                    return Ok(ClockUiState::MinutesSeconds);
                 }
                 (PressDuration::Short, _) => {
-                    return ClockUiState::HoursMinutes {
+                    return Ok(ClockUiState::HoursMinutes {
                         speed: REAL_TIME_SPEED,
-                    };
+                    });
                 }
                 (PressDuration::Long, _) => {
-                    return ClockUiState::EditOffset;
+                    return Ok(ClockUiState::EditOffset);
                 }
             },
             Either::Second(clock_sync_tick) => {
                 let (hours, minutes, _) = h12_m_s(&clock_sync_tick.local_time);
-                display.show_hours_minutes(hours, minutes);
+                on_event(ClockUiEvent::RenderHoursMinutes { hours, minutes }).await?;
             }
         }
     }
 }
 
-async fn run_minutes_seconds_state<B, C, D>(
+async fn run_minutes_seconds_state<B, C, OnEvent, OnEventFuture, E>(
     clock_sync: &C,
     button: &mut B,
-    display: &D,
-    fast_mode_speed: f32,
-) -> ClockUiState
+    on_event: &mut OnEvent,
+) -> Result<ClockUiState, E>
 where
     B: Button,
     C: ClockSync,
-    D: ClockUiDisplay,
+    OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
+    OnEventFuture: Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(REAL_TIME_SPEED);
     let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
-    display.show_minutes_seconds(minutes, seconds);
+    on_event(ClockUiEvent::RenderMinutesSeconds { minutes, seconds }).await?;
     clock_sync.set_tick_interval(Some(ONE_SECOND));
 
     loop {
         match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
             Either::First(PressDuration::Short) => {
-                return ClockUiState::HoursMinutes {
-                    speed: fast_mode_speed,
-                };
+                return Ok(ClockUiState::HoursMinutes {
+                    speed: FAST_MODE_SPEED,
+                });
             }
             Either::First(PressDuration::Long) => {
-                return ClockUiState::EditOffset;
+                return Ok(ClockUiState::EditOffset);
             }
             Either::Second(clock_sync_tick) => {
                 let (_, minutes, seconds) = h12_m_s(&clock_sync_tick.local_time);
-                display.show_minutes_seconds(minutes, seconds);
+                on_event(ClockUiEvent::RenderMinutesSeconds { minutes, seconds }).await?;
             }
         }
     }
 }
 
-async fn run_edit_offset_state<B, C, D, PersistOffset, E>(
+async fn run_edit_offset_state<B, C, OnEvent, OnEventFuture, E>(
     clock_sync: &C,
     button: &mut B,
-    display: &D,
-    persist_offset_minutes: &mut PersistOffset,
-    edit_offset_step_minutes: i32,
+    on_event: &mut OnEvent,
 ) -> Result<ClockUiState, E>
 where
     B: Button,
     C: ClockSync,
-    D: ClockUiDisplay,
-    PersistOffset: FnMut(i32) -> Result<(), E>,
+    OnEvent: FnMut(ClockUiEvent) -> OnEventFuture,
+    OnEventFuture: Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(REAL_TIME_SPEED);
     let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-    display.show_hours_minutes_edit(hours, minutes);
+    on_event(ClockUiEvent::RenderHoursMinutesEdit { hours, minutes }).await?;
 
     let mut offset_minutes = clock_sync.offset_minutes();
     clock_sync.set_tick_interval(None);
@@ -199,13 +165,13 @@ where
     loop {
         match button.wait_for_press_duration().await {
             PressDuration::Short => {
-                offset_minutes = increment_offset_minutes(offset_minutes, edit_offset_step_minutes);
+                offset_minutes = increment_offset_minutes(offset_minutes, EDIT_OFFSET_STEP_MINUTES);
                 clock_sync.set_offset_minutes(offset_minutes);
                 let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-                display.show_hours_minutes_edit(hours, minutes);
+                on_event(ClockUiEvent::RenderHoursMinutesEdit { hours, minutes }).await?;
             }
             PressDuration::Long => {
-                persist_offset_minutes(offset_minutes)?;
+                on_event(ClockUiEvent::OffsetPersistRequested { offset_minutes }).await?;
                 return Ok(ClockUiState::HoursMinutes {
                     speed: REAL_TIME_SPEED,
                 });

@@ -12,13 +12,20 @@
 //! use device_envoy_rp::{
 //!     Error,
 //!     Result,
-//!     button::{ButtonRp, PressedTo},
+//!     button::PressedTo,
+//!     button_watch,
 //!     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND, h12_m_s},
 //!     flash_block::FlashBlockRp,
 //!     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
 //!     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 //! };
 //! use defmt::info;
+//!
+//! button_watch! {
+//!     ButtonWatch13 {
+//!         pin: PIN_13,
+//!     }
+//! }
 //!
 //! async fn run(
 //!     spawner: embassy_executor::Spawner,
@@ -29,7 +36,7 @@
 //!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
 //!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
 //!
-//!     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+//!     let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
 //!     let wifi_auto = WifiAutoRp::new(
 //!         p.PIN_23,
 //!         p.PIN_24,
@@ -44,7 +51,7 @@
 //!     )?;
 //!
 //!     let stack = wifi_auto
-//!         .connect(&mut button, |event| async move {
+//!         .connect(&mut *button_watch13, |event| async move {
 //!             match event {
 //!                 WifiAutoEvent::CaptivePortalReady => {
 //!                     info!("WifiAutoRp: setup mode ready");

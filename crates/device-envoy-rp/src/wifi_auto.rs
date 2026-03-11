@@ -94,11 +94,18 @@ pub(crate) struct WifiAutoStatic {
 /// # use defmt::info;
 /// use device_envoy_rp::{
 ///     Result,
-///     button::{ButtonRp, PressedTo},
+///     button::PressedTo,
+///     button_watch,
 ///     flash_block::FlashBlockRp,
 ///     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
 /// };
 /// use embassy_time::Duration;
+///
+/// button_watch! {
+///     ButtonWatch13 {
+///         pin: PIN_13,
+///     }
+/// }
 ///
 /// async fn connect_wifi(
 ///     spawner: embassy_executor::Spawner,
@@ -107,7 +114,7 @@ pub(crate) struct WifiAutoStatic {
 ///     // Set up flash storage for WiFi credentials
 ///     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 ///
-///     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+///     let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
 ///
 ///     // Construct WifiAutoRp
 ///     let wifi_auto = WifiAutoRp::new(
@@ -125,7 +132,7 @@ pub(crate) struct WifiAutoStatic {
 ///
 ///     // Connect (logging status as we go)
 ///     let stack = wifi_auto
-///         .connect(&mut button, |event| async move {
+///         .connect(&mut *button_watch13, |event| async move {
 ///             match event {
 ///                 WifiAutoEvent::CaptivePortalReady =>
 ///                     info!("Captive portal ready"),
@@ -387,15 +394,21 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # use panic_probe as _;
     /// # use device_envoy_rp::{
     /// #     Result,
-    /// #     button::{ButtonRp, PressedTo},
+    /// #     button::PressedTo,
+    /// #     button_watch,
     /// #     flash_block::FlashBlockRp,
     /// #     wifi_auto::{WifiAuto as _, WifiAutoRp},
     /// # };
     /// # use embassy_executor::Spawner;
     /// # use embassy_rp::Peripherals;
+    /// # button_watch! {
+    /// #     ButtonWatch13 {
+    /// #         pin: PIN_13,
+    /// #     }
+    /// # }
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
     /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    /// # let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    /// # let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,
@@ -409,7 +422,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     spawner,
     /// # )?;
     /// let _stack = wifi_auto
-    ///     .connect(&mut button, |_event| async move { Ok(()) })
+    ///     .connect(&mut *button_watch13, |_event| async move { Ok(()) })
     ///     .await?;
     /// # Ok(())
     /// # }
@@ -423,7 +436,8 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # use panic_probe as _;
     /// # use device_envoy_rp::{
     /// #     Result,
-    /// #     button::{ButtonRp, PressedTo},
+    /// #     button::PressedTo,
+    /// #     button_watch,
     /// #     flash_block::FlashBlockRp,
     /// #     led_strip::colors,
     /// #     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
@@ -431,6 +445,11 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # use smart_leds::RGB8;
     /// # use embassy_executor::Spawner;
     /// # use embassy_rp::Peripherals;
+    /// # button_watch! {
+    /// #     ButtonWatch13 {
+    /// #         pin: PIN_13,
+    /// #     }
+    /// # }
     /// # struct Led8x12;
     /// # impl Led8x12 {
     /// #     async fn write_text(&self, _text: &str, _colors: &[RGB8]) -> Result<()> { Ok(()) }
@@ -439,7 +458,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # const COLORS: &[RGB8] = &[colors::WHITE];
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
     /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    /// # let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    /// # let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,
@@ -456,7 +475,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// // Keep a reference so the handler can reuse the display across events.
     /// let led8x12_ref = &led8x12;
     /// let stack = wifi_auto
-    ///     .connect(&mut button, |event| async move {
+    ///     .connect(&mut *button_watch13, |event| async move {
     ///         match event {
     ///             WifiAutoEvent::CaptivePortalReady => {
     ///                 led8x12_ref.write_text("JO\nIN", COLORS);

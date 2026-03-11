@@ -208,7 +208,7 @@ pub fn generate_config_page<E>(
 
     if has_saved_password {
         page.push_str(
-            "<label class=\"toggle\"><input type=\"checkbox\" id=\"keep_saved_password\" name=\"keep_saved_password\" value=\"1\" checked onclick=\"syncPasswordEditing()\">Keep current saved password</label>\
+            "<label class=\"toggle\"><input type=\"checkbox\" id=\"keep_saved_password\" name=\"keep_saved_password\" value=\"1\" checked onclick=\"syncPasswordEditing()\">Use saved password</label>\
              <input type=\"password\" id=\"password\" name=\"password\" onfocus=\"beginPasswordEdit()\" onkeydown=\"beginPasswordEdit()\" onclick=\"beginPasswordEdit()\" onpaste=\"beginPasswordEdit()\">\
              <label class=\"toggle\"><input type=\"checkbox\" id=\"show_password\" onclick=\"togglePasswordVisibility()\">Show password</label>\
              <script>syncPasswordEditing();</script>\

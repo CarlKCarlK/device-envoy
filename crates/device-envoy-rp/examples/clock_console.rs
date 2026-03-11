@@ -60,7 +60,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        "www.picoclock.net",
+        "DeviceEnvoyClock",
         [timezone_field],
         spawner,
     )?;

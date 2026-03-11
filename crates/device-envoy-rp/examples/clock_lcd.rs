@@ -76,7 +76,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        "www.picoclock.net",
+        "DeviceEnvoyClock",
         [timezone_field],
         spawner,
     )?;
@@ -89,7 +89,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             async move {
                 match wifi_auto_event {
                     device_envoy_rp::wifi_auto::WifiAutoEvent::CaptivePortalReady => {
-                        lcd_text_ref.write_text("Join WiFi:\nwww.picoclock.net");
+                        lcd_text_ref.write_text("Join WiFi:\nDeviceEnvoyClock");
                     }
                     device_envoy_rp::wifi_auto::WifiAutoEvent::Connecting { .. } => {
                         lcd_text_ref.write_text("Connecting...\nPlease wait");

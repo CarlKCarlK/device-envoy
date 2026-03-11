@@ -132,7 +132,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,
         p.DMA_CH0,
         wifi_credentials_flash_block,
-        "www.picoclock.net",
+        "DeviceEnvoyClock",
         [timezone_field],
         spawner,
     )?;

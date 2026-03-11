@@ -32,7 +32,7 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-const CAPTIVE_PORTAL_SSID: &str = "EnvoyClock";
+const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoyClock";
 const DIGIT_COLORS: [smart_leds::RGB8; 4] =
     [colors::CYAN, colors::MAGENTA, colors::ORANGE, colors::LIME];
 const EDIT_COLORS: [smart_leds::RGB8; 4] = [

@@ -23,7 +23,7 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-const CAPTIVE_PORTAL_SSID: &str = "EnvoyClockSync";
+const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoyClock";
 
 button_watch! {
     ForcePortalButtonWatch {

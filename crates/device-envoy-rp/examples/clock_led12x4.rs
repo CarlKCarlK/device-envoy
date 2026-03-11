@@ -93,7 +93,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO1,    // CYW43 PIO interface (swapped to show PIO not hardcoded)
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        "www.picoclock.net", // Captive-portal SSID
+        "DeviceEnvoyClock", // Captive-portal SSID
         [timezone_field],    // Custom fields to ask for
         spawner,
     )?;

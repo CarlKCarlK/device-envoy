@@ -37,7 +37,7 @@ use device_envoy_esp::{
 };
 esp_bootloader_esp_idf::esp_app_desc!();
 
-const CAPTIVE_PORTAL_SSID: &str = "EnvoyServoClock";
+const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoyClock";
 const SERVO_MAX_STEPS: usize = 30;
 type ClockServoPlayer = ServoPlayerHandle<SERVO_MAX_STEPS>;
 

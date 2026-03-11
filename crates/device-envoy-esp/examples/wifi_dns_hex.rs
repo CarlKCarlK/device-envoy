@@ -32,7 +32,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 const COLORS: &[smart_leds::RGB8] = &[colors::YELLOW, colors::LIME, colors::CYAN, colors::RED];
 const DNS_PERIOD: Duration = Duration::from_secs(15);
-const CAPTIVE_PORTAL_SSID: &str = "EnvoySetup";
+const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
 
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4);

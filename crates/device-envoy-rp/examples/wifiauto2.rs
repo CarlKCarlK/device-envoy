@@ -38,7 +38,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
-        "PicoAccess", // Captive-portal SSID
+        "DeviceEnvoySetup", // Captive-portal SSID
         [],           // Any extra fields
         spawner,
     )?;

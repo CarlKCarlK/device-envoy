@@ -68,7 +68,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        "EnvoyClockLcd",
+        "DeviceEnvoyClock",
         [timezone_field],
         spawner,
     )?;
@@ -80,7 +80,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             async move {
                 match wifi_auto_event {
                     device_envoy_esp::wifi_auto::WifiAutoEvent::CaptivePortalReady => {
-                        lcd_text_clock_ref.write_text("Join WiFi:\nEnvoyClockLcd");
+                        lcd_text_clock_ref.write_text("Join WiFi:\nDeviceEnvoyClock");
                     }
                     device_envoy_esp::wifi_auto::WifiAutoEvent::Connecting { .. } => {
                         lcd_text_clock_ref.write_text("Connecting...\nPlease wait");

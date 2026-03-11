@@ -77,7 +77,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         device_name_flash_block,
         "device_name",
         "Device Name",
-        "www.picoclock.net",
+        "DeviceEnvoy",
     );
 
     static LOCATION_FIELD_STATIC: TextFieldStatic<64> = TextField::new_static();
@@ -98,7 +98,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,                       // CYW43 PIO interface
         p.DMA_CH0,                    // CYW43 DMA channel
         wifi_credentials_flash_block, // Flash block storing Wi-Fi creds
-        "Pico",                       // Captive portal SSID to display
+        "DeviceEnvoySetup",           // Captive portal SSID to display
         [timezone_field, device_name_field, location_field],
         spawner,
     )?;

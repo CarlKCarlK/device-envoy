@@ -50,7 +50,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
-        "PicoAccess",                    // Captive-portal SSID
+        "DeviceEnvoySetup",           // Captive-portal SSID
         [website_field, timezone_field], // Custom fields
         spawner,
     )?;

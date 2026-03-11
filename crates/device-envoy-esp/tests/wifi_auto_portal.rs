@@ -55,7 +55,9 @@ fn generate_config_page_escapes_defaults() {
 
     assert!(page.contains("A&amp;B&quot;&lt;ssid&gt;"));
     assert!(!page.contains("p@ss&lt;word&gt;&amp;&quot;"));
-    assert!(!page.contains("name=\"password\" value="));
+    assert!(page.contains("name=\"password\""));
+    assert!(page.contains("value=\"*******\""));
+    assert!(page.contains("keep_saved_password"));
 }
 
 #[test]

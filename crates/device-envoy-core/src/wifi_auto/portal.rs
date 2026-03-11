@@ -145,6 +145,7 @@ pub fn generate_config_page<E>(
                  h1 {{ color: #333; }}\
                  form {{ margin-top: 20px; }}\
                  input, select {{ width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }}\
+                 input.masked {{ color: #777; background-color: #f2f2f2; }}\
                  label {{ display: block; margin-top: 10px; }}\
                  .toggle {{ display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #444; margin-top: 5px; }}\
                  .toggle input {{ width: auto; margin: 0; }}\
@@ -153,20 +154,42 @@ pub fn generate_config_page<E>(
              </style>\
              <script>\
                  function togglePasswordVisibility() {{\
+                     var keepSavedPassword = document.getElementById('keep_saved_password');\
+                     if (keepSavedPassword && keepSavedPassword.checked) return;\
                      var input = document.getElementById('password');\
                      if (!input) return;\
                      input.type = input.type === 'password' ? 'text' : 'password';\
                  }}\
+                 function beginPasswordEdit() {{\
+                     var keepSavedPassword = document.getElementById('keep_saved_password');\
+                     if (!keepSavedPassword || !keepSavedPassword.checked) return;\
+                     keepSavedPassword.checked = false;\
+                     syncPasswordEditing();\
+                 }}\
                  function syncPasswordEditing() {{\
                      var keepSavedPassword = document.getElementById('keep_saved_password');\
                      var passwordInput = document.getElementById('password');\
+                     var showPassword = document.getElementById('show_password');\
                      if (!keepSavedPassword || !passwordInput) return;\
                      var isKeepingSavedPassword = keepSavedPassword.checked;\
-                     passwordInput.disabled = isKeepingSavedPassword;\
+                     passwordInput.readOnly = isKeepingSavedPassword;\
                      passwordInput.required = !isKeepingSavedPassword;\
                      if (isKeepingSavedPassword) {{\
-                         passwordInput.value = '';\
+                         passwordInput.value = '*******';\
                          passwordInput.type = 'password';\
+                         passwordInput.classList.add('masked');\
+                         if (showPassword) {{\
+                             showPassword.checked = false;\
+                             showPassword.disabled = true;\
+                         }}\
+                     }} else {{\
+                         if (passwordInput.value === '*******') {{\
+                             passwordInput.value = '';\
+                         }}\
+                         passwordInput.classList.remove('masked');\
+                         if (showPassword) {{\
+                             showPassword.disabled = false;\
+                         }}\
                      }}\
                  }}\
              </script>\
@@ -186,8 +209,8 @@ pub fn generate_config_page<E>(
     if has_saved_password {
         page.push_str(
             "<label class=\"toggle\"><input type=\"checkbox\" id=\"keep_saved_password\" name=\"keep_saved_password\" value=\"1\" checked onclick=\"syncPasswordEditing()\">Keep current saved password</label>\
-             <input type=\"password\" id=\"password\" name=\"password\" disabled>\
-             <label class=\"toggle\"><input type=\"checkbox\" onclick=\"togglePasswordVisibility()\">Show password</label>\
+             <input type=\"password\" id=\"password\" name=\"password\" onfocus=\"beginPasswordEdit()\" onkeydown=\"beginPasswordEdit()\" onclick=\"beginPasswordEdit()\" onpaste=\"beginPasswordEdit()\">\
+             <label class=\"toggle\"><input type=\"checkbox\" id=\"show_password\" onclick=\"togglePasswordVisibility()\">Show password</label>\
              <script>syncPasswordEditing();</script>\
 ",
         )
@@ -195,7 +218,7 @@ pub fn generate_config_page<E>(
     } else {
         page.push_str(
             "<input type=\"password\" id=\"password\" name=\"password\" required>\
-             <label class=\"toggle\"><input type=\"checkbox\" onclick=\"togglePasswordVisibility()\">Show password</label>\
+             <label class=\"toggle\"><input type=\"checkbox\" id=\"show_password\" onclick=\"togglePasswordVisibility()\">Show password</label>\
 ",
         )
         .expect("page HTML exceeds capacity");

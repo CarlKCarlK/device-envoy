@@ -21,7 +21,10 @@ use super::{PressDuration, PressedTo};
 pub struct ButtonWatchStaticRp {
     signal: Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: Signal<CriticalSectionRawMutex, ()>,
     is_pressed: AtomicBool,
+    initialized: AtomicBool,
 }
 
 impl ButtonWatchStaticRp {
@@ -30,7 +33,10 @@ impl ButtonWatchStaticRp {
         Self {
             signal: Signal::new(),
             state_signal: Signal::new(),
+            state_changed_signal: Signal::new(),
+            initialized_signal: Signal::new(),
             is_pressed: AtomicBool::new(false),
+            initialized: AtomicBool::new(false),
         }
     }
 
@@ -45,8 +51,23 @@ impl ButtonWatchStaticRp {
     }
 
     #[must_use]
+    pub const fn state_changed_signal(&self) -> &Signal<CriticalSectionRawMutex, ()> {
+        &self.state_changed_signal
+    }
+
+    #[must_use]
+    pub const fn initialized_signal(&self) -> &Signal<CriticalSectionRawMutex, ()> {
+        &self.initialized_signal
+    }
+
+    #[must_use]
     pub const fn is_pressed(&self) -> &AtomicBool {
         &self.is_pressed
+    }
+
+    #[must_use]
+    pub const fn initialized(&self) -> &AtomicBool {
+        &self.initialized
     }
 }
 
@@ -60,7 +81,10 @@ impl ButtonWatchStaticRp {
 pub struct ButtonWatchRp {
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: &'static Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: &'static Signal<CriticalSectionRawMutex, ()>,
     is_pressed: &'static AtomicBool,
+    initialized: &'static AtomicBool,
 }
 
 impl ButtonWatchRp {
@@ -69,8 +93,22 @@ impl ButtonWatchRp {
         Self {
             signal: button_watch_static.signal(),
             state_signal: button_watch_static.state_signal(),
+            state_changed_signal: button_watch_static.state_changed_signal(),
+            initialized_signal: button_watch_static.initialized_signal(),
             is_pressed: button_watch_static.is_pressed(),
+            initialized: button_watch_static.initialized(),
         }
+    }
+
+    pub async fn wait_until_initialized(&self) {
+        if self.initialized.load(Ordering::Acquire) {
+            return;
+        }
+        self.initialized_signal.wait().await;
+    }
+
+    pub async fn wait_for_state_change(&self) {
+        self.state_changed_signal.wait().await;
     }
 }
 
@@ -110,7 +148,10 @@ pub async fn button_watch_task<P: Pin>(
     pressed_to: PressedTo,
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: &'static Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: &'static Signal<CriticalSectionRawMutex, ()>,
     is_pressed: &'static AtomicBool,
+    initialized: &'static AtomicBool,
 ) -> ! {
     let pull = match pressed_to {
         PressedTo::Voltage => Pull::Down,
@@ -121,7 +162,16 @@ pub async fn button_watch_task<P: Pin>(
         input: &mut input,
         pressed_to,
     };
-    signal_press_durations(&mut input_button, signal, state_signal, is_pressed).await
+    signal_press_durations(
+        &mut input_button,
+        signal,
+        state_signal,
+        state_changed_signal,
+        initialized_signal,
+        is_pressed,
+        initialized,
+    )
+    .await
 }
 
 /// Background task that monitors button state from an existing Input.
@@ -134,13 +184,25 @@ pub async fn button_watch_task_from_input(
     pressed_to: PressedTo,
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: &'static Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: &'static Signal<CriticalSectionRawMutex, ()>,
     is_pressed: &'static AtomicBool,
+    initialized: &'static AtomicBool,
 ) -> ! {
     let mut input_button = InputButton {
         input: &mut input,
         pressed_to,
     };
-    signal_press_durations(&mut input_button, signal, state_signal, is_pressed).await
+    signal_press_durations(
+        &mut input_button,
+        signal,
+        state_signal,
+        state_changed_signal,
+        initialized_signal,
+        is_pressed,
+        initialized,
+    )
+    .await
 }
 
 struct InputButton<'a> {
@@ -169,11 +231,16 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
     button: &mut B,
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
+    state_changed_signal: &'static Signal<CriticalSectionRawMutex, ()>,
+    initialized_signal: &'static Signal<CriticalSectionRawMutex, ()>,
     is_pressed: &'static AtomicBool,
+    initialized: &'static AtomicBool,
 ) -> ! {
     let initial_pressed = button.is_pressed();
     is_pressed.store(initial_pressed, Ordering::Relaxed);
     state_signal.signal(initial_pressed);
+    initialized.store(true, Ordering::Release);
+    initialized_signal.signal(());
 
     loop {
         <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false).await;
@@ -181,11 +248,13 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
         <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, true).await;
         is_pressed.store(true, Ordering::Relaxed);
         state_signal.signal(true);
+        state_changed_signal.signal(());
 
         Timer::after(device_envoy_core::button::BUTTON_DEBOUNCE_DELAY).await;
         if !button.is_pressed() {
             is_pressed.store(false, Ordering::Relaxed);
             state_signal.signal(false);
+            state_changed_signal.signal(());
             continue;
         }
 
@@ -199,6 +268,7 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
             embassy_futures::select::Either::First(()) => {
                 is_pressed.store(false, Ordering::Relaxed);
                 state_signal.signal(false);
+                state_changed_signal.signal(());
                 signal.signal(PressDuration::Short);
             }
             embassy_futures::select::Either::Second(()) => {
@@ -207,6 +277,7 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
                     .await;
                 is_pressed.store(false, Ordering::Relaxed);
                 state_signal.signal(false);
+                state_changed_signal.signal(());
             }
         }
     }
@@ -264,6 +335,7 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
 /// async fn example(p: embassy_rp::Peripherals, spawner: Spawner) {
 ///     // Create the button monitor (spawns background task automatically)
 ///     let mut button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)
+///         .await
 ///         .expect("Failed to create button monitor");
 ///
 ///     loop {
@@ -367,7 +439,7 @@ macro_rules! __button_watch_impl {
                 /// # Errors
                 ///
                 /// Returns an error if the background task cannot be spawned.
-                pub fn new(
+                pub async fn new(
                     pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
                     pressed_to: $crate::button::PressedTo,
                     spawner: ::embassy_executor::Spawner,
@@ -383,13 +455,17 @@ macro_rules! __button_watch_impl {
                         pressed_to,
                         BUTTON_WATCH_STATIC.signal(),
                         BUTTON_WATCH_STATIC.state_signal(),
+                        BUTTON_WATCH_STATIC.state_changed_signal(),
+                        BUTTON_WATCH_STATIC.initialized_signal(),
                         BUTTON_WATCH_STATIC.is_pressed(),
+                        BUTTON_WATCH_STATIC.initialized(),
                     );
                     spawner.spawn(task_token).map_err($crate::Error::TaskSpawn)?;
 
                     let button_watch = $crate::button::ButtonWatchRp::new(
                         &BUTTON_WATCH_STATIC,
                     );
+                    button_watch.wait_until_initialized().await;
 
                     let instance = BUTTON_WATCH_CELL.init($name { button_watch });
                     Ok(instance)
@@ -430,7 +506,7 @@ macro_rules! __button_watch_impl {
                 ///     spawner: Spawner,
                 /// ) -> device_envoy_rp::Result<()> {
                 ///     // Convert ButtonRp from WifiAuto into ButtonWatchRp
-                ///     let mut button_watch13 = ButtonWatch13::from_button(button, spawner)?;
+                ///     let mut button_watch13 = ButtonWatch13::from_button(button, spawner).await?;
                 ///
                 ///     // Now button monitoring happens in background
                 ///     loop {
@@ -441,7 +517,7 @@ macro_rules! __button_watch_impl {
                 /// #   Ok(())
                 /// }
                 /// ```
-                pub fn from_button(
+                pub async fn from_button(
                     button: $crate::button::ButtonRp<'static>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static mut Self> {
@@ -456,13 +532,17 @@ macro_rules! __button_watch_impl {
                         pressed_to,
                         BUTTON_WATCH_STATIC.signal(),
                         BUTTON_WATCH_STATIC.state_signal(),
+                        BUTTON_WATCH_STATIC.state_changed_signal(),
+                        BUTTON_WATCH_STATIC.initialized_signal(),
                         BUTTON_WATCH_STATIC.is_pressed(),
+                        BUTTON_WATCH_STATIC.initialized(),
                     );
                     spawner.spawn(task_token).map_err($crate::Error::TaskSpawn)?;
 
                     let button_watch = $crate::button::ButtonWatchRp::new(
                         &BUTTON_WATCH_STATIC,
                     );
+                    button_watch.wait_until_initialized().await;
 
                     let instance = BUTTON_WATCH_CELL.init($name { button_watch });
                     Ok(instance)
@@ -512,14 +592,26 @@ macro_rules! __button_watch_impl {
                     ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
                     bool
                 >,
+                state_changed_signal: &'static ::embassy_sync::signal::Signal<
+                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+                    ()
+                >,
+                initialized_signal: &'static ::embassy_sync::signal::Signal<
+                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+                    ()
+                >,
                 is_pressed: &'static ::core::sync::atomic::AtomicBool,
+                initialized: &'static ::core::sync::atomic::AtomicBool,
             ) -> ! {
                 $crate::button::button_watch_task(
                     pin,
                     pressed_to,
                     signal,
                     state_signal,
+                    state_changed_signal,
+                    initialized_signal,
                     is_pressed,
+                    initialized,
                 )
                 .await
             }
@@ -536,14 +628,26 @@ macro_rules! __button_watch_impl {
                     ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
                     bool
                 >,
+                state_changed_signal: &'static ::embassy_sync::signal::Signal<
+                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+                    ()
+                >,
+                initialized_signal: &'static ::embassy_sync::signal::Signal<
+                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+                    ()
+                >,
                 is_pressed: &'static ::core::sync::atomic::AtomicBool,
+                initialized: &'static ::core::sync::atomic::AtomicBool,
             ) -> ! {
                 $crate::button::button_watch_task_from_input(
                     input,
                     pressed_to,
                     signal,
                     state_signal,
+                    state_changed_signal,
+                    initialized_signal,
                     is_pressed,
+                    initialized,
                 )
                 .await
             }

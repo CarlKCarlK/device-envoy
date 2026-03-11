@@ -112,7 +112,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             Ok(())
         })
         .await?;
-    let button_watch13 = ButtonWatch13::from_button(button, spawner)?;
+    let button_watch13 = ButtonWatch13::from_button(button, spawner).await?;
 
     led4.write_text(['D', 'O', 'N', 'E'], BlinkState::Solid);
     info!("WiFi connected");

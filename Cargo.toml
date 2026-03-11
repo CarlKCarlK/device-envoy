@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "xtask",
     "crates/device-envoy-core",
     "crates/device-envoy-example-common",
     "crates/device-envoy-rp",

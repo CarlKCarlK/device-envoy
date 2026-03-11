@@ -13,7 +13,7 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{PressDuration, PressedTo};
+use device_envoy_rp::button::{Button, PressDuration, PressedTo};
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
@@ -55,7 +55,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Define HTML to ask for timezone on the captive portal.
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
-    let mut button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?;
+    let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?;
 
     // Set up Wifi via a captive portal. The button pin is used to reset stored credentials.
     let wifi_auto = WifiAutoRp::new(
@@ -97,7 +97,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led4_ref = &led4;
     // TODO00 review this possible material change (may no longer apply): keep using ButtonWatch13 for stable press duration detection in fast modes.
     let stack = wifi_auto
-        .connect(&mut button_watch13, |event| async move {
+        .connect(&mut *button_watch13, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['j', 'o', 'i', 'n'], BlinkState::BlinkingAndOn);
@@ -137,17 +137,22 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, &mut button_watch13, &led4)
+                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch13, &led4)
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, &mut button_watch13, &led4)
+                    .execute_minutes_seconds(&clock_sync, &mut *button_watch13, &led4)
                     .await?
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(&clock_sync, &mut button_watch13, &timezone_field, &led4)
+                    .execute_edit_offset(
+                        &clock_sync,
+                        &mut *button_watch13,
+                        &timezone_field,
+                        &led4,
+                    )
                     .await?
             }
         };
@@ -164,7 +169,7 @@ enum State {
 }
 
 impl State {
-    async fn execute_hours_minutes<B: device_envoy_core::button::Button>(
+    async fn execute_hours_minutes<B: Button>(
         self,
         speed: f32,
         clock_sync: &ClockSyncRp,
@@ -214,7 +219,7 @@ impl State {
         }
     }
 
-    async fn execute_minutes_seconds<B: device_envoy_core::button::Button>(
+    async fn execute_minutes_seconds<B: Button>(
         self,
         clock_sync: &ClockSyncRp,
         button: &mut B,
@@ -260,7 +265,7 @@ impl State {
         }
     }
 
-    async fn execute_edit_offset<B: device_envoy_core::button::Button>(
+    async fn execute_edit_offset<B: Button>(
         self,
         clock_sync: &ClockSyncRp,
         button: &mut B,

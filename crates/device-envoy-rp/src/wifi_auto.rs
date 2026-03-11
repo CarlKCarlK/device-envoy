@@ -24,7 +24,10 @@ use static_cell::StaticCell;
 use crate::button::Button;
 use crate::flash_block::FlashBlockRp;
 use crate::{Error, Result};
-use device_envoy_core::wifi_auto::{WifiCredentials as InnerWifiCredentials, WifiStartMode};
+use device_envoy_core::wifi_auto::{
+    WifiAutoBackend, WifiCredentials as InnerWifiCredentials, WifiStartMode, connect_with_backend,
+    should_enter_captive_portal,
+};
 
 mod dhcp;
 mod dns;
@@ -336,7 +339,7 @@ impl WifiAutoRp {
     }
 }
 
-impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
+impl WifiAuto for WifiAutoRp {
     type Error = Error;
 
     /// Connects to WiFi (if possible), reports status, and returns the
@@ -472,8 +475,20 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
         // Allow the pull-up to stabilize after reset before sampling the button.
         let button_reset_stabilize_cycles: u32 = 300_000;
         cortex_m::asm::delay(button_reset_stabilize_cycles);
-        if button.is_pressed() {
-            self.wifi_auto.force_captive_portal();
+        if button.take_press_latch() {
+            if self.wifi_auto.wifi.current_start_mode() != WifiStartMode::CaptivePortal {
+                info!("WifiAutoRp: force-captive-portal requested via button");
+                self.wifi_auto
+                    .wifi
+                    .set_start_mode(WifiStartMode::CaptivePortal)
+                    .map_err(|_| Error::StorageCorrupted)?;
+                // The RP WiFi runtime mode is selected when the device loop starts.
+                // Reboot immediately so startup re-enters in captive-portal mode.
+                info!("WifiAutoRp: rebooting now to apply CaptivePortal startup mode");
+                SCB::sys_reset();
+            } else {
+                info!("WifiAutoRp: force request ignored (already in CaptivePortal mode)");
+            }
         }
         self.wifi_auto.ensure_connected_with(&mut on_event).await?;
         Ok(self.wifi_auto.wifi.wait_for_stack().await)
@@ -484,10 +499,6 @@ impl WifiAutoInner {
     #[must_use]
     const fn new_static() -> WifiAutoStatic {
         WifiAutoStatic::new()
-    }
-
-    fn force_captive_portal(&self) {
-        self.force_captive_portal.store(true, Ordering::Relaxed);
     }
 
     fn extra_fields_ready(&self) -> Result<bool> {
@@ -516,7 +527,7 @@ impl WifiAutoInner {
             let persisted_wifi_credentials = self.wifi.load_persisted_credentials();
             let has_credentials = persisted_wifi_credentials.is_some();
             let extras_ready = self.extra_fields_ready()?;
-            let enter_captive_portal = device_envoy_core::wifi_auto::should_enter_captive_portal(
+            let enter_captive_portal = should_enter_captive_portal(
                 start_mode,
                 force_captive_portal,
                 has_credentials,
@@ -531,7 +542,7 @@ impl WifiAutoInner {
                 wifi_auto_inner: &'a WifiAutoInner,
                 force_captive_portal: bool,
             }
-            impl device_envoy_core::wifi_auto::WifiAutoBackend for RpWifiAutoBackend<'_> {
+            impl WifiAutoBackend for RpWifiAutoBackend<'_> {
                 type Error = Error;
 
                 fn force_captive_portal(&self) -> bool {
@@ -623,11 +634,7 @@ impl WifiAutoInner {
                 wifi_auto_inner: self,
                 force_captive_portal,
             };
-            let connected = device_envoy_core::wifi_auto::connect_with_backend(
-                &mut wifi_auto_backend,
-                on_event,
-            )
-            .await?;
+            let connected = connect_with_backend(&mut wifi_auto_backend, on_event).await?;
             if connected {
                 return Ok(());
             }

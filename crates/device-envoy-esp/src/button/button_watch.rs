@@ -22,6 +22,7 @@ pub struct ButtonWatchStaticEsp {
     signal: Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: Signal<CriticalSectionRawMutex, bool>,
     is_pressed: AtomicBool,
+    press_latch: AtomicBool,
 }
 
 #[cfg(target_os = "none")]
@@ -31,6 +32,7 @@ impl ButtonWatchStaticEsp {
             signal: Signal::new(),
             state_signal: Signal::new(),
             is_pressed: AtomicBool::new(false),
+            press_latch: AtomicBool::new(false),
         }
     }
 }
@@ -44,6 +46,7 @@ pub struct ButtonWatchEsp<'a> {
     signal: &'a Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'a Signal<CriticalSectionRawMutex, bool>,
     is_pressed: &'a AtomicBool,
+    press_latch: &'a AtomicBool,
 }
 
 #[cfg(target_os = "none")]
@@ -63,6 +66,17 @@ impl ButtonWatchEsp<'_> {
         spawner: Spawner,
     ) -> Result<Self> {
         let button = ButtonEsp::new(button_pin, pressed_to);
+        let initial_pressed =
+            <ButtonEsp<'_> as device_envoy_core::button::Button>::is_pressed(&button);
+        button_watch_static
+            .is_pressed
+            .store(initial_pressed, Ordering::Relaxed);
+        button_watch_static.state_signal.signal(initial_pressed);
+        if initial_pressed {
+            button_watch_static
+                .press_latch
+                .store(true, Ordering::Relaxed);
+        }
         let (input, pressed_to) = button.into_parts();
         let token = button_watch_task_from_input(
             input,
@@ -70,12 +84,14 @@ impl ButtonWatchEsp<'_> {
             &button_watch_static.signal,
             &button_watch_static.state_signal,
             &button_watch_static.is_pressed,
+            &button_watch_static.press_latch,
         );
         spawner.spawn(token).map_err(Error::TaskSpawn)?;
         Ok(Self {
             signal: &button_watch_static.signal,
             state_signal: &button_watch_static.state_signal,
             is_pressed: &button_watch_static.is_pressed,
+            press_latch: &button_watch_static.press_latch,
         })
     }
 }
@@ -84,6 +100,14 @@ impl ButtonWatchEsp<'_> {
 impl device_envoy_core::button::Button for ButtonWatchEsp<'_> {
     fn is_pressed(&self) -> bool {
         self.is_pressed.load(Ordering::Relaxed)
+    }
+
+    fn take_press_latch(&mut self) -> bool {
+        let latched = self.press_latch.load(Ordering::Relaxed);
+        if latched {
+            self.press_latch.store(false, Ordering::Relaxed);
+        }
+        latched
     }
 
     async fn wait_for_press_duration(&mut self) -> PressDuration {
@@ -112,12 +136,13 @@ async fn button_watch_task_from_input(
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
     is_pressed: &'static AtomicBool,
+    press_latch: &'static AtomicBool,
 ) -> ! {
     let mut input_button = InputButton {
         input: &mut input,
         pressed_to,
     };
-    signal_press_durations(&mut input_button, signal, state_signal, is_pressed).await
+    signal_press_durations(&mut input_button, signal, state_signal, is_pressed, press_latch).await
 }
 
 #[cfg(target_os = "none")]
@@ -150,10 +175,14 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
     is_pressed: &'static AtomicBool,
+    press_latch: &'static AtomicBool,
 ) -> ! {
     let initial_pressed = button.is_pressed();
     is_pressed.store(initial_pressed, Ordering::Relaxed);
     state_signal.signal(initial_pressed);
+    if initial_pressed {
+        press_latch.store(true, Ordering::Relaxed);
+    }
 
     loop {
         <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false).await;
@@ -161,6 +190,7 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
         <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, true).await;
         is_pressed.store(true, Ordering::Relaxed);
         state_signal.signal(true);
+        press_latch.store(true, Ordering::Relaxed);
 
         Timer::after(device_envoy_core::button::BUTTON_DEBOUNCE_DELAY).await;
         if !button.is_pressed() {

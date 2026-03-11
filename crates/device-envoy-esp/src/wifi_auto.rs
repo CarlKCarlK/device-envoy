@@ -39,6 +39,10 @@ pub use device_envoy_core::wifi_auto::{
     FormData, HtmlBuffer, WifiAuto, WifiAutoError, WifiAutoEvent, WifiAutoField,
     WifiAutoPersistedState, WifiCredentials, WifiStack, WifiStartMode,
 };
+use device_envoy_core::wifi_auto::{
+    WifiAutoBackend, connect_with_backend, generate_config_page, parse_post,
+    should_enter_captive_portal,
+};
 
 const MAX_WIFI_AUTO_FIELDS: usize = 8;
 
@@ -129,7 +133,7 @@ impl<'a> WifiAutoEsp<'a> {
         let wifi_start_mode = wifi_auto.start_mode()?;
         let custom_fields_satisfied = wifi_auto.custom_fields_satisfied()?;
         let has_persisted_credentials = wifi_auto.load_persisted_credentials()?.is_some();
-        if device_envoy_core::wifi_auto::should_enter_captive_portal(
+        if should_enter_captive_portal(
             wifi_start_mode,
             false,
             has_persisted_credentials,
@@ -175,7 +179,7 @@ impl<'a> WifiAutoEsp<'a> {
         let wifi_start_mode = wifi_auto.start_mode()?;
         let custom_fields_satisfied = wifi_auto.custom_fields_satisfied()?;
         let has_persisted_credentials = wifi_auto.load_persisted_credentials()?.is_some();
-        if device_envoy_core::wifi_auto::should_enter_captive_portal(
+        if should_enter_captive_portal(
             wifi_start_mode,
             false,
             has_persisted_credentials,
@@ -200,7 +204,7 @@ impl<'a> WifiAutoEsp<'a> {
     /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
     pub fn generate_config_page(&self, defaults: Option<&WifiCredentials>) -> HtmlBuffer {
-        device_envoy_core::wifi_auto::generate_config_page(defaults, self.fields.as_slice())
+        generate_config_page(defaults, self.fields.as_slice())
     }
 
     /// Parse a raw HTTP POST request into credentials and apply field parsers.
@@ -211,7 +215,7 @@ impl<'a> WifiAutoEsp<'a> {
     /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
     pub fn parse_post(&self, request: &str) -> Option<WifiCredentials> {
-        device_envoy_core::wifi_auto::parse_post(request, self.fields.as_slice())
+        parse_post(request, self.fields.as_slice())
     }
 
     /// Load persisted Wi-Fi credentials from storage.
@@ -330,7 +334,7 @@ impl<'a> WifiAutoEsp<'a> {
             .take()
             .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
         let spawner = self.spawner;
-        let force_captive_portal = button.is_pressed();
+        let force_captive_portal = button.take_press_latch();
 
         static ESP_RADIO_CONTROLLER: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
         let esp_radio_controller = ESP_RADIO_CONTROLLER.init(esp_radio::init()?);
@@ -350,7 +354,7 @@ impl<'a> WifiAutoEsp<'a> {
             connected_stack: Option<&'static Stack<'static>>,
             force_captive_portal: bool,
         }
-        impl device_envoy_core::wifi_auto::WifiAutoBackend for EspWifiAutoBackend<'_, '_> {
+        impl WifiAutoBackend for EspWifiAutoBackend<'_, '_> {
             type Error = crate::Error;
 
             fn force_captive_portal(&self) -> bool {
@@ -469,11 +473,7 @@ impl<'a> WifiAutoEsp<'a> {
             connected_stack: None,
             force_captive_portal,
         };
-        let connected = device_envoy_core::wifi_auto::connect_with_backend(
-            &mut wifi_auto_backend,
-            &mut on_event,
-        )
-        .await?;
+        let connected = connect_with_backend(&mut wifi_auto_backend, &mut on_event).await?;
         if !connected {
             warn!(
                 "wifi_auto failed to connect after {} attempts; switching startup mode to CaptivePortal and resetting",
@@ -644,7 +644,7 @@ impl<'a> WifiAutoEsp<'a> {
 }
 
 #[cfg(target_os = "none")]
-impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
+impl WifiAuto for WifiAutoEsp<'_> {
     type Error = crate::Error;
 
     /// Connect using persisted credentials or captive-portal setup flow.

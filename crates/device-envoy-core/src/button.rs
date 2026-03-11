@@ -80,6 +80,14 @@ pub trait Button {
     /// Returns whether the button is currently pressed.
     fn is_pressed(&self) -> bool;
 
+    /// Returns whether a press latch is currently set, then clears that latch.
+    ///
+    /// By default this just returns [`Self::is_pressed`]. Button-watch implementations can
+    /// override this to report a latched "pressed since last check" state.
+    fn take_press_latch(&mut self) -> bool {
+        self.is_pressed()
+    }
+
     /// Wait until the sampled pressed state matches `pressed`.
     ///
     /// Implementations may use edge interrupts, polling, or any platform-specific mechanism.
@@ -157,6 +165,10 @@ where
 {
     fn is_pressed(&self) -> bool {
         (**self).is_pressed()
+    }
+
+    fn take_press_latch(&mut self) -> bool {
+        (**self).take_press_latch()
     }
 
     async fn wait_until_pressed_state(&mut self, pressed: bool) {

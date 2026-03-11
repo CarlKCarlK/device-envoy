@@ -18,6 +18,9 @@ pub use button_watch::{ButtonWatchRp, ButtonWatchStaticRp};
 // Must be public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
 pub use button_watch::button_watch_task;
+// Must be public for macro expansion in downstream crates, but not user-facing API.
+#[doc(hidden)]
+pub use button_watch::button_watch_task_from_input;
 
 pub use device_envoy_core::button::Button;
 pub use device_envoy_core::button::{

@@ -22,6 +22,7 @@ pub struct ButtonWatchStaticRp {
     signal: Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: Signal<CriticalSectionRawMutex, bool>,
     is_pressed: AtomicBool,
+    press_latch: AtomicBool,
 }
 
 impl ButtonWatchStaticRp {
@@ -31,6 +32,7 @@ impl ButtonWatchStaticRp {
             signal: Signal::new(),
             state_signal: Signal::new(),
             is_pressed: AtomicBool::new(false),
+            press_latch: AtomicBool::new(false),
         }
     }
 
@@ -48,6 +50,11 @@ impl ButtonWatchStaticRp {
     pub const fn is_pressed(&self) -> &AtomicBool {
         &self.is_pressed
     }
+
+    #[must_use]
+    pub const fn press_latch(&self) -> &AtomicBool {
+        &self.press_latch
+    }
 }
 
 // ============================================================================
@@ -61,6 +68,7 @@ pub struct ButtonWatchRp {
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
     is_pressed: &'static AtomicBool,
+    press_latch: &'static AtomicBool,
 }
 
 impl ButtonWatchRp {
@@ -70,6 +78,7 @@ impl ButtonWatchRp {
             signal: button_watch_static.signal(),
             state_signal: button_watch_static.state_signal(),
             is_pressed: button_watch_static.is_pressed(),
+            press_latch: button_watch_static.press_latch(),
         }
     }
 }
@@ -77,6 +86,14 @@ impl ButtonWatchRp {
 impl device_envoy_core::button::Button for ButtonWatchRp {
     fn is_pressed(&self) -> bool {
         self.is_pressed.load(Ordering::Relaxed)
+    }
+
+    fn take_press_latch(&mut self) -> bool {
+        let latched = self.press_latch.load(Ordering::Relaxed);
+        if latched {
+            self.press_latch.store(false, Ordering::Relaxed);
+        }
+        latched
     }
 
     async fn wait_for_press_duration(&mut self) -> PressDuration {
@@ -111,17 +128,41 @@ pub async fn button_watch_task<P: Pin>(
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
     is_pressed: &'static AtomicBool,
+    press_latch: &'static AtomicBool,
 ) -> ! {
     let pull = match pressed_to {
         PressedTo::Voltage => Pull::Down,
         PressedTo::Ground => Pull::Up,
     };
-    let mut input = Input::new(pin, pull);
+    let input = Input::new(pin, pull);
+    button_watch_task_from_input(
+        input,
+        pressed_to,
+        signal,
+        state_signal,
+        is_pressed,
+        press_latch,
+    )
+    .await
+}
+
+/// Background task that monitors an already-configured input and fires events.
+///
+/// Never call directly - spawned automatically by the [`button_watch!`](crate::button_watch!) macro.
+#[doc(hidden)]
+pub async fn button_watch_task_from_input(
+    mut input: Input<'static>,
+    pressed_to: PressedTo,
+    signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
+    state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
+    is_pressed: &'static AtomicBool,
+    press_latch: &'static AtomicBool,
+) -> ! {
     let mut input_button = InputButton {
         input: &mut input,
         pressed_to,
     };
-    signal_press_durations(&mut input_button, signal, state_signal, is_pressed).await
+    signal_press_durations(&mut input_button, signal, state_signal, is_pressed, press_latch).await
 }
 
 struct InputButton<'a> {
@@ -151,10 +192,14 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
     is_pressed: &'static AtomicBool,
+    press_latch: &'static AtomicBool,
 ) -> ! {
     let initial_pressed = button.is_pressed();
     is_pressed.store(initial_pressed, Ordering::Relaxed);
     state_signal.signal(initial_pressed);
+    if initial_pressed {
+        press_latch.store(true, Ordering::Relaxed);
+    }
 
     loop {
         <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false).await;
@@ -162,6 +207,7 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
         <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, true).await;
         is_pressed.store(true, Ordering::Relaxed);
         state_signal.signal(true);
+        press_latch.store(true, Ordering::Relaxed);
 
         Timer::after(device_envoy_core::button::BUTTON_DEBOUNCE_DELAY).await;
         if !button.is_pressed() {
@@ -358,12 +404,25 @@ macro_rules! __button_watch_impl {
                         ::static_cell::StaticCell::new();
 
                     let pin = pin.into();
+                    let pull = match pressed_to {
+                        $crate::button::PressedTo::Voltage => ::embassy_rp::gpio::Pull::Down,
+                        $crate::button::PressedTo::Ground => ::embassy_rp::gpio::Pull::Up,
+                    };
+                    let input = ::embassy_rp::gpio::Input::new(pin, pull);
+                    let initial_pressed = pressed_to.is_pressed(input.is_high());
+                    BUTTON_WATCH_STATIC.is_pressed().store(
+                        initial_pressed,
+                        ::core::sync::atomic::Ordering::Relaxed,
+                    );
+                    BUTTON_WATCH_STATIC.state_signal().signal(initial_pressed);
+
                     let task_token = [<$name:snake _task>](
-                        pin,
+                        input,
                         pressed_to,
                         BUTTON_WATCH_STATIC.signal(),
                         BUTTON_WATCH_STATIC.state_signal(),
                         BUTTON_WATCH_STATIC.is_pressed(),
+                        BUTTON_WATCH_STATIC.press_latch(),
                     );
                     spawner.spawn(task_token).map_err($crate::Error::TaskSpawn)?;
 
@@ -410,7 +469,7 @@ macro_rules! __button_watch_impl {
 
             #[::embassy_executor::task]
             async fn [<$name:snake _task>](
-                pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
+                input: ::embassy_rp::gpio::Input<'static>,
                 pressed_to: $crate::button::PressedTo,
                 signal: &'static ::embassy_sync::signal::Signal<
                     ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
@@ -421,13 +480,15 @@ macro_rules! __button_watch_impl {
                     bool
                 >,
                 is_pressed: &'static ::core::sync::atomic::AtomicBool,
+                press_latch: &'static ::core::sync::atomic::AtomicBool,
             ) -> ! {
-                $crate::button::button_watch_task(
-                    pin,
+                $crate::button::button_watch_task_from_input(
+                    input,
                     pressed_to,
                     signal,
                     state_signal,
                     is_pressed,
+                    press_latch,
                 )
                 .await
             }

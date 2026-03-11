@@ -68,7 +68,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
-    let mut button_watch6 = ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?;
+    let button_watch6 = ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
@@ -106,7 +106,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // TODO00 review this possible material change (may no longer apply): keep ButtonWatch6 for
     // stable press duration detection in fast modes.
     let stack = wifi_auto
-        .connect(&mut button_watch6, |wifi_auto_event| async move {
+        .connect(&mut *button_watch6, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['j', 'o', 'i', 'n'], BlinkState::BlinkingAndOn);
@@ -148,17 +148,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, &mut button_watch6, &led4)
+                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch6, &led4)
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, &mut button_watch6, &led4)
+                    .execute_minutes_seconds(&clock_sync, &mut *button_watch6, &led4)
                     .await?
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(&clock_sync, &mut button_watch6, timezone_field, &led4)
+                    .execute_edit_offset(&clock_sync, &mut *button_watch6, timezone_field, &led4)
                     .await?
             }
         };

@@ -12,9 +12,9 @@ extern crate panic_probe as _;
 use core::convert::Infallible;
 use device_envoy_rp::{
     Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
-    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
+    wifi_auto::{WifiAutoEvent, WifiAutoRp},
 };
 use embassy_net::dns::DnsQueryType;
 use embassy_time::{Duration, Timer};
@@ -30,6 +30,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -38,15 +39,13 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
-        p.PIN_13, // Button for reconfiguration
-        PressedTo::Ground,
         "PicoAccess", // Captive-portal SSID
         [],           // Any extra fields
         spawner,
     )?;
 
     let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+        .connect(button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     defmt::info!("Captive portal ready");

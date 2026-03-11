@@ -20,7 +20,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::{
     Error, Result,
-    button::{PressDuration, PressedTo},
+    button::{ButtonRp, PressDuration, PressedTo},
     clock_sync::{
         ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
     },
@@ -32,7 +32,7 @@ use device_envoy_rp::{
     led2d::Led2dFont,
     led2d::layout::LedLayout,
     wifi_auto::{
-        WifiAuto as _, WifiAutoEvent, WifiAutoRp,
+        WifiAutoEvent, WifiAutoRp,
         fields::{TimezoneField, TimezoneFieldStatic},
     },
 };
@@ -90,6 +90,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal.
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -98,8 +99,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        p.PIN_13, // Reset button pin (used only during WiFi setup)
-        PressedTo::Ground,
         "www.picoclock.net", // Captive-portal SSID
         [timezone_field],    // Custom fields to ask for
         spawner,
@@ -113,7 +112,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // TODO00 review this possible material change: use WifiAuto's returned trait button directly
     // instead of converting into ButtonWatch13.
     let (stack, mut button) = wifi_auto
-        .connect(|event| {
+        .connect(button, |event| {
             let led8x12_ref = led8x12_ref;
             async move {
                 match event {

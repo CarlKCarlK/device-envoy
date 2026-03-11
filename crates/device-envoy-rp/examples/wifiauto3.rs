@@ -11,10 +11,10 @@ extern crate panic_probe as _;
 
 use device_envoy_rp::{
     Error, Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
     wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
-    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
+    wifi_auto::{WifiAutoEvent, WifiAutoRp},
 };
 
 #[embassy_executor::main]
@@ -41,6 +41,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
 
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -49,15 +50,13 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
-        p.PIN_13, // Button for reconfiguration
-        PressedTo::Ground,
         "PicoAccess",                    // Captive-portal SSID
         [website_field, timezone_field], // Custom fields
         spawner,
     )?;
 
     let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+        .connect(button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     defmt::info!("Captive portal ready");

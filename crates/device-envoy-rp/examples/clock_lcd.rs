@@ -9,13 +9,13 @@
 use core::{convert::Infallible, fmt};
 use defmt::*;
 use defmt_rtt as _;
-use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::i2cs;
 use device_envoy_rp::lcd_text::LcdText as _;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoRp};
+use device_envoy_rp::wifi_auto::{WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use heapless::String;
@@ -60,6 +60,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up WiFi via captive portal
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -68,8 +69,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        p.PIN_13, // Reset button pin
-        PressedTo::Ground,
         "www.picoclock.net",
         [timezone_field],
         spawner,
@@ -78,7 +77,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect to WiFi
     let lcd_text_ref = lcd_text;
     let (stack, _button) = wifi_auto
-        .connect(|wifi_auto_event| {
+        .connect(button, |wifi_auto_event| {
             let lcd_text_ref = lcd_text_ref;
             async move {
                 match wifi_auto_event {

@@ -13,13 +13,13 @@
 use core::convert::{Infallible, TryFrom};
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{PressDuration, PressedTo};
+use device_envoy_rp::button::{ButtonRp, PressDuration, PressedTo};
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
+use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use device_envoy_rp::{
     servo::Servo as _,
@@ -66,6 +66,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal. The button pin is used to reset stored credentials.
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -74,8 +75,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        p.PIN_13, // Reset button pin
-        PressedTo::Ground,
         "PicoServoClock", // Captive-portal SSID
         [timezone_field],
         spawner,
@@ -91,7 +90,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // TODO00 review this possible material change: use WifiAuto's returned trait button directly
     // instead of converting into ButtonWatch13.
     let (stack, mut button) = wifi_auto
-        .connect(|event| {
+        .connect(button, |event| {
             let servo_display_ref = servo_display_ref;
             async move {
                 match event {

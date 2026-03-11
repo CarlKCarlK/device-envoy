@@ -11,7 +11,7 @@ use core::convert::Infallible;
 use defmt::{info, warn};
 use defmt_rtt as _;
 use device_envoy_rp::button::Button as _;
-use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::clock_sync::UnixSeconds;
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::led4::{
@@ -20,7 +20,7 @@ use device_envoy_rp::led4::{
 use device_envoy_rp::wifi_auto::fields::{
     TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic,
 };
-use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
+use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_net::{Stack, dns::DnsQueryType, udp};
@@ -89,6 +89,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         "Living Room",
     );
 
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,                     // CYW43 power
         p.PIN_24,                     // CYW43 clock
@@ -97,8 +98,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,                       // CYW43 PIO interface
         p.DMA_CH0,                    // CYW43 DMA channel
         wifi_credentials_flash_block, // Flash block storing Wi-Fi creds
-        p.PIN_13,                     // Reset button pin
-        PressedTo::Ground,            // Button wiring
         "Pico",                       // Captive portal SSID to display
         [timezone_field, device_name_field, location_field],
         spawner,
@@ -106,7 +105,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led4_ref = &led4;
     let (stack, mut button) = wifi_auto
-        .connect(|event| async move {
+        .connect(button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['C', 'O', 'N', 'N'], BlinkState::BlinkingAndOn);

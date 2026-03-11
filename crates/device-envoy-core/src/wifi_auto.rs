@@ -185,7 +185,7 @@ impl Default for WifiAutoPersistedState {
 ///     wifi_auto: impl WifiAuto<Error = Infallible>,
 /// ) -> Result<(WifiStack, impl Button), Infallible> {
 ///     wifi_auto
-///         .connect(|wifi_auto_event| async move {
+///         .connect(DemoButton, |wifi_auto_event| async move {
 ///             match wifi_auto_event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     // Captive portal is ready for Wi-Fi credential entry.
@@ -217,6 +217,7 @@ impl Default for WifiAutoPersistedState {
 /// #         OnEventFuture: Future<Output = Result<(), Self::Error>>,
 /// #     >(
 /// #         self,
+/// #         _button: impl Button,
 /// #         mut on_event: OnEvent,
 /// #     ) -> Result<(WifiStack, DemoButton), Self::Error>
 /// #     {
@@ -244,6 +245,7 @@ pub trait WifiAuto {
     /// See the [WifiAuto trait documentation](Self) for usage examples.
     async fn connect<OnEvent, OnEventFuture>(
         self,
+        button: impl Button,
         on_event: OnEvent,
     ) -> Result<(WifiStack, impl Button), Self::Error>
     where

@@ -10,14 +10,14 @@ use core::{convert::Infallible, panic};
 use defmt::{info, warn};
 use device_envoy_rp::{
     Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
     led_strip::colors,
     led2d,
     led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},
     wifi_auto::fields::{TextField, TextFieldStatic},
-    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
+    wifi_auto::{WifiAutoEvent, WifiAutoRp},
 };
 use embassy_executor::Spawner;
 use embassy_net::{
@@ -76,6 +76,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
 
     // Initialize WifiAutoRp
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -84,8 +85,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface (required)
         p.DMA_CH0, // CYW43 DMA (required)
         wifi_credentials_flash_block,
-        p.PIN_13, // Button for forced reconfiguration
-        PressedTo::Ground,
         "PicoTime", // Captive-portal SSID
         [device_name_field],
         spawner,
@@ -97,7 +96,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect with status on display
     let led12x8_ref = &led12x8;
     let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+        .connect(button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led12x8_ref.write_text("JOIN", COLORS);

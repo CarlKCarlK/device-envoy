@@ -24,13 +24,13 @@ use device_envoy_rp::audio_player::{
     AtEnd, AudioPlayer as _, Gain, VOICE_22050_HZ, Volume, audio_player,
 };
 use device_envoy_rp::button::Button as _;
-use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button::{ButtonRp, PressedTo};
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp};
+use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result, tone};
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either, select};
@@ -146,6 +146,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
+    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,
         p.PIN_24,
@@ -154,8 +155,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,
         p.DMA_CH0,
         wifi_credentials_flash_block,
-        p.PIN_13,
-        PressedTo::Ground,
         "www.picoclock.net",
         [timezone_field],
         spawner,
@@ -163,7 +162,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let audio_player10_ref = audio_player8;
     let (stack, mut button) = wifi_auto
-        .connect(|event| async move {
+        .connect(button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready");

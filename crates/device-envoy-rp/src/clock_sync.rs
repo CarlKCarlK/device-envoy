@@ -12,7 +12,7 @@
 //! use device_envoy_rp::{
 //!     Error,
 //!     Result,
-//!     button::PressedTo,
+//!     button::{ButtonRp, PressedTo},
 //!     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND, h12_m_s},
 //!     flash_block::FlashBlockRp,
 //!     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
@@ -29,6 +29,7 @@
 //!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
 //!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
 //!
+//!     let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 //!     let wifi_auto = WifiAutoRp::new(
 //!         p.PIN_23,
 //!         p.PIN_24,
@@ -37,15 +38,13 @@
 //!         p.PIO0,
 //!         p.DMA_CH0,
 //!         wifi_credentials_flash_block,
-//!         p.PIN_13,
-//!         PressedTo::Ground,
 //!         "ClockSync",
 //!         [timezone_field],
 //!         spawner,
 //!     )?;
 //!
 //!     let (stack, _button) = wifi_auto
-//!         .connect(|event| async move {
+//!         .connect(button, |event| async move {
 //!             match event {
 //!                 WifiAutoEvent::CaptivePortalReady => {
 //!                     info!("WifiAutoRp: setup mode ready");

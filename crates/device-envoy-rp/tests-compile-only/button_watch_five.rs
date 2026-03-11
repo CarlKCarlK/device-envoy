@@ -32,11 +32,11 @@ button_watch! {
 }
 
 async fn test_five_button_watches(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let button_watch0 = ButtonWatch0::new(p.PIN_0, PressedTo::Ground, spawner)?;
-    let button_watch1 = ButtonWatch1::new(p.PIN_1, PressedTo::Ground, spawner)?;
-    let button_watch2 = ButtonWatch2::new(p.PIN_2, PressedTo::Ground, spawner)?;
-    let button_watch3 = ButtonWatch3::new(p.PIN_3, PressedTo::Ground, spawner)?;
-    let button_watch4 = ButtonWatch4::new(p.PIN_4, PressedTo::Ground, spawner)?;
+    let button_watch0 = ButtonWatch0::new(p.PIN_0, PressedTo::Ground, spawner).await?;
+    let button_watch1 = ButtonWatch1::new(p.PIN_1, PressedTo::Ground, spawner).await?;
+    let button_watch2 = ButtonWatch2::new(p.PIN_2, PressedTo::Ground, spawner).await?;
+    let button_watch3 = ButtonWatch3::new(p.PIN_3, PressedTo::Ground, spawner).await?;
+    let button_watch4 = ButtonWatch4::new(p.PIN_4, PressedTo::Ground, spawner).await?;
 
     let _ = button_watch0.is_pressed();
     let _ = button_watch1.is_pressed();

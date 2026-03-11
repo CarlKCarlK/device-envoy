@@ -107,7 +107,7 @@ pub(crate) struct WifiAutoStatic {
 ///     // Set up flash storage for WiFi credentials
 ///     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 ///
-///     let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+///     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 ///
 ///     // Construct WifiAutoRp
 ///     let wifi_auto = WifiAutoRp::new(
@@ -395,7 +395,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # use embassy_rp::Peripherals;
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
     /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    /// # let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    /// # let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,
@@ -439,7 +439,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # const COLORS: &[RGB8] = &[colors::WHITE];
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
     /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    /// # let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    /// # let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
     /// #     p.PIN_24,

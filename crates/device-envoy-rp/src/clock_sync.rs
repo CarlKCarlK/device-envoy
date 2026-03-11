@@ -29,7 +29,7 @@
 //!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
 //!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
 //!
-//!     let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+//!     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 //!     let wifi_auto = WifiAutoRp::new(
 //!         p.PIN_23,
 //!         p.PIN_24,
@@ -43,8 +43,8 @@
 //!         spawner,
 //!     )?;
 //!
-//!     let (stack, _button) = wifi_auto
-//!         .connect(button, |event| async move {
+//!     let stack = wifi_auto
+//!         .connect(&mut button, |event| async move {
 //!             match event {
 //!                 WifiAutoEvent::CaptivePortalReady => {
 //!                     info!("WifiAutoRp: setup mode ready");

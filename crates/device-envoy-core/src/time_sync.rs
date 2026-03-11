@@ -201,7 +201,10 @@ async fn fetch_ntp_time(stack: &Stack<'static>) -> Result<UnixSeconds, &'static 
     let server_addr = dns_result.first().ok_or("No DNS results")?;
 
     #[cfg(feature = "defmt")]
-    defmt::info!("TimeSync NTP server IP: {}", server_addr);
+    defmt::info!(
+        "TimeSync NTP server IP: {}",
+        defmt::Debug2Format(server_addr)
+    );
 
     let mut rx_meta = [udp::PacketMetadata::EMPTY; 1];
     let mut rx_buffer = [0u8; 128];

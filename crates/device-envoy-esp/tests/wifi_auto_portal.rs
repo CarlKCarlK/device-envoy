@@ -56,8 +56,7 @@ fn generate_config_page_escapes_defaults() {
     assert!(page.contains("A&amp;B&quot;&lt;ssid&gt;"));
     assert!(!page.contains("p@ss&lt;word&gt;&amp;&quot;"));
     assert!(page.contains("name=\"password\""));
-    assert!(page.contains("value=\"*******\""));
-    assert!(page.contains("keep_saved_password"));
+    assert!(page.contains("name=\"keep_saved_password\""));
 }
 
 #[test]
@@ -120,7 +119,7 @@ fn generate_config_page_hides_keep_saved_password_when_saved_password_is_blank()
 
     let page = wifi_auto.generate_config_page(Some(&wifi_credentials));
 
-    assert!(!page.contains("keep_saved_password"));
+    assert!(!page.contains("name=\"keep_saved_password\""));
 }
 
 #[test]

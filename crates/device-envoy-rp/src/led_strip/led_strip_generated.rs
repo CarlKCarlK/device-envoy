@@ -37,7 +37,8 @@ impl LedStripGenerated {
     /// Maximum number of animation frames.
     pub const MAX_FRAMES: usize = 16;
     /// Maximum brightness after current limiting.
-    pub const MAX_BRIGHTNESS: u8 = crate::led_strip::Current::Milliamps(250).max_brightness(8 * 60);
+    pub const MAX_BRIGHTNESS: u8 =
+        crate::led_strip::Current::Milliamps(250).max_brightness(8 * 60);
 
     /// Create a new LED strip instance of the struct type defined by
     /// [`led_strip!`](macro@crate::led_strip).

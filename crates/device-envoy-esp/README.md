@@ -115,84 +115,19 @@ See the `examples/` directory for complete runnable code.
 
 ## Building & Running
 
-### Prerequisites
+- If you just want to use this library, start from the template project: [`device-envoy-blinky-esp`](https://github.com/CarlKCarlK/device-envoy-blinky-esp).
+- If you want to edit this project, see the [Development Guide](crate::development_guide).
 
-```bash
-rustup target add riscv32imac-unknown-none-elf
-```
+## Glossary
 
-### Quick Start
+Resources commonly used in `device-envoy-esp`:
 
-```bash
-# New project template
-# https://github.com/CarlKCarlK/device-envoy-blinky-esp
-
-# Check this crate
-cargo check
-
-# Run an example (adjust board features as needed)
-cargo run --example led_example1_trait --target riscv32imac-unknown-none-elf
-```
-
-**Tools:**
-
-- `just` - Optional command runner (install with `cargo install just` or your package manager). See `justfile` for commands.
-- `xtask` - Project's custom automation tool (built-in, use via `cargo xtask --help`)
-
-See `.cargo/config.toml` for cargo aliases.
-
-## Hardware Notes
-
-### Standard Pinouts
-
-This section is the single source of truth for default pin assignments used by
-examples in this repo.
-
-- `GPIO6` - Button input (wired to GND in examples using `PressedTo::Ground`)
-- `GPIO7` - IR receiver data input
-- `GPIO11` - I2S bit clock (`BCLK`)
-- `GPIO12` - I2S word select (`WS` / `LRCLK`)
-- `GPIO21` - I2S serial data output (`DIN`)
-- Built-in NeoPixel-style (WS2812) RGB LED (board-specific):
-- `GPIO8` on ESP32-C6-DevKitC-1
-- `GPIO48` on ESP32-S3-DevKitC-1
-- `GPIO10` - External 8-pixel NeoPixel-style (WS2812) strip
-- `GPIO18` - 12x8 panel examples
-- `GPIO2` - 16x16 panel examples and the singular `led_example1_trait` external LED example
-
-`GPIO11` and `GPIO12` replaced the previous `GPIO22`/`GPIO23` defaults because
-`GPIO22`-`GPIO25` are not exposed as peripherals in esp-hal on ESP32-S3.
-
-### Peripheral Resources
-
-- `I2S0 + DMA_CH0` - Audio examples
-- `SPI2` - SPI-driven LED panel/strip examples
-- ESP32-C6 RMT IR receive channel: `channel2` (channels 0-3 all support RX)
-- ESP32-S3 RMT IR receive channel: `channel4` (channels 0-3 are TX-only; RX requires channel 4+)
-
-### Portability Guardrails
-
-- Avoid C6 USB pins: `GPIO12`, `GPIO13`
-- Avoid S3 USB pins: `GPIO19`, `GPIO20`
-- Avoid C6 strapping pins for defaults: `GPIO4`, `GPIO5`, `GPIO8`, `GPIO9`, `GPIO15`
-- Avoid S3 strapping pins for defaults: `GPIO0`, `GPIO3`, `GPIO45`, `GPIO46`
-- Avoid S3 unavailable pins: `GPIO22`-`GPIO25` are not exposed in esp-hal for ESP32-S3
-- Avoid flash/SPI0/1-connected pins as defaults on board variants where they are not GPIO-safe
-
-Note: `GPIO8` appears both as a built-in LED pin and in the C6 strapping-pin
-avoid list. That is intentional: keep it for the board's built-in LED only, and
-avoid using it as a default for new external signals.
-
-## Testing
-
-Host-side checks and tests:
-
-```bash
-cargo check
-cargo test
-```
-
-`just` is the optional command runner (install with `cargo install just` or your package manager). See **Tools** above.
+- **RMT** ([Remote Control Transceiver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/rmt.html)): ESP32-C6: 4 channels. ESP32-S3: 8 channels.
+- **LEDC** ([LED PWM Controller](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/ledc.html)): ESP32-C6: 4 timers, 6 channels. ESP32-S3: 4 timers, 8 channels.
+- **DMA** ([Direct Memory Access](https://en.wikipedia.org/wiki/Direct_memory_access)): ESP32-C6: 3 channels (`DMA_CH0`-`DMA_CH2`). ESP32-S3: 5 channels (`DMA_CH0`-`DMA_CH4`).
+- **I2S** ([Inter-IC Sound](https://en.wikipedia.org/wiki/I%C2%B2S)): ESP32-C6: 1 controller (`I2S0`). ESP32-S3: 2 controllers (`I2S0`, `I2S1`).
+- **I2C** ([Inter-Integrated Circuit](https://en.wikipedia.org/wiki/I2C)): ESP32-C6: 2 controllers. ESP32-S3: 2 controllers.
+- **SPI** ([Serial Peripheral Interface](https://en.wikipedia.org/wiki/Serial_Peripheral_Interface)): ESP32-C6: 2 peripherals. ESP32-S3: 3 peripherals.
 
 ## Policy on AI-assisted development and contributions
 

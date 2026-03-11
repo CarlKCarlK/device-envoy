@@ -41,6 +41,10 @@ pub mod servo;
 mod servo_player;
 pub mod wifi_auto;
 
+#[cfg(doc)]
+#[doc = include_str!("../../device-envoy-core/docs/development.md")]
+pub mod development_guide {}
+
 pub use device_envoy_core::tone;
 use device_envoy_core::wifi_auto::WifiAutoError;
 pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};

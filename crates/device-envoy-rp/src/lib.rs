@@ -8,6 +8,7 @@
 //! - **DMA ([Direct Memory Access](https://en.wikipedia.org/wiki/Direct_memory_access)):** Both Pico 1 and 2 have 12 channels.
 //! - **PWM ([Pulse Width Modulation](https://en.wikipedia.org/wiki/Pulse-width_modulation)) Slices:** Both  Pico 1 and 2 have 8 slices (& 16 channels). These "slices"
 //!   are unrelated Rust slices.
+//! - **I2C ([Inter-Integrated Circuit](https://en.wikipedia.org/wiki/I%C2%B2C)):** Serial control bus used by abstractions like `lcd_text`. Pico 1 and Pico 2 each provide 2 controllers (`I2C0`, `I2C1`).
 #![cfg_attr(target_os = "none", no_std)]
 #![cfg_attr(target_os = "none", no_main)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -63,6 +64,10 @@ pub mod servo;
 mod servo_player;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod wifi_auto;
+
+#[cfg(doc)]
+#[doc = include_str!("../../device-envoy-core/docs/development.md")]
+pub mod development_guide {}
 
 // Re-export error types and result (used throughout)
 pub use crate::error::{Error, Result};

@@ -170,7 +170,7 @@ pub(crate) struct WifiAutoStatic {
 ///
 /// ## WiFi limitations
 ///
-/// - Only standard SSID/password 2.4 Ghz WiFi networks are supported.
+/// - Only standard SSID/password 2.4 GHz WiFi networks are supported.
 ///
 /// ## Performance and code size
 ///

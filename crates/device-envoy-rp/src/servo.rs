@@ -26,7 +26,7 @@
 //!
 //! Supports up to eight servos, one per [PWM slice](crate#glossary) resource. To calculate which PWM slice a pin uses,
 //! use the formula: `PWM slice = (pin / 2) % 8`. For example, PIN_10 and PIN_11 must both use PWM_SLICE5
-//! ((10 / 2) % 8 = 5, (11 / 2) % 8 = 5). Therefore, either of these these two pins can have a servo, but not both.
+//! ((10 / 2) % 8 = 5, (11 / 2) % 8 = 5). Therefore, either of these two pins can have a servo, but not both.
 //!
 //! # Example: Basic Servo Control
 //!

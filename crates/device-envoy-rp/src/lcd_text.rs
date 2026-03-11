@@ -20,8 +20,8 @@
 //! `write_text(...)` behavior:
 //!
 //! - `\n` starts a new LCD row.
-//! - Characters past `WIDTH` on a row are `"ignored"`.
-//! - Rows past `HEIGHT` are `"ignored"`.
+//! - characters past `WIDTH` are ignored
+//! - rows past `HEIGHT` are ignored
 //! - Non-ASCII Unicode characters are replaced with `?`.
 //! - Missing characters are padded with spaces.
 //!

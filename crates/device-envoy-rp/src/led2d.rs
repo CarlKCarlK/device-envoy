@@ -14,7 +14,7 @@
 //! - [`led2d!`](macro@crate::led2d) — Macro to generate an LED-panel struct type (includes syntax details).
 //! - [`Led2d`](`crate::led2d::Led2d`) — Core trait that defines the LED panel API surface.
 //! - [`Led2dGenerated`](led2d_generated::Led2dGenerated) — Sample generated panel type showing the constructor path.
-//! - [`LedLayout`] — Compile-type description of panel geometry and wiring, including dimensions (with examples)
+//! - [`LedLayout`] — Compile-time description of panel geometry and wiring, including dimensions (with examples)
 //! - [`Frame2d`] — 2D pixel array used for general graphics (includes examples)
 //! - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other panels or LED strips (includes examples)
 //!
@@ -123,7 +123,7 @@
 //!
 //!     // Write "Go" into a second frame buffer with custom colors and on the 2nd line.
 //!     let mut frame_1 = Frame2d::new();
-//!     // "/n" starts a new line. Text does not wrap but rather clips.
+//!     // "\n" starts a new line. Text does not wrap but rather clips.
 //!     led_12x8_animated.write_text_to_frame(
 //!         "\nGo",
 //!         &[colors::HOT_PINK, colors::LIME],

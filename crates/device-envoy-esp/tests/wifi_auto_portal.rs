@@ -6,7 +6,7 @@ fn parse_post_decodes_credentials() {
     let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\nContent-Length: 29\r\n\r\nssid=Home+WiFi&password=s3cr%21";
     let wifi_credentials = wifi_auto
-        .parse_post(request)
+        .parse_post(request, None)
         .expect("valid credentials expected");
 
     assert_eq!(wifi_credentials.ssid.as_str(), "Home WiFi");
@@ -23,7 +23,7 @@ fn parse_post_applies_custom_field_parsing() {
     let request =
         "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&password=abc123&timezone=-300";
     let _wifi_credentials = wifi_auto
-        .parse_post(request)
+        .parse_post(request, None)
         .expect("valid request expected");
 
     assert_eq!(
@@ -42,7 +42,7 @@ fn parse_post_requires_ssid() {
     let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\npassword=s3cr3t";
 
-    assert!(wifi_auto.parse_post(request).is_none());
+    assert!(wifi_auto.parse_post(request, None).is_none());
 }
 
 #[test]
@@ -54,7 +54,8 @@ fn generate_config_page_escapes_defaults() {
     let page = wifi_auto.generate_config_page(Some(&wifi_credentials));
 
     assert!(page.contains("A&amp;B&quot;&lt;ssid&gt;"));
-    assert!(page.contains("p@ss&lt;word&gt;&amp;&quot;"));
+    assert!(!page.contains("p@ss&lt;word&gt;&amp;&quot;"));
+    assert!(!page.contains("name=\"password\" value="));
 }
 
 #[test]
@@ -72,7 +73,7 @@ fn text_field_roundtrip_from_post() {
     let request =
         "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Lab&password=abc123&device_name=Panel01";
     let _wifi_credentials = wifi_auto
-        .parse_post(request)
+        .parse_post(request, None)
         .expect("valid request expected");
 
     assert_eq!(
@@ -86,6 +87,28 @@ fn text_field_roundtrip_from_post() {
     assert!(text_field
         .is_satisfied()
         .expect("state query should succeed"));
+}
+
+#[test]
+fn parse_post_keeps_saved_password_when_checkbox_selected() {
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
+    let defaults_wifi_credentials = WifiCredentials::new("Office", "saved-secret");
+    let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&keep_saved_password=1";
+
+    let wifi_credentials = wifi_auto
+        .parse_post(request, Some(&defaults_wifi_credentials))
+        .expect("valid credentials expected");
+
+    assert_eq!(wifi_credentials.ssid.as_str(), "Office");
+    assert_eq!(wifi_credentials.password.as_str(), "saved-secret");
+}
+
+#[test]
+fn parse_post_rejects_keep_saved_password_without_defaults() {
+    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
+    let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&keep_saved_password=1";
+
+    assert!(wifi_auto.parse_post(request, None).is_none());
 }
 
 #[test]

@@ -55,6 +55,7 @@ type FormMap = FnvIndexMap<FormKey, FormValue, 32>;
 #[must_use]
 pub fn parse_post<E>(
     request: &str,
+    defaults: Option<&WifiCredentials>,
     fields: &[&dyn WifiAutoField<Error = E>],
 ) -> Option<WifiCredentials> {
     let body_start = request.find("\r\n\r\n")? + 4;
@@ -62,7 +63,8 @@ pub fn parse_post<E>(
 
     let mut params: FormMap = FormMap::new();
     let mut ssid = heapless::String::<32>::new();
-    let mut password = heapless::String::<64>::new();
+    let mut submitted_password = heapless::String::<64>::new();
+    let mut keep_saved_password = false;
 
     for param in body.split('&') {
         if let Some((key, value)) = param.split_once('=') {
@@ -76,7 +78,10 @@ pub fn parse_post<E>(
                     ssid.push_str(&decoded_value).ok()?;
                 }
                 "password" => {
-                    password.push_str(&decoded_value).ok()?;
+                    submitted_password.push_str(&decoded_value).ok()?;
+                }
+                "keep_saved_password" => {
+                    keep_saved_password = decoded_value.as_str() == "1";
                 }
                 _ => {}
             }
@@ -92,6 +97,16 @@ pub fn parse_post<E>(
         field.parse(&form_data).ok()?;
     }
 
+    let password = if keep_saved_password {
+        let defaults_wifi_credentials = defaults?;
+        defaults_wifi_credentials.password.clone()
+    } else {
+        if submitted_password.is_empty() {
+            return None;
+        }
+        submitted_password
+    };
+
     Some(WifiCredentials { ssid, password })
 }
 
@@ -106,11 +121,6 @@ pub fn generate_config_page<E>(
         .as_ref()
         .map(|wifi_credentials| escape_html::<160>(wifi_credentials.ssid.as_str()))
         .unwrap_or_else(heapless::String::new);
-    let password = defaults
-        .as_ref()
-        .map(|wifi_credentials| escape_html::<320>(wifi_credentials.password.as_str()))
-        .unwrap_or_else(heapless::String::new);
-
     write!(
         page,
         "HTTP/1.1 200 OK\r\n\
@@ -137,7 +147,20 @@ pub fn generate_config_page<E>(
              <script>\
                  function togglePasswordVisibility() {{\
                      var input = document.getElementById('password');\
+                     if (!input) return;\
                      input.type = input.type === 'password' ? 'text' : 'password';\
+                 }}\
+                 function syncPasswordEditing() {{\
+                     var keepSavedPassword = document.getElementById('keep_saved_password');\
+                     var passwordInput = document.getElementById('password');\
+                     if (!keepSavedPassword || !passwordInput) return;\
+                     var isKeepingSavedPassword = keepSavedPassword.checked;\
+                     passwordInput.disabled = isKeepingSavedPassword;\
+                     passwordInput.required = !isKeepingSavedPassword;\
+                     if (isKeepingSavedPassword) {{\
+                         passwordInput.value = '';\
+                         passwordInput.type = 'password';\
+                     }}\
                  }}\
              </script>\
          </head>\
@@ -148,12 +171,28 @@ pub fn generate_config_page<E>(
                 <label for=\"ssid\">WiFi Network Name (SSID):</label>\
                 <input type=\"text\" id=\"ssid\" name=\"ssid\" value=\"{}\" required>\
                 <label for=\"password\">Password:</label>\
-                <input type=\"password\" id=\"password\" name=\"password\" value=\"{}\" required>\
-                <label class=\"toggle\"><input type=\"checkbox\" onclick=\"togglePasswordVisibility()\">Show password</label>\
 ",
-        ssid, password
+        ssid
     )
     .expect("page HTML exceeds capacity");
+
+    if defaults.is_some() {
+        page.push_str(
+            "<label class=\"toggle\"><input type=\"checkbox\" id=\"keep_saved_password\" name=\"keep_saved_password\" value=\"1\" checked onclick=\"syncPasswordEditing()\">Keep current saved password</label>\
+             <input type=\"password\" id=\"password\" name=\"password\" disabled>\
+             <label class=\"toggle\"><input type=\"checkbox\" onclick=\"togglePasswordVisibility()\">Show password</label>\
+             <script>syncPasswordEditing();</script>\
+",
+        )
+        .expect("page HTML exceeds capacity");
+    } else {
+        page.push_str(
+            "<input type=\"password\" id=\"password\" name=\"password\" required>\
+             <label class=\"toggle\"><input type=\"checkbox\" onclick=\"togglePasswordVisibility()\">Show password</label>\
+",
+        )
+        .expect("page HTML exceeds capacity");
+    }
 
     for field in fields {
         field

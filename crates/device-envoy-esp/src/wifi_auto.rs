@@ -209,8 +209,12 @@ impl<'a> WifiAutoEsp<'a> {
     ///
     /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
-    pub fn parse_post(&self, request: &str) -> Option<WifiCredentials> {
-        device_envoy_core::wifi_auto::parse_post(request, self.fields.as_slice())
+    pub fn parse_post(
+        &self,
+        request: &str,
+        defaults: Option<&WifiCredentials>,
+    ) -> Option<WifiCredentials> {
+        device_envoy_core::wifi_auto::parse_post(request, defaults, self.fields.as_slice())
     }
 
     /// Load persisted Wi-Fi credentials from storage.
@@ -597,7 +601,10 @@ impl<'a> WifiAutoEsp<'a> {
             };
 
             if request.starts_with("POST ") {
-                if let Some(wifi_credentials) = self.parse_post(request) {
+                let defaults_wifi_credentials = self.load_persisted_credentials()?;
+                if let Some(wifi_credentials) =
+                    self.parse_post(request, defaults_wifi_credentials.as_ref())
+                {
                     let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nSaved credentials. Device is connecting now.\r\n";
                     let _ = Self::socket_write_all(&mut socket, response.as_bytes()).await;
                     socket.close();

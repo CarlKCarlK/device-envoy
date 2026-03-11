@@ -123,8 +123,13 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
                     .unwrap_or_else(|| static_page(generate_error_page()))
             }
             "POST" => {
+                let state_snapshot = FORM_STATE.lock(|state| state.borrow().clone());
                 let fields_snapshot = FORM_FIELDS.lock(|fields| *fields.borrow());
-                if let Some(credentials) = parse_post(request_text, fields_snapshot) {
+                if let Some(credentials) = parse_post(
+                    request_text,
+                    state_snapshot.defaults.as_ref(),
+                    fields_snapshot,
+                ) {
                     CREDENTIAL_CHANNEL.send(credentials).await;
                     static_page(generate_success_page())
                 } else {
@@ -145,9 +150,13 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
     }
 }
 
-fn parse_post(request: &str, fields: &[&'static dyn WifiAutoField]) -> Option<WifiCredentials> {
+fn parse_post(
+    request: &str,
+    defaults: Option<&WifiCredentials>,
+    fields: &[&'static dyn WifiAutoField],
+) -> Option<WifiCredentials> {
     let core_fields = core_fields(fields)?;
-    device_envoy_core::wifi_auto::parse_post(request, core_fields.as_slice())
+    device_envoy_core::wifi_auto::parse_post(request, defaults, core_fields.as_slice())
 }
 
 fn generate_config_page(

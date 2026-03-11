@@ -1,6 +1,7 @@
-# device-envoy
+# device-envoy-rp
 
-<!-- todo00 links to the old project -->
+<!-- todo0 create and publish template repo: device-envoy-blinky-esp -->
+<!-- todo0 create and publish template repo: device-envoy-blinky-rp -->
 <!-- todo00 want "hey open-docs" to work for both rp and esp -->
 
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
@@ -9,17 +10,19 @@
 
 **Build Pico applications with LED panels, easy WiFi, and composable device abstractions.**
 
-`device-envoy` is a library for building embedded applications in Rust, built on the Embassy framework. It organizes hardware around *device abstractions*.
+`device-envoy-rp` is a library for building embedded applications in Rust, built on the Embassy framework. It organizes hardware around *device abstractions*.
 
 A device abstraction is a software encapsulation of hardware that manages timing, tasks, control flow, interrupts, channels, and state within the abstraction.
 
-Rather than replacing HALs or drivers, `device-envoy` builds on them. It defines device abstractions that expose a small set of simple operations to the rest of the program.
+Rather than replacing HALs or drivers, `device-envoy-rp` builds on them. It defines device abstractions that expose a small set of simple operations to the rest of the program.
 
-Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores). RISC-V core support exists but is not actively tested.
+Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores) in [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/), and ESP32-C6 and ESP32-S3 in [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/). RISC-V core support on RP exists but is not actively tested.
 
 ## Start From a Template
 
-Want a minimal starting project? Use [`device-envoy-blinky` on GitHub](https://github.com/CarlKCarlK/device-envoy-blinky) as a template.
+Want a minimal starting project?
+
+- [`device-envoy-blinky-rp` on GitHub](https://github.com/CarlKCarlK/device-envoy-blinky-rp)
 
 ## Status
 
@@ -46,7 +49,7 @@ The API is actively evolving. Not recommended for production use, but excellent 
 
 - **[Using Embassy to build applications](https://github.com/CarlKCarlK/device-envoy/discussions)**  
   A place to talk about writing embedded applications with Embassy: sharing code, asking practical questions, and learning what works in practice.  
-  Not limited to Pico boards or to `device-envoy`.
+  Not limited to Pico or ESP boards, or to `device-envoy`.
 
 ## Videos and Articles
 
@@ -126,8 +129,9 @@ rustup target add thumbv8m.main-none-eabihf    # Pico 2 (ARM)
 ### Quick Start
 
 ```bash
-# New project template
-# https://github.com/CarlKCarlK/device-envoy-blinky
+# New project templates
+# https://github.com/CarlKCarlK/device-envoy-blinky-rp
+# https://github.com/CarlKCarlK/device-envoy-blinky-esp
 
 # Run examples using convenient aliases
 cargo blinky                # Simple LED blinky (Pico 1)

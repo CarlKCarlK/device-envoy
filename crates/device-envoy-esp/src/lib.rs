@@ -1,6 +1,4 @@
-//! device-envoy-esp — NeoPixel-style (WS2812) LED strips and panels for ESP32.
-//!
-//! See the [`led_strip` module](mod@led_strip) and [`led2d` module](mod@led2d).
+#![doc = include_str!("../README.md")]
 // todo00 does led_strip for esp have two methods that rp doesn't?
 // todo00 check if every async method should be async?
 // todo00 rename check-all to check-rp and check-esp? likewise attach

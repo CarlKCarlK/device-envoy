@@ -59,35 +59,6 @@ impl ButtonWatchGenerated {
         Ok(instance)
     }
 
-    /// A device abstraction for buttons that uses a background task to monitor presses.
-    ///
-    /// This is useful for converting a `ButtonRp` returned from `WifiAuto::connect()`
-    /// into a `ButtonWatchRp` for background monitoring.
-    ///
-    /// # Parameters
-    ///
-    /// - `button`: An existing button (e.g., from `WifiAuto::connect()`)
-    /// - `spawner`: Task spawner for background operations
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the background task cannot be spawned.
-    pub fn from_button(
-        button: crate::button::ButtonRp<'static>,
-        spawner: embassy_executor::Spawner,
-    ) -> crate::Result<&'static mut Self> {
-        static INSTANCE: static_cell::StaticCell<ButtonWatchGenerated> =
-            static_cell::StaticCell::new();
-        let instance = INSTANCE.init(ButtonWatchGenerated {
-            button_watch: super::ButtonWatchRp {
-                signal: &embassy_sync::signal::Signal::new(),
-                state_signal: &embassy_sync::signal::Signal::new(),
-                is_pressed: &core::sync::atomic::AtomicBool::new(false),
-            },
-        });
-        let _ = (button, spawner);
-        Ok(instance)
-    }
 }
 
 #[cfg(doc)]

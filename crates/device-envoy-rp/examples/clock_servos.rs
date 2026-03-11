@@ -13,7 +13,8 @@
 use core::convert::{Infallible, TryFrom};
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{ButtonRp, PressDuration, PressedTo};
+use device_envoy_rp::button::{PressDuration, PressedTo};
+use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
@@ -31,6 +32,12 @@ use embassy_time::{Duration, Timer};
 use panic_probe as _;
 
 const FAST_MODE_SPEED: f32 = 720.0;
+
+button_watch! {
+    ButtonWatch13 {
+        pin: PIN_13,
+    }
+}
 
 // Define two typed servo players at module scope
 servo_player! {
@@ -66,7 +73,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal. The button pin is used to reset stored credentials.
-    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -87,10 +94,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect Wi-Fi, using the servos for status indications.
     let servo_display_ref = &servo_display;
-    // TODO00 review this possible material change: use WifiAuto's returned trait button directly
-    // instead of converting into ButtonWatch13.
+    // TODO00 verify startup ButtonWatch13 behavior still matches reset-button expectations.
     let stack = wifi_auto
-        .connect(&mut button, |event| {
+        .connect(&mut *button_watch13, |event| {
             let servo_display_ref = servo_display_ref;
             async move {
                 match event {
@@ -130,17 +136,27 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         state = match state {
             State::HoursMinutes { speed } => {
                 state
-                    .execute_hours_minutes(speed, &clock_sync, &mut button, &servo_display)
+                    .execute_hours_minutes(
+                        speed,
+                        &clock_sync,
+                        &mut *button_watch13,
+                        &servo_display,
+                    )
                     .await?
             }
             State::MinutesSeconds => {
                 state
-                    .execute_minutes_seconds(&clock_sync, &mut button, &servo_display)
+                    .execute_minutes_seconds(&clock_sync, &mut *button_watch13, &servo_display)
                     .await?
             }
             State::EditOffset => {
                 state
-                    .execute_edit_offset(&clock_sync, &mut button, &timezone_field, &servo_display)
+                    .execute_edit_offset(
+                        &clock_sync,
+                        &mut *button_watch13,
+                        &timezone_field,
+                        &servo_display,
+                    )
                     .await?
             }
         };

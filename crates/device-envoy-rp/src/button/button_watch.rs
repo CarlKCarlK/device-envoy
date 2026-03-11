@@ -174,37 +174,6 @@ pub async fn button_watch_task<P: Pin>(
     .await
 }
 
-/// Background task that monitors button state from an existing Input.
-///
-/// This variant is used when converting from a `ButtonRp` via `from_button()`.
-/// Never call directly - spawned automatically by the [`button_watch!`](crate::button_watch!) macro.
-#[doc(hidden)]
-pub async fn button_watch_task_from_input(
-    mut input: Input<'static>,
-    pressed_to: PressedTo,
-    signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
-    state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
-    state_changed_signal: &'static Signal<CriticalSectionRawMutex, ()>,
-    initialized_signal: &'static Signal<CriticalSectionRawMutex, ()>,
-    is_pressed: &'static AtomicBool,
-    initialized: &'static AtomicBool,
-) -> ! {
-    let mut input_button = InputButton {
-        input: &mut input,
-        pressed_to,
-    };
-    signal_press_durations(
-        &mut input_button,
-        signal,
-        state_signal,
-        state_changed_signal,
-        initialized_signal,
-        is_pressed,
-        initialized,
-    )
-    .await
-}
-
 struct InputButton<'a> {
     input: &'a mut Input<'static>,
     pressed_to: PressedTo,
@@ -297,7 +266,6 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
 /// # Constructors
 ///
 /// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
-/// - [`from_button()`](crate::button::button_watch_generated::ButtonWatchGenerated::from_button) — Convert from an existing `ButtonRp`
 ///
 /// # Use Cases
 ///
@@ -471,82 +439,6 @@ macro_rules! __button_watch_impl {
                     Ok(instance)
                 }
 
-                /// Creates a button monitor from an existing `ButtonRp` and spawns its background task.
-                ///
-                /// This is useful for converting a `ButtonRp` returned from `WifiAuto::connect()`
-                /// into a `ButtonWatchRp` for background monitoring.
-                ///
-                /// # Parameters
-                ///
-                /// - `button`: An existing button (e.g., from `WifiAuto::connect()`)
-                /// - `spawner`: Task spawner for background operations
-                ///
-                /// # Errors
-                ///
-                /// Returns an error if the background task cannot be spawned.
-                ///
-                /// # Example
-                ///
-                /// ```rust,no_run
-                /// # #![no_std]
-                /// # #![no_main]
-                /// # use device_envoy_rp::button_watch;
-                /// # use device_envoy_rp::button::Button as _;
-                /// # use embassy_executor::Spawner;
-                /// # #[panic_handler]
-                /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-                /// button_watch! {
-                ///     ButtonWatch13 {
-                ///         pin: PIN_13,
-                ///     }
-                /// }
-                ///
-                /// async fn example(
-                ///     button: device_envoy_rp::button::ButtonRp<'static>,
-                ///     spawner: Spawner,
-                /// ) -> device_envoy_rp::Result<()> {
-                ///     // Convert ButtonRp from WifiAuto into ButtonWatchRp
-                ///     let mut button_watch13 = ButtonWatch13::from_button(button, spawner).await?;
-                ///
-                ///     // Now button monitoring happens in background
-                ///     loop {
-                ///         let press = button_watch13.wait_for_press_duration().await;
-                ///         // Handle press...
-                /// #       break;
-                ///     }
-                /// #   Ok(())
-                /// }
-                /// ```
-                pub async fn from_button(
-                    button: $crate::button::ButtonRp<'static>,
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<&'static mut Self> {
-                    static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticRp =
-                        $crate::button::ButtonWatchStaticRp::new();
-                    static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$name> =
-                        ::static_cell::StaticCell::new();
-
-                    let (input, pressed_to) = button.into_parts();
-                    let task_token = [<$name:snake _task_from_input>](
-                        input,
-                        pressed_to,
-                        BUTTON_WATCH_STATIC.signal(),
-                        BUTTON_WATCH_STATIC.state_signal(),
-                        BUTTON_WATCH_STATIC.state_changed_signal(),
-                        BUTTON_WATCH_STATIC.initialized_signal(),
-                        BUTTON_WATCH_STATIC.is_pressed(),
-                        BUTTON_WATCH_STATIC.initialized(),
-                    );
-                    spawner.spawn(task_token).map_err($crate::Error::TaskSpawn)?;
-
-                    let button_watch = $crate::button::ButtonWatchRp::new(
-                        &BUTTON_WATCH_STATIC,
-                    );
-                    button_watch.wait_until_initialized().await;
-
-                    let instance = BUTTON_WATCH_CELL.init($name { button_watch });
-                    Ok(instance)
-                }
             }
 
             impl ::core::ops::Deref for $name {
@@ -616,41 +508,6 @@ macro_rules! __button_watch_impl {
                 .await
             }
 
-            #[::embassy_executor::task]
-            async fn [<$name:snake _task_from_input>](
-                input: ::embassy_rp::gpio::Input<'static>,
-                pressed_to: $crate::button::PressedTo,
-                signal: &'static ::embassy_sync::signal::Signal<
-                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
-                    $crate::button::PressDuration
-                >,
-                state_signal: &'static ::embassy_sync::signal::Signal<
-                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
-                    bool
-                >,
-                state_changed_signal: &'static ::embassy_sync::signal::Signal<
-                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
-                    ()
-                >,
-                initialized_signal: &'static ::embassy_sync::signal::Signal<
-                    ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
-                    ()
-                >,
-                is_pressed: &'static ::core::sync::atomic::AtomicBool,
-                initialized: &'static ::core::sync::atomic::AtomicBool,
-            ) -> ! {
-                $crate::button::button_watch_task_from_input(
-                    input,
-                    pressed_to,
-                    signal,
-                    state_signal,
-                    state_changed_signal,
-                    initialized_signal,
-                    is_pressed,
-                    initialized,
-                )
-                .await
-            }
         }
     };
 }

@@ -9,7 +9,8 @@
 use core::{convert::Infallible, fmt};
 use defmt::*;
 use defmt_rtt as _;
-use device_envoy_rp::button::{ButtonRp, PressedTo};
+use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::i2cs;
@@ -27,6 +28,12 @@ i2cs! {
     scl_pin: PIN_5,
     LcdTexts0 {
         LcdTextClock { width: 16, height: 2, address: 0x27 },
+    }
+}
+
+button_watch! {
+    ButtonWatch13 {
+        pin: PIN_13,
     }
 }
 
@@ -60,7 +67,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up WiFi via captive portal
-    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -77,7 +84,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect to WiFi
     let lcd_text_ref = lcd_text;
     let stack = wifi_auto
-        .connect(&mut button, |wifi_auto_event| {
+        .connect(&mut *button_watch13, |wifi_auto_event| {
             let lcd_text_ref = lcd_text_ref;
             async move {
                 match wifi_auto_event {

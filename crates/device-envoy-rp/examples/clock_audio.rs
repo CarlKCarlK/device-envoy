@@ -24,7 +24,8 @@ use device_envoy_rp::audio_player::{
     AtEnd, AudioPlayer as _, Gain, VOICE_22050_HZ, Volume, audio_player,
 };
 use device_envoy_rp::button::Button as _;
-use device_envoy_rp::button::{ButtonRp, PressedTo};
+use device_envoy_rp::button::PressedTo;
+use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s,
 };
@@ -46,6 +47,12 @@ audio_player! {
         pio: PIO1,
         dma: DMA_CH1,
         max_volume: Volume::percent(10),
+    }
+}
+
+button_watch! {
+    ButtonWatch13 {
+        pin: PIN_13,
     }
 }
 
@@ -146,7 +153,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
-    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,
         p.PIN_24,
@@ -162,7 +169,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let audio_player10_ref = audio_player8;
     let stack = wifi_auto
-        .connect(&mut button, |event| async move {
+        .connect(&mut *button_watch13, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready");
@@ -220,7 +227,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
 
     loop {
-        match select(button.wait_for_press(), clock_sync.wait_for_tick()).await {
+        match select(button_watch13.wait_for_press(), clock_sync.wait_for_tick()).await {
             Either::First(()) => {
                 clock_audio_mode = clock_audio_mode.toggled();
                 clock_sync

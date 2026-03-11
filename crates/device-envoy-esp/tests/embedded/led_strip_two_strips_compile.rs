@@ -15,30 +15,28 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
     LedStripA {
-        pin: GPIO10,
-        len: 8,
-        max_current: Current::Milliamps(120),
         max_frames: 2,
+        len: 8,
+        pin: GPIO10,
+        max_current: Current::Milliamps(120),
     }
 }
 
 #[cfg(target_arch = "xtensa")]
 led_strip! {
     LedStripB {
-        pin: GPIO48,
         len: 1,
-        max_current: Current::Milliamps(10),
         max_frames: 2,
+        pin: GPIO48,
     }
 }
 
 #[cfg(not(target_arch = "xtensa"))]
 led_strip! {
     LedStripB {
-        pin: GPIO8,
-        len: 1,
-        max_current: Current::Milliamps(10),
         max_frames: 2,
+        len: 1,
+        pin: GPIO8,
     }
 }
 

@@ -57,6 +57,10 @@ impl Default for Engine {
     }
 }
 
+/// Default current budget used by [`led_strip!`](macro@crate::led_strip) when
+/// `max_current` is omitted.
+pub const CURRENT_DEFAULT: Current = Current::Milliamps(250);
+
 // ============================================================================
 // RMT driver (ESP32-specific)
 // ============================================================================
@@ -255,6 +259,7 @@ pub async fn led_strip_device_loop<
 /// | `engine` | [`Engine::Rmt`][`Engine::Rmt`] |
 /// | `gamma` | [`Gamma::Srgb`][`Gamma::Srgb`] |
 /// | `max_frames` | `16` |
+/// | `max_current` | [`Current::Milliamps(250)`][`Current::Milliamps`] |
 ///
 /// # What gets generated
 ///
@@ -282,40 +287,408 @@ macro_rules! led_strip {
     };
     (
         $name:ident {
-            pin: $pin:ident,
-            len: $len:expr,
-            max_current: $max_current:expr,
-            $($options:tt)+
+            $($fields:tt)*
         }
     ) => {
-        $crate::__led_strip_parse_options!{
+        $crate::__led_strip_collect_fields!{
             name = $name,
-            pin = $pin,
-            len = $len,
-            max_current = $max_current,
+            pin = [],
+            len = [],
+            max_current = [],
             engine = [],
             gamma = [],
             max_frames = [],
-            $($options)+
+            fields = [$($fields)*],
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strip_collect_fields {
+    (
+        name = $name:ident,
+        pin = [$pin:ident],
+        len = [$len:expr],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [],
+    ) => {
+        $crate::__led_strip_dispatch_engine!(
+            $name,
+            $pin,
+            $len,
+            $crate::__led_strip_max_current_or_default!([$($max_current)?]),
+            [$($engine)?],
+            [$($gamma)?],
+            [$($max_frames)?],
+        );
+    };
+    (
+        name = $name:ident,
+        pin = [],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [],
+    ) => {
+        compile_error!("led_strip! missing required `pin` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$pin:ident],
+        len = [],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [],
+    ) => {
+        compile_error!("led_strip! missing required `len` field");
+    };
+    (
+        name = $name:ident,
+        pin = [],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [pin: $pin:ident $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$pin],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [$($engine)?],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
         }
     };
     (
-        $name:ident {
-            pin: $pin:ident,
-            len: $len:expr,
-            max_current: $max_current:expr
-            $(,)?
-        }
+        name = $name:ident,
+        pin = [$already_pin:ident],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [pin: $pin:ident $(, $($rest:tt)*)?],
     ) => {
-        $crate::__led_strip_parse_options!{
+        compile_error!("led_strip! duplicate `pin` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [len: $len:expr $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
             name = $name,
-            pin = $pin,
-            len = $len,
-            max_current = $max_current,
-            engine = [],
-            gamma = [],
-            max_frames = [],
+            pin = [$($pin)?],
+            len = [$len],
+            max_current = [$($max_current)?],
+            engine = [$($engine)?],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
         }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$already_len:expr],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [len: $len:expr $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!("led_strip! duplicate `len` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [max_current: $max_current:expr $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$max_current],
+            engine = [$($engine)?],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$already_max_current:expr],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [max_current: $max_current:expr $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!("led_strip! duplicate `max_current` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: Engine::Spi $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [Spi],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: $crate::led_strip::Engine::Spi $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [Spi],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: device_envoy_esp::led_strip::Engine::Spi $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [Spi],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: Engine::Rmt $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [Rmt],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: $crate::led_strip::Engine::Rmt $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [Rmt],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: device_envoy_esp::led_strip::Engine::Rmt $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [Rmt],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$already_engine:tt],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: $ignored:path $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!("led_strip! duplicate `engine` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [engine: $ignored:path $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!("led_strip! engine must be Engine::Rmt or Engine::Spi");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [],
+        max_frames = [$($max_frames:expr)?],
+        fields = [gamma: $gamma:expr $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [$($engine)?],
+            gamma = [$gamma],
+            max_frames = [$($max_frames)?],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$already_gamma:expr],
+        max_frames = [$($max_frames:expr)?],
+        fields = [gamma: $gamma:expr $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!("led_strip! duplicate `gamma` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [],
+        fields = [max_frames: $max_frames:expr $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [$($engine)?],
+            gamma = [$($gamma)?],
+            max_frames = [$max_frames],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$already_max_frames:expr],
+        fields = [max_frames: $max_frames:expr $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!("led_strip! duplicate `max_frames` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        fields = [$field:ident : $value:expr $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!(
+            "led_strip! unknown field; expected `pin`, `len`, `max_current`, `engine`, `gamma`, or `max_frames`"
+        );
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strip_max_current_or_default {
+    ([$max_current:expr]) => {
+        $max_current
+    };
+    ([]) => {
+        $crate::led_strip::CURRENT_DEFAULT
     };
 }
 

@@ -19,21 +19,20 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
     LedStripSpiA {
-        pin: GPIO10,
-        len: 8,
-        max_current: Current::Milliamps(120),
-        max_frames: 2,
         engine: device_envoy_esp::led_strip::Engine::Spi,
+        len: 8,
+        pin: GPIO10,
+        max_frames: 2,
+        max_current: Current::Milliamps(120),
     }
 }
 
 led_strip! {
     LedStripSpiB {
-        pin: GPIO11,
-        len: 1,
-        max_current: Current::Milliamps(10),
-        engine: device_envoy_esp::led_strip::Engine::Spi,
         max_frames: 2,
+        engine: device_envoy_esp::led_strip::Engine::Spi,
+        len: 1,
+        pin: GPIO11,
     }
 }
 

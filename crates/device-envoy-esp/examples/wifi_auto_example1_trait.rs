@@ -51,7 +51,13 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    let wifi_auto = WifiAutoEsp::new(p.WIFI, wifi_auto_flash_block, "DeviceEnvoySetup", [], spawner)?;
+    let wifi_auto = WifiAutoEsp::new(
+        p.WIFI,
+        wifi_auto_flash_block,
+        "DeviceEnvoySetup",
+        [],
+        spawner,
+    )?;
 
     let _stack = connect_with_status(wifi_auto, &mut button6).await?;
 

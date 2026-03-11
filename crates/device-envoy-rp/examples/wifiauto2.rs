@@ -39,7 +39,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
         "DeviceEnvoySetup", // Captive-portal SSID
-        [],           // Any extra fields
+        [],                 // Any extra fields
         spawner,
     )?;
 

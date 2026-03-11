@@ -185,44 +185,8 @@ fn main() -> ExitCode {
 
 fn check_quick() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
-        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
-        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
-        eprintln!("Error generating audio_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
-        eprintln!("Error generating led2d_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = lcd_text_generated::generate_lcd_text_generated(&workspace_root) {
-        eprintln!("Error generating lcd_text_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
-        eprintln!("Error generating led_strip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = ir_generated::generate_ir_generated(&workspace_root) {
-        eprintln!("Error generating ir_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_generated::generate_led_generated(&workspace_root) {
-        eprintln!("Error generating led_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
-        eprintln!("Error generating servo_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = check_generated_doc_stubs(&workspace_root) {
-        eprintln!("Generated doc stub consistency check failed:\n{}", err);
+    if let Err(err) = regenerate_generated_sources(&workspace_root) {
+        eprintln!("{err}");
         return ExitCode::FAILURE;
     }
 
@@ -354,44 +318,8 @@ fn check_compile_only() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
-        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
-        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
-        eprintln!("Error generating audio_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
-        eprintln!("Error generating led2d_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = lcd_text_generated::generate_lcd_text_generated(&workspace_root) {
-        eprintln!("Error generating lcd_text_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
-        eprintln!("Error generating led_strip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = ir_generated::generate_ir_generated(&workspace_root) {
-        eprintln!("Error generating ir_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_generated::generate_led_generated(&workspace_root) {
-        eprintln!("Error generating led_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
-        eprintln!("Error generating servo_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = check_generated_doc_stubs(&workspace_root) {
-        eprintln!("Generated doc stub consistency check failed:\n{}", err);
+    if let Err(err) = regenerate_generated_sources(&workspace_root) {
+        eprintln!("{err}");
         return ExitCode::FAILURE;
     }
     let examples = discover_examples(&workspace_root);
@@ -674,44 +602,8 @@ fn check_all() -> ExitCode {
 
 fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = pcm_clip_generated::generate_pcm_clip_generated(&workspace_root) {
-        eprintln!("Error generating pcm_clip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = adpcm_clip_generated::generate_adpcm_clip_generated(&workspace_root) {
-        eprintln!("Error generating adpcm_clip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&workspace_root) {
-        eprintln!("Error generating audio_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&workspace_root) {
-        eprintln!("Error generating led2d_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = lcd_text_generated::generate_lcd_text_generated(&workspace_root) {
-        eprintln!("Error generating lcd_text_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&workspace_root) {
-        eprintln!("Error generating led_strip_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = ir_generated::generate_ir_generated(&workspace_root) {
-        eprintln!("Error generating ir_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_generated::generate_led_generated(&workspace_root) {
-        eprintln!("Error generating led_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&workspace_root) {
-        eprintln!("Error generating servo_player_generated.rs: {}", err);
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = check_generated_doc_stubs(&workspace_root) {
-        eprintln!("Generated doc stub consistency check failed:\n{}", err);
+    if let Err(err) = regenerate_generated_sources(&workspace_root) {
+        eprintln!("{err}");
         return ExitCode::FAILURE;
     }
     let arch = Arch::Arm;
@@ -1351,6 +1243,65 @@ fn workspace_root() -> PathBuf {
     // The xtask binary is in target/x86_64-pc-windows-msvc/debug/ or similar
     // We need to find the workspace root (parent of xtask directory)
     std::env::current_dir().expect("Failed to get current directory")
+}
+
+const GENERATED_RUST_FILE_PATHS: [&str; 9] = [
+    "src/audio_player/pcm_clip_generated.rs",
+    "src/audio_player/adpcm_clip_generated.rs",
+    "src/audio_player/audio_player_generated.rs",
+    "src/led2d/led2d_generated.rs",
+    "src/lcd_text/lcd_text_generated.rs",
+    "src/led_strip/led_strip_generated.rs",
+    "src/ir/ir_generated.rs",
+    "src/led/led_generated.rs",
+    "src/servo_player/servo_player_generated.rs",
+];
+
+fn regenerate_generated_sources(workspace_root: &Path) -> Result<(), String> {
+    pcm_clip_generated::generate_pcm_clip_generated(workspace_root)
+        .map_err(|error| format!("Error generating pcm_clip_generated.rs: {error}"))?;
+    adpcm_clip_generated::generate_adpcm_clip_generated(workspace_root)
+        .map_err(|error| format!("Error generating adpcm_clip_generated.rs: {error}"))?;
+    audio_player_generated::generate_audio_player_generated(workspace_root)
+        .map_err(|error| format!("Error generating audio_player_generated.rs: {error}"))?;
+    led2d_generated::generate_led2d_generated(workspace_root)
+        .map_err(|error| format!("Error generating led2d_generated.rs: {error}"))?;
+    lcd_text_generated::generate_lcd_text_generated(workspace_root)
+        .map_err(|error| format!("Error generating lcd_text_generated.rs: {error}"))?;
+    led_strip_generated::generate_led_strip_generated(workspace_root)
+        .map_err(|error| format!("Error generating led_strip_generated.rs: {error}"))?;
+    ir_generated::generate_ir_generated(workspace_root)
+        .map_err(|error| format!("Error generating ir_generated.rs: {error}"))?;
+    led_generated::generate_led_generated(workspace_root)
+        .map_err(|error| format!("Error generating led_generated.rs: {error}"))?;
+    servo_player_generated::generate_servo_player_generated(workspace_root)
+        .map_err(|error| format!("Error generating servo_player_generated.rs: {error}"))?;
+    format_generated_rust_sources(workspace_root)?;
+    check_generated_doc_stubs(workspace_root)
+        .map_err(|error| format!("Generated doc stub consistency check failed:\n{error}"))?;
+    Ok(())
+}
+
+fn format_generated_rust_sources(workspace_root: &Path) -> Result<(), String> {
+    let mut format_generated_sources_command = Command::new("cargo");
+    format_generated_sources_command
+        .current_dir(workspace_root)
+        .arg("fmt")
+        .arg("--");
+    for generated_rust_file_path in GENERATED_RUST_FILE_PATHS {
+        format_generated_sources_command.arg(generated_rust_file_path);
+    }
+
+    match format_generated_sources_command.status() {
+        Ok(status) if status.success() => Ok(()),
+        Ok(status) => Err(format!(
+            "Formatting generated Rust files failed with exit code {:?}. Install rustfmt with `rustup component add rustfmt`.",
+            status.code()
+        )),
+        Err(error) => Err(format!(
+            "Failed to run `cargo fmt` for generated Rust files: {error}. Install rustfmt with `rustup component add rustfmt`."
+        )),
+    }
 }
 
 fn host_target() -> Option<String> {

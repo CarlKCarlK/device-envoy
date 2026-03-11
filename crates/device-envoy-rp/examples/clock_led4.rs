@@ -63,7 +63,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
         "DeviceEnvoyClock", // Captive-portal SSID
-        [timezone_field],    // Custom fields to ask for
+        [timezone_field],   // Custom fields to ask for
         spawner,
     )?;
 

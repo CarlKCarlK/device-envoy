@@ -84,7 +84,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
-    let force_portal_button = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    let button6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
@@ -96,7 +96,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     let led8x12_clock_ref = &led8x12_clock;
     let stack = wifi_auto
-        .connect(&mut *force_portal_button, |wifi_auto_event| async move {
+        .connect(&mut *button6, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);
@@ -134,7 +134,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
             synced_at = Instant::now();
         }
 
-        let is_pressed = force_portal_button.is_pressed();
+        let is_pressed = button6.is_pressed();
         if is_pressed && !was_pressed {
             pressed_since = Some(Instant::now());
         } else if !is_pressed && was_pressed {

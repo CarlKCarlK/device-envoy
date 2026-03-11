@@ -60,7 +60,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up WiFi via captive portal
-    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -76,8 +76,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect to WiFi
     let lcd_text_ref = lcd_text;
-    let (stack, _button) = wifi_auto
-        .connect(button, |wifi_auto_event| {
+    let stack = wifi_auto
+        .connect(&mut button, |wifi_auto_event| {
             let lcd_text_ref = lcd_text_ref;
             async move {
                 match wifi_auto_event {

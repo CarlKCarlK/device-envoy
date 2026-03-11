@@ -89,7 +89,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         "Living Room",
     );
 
-    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,                     // CYW43 power
         p.PIN_24,                     // CYW43 clock
@@ -104,8 +104,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let led4_ref = &led4;
-    let (stack, mut button) = wifi_auto
-        .connect(button, |event| async move {
+    let stack = wifi_auto
+        .connect(&mut button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['C', 'O', 'N', 'N'], BlinkState::BlinkingAndOn);

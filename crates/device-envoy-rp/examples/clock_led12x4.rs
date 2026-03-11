@@ -80,7 +80,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal. The button pin is used to reset stored credentials.
-    let button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -101,8 +101,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led12x4_ref = &led12x4;
     // TODO00 review this possible material change: use WifiAuto's returned trait button directly
     // instead of converting into ButtonWatch13.
-    let (stack, mut button) = wifi_auto
-        .connect(button, |event| {
+    let stack = wifi_auto
+        .connect(&mut button, |event| {
             let led12x4_ref = led12x4_ref;
             async move {
                 match event {

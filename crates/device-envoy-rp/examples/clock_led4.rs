@@ -13,7 +13,7 @@
 use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{Button as _, ButtonRp, PressDuration, PressedTo};
+use device_envoy_rp::button::{Button as _, PressDuration, PressedTo};
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
     ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
@@ -56,7 +56,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
 
     // Set up Wifi via a captive portal. The button pin is used to reset stored credentials.
-    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
         p.PIN_24,  // CYW43 clock
@@ -94,10 +94,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect Wi-Fi, using the clock display for status.
     let led4_ref = &led4;
-    // TODO00 review this possible material change: use WifiAuto's returned trait button directly
-    // instead of converting into ButtonWatch13.
+    // TODO00 verify startup ButtonWatch13 behavior still matches reset-button expectations.
     let stack = wifi_auto
-        .connect(&mut button, |event| async move {
+        .connect(&mut *button_watch13, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['j', 'o', 'i', 'n'], BlinkState::BlinkingAndOn);
@@ -112,7 +111,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             Ok(())
         })
         .await?;
-    let button_watch13 = ButtonWatch13::from_button(button, spawner).await?;
 
     led4.write_text(['D', 'O', 'N', 'E'], BlinkState::Solid);
     info!("WiFi connected");

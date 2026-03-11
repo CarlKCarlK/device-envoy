@@ -21,7 +21,6 @@ use heapless::Vec;
 use portable_atomic::{AtomicBool, Ordering};
 use static_cell::StaticCell;
 
-use crate::button::ButtonRp;
 use crate::flash_block::FlashBlockRp;
 use crate::{Error, Result};
 use device_envoy_core::button::Button;
@@ -339,10 +338,10 @@ impl WifiAutoRp {
         })
     }
 
-    /// Connect to Wi-Fi using a caller-provided `ButtonRp` reference.
+    /// Connect to Wi-Fi using a caller-provided button reference.
     pub async fn connect<OnEvent, OnEventFuture>(
         self,
-        button: &mut ButtonRp<'static>,
+        button: &mut impl Button,
         on_event: OnEvent,
     ) -> Result<WifiStack>
     where

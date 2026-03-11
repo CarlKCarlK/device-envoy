@@ -11,14 +11,14 @@
 #![no_main]
 
 use embassy_executor::Spawner;
-use embassy_net::{dns::DnsQueryType, udp, Stack};
-use embassy_time::{Duration, Instant, Timer};
+use embassy_futures::select::{select, Either};
 use esp_backtrace as _;
-use log::{info, warn};
+use log::info;
 
 use device_envoy_esp::{
-    button::PressedTo,
+    button::{PressDuration, PressedTo},
     button_watch,
+    clock_sync::{h12_m_s, ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_MINUTE, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
@@ -41,12 +41,6 @@ const DIGIT_COLORS: [smart_leds::RGB8; 4] =
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
     LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
-
-const NTP_SERVER: &str = "pool.ntp.org";
-const NTP_PORT: u16 = 123;
-const NTP_TO_UNIX_SECONDS: i64 = 2_208_988_800;
-const BUTTON_POLL_INTERVAL: Duration = Duration::from_millis(200);
-const LONG_PRESS_THRESHOLD: Duration = Duration::from_millis(900);
 
 button_watch! {
     ForcePortalButtonWatch {
@@ -112,63 +106,53 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         })
         .await?;
 
-    while !stack.is_link_up() || stack.config_v4().is_none() {
-        led8x12_clock.write_text("IP\n..", &DIGIT_COLORS);
-        Timer::after(Duration::from_millis(200)).await;
-    }
+    led8x12_clock.write_text("IP\n..", &DIGIT_COLORS);
+    stack.wait_config_up().await;
 
     info!("network up: {:?}", stack.config_v4());
 
     let mut offset_minutes = timezone_field.offset_minutes()?.unwrap_or(0);
     info!("timezone offset minutes: {}", offset_minutes);
 
-    let mut synced_unix_seconds = fetch_ntp_unix_seconds(&stack).await;
-    let mut synced_at = Instant::now();
+    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncEsp::new_static();
+    let clock_sync = ClockSyncEsp::new(
+        &CLOCK_SYNC_STATIC,
+        stack,
+        offset_minutes,
+        Some(ONE_MINUTE),
+        spawner,
+    );
+
     let mut display_mode = DisplayMode::HourMinute;
-    let mut was_pressed = false;
-    let mut pressed_since: Option<Instant> = None;
+    render_clock_text(&led8x12_clock, display_mode, &clock_sync.now_local());
 
     loop {
-        if synced_unix_seconds.is_none() || synced_at.elapsed() >= Duration::from_secs(3600) {
-            synced_unix_seconds = fetch_ntp_unix_seconds(&stack).await;
-            synced_at = Instant::now();
-        }
-
-        let is_pressed = button6.is_pressed();
-        if is_pressed && !was_pressed {
-            pressed_since = Some(Instant::now());
-        } else if !is_pressed && was_pressed {
-            if let Some(press_start) = pressed_since {
-                let held_for = Instant::now() - press_start;
-                if held_for >= LONG_PRESS_THRESHOLD {
-                    offset_minutes = increment_timezone_offset_minutes(offset_minutes);
-                    timezone_field.set_offset_minutes(offset_minutes)?;
-                    info!("timezone offset changed by button: {}", offset_minutes);
-                } else {
+        match select(button6.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
+            Either::First(press_duration) => match press_duration {
+                PressDuration::Short => {
                     display_mode = match display_mode {
                         DisplayMode::HourMinute => DisplayMode::MinuteSecond,
                         DisplayMode::MinuteSecond => DisplayMode::HourMinute,
                     };
+                    clock_sync.set_tick_interval(Some(match display_mode {
+                        DisplayMode::HourMinute => ONE_MINUTE,
+                        DisplayMode::MinuteSecond => ONE_SECOND,
+                    }));
                     info!("display mode changed: {:?}", display_mode);
+                    render_clock_text(&led8x12_clock, display_mode, &clock_sync.now_local());
                 }
+                PressDuration::Long => {
+                    offset_minutes = increment_timezone_offset_minutes(offset_minutes);
+                    clock_sync.set_offset_minutes(offset_minutes);
+                    timezone_field.set_offset_minutes(offset_minutes)?;
+                    info!("timezone offset changed by button: {}", offset_minutes);
+                    render_clock_text(&led8x12_clock, display_mode, &clock_sync.now_local());
+                }
+            },
+            Either::Second(clock_sync_tick) => {
+                render_clock_text(&led8x12_clock, display_mode, &clock_sync_tick.local_time);
             }
-            pressed_since = None;
         }
-        was_pressed = is_pressed;
-
-        if let Some(base_unix_seconds) = synced_unix_seconds {
-            let current_unix_seconds = base_unix_seconds + (synced_at.elapsed().as_secs() as i64);
-            let display_text = match display_mode {
-                DisplayMode::HourMinute => format_hhmm(current_unix_seconds, offset_minutes),
-                DisplayMode::MinuteSecond => format_mmss(current_unix_seconds, offset_minutes),
-            };
-            let display_text_with_o = format_zero_as_o(&display_text);
-            led8x12_clock.write_text(display_text_with_o.as_str(), &DIGIT_COLORS);
-        } else {
-            led8x12_clock.write_text("--\n--", &DIGIT_COLORS);
-        }
-
-        Timer::after(BUTTON_POLL_INTERVAL).await;
     }
 }
 
@@ -178,84 +162,7 @@ enum DisplayMode {
     MinuteSecond,
 }
 
-async fn fetch_ntp_unix_seconds(stack: &Stack<'static>) -> Option<i64> {
-    let dns_results = match stack.dns_query(NTP_SERVER, DnsQueryType::A).await {
-        Ok(dns_results) => dns_results,
-        Err(error) => {
-            warn!("NTP DNS failed: {:?}", error);
-            return None;
-        }
-    };
-    let server_ip = match dns_results.first().copied() {
-        Some(server_ip) => server_ip,
-        None => return None,
-    };
-
-    let mut rx_metadata = [udp::PacketMetadata::EMPTY; 1];
-    let mut rx_buffer = [0u8; 128];
-    let mut tx_metadata = [udp::PacketMetadata::EMPTY; 1];
-    let mut tx_buffer = [0u8; 128];
-    let mut socket = udp::UdpSocket::new(
-        *stack,
-        &mut rx_metadata,
-        &mut rx_buffer,
-        &mut tx_metadata,
-        &mut tx_buffer,
-    );
-
-    if socket.bind(0).is_err() {
-        return None;
-    }
-
-    let mut ntp_request = [0u8; 48];
-    ntp_request[0] = 0x1B;
-    if socket
-        .send_to(&ntp_request, (server_ip, NTP_PORT))
-        .await
-        .is_err()
-    {
-        return None;
-    }
-
-    let mut ntp_response = [0u8; 48];
-    let received =
-        embassy_time::with_timeout(Duration::from_secs(5), socket.recv_from(&mut ntp_response))
-            .await;
-    let (received_len, _) = match received {
-        Ok(Ok(data)) => data,
-        _ => return None,
-    };
-    if received_len < 48 {
-        return None;
-    }
-
-    let ntp_seconds = u32::from_be_bytes([
-        ntp_response[40],
-        ntp_response[41],
-        ntp_response[42],
-        ntp_response[43],
-    ]);
-    let unix_seconds = (ntp_seconds as i64) - NTP_TO_UNIX_SECONDS;
-    if unix_seconds <= 0 {
-        return None;
-    }
-
-    info!("NTP sync ok: unix={}", unix_seconds);
-    Some(unix_seconds)
-}
-
-fn format_hhmm(unix_seconds: i64, offset_minutes: i32) -> heapless::String<5> {
-    let local_seconds = unix_seconds + (offset_minutes as i64 * 60);
-    let seconds_in_day = 24 * 60 * 60;
-    let day_seconds = local_seconds.rem_euclid(seconds_in_day);
-    let hour24 = (day_seconds / 3600) as u8;
-    let minute = ((day_seconds % 3600) / 60) as u8;
-    let hour12 = match hour24 {
-        0 => 12,
-        1..=12 => hour24,
-        _ => hour24 - 12,
-    };
-
+fn format_hhmm(hour12: u8, minute: u8) -> heapless::String<5> {
     let mut text = heapless::String::<5>::new();
     if hour12 >= 10 {
         text.push(char::from(b'0' + (hour12 / 10))).ok();
@@ -269,13 +176,7 @@ fn format_hhmm(unix_seconds: i64, offset_minutes: i32) -> heapless::String<5> {
     text
 }
 
-fn format_mmss(unix_seconds: i64, offset_minutes: i32) -> heapless::String<5> {
-    let local_seconds = unix_seconds + (offset_minutes as i64 * 60);
-    let seconds_in_hour = 60 * 60;
-    let hour_seconds = local_seconds.rem_euclid(seconds_in_hour);
-    let minute = (hour_seconds / 60) as u8;
-    let second = (hour_seconds % 60) as u8;
-
+fn format_mmss(minute: u8, second: u8) -> heapless::String<5> {
     let mut text = heapless::String::<5>::new();
     text.push(char::from(b'0' + (minute / 10))).ok();
     text.push(char::from(b'0' + (minute % 10))).ok();
@@ -295,6 +196,20 @@ fn format_zero_as_o(text: &str) -> heapless::String<5> {
         }
     }
     formatted_text
+}
+
+fn render_clock_text(
+    led8x12_clock: &'static Led8x12Clock,
+    display_mode: DisplayMode,
+    local_time: &time::OffsetDateTime,
+) {
+    let (hours, minutes, seconds) = h12_m_s(local_time);
+    let display_text = match display_mode {
+        DisplayMode::HourMinute => format_hhmm(hours, minutes),
+        DisplayMode::MinuteSecond => format_mmss(minutes, seconds),
+    };
+    let display_text_with_o = format_zero_as_o(&display_text);
+    led8x12_clock.write_text(display_text_with_o.as_str(), &DIGIT_COLORS);
 }
 
 fn increment_timezone_offset_minutes(offset_minutes: i32) -> i32 {

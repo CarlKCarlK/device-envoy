@@ -13,11 +13,10 @@
 use core::convert::{Infallible, TryFrom};
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_rp::button::{PressDuration, PressedTo};
+use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
+use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::button_watch;
-use device_envoy_rp::clock_sync::{
-    ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
-};
+use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_MINUTE};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
@@ -27,11 +26,8 @@ use device_envoy_rp::{
     servo::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
 };
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Timer};
 use panic_probe as _;
-
-const FAST_MODE_SPEED: f32 = 720.0;
 
 button_watch! {
     ButtonWatch13 {
@@ -130,171 +126,34 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         spawner,
     );
 
-    // Start in HH:MM mode
-    let mut state = State::HoursMinutes { speed: 1.0 };
-    loop {
-        state = match state {
-            State::HoursMinutes { speed } => {
-                state
-                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch13, &servo_display)
-                    .await?
-            }
-            State::MinutesSeconds => {
-                state
-                    .execute_minutes_seconds(&clock_sync, &mut *button_watch13, &servo_display)
-                    .await?
-            }
-            State::EditOffset => {
-                state
-                    .execute_edit_offset(
-                        &clock_sync,
-                        &mut *button_watch13,
-                        &timezone_field,
-                        &servo_display,
-                    )
-                    .await?
-            }
-        };
-    }
-}
-
-// State machine for servo clock display modes and transitions.
-
-/// Display states for the servo clock.
-#[derive(Debug, defmt::Format, Clone, Copy, PartialEq)]
-pub enum State {
-    HoursMinutes { speed: f32 },
-    MinutesSeconds,
-    EditOffset,
-}
-
-impl State {
-    async fn execute_hours_minutes<B: device_envoy_core::button::Button>(
-        self,
-        speed: f32,
-        clock_sync: &ClockSyncRp,
-        button: &mut B,
-        servo_display: &ServoClockDisplay,
-    ) -> Result<Self> {
-        clock_sync.set_speed(speed);
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        servo_display.show_hours_minutes(hours, minutes).await;
-        clock_sync.set_tick_interval(Some(ONE_MINUTE));
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                // Button pushes
-                Either::First(press_duration) => match (press_duration, speed.to_bits()) {
-                    (PressDuration::Short, bits) if bits == 1.0f32.to_bits() => {
-                        return Ok(Self::MinutesSeconds);
-                    }
-                    (PressDuration::Short, _) => {
-                        return Ok(Self::HoursMinutes { speed: 1.0 });
-                    }
-                    (PressDuration::Long, _) => {
-                        return Ok(Self::EditOffset);
-                    }
-                },
-                // Clock tick
-                Either::Second(tick) => {
-                    let (hours, minutes, _) = h12_m_s(&tick.local_time);
-                    servo_display.show_hours_minutes(hours, minutes).await;
+    let servo_display_ref = &servo_display;
+    run_clock_ui(
+        &clock_sync,
+        &mut *button_watch13,
+        |clock_ui_event| async move {
+            match clock_ui_event {
+                ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                    servo_display_ref.show_hours_minutes(hours, minutes).await;
                 }
-            }
-        }
-    }
-
-    async fn execute_minutes_seconds<B: device_envoy_core::button::Button>(
-        self,
-        clock_sync: &ClockSyncRp,
-        button: &mut B,
-        servo_display: &ServoClockDisplay,
-    ) -> Result<Self> {
-        clock_sync.set_speed(1.0);
-        let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
-        servo_display.show_minutes_seconds(minutes, seconds).await;
-        clock_sync.set_tick_interval(Some(ONE_SECOND));
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                // Button pushes
-                Either::First(PressDuration::Short) => {
-                    return Ok(Self::HoursMinutes {
-                        speed: FAST_MODE_SPEED,
-                    });
+                ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                    servo_display_ref
+                        .show_minutes_seconds(minutes, seconds)
+                        .await;
                 }
-                Either::First(PressDuration::Long) => {
-                    return Ok(Self::EditOffset);
-                }
-                // Clock tick
-                Either::Second(tick) => {
-                    let (_, minutes, seconds) = h12_m_s(&tick.local_time);
-                    servo_display.show_minutes_seconds(minutes, seconds).await;
-                }
-            }
-        }
-    }
-
-    async fn execute_edit_offset<B: device_envoy_core::button::Button>(
-        self,
-        clock_sync: &ClockSyncRp,
-        button: &mut B,
-        timezone_field: &TimezoneField,
-        servo_display: &ServoClockDisplay,
-    ) -> Result<Self> {
-        info!("Entering edit offset mode");
-        clock_sync.set_speed(1.0);
-
-        // Show current hours and minutes
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        servo_display
-            .show_hours_minutes_indicator(hours, minutes)
-            .await;
-        // Add a gentle wiggle on the bottom servo to signal edit mode.
-        const WIGGLE: [(u16, Duration); 2] = [
-            (80, Duration::from_millis(250)),
-            (100, Duration::from_millis(250)),
-        ];
-        servo_display.bottom.animate(WIGGLE, AtEnd::Loop);
-
-        // Get the current offset minutes from clock (source of truth)
-        let mut offset_minutes = clock_sync.offset_minutes();
-        info!("Current offset: {} minutes", offset_minutes);
-
-        clock_sync.set_tick_interval(None); // Disable ticks in edit mode
-        loop {
-            info!("Waiting for button press in edit mode");
-            match button.wait_for_press_duration().await {
-                PressDuration::Short => {
-                    info!("Short press detected - incrementing offset");
-                    // Increment the offset by 1 hour
-                    offset_minutes += 60;
-                    const ONE_DAY_MINUTES: i32 = ONE_DAY.as_secs() as i32 / 60;
-                    if offset_minutes >= ONE_DAY_MINUTES {
-                        offset_minutes -= ONE_DAY_MINUTES;
-                    }
-                    clock_sync.set_offset_minutes(offset_minutes);
-                    info!("New offset: {} minutes", offset_minutes);
-
-                    // Update display (atomic already updated, can use now_local)
-                    let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-                    info!(
-                        "Updated time after offset change: {:02}:{:02}",
-                        hours, minutes
-                    );
-                    servo_display
+                ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                    servo_display_ref
                         .show_hours_minutes_indicator(hours, minutes)
                         .await;
-                    servo_display.bottom.animate(WIGGLE, AtEnd::Loop);
                 }
-                PressDuration::Long => {
-                    info!("Long press detected - saving and exiting edit mode");
-                    // Save to flash and exit edit mode
+                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
                     timezone_field.set_offset_minutes(offset_minutes)?;
                     info!("Offset saved to flash: {} minutes", offset_minutes);
-                    return Ok(Self::HoursMinutes { speed: 1.0 });
                 }
             }
-        }
-    }
+            Ok(())
+        },
+    )
+    .await
 }
 
 struct ServoClockDisplay {

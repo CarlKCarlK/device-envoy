@@ -18,13 +18,12 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
+use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use device_envoy_rp::button_watch;
 use device_envoy_rp::{
     Error, Result,
-    button::{PressDuration, PressedTo},
-    clock_sync::{
-        ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND, h12_m_s,
-    },
+    button::PressedTo,
+    clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_MINUTE},
     flash_block::FlashBlockRp,
     led_strip::{Current, Gamma, colors},
     led2d,
@@ -38,7 +37,6 @@ use device_envoy_rp::{
     },
 };
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
 use embassy_time::Duration;
 use heapless::String;
 use panic_probe as _;
@@ -62,7 +60,6 @@ led2d! {
     }
 }
 
-const FAST_MODE_SPEED: f32 = 720.0;
 const CONNECTING_COLOR: RGB8 = colors::SADDLE_BROWN;
 const DIGIT_COLORS: [RGB8; 4] = [colors::CYAN, colors::MAGENTA, colors::ORANGE, colors::LIME];
 const EDIT_COLORS: [RGB8; 4] = [
@@ -161,180 +158,29 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         spawner,
     );
 
-    // Start in HH:MM mode
-    let mut state = State::HoursMinutes { speed: 1.0 };
-    loop {
-        state = match state {
-            State::HoursMinutes { speed } => {
-                state
-                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch13, &led8x12)
-                    .await?
-            }
-            State::MinutesSeconds => {
-                state
-                    .execute_minutes_seconds(&clock_sync, &mut *button_watch13, &led8x12)
-                    .await?
-            }
-            State::EditOffset => {
-                state
-                    .execute_edit_offset(
-                        &clock_sync,
-                        &mut *button_watch13,
-                        &timezone_field,
-                        &led8x12,
-                    )
-                    .await?
-            }
-        };
-    }
-}
-
-// State machine for 8x12 LED clock display modes and transitions.
-
-/// Display states for the 8x12 LED clock.
-#[derive(Debug, defmt::Format, Clone, Copy, PartialEq)]
-pub enum State {
-    HoursMinutes { speed: f32 },
-    MinutesSeconds,
-    EditOffset,
-}
-
-impl State {
-    async fn execute_hours_minutes<B: device_envoy_core::button::Button>(
-        self,
-        speed: f32,
-        clock_sync: &ClockSyncRp,
-        button: &mut B,
-        led8x12: &Led8x12,
-    ) -> Result<Self> {
-        clock_sync.set_speed(speed);
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        show_hours_minutes(led8x12, hours, minutes).await;
-        clock_sync.set_tick_interval(Some(ONE_MINUTE));
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                // Button pushes
-                Either::First(press_duration) => {
-                    info!(
-                        "HoursMinutes: Button press detected: {:?}, speed_bits={}",
-                        press_duration,
-                        speed.to_bits()
-                    );
-                    match (press_duration, speed.to_bits()) {
-                        (PressDuration::Short, bits) if bits == 1.0f32.to_bits() => {
-                            info!("HoursMinutes -> MinutesSeconds");
-                            return Ok(Self::MinutesSeconds);
-                        }
-                        (PressDuration::Short, _) => {
-                            info!("HoursMinutes: Resetting speed to 1.0");
-                            return Ok(Self::HoursMinutes { speed: 1.0 });
-                        }
-                        (PressDuration::Long, _) => {
-                            info!("HoursMinutes -> EditOffset");
-                            return Ok(Self::EditOffset);
-                        }
-                    }
+    let led8x12_ref = &led8x12;
+    run_clock_ui(
+        &clock_sync,
+        &mut *button_watch13,
+        |clock_ui_event| async move {
+            match clock_ui_event {
+                ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                    show_hours_minutes(led8x12_ref, hours, minutes).await;
                 }
-                // Clock tick
-                Either::Second(tick_event) => {
-                    let (hours, minutes, _) = h12_m_s(&tick_event.local_time);
-                    show_hours_minutes(led8x12, hours, minutes).await;
+                ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                    show_minutes_seconds(led8x12_ref, minutes, seconds).await;
                 }
-            }
-        }
-    }
-
-    async fn execute_minutes_seconds<B: device_envoy_core::button::Button>(
-        self,
-        clock_sync: &ClockSyncRp,
-        button: &mut B,
-        led8x12: &Led8x12,
-    ) -> Result<Self> {
-        clock_sync.set_speed(1.0);
-        let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
-        show_minutes_seconds(led8x12, minutes, seconds).await;
-        clock_sync.set_tick_interval(Some(ONE_SECOND));
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                // Button pushes
-                Either::First(press_duration) => {
-                    info!(
-                        "MinutesSeconds: Button press detected: {:?}",
-                        press_duration
-                    );
-                    match press_duration {
-                        PressDuration::Short => {
-                            info!("MinutesSeconds -> HoursMinutes (fast)");
-                            return Ok(Self::HoursMinutes {
-                                speed: FAST_MODE_SPEED,
-                            });
-                        }
-                        PressDuration::Long => {
-                            info!("MinutesSeconds -> EditOffset");
-                            return Ok(Self::EditOffset);
-                        }
-                    }
+                ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                    show_hours_minutes_indicator(led8x12_ref, hours, minutes).await;
                 }
-                // Clock tick
-                Either::Second(tick_event) => {
-                    let (_, minutes, seconds) = h12_m_s(&tick_event.local_time);
-                    show_minutes_seconds(led8x12, minutes, seconds).await;
-                }
-            }
-        }
-    }
-
-    async fn execute_edit_offset<B: device_envoy_core::button::Button>(
-        self,
-        clock_sync: &ClockSyncRp,
-        button: &mut B,
-        timezone_field: &TimezoneField,
-        led8x12: &Led8x12,
-    ) -> Result<Self> {
-        info!("Entering edit offset mode");
-        clock_sync.set_speed(1.0);
-
-        // Blink current hours and minutes with edit color accent.
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        show_hours_minutes_indicator(led8x12, hours, minutes).await;
-
-        // Get the current offset minutes from clock (source of truth)
-        let mut offset_minutes = clock_sync.offset_minutes();
-        info!("Current offset: {} minutes", offset_minutes);
-
-        clock_sync.set_tick_interval(None); // Disable ticks in edit mode
-        loop {
-            info!("Waiting for button press in edit mode");
-            match button.wait_for_press_duration().await {
-                PressDuration::Short => {
-                    info!("Short press detected - incrementing offset");
-                    // Increment the offset by 1 hour
-                    offset_minutes += 60;
-                    const ONE_DAY_MINUTES: i32 = ONE_DAY.as_secs() as i32 / 60;
-                    if offset_minutes >= ONE_DAY_MINUTES {
-                        offset_minutes -= ONE_DAY_MINUTES;
-                    }
-                    clock_sync.set_offset_minutes(offset_minutes);
-                    info!("New offset: {} minutes", offset_minutes);
-
-                    // Update display
-                    let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-                    info!(
-                        "Updated time after offset change: {:02}:{:02}",
-                        hours, minutes
-                    );
-                    show_hours_minutes_indicator(led8x12, hours, minutes).await;
-                }
-                PressDuration::Long => {
-                    info!("Long press detected - saving and exiting edit mode");
-                    // Save to flash and exit edit mode
+                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
                     timezone_field.set_offset_minutes(offset_minutes)?;
-                    info!("Offset saved to flash: {} minutes", offset_minutes);
-                    return Ok(Self::HoursMinutes { speed: 1.0 });
                 }
             }
-        }
-    }
+            Ok(())
+        },
+    )
+    .await
 }
 
 // Display helper functions for the 8x12 LED clock

@@ -15,18 +15,16 @@
 
 use core::convert::Infallible;
 
+use device_envoy_example_common::clock_ui::{run_clock_ui, ClockUiEvent};
 use embassy_executor::Spawner;
-use embassy_futures::select::{select, Either};
 use esp_backtrace as _;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use log::info;
 
 use device_envoy_esp::{
-    button::{PressDuration, PressedTo},
+    button::PressedTo,
     button_watch,
-    clock_sync::{
-        h12_m_s, ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_DAY, ONE_MINUTE, ONE_SECOND,
-    },
+    clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start,
     led4::{
@@ -42,8 +40,6 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const CAPTIVE_PORTAL_SSID: &str = "EnvoyClock4";
-const FAST_MODE_SPEED: f32 = 720.0;
-
 button_watch! {
     ForcePortalButtonWatch {
         pin: GPIO6,
@@ -141,213 +137,77 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let _clock_sync_tick = clock_sync.wait_for_tick().await;
     info!("First NTP sync complete");
 
-    let mut state = State::HoursMinutes { speed: 1.0 };
-    loop {
-        state = match state {
-            State::HoursMinutes { speed } => {
-                state
-                    .execute_hours_minutes(speed, &clock_sync, &mut *button_watch6, &led4)
-                    .await?
-            }
-            State::MinutesSeconds => {
-                state
-                    .execute_minutes_seconds(&clock_sync, &mut *button_watch6, &led4)
-                    .await?
-            }
-            State::EditOffset => {
-                state
-                    .execute_edit_offset(&clock_sync, &mut *button_watch6, timezone_field, &led4)
-                    .await?
-            }
-        };
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum State {
-    HoursMinutes { speed: f32 },
-    MinutesSeconds,
-    EditOffset,
-}
-
-impl State {
-    async fn execute_hours_minutes<B: device_envoy_esp::button::Button>(
-        self,
-        speed: f32,
-        clock_sync: &ClockSyncEsp,
-        button: &mut B,
-        led4: &Led4Esp<'_>,
-    ) -> Result<Self> {
-        clock_sync.set_speed(speed);
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        led4.write_text(
-            [
-                Self::tens_hours(hours),
-                Self::ones_digit(hours),
-                Self::tens_digit(minutes),
-                Self::ones_digit(minutes),
-            ],
-            BlinkState::Solid,
-        );
-        clock_sync.set_tick_interval(Some(ONE_MINUTE));
-
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                Either::First(press_duration) => match (press_duration, speed.to_bits()) {
-                    (PressDuration::Short, bits) if bits == 1.0_f32.to_bits() => {
-                        return Ok(Self::MinutesSeconds);
-                    }
-                    (PressDuration::Short, _) => {
-                        return Ok(Self::HoursMinutes { speed: 1.0 });
-                    }
-                    (PressDuration::Long, _) => {
-                        return Ok(Self::EditOffset);
-                    }
-                },
-                Either::Second(clock_sync_tick) => {
-                    let (hours, minutes, _) = h12_m_s(&clock_sync_tick.local_time);
-                    led4.write_text(
-                        [
-                            Self::tens_hours(hours),
-                            Self::ones_digit(hours),
-                            Self::tens_digit(minutes),
-                            Self::ones_digit(minutes),
-                        ],
-                        BlinkState::Solid,
-                    );
+    let led4_ref = &led4;
+    run_clock_ui(
+        &clock_sync,
+        &mut *button_watch6,
+        |clock_ui_event| async move {
+            match clock_ui_event {
+                ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                    led4_ref.write_text(hours_minutes_text(hours, minutes), BlinkState::Solid);
                 }
-            }
-        }
-    }
-
-    async fn execute_minutes_seconds<B: device_envoy_esp::button::Button>(
-        self,
-        clock_sync: &ClockSyncEsp,
-        button: &mut B,
-        led4: &Led4Esp<'_>,
-    ) -> Result<Self> {
-        clock_sync.set_speed(1.0);
-        let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
-        led4.write_text(
-            [
-                Self::tens_digit(minutes),
-                Self::ones_digit(minutes),
-                Self::tens_digit(seconds),
-                Self::ones_digit(seconds),
-            ],
-            BlinkState::Solid,
-        );
-        clock_sync.set_tick_interval(Some(ONE_SECOND));
-
-        loop {
-            match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
-                Either::First(PressDuration::Short) => {
-                    return Ok(Self::HoursMinutes {
-                        speed: FAST_MODE_SPEED,
-                    });
+                ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                    led4_ref.write_text(minutes_seconds_text(minutes, seconds), BlinkState::Solid);
                 }
-                Either::First(PressDuration::Long) => {
-                    return Ok(Self::EditOffset);
-                }
-                Either::Second(clock_sync_tick) => {
-                    let (_, minutes, seconds) = h12_m_s(&clock_sync_tick.local_time);
-                    led4.write_text(
-                        [
-                            Self::tens_digit(minutes),
-                            Self::ones_digit(minutes),
-                            Self::tens_digit(seconds),
-                            Self::ones_digit(seconds),
-                        ],
-                        BlinkState::Solid,
-                    );
-                }
-            }
-        }
-    }
-
-    async fn execute_edit_offset<B: device_envoy_esp::button::Button>(
-        self,
-        clock_sync: &ClockSyncEsp,
-        button: &mut B,
-        timezone_field: &TimezoneField,
-        led4: &Led4Esp<'_>,
-    ) -> Result<Self> {
-        info!("Entering edit offset mode");
-
-        let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-        led4.write_text(
-            [
-                Self::tens_hours(hours),
-                Self::ones_digit(hours),
-                Self::tens_digit(minutes),
-                Self::ones_digit(minutes),
-            ],
-            BlinkState::BlinkingAndOn,
-        );
-
-        let mut offset_minutes = clock_sync.offset_minutes();
-        info!("Current offset: {} minutes", offset_minutes);
-
-        clock_sync.set_tick_interval(None);
-        clock_sync.set_speed(1.0);
-
-        loop {
-            match button.wait_for_press_duration().await {
-                PressDuration::Short => {
-                    offset_minutes += 60;
-                    const ONE_DAY_MINUTES: i32 = ONE_DAY.as_secs() as i32 / 60;
-                    if offset_minutes >= ONE_DAY_MINUTES {
-                        offset_minutes -= ONE_DAY_MINUTES;
-                    }
-                    clock_sync.set_offset_minutes(offset_minutes);
-                    info!("New offset: {} minutes", offset_minutes);
-
-                    let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
-                    led4.write_text(
-                        [
-                            Self::tens_hours(hours),
-                            Self::ones_digit(hours),
-                            Self::tens_digit(minutes),
-                            Self::ones_digit(minutes),
-                        ],
+                ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                    led4_ref.write_text(
+                        hours_minutes_text(hours, minutes),
                         BlinkState::BlinkingAndOn,
                     );
                 }
-                PressDuration::Long => {
+                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
                     timezone_field.set_offset_minutes(offset_minutes)?;
-                    info!("Offset saved to flash: {} minutes", offset_minutes);
-                    return Ok(Self::HoursMinutes { speed: 1.0 });
                 }
             }
-        }
-    }
+            Ok(())
+        },
+    )
+    .await
+}
 
-    #[inline]
-    #[expect(
-        clippy::arithmetic_side_effects,
-        clippy::integer_division_remainder_used,
-        reason = "Value < 60 ensures division is safe"
-    )]
-    const fn tens_digit(value: u8) -> char {
-        ((value / 10) + b'0') as char
-    }
+fn hours_minutes_text(hours: u8, minutes: u8) -> [char; 4] {
+    [
+        tens_hours(hours),
+        ones_digit(hours),
+        tens_digit(minutes),
+        ones_digit(minutes),
+    ]
+}
 
-    #[inline]
-    const fn tens_hours(value: u8) -> char {
-        if value >= 10 {
-            '1'
-        } else {
-            ' '
-        }
-    }
+fn minutes_seconds_text(minutes: u8, seconds: u8) -> [char; 4] {
+    [
+        tens_digit(minutes),
+        ones_digit(minutes),
+        tens_digit(seconds),
+        ones_digit(seconds),
+    ]
+}
 
-    #[inline]
-    #[expect(
-        clippy::arithmetic_side_effects,
-        clippy::integer_division_remainder_used,
-        reason = "Value < 60 ensures division is safe"
-    )]
-    const fn ones_digit(value: u8) -> char {
-        ((value % 10) + b'0') as char
+#[inline]
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::integer_division_remainder_used,
+    reason = "Value < 60 ensures division is safe"
+)]
+const fn tens_digit(value: u8) -> char {
+    ((value / 10) + b'0') as char
+}
+
+#[inline]
+const fn tens_hours(value: u8) -> char {
+    if value >= 10 {
+        '1'
+    } else {
+        ' '
     }
+}
+
+#[inline]
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::integer_division_remainder_used,
+    reason = "Value < 60 ensures division is safe"
+)]
+const fn ones_digit(value: u8) -> char {
+    ((value % 10) + b'0') as char
 }

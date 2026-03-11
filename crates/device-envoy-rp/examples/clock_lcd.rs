@@ -9,9 +9,10 @@
 use core::{convert::Infallible, fmt};
 use defmt::*;
 use defmt_rtt as _;
+use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::button_watch;
-use device_envoy_rp::clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND};
+use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::i2cs;
 use device_envoy_rp::lcd_text::LcdText as _;
@@ -19,7 +20,6 @@ use device_envoy_rp::wifi_auto::WifiAutoRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
-use heapless::String;
 use panic_probe as _;
 
 i2cs! {
@@ -119,37 +119,49 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("Entering main event loop");
     lcd_text.write_text("WiFi connected\nWaiting NTP");
 
-    // Main orchestrator loop - owns LCD and displays the clock
-    loop {
-        let tick = clock_sync.wait_for_tick().await;
-        let time_info = tick.local_time;
-        let mut text = String::<64>::new();
-        let (hour12, am_pm) = if time_info.hour() == 0 {
-            (12, "AM")
-        } else if time_info.hour() < 12 {
-            (time_info.hour(), "AM")
-        } else if time_info.hour() == 12 {
-            (12, "PM")
-        } else {
-            #[expect(clippy::arithmetic_side_effects, reason = "hour guaranteed 13-23")]
-            {
-                (time_info.hour() - 12, "PM")
+    let lcd_text_ref = lcd_text;
+    run_clock_ui(
+        &clock_sync,
+        &mut *button_watch13,
+        |clock_ui_event| async move {
+            let text = event_text(clock_ui_event).map_err(|_| Error::FormatError)?;
+            lcd_text_ref.write_text(text.as_str());
+            if let ClockUiEvent::OffsetPersistRequested { offset_minutes } = clock_ui_event {
+                timezone_field.set_offset_minutes(offset_minutes)?;
             }
-        };
-        fmt::Write::write_fmt(
-            &mut text,
-            format_args!(
-                "{:2}:{:02}:{:02} {}\n{:04}-{:02}-{:02}",
-                hour12,
-                time_info.minute(),
-                time_info.second(),
-                am_pm,
-                time_info.year(),
-                u8::from(time_info.month()),
-                time_info.day()
-            ),
-        )
-        .map_err(|_| Error::FormatError)?;
-        lcd_text.write_text(text.as_str());
+            Ok(())
+        },
+    )
+    .await
+}
+
+fn event_text(clock_ui_event: ClockUiEvent) -> Result<heapless::String<32>, fmt::Error> {
+    let mut text = heapless::String::<32>::new();
+    match clock_ui_event {
+        ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+            fmt::Write::write_fmt(
+                &mut text,
+                format_args!("{:>2}:{:02} HH:MM\nshort for MM:SS", hours, minutes),
+            )?;
+        }
+        ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+            fmt::Write::write_fmt(
+                &mut text,
+                format_args!("{:02}:{:02} MM:SS\nshort for FAST", minutes, seconds),
+            )?;
+        }
+        ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+            fmt::Write::write_fmt(
+                &mut text,
+                format_args!("{:>2}:{:02} TZ EDIT\nshort +1h long OK", hours, minutes),
+            )?;
+        }
+        ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
+            fmt::Write::write_fmt(
+                &mut text,
+                format_args!("Saved TZ offset\n{} minutes", offset_minutes),
+            )?;
+        }
     }
+    Ok(text)
 }

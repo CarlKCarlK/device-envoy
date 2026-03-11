@@ -19,23 +19,21 @@ use core::time::Duration as StdDuration;
 
 use defmt::info;
 use defmt_rtt as _;
+use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use device_envoy_rp::audio_player::SilenceClip;
 use device_envoy_rp::audio_player::{
     AtEnd, AudioPlayer as _, Gain, VOICE_22050_HZ, Volume, audio_player,
 };
-use device_envoy_rp::button::Button as _;
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
-    ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_MINUTE, ONE_SECOND, h12_m_s,
+    ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_MINUTE, h12_m_s,
 };
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
 use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
 use device_envoy_rp::{Error, Result, tone};
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
-use embassy_time::Duration;
 use panic_probe as _;
 
 audio_player! {
@@ -53,28 +51,6 @@ audio_player! {
 button_watch! {
     ButtonWatch13 {
         pin: PIN_13,
-    }
-}
-
-#[derive(Clone, Copy)]
-enum ClockAudioMode {
-    HoursMinutes,
-    MinutesSeconds,
-}
-
-impl ClockAudioMode {
-    fn tick_interval(self) -> Duration {
-        match self {
-            Self::HoursMinutes => ONE_MINUTE,
-            Self::MinutesSeconds => ONE_SECOND,
-        }
-    }
-
-    fn toggled(self) -> Self {
-        match self {
-            Self::HoursMinutes => Self::MinutesSeconds,
-            Self::MinutesSeconds => Self::HoursMinutes,
-        }
     }
 }
 
@@ -208,12 +184,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .ok_or(Error::MissingCustomWifiAutoField)?;
     static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
 
-    let mut clock_audio_mode = ClockAudioMode::HoursMinutes;
     let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,
         stack,
         timezone_offset_minutes,
-        Some(clock_audio_mode.tick_interval()),
+        Some(ONE_MINUTE),
         spawner,
     );
 
@@ -222,50 +197,35 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let (first_hours, first_minutes, first_seconds) = h12_m_s(&first_tick.local_time);
     audio_player8.play([TIME_SYNCED_TONE], AtEnd::Stop);
     info!(
-        "Time synced: {:02}:{:02}:{:02} (button toggles mode)",
+        "Time synced: {:02}:{:02}:{:02}",
         first_hours, first_minutes, first_seconds
     );
 
-    loop {
-        match select(button_watch13.wait_for_press(), clock_sync.wait_for_tick()).await {
-            Either::First(()) => {
-                clock_audio_mode = clock_audio_mode.toggled();
-                clock_sync.set_tick_interval(Some(clock_audio_mode.tick_interval()));
-
-                match clock_audio_mode {
-                    ClockAudioMode::HoursMinutes => {
-                        audio_player8.play([MODE_HH_MM_TONE], AtEnd::Stop);
-                        info!("Mode changed: hh:mm (minute tick)");
-                    }
-                    ClockAudioMode::MinutesSeconds => {
-                        audio_player8.play([MODE_MM_SS_TONE], AtEnd::Stop);
-                        info!("Mode changed: mm:ss (second tick)");
-                    }
+    run_clock_ui(
+        &clock_sync,
+        &mut *button_watch13,
+        |clock_ui_event| async move {
+            match clock_ui_event {
+                ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                    audio_player8.play([HH_MM_TICK_TONE], AtEnd::Stop);
+                    info!("hh:mm {:02}:{:02}", hours, minutes);
+                }
+                ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                    audio_player8.play([MM_SS_TICK_TONE], AtEnd::Stop);
+                    info!("mm:ss {:02}:{:02}", minutes, seconds);
+                }
+                ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                    audio_player8.play([MODE_MM_SS_TONE], AtEnd::Stop);
+                    info!("edit offset {:02}:{:02}", hours, minutes);
+                }
+                ClockUiEvent::OffsetPersistRequested { offset_minutes } => {
+                    timezone_field.set_offset_minutes(offset_minutes)?;
+                    audio_player8.play([MODE_HH_MM_TONE], AtEnd::Stop);
+                    info!("saved offset minutes {}", offset_minutes);
                 }
             }
-            Either::Second(tick) => {
-                let (hours, minutes, seconds) = h12_m_s(&tick.local_time);
-                match clock_audio_mode {
-                    ClockAudioMode::HoursMinutes => {
-                        audio_player8.play([HH_MM_TICK_TONE], AtEnd::Stop);
-                        info!(
-                            "hh:mm {:02}:{:02} (since sync: {}s)",
-                            hours,
-                            minutes,
-                            tick.since_last_sync.as_secs()
-                        );
-                    }
-                    ClockAudioMode::MinutesSeconds => {
-                        audio_player8.play([MM_SS_TICK_TONE], AtEnd::Stop);
-                        info!(
-                            "mm:ss {:02}:{:02} (since sync: {}s)",
-                            minutes,
-                            seconds,
-                            tick.since_last_sync.as_secs()
-                        );
-                    }
-                }
-            }
-        }
-    }
+            Ok(())
+        },
+    )
+    .await
 }

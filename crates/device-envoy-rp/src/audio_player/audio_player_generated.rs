@@ -42,7 +42,7 @@ pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, AudioPlayer, Playable, VOICE_22050_HZ, Volume};
+use crate::audio_player::{AtEnd, AudioPlayer, Playable, Volume, VOICE_22050_HZ};
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {

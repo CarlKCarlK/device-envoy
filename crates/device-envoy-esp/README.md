@@ -56,8 +56,7 @@ The API is actively evolving and may change without compatibility guarantees.
 
 ## Examples & Demos
 
-The project includes **examples** (single-device tests) in `examples/` and
-integration examples for common patterns.
+The project includes **examples** (single-device tests) in `examples/` showing integration patterns:
 
 ### Example: animated LED strip
 
@@ -73,21 +72,18 @@ strip and then animates a sequence of frames.
 # #![no_main]
 # use esp_backtrace as _;
 # use core::convert::Infallible;
-use embassy_executor::Spawner;
+use device_envoy_esp::{Result, init_and_start, led_strip, led_strip::{LedStrip as _, Frame1d, colors}};
 use embassy_time::Duration;
-use device_envoy_esp::{
-    Result, init_and_start, led_strip,
-    led_strip::{colors, Frame1d},
-};
 
 led_strip! {
     LedStripAnimated {
+        pin: GPIO18,
         len: 96,
     }
 }
 
-async fn example(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80, rmt_mode::Blocking);
+async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     let led_strip_animated = LedStripAnimated::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // Create a sequence of frames and durations and then animate them (looping, until replaced).
@@ -102,8 +98,7 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
 }
 ```
 
-> For complete, runnable examples (including wiring and setup), see the
-> `examples/` directory.
+> For complete, runnable examples (including wiring and setup), see the `examples/` directory.
 
 - **Basic LED Examples**: Simple on/off control with blinky pattern
 - **LED Strip Examples**: Simple animations, color control, text rendering

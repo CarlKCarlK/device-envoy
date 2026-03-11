@@ -150,6 +150,7 @@ pub async fn led_strip_spi_device_loop<
 macro_rules! __led_strip_spi_inner {
     (
         $name:ident,
+        $pin:ident,
         $len:expr,
         $max_current:expr,
         [$($gamma:expr)?],
@@ -159,6 +160,7 @@ macro_rules! __led_strip_spi_inner {
     ) => {
         $crate::__led_strip_spi_impl!{
             name        = $name,
+            pin         = $pin,
             len         = $len,
             max_current = $max_current,
             gamma       = $crate::__led_strip_first_or_default!(
@@ -181,6 +183,7 @@ macro_rules! __led_strip_spi_inner {
 macro_rules! __led_strip_spi_impl {
     (
         name        = $name:ident,
+        pin         = $pin:ident,
         len         = $len:expr,
         max_current = $max_current:expr,
         gamma       = $gamma:expr,
@@ -227,7 +230,7 @@ macro_rules! __led_strip_spi_impl {
 
                 /// Construct the strip controller from a MOSI pin and SPI peripheral.
                 pub fn new(
-                    mosi_pin: impl ::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+                    pin: $crate::esp_hal::peripherals::$pin<'static>,
                     spi: impl ::esp_hal::spi::master::Instance + 'static,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
@@ -242,7 +245,7 @@ macro_rules! __led_strip_spi_impl {
                         $crate::led_strip::spi::SpiWs2812::<
                             { [<$name:snake _consts>]::LEDS },
                             { [<$name:snake _consts>]::BYTES },
-                        >::new(spi, mosi_pin)?;
+                        >::new(spi, pin)?;
 
                     let strip_static: &'static _ = &[<$name:snake:upper _STATIC>];
 

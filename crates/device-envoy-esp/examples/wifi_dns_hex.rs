@@ -40,6 +40,7 @@ const LED_LAYOUT_8X12_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw(
 
 led2d! {
     Led12x8Dns {
+        pin: GPIO18,
         len: 96,
         led_layout: LED_LAYOUT_8X12_ROTATED,
         max_current: Current::Milliamps(300),

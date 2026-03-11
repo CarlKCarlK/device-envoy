@@ -24,6 +24,7 @@ const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_ma
 
 led2d! {
     Led16x16Test {
+        pin: GPIO2,
         len: 256,
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),

@@ -19,6 +19,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
     LedStripAnimated {
+        pin: GPIO18,
         len: 96,
         max_current: Current::Milliamps(1000),
         gamma: Gamma::Linear,

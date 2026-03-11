@@ -241,6 +241,7 @@ pub async fn led_strip_device_loop<
 /// ```rust,no_run
 /// device_envoy_esp::led_strip! {
 ///     MyStrip {
+///         pin: GPIO8,
 ///         len: 8,
 ///         max_current: device_envoy_esp::led_strip::Current::Milliamps(1000),
 ///     }
@@ -259,8 +260,8 @@ pub async fn led_strip_device_loop<
 ///
 /// - A `mod my_strip` containing `const LEDS`, `const PULSES = LEDS*24+1`.
 /// - A struct `MyStrip` implementing [`LedStrip<LEDS>`](crate::led_strip::LedStrip).
-/// - `MyStrip::new(channel, spawner) -> Result<&'static MyStrip>`, which
-///   consumes a configured TX channel and spawns the background device task.
+/// - `MyStrip::new(pin, channel_creator, spawner) -> Result<&'static MyStrip>`,
+///   where `pin` is the exact `GPIOx` type declared in the macro.
 /// - `MyStrip::MAX_BRIGHTNESS`, `MY_STRIP::MAX_FRAMES`, `MyStrip::LEN`.
 ///
 /// # `'static` requirement
@@ -281,6 +282,7 @@ macro_rules! led_strip {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             max_current: $max_current:expr,
             $($options:tt)+
@@ -288,6 +290,7 @@ macro_rules! led_strip {
     ) => {
         $crate::__led_strip_parse_options!{
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [],
@@ -298,6 +301,7 @@ macro_rules! led_strip {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             max_current: $max_current:expr
             $(,)?
@@ -305,6 +309,7 @@ macro_rules! led_strip {
     ) => {
         $crate::__led_strip_parse_options!{
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [],
@@ -325,6 +330,7 @@ macro_rules! led_strip {
 macro_rules! __led_strip_inner {
     (
         $name:ident,
+        $pin:ident,
         $len:expr,
         $max_current:expr,
         [$($gamma:expr)?],
@@ -334,6 +340,7 @@ macro_rules! __led_strip_inner {
     ) => {
         $crate::__led_strip_impl!{
             name        = $name,
+            pin         = $pin,
             len         = $len,
             max_current = $max_current,
             gamma       = $crate::__led_strip_first_or_default!(
@@ -358,6 +365,7 @@ macro_rules! __led_strip_inner {
 macro_rules! __led_strip_parse_options {
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [$($engine:tt)*],
@@ -366,6 +374,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_dispatch_engine! {
             $name,
+            $pin,
             $len,
             $max_current,
             [$($engine)*],
@@ -375,6 +384,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [],
@@ -385,6 +395,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [Spi],
@@ -395,6 +406,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [],
@@ -405,6 +417,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [Spi],
@@ -415,6 +428,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [],
@@ -425,6 +439,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [Spi],
@@ -435,6 +450,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [],
@@ -445,6 +461,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [Rmt],
@@ -455,6 +472,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [],
@@ -465,6 +483,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [Rmt],
@@ -475,6 +494,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [],
@@ -485,6 +505,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [Rmt],
@@ -495,6 +516,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [$($engine:tt)+],
@@ -507,6 +529,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [],
@@ -519,6 +542,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [$($engine:tt)*],
@@ -529,6 +553,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [$($engine)*],
@@ -539,6 +564,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [$($engine:tt)*],
@@ -551,6 +577,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [$($engine:tt)*],
@@ -561,6 +588,7 @@ macro_rules! __led_strip_parse_options {
     ) => {
         $crate::__led_strip_parse_options! {
             name = $name,
+            pin = $pin,
             len = $len,
             max_current = $max_current,
             engine = [$($engine)*],
@@ -571,6 +599,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [$($engine:tt)*],
@@ -583,6 +612,7 @@ macro_rules! __led_strip_parse_options {
     };
     (
         name = $name:ident,
+        pin = $pin:ident,
         len = $len:expr,
         max_current = $max_current:expr,
         engine = [$($engine:tt)*],
@@ -603,6 +633,7 @@ macro_rules! __led_strip_parse_options {
 macro_rules! __led_strip_dispatch_engine {
     (
         $name:ident,
+        $pin:ident,
         $len:expr,
         $max_current:expr,
         [Spi],
@@ -611,6 +642,7 @@ macro_rules! __led_strip_dispatch_engine {
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -621,6 +653,7 @@ macro_rules! __led_strip_dispatch_engine {
     };
     (
         $name:ident,
+        $pin:ident,
         $len:expr,
         $max_current:expr,
         [Rmt],
@@ -629,6 +662,7 @@ macro_rules! __led_strip_dispatch_engine {
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -639,6 +673,7 @@ macro_rules! __led_strip_dispatch_engine {
     };
     (
         $name:ident,
+        $pin:ident,
         $len:expr,
         $max_current:expr,
         [],
@@ -647,6 +682,7 @@ macro_rules! __led_strip_dispatch_engine {
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -756,6 +792,7 @@ macro_rules! __led2d_strip_trait_impl {
 macro_rules! __led_strip_impl {
     (
         name        = $name:ident,
+        pin         = $pin:ident,
         len         = $len:expr,
         max_current = $max_current:expr,
         gamma       = $gamma:expr,
@@ -826,7 +863,7 @@ macro_rules! __led_strip_impl {
                 /// This configures a TX channel from a shared `rmt80` hub using
                 /// [`ws2812_tx_config`](crate::rmt::ws2812_tx_config).
                 pub fn new(
-                    pin: impl ::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+                    pin: $crate::esp_hal::peripherals::$pin<'static>,
                     channel_creator: impl ::esp_hal::rmt::TxChannelCreator<
                         'static,
                         ::esp_hal::Blocking,

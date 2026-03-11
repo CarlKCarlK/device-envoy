@@ -14,6 +14,7 @@ const LED_LAYOUT_12X4: crate::led2d::LedLayout<48, 12, 4> =
 #[cfg(all(not(doc), not(feature = "host")))]
 led2d! {
     Led2dGenerated {
+        pin: GPIO2,
         len: 48,
         led_layout: LED_LAYOUT_12X4,
         max_current: crate::led_strip::Current::Milliamps(250),
@@ -65,7 +66,7 @@ impl Led2dGenerated {
     ///
     /// See the [`led2d`](mod@crate::led2d) module docs for usage examples.
     pub fn new(
-        pin: impl crate::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        pin: crate::esp_hal::peripherals::GPIO2<'static>,
         channel_creator: impl crate::esp_hal::rmt::TxChannelCreator<'static, crate::esp_hal::Blocking>,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {

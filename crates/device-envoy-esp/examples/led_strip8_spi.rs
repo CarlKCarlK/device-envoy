@@ -22,6 +22,7 @@ const FRAME_DURATION: Duration = Duration::from_millis(350);
 
 led_strip! {
     LedStrip8Spi {
+        pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(180),
         engine: Engine::Spi,

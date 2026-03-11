@@ -18,6 +18,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
     LedStripSimple {
+        pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(250),
     }

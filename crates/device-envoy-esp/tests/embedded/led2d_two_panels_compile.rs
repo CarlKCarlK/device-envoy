@@ -18,6 +18,7 @@ const LED_LAYOUT_4X2: LedLayout<8, 4, 2> = LedLayout::serpentine_column_major();
 
 led2d! {
     Led2dPanelA {
+        pin: GPIO10,
         len: 8,
         led_layout: LED_LAYOUT_4X2,
         max_current: Current::Milliamps(120),
@@ -26,8 +27,22 @@ led2d! {
     }
 }
 
+#[cfg(target_arch = "xtensa")]
 led2d! {
     Led2dPanelB {
+        pin: GPIO48,
+        len: 8,
+        led_layout: LED_LAYOUT_4X2,
+        max_current: Current::Milliamps(120),
+        font: Led2dFont::Font4x6,
+        max_frames: 2,
+    }
+}
+
+#[cfg(not(target_arch = "xtensa"))]
+led2d! {
+    Led2dPanelB {
+        pin: GPIO8,
         len: 8,
         led_layout: LED_LAYOUT_4X2,
         max_current: Current::Milliamps(120),

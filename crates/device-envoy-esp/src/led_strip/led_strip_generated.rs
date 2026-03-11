@@ -10,6 +10,7 @@ use crate::led_strip;
 #[cfg(all(not(doc), not(feature = "host")))]
 led_strip! {
     LedStripGenerated {
+        pin: GPIO2,
         len: 8,
         max_current: crate::led_strip::Current::Milliamps(250),
     }
@@ -45,7 +46,7 @@ impl LedStripGenerated {
     /// See the [`led_strip`](mod@crate::led_strip) module docs for usage
     /// examples.
     pub fn new(
-        pin: impl crate::esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        pin: crate::esp_hal::peripherals::GPIO2<'static>,
         channel_creator: impl crate::esp_hal::rmt::TxChannelCreator<'static, crate::esp_hal::Blocking>,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {

@@ -73,13 +73,25 @@ const SOS: [(Frame1d<1>, Duration); 18] = [
 
 led_strip! {
     LedStrip8 {
+        pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(200),
         max_frames: 2,
     }
 }
+#[cfg(target_arch = "riscv32")]
 led_strip! {
     SosStrip {
+        pin: GPIO8,
+        len: 1,
+        max_current: Current::Milliamps(10),
+        max_frames: 20,
+    }
+}
+#[cfg(target_arch = "xtensa")]
+led_strip! {
+    SosStrip {
+        pin: GPIO48,
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 20,

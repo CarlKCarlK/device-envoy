@@ -18,6 +18,7 @@ pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 /// Generate a 2D panel device type backed by `led_strip!`.
 ///
 /// Required fields:
+/// - `pin`
 /// - `len`
 /// - `led_layout`
 /// - `max_current`
@@ -31,6 +32,7 @@ pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 macro_rules! led2d {
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -43,6 +45,7 @@ macro_rules! led2d {
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -53,6 +56,7 @@ macro_rules! led2d {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -65,6 +69,7 @@ macro_rules! led2d {
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -75,6 +80,7 @@ macro_rules! led2d {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -87,6 +93,7 @@ macro_rules! led2d {
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -97,6 +104,7 @@ macro_rules! led2d {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -109,6 +117,7 @@ macro_rules! led2d {
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -119,6 +128,7 @@ macro_rules! led2d {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -131,6 +141,7 @@ macro_rules! led2d {
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -141,6 +152,7 @@ macro_rules! led2d {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -153,6 +165,7 @@ macro_rules! led2d {
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],
@@ -163,6 +176,7 @@ macro_rules! led2d {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -177,6 +191,7 @@ macro_rules! led2d {
     };
     (
         $name:ident {
+            pin: $pin:ident,
             len: $len:expr,
             led_layout: $led_layout:expr,
             max_current: $max_current:expr,
@@ -188,6 +203,7 @@ macro_rules! led2d {
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
+            $pin,
             $len,
             $max_current,
             [$($gamma)?],

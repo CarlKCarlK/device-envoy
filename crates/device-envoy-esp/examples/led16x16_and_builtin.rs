@@ -30,6 +30,7 @@ const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_ma
 
 led2d! {
     Led16x16Dual {
+        pin: GPIO2,
         len: 256,
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
@@ -38,8 +39,20 @@ led2d! {
     }
 }
 
+#[cfg(target_arch = "riscv32")]
 led_strip! {
     BuiltinLedDual {
+        pin: GPIO8,
+        len: 1,
+        max_current: Current::Milliamps(10),
+        max_frames: 4,
+    }
+}
+
+#[cfg(target_arch = "xtensa")]
+led_strip! {
+    BuiltinLedDual {
+        pin: GPIO48,
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 4,

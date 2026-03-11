@@ -46,6 +46,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
+    let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
 
     // Flash stores WiFi credentials after first setup
     let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
@@ -61,19 +62,18 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO1,    // Needs a PIO resource
         p.DMA_CH1, // Needs a DMA resource
         wifi_credentials_flash_block,
-        ButtonRp::new(p.PIN_15, PressedTo::Ground),
         "PicoDemo", // Setup SSID
         [],         // Any custom fields
         spawner,
     )?;
 
     // Try to connect. Will launch setup web page as needed.
-    // Returns network stack and button.
+    // Returns network stack.
     //
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
     let led8x12_ref = &led8x12;
-    let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+    let stack = wifi_auto
+        .connect(&mut button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led8x12_ref.write_text("JO\nIN", COLORS)? // Join setup network

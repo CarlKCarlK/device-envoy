@@ -18,9 +18,10 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 async fn connect_with_status(
     wifi_auto: impl WifiAuto<Error = Error>,
-) -> Result<(WifiStack, impl Button)> {
+    button: &mut impl Button,
+) -> Result<WifiStack> {
     wifi_auto
-        .connect(|wifi_auto_event| async move {
+        .connect(button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     // Captive portal is ready for Wi-Fi credential entry.
@@ -49,16 +50,16 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        ButtonEsp::new(p.GPIO6, PressedTo::Ground),
         "EnvoySetup",
         [],
         spawner,
     )?;
 
-    let (_stack, _button) = connect_with_status(wifi_auto).await?;
+    let _stack = connect_with_status(wifi_auto, &mut button).await?;
 
     core::future::pending().await
 }

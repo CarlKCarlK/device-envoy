@@ -95,6 +95,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Define HTML to ask for timezone on the captive portal.
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let mut button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?;
 
     // Set up Wifi via a captive portal.
     let wifi_auto = WifiAutoRp::new(
@@ -105,7 +106,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?,
         "www.picoclock.net", // Captive-portal SSID
         [timezone_field],    // Custom fields to ask for
         spawner,
@@ -117,8 +117,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect Wi-Fi, using the LED panel for status.
     let led8x12_ref = &led8x12;
     // TODO00 review this possible material change (may no longer apply): keep using ButtonWatch13 for stable press duration detection in fast modes.
-    let (stack, mut button_watch13) = wifi_auto
-        .connect(|event| {
+    let stack = wifi_auto
+        .connect(&mut button_watch13, |event| {
             let led8x12_ref = led8x12_ref;
             async move {
                 match event {

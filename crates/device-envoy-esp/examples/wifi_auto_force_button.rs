@@ -30,17 +30,17 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    let button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        ButtonEsp::new(p.GPIO6, PressedTo::Ground),
         "EnvoySetup",
         [],
         spawner,
     )?;
 
     let before_mode = wifi_auto.start_mode()?;
-    let changed = wifi_auto.force_captive_portal_if_pressed_state(true)?;
+    let changed = wifi_auto.force_captive_portal_if_pressed(&button)?;
     let after_mode = wifi_auto.start_mode()?;
 
     info!("wifi_auto_force_button");

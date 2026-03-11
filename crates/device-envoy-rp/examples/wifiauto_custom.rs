@@ -74,6 +74,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         "Name",
         "PICO",
     );
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     // Initialize WifiAutoRp
     let wifi_auto = WifiAutoRp::new(
@@ -84,7 +85,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface (required)
         p.DMA_CH0, // CYW43 DMA (required)
         wifi_credentials_flash_block,
-        ButtonRp::new(p.PIN_13, PressedTo::Ground),
         "PicoTime", // Captive-portal SSID
         [device_name_field],
         spawner,
@@ -95,8 +95,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect with status on display
     let led12x8_ref = &led12x8;
-    let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+    let stack = wifi_auto
+        .connect(&mut button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led12x8_ref.write_text("JOIN", COLORS);

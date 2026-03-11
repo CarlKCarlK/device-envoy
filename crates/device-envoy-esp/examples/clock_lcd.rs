@@ -62,19 +62,19 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let mut button_watch6 = ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?,
         "EnvoyClockLcd",
         [timezone_field],
         spawner,
     )?;
 
     let lcd_text_clock_ref = lcd_text_clock;
-    let (stack, _button) = wifi_auto
-        .connect(|wifi_auto_event| {
+    let stack = wifi_auto
+        .connect(&mut button_watch6, |wifi_auto_event| {
             let lcd_text_clock_ref = lcd_text_clock_ref;
             async move {
                 match wifi_auto_event {

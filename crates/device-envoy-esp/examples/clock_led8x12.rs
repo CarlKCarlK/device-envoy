@@ -84,19 +84,19 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let mut force_portal_button = ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner)?,
         CAPTIVE_PORTAL_SSID,
         [timezone_field],
         spawner,
     )?;
 
     let led8x12_clock_ref = &led8x12_clock;
-    let (stack, force_portal_button) = wifi_auto
-        .connect(|wifi_auto_event| async move {
+    let stack = wifi_auto
+        .connect(&mut force_portal_button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);

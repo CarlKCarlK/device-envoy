@@ -40,6 +40,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
     // Create timezone field
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
@@ -49,14 +50,13 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
         wifi_flash,
-        ButtonRp::new(p.PIN_13, PressedTo::Ground),
         "PicoAccess",                    // Captive-portal SSID
         [website_field, timezone_field], // Custom fields
         spawner,
     )?;
 
-    let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+    let stack = wifi_auto
+        .connect(&mut button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     defmt::info!("Captive portal ready");

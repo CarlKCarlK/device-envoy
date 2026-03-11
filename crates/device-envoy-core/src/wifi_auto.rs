@@ -183,9 +183,10 @@ impl Default for WifiAutoPersistedState {
 ///
 /// async fn connect_with_status(
 ///     wifi_auto: impl WifiAuto<Error = Infallible>,
-/// ) -> Result<(WifiStack, impl Button), Infallible> {
+///     button: &mut impl Button,
+/// ) -> Result<WifiStack, Infallible> {
 ///     wifi_auto
-///         .connect(|wifi_auto_event| async move {
+///         .connect(button, |wifi_auto_event| async move {
 ///             match wifi_auto_event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     // Captive portal is ready for Wi-Fi credential entry.
@@ -217,21 +218,23 @@ impl Default for WifiAutoPersistedState {
 /// #         OnEventFuture: Future<Output = Result<(), Self::Error>>,
 /// #     >(
 /// #         self,
+/// #         _button: &mut impl Button,
 /// #         mut on_event: OnEvent,
-/// #     ) -> Result<(WifiStack, DemoButton), Self::Error>
+/// #     ) -> Result<WifiStack, Self::Error>
 /// #     {
 /// #         on_event(WifiAutoEvent::Connecting {
 /// #             try_index: 0,
 /// #             try_count: 1,
 /// #         })
 /// #         .await?;
-/// #         let _todo_result: Result<(WifiStack, DemoButton), Self::Error> = todo!();
+/// #         let _todo_result: Result<WifiStack, Self::Error> = todo!();
 /// #         _todo_result
 /// #     }
 /// # }
 /// # fn main() {
 /// #     let wifi_auto = DemoWifiAuto;
-/// #     let _future = connect_with_status(wifi_auto);
+/// #     let mut demo_button = DemoButton;
+/// #     let _future = connect_with_status(wifi_auto, &mut demo_button);
 /// # }
 /// ```
 #[allow(async_fn_in_trait)]
@@ -244,8 +247,9 @@ pub trait WifiAuto {
     /// See the [WifiAuto trait documentation](Self) for usage examples.
     async fn connect<OnEvent, OnEventFuture>(
         self,
+        button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<(WifiStack, impl Button), Self::Error>
+    ) -> Result<WifiStack, Self::Error>
     where
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<(), Self::Error>>;

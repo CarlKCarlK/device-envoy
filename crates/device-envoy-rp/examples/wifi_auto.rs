@@ -88,6 +88,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         "Location",
         "Living Room",
     );
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,                     // CYW43 power
@@ -97,15 +98,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,                       // CYW43 PIO interface
         p.DMA_CH0,                    // CYW43 DMA channel
         wifi_credentials_flash_block, // Flash block storing Wi-Fi creds
-        ButtonRp::new(p.PIN_13, PressedTo::Ground),            // Button wiring
         "Pico",                       // Captive portal SSID to display
         [timezone_field, device_name_field, location_field],
         spawner,
     )?;
 
     let led4_ref = &led4;
-    let (stack, mut button) = wifi_auto
-        .connect(|event| async move {
+    let stack = wifi_auto
+        .connect(&mut button, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led4_ref.write_text(['C', 'O', 'N', 'N'], BlinkState::BlinkingAndOn);

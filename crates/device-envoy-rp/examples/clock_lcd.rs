@@ -65,6 +65,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Define timezone field for captive portal
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let mut button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?;
 
     // Set up WiFi via captive portal
     let wifi_auto = WifiAutoRp::new(
@@ -75,7 +76,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,    // CYW43 PIO interface
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
-        ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?,
         "www.picoclock.net",
         [timezone_field],
         spawner,
@@ -83,8 +83,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect to WiFi
     let lcd_text_ref = lcd_text;
-    let (stack, _button) = wifi_auto
-        .connect(|wifi_auto_event| {
+    let stack = wifi_auto
+        .connect(&mut button_watch13, |wifi_auto_event| {
             let lcd_text_ref = lcd_text_ref;
             async move {
                 match wifi_auto_event {

@@ -152,6 +152,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let mut button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?;
 
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,
@@ -161,15 +162,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,
         p.DMA_CH0,
         wifi_credentials_flash_block,
-        ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)?,
         "www.picoclock.net",
         [timezone_field],
         spawner,
     )?;
 
     let audio_player10_ref = audio_player8;
-    let (stack, mut button_watch13) = wifi_auto
-        .connect(|event| async move {
+    let stack = wifi_auto
+        .connect(&mut button_watch13, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready");

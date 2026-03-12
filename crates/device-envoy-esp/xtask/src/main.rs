@@ -111,6 +111,8 @@ struct Cli {
 enum Commands {
     /// Run all checks: lib + all examples + docs
     CheckAll,
+    /// Check documentation workflows and build docs
+    CheckDocs,
     /// Build all examples (catches linker errors)
     CheckExamples,
     /// Verify README Rust example extraction + compile
@@ -121,9 +123,46 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Commands::CheckAll => check_all(),
+        Commands::CheckDocs => check_docs(),
         Commands::CheckExamples => check_examples(),
         Commands::CheckReadmeExample => check_readme_example(),
     }
+}
+
+fn check_docs() -> ExitCode {
+    let root = workspace_root();
+    println!("{}", "==> cargo check-docs: device-envoy-esp".cyan().bold());
+
+    if let Err(err) = ir_generated::generate_ir_generated(&root) {
+        eprintln!("Error generating ir_generated.rs: {err}");
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = led_generated::generate_led_generated(&root) {
+        eprintln!("Error generating led_generated.rs: {err}");
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = check_generated_doc_stubs(&root) {
+        eprintln!("Generated doc stub consistency check failed:\n{err}");
+        return ExitCode::FAILURE;
+    }
+    if check_readme_example() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+
+    println!("{}", "--> doc".cyan());
+    if !run(Command::new("cargo").current_dir(&root).args([
+        "doc",
+        "--no-deps",
+        "--release",
+        "--target",
+        TARGET_C6,
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+
+    println!("\n{}", "==> Docs check passed! 🎉".green().bold());
+    ExitCode::SUCCESS
 }
 
 fn check_all() -> ExitCode {

@@ -3,7 +3,92 @@
 //! Use [`servo_player!`] for typed servo players.
 // TODO0 Document LEDC timer/channel ownership protocol and link-time claim behavior in module docs/README.
 
-/// Create a typed servo player with keyword configuration.
+/// Sample generated servo-player type documentation.
+pub mod servo_player_generated;
+
+/// Combine multiple animation step arrays into one larger array.
+///
+/// This macro allows combining any number of const arrays with a clean syntax.
+///
+/// **Syntax:**
+///
+/// ```text
+/// combine!()
+/// combine!(<steps_expr>)
+/// combine!(<first_steps_expr>, <second_steps_expr>, ... )
+/// ```
+///
+/// See the [servo module documentation](mod@crate::servo) for usage examples.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! combine {
+    () => {
+        []
+    };
+    ($single:expr) => {
+        $single
+    };
+    ($first:expr, $second:expr) => {{
+        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
+        const SECOND: &[(u16, ::embassy_time::Duration)] = &$second;
+        $crate::servo::combine::<{FIRST.len()}, {SECOND.len()}, {FIRST.len() + SECOND.len()}>($first, $second)
+    }};
+    ($first:expr, $($rest:expr),+ $(,)?) => {{
+        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
+        const REST: &[(u16, ::embassy_time::Duration)] = &$crate::combine!($($rest),+);
+        $crate::servo::combine::<{FIRST.len()}, {REST.len()}, {FIRST.len() + REST.len()}>($first, $crate::combine!($($rest),+))
+    }};
+}
+
+/// Macro to generate a servo player struct type (includes syntax details).
+///
+/// This page provides the primary documentation for configuring individual servo players.
+///
+/// See the [servo module documentation](mod@crate::servo) for complete examples.
+///
+/// **After reading the configuration details below, see also:**
+///
+/// - [`servo`](mod@crate::servo) module - Complete examples and usage patterns
+///
+/// Use this macro when your project has a servo that needs scripted animation control.
+/// The macro generates a struct type and spawns a background task to execute
+/// animation sequences.
+///
+/// **Syntax:**
+///
+/// ```text
+/// servo_player! {
+///     <Name> {
+///         pin: <pin_ident>,
+///         timer: <timer_ident>,
+///         channel: <channel_ident>,
+///         min_us: <u32_expr>,         // optional
+///         max_us: <u32_expr>,         // optional
+///         max_degrees: <u16_expr>,    // optional
+///         max_steps: <usize_expr>,    // optional
+///     }
+/// }
+/// ```
+///
+/// # Configuration
+///
+/// **Required fields:**
+///
+/// - `pin` - GPIO pin for servo output
+/// - `timer` - [LEDC](crate#glossary) timer resource
+/// - `channel` - [LEDC](crate#glossary) channel resource
+///
+/// **Optional fields:**
+///
+/// - `min_us` - Minimum pulse width in microseconds for 0° (default: `500`)
+/// - `max_us` - Maximum pulse width in microseconds for `max_degrees` (default: `2500`)
+/// - `max_degrees` - Maximum servo angle in degrees (default: `180`)
+/// - `max_steps` - Maximum number of animation steps (default: `16`)
+///
+/// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`,
+/// `hold()`, and `relax()` are still supported.
+///
+/// See the [servo module documentation](mod@crate::servo) for details and examples.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! servo_player {

@@ -42,7 +42,26 @@ pub enum AtEnd {
 
 /// Build a const linear sequence of animation steps as an array.
 ///
+/// This function creates `N` evenly spaced degree targets from `start_degrees`
+/// to `end_degrees`, each using the same per-step duration.
+///
+/// **Syntax:**
+///
+/// ```text
+/// linear::<N>(<start_degrees>, <end_degrees>, <total_duration>)
+/// ```
+///
+/// **Behavior:**
+///
+/// - `N` must be greater than zero.
+/// - When `N > 1`, the first step is `start_degrees` and the last step is
+///   `end_degrees`.
+/// - Each returned step uses the same duration, derived from
+///   `total_duration / N`.
+///
 /// This uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html) for step timing.
+///
+/// See the [servo module documentation](mod@crate::servo) for usage examples.
 #[must_use]
 pub const fn linear<const N: usize>(
     start_degrees: u16,

@@ -11,8 +11,7 @@
 //!   type (includes syntax details).
 //! - [`combine!`](macro@crate::servo::combine) & [`linear`] — Macro and function for creating
 //!   complex motion sequences.
-//! - [`ServoRp`] — Direct servo control without animation support. Use `ServoRp` for direct,
-//!   immediate control; use `servo_player` when you want motion to continue in the background.
+//! - [`servo!`](macro@crate::servo::servo) — Direct servo control without animation support.
 
 #![doc = include_str!("../docs/how_servos_work.md")]
 
@@ -152,7 +151,7 @@ pub mod servo_player_generated;
 /// combine!(<first_steps_expr>, <second_steps_expr>, ... )
 /// ```
 ///
-/// See the [servo_player module documentation](mod@crate::servo) for usage.
+/// See the [servo module documentation](mod@crate::servo) for usage.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! combine {
@@ -178,13 +177,13 @@ macro_rules! combine {
 ///
 /// This page provides the primary documentation for configuring individual servo players.
 ///
-/// See the [servo_player module documentation](mod@crate::servo) for complete
+/// See the [servo module documentation](mod@crate::servo) for complete
 /// examples.
 
 ///
 /// **After reading the configuration details below, see also:**
 ///
-/// - [`servo_player`](mod@crate::servo) module — Complete examples and usage
+/// - [`servo`](mod@crate::servo) module — Complete examples and usage
 ///   patterns
 ///
 /// Use this macro when your project has a servo that needs scripted animation control.
@@ -207,11 +206,11 @@ macro_rules! combine {
 ///
 /// # Configuration
 ///
-/// ## Required Fields
+/// **Required fields:**
 ///
 /// - `pin` — GPIO pin for servo
 ///
-/// ## Optional Fields
+/// **Optional fields:**
 ///
 /// - `min_us` — Minimum pulse width in microseconds for 0° (default: 500)
 /// - `max_us` — Maximum pulse width in microseconds for max_degrees

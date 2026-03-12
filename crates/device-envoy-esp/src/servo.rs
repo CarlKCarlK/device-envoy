@@ -1,11 +1,36 @@
 //! A device abstraction for hobby servos on ESP LEDC PWM.
 //!
-//! This module provides both direct servo control (`servo!`) and
-//! servo-player animation control (`servo_player!`, [`ServoPlayer`], [`AtEnd`], [`linear`], `combine!`).
+//! This module provides both direct servo control ([`servo!`](macro@crate::servo::servo)) and
+//! servo animationl ([`servo_player!`](macro@crate::servo::servo_player)).
 //!
 //! Use [`servo!`] for a keyword-driven typed constructor.
 //!
-//! # Example: Direct Servo Control
+//! **After reading the examples below, see also:**
+//!
+//! - [`servo!`](macro@crate::servo::servo) — Direct servo control without animation support.
+//! - [`servo_player!`](macro@crate::servo::servo_player) — Macro to generate a servo player struct
+//!   type (includes syntax details). See [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated)
+//!   for a sample of a generated type.
+//! - [`combine!`](macro@crate::servo::combine) & [`linear`] — Macro and function for creating
+//!   complex motion sequences.
+//! - [`Servo`] — Trait defining core methods and constants for direct servo control.
+//! - [`ServoPlayer`] — Trait defining core methods and constants for animatable servos.
+//!
+#![doc = include_str!("../docs/how_servos_work.md")]
+//!
+//! This device abstraction, `servo_player`, adds a background software task around the hardware
+//! control signal.
+//!
+//! # Controlling Multiple Servos
+//!
+//! Supports multiple servos, where each servo consumes one [LEDC](crate#glossary) timer resource and
+//! one [LEDC](crate#glossary) channel resource. The macro-generated link-time ownership claims enforce
+//! this exclusivity so duplicate timer/channel selections fail at link time.
+//!
+//! # Example: Basic Servo Control
+//!
+//! This example demonstrates basic servo control: moving to a position, relaxing,
+//! and using animation. Here, the generated struct type is named `Servo11`.
 //!
 //! ```rust,no_run
 //! # #![no_std]
@@ -38,7 +63,11 @@
 //! }
 //! ```
 //!
-//! # Example: Servo Player Animation
+//! # Example: Multi-Step Animation
+//!
+//! This example combines 40 animation steps using `linear` and `combine!` to
+//! sweep up, hold, sweep down, hold pattern. Here, the generated struct type is named
+//! `ServoSweep`.
 //!
 //! ```rust,no_run
 //! # #![no_std]
@@ -86,6 +115,8 @@ use esp_hal::time::Rate;
 use static_cell::StaticCell;
 
 #[doc(inline)]
+pub use crate::combine;
+#[doc(inline)]
 pub use crate::servo_player::servo_player;
 #[doc(hidden)]
 pub use device_envoy_core::servo::{
@@ -95,6 +126,12 @@ pub use device_envoy_core::servo::{
 pub use device_envoy_core::servo::{
     combine, linear, AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic,
 };
+
+/// Sample generated servo-player type documentation.
+pub mod servo_player_generated {
+    #[cfg(doc)]
+    pub use crate::servo_player::servo_player_generated::*;
+}
 
 const SERVO_PERIOD_US: u32 = 20_000;
 
@@ -230,7 +267,38 @@ impl Servo for ServoEsp {
 #[doc(hidden)]
 pub use paste;
 
-/// Create a typed servo constructor with keyword configuration.
+/// Macro to generate a direct-servo struct type (includes syntax details).
+///
+/// **See the [servo module documentation](mod@crate::servo) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// servo! {
+///     <Name> {
+///         pin: <pin_ident>,
+///         timer: <timer_ident>,
+///         channel: <channel_ident>,
+///         min_us: <u32_expr>,         // optional
+///         max_us: <u32_expr>,         // optional
+///         max_degrees: <u16_expr>,    // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` - GPIO pin for servo output
+/// - `timer` - [LEDC](crate#glossary) timer resource
+/// - `channel` - [LEDC](crate#glossary) channel resource
+///
+/// **Optional fields:**
+///
+/// - `min_us` - Minimum pulse width in microseconds for 0° (default: `500`)
+/// - `max_us` - Maximum pulse width in microseconds for `max_degrees` (default: `2500`)
+/// - `max_degrees` - Maximum servo angle in degrees (default: `180`)
+///
+/// See the [servo module documentation](mod@crate::servo) for details and examples.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! servo {

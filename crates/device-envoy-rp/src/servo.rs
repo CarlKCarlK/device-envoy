@@ -1,21 +1,20 @@
 //! A device abstraction for hobby servos.
 //!
-//! This module provides both direct servo control (`servo!`, [`ServoRp`]) and
-//! servo-player animation control (`servo_player!`, [`ServoPlayer`], [`AtEnd`], [`linear`], [`combine!`]).
+//! This module provides both direct servo control ([`servo!`](macro@crate::servo::servo)) and
+//! servo animationl ([`servo_player!`](macro@crate::servo::servo_player)).
 //!
 //! Use the [`servo!`] macro for a keyword-driven constructor with defaults.
 //!
 //! **After reading the examples below, see also:**
 //!
+//! - [`servo!`](macro@crate::servo::servo) — Direct servo control without animation support.
 //! - [`servo_player!`](macro@crate::servo::servo_player) — Macro to generate a servo player struct
 //!   type (includes syntax details). See [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated)
 //!   for a sample of a generated type.
-//! - [`ServoPlayerGenerated`](servo_player_generated::ServoPlayerGenerated) — Sample struct
-//!   type showing all methods and associated constants.
 //! - [`combine!`](macro@crate::servo::combine) & [`linear`] — Macro and function for creating
 //!   complex motion sequences.
-//! - [`ServoRp`] — Direct servo control without animation support. Use `ServoRp` for direct,
-//!   immediate control; use `servo_player` when you want motion to continue in the background.
+//! - [`Servo`] — Trait defining core methods and constants for direct servo control.
+//! - [`ServoPlayer`] — Trait defining core methods and constants for animatable servos.
 //!
 #![doc = include_str!("../docs/how_servos_work.md")]
 //!
@@ -177,13 +176,20 @@ pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 /// }
 /// ```
 ///
-/// Required fields: `pin`, `slice`.
+/// **Required fields:**
 ///
-/// Optional fields: `min_us`, `max_us`, `max_degrees` (defaults to
-/// [`SERVO_MIN_US_DEFAULT`]/[`SERVO_MAX_US_DEFAULT`]/[`ServoRp::DEFAULT_MAX_DEGREES`]),
-/// plus `channel: A/B` or `odd`/`even` to override the inferred channel.
+/// - `pin` - GPIO pin for servo output
+/// - `slice` - [PWM slice](crate#glossary) resource
 ///
-/// See [`ServoRp`] for details and examples.
+/// **Optional fields:**
+///
+/// - `channel: A | B` - Explicitly choose PWM output channel
+/// - `odd` / `even` - Shorthand channel selection (`odd` => `B`, `even` => `A`)
+/// - `min_us` - Minimum pulse width in microseconds for 0° (default: [`SERVO_MIN_US_DEFAULT`])
+/// - `max_us` - Maximum pulse width in microseconds for `max_degrees` (default: [`SERVO_MAX_US_DEFAULT`])
+/// - `max_degrees` - Maximum servo angle in degrees (default: `180`)
+///
+/// See the [servo module documentation](mod@crate::servo) for details and examples.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! servo {
@@ -806,7 +812,7 @@ servo_pin_map!(PIN_47, PWM_SLICE11, B);
 
 /// A device abstraction for hobby servos.
 ///
-/// Use `ServoRp` for direct, immediate control when you want to manually manage servo
+/// Use [`servo!`](macro@crate::servo::servo) for direct, immediate control when you want to manually manage servo
 /// positioning. Use [`servo_player`](mod@crate::servo) instead when you need
 /// background animation sequences or want motion to continue while your code does other work.
 ///
@@ -865,14 +871,14 @@ impl<'d> ServoRp<'d> {
 
     /// Create a servo on a PWM output A channel.
     ///
-    /// See the [`ServoRp`] example for usage.
+    /// See the [servo module documentation](mod@crate::servo) for usage examples.
     pub(crate) fn new_output_a(pwm: Pwm<'d>, min_us: u16, max_us: u16, max_degrees: u16) -> Self {
         Self::init(pwm, ServoChannel::A, min_us, max_us, max_degrees)
     }
 
     /// Create a servo on a PWM output B channel.
     ///
-    /// See the [`ServoRp`] example for usage.
+    /// See the [servo module documentation](mod@crate::servo) for usage examples.
     pub(crate) fn new_output_b(pwm: Pwm<'d>, min_us: u16, max_us: u16, max_degrees: u16) -> Self {
         Self::init(pwm, ServoChannel::B, min_us, max_us, max_degrees)
     }
@@ -939,7 +945,7 @@ impl<'d> ServoRp<'d> {
 
     /// Set raw pulse width in microseconds.
     ///
-    /// See the [`ServoRp`] example for usage.
+    /// See the [servo module documentation](mod@crate::servo) for usage examples.
     /// NOTE: only update the *compare* register; do not reconfigure the slice.
     #[doc(hidden)]
     pub fn set_pulse_us(&self, us: u16) {
@@ -974,7 +980,7 @@ impl<'d> Servo for ServoRp<'d> {
     ///
     /// Automatically enables the servo if it was disabled.
     ///
-    /// See the [`ServoRp`] example for usage.
+    /// See the [servo module documentation](mod@crate::servo) for usage examples.
     fn set_degrees(&self, degrees: u16) {
         assert!((0..=self.max_degrees).contains(&degrees));
         self.ensure_enabled();
@@ -990,7 +996,7 @@ impl<'d> Servo for ServoRp<'d> {
     /// This allows the servo to relax and move freely, reducing power consumption
     /// and mechanical stress.
     ///
-    /// See the [`ServoRp`] example for usage.
+    /// See the [servo module documentation](mod@crate::servo) for usage examples.
     fn relax(&self) {
         if self.state.get() == ServoState::Disabled {
             return;

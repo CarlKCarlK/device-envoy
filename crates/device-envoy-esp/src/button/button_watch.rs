@@ -261,7 +261,8 @@ async fn signal_press_durations<B: __ButtonMonitor>(
 
 /// Creates a button monitoring device abstraction with a background task.
 ///
-/// This macro creates a generated wrapper type with RP-style constructor ergonomics.
+/// This macro creates a button monitor that runs in a dedicated background task,
+/// providing continuous monitoring without interruption.
 ///
 /// See [`ButtonWatchGenerated`](crate::button::button_watch_generated::ButtonWatchGenerated)
 /// for a sample of what the macro generates.
@@ -270,7 +271,63 @@ async fn signal_press_durations<B: __ButtonMonitor>(
 ///
 /// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
 ///
-/// Syntax:
+/// # Use Cases
+///
+/// Use `button_watch!` instead of [`ButtonEsp`](super::ButtonEsp) when you need continuous monitoring
+/// that works even in fast loops or `select()` operations. [`ButtonEsp`](super::ButtonEsp) starts
+/// fresh monitoring on each call to `wait_for_press()`, which can miss events in busy loops.
+///
+/// # Parameters
+///
+/// - `name`: The struct name for the button watch device
+/// - `pin`: The GPIO pin connected to the button
+///
+/// Optional:
+/// - `vis`: Visibility modifier (default: private)
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// use device_envoy_esp::button_watch;
+/// use device_envoy_esp::button::PressDuration;
+/// use device_envoy_esp::button::PressedTo;
+/// use device_envoy_esp::button::Button as _;
+/// use embassy_executor::Spawner;
+/// # use esp_backtrace as _;
+/// # #[panic_handler]
+/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+///
+/// button_watch! {
+///     ButtonWatch13 {
+///         pin: GPIO13,
+///     }
+/// }
+///
+/// async fn example(p: esp_hal::peripherals::Peripherals, spawner: Spawner) {
+///     // Create the button monitor (spawns background task automatically)
+///     let mut button_watch13 = ButtonWatch13::new(p.GPIO13, PressedTo::Ground, spawner)
+///         .await
+///         .expect("Failed to create button monitor");
+///
+///     loop {
+///         // Wait for button press - never misses events even if this loop is slow
+///         match button_watch13.wait_for_press_duration().await {
+///             PressDuration::Short => {
+///                 // Handle short press
+/// #               break;
+///             }
+///             PressDuration::Long => {
+///                 // Handle long press
+/// #               break;
+///             }
+///         }
+///     }
+/// }
+/// ```
+///
+/// **Syntax:**
 ///
 /// ```text
 /// button_watch! {
@@ -287,6 +344,8 @@ macro_rules! button_watch {
 }
 
 /// Implementation macro for [`button_watch!`].
+///
+/// Do not call directly - use [`button_watch!`](crate::button_watch!) instead.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __button_watch_impl {
@@ -338,6 +397,12 @@ macro_rules! __button_watch_impl {
 
             impl $name {
                 /// Creates a new button monitor and spawns its background task.
+                ///
+                /// # Parameters
+                ///
+                /// - `button_pin`: GPIO pin for the button
+                /// - `pressed_to`: How the button is wired ([`PressedTo::Ground`] or [`PressedTo::Voltage`])
+                /// - `spawner`: Task spawner for background operations
                 ///
                 /// # Errors
                 ///

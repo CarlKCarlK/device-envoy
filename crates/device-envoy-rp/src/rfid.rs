@@ -53,6 +53,8 @@ impl Mfrc522Device {
 
 /// A device abstraction for an RFID reader using the MFRC522 chip.
 ///
+/// # Example
+///
 /// ```rust,no_run
 /// # #![no_std]
 /// # use panic_probe as _;

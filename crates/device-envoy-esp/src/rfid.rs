@@ -1,10 +1,10 @@
 //! A device abstraction for RFID readers using the MFRC522 chip.
 //!
-//! See [`RfidEsp`] for the primary example.
+//! See [`Rfid`] for the primary example.
 //!
-//! You can create up to two concurrent `RfidEsp` instances per program; a third is expected to fail at runtime because the `rfid` task pool uses `pool_size = 2`.
+//! You can create up to two concurrent `Rfid` instances per program; a third is expected to fail at runtime because the `rfid` task pool uses `pool_size = 2`.
 
-pub use device_envoy_core::rfid::{Rfid, RfidEvent, RfidStatic};
+pub use device_envoy_core::rfid::{Rfid as RfidTrait, RfidEvent, RfidStatic};
 use embassy_executor::Spawner;
 use embassy_time::{Instant, Timer};
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
@@ -22,12 +22,14 @@ type Mfrc522Device =
 
 /// A device abstraction for an RFID reader using the MFRC522 chip.
 ///
+/// # Example
+///
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
 /// use device_envoy_esp::{
 ///     Result, init_and_start,
-///     rfid::{Rfid as _, RfidEsp, RfidEvent, RfidStatic},
+///     rfid::{Rfid, RfidEvent, RfidStatic, RfidTrait as _},
 /// };
 /// # use esp_backtrace as _;
 /// # use log::info;
@@ -42,9 +44,9 @@ type Mfrc522Device =
 ///
 /// async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
 ///     init_and_start!(p);
-///     static RFID_STATIC: RfidStatic = RfidEsp::new_static();
+///     static RFID_STATIC: RfidStatic = Rfid::new_static();
 ///
-///     let rfid = RfidEsp::new(
+///     let rfid = Rfid::new(
 ///         &RFID_STATIC,
 ///         p.SPI2,
 ///         p.GPIO6,
@@ -62,11 +64,11 @@ type Mfrc522Device =
 ///     }
 /// }
 /// ```
-pub struct RfidEsp<'a> {
+pub struct Rfid<'a> {
     rfid_static: &'a RfidStatic,
 }
 
-impl RfidEsp<'_> {
+impl Rfid<'_> {
     /// Create static channel resources for an RFID reader.
     #[must_use]
     pub const fn new_static() -> RfidStatic {
@@ -75,7 +77,7 @@ impl RfidEsp<'_> {
 
     /// Create a new RFID reader device abstraction.
     ///
-    /// See the [RfidEsp struct example](Self) for usage.
+    /// See the [Rfid struct example](Self) for usage.
     pub async fn new(
         rfid_static: &'static RfidStatic,
         spi: impl Instance + 'static,
@@ -93,7 +95,7 @@ impl RfidEsp<'_> {
     }
 }
 
-impl Rfid for RfidEsp<'_> {
+impl RfidTrait for Rfid<'_> {
     async fn wait_for_tap(&self) -> RfidEvent {
         self.rfid_static.receive().await
     }

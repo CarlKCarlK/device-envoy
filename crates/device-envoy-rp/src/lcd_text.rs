@@ -35,8 +35,7 @@
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
 //! # use core::convert::Infallible;
-//! use device_envoy_rp::lcd_text::LcdText as _;
-//! use device_envoy_rp::{Result, lcd_text};
+//! use device_envoy_rp::{Result, lcd_text, lcd_text::LcdText as _};
 //!
 //! lcd_text! {
 //!     i2c: I2C0,
@@ -74,8 +73,7 @@
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
 //! # use core::convert::Infallible;
-//! use device_envoy_rp::lcd_text::LcdText as _;
-//! use device_envoy_rp::{Result, i2cs};
+//! use device_envoy_rp::{Result, i2cs, lcd_text::LcdText as _};
 //!
 //! i2cs! {
 //!     i2c: I2C0,

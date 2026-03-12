@@ -15,10 +15,9 @@ use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_SECOND};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::i2cs;
-use device_envoy_rp::lcd_text::LcdText as _;
 use device_envoy_rp::wifi_auto::WifiAutoRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::{Error, Result};
+use device_envoy_rp::{Error, Result, lcd_text::LcdText as _};
 use embassy_executor::Spawner;
 use panic_probe as _;
 

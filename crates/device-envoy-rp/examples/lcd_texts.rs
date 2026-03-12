@@ -3,9 +3,7 @@
 #![no_main]
 
 use core::{convert::Infallible, panic};
-use device_envoy_rp::Result;
-use device_envoy_rp::i2cs;
-use device_envoy_rp::lcd_text::LcdText as _;
+use device_envoy_rp::{Result, i2cs, lcd_text::LcdText as _};
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 

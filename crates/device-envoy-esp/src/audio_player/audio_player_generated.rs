@@ -64,12 +64,12 @@ impl AudioPlayerGenerated {
         data_pin: crate::esp_hal::peripherals::GPIO21<'static>,
         bit_clock_pin: crate::esp_hal::peripherals::GPIO12<'static>,
         word_select_pin: crate::esp_hal::peripherals::GPIO13<'static>,
-        pio: crate::esp_hal::peripherals::I2S0<'static>,
+        i2s: crate::esp_hal::peripherals::I2S0<'static>,
         dma: crate::esp_hal::peripherals::DMA<'static>,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
         static INSTANCE: AudioPlayerGenerated = AudioPlayerGenerated;
-        let _ = (data_pin, bit_clock_pin, word_select_pin, pio, dma, spawner);
+        let _ = (data_pin, bit_clock_pin, word_select_pin, i2s, dma, spawner);
         Ok(&INSTANCE)
     }
 }

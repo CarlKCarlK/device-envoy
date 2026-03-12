@@ -522,6 +522,9 @@ pub async fn device_loop<
 /// }
 /// ```
 ///
+/// Field order is flexible. Optional fields may be omitted or specified in
+/// any order.
+///
 /// **Inputs:**
 ///
 /// - `$vis` - Optional generated type visibility (for example: `pub`,

@@ -1,6 +1,6 @@
 [package]
 name = "device-envoy-esp"
-version = "0.0.1-alpha"
+version = "0.0.4-alpha.2"
 edition = "2021"
 
 [features]

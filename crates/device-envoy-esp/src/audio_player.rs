@@ -69,9 +69,9 @@
 //! // Generate `AudioPlayer8`, a struct type with the specified configuration.
 //! audio_player! {
 //!     AudioPlayer8 {
-//!         data_pin: PIN_8,
-//!         bit_clock_pin: PIN_9,
-//!         word_select_pin: PIN_10,
+//!         data_pin: GPIO8,
+//!         bit_clock_pin: GPIO9,
+//!         word_select_pin: GPIO10,
 //!         sample_rate_hz: VOICE_22050_HZ, // Convenience constant for this example; any hardware-supported sample rate can be used.
 //!         max_volume: Volume::percent(50),
 //!     }
@@ -96,7 +96,7 @@
 //!     // Initializes the board and creates `p` (the peripheral bundle).
 //!     init_and_start!(p);
 //!     // Create an `AudioPlayer8` instance with the specified pins and resources.
-//!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
+//!     let audio_player8 = AudioPlayer8::new(p.GPIO8, p.GPIO9, p.GPIO10, p.I2S0, p.DMA_CH0, spawner)?;
 //!
 //!     audio_player8.play(
 //!         [
@@ -140,11 +140,11 @@
 //!
 //! audio_player! {
 //!     AudioPlayer8 {
-//!         data_pin: PIN_8,
-//!         bit_clock_pin: PIN_9,
-//!         word_select_pin: PIN_10,
+//!         data_pin: GPIO8,
+//!         bit_clock_pin: GPIO9,
+//!         word_select_pin: GPIO10,
 //!         sample_rate_hz: VOICE_22050_HZ,
-//!         pio: PIO0,                             // optional, defaults to PIO0
+//!         i2s: I2S0,                             // optional, defaults to I2S0
 //!         dma: DMA_CH1,                          // optional, defaults to DMA_CH0
 //!         max_clips: 8,                          // optional, defaults to 16
 //!         max_volume: Volume::spinal_tap(11),    // optional, defaults to Volume::MAX
@@ -184,9 +184,9 @@
 //!         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
 //!
 //!     init_and_start!(p);
-//!     let mut button = ButtonEsp::new(p.PIN_13, PressedTo::Ground);
+//!     let mut button = ButtonEsp::new(p.GPIO13, PressedTo::Ground);
 //!     let audio_player8 =
-//!         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner)?;
+//!         AudioPlayer8::new(p.GPIO8, p.GPIO9, p.GPIO10, p.I2S0, p.DMA_CH1, spawner)?;
 //!
 //!     const VOLUME_STEPS_PERCENT: [u8; 7] = [50, 25, 12, 6, 3, 1, 0];
 //!
@@ -251,9 +251,9 @@
 //! // To save memory, we use a lower sample rate.
 //! audio_player! {
 //!     AudioPlayer8 {
-//!         data_pin: PIN_8,
-//!         bit_clock_pin: PIN_9,
-//!         word_select_pin: PIN_10,
+//!         data_pin: GPIO8,
+//!         bit_clock_pin: GPIO9,
+//!         word_select_pin: GPIO10,
 //!         sample_rate_hz: NARROWBAND_8000_HZ,
 //!         max_volume: Volume::percent(50),
 //!     }
@@ -311,7 +311,7 @@
 //!         .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
 //!
 //!     init_and_start!(p);
-//!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
+//!     let audio_player8 = AudioPlayer8::new(p.GPIO8, p.GPIO9, p.GPIO10, p.I2S0, p.DMA_CH0, spawner)?;
 //!
 //!     audio_player8.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);
 //!     core::future::pending().await // run forever
@@ -640,7 +640,7 @@ async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) ->
 ///         bit_clock_pin: <pin_ident>,
 ///         word_select_pin: <pin_ident>,
 ///         sample_rate_hz: <sample_rate_expr>,
-///         pio: <pio_ident>,                 // optional
+///         i2s: <i2s_ident>,                // optional (for example: I2S0)
 ///         dma: <dma_ident>,                 // optional
 ///         max_clips: <usize_expr>,          // optional
 ///         max_volume: <Volume_expr>,        // optional
@@ -648,6 +648,9 @@ async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) ->
 ///     }
 /// }
 /// ```
+///
+/// Field order is flexible. Optional fields may be omitted or specified in
+/// any order.
 ///
 /// **Inputs:**
 ///
@@ -665,7 +668,7 @@ async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) ->
 ///
 /// **Optional fields:**
 ///
-/// - `pio` - PIO resource (default: `PIO0`)
+/// - `i2s` - I2S peripheral resource (default: `I2S0`)
 /// - `dma` - DMA channel (default: `DMA_CH0`)
 /// - `max_clips` - Maximum clips per queued play request (default: `16`)
 /// - `max_volume` - Runtime volume ceiling (default: [`Volume::MAX`])
@@ -709,7 +712,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: _UNSET_,
             word_select_pin: _UNSET_,
             sample_rate_hz: _UNSET_,
-            pio: I2S0,
+            i2s: I2S0,
             dma: DMA_CH0,
             max_clips: 16,
             max_volume: $crate::audio_player::Volume::MAX,
@@ -731,7 +734,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: _UNSET_,
             word_select_pin: _UNSET_,
             sample_rate_hz: _UNSET_,
-            pio: I2S0,
+            i2s: I2S0,
             dma: DMA_CH0,
             max_clips: 16,
             max_volume: $crate::audio_player::Volume::MAX,
@@ -747,7 +750,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -762,7 +765,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
@@ -778,7 +781,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -793,7 +796,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz_value,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
@@ -809,7 +812,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -824,7 +827,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bclk_pin_value,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
@@ -840,7 +843,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -855,7 +858,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $lrc_pin_value,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
@@ -871,12 +874,12 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        fields: [ pio: $pio_value:ident $(, $($rest:tt)* )? ]
+        fields: [ i2s: $i2s_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__audio_player_impl! {
             @__fill_defaults
@@ -886,7 +889,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio_value,
+            i2s: $i2s_value,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
@@ -902,7 +905,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -917,7 +920,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma_value,
             max_clips: $max_clips,
             max_volume: $max_volume,
@@ -933,7 +936,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -948,7 +951,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma,
             max_clips: $max_clips_value,
             max_volume: $max_volume,
@@ -964,7 +967,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -979,7 +982,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume_value,
@@ -995,7 +998,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -1010,7 +1013,7 @@ macro_rules! __audio_player_impl {
             bit_clock_pin: $bit_clock_pin,
             word_select_pin: $word_select_pin,
             sample_rate_hz: $sample_rate_hz,
-            pio: $pio,
+            i2s: $i2s,
             dma: $dma,
             max_clips: $max_clips,
             max_volume: $max_volume,
@@ -1026,7 +1029,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:tt,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -1043,7 +1046,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: _UNSET_,
         word_select_pin: $word_select_pin:tt,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -1060,7 +1063,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:ident,
         word_select_pin: _UNSET_,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -1077,7 +1080,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:ident,
         word_select_pin: $word_select_pin:ident,
         sample_rate_hz: _UNSET_,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -1094,7 +1097,7 @@ macro_rules! __audio_player_impl {
         bit_clock_pin: $bit_clock_pin:ident,
         word_select_pin: $word_select_pin:ident,
         sample_rate_hz: $sample_rate_hz:expr,
-        pio: $pio:ident,
+        i2s: $i2s:ident,
         dma: $dma:ident,
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
@@ -1152,13 +1155,13 @@ macro_rules! __audio_player_impl {
                     data_pin: $crate::esp_hal::peripherals::$data_pin<'static>,
                     bit_clock_pin: $crate::esp_hal::peripherals::$bit_clock_pin<'static>,
                     word_select_pin: $crate::esp_hal::peripherals::$word_select_pin<'static>,
-                    pio: $crate::esp_hal::peripherals::$pio<'static>,
+                    i2s: $crate::esp_hal::peripherals::$i2s<'static>,
                     dma: $crate::esp_hal::peripherals::$dma<'static>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let token = [<$name:snake _audio_player_task>](
                         &[<$name:upper _AUDIO_PLAYER_STATIC>],
-                        pio,
+                        i2s,
                         dma,
                         data_pin,
                         bit_clock_pin,
@@ -1214,7 +1217,7 @@ macro_rules! __audio_player_impl {
             #[::embassy_executor::task]
             async fn [<$name:snake _audio_player_task>](
                 audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }>,
-                pio: $crate::esp_hal::peripherals::$pio<'static>,
+                i2s: $crate::esp_hal::peripherals::$i2s<'static>,
                 dma: $crate::esp_hal::peripherals::$dma<'static>,
                 data_pin: $crate::esp_hal::peripherals::$data_pin<'static>,
                 bit_clock_pin: $crate::esp_hal::peripherals::$bit_clock_pin<'static>,
@@ -1227,7 +1230,7 @@ macro_rules! __audio_player_impl {
                     $crate::esp_hal::peripherals::$data_pin<'static>,
                     $crate::esp_hal::peripherals::$bit_clock_pin<'static>,
                     $crate::esp_hal::peripherals::$word_select_pin<'static>,
-                >(audio_player_static, pio, dma, data_pin, bit_clock_pin, word_select_pin).await
+                >(audio_player_static, i2s, dma, data_pin, bit_clock_pin, word_select_pin).await
             }
         }
     };

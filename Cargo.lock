@@ -723,7 +723,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy-esp"
-version = "0.0.1-alpha"
+version = "0.0.4-alpha.2"
 dependencies = [
  "device-envoy-core",
  "device-envoy-example-common",

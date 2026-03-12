@@ -2,7 +2,7 @@
 
 Shared rules are in the root [`AGENTS.md`](../../AGENTS.md). This file contains rules specific to the `device-envoy-esp` crate.
 
-- While the crate version remains `0.0.1-alpha`, we do not care about breaking changes. Optimize for the best API design.
+- While the crate version remains `0.0.4-alpha.2`, we do not care about breaking changes. Optimize for the best API design.
 - For ESP32 programs that should run forever, use `core::future::pending().await` instead of a timer loop.
 - **Hide boilerplate in doctests**: In addition to the shared rules, hide `use esp_backtrace as _`. **Important:** Do NOT hide imports from `device_envoy_esp`, `embassy_time::Duration`, or `smart_leds` because they are unusual and users need to see them to understand what to import.
 - Always run `cargo check` before handing work back.

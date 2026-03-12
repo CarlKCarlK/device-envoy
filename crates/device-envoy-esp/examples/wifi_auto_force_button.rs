@@ -11,7 +11,9 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{flash_block::FlashBlockEsp, init_and_start, wifi_auto::WifiAutoEsp};
+use device_envoy_esp::{
+    flash_block::FlashBlockEsp, init_and_start, init_and_start::rmt_mode, wifi_auto::WifiAutoEsp,
+};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

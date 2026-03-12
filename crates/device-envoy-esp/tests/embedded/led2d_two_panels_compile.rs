@@ -7,7 +7,9 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start, led2d,
+    init_and_start,
+    init_and_start::rmt_mode,
+    led2d,
     led2d::{layout::LedLayout, Frame2d, Led2d as _, Led2dFont},
     led_strip::Current,
 };
@@ -58,7 +60,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 
     let led2d_panel_a = Led2dPanelA::new(p.GPIO10, rmt80.channel0, spawner)?;
     #[cfg(target_arch = "xtensa")]

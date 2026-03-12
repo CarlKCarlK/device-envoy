@@ -13,7 +13,9 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    init_and_start, ir,
+    init_and_start,
+    init_and_start::rmt_mode,
+    ir,
     ir::{Ir as _, IrEvent},
 };
 
@@ -32,7 +34,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("ir example started: listening on GPIO7");
 

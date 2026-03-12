@@ -11,7 +11,7 @@ use esp_backtrace as _;
 use device_envoy_esp::{
     audio_player::audio_player, audio_player::AtEnd, audio_player::AudioPlayer as _,
     audio_player::SilenceClip, audio_player::Volume, audio_player::VOICE_22050_HZ, init_and_start,
-    tone, Result,
+    init_and_start::rmt_mode, tone, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

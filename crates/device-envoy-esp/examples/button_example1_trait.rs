@@ -11,7 +11,9 @@ use log::info;
 use device_envoy_core::button::{Button, PressDuration};
 use device_envoy_esp::{
     button::{ButtonEsp, PressedTo},
-    init_and_start, Result,
+    init_and_start,
+    init_and_start::rmt_mode,
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

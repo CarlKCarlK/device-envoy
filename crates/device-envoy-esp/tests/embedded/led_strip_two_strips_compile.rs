@@ -7,7 +7,9 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start, led_strip,
+    init_and_start,
+    init_and_start::rmt_mode,
+    led_strip,
     led_strip::{colors, Current, Frame1d, LedStrip as _},
 };
 
@@ -49,7 +51,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 
     let led_strip_a = LedStripA::new(p.GPIO10, rmt80.channel0, spawner)?;
     #[cfg(target_arch = "xtensa")]

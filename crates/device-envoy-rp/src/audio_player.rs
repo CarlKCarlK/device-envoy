@@ -19,7 +19,8 @@
 //!   - Uncompressed: 16-bit PCM (s16le)
 //!   - Compressed: IMA ADPCM in WAV (mono; ~25% the size of PCM; ideal for speech)
 //! - Mono input audio (duplicated to left/right on I²S output)
-//! - For ffmpeg conversion commands, see "Preparing audio files" at [`pcm_clip!`] and
+//! - For ffmpeg conversion commands, see "Preparing audio files" at
+//!   [`pcm_clip!`](macro@crate::audio_player::pcm_clip) and
 //!   [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip).
 //!
 //! **After reading the examples below, see also:**
@@ -33,7 +34,7 @@
 //!   (for example [`new`](audio_player_generated::AudioPlayerGenerated::new)).
 //! - [`AudioPlayer`] - Trait providing playback operations
 //!   (`play`, `stop`, `wait_until_stopped`, runtime volume controls) for generated types.
-//! - [`pcm_clip!`] - Macro to "compile in" an uncompressed (PCM) clip from an external file
+//! - [`pcm_clip!`](macro@crate::audio_player::pcm_clip) - Macro to "compile in" an uncompressed (PCM) clip from an external file
 //!   (includes syntax details). See
 //!   [`PcmClipGenerated`](pcm_clip_generated::PcmClipGenerated)
 //!   for sample generated items.
@@ -973,7 +974,7 @@ macro_rules! __audio_player_impl {
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
-        $crate::audio_player::paste::paste! {
+        $crate::__paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]:
                 $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }> =
                 $crate::audio_player::AudioPlayerRp::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(

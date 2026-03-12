@@ -16,6 +16,7 @@ use device_envoy_esp::{
         rmt::{PulseCode, TxChannelCreator as _},
     },
     init_and_start,
+    init_and_start::rmt_mode,
     led2d::layout::LedLayout,
     led_strip::{colors, RGB8},
 };
@@ -40,7 +41,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(_spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
         "led16x16test_async starting on GPIO{} (one moving foreground dot)",

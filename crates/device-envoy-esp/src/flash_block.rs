@@ -221,6 +221,7 @@ impl FlashBlockEspStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
+/// use device_envoy_esp::init_and_start;
 /// use device_envoy_esp::flash_block::{FlashBlockEsp, FlashBlock as _};
 ///
 /// #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -231,7 +232,7 @@ impl FlashBlockEspStatic {
 /// }
 ///
 /// # async fn example() -> device_envoy_esp::Result<core::convert::Infallible> {
-/// device_envoy_esp::init_and_start!(p);
+/// init_and_start!(p);
 /// let [mut wifi_persisted_state_flash_block, mut fields_flash_block] =
 ///     FlashBlockEsp::new_array::<2>(p.FLASH)?;
 ///

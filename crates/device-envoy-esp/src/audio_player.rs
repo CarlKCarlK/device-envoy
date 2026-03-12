@@ -20,7 +20,8 @@
 //!   - Uncompressed: 16-bit PCM (s16le)
 //!   - Compressed: IMA ADPCM in WAV (mono; ~25% the size of PCM; ideal for speech)
 //! - Mono input audio (duplicated to left/right on I²S output)
-//! - For ffmpeg conversion commands, see "Preparing audio files" at [`pcm_clip!`] and
+//! - For ffmpeg conversion commands, see "Preparing audio files" at
+//!   [`pcm_clip!`](macro@crate::audio_player::pcm_clip) and
 //!   [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip).
 //!
 //! **After reading the examples below, see also:**
@@ -34,7 +35,7 @@
 //!   (for example [`new`](audio_player_generated::AudioPlayerGenerated::new)).
 //! - [`AudioPlayer`] - Trait providing playback operations
 //!   (`play`, `stop`, `wait_until_stopped`, runtime volume controls) for generated types.
-//! - [`pcm_clip!`] - Macro to "compile in" an uncompressed (PCM) clip from an external file
+//! - [`pcm_clip!`](macro@crate::audio_player::pcm_clip) - Macro to "compile in" an uncompressed (PCM) clip from an external file
 //!   (includes syntax details). See
 //!   [`PcmClipGenerated`](pcm_clip_generated::PcmClipGenerated)
 //!   for sample generated items.
@@ -62,6 +63,7 @@
 //!     audio_player::{AudioPlayer as _,AtEnd, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
 //!     tone,
 //! };
+//! use device_envoy_esp::init_and_start;
 //! use core::time::Duration as StdDuration;
 //!
 //! // Generate `AudioPlayer8`, a struct type with the specified configuration.
@@ -91,7 +93,8 @@
 //!     const NOTE_D4: &AudioPlayer8Playable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
 //!     const NOTE_C4: &AudioPlayer8Playable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
 //!
-//!     device_envoy_esp::init_and_start!(p);
+//!     // Initializes the board and creates `p` (the peripheral bundle).
+//!     init_and_start!(p);
 //!     // Create an `AudioPlayer8` instance with the specified pins and resources.
 //!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 //!
@@ -130,6 +133,7 @@
 //!     button::{ButtonEsp, PressedTo},
 //!     tone,
 //! };
+//! use device_envoy_esp::init_and_start;
 //! use core::time::Duration as StdDuration;
 //! use embassy_futures::select::{Either, select};
 //! use embassy_time::{Duration, Timer};
@@ -179,7 +183,7 @@
 //!     const CHIME: &AudioPlayer8Playable =
 //!         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
 //!
-//!     device_envoy_esp::init_and_start!(p);
+//!     init_and_start!(p);
 //!     let mut button = ButtonEsp::new(p.PIN_13, PressedTo::Ground);
 //!     let audio_player8 =
 //!         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner)?;
@@ -242,6 +246,7 @@
 //!         audio_player,
 //!     },
 //! };
+//! use device_envoy_esp::init_and_start;
 //!
 //! // To save memory, we use a lower sample rate.
 //! audio_player! {
@@ -305,7 +310,7 @@
 //!         .with_gain(Gain::percent(25))
 //!         .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
 //!
-//!     device_envoy_esp::init_and_start!(p);
+//!     init_and_start!(p);
 //!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 //!
 //!     audio_player8.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);
@@ -1096,7 +1101,7 @@ macro_rules! __audio_player_impl {
         initial_volume: $initial_volume:expr,
         fields: [ ]
     ) => {
-        $crate::audio_player::paste::paste! {
+        $crate::__paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]:
                 $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }> =
                 $crate::audio_player::AudioPlayerEsp::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(

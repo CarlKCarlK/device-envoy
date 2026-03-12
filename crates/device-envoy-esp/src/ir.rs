@@ -20,7 +20,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
-//! use device_envoy_esp::{Result, init_and_start, ir, ir::{Ir as _, IrEvent}};
+//! use device_envoy_esp::{Result, init_and_start, init_and_start::rmt_mode, ir, ir::{Ir as _, IrEvent}};
 //! # use esp_backtrace as _;
 //! # use log::info;
 //! #
@@ -36,7 +36,7 @@
 //! #     }
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
-//!     init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
+//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 //!     esp_println::logger::init_logger(log::LevelFilter::Info);
 //!
 //!     #[cfg(target_arch = "xtensa")]
@@ -61,7 +61,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
-//! use device_envoy_esp::{Result, init_and_start, ir::IrMapping as _, ir_mapping};
+//! use device_envoy_esp::{Result, init_and_start, init_and_start::rmt_mode, ir::IrMapping as _, ir_mapping};
 //! # use esp_backtrace as _;
 //! #
 //! #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -93,7 +93,7 @@
 //! #     }
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
-//!     init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
+//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 //!
 //!     #[cfg(target_arch = "xtensa")]
 //!     let channel_creator = rmt80.channel4;
@@ -121,7 +121,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
-//! use device_envoy_esp::{Result, init_and_start, ir::IrKepler as _, ir::KeplerKeys, ir_kepler};
+//! use device_envoy_esp::{Result, init_and_start, init_and_start::rmt_mode, ir::IrKepler as _, ir::KeplerKeys, ir_kepler};
 //! # use esp_backtrace as _;
 //! # use log::info;
 //! #
@@ -137,7 +137,7 @@
 //! #     }
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
-//!     init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
+//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 //!     esp_println::logger::init_logger(log::LevelFilter::Info);
 //!
 //!     #[cfg(target_arch = "xtensa")]

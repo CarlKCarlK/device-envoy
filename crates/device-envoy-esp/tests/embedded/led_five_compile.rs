@@ -9,6 +9,7 @@ use esp_backtrace as _;
 use device_envoy_core::led::Led as _;
 use device_envoy_esp::{
     init_and_start,
+    init_and_start::rmt_mode,
     led::{LedLevel, OnLevel},
 };
 

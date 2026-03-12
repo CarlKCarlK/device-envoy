@@ -27,6 +27,7 @@ use device_envoy_esp::{
     clock_sync::{ClockSyncEsp, ClockSyncStatic, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start,
+    init_and_start::rmt_mode,
     servo::Servo as _,
     servo::{combine, linear, servo_player, AtEnd, ServoPlayer as _, ServoPlayerHandle},
     wifi_auto::{

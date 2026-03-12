@@ -243,9 +243,9 @@ pub async fn led_strip_device_loop<
 /// # Syntax
 ///
 /// ```rust,no_run
-/// # use device_envoy_esp::init_and_start;
+/// # use device_envoy_esp::{init_and_start, init_and_start::rmt_mode};
 /// # async fn example(spawner: embassy_executor::Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-/// init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
+/// init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 /// device_envoy_esp::led_strip! {
 ///     MyStrip {
 ///         pin: GPIO8,

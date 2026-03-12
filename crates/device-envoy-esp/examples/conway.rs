@@ -11,7 +11,9 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start, ir_kepler, led2d,
+    init_and_start,
+    init_and_start::rmt_mode,
+    ir_kepler, led2d,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::Current,
 };
@@ -45,7 +47,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let led16x16 = Led16x16::new(p.GPIO2, p.SPI2, spawner)?;

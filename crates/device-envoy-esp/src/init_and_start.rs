@@ -17,8 +17,8 @@ pub mod rmt_mode {
 /// Supported forms:
 ///
 /// - `init_and_start!(p)`
-/// - `init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking)`
-/// - `init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async)`
+/// - `init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking)`
+/// - `init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async)`
 /// - `init_and_start!(p, ledc: ledc)`
 /// - Any of the above with both `rmt80` and `ledc` in either order.
 #[cfg(target_os = "none")]
@@ -29,11 +29,11 @@ macro_rules! init_and_start {
         let mut $ledc = $crate::esp_hal::ledc::Ledc::new($p.LEDC);
         $ledc.set_global_slow_clock($crate::esp_hal::ledc::LSGlobalClkSource::APBClk);
     };
-    ($p:ident, rmt80: $rmt80:ident, mode: init_and_start::rmt_mode::Blocking) => {
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
         $crate::init_and_start!($p);
         let $rmt80 = $crate::init_and_start::rmt::new_rmt80($p.RMT).expect("RMT init failed");
     };
-    ($p:ident, rmt80: $rmt80:ident, mode: init_and_start::rmt_mode::Async) => {
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
         $crate::init_and_start!($p);
         let $rmt80 =
             $crate::init_and_start::rmt::into_async(
@@ -44,19 +44,19 @@ macro_rules! init_and_start {
         $crate::init_and_start!($p);
         $crate::init_and_start!(@init_ledc $p, $ledc);
     };
-    ($p:ident, rmt80: $rmt80:ident, mode: init_and_start::rmt_mode::Blocking, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: init_and_start::rmt_mode::Blocking);
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking, ledc: $ledc:ident) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking);
         $crate::init_and_start!(@init_ledc $p, $ledc);
     };
-    ($p:ident, rmt80: $rmt80:ident, mode: init_and_start::rmt_mode::Async, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: init_and_start::rmt_mode::Async);
+    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async, ledc: $ledc:ident) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async);
         $crate::init_and_start!(@init_ledc $p, $ledc);
     };
-    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: init_and_start::rmt_mode::Blocking) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: init_and_start::rmt_mode::Blocking, ledc: $ledc);
+    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking, ledc: $ledc);
     };
-    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: init_and_start::rmt_mode::Async) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: init_and_start::rmt_mode::Async, ledc: $ledc);
+    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
+        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async, ledc: $ledc);
     };
     ($p:ident) => {
         let $p = $crate::esp_hal::init($crate::esp_hal::Config::default());

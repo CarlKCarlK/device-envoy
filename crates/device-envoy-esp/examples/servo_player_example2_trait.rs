@@ -13,6 +13,7 @@ use device_envoy_core::servo::ServoPlayer;
 use device_envoy_esp::{
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start,
+    init_and_start::rmt_mode,
     servo::{combine, linear, servo_player, AtEnd},
     Result,
 };

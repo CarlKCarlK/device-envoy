@@ -15,7 +15,9 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    init_and_start, led2d,
+    init_and_start,
+    init_and_start::rmt_mode,
+    led2d,
     led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
     led_strip,
     led_strip::{colors, Current, Frame1d, LedStrip as _},
@@ -71,7 +73,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
         "led16x16_and_builtin_spi: panel on GPIO{} via SPI2, built-in LED on GPIO{} via RMT",

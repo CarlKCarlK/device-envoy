@@ -72,7 +72,7 @@ strip and then animates a sequence of frames.
 # #![no_main]
 # use esp_backtrace as _;
 # use core::convert::Infallible;
-use device_envoy_esp::{Result, init_and_start, led_strip, led_strip::{LedStrip as _, Frame1d, colors}};
+use device_envoy_esp::{Result, init_and_start, init_and_start::rmt_mode, led_strip, led_strip::{LedStrip as _, Frame1d, colors}};
 use embassy_time::Duration;
 
 led_strip! {
@@ -83,7 +83,7 @@ led_strip! {
 }
 
 async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     let led_strip_animated = LedStripAnimated::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // Create a sequence of frames and durations and then animate them (looping, until replaced).

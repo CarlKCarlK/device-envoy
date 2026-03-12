@@ -14,7 +14,9 @@ use device_envoy_esp::{
     button_watch,
     clock_sync::{ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
     flash_block::FlashBlockEsp,
-    init_and_start, lcd_text,
+    init_and_start,
+    init_and_start::rmt_mode,
+    lcd_text,
     lcd_text::LcdText as _,
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},

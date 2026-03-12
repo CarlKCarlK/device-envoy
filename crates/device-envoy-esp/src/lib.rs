@@ -23,6 +23,7 @@ pub mod time_sync {
 }
 pub mod audio_player;
 pub mod flash_block;
+pub mod init_and_start;
 pub mod ir;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
@@ -31,7 +32,6 @@ pub mod led;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;
-pub mod init_and_start;
 #[cfg(target_os = "none")]
 pub mod rfid;
 mod rmt;
@@ -51,6 +51,9 @@ pub mod docs {
 
 pub use device_envoy_core::tone;
 use device_envoy_core::wifi_auto::WifiAutoError;
+/// Used internally by other macros.
+#[doc(hidden)]
+pub use paste::paste as __paste;
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but

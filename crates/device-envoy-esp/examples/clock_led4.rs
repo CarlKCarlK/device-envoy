@@ -27,6 +27,7 @@ use device_envoy_esp::{
     clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start,
+    init_and_start::rmt_mode,
     led4::{
         circular_outline_animation, BlinkState, Led4 as _, Led4Esp, Led4EspStatic, OutputArray,
     },

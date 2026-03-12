@@ -11,9 +11,8 @@ pub mod adpcm_clip_generated;
 mod host_tests;
 pub mod pcm_clip_generated;
 
-// Re-export `paste` so platform crates can reference it as
-// `$crate::audio_player::paste::paste!` in their `audio_player!` macro.
-pub use paste;
+// Re-export `paste!` so platform crates can reference it as
+// `__paste!` in their `audio_player!` macro.
 
 use core::ops::ControlFlow;
 use core::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
@@ -2226,7 +2225,7 @@ macro_rules! __audio_clip_impl {
         source_sample_rate_hz: $source_sample_rate_hz:expr,
         target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
     ) => {
-        $crate::audio_player::paste::paste! {
+        $crate::__paste! {
             const [<$name:upper _SOURCE_SAMPLE_RATE_HZ>]: u32 = $source_sample_rate_hz;
             const [<$name:upper _TARGET_SAMPLE_RATE_HZ>]: u32 = $target_sample_rate_hz;
 
@@ -2333,7 +2332,7 @@ macro_rules! __adpcm_clip_parse {
             target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
         }
     ) => {
-        $crate::audio_player::paste::paste! {
+        $crate::__paste! {
             const [<$name:upper _TARGET_SAMPLE_RATE_HZ>]: u32 = $target_sample_rate_hz;
 
             #[allow(non_snake_case)]

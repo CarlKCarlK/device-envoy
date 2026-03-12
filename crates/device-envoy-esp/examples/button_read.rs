@@ -14,6 +14,7 @@ use log::info;
 use device_envoy_esp::{
     button::{ButtonEsp, PressedTo},
     init_and_start,
+    init_and_start::rmt_mode,
 };
 
 use device_envoy_esp::button::Button as _;

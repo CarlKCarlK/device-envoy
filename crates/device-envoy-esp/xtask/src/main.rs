@@ -133,6 +133,10 @@ fn check_docs() -> ExitCode {
     let root = workspace_root();
     println!("{}", "==> cargo check-docs: device-envoy-esp".cyan().bold());
 
+    if let Err(err) = check_shared_markdown_sync(&root) {
+        eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
         eprintln!("Error generating ir_generated.rs: {err}");
         return ExitCode::FAILURE;
@@ -156,6 +160,8 @@ fn check_docs() -> ExitCode {
         "--release",
         "--target",
         TARGET_C6,
+        "--features",
+        "doc-images",
         "--no-default-features",
     ])) {
         return ExitCode::FAILURE;
@@ -170,6 +176,10 @@ fn check_all() -> ExitCode {
 
     println!("{}", "==> cargo check-all: device-envoy-esp".cyan().bold());
 
+    if let Err(err) = check_shared_markdown_sync(&root) {
+        eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
         eprintln!("Error generating ir_generated.rs: {err}");
         return ExitCode::FAILURE;
@@ -242,6 +252,8 @@ fn check_all() -> ExitCode {
         "--release",
         "--target",
         TARGET_C6,
+        "--features",
+        "doc-images",
         "--no-default-features",
     ])) {
         return ExitCode::FAILURE;
@@ -748,5 +760,29 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
         Ok(())
     } else {
         Err(failure_messages.join("\n"))
+    }
+}
+
+fn check_shared_markdown_sync(workspace_root: &Path) -> Result<(), String> {
+    let esp_markdown_path = workspace_root.join("src/docs/current_limiting_and_gamma.md");
+    let rp_markdown_path =
+        workspace_root.join("../device-envoy-rp/src/docs/current_limiting_and_gamma.md");
+
+    let esp_markdown_source = fs::read_to_string(&esp_markdown_path)
+        .map_err(|read_error| format!("{}: {}", esp_markdown_path.display(), read_error))?;
+    let rp_markdown_source = fs::read_to_string(&rp_markdown_path)
+        .map_err(|read_error| format!("{}: {}", rp_markdown_path.display(), read_error))?;
+
+    let esp_markdown_source = esp_markdown_source.replace("\r\n", "\n");
+    let rp_markdown_source = rp_markdown_source.replace("\r\n", "\n");
+
+    if esp_markdown_source == rp_markdown_source {
+        Ok(())
+    } else {
+        Err(format!(
+            "Shared markdown mismatch:\n  {}\n  {}\nKeep these files identical.",
+            esp_markdown_path.display(),
+            rp_markdown_path.display()
+        ))
     }
 }

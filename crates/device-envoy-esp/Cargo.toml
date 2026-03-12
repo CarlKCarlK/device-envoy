@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 host = []
 compile-fail-tests = []
+doc-images = ["dep:embed-doc-image"]
 
 [dependencies]
 embassy-executor = { version = "0.9.0" }
@@ -18,6 +19,7 @@ embedded-graphics = { version = "0.8", default-features = false }
 heapless       = { version = "0.8.0", features = ["serde"] }
 static_cell    = { version = "2.1.0" }
 paste          = { version = "1.0" }
+embed-doc-image = { version = "0.1.4", optional = true }
 embedded-storage = "0.3.1"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 time = { version = "0.3", default-features = false }

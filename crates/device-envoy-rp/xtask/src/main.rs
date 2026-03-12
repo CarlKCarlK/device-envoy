@@ -321,6 +321,10 @@ fn check_compile_only() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = check_shared_markdown_sync(&workspace_root) {
+        eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = regenerate_generated_sources(&workspace_root) {
         eprintln!("{err}");
         return ExitCode::FAILURE;
@@ -733,6 +737,10 @@ fn extract_single_rust_example(readme_source: &str, readme_path: &Path) -> Resul
 
 fn check_docs() -> ExitCode {
     let workspace_root = workspace_root();
+    if let Err(err) = check_shared_markdown_sync(&workspace_root) {
+        eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
     if let Err(err) = regenerate_generated_sources(&workspace_root) {
         eprintln!("{err}");
         return ExitCode::FAILURE;
@@ -1367,6 +1375,30 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
         Ok(())
     } else {
         Err(failure_messages.join("\n"))
+    }
+}
+
+fn check_shared_markdown_sync(workspace_root: &Path) -> Result<(), String> {
+    let rp_markdown_path = workspace_root.join("src/docs/current_limiting_and_gamma.md");
+    let esp_markdown_path =
+        workspace_root.join("../device-envoy-esp/src/docs/current_limiting_and_gamma.md");
+
+    let rp_markdown_source = fs::read_to_string(&rp_markdown_path)
+        .map_err(|read_error| format!("{}: {}", rp_markdown_path.display(), read_error))?;
+    let esp_markdown_source = fs::read_to_string(&esp_markdown_path)
+        .map_err(|read_error| format!("{}: {}", esp_markdown_path.display(), read_error))?;
+
+    let rp_markdown_source = rp_markdown_source.replace("\r\n", "\n");
+    let esp_markdown_source = esp_markdown_source.replace("\r\n", "\n");
+
+    if rp_markdown_source == esp_markdown_source {
+        Ok(())
+    } else {
+        Err(format!(
+            "Shared markdown mismatch:\n  {}\n  {}\nKeep these files identical.",
+            rp_markdown_path.display(),
+            esp_markdown_path.display()
+        ))
     }
 }
 

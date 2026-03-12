@@ -6,7 +6,7 @@ update-docs-esp:
 
 # ESP docs fast path (no extra validation/generation steps)
 update-docs-esp-fast:
-    source "$HOME/export-esp.sh" && cargo doc --no-deps --release --target riscv32imac-unknown-none-elf --no-default-features
+    source "$HOME/export-esp.sh" && cargo doc --no-deps --release --target riscv32imac-unknown-none-elf --features doc-images --no-default-features
 
 # Build docs and open them in a browser
 show-docs-esp:

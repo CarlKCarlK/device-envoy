@@ -66,8 +66,11 @@ mod servo_player;
 pub mod wifi_auto;
 
 #[cfg(doc)]
-#[doc = include_str!("../../device-envoy-core/docs/development.md")]
-pub mod development_guide {}
+pub mod docs {
+    //! Documentation-only pages for this crate.
+    #[doc = include_str!("../../device-envoy-core/docs/development.md")]
+    pub mod development_guide {}
+}
 
 // Re-export error types and result (used throughout)
 pub use crate::error::{Error, Result};

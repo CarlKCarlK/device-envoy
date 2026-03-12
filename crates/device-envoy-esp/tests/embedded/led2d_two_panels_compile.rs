@@ -58,7 +58,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    init_and_start!(p, rmt80, rmt_mode::Blocking);
+    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
 
     let led2d_panel_a = Led2dPanelA::new(p.GPIO10, rmt80.channel0, spawner)?;
     #[cfg(target_arch = "xtensa")]

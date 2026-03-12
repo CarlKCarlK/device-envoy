@@ -57,7 +57,7 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 }
 
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80, rmt_mode::Async);
+    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
 
     // On ESP32-S3, RMT channels 0-3 are TX-only; RX requires channel 4+.
     // On ESP32-C6, channels 0-3 all support RX.

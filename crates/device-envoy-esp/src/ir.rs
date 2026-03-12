@@ -36,7 +36,7 @@
 //! #     }
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
-//!     init_and_start!(p, rmt80, rmt_mode::Async);
+//!     init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
 //!     esp_println::logger::init_logger(log::LevelFilter::Info);
 //!
 //!     #[cfg(target_arch = "xtensa")]
@@ -93,7 +93,7 @@
 //! #     }
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
-//!     init_and_start!(p, rmt80, rmt_mode::Async);
+//!     init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
 //!
 //!     #[cfg(target_arch = "xtensa")]
 //!     let channel_creator = rmt80.channel4;
@@ -137,7 +137,7 @@
 //! #     }
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
-//!     init_and_start!(p, rmt80, rmt_mode::Async);
+//!     init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Async);
 //!     esp_println::logger::init_logger(log::LevelFilter::Info);
 //!
 //!     #[cfg(target_arch = "xtensa")]
@@ -351,7 +351,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
@@ -421,7 +421,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
@@ -437,7 +437,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
@@ -530,7 +530,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
@@ -546,7 +546,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
@@ -562,7 +562,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name2:lower _ir_receiver_task>](channel, &[<$name2:upper _IR_STATIC>]))
@@ -678,7 +678,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name0:lower _ir_receiver_task>](channel, &[<$name0:upper _IR_STATIC>]))
@@ -694,7 +694,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name1:lower _ir_receiver_task>](channel, &[<$name1:upper _IR_STATIC>]))
@@ -710,7 +710,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name2:lower _ir_receiver_task>](channel, &[<$name2:upper _IR_STATIC>]))
@@ -726,7 +726,7 @@ macro_rules! __irs_impl {
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let channel = channel_creator
-                        .configure_rx(pin, $crate::rmt::nec_rx_config())
+                        .configure_rx(pin, $crate::init_and_start::rmt::nec_rx_config())
                         .map_err($crate::Error::Rmt)?;
                     spawner
                         .spawn([<__ $name3:lower _ir_receiver_task>](channel, &[<$name3:upper _IR_STATIC>]))

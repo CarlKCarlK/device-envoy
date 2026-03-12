@@ -28,6 +28,7 @@ pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 /// - `engine` (default `Engine::Rmt`)
 /// - `gamma`
 /// - `max_frames`
+#[doc(hidden)]
 #[macro_export]
 macro_rules! led2d {
     (
@@ -49,6 +50,10 @@ macro_rules! led2d {
         }
     };
 }
+
+#[cfg(target_os = "none")]
+#[doc(inline)]
+pub use led2d;
 
 #[doc(hidden)]
 #[macro_export]

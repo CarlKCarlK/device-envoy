@@ -83,7 +83,7 @@ led_strip! {
 }
 
 async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
     let led_strip_animated = LedStripAnimated::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // Create a sequence of frames and durations and then animate them (looping, until replaced).
@@ -116,7 +116,7 @@ See the `examples/` directory for complete runnable code.
 ## Building & Running
 
 - If you just want to use this library, start from the template project: [`device-envoy-blinky-esp`](https://github.com/CarlKCarlK/device-envoy-blinky-esp).
-- If you want to edit this project, see the [Development Guide](crate::development_guide).
+- If you want to edit this project, see the [Development Guide](crate::docs::development_guide).
 
 ## Glossary
 

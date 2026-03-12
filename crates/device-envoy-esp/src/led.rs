@@ -12,6 +12,7 @@
 //! # #![no_main]
 //! use device_envoy_esp::{
 //!     Result,
+//!     init_and_start,
 //!     led::{Led as _, LedLevel, OnLevel},
 //! };
 //! use embassy_time::Duration;
@@ -30,7 +31,8 @@
 //!     }
 //! }
 //!
-//! async fn example(p: device_envoy_esp::esp_hal::Peripherals, spawner: embassy_executor::Spawner) -> Result<()> {
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<()> {
+//!     init_and_start!(p);
 //!     let led_one = LedOne::new(p.GPIO2, OnLevel::High, spawner)?;
 //!     let led_two = LedTwo::new(p.GPIO3, OnLevel::High, spawner)?;
 //!

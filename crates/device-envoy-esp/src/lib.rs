@@ -31,10 +31,11 @@ pub mod led;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;
+pub mod init_and_start;
 #[cfg(target_os = "none")]
 pub mod rfid;
-pub mod rmt;
-pub mod rmt_mode;
+mod rmt;
+mod rmt_mode;
 #[cfg(target_os = "none")]
 pub mod servo;
 #[cfg(target_os = "none")]
@@ -42,12 +43,14 @@ mod servo_player;
 pub mod wifi_auto;
 
 #[cfg(doc)]
-#[doc = include_str!("../../device-envoy-core/docs/development.md")]
-pub mod development_guide {}
+pub mod docs {
+    //! Documentation-only pages for this crate.
+    #[doc = include_str!("../../device-envoy-core/docs/development.md")]
+    pub mod development_guide {}
+}
 
 pub use device_envoy_core::tone;
 use device_envoy_core::wifi_auto::WifiAutoError;
-pub use led_strip::{colors, Frame1d, Gamma, ToRgb8, ToRgb888, RGB8};
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but
@@ -75,72 +78,6 @@ pub use esp_hal;
 #[doc(hidden)]
 #[cfg(target_os = "none")]
 pub use esp_rtos;
-
-#[cfg(target_os = "none")]
-#[macro_export]
-macro_rules! init_and_start {
-    (@init_ledc $p:ident, $ledc:ident) => {
-        let mut $ledc = $crate::esp_hal::ledc::Ledc::new($p.LEDC);
-        $ledc.set_global_slow_clock($crate::esp_hal::ledc::LSGlobalClkSource::APBClk);
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
-        $crate::init_and_start!($p);
-        let $rmt80 = $crate::rmt::new_rmt80($p.RMT).expect("RMT init failed");
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
-        $crate::init_and_start!($p);
-        let $rmt80 =
-            $crate::rmt::into_async($crate::rmt::new_rmt80($p.RMT).expect("RMT init failed"));
-    };
-    ($p:ident, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p);
-        $crate::init_and_start!(@init_ledc $p, $ledc);
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking);
-        $crate::init_and_start!(@init_ledc $p, $ledc);
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async);
-        $crate::init_and_start!(@init_ledc $p, $ledc);
-    };
-    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking, ledc: $ledc);
-    };
-    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async, ledc: $ledc);
-    };
-    // Backward-compatible RMT syntax (positional mode argument).
-    ($p:ident, $rmt80:ident, rmt_mode::Blocking) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking);
-    };
-    // Backward-compatible RMT syntax (positional mode argument).
-    ($p:ident, $rmt80:ident, rmt_mode::Async) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async);
-    };
-    ($p:ident, $rmt80:ident) => {
-        compile_error!(
-            "init_and_start!(p, rmt80) now requires mode. Prefer keyword form: init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking|Async)"
-        );
-    };
-    ($p:ident) => {
-        let $p = $crate::esp_hal::init($crate::esp_hal::Config::default());
-        {
-            let timg0 = $crate::esp_hal::timer::timg::TimerGroup::new($p.TIMG0);
-            #[cfg(target_arch = "riscv32")]
-            {
-                let sw = $crate::esp_hal::interrupt::software::SoftwareInterruptControl::new(
-                    $p.SW_INTERRUPT,
-                );
-                $crate::esp_rtos::start(timg0.timer0, sw.software_interrupt0);
-            }
-            #[cfg(target_arch = "xtensa")]
-            {
-                $crate::esp_rtos::start(timg0.timer0);
-            }
-        }
-    };
-}
 
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 

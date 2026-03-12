@@ -91,7 +91,7 @@
 //!     const NOTE_D4: &AudioPlayer8Playable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
 //!     const NOTE_C4: &AudioPlayer8Playable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
 //!
-//!     let p = embassy_rp::init(Default::default());
+//!     device_envoy_esp::init_and_start!(p);
 //!     // Create an `AudioPlayer8` instance with the specified pins and resources.
 //!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 //!
@@ -179,7 +179,7 @@
 //!     const CHIME: &AudioPlayer8Playable =
 //!         &tone!(880, SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
 //!
-//!     let p = embassy_rp::init(Default::default());
+//!     device_envoy_esp::init_and_start!(p);
 //!     let mut button = ButtonEsp::new(p.PIN_13, PressedTo::Ground);
 //!     let audio_player8 =
 //!         AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH1, spawner)?;
@@ -305,7 +305,7 @@
 //!         .with_gain(Gain::percent(25))
 //!         .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
 //!
-//!     let p = embassy_rp::init(Default::default());
+//!     device_envoy_esp::init_and_start!(p);
 //!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 //!
 //!     audio_player8.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);

@@ -119,7 +119,7 @@ See the `examples/` and `demos/` directories for complete runnable code.
 ## Building & Running
 
 - If you just want to use this library, start from the template project: [`device-envoy-blinky-rp`](https://github.com/CarlKCarlK/device-envoy-blinky-rp).
-- If you want to edit this project, see the [Development Guide](crate::development_guide).
+- If you want to edit this project, see the [Development Guide](crate::docs::development_guide).
 
 ## Policy on AI-assisted development and contributions
 

@@ -45,7 +45,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    init_and_start!(p, rmt80, rmt_mode::Blocking);
+    init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
 
     let led_strip_spi_a = LedStripSpiA::new(p.GPIO10, p.SPI2, spawner)?;
     led_strip_spi_a.write_frame(Frame1d([

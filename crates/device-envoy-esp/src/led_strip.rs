@@ -243,6 +243,9 @@ pub async fn led_strip_device_loop<
 /// # Syntax
 ///
 /// ```rust,no_run
+/// # use device_envoy_esp::init_and_start;
+/// # async fn example(spawner: embassy_executor::Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+/// init_and_start!(p, rmt80: rmt80, mode: init_and_start::rmt_mode::Blocking);
 /// device_envoy_esp::led_strip! {
 ///     MyStrip {
 ///         pin: GPIO8,
@@ -250,6 +253,9 @@ pub async fn led_strip_device_loop<
 ///         max_current: device_envoy_esp::led_strip::Current::Milliamps(1000),
 ///     }
 /// }
+/// # let _my_strip = MyStrip::new(p.GPIO8, rmt80.channel0, spawner)?;
+/// # core::future::pending().await
+/// # }
 /// ```
 ///
 /// Optional fields and their defaults:
@@ -274,6 +280,7 @@ pub async fn led_strip_device_loop<
 /// `new()` returns `&'static MyStrip`. The static storage is hidden inside
 /// a function-scoped `static` via [`static_cell::StaticCell`]. You only need
 /// to call `new()` once.
+#[doc(hidden)]
 #[macro_export]
 macro_rules! led_strip {
     (
@@ -302,6 +309,10 @@ macro_rules! led_strip {
         }
     };
 }
+
+#[cfg(target_os = "none")]
+#[doc(inline)]
+pub use led_strip;
 
 #[doc(hidden)]
 #[macro_export]
@@ -1234,7 +1245,7 @@ macro_rules! __led_strip_impl {
                 /// Construct the strip controller from an owned TX channel creator and GPIO pin.
                 ///
                 /// This configures a TX channel from a shared `rmt80` hub using
-                /// [`ws2812_tx_config`](crate::rmt::ws2812_tx_config).
+                /// [`ws2812_tx_config`](crate::init_and_start::rmt::ws2812_tx_config).
                 pub fn new(
                     pin: $crate::esp_hal::peripherals::$pin<'static>,
                     channel_creator: impl ::esp_hal::rmt::TxChannelCreator<
@@ -1252,7 +1263,7 @@ macro_rules! __led_strip_impl {
                         COMBO.init(<$name>::COMBO_TABLE);
 
                     let channel = channel_creator
-                        .configure_tx(pin, $crate::rmt::ws2812_tx_config())
+                        .configure_tx(pin, $crate::init_and_start::rmt::ws2812_tx_config())
                         .map_err($crate::Error::Rmt)?;
 
                     let driver =

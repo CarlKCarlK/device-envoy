@@ -69,7 +69,6 @@ fn convert_flash_block_error(e: FlashBlockError<esp_storage::FlashStorageError>)
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum FlashRegionRequest {
     Tail { byte_len: u32 },
-    Explicit { start_offset: u32, byte_len: u32 },
 }
 
 #[cfg(target_os = "none")]
@@ -82,18 +81,11 @@ struct ResolvedFlashRegion {
 #[cfg(target_os = "none")]
 impl FlashRegionRequest {
     fn resolve(self, flash_capacity: u32) -> Result<ResolvedFlashRegion> {
-        let (start_offset, byte_len) = match self {
-            Self::Tail { byte_len } => {
-                if byte_len == 0 || byte_len > flash_capacity {
-                    return Err(Error::InvalidFlashRegion);
-                }
-                (flash_capacity - byte_len, byte_len)
-            }
-            Self::Explicit {
-                start_offset,
-                byte_len,
-            } => (start_offset, byte_len),
-        };
+        let Self::Tail { byte_len } = self;
+        if byte_len == 0 || byte_len > flash_capacity {
+            return Err(Error::InvalidFlashRegion);
+        }
+        let start_offset = flash_capacity - byte_len;
 
         if start_offset % FLASH_BLOCK_SIZE_U32 != 0 || byte_len % FLASH_BLOCK_SIZE_U32 != 0 {
             return Err(Error::InvalidFlashRegion);
@@ -216,8 +208,34 @@ impl FlashBlockEspStatic {
 #[cfg(target_os = "none")]
 /// A device abstraction for type-safe persistent storage in flash memory.
 ///
-/// See this API for storing values such as Wi-Fi credentials and additional
-/// setup field values used by `wifi_auto`.
+/// `FlashBlockEsp` provides a generic flash-block storage system for ESP,
+/// allowing you to store any `serde`-compatible type in the device's internal flash.
+///
+/// Use [`FlashBlockEsp::new_array`] to allocate one or more blocks. Block operations like
+/// [`load`](FlashBlock::load), [`save`](FlashBlock::save), and
+/// [`clear`](FlashBlock::clear) are provided by [`FlashBlock`], so bring the trait into
+/// scope:
+///
+/// `use device_envoy_esp::flash_block::FlashBlock as _;`
+///
+/// # Features
+///
+/// - **Type safety**: Hash-based type checking prevents reading data written under a
+///   different Rust type name. The hash is derived from the full type path
+///   (for example, `app1::BootCounter`). **Trying to read a different type
+///   returns `Ok(None)`**. Structural changes (adding or removing fields) do not
+///   change the hash, but may cause deserialization to fail and return an error.
+/// - **Postcard serialization**: A compact, `no_std`-friendly binary format.
+///
+/// # Block allocation
+///
+/// Conceptually, flash is treated as an array of fixed-size erase blocks counted from
+/// the end of the configured region backward. Your code can split that array using
+/// destructuring assignment and hand individual blocks to subsystems that need
+/// persistent storage.
+///
+/// ⚠️ **Warning**: ESP firmware and user data share the same flash device.
+/// Allocating too many blocks can overwrite your firmware.
 ///
 /// # Example
 ///
@@ -307,23 +325,6 @@ impl FlashBlockEsp {
             flash,
             FlashRegionRequest::Tail {
                 byte_len: DEFAULT_FLASH_REGION_BYTES,
-            },
-        )
-    }
-
-    /// Reserve `N` blocks in an explicit flash region.
-    ///
-    /// Both `start_offset` and `byte_len` must be multiples of 4096 bytes.
-    pub fn new_array_with_region<const N: usize>(
-        flash: esp_hal::peripherals::FLASH<'static>,
-        start_offset: u32,
-        byte_len: u32,
-    ) -> Result<[FlashBlockEsp; N]> {
-        Self::new_array_with_request(
-            flash,
-            FlashRegionRequest::Explicit {
-                start_offset,
-                byte_len,
             },
         )
     }

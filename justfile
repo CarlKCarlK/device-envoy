@@ -22,6 +22,11 @@ update-docs-esp-fast:
 update-docs-rp-fast:
     cd crates/device-envoy-rp && just update-docs-rp-fast
 
+# Update RP + ESP docs (fast path)
+update-docs-fast:
+    just update-docs-rp-fast
+    just update-docs-esp-fast
+
 # Run all checks across all three crates.
 check-all:
     cargo run --manifest-path xtask/Cargo.toml -- check-all

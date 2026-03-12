@@ -117,7 +117,9 @@ impl FlashManager {
 /// allowing you to store any `serde`-compatible type in the device's internal flash.
 ///
 /// Use [`FlashBlockRp::new_array`] to allocate one or more blocks. Block operations like
-/// `load`, `save`, and `clear` are provided by [`FlashBlock`], so bring the trait into scope:
+/// [`load`](FlashBlock::load), [`save`](FlashBlock::save), and
+/// [`clear`](FlashBlock::clear) are provided by [`FlashBlock`], so bring the trait into
+/// scope:
 ///
 /// `use device_envoy_rp::flash_block::FlashBlock as _;`
 ///
@@ -178,10 +180,6 @@ impl FlashManager {
 /// }
 /// ```
 ///
-/// Implements [`device_envoy_core::flash_block::FlashBlock`] for typed
-/// [`load`](device_envoy_core::flash_block::FlashBlock::load),
-/// [`save`](device_envoy_core::flash_block::FlashBlock::save), and
-/// [`clear`](device_envoy_core::flash_block::FlashBlock::clear) operations.
 #[derive(Clone, Copy)]
 pub struct FlashBlockRp {
     manager: &'static FlashManager,

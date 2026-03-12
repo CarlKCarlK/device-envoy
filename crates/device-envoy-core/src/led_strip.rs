@@ -18,8 +18,9 @@ pub use smart_leds::RGB8;
 /// Predefined [`RGB8`] color constants (CSS/Web names).
 ///
 /// `GREEN` is `(0, 128, 0)`; `LIME` is `(0, 255, 0)`.
-#[doc(inline)]
-pub use smart_leds::colors;
+pub mod colors {
+    pub use smart_leds::colors::*;
+}
 
 /// 8-bit-per-channel RGB color from `embedded-graphics`.
 ///

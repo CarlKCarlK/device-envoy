@@ -1,15 +1,125 @@
-//! A device abstraction for NeoPixel-style (WS2812) LED strips.
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "led_strip_simple",
+        "docs/assets/led_strip_simple.png"
+    ),
+    doc = ::embed_doc_image::embed_image!(
+        "led_strip_animated",
+        "docs/assets/led_strip_animated.png"
+    )
+)]
+//! A device abstraction for 1-dimensional NeoPixel-style (WS2812) LED strips. For 2-dimensional
+//! panels, see the [`led2d`](mod@crate::led2d) module.
 //!
-//! Platform-independent types ([`Frame1d`], [`Gamma`], [`LedStrip`], color
-//! types, etc.) come from [`device_envoy_core::led_strip`] and are re-exported
-//! here for transparent access.
+//! This page provides the primary documentation and examples for programming LED strips.
+//! The device abstraction supports pixel patterns and animation on the LED strip.
 //!
-//! The [`led_strip!`](macro@crate::led_strip) macro generates a fully async, Embassy-based strip
-//! controller. Use `engine: Engine::Spi` to select the SPI variant backed by
-//! the [`spi`] sub-module.
+//! **After reading the examples below, see also:**
 //!
-//! See also [`LedStripGenerated`](led_strip_generated::LedStripGenerated) for a
-//! sample generated type with constructor, constants, and trait methods.
+//! - [`led_strip!`](macro@crate::led_strip) - Macro to generate an LED-strip struct type (includes syntax details).
+//! - [`LedStrip`](`crate::led_strip::LedStrip`) - Core trait defining the LED strip API surface.
+//! - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) - Sample generated strip type showing the constructor path.
+//! - [`Frame1d`] - 1D pixel array used to describe LED strip patterns.
+//!
+//! # Example: Write a Single 1-Dimensional Frame
+//!
+//! In this example, we set every other LED to blue and gray. Here, the generated struct type is
+//! named `LedStripSimple`.
+//!
+//! ![LED strip preview][led_strip_simple]
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use core::convert::Infallible;
+//! # use esp_backtrace as _;
+//! use device_envoy_esp::{Result, init_and_start, led_strip, led_strip::{Frame1d, LedStrip as _, colors}};
+//!
+//! // Define LedStripSimple, a struct type for an 8-LED strip on GPIO8.
+//! led_strip! {
+//!     LedStripSimple {
+//!         pin: GPIO8,  // GPIO pin for LED data
+//!         len: 8,      // 8 LEDs
+//!         // other inputs set to their defaults
+//!     }
+//! }
+//!
+//! # #[esp_rtos::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     match example(spawner).await {
+//! #         Ok(infallible) => match infallible {},
+//! #         Err(error) => panic!("{error:?}"),
+//! #     }
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+//!     // Create a LedStripSimple instance.
+//!     let led_strip_simple = LedStripSimple::new(p.GPIO8, rmt80.channel0, spawner)?;
+//!
+//!     // Create and write a frame with alternating blue and gray pixels.
+//!     let mut frame = Frame1d::new();
+//!     for pixel_index in 0..LedStripSimple::LEN {
+//!         // Directly index into the frame buffer.
+//!         frame[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
+//!     }
+//!
+//!     // Display the frame on the LED strip (until replaced).
+//!     led_strip_simple.write_frame(frame);
+//!
+//!     core::future::pending().await
+//! }
+//! ```
+//!
+//! # Example: Animate a Sequence
+//!
+//! This example animates a 96-LED strip through red, green, and blue frames, cycling continuously.
+//! Here, the generated struct type is named `LedStripAnimated`.
+//!
+//! ![LED strip preview][led_strip_animated]
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! # use core::convert::Infallible;
+//! # use esp_backtrace as _;
+//! use device_envoy_esp::{Result, init_and_start, led_strip, led_strip::{Current, Frame1d, Gamma, LedStrip as _, colors}};
+//! use embassy_time::Duration;
+//!
+//! // Define LedStripAnimated, a struct type for a 96-LED strip on GPIO18.
+//! // We change some defaults including setting a 1A power budget and disabling gamma correction.
+//! led_strip! {
+//!     LedStripAnimated {
+//!         pin: GPIO18,                           // GPIO pin for LED data
+//!         len: 96,                               // 96 LEDs
+//!         max_current: Current::Milliamps(1000), // 1A power budget
+//!         gamma: Gamma::Linear,                  // No color correction
+//!         max_frames: 3,                         // Up to 3 animation frames
+//!     }
+//! }
+//!
+//! # #[esp_rtos::main]
+//! # async fn main(spawner: embassy_executor::Spawner) -> ! {
+//! #     match example(spawner).await {
+//! #         Ok(infallible) => match infallible {},
+//! #         Err(error) => panic!("{error:?}"),
+//! #     }
+//! # }
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+//!     let led_strip_animated = LedStripAnimated::new(p.GPIO18, rmt80.channel0, spawner)?;
+//!
+//!     // Create a sequence of frames and durations and then animate them (looping, until replaced).
+//!     let frame_duration = Duration::from_millis(300);
+//!     led_strip_animated.animate([
+//!         (Frame1d::filled(colors::RED), frame_duration),
+//!         (Frame1d::filled(colors::GREEN), frame_duration),
+//!         (Frame1d::filled(colors::BLUE), frame_duration),
+//!     ]);
+//!
+//!     core::future::pending().await
+//! }
+//! ```
 
 pub use device_envoy_core::led_strip::*;
 pub mod led_strip_generated;
@@ -42,12 +152,13 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStripEsp<N, MAX_FRAMES> {
     }
 }
 
-/// Output engine for WS2812 transmission.
+/// Tells whether to run LEDs from an [RMT resource](crate#glossary) or an
+/// [SPI resource](crate#glossary).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Engine {
-    /// ESP32 RMT pulse engine.
+    /// Use an [RMT resource](crate#glossary).
     Rmt,
-    /// ESP32 SPI byte-stream engine.
+    /// Use an [SPI resource](crate#glossary).
     Spi,
 }
 
@@ -57,6 +168,9 @@ impl Default for Engine {
     }
 }
 
+// Must be `pub` for macro expansion at foreign call sites.
+// This is an implementation detail, not part of the user-facing API.
+#[doc(hidden)]
 /// Default current budget used by [`led_strip!`](macro@crate::led_strip) when
 /// `max_current` is omitted.
 pub const CURRENT_DEFAULT: Current = Current::Milliamps(250);
@@ -92,6 +206,9 @@ const BIT1: PulseCode = PulseCode::new(Level::High, 16, Level::Low, 9);
 /// The pulse buffer is a **field** of this struct so that it lives in BSS /
 /// static memory rather than on the stack.
 #[cfg(target_os = "none")]
+// Must be `pub` for macro expansion at foreign call sites.
+// This is an implementation detail, not part of the user-facing API.
+#[doc(hidden)]
 pub struct RmtWs2812<'d, const LEDS: usize, const PULSES: usize> {
     channel: Option<Channel<'d, esp_hal::Blocking, Tx>>,
     pulse_buf: [PulseCode; PULSES],
@@ -150,8 +267,9 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
     }
 }
 
-/// Errors returned by [`RmtWs2812::write`].
 #[cfg(target_os = "none")]
+#[doc(hidden)]
+/// Errors returned by [`RmtWs2812::write`].
 #[derive(Debug)]
 pub enum WritingError {
     /// Channel was already consumed and not recovered (internal logic error).
@@ -238,51 +356,54 @@ pub async fn led_strip_device_loop<
 // led_strip! macro
 // ============================================================================
 
-/// Generate a fully async WS2812 LED strip controller for ESP32.
+/// Macro to generate an LED-strip struct type (includes syntax details).
 ///
-/// # Syntax
+/// **See the [led_strip module documentation](mod@crate::led_strip) for usage examples.**
 ///
-/// ```rust,no_run
-/// # use device_envoy_esp::{init_and_start, init_and_start::rmt_mode};
-/// # async fn example(spawner: embassy_executor::Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-/// init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-/// device_envoy_esp::led_strip! {
-///     MyStrip {
-///         pin: GPIO8,
-///         len: 8,
-///         max_current: device_envoy_esp::led_strip::Current::Milliamps(1000),
+/// **Syntax:**
+///
+/// ```text
+/// led_strip! {
+///     <Name> {
+///         pin: <pin_ident>,
+///         len: <usize_expr>,
+///         max_current: <Current_expr>, // optional
+///         engine: <Engine_expr>,       // optional
+///         gamma: <Gamma_expr>,         // optional
+///         max_frames: <usize_expr>,    // optional
 ///     }
 /// }
-/// # let _my_strip = MyStrip::new(p.GPIO8, rmt80.channel0, spawner)?;
-/// # core::future::pending().await
-/// # }
 /// ```
 ///
-/// Optional fields and their defaults:
+/// **Required fields:**
 ///
-/// | Field | Default |
-/// |---|---|
-/// | `engine` | [`Engine::Rmt`][`Engine::Rmt`] |
-/// | `gamma` | [`Gamma::Srgb`][`Gamma::Srgb`] |
-/// | `max_frames` | `16` |
-/// | `max_current` | [`Current::Milliamps(250)`][`Current::Milliamps`] |
+/// - `pin` — GPIO pin for LED data
+/// - `len` — Number of LEDs
 ///
-/// # What gets generated
+/// **Optional fields:**
 ///
-/// - A `mod my_strip` containing `const LEDS`, `const PULSES = LEDS*24+1`.
-/// - A struct `MyStrip` implementing [`LedStrip<LEDS>`](crate::led_strip::LedStrip).
-/// - `MyStrip::new(pin, channel_creator, spawner) -> Result<&'static MyStrip>`,
-///   where `pin` is the exact `GPIOx` type declared in the macro.
-/// - `MyStrip::MAX_BRIGHTNESS`, `MY_STRIP::MAX_FRAMES`, `MyStrip::LEN`.
+/// - `max_current` — Electrical current budget (default: 250 mA)
+/// - `engine` — Output engine (default: `Engine::Rmt`)
+/// - `gamma` — Color curve (default: `Gamma::Srgb`)
+/// - `max_frames` — Maximum number of animation frames (default: 16 frames)
 ///
-/// # `'static` requirement
+/// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
 ///
-/// `new()` returns `&'static MyStrip`. The static storage is hidden inside
-/// a function-scoped `static` via [`static_cell::StaticCell`]. You only need
-/// to call `new()` once.
+#[doc = include_str!("docs/current_limiting_and_gamma.md")]
+///
+/// # Related Macros
+///
+/// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
 #[doc(hidden)]
 #[macro_export]
 macro_rules! led_strip {
+    ($($tt:tt)*) => { $crate::__led_strip_entry! { $($tt)* } };
+}
+
+/// Implementation macro. Not part of the public API; use [`led_strip!`] instead.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strip_entry {
     (
         $name:ident {
             $($before:tt)*
@@ -1347,6 +1468,7 @@ macro_rules! __led_strip_impl {
 // ============================================================================
 
 #[cfg(target_os = "none")]
+#[doc(hidden)]
 pub mod spi;
 
 // Re-export macros so they are visible from the `led_strip` module path.

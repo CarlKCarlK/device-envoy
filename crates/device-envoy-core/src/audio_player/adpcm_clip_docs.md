@@ -2,6 +2,9 @@
 
 See [`AdpcmClipGenerated`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated) for a sample of generated items.
 
+For ffmpeg conversion commands, see "Preparing audio files" in
+[`pcm_clip!`](macro.pcm_clip.html) and [`adpcm_clip!`](macro.adpcm_clip.html).
+
 At compile time, you can read the clip as compressed ADPCM with
 [`Name::adpcm_clip()`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::adpcm_clip)
 or uncompressed PCM with

@@ -20,9 +20,9 @@
 //!   - Uncompressed: 16-bit PCM (s16le)
 //!   - Compressed: IMA ADPCM in WAV (mono; ~25% the size of PCM; ideal for speech)
 //! - Mono input audio (duplicated to left/right on I²S output)
-//! - For ffmpeg conversion commands, see "Preparing audio files" at
-//!   [`pcm_clip!`](macro@crate::audio_player::pcm_clip) and
-//!   [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip).
+//! - For ffmpeg conversion commands, see "Preparing audio files" in
+//!   [`pcm_clip!`](macro.pcm_clip.html) and
+//!   [`adpcm_clip!`](macro.adpcm_clip.html).
 //!
 //! **After reading the examples below, see also:**
 //!
@@ -35,15 +35,15 @@
 //!   (for example [`new`](audio_player_generated::AudioPlayerGenerated::new)).
 //! - [`AudioPlayer`] - Trait providing playback operations
 //!   (`play`, `stop`, `wait_until_stopped`, runtime volume controls) for generated types.
-//! - [`pcm_clip!`](macro@crate::audio_player::pcm_clip) - Macro to "compile in" an uncompressed (PCM) clip from an external file
+//! - [`pcm_clip!`](macro.pcm_clip.html) - Macro to "compile in" an uncompressed (PCM) clip from an external file
 //!   (includes syntax details). See
 //!   [`PcmClipGenerated`](pcm_clip_generated::PcmClipGenerated)
 //!   for sample generated items.
-//! - [`adpcm_clip!`](macro@crate::audio_player::adpcm_clip) - Macro to "compile in" a compressed (ADPCM) WAV clip from an external file
+//! - [`adpcm_clip!`](macro.adpcm_clip.html) - Macro to "compile in" a compressed (ADPCM) WAV clip from an external file
 //!   (includes syntax details).
 //!   See [`AdpcmClipGenerated`](adpcm_clip_generated::AdpcmClipGenerated) for
 //!   sample generated items.
-//! - [`tone!`](macro@crate::tone) - Macro to generate tone audio clips.
+//! - [`tone!`](macro.tone.html) - Macro to generate tone audio clips.
 //! - [`SilenceClip`] - An audio clip of silence for a specific duration. Memory-efficient because it stores no audio sample data.
 //! - [`PcmClip`] and [`PcmClipBuf`] - Unsized and sized const-friendly uncompressed (PCM) clip types.
 //! - [`AdpcmClip`] and [`AdpcmClipBuf`] - Unsized and sized const-friendly compressed (ADPCM) clip types.
@@ -324,6 +324,18 @@ pub mod audio_player_generated;
 pub mod pcm_clip_generated;
 
 pub use device_envoy_core::audio_player::*;
+#[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file (includes syntax details)."]
+#[doc = include_str!("../../device-envoy-core/src/audio_player/adpcm_clip_docs.md")]
+#[doc = include_str!("../../device-envoy-core/src/audio_player/audio_prep_steps_1_2.md")]
+#[doc = include_str!("../../device-envoy-core/src/audio_player/adpcm_clip_step_3.md")]
+#[doc(inline)]
+pub use device_envoy_core::audio_player::adpcm_clip;
+#[doc = "Macro to \"compile in\" an uncompressed (PCM) clip from an external file (includes syntax details)."]
+#[doc = include_str!("../../device-envoy-core/src/audio_player/pcm_clip_docs.md")]
+#[doc = include_str!("../../device-envoy-core/src/audio_player/audio_prep_steps_1_2.md")]
+#[doc = include_str!("../../device-envoy-core/src/audio_player/pcm_clip_step_3.md")]
+#[doc(inline)]
+pub use device_envoy_core::audio_player::pcm_clip;
 
 #[cfg(target_os = "none")]
 use embassy_futures::yield_now;

@@ -4,6 +4,9 @@ See [`PcmClipGenerated`](crate::audio_player::pcm_clip_generated::PcmClipGenerat
 
 **See the [audio_player module documentation](mod@crate::audio_player) for usage examples.**
 
+For ffmpeg conversion commands, see "Preparing audio files" in
+[`pcm_clip!`](macro.pcm_clip.html) and [`adpcm_clip!`](macro.adpcm_clip.html).
+
 At compile time, you can read the clip as uncompressed PCM with
 [`Name::pcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::pcm_clip)
 or compressed ADPCM with

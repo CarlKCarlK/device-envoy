@@ -14,7 +14,6 @@ use device_envoy_esp::{
     clock_sync::{h12_m_s, ClockSync, ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start,
-    init_and_start::rmt_mode,
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,

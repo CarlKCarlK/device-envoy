@@ -323,7 +323,6 @@ pub mod adpcm_clip_generated;
 pub mod audio_player_generated;
 pub mod pcm_clip_generated;
 
-pub use device_envoy_core::audio_player::*;
 #[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file (includes syntax details)."]
 #[doc = include_str!("../../device-envoy-core/src/audio_player/adpcm_clip_docs.md")]
 #[doc = include_str!("../../device-envoy-core/src/audio_player/audio_prep_steps_1_2.md")]
@@ -336,6 +335,7 @@ pub use device_envoy_core::audio_player::adpcm_clip;
 #[doc = include_str!("../../device-envoy-core/src/audio_player/pcm_clip_step_3.md")]
 #[doc(inline)]
 pub use device_envoy_core::audio_player::pcm_clip;
+pub use device_envoy_core::audio_player::*;
 
 #[cfg(target_os = "none")]
 use embassy_futures::yield_now;

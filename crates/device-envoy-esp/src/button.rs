@@ -2,7 +2,6 @@
 //!
 //! This module provides:
 //! - [`ButtonEsp`] for direct debounced polling
-//! - [`ButtonWatchEsp`] for background monitoring that avoids future-cancellation starvation
 //! - [`button_watch!`](crate::button_watch!) for RP-style generated button-watch types
 
 #[cfg(target_os = "none")]
@@ -10,6 +9,9 @@ mod button_watch;
 pub mod button_watch_generated;
 
 #[cfg(target_os = "none")]
+// `button_watch!` expands in downstream crates and references these symbols, so
+// they must remain public even though they are macro implementation details.
+#[doc(hidden)]
 pub use button_watch::{ButtonWatchEsp, ButtonWatchStaticEsp};
 pub use device_envoy_core::button::Button;
 pub use device_envoy_core::button::{

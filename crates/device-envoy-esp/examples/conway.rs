@@ -9,11 +9,9 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start,
-    init_and_start::rmt_mode,
-    ir_kepler, led2d,
+    init_and_start, ir_kepler, led2d,
     led2d::{layout::LedLayout, Led2dFont},
-    led_strip::{Current, Engine},
+    led_strip::Current,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -27,7 +25,7 @@ led2d! {
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
         font: Led2dFont::Font4x6Trim,
-        engine: Engine::Spi,
+        engine: device_envoy_esp::led_strip::Engine::Spi,
         max_frames: 30,
     }
 }

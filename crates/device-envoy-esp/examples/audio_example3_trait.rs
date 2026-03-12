@@ -14,9 +14,7 @@ use device_envoy_core::audio_player::{
 use device_envoy_esp::{
     audio_player::{audio_player, pcm_clip},
     button::{Button as _, ButtonEsp, PressedTo},
-    init_and_start,
-    init_and_start::rmt_mode,
-    Result,
+    init_and_start, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

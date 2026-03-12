@@ -10,9 +10,7 @@ use log::info;
 
 use device_envoy_esp::{
     flash_block::{FlashBlock, FlashBlockEsp},
-    init_and_start,
-    init_and_start::rmt_mode,
-    Error, Result,
+    init_and_start, Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

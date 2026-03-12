@@ -9,10 +9,8 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    init_and_start,
-    init_and_start::rmt_mode,
-    led_strip,
-    led_strip::{colors, Current, Engine, Frame1d, LedStrip as _},
+    init_and_start, led_strip,
+    led_strip::{colors, Current, Frame1d, LedStrip as _},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -25,7 +23,7 @@ led_strip! {
         pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(180),
-        engine: Engine::Spi,
+        engine: device_envoy_esp::led_strip::Engine::Spi,
         max_frames: 2,
     }
 }

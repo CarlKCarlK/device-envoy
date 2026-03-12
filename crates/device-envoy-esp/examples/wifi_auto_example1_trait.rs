@@ -10,7 +10,6 @@ use device_envoy_esp::{
     button::{Button, ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
     init_and_start,
-    init_and_start::rmt_mode,
     wifi_auto::{WifiAuto, WifiAutoEsp, WifiAutoEvent, WifiStack},
     Error, Result,
 };

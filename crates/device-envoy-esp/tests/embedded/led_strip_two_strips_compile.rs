@@ -7,9 +7,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start,
-    init_and_start::rmt_mode,
-    led_strip,
+    init_and_start, led_strip,
     led_strip::{colors, Current, Frame1d, LedStrip as _},
 };
 

@@ -72,7 +72,7 @@ strip and then animates a sequence of frames.
 # #![no_main]
 # use esp_backtrace as _;
 # use core::convert::Infallible;
-use device_envoy_esp::{Result, init_and_start, init_and_start::rmt_mode, led_strip, led_strip::{LedStrip as _, Frame1d, colors}};
+use device_envoy_esp::{Result, init_and_start, led_strip, led_strip::{LedStrip as _, Frame1d, colors}};
 use embassy_time::Duration;
 
 led_strip! {

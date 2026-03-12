@@ -10,7 +10,6 @@ use esp_hal::gpio::{Level, Output, OutputConfig};
 
 use device_envoy_esp::{
     init_and_start,
-    init_and_start::rmt_mode,
     led4::{BlinkState, Led4 as _, Led4Esp, Led4EspStatic, OutputArray},
 };
 

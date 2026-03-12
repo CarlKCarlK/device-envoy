@@ -16,9 +16,7 @@ use embassy_time::{Duration, Instant, Timer};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{
-    init_and_start, init_and_start::rmt_mode, servo, servo::Servo as _, Result,
-};
+use device_envoy_esp::{init_and_start, servo, servo::Servo as _, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

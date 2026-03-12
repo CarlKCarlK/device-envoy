@@ -17,7 +17,6 @@ use log::info;
 
 use device_envoy_esp::{
     init_and_start,
-    init_and_start::rmt_mode,
     rfid::{Rfid as _, RfidEsp, RfidEvent, RfidStatic},
 };
 

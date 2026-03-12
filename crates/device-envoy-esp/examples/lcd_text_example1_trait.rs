@@ -8,7 +8,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_core::lcd_text::LcdText;
-use device_envoy_esp::{init_and_start, init_and_start::rmt_mode, lcd_text};
+use device_envoy_esp::{init_and_start, lcd_text};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

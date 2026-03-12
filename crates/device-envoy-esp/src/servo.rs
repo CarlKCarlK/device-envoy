@@ -1,6 +1,6 @@
 //! A device abstraction for hobby servos on ESP LEDC PWM.
 //!
-//! This module provides both direct servo control (`servo!`, [`ServoEsp`]) and
+//! This module provides both direct servo control (`servo!`) and
 //! servo-player animation control (`servo_player!`, [`ServoPlayer`], [`AtEnd`], [`linear`], `combine!`).
 //!
 //! Use [`servo!`] for a keyword-driven typed constructor.
@@ -140,6 +140,10 @@ impl ServoStatic {
 }
 
 /// A direct servo output using one LEDC timer and one LEDC channel.
+///
+/// This type is public only because `servo!` and `servo_player!` macro
+/// expansions in downstream crates reference it.
+#[doc(hidden)]
 pub struct ServoEsp {
     channel: RefCell<&'static mut channel::Channel<'static, LowSpeed>>,
     min_us: u32,

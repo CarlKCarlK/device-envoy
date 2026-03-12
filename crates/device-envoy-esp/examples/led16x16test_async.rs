@@ -16,7 +16,6 @@ use device_envoy_esp::{
         rmt::{PulseCode, TxChannelCreator as _},
     },
     init_and_start,
-    init_and_start::rmt_mode,
     led2d::layout::LedLayout,
     led_strip::{colors, RGB8},
 };

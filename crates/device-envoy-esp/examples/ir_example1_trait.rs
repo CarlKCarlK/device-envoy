@@ -7,9 +7,7 @@ use core::convert::Infallible;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start,
-    init_and_start::rmt_mode,
-    ir,
+    init_and_start, ir,
     ir::{Ir, IrEvent},
     Result,
 };

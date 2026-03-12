@@ -7,7 +7,7 @@
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 
-use device_envoy_esp::{init_and_start, init_and_start::rmt_mode, ir_mappings};
+use device_envoy_esp::{init_and_start, ir_mappings};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

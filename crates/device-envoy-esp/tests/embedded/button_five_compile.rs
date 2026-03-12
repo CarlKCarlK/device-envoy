@@ -9,7 +9,6 @@ use esp_backtrace as _;
 use device_envoy_esp::{
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start,
-    init_and_start::rmt_mode,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

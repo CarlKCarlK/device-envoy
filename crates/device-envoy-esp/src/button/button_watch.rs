@@ -1,6 +1,6 @@
 //! A device abstraction for background button monitoring with a spawned task.
 //!
-//! See [`ButtonWatchEsp`] for usage.
+//! See [`button_watch!`](crate::button_watch!) for usage.
 
 #[cfg(target_os = "none")]
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -20,6 +20,9 @@ use crate::{Error, Result};
 
 /// Static resources for [`ButtonWatchEsp`].
 #[cfg(target_os = "none")]
+// Public only because `button_watch!` macro expansions reference this type in
+// downstream crates.
+#[doc(hidden)]
 pub struct ButtonWatchStaticEsp {
     signal: Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: Signal<CriticalSectionRawMutex, bool>,
@@ -48,6 +51,9 @@ impl ButtonWatchStaticEsp {
 /// Use this type when you need press detection that is not disrupted by other
 /// fast loops/tasks that repeatedly cancel futures.
 #[cfg(target_os = "none")]
+// Public only because `button_watch!` macro expansions reference this type in
+// downstream crates.
+#[doc(hidden)]
 pub struct ButtonWatchEsp<'a> {
     signal: &'a Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'a Signal<CriticalSectionRawMutex, bool>,
@@ -252,8 +258,7 @@ async fn signal_press_durations<B: Button>(
 
 /// Creates a button monitoring device abstraction with a background task.
 ///
-/// This macro creates a generated wrapper type around [`ButtonWatchEsp`] with
-/// RP-style constructor ergonomics.
+/// This macro creates a generated wrapper type with RP-style constructor ergonomics.
 ///
 /// See [`ButtonWatchGenerated`](crate::button::button_watch_generated::ButtonWatchGenerated)
 /// for a sample of what the macro generates.

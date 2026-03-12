@@ -13,12 +13,10 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    init_and_start,
-    init_and_start::rmt_mode,
-    led2d,
+    init_and_start, led2d,
     led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
     led_strip,
-    led_strip::{colors, Current, Engine, Frame1d, LedStrip as _},
+    led_strip::{colors, Current, Frame1d, LedStrip as _},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -37,7 +35,7 @@ led2d! {
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
         font: Led2dFont::Font4x6Trim,
-        engine: Engine::Spi,
+        engine: device_envoy_esp::led_strip::Engine::Spi,
         max_frames: 4,
     }
 }

@@ -6,9 +6,7 @@ use core::convert::Infallible;
 
 use esp_backtrace as _;
 
-use device_envoy_esp::{
-    init_and_start, init_and_start::rmt_mode, ir::IrMapping, ir_mapping, Result,
-};
+use device_envoy_esp::{init_and_start, ir::IrMapping, ir_mapping, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

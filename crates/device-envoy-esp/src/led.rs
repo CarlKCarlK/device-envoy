@@ -167,21 +167,49 @@ pub async fn run_animation_loop<const MAX_STEPS: usize>(
     }
 }
 
-/// Macro to generate per-type LED devices with independent task symbols.
+/// Macro to generate a single LED struct type (includes syntax details).
 ///
-/// Each generated type has its own task entry, so multiple generated LED types
-/// can be spawned without sharing one task pool slot.
+/// **See the [led module documentation](mod@crate::led) for usage examples.**
+///
+/// **Syntax:**
+///
+/// ```text
+/// led! {
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///         max_steps: <usize_expr>, // optional
+///     }
+/// }
+/// ```
+///
+/// **Required fields:**
+///
+/// - `pin` - GPIO pin resource type for this generated LED.
+///
+/// **Optional fields:**
+///
+/// - `max_steps` - Maximum number of animation frames (default: 32).
+///
+/// `max_steps = 0` disables animation storage; `set_level()` is still supported.
 #[cfg(target_os = "none")]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! led {
+    ($($tt:tt)*) => { $crate::__led_impl! { $($tt)* } };
+}
+
+/// Implementation macro. Not part of the public API; use [`led!`] instead.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_impl {
     (
         $vis:vis $name:ident {
             pin: $pin:ident,
             max_steps: $max_steps:expr $(,)?
         }
     ) => {
-        $crate::led!(@__impl vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
+        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
     };
     (
         $vis:vis $name:ident {
@@ -189,17 +217,23 @@ macro_rules! led {
             pin: $pin:ident $(,)?
         }
     ) => {
-        $crate::led!(@__impl vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
+        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
     };
     (
         $vis:vis $name:ident {
             pin: $pin:ident $(,)?
         }
     ) => {
-        $crate::led!(@__impl vis: $vis, name: $name, pin: $pin, max_steps: $crate::led::DEFAULT_MAX_STEPS);
+        $crate::__led_impl!(
+            @__emit
+            vis: $vis,
+            name: $name,
+            pin: $pin,
+            max_steps: $crate::led::DEFAULT_MAX_STEPS
+        );
     };
     (
-        @__impl
+        @__emit
         vis: $vis:vis,
         name: $name:ident,
         pin: $pin:ident,

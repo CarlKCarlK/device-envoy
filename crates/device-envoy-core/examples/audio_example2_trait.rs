@@ -82,13 +82,15 @@ impl AudioPlayer<VOICE_22050_HZ> for DemoAudioPlayer {
 
 struct DemoButton;
 
-impl Button for DemoButton {
-    fn is_pressed(&self) -> bool {
+impl device_envoy_core::button::__ButtonMonitor for DemoButton {
+    fn is_pressed_raw(&self) -> bool {
         false
     }
 
     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 }
+
+impl Button for DemoButton {}
 
 fn main() {
     let mut button = DemoButton;

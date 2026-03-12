@@ -203,12 +203,11 @@ impl Default for WifiAutoPersistedState {
 /// }
 ///
 /// # struct DemoButton;
-/// # impl Button for DemoButton {
-/// #     fn is_pressed(&self) -> bool {
-/// #         false
-/// #     }
+/// # impl device_envoy_core::button::__ButtonMonitor for DemoButton {
+/// #     fn is_pressed_raw(&self) -> bool { false }
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
+/// # impl Button for DemoButton {}
 /// # struct DemoWifiAuto;
 /// # impl WifiAuto for DemoWifiAuto {
 /// #     type Error = Infallible;

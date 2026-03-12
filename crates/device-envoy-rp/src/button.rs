@@ -19,6 +19,8 @@ pub use button_watch::{ButtonWatchRp, ButtonWatchStaticRp};
 #[doc(hidden)]
 pub use button_watch::button_watch_task;
 
+#[doc(hidden)]
+pub use device_envoy_core::button::__ButtonMonitor;
 pub use device_envoy_core::button::Button;
 pub use device_envoy_core::button::{
     BUTTON_DEBOUNCE_DELAY, BUTTON_POLL_INTERVAL, LONG_PRESS_DURATION, PressDuration, PressedTo,
@@ -105,8 +107,8 @@ impl<'a> ButtonRp<'a> {
     }
 }
 
-impl device_envoy_core::button::Button for ButtonRp<'_> {
-    fn is_pressed(&self) -> bool {
+impl device_envoy_core::button::__ButtonMonitor for ButtonRp<'_> {
+    fn is_pressed_raw(&self) -> bool {
         self.pressed_to.is_pressed(self.input.is_high())
     }
 
@@ -121,6 +123,8 @@ impl device_envoy_core::button::Button for ButtonRp<'_> {
         }
     }
 }
+
+impl device_envoy_core::button::Button for ButtonRp<'_> {}
 
 #[doc(inline)]
 pub use crate::button_watch;

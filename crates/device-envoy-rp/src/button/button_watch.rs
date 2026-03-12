@@ -112,17 +112,13 @@ impl ButtonWatchRp {
     }
 }
 
-impl device_envoy_core::button::Button for ButtonWatchRp {
-    fn is_pressed(&self) -> bool {
+impl device_envoy_core::button::__ButtonMonitor for ButtonWatchRp {
+    fn is_pressed_raw(&self) -> bool {
         self.is_pressed.load(Ordering::Relaxed)
     }
 
-    async fn wait_for_press_duration(&mut self) -> PressDuration {
-        self.signal.wait().await
-    }
-
     async fn wait_until_pressed_state(&mut self, pressed: bool) {
-        if self.is_pressed() == pressed {
+        if self.is_pressed.load(Ordering::Relaxed) == pressed {
             return;
         }
 
@@ -132,6 +128,12 @@ impl device_envoy_core::button::Button for ButtonWatchRp {
                 return;
             }
         }
+    }
+}
+
+impl device_envoy_core::button::Button for ButtonWatchRp {
+    async fn wait_for_press_duration(&mut self) -> PressDuration {
+        self.signal.wait().await
     }
 }
 
@@ -179,8 +181,8 @@ struct InputButton<'a> {
     pressed_to: PressedTo,
 }
 
-impl device_envoy_core::button::Button for InputButton<'_> {
-    fn is_pressed(&self) -> bool {
+impl device_envoy_core::button::__ButtonMonitor for InputButton<'_> {
+    fn is_pressed_raw(&self) -> bool {
         self.pressed_to.is_pressed(self.input.is_high())
     }
 
@@ -196,7 +198,7 @@ impl device_envoy_core::button::Button for InputButton<'_> {
     }
 }
 
-async fn signal_press_durations<B: device_envoy_core::button::Button>(
+async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
     button: &mut B,
     signal: &'static Signal<CriticalSectionRawMutex, PressDuration>,
     state_signal: &'static Signal<CriticalSectionRawMutex, bool>,
@@ -205,22 +207,24 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
     is_pressed: &'static AtomicBool,
     initialized: &'static AtomicBool,
 ) -> ! {
-    let initial_pressed = button.is_pressed();
+    let initial_pressed = <B as device_envoy_core::button::__ButtonMonitor>::is_pressed_raw(button);
     is_pressed.store(initial_pressed, Ordering::Relaxed);
     state_signal.signal(initial_pressed);
     initialized.store(true, Ordering::Release);
     initialized_signal.signal(());
 
     loop {
-        <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false).await;
+        <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(button, false)
+            .await;
 
-        <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, true).await;
+        <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(button, true)
+            .await;
         is_pressed.store(true, Ordering::Relaxed);
         state_signal.signal(true);
         state_changed_signal.signal(());
 
         Timer::after(device_envoy_core::button::BUTTON_DEBOUNCE_DELAY).await;
-        if !button.is_pressed() {
+        if !<B as device_envoy_core::button::__ButtonMonitor>::is_pressed_raw(button) {
             is_pressed.store(false, Ordering::Relaxed);
             state_signal.signal(false);
             state_changed_signal.signal(());
@@ -228,7 +232,9 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
         }
 
         let press_duration = embassy_futures::select::select(
-            <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false),
+            <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(
+                button, false,
+            ),
             Timer::after(device_envoy_core::button::LONG_PRESS_DURATION),
         )
         .await;
@@ -242,8 +248,10 @@ async fn signal_press_durations<B: device_envoy_core::button::Button>(
             }
             embassy_futures::select::Either::Second(()) => {
                 signal.signal(PressDuration::Long);
-                <B as device_envoy_core::button::Button>::wait_until_pressed_state(button, false)
-                    .await;
+                <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(
+                    button, false,
+                )
+                .await;
                 is_pressed.store(false, Ordering::Relaxed);
                 state_signal.signal(false);
                 state_changed_signal.signal(());
@@ -449,24 +457,26 @@ macro_rules! __button_watch_impl {
                 }
             }
 
-            impl $crate::button::Button for $name {
-                fn is_pressed(&self) -> bool {
+            impl $crate::button::__ButtonMonitor for $name {
+                fn is_pressed_raw(&self) -> bool {
                     <$crate::button::ButtonWatchRp as $crate::button::Button>::is_pressed(
                         &self.button_watch,
                     )
                 }
 
-                async fn wait_for_press_duration(&mut self) -> $crate::button::PressDuration {
-                    <$crate::button::ButtonWatchRp as $crate::button::Button>::wait_for_press_duration(
+                async fn wait_until_pressed_state(&mut self, pressed: bool) {
+                    <$crate::button::ButtonWatchRp as $crate::button::__ButtonMonitor>::wait_until_pressed_state(
                         &mut self.button_watch,
+                        pressed,
                     )
                     .await
                 }
+            }
 
-                async fn wait_until_pressed_state(&mut self, pressed: bool) {
-                    <$crate::button::ButtonWatchRp as $crate::button::Button>::wait_until_pressed_state(
+            impl $crate::button::Button for $name {
+                async fn wait_for_press_duration(&mut self) -> $crate::button::PressDuration {
+                    <$crate::button::ButtonWatchRp as $crate::button::Button>::wait_for_press_duration(
                         &mut self.button_watch,
-                        pressed,
                     )
                     .await
                 }

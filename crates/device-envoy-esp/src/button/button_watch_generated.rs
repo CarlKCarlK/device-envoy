@@ -73,22 +73,25 @@ impl core::ops::Deref for ButtonWatchGenerated {
 }
 
 #[cfg(doc)]
-impl crate::button::Button for ButtonWatchGenerated {
-    fn is_pressed(&self) -> bool {
+impl crate::button::__ButtonMonitor for ButtonWatchGenerated {
+    fn is_pressed_raw(&self) -> bool {
         <super::ButtonWatchEsp<'static> as crate::button::Button>::is_pressed(&self.button_watch)
     }
 
-    async fn wait_for_press_duration(&mut self) -> crate::button::PressDuration {
-        <super::ButtonWatchEsp<'static> as crate::button::Button>::wait_for_press_duration(
+    async fn wait_until_pressed_state(&mut self, pressed: bool) {
+        <super::ButtonWatchEsp<'static> as crate::button::__ButtonMonitor>::wait_until_pressed_state(
             &mut self.button_watch,
+            pressed,
         )
         .await
     }
+}
 
-    async fn wait_until_pressed_state(&mut self, pressed: bool) {
-        <super::ButtonWatchEsp<'static> as crate::button::Button>::wait_until_pressed_state(
+#[cfg(doc)]
+impl crate::button::Button for ButtonWatchGenerated {
+    async fn wait_for_press_duration(&mut self) -> crate::button::PressDuration {
+        <super::ButtonWatchEsp<'static> as crate::button::Button>::wait_for_press_duration(
             &mut self.button_watch,
-            pressed,
         )
         .await
     }

@@ -12,7 +12,7 @@ use log::info;
 use device_envoy_esp::{
     button::PressedTo,
     button_watch,
-    clock_sync::{ClockSyncEsp, ClockSyncStatic, ONE_SECOND},
+    clock_sync::{ClockSyncEsp, ClockSyncStaticEsp, ONE_SECOND},
     flash_block::FlashBlockEsp,
     init_and_start, lcd_text,
     lcd_text::LcdText as _,
@@ -97,7 +97,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_offset_minutes = timezone_field
         .offset_minutes()?
         .ok_or(Error::MissingCustomWifiAutoField)?;
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncEsp::new_static();
+    static CLOCK_SYNC_STATIC: ClockSyncStaticEsp = ClockSyncEsp::new_static();
     let clock_sync = ClockSyncEsp::new(
         &CLOCK_SYNC_STATIC,
         stack,

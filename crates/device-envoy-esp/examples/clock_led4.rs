@@ -24,7 +24,7 @@ use log::info;
 use device_envoy_esp::{
     button::PressedTo,
     button_watch,
-    clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStatic, ONE_MINUTE},
+    clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStaticEsp, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start,
     led4::{
@@ -123,7 +123,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .offset_minutes()?
         .ok_or(Error::MissingCustomWifiAutoField)?;
 
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncEsp::new_static();
+    static CLOCK_SYNC_STATIC: ClockSyncStaticEsp = ClockSyncEsp::new_static();
     let clock_sync = ClockSyncEsp::new(
         &CLOCK_SYNC_STATIC,
         stack,

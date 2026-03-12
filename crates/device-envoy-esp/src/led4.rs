@@ -12,7 +12,9 @@ pub use device_envoy_core::led4::{
     circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES,
 };
 
+#[cfg(target_os = "none")]
 const CELL_COUNT: usize = device_envoy_core::led4::CELL_COUNT;
+#[cfg(target_os = "none")]
 const SEGMENT_COUNT: usize = device_envoy_core::led4::SEGMENT_COUNT;
 
 #[cfg(target_os = "none")]

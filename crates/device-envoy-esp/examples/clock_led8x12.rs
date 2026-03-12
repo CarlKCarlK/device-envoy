@@ -18,7 +18,7 @@ use log::info;
 use device_envoy_esp::{
     button::PressedTo,
     button_watch,
-    clock_sync::{ClockSyncEsp, ClockSyncStatic, ONE_MINUTE},
+    clock_sync::{ClockSyncEsp, ClockSyncStaticEsp, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start, led2d,
     led2d::Led2d as _,
@@ -119,7 +119,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     let offset_minutes = timezone_field.offset_minutes()?.unwrap_or(0);
     info!("timezone offset minutes: {}", offset_minutes);
 
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncEsp::new_static();
+    static CLOCK_SYNC_STATIC: ClockSyncStaticEsp = ClockSyncEsp::new_static();
     let clock_sync = ClockSyncEsp::new(
         &CLOCK_SYNC_STATIC,
         stack,

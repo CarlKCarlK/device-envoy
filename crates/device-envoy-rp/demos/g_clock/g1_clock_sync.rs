@@ -11,7 +11,7 @@ use defmt::info;
 use device_envoy_rp::{
     Error, Result,
     button::PressedTo,
-    clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND, h12_m_s},
+    clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStaticRp, ONE_SECOND, h12_m_s},
     flash_block::FlashBlockRp,
     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
@@ -74,7 +74,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .ok_or(Error::MissingCustomWifiAutoField)?;
 
     // Create the ClockSync instance.
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+    static CLOCK_SYNC_STATIC: ClockSyncStaticRp = ClockSyncRp::new_static();
     let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,
         stack,

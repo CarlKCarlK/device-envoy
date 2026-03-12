@@ -1,13 +1,19 @@
-//! A device abstraction for a 4-digit, 7-segment LED display.
+//! A device abstraction for a 4-digit, 7-segment LED display for text with optional animation and blinking.
 //!
-//! See [`Led4Esp`] for construction and [`device_envoy_core::led4::Led4`] for text, blinking, and animation control.
+//! See [`Led4Esp`] for the primary text/blinking example and [`Led4`] for trait methods.
 //!
-//! You can create up to two concurrent `Led4Esp` instances per program; a third is expected to fail at runtime because the `led4` task pool uses `pool_size = 2`.
+//! **Limations**: You can create up to two concurrent `Led4Esp` instances per program; a third is expected to fail at runtime because the `led4` task pool uses `pool_size = 2`. Animation APIs support up to 16 steps per animation (`ANIMATION_MAX_FRAMES`).
+//!
+//! This module provides device abstraction for controlling common-cathode
+//! 4-digit 7-segment LED displays. Supports displaying text and numbers with
+//! optional blinking.
 
 pub use device_envoy_core::led4::{
-    circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES, CELL_COUNT,
-    SEGMENT_COUNT,
+    circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES,
 };
+
+const CELL_COUNT: usize = device_envoy_core::led4::CELL_COUNT;
+const SEGMENT_COUNT: usize = device_envoy_core::led4::SEGMENT_COUNT;
 
 #[cfg(target_os = "none")]
 use core::convert::Infallible;
@@ -132,7 +138,75 @@ impl From<Led4SimpleLoopError<Error>> for Error {
     }
 }
 
-/// A device abstraction for a 4-digit, 7-segment LED display with blinking.
+/// A device abstraction for a 4-digit, 7-segment LED display with blinking support.
+///
+/// # Hardware Requirements
+///
+/// This abstraction is designed for common-cathode 7-segment displays where:
+/// - Cell pins control which digit is active (LOW = on, HIGH = off)
+/// - Segment pins control which segments light up (HIGH = on, LOW = off)
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use esp_backtrace as _;
+/// use device_envoy_esp::{
+///     Error, Result, init_and_start,
+///     led4::{BlinkState, Led4 as _, Led4Esp, Led4EspStatic, OutputArray, circular_outline_animation},
+/// };
+/// use esp_hal::gpio::{Level, Output, OutputConfig};
+/// use embassy_time::{Duration, Timer};
+///
+/// # #[esp_rtos::main]
+/// # async fn main(spawner: embassy_executor::Spawner) -> ! {
+/// #     match example(spawner).await {
+/// #         Ok(()) => loop {},
+/// #         Err(error) => panic!("{error:?}"),
+/// #     }
+/// # }
+/// async fn example(spawner: embassy_executor::Spawner) -> Result<(), Error> {
+///     init_and_start!(p);
+///
+///     let cells = OutputArray::new([
+///         Output::new(p.GPIO14, Level::High, OutputConfig::default()),
+///         Output::new(p.GPIO13, Level::High, OutputConfig::default()),
+///         Output::new(p.GPIO12, Level::High, OutputConfig::default()),
+///         Output::new(p.GPIO11, Level::High, OutputConfig::default()),
+///     ]);
+///
+///     let segments = OutputArray::new([
+///         Output::new(p.GPIO10, Level::Low, OutputConfig::default()),
+///         Output::new(p.GPIO9, Level::Low, OutputConfig::default()),
+///         Output::new(p.GPIO4, Level::Low, OutputConfig::default()),
+///         Output::new(p.GPIO3, Level::Low, OutputConfig::default()),
+///         Output::new(p.GPIO8, Level::Low, OutputConfig::default()),
+///         Output::new(p.GPIO18, Level::Low, OutputConfig::default()),
+///         Output::new(p.GPIO17, Level::Low, OutputConfig::default()),
+///         Output::new(p.GPIO16, Level::Low, OutputConfig::default()),
+///     ]);
+///
+///     static LED4_STATIC: Led4EspStatic = Led4Esp::new_static();
+///     let display = Led4Esp::new(&LED4_STATIC, cells, segments, spawner)?;
+///
+///     // Blink "1234" for three seconds.
+///     display.write_text(['1', '2', '3', '4'], BlinkState::BlinkingAndOn);
+///     Timer::after(Duration::from_secs(3)).await;
+///
+///     // Run the circular outline animation for three seconds.
+///     display.animate_text(circular_outline_animation(true));
+///     Timer::after(Duration::from_secs(3)).await;
+///
+///     // Show "rUSt" solid forever.
+///     display.write_text(['r', 'U', 'S', 't'], BlinkState::Solid);
+///     core::future::pending().await
+/// }
+/// ```
+///
+/// Beyond simple text, the driver can loop animations via [`Led4::animate_text`].
+/// The struct owns the background task and signal wiring; create it once with
+/// [`Led4Esp::new`] and use the returned handle for all display updates.
 #[cfg(target_os = "none")]
 pub struct Led4Esp<'a>(&'a Led4EspOuterStatic);
 

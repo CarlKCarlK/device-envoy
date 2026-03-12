@@ -16,7 +16,7 @@ use defmt_rtt as _;
 use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::button_watch;
-use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_MINUTE};
+use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE};
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::led4::{
     BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
@@ -118,7 +118,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .ok_or(Error::MissingCustomWifiAutoField)?;
 
     // Create a ClockSync device that knows its timezone offset.
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+    static CLOCK_SYNC_STATIC: ClockSyncStaticRp = ClockSyncRp::new_static();
     let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,
         stack,

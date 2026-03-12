@@ -27,7 +27,7 @@ use device_envoy_rp::audio_player::{
 use device_envoy_rp::button::PressedTo;
 use device_envoy_rp::button_watch;
 use device_envoy_rp::clock_sync::{
-    ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_MINUTE, h12_m_s,
+    ClockSync as _, ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE, h12_m_s,
 };
 use device_envoy_rp::flash_block::FlashBlockRp;
 use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
@@ -176,7 +176,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let timezone_offset_minutes = timezone_field
         .offset_minutes()?
         .ok_or(Error::MissingCustomWifiAutoField)?;
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+    static CLOCK_SYNC_STATIC: ClockSyncStaticRp = ClockSyncRp::new_static();
 
     let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,

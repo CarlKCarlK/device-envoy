@@ -2,7 +2,7 @@
 //!
 //! See [`Led4Rp`] for the primary text/blinking example and [`Led4`] for trait methods.
 //!
-//! You can create up to two concurrent `Led4Rp` instances per program; a third is expected to fail at runtime because the `led4` task pool uses `pool_size = 2`.
+//! **Limations**: You can create up to two concurrent `Led4Rp` instances per program; a third is expected to fail at runtime because the `led4` task pool uses `pool_size = 2`. Animation APIs support up to 16 steps per animation (`ANIMATION_MAX_FRAMES`).
 //!
 //! This module provides device abstraction for controlling common-cathode
 //! 4-digit 7-segment LED displays. Supports displaying text and numbers with
@@ -28,7 +28,9 @@ use self::led4_simple::{Led4Simple, Led4SimpleStatic};
 // ============================================================================
 
 mod output_array;
-pub use device_envoy_core::led4::{AnimationFrame, BlinkState, Led4, circular_outline_animation};
+pub use device_envoy_core::led4::{
+    ANIMATION_MAX_FRAMES, AnimationFrame, BlinkState, Led4, circular_outline_animation,
+};
 pub use output_array::OutputArray;
 
 // ============================================================================

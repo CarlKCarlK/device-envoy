@@ -23,7 +23,7 @@ use device_envoy_rp::button_watch;
 use device_envoy_rp::{
     Error, Result,
     button::PressedTo,
-    clock_sync::{ClockSyncRp, ClockSyncStatic, ONE_MINUTE},
+    clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE},
     flash_block::FlashBlockRp,
     led_strip::{Current, Gamma, colors},
     led2d,
@@ -149,7 +149,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .ok_or(Error::MissingCustomWifiAutoField)?;
 
     // Create a clock synced over WiFi.
-    static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+    static CLOCK_SYNC_STATIC: ClockSyncStaticRp = ClockSyncRp::new_static();
     let clock_sync = ClockSyncRp::new(
         &CLOCK_SYNC_STATIC,
         stack,

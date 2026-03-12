@@ -7,8 +7,6 @@
 #![no_std]
 #![no_main]
 
-#[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
@@ -20,7 +18,7 @@ use device_envoy_esp::{
     led2d,
     led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
     led_strip,
-    led_strip::{colors, Current, Frame1d, LedStrip as _},
+    led_strip::{colors, Current, Engine, Frame1d, LedStrip as _},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

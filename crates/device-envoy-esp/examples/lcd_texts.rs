@@ -8,8 +8,11 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 
-use device_envoy_esp::lcd_text::LcdText as _;
-use device_envoy_esp::{i2cs, init_and_start};
+use device_envoy_esp::{
+    i2cs,
+    init_and_start,
+    lcd_text::LcdText as _,
+};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

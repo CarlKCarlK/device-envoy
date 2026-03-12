@@ -30,8 +30,7 @@
 //! # #![no_main]
 //! # use core::convert::Infallible;
 //! # use esp_backtrace as _;
-//! use device_envoy_esp::lcd_text::LcdText as _;
-//! use device_envoy_esp::{Result, init_and_start, lcd_text};
+//! use device_envoy_esp::{Result, init_and_start, lcd_text::{self, LcdText as _}};
 //!
 //! lcd_text! {
 //!     i2c: I2C0,
@@ -70,8 +69,7 @@
 //! # #![no_main]
 //! # use core::convert::Infallible;
 //! # use esp_backtrace as _;
-//! use device_envoy_esp::lcd_text::LcdText as _;
-//! use device_envoy_esp::{Result, i2cs, init_and_start};
+//! use device_envoy_esp::{Result, i2cs, init_and_start, lcd_text::LcdText as _};
 //!
 //! i2cs! {
 //!     i2c: I2C0,

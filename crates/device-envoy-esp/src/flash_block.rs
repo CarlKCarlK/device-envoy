@@ -221,8 +221,7 @@ impl FlashBlockEspStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_esp::init_and_start;
-/// use device_envoy_esp::flash_block::{FlashBlockEsp, FlashBlock as _};
+/// use device_envoy_esp::{init_and_start, flash_block::{FlashBlockEsp, FlashBlock as _}};
 ///
 /// #[derive(serde::Serialize, serde::Deserialize, Clone)]
 /// struct WifiPersistedState {

@@ -58,12 +58,12 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{
+//! use device_envoy_esp::{
 //!     Result,
 //!     audio_player::{AudioPlayer as _,AtEnd, SilenceClip, VOICE_22050_HZ, Volume, audio_player},
+//!     init_and_start,
 //!     tone,
 //! };
-//! use device_envoy_esp::init_and_start;
 //! use core::time::Duration as StdDuration;
 //!
 //! // Generate `AudioPlayer8`, a struct type with the specified configuration.
@@ -125,15 +125,15 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{
+//! use device_envoy_esp::{
 //!     Result,
 //!     audio_player::{AudioPlayer as _,
 //!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
 //!     button::{ButtonEsp, PressedTo},
+//!     init_and_start,
 //!     tone,
 //! };
-//! use device_envoy_esp::init_and_start;
 //! use core::time::Duration as StdDuration;
 //! use embassy_futures::select::{Either, select};
 //! use embassy_time::{Duration, Timer};
@@ -216,7 +216,7 @@
 //!             }
 //!         }
 //!         audio_player8.stop();
-//!         audio_player8.set_volume(<AudioPlayer8 as device_envoy::audio_player::AudioPlayer<{ AudioPlayer8::SAMPLE_RATE_HZ }>>::INITIAL_VOLUME);
+//!         audio_player8.set_volume(<AudioPlayer8 as device_envoy_esp::audio_player::AudioPlayer<{ AudioPlayer8::SAMPLE_RATE_HZ }>>::INITIAL_VOLUME);
 //!
 //!     }
 //! }
@@ -239,14 +239,14 @@
 //! # use panic_probe as _;
 //! # use core::convert::Infallible;
 //! # use core::result::Result::Ok;
-//! use device_envoy::{
+//! use device_envoy_esp::{
 //!     Result,
 //!     audio_player::{AudioPlayer as _,
 //!         AtEnd, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, pcm_clip,
 //!         audio_player,
 //!     },
+//!     init_and_start,
 //! };
-//! use device_envoy_esp::init_and_start;
 //!
 //! // To save memory, we use a lower sample rate.
 //! audio_player! {

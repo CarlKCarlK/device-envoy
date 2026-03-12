@@ -4,8 +4,6 @@
 
 use core::convert::Infallible;
 
-#[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
 use device_envoy_example_common::conway::conway_with_led2d_ir_kepler;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
@@ -15,7 +13,7 @@ use device_envoy_esp::{
     init_and_start::rmt_mode,
     ir_kepler, led2d,
     led2d::{layout::LedLayout, Led2dFont},
-    led_strip::Current,
+    led_strip::{Current, Engine},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

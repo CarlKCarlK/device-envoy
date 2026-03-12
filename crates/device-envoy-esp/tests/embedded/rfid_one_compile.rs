@@ -8,7 +8,7 @@ use esp_backtrace as _;
 
 use device_envoy_esp::{
     init_and_start,
-    rfid::{Rfid, RfidStatic, RfidTrait as _},
+    rfid::{Rfid as _, RfidEsp, RfidStatic},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -22,11 +22,11 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    static RFID_STATIC: RfidStatic = Rfid::new_static();
+    static RFID_STATIC: RfidStatic = RfidEsp::new_static();
 
     init_and_start!(p);
 
-    let rfid = Rfid::new(
+    let rfid = RfidEsp::new(
         &RFID_STATIC,
         p.SPI2,
         p.GPIO6,

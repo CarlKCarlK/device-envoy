@@ -1,10 +1,10 @@
 //! A device abstraction for RFID readers using the MFRC522 chip.
 //!
-//! See [`Rfid`] for the primary example.
+//! See [`RfidEsp`] for the primary example.
 //!
-//! You can create up to two concurrent `Rfid` instances per program; a third is expected to fail at runtime because the `rfid` task pool uses `pool_size = 2`.
+//! You can create up to two concurrent `RfidEsp` instances per program; a third is expected to fail at runtime because the `rfid` task pool uses `pool_size = 2`.
 
-pub use device_envoy_core::rfid::{Rfid as RfidTrait, RfidEvent, RfidStatic};
+pub use device_envoy_core::rfid::{Rfid, RfidEvent, RfidStatic};
 use embassy_executor::Spawner;
 use embassy_time::{Instant, Timer};
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
@@ -29,7 +29,7 @@ type Mfrc522Device =
 /// # #![no_main]
 /// use device_envoy_esp::{
 ///     Result, init_and_start,
-///     rfid::{Rfid, RfidEvent, RfidStatic, RfidTrait as _},
+///     rfid::{Rfid, RfidEsp, RfidEvent, RfidStatic},
 /// };
 /// # use esp_backtrace as _;
 /// # use log::info;
@@ -44,9 +44,9 @@ type Mfrc522Device =
 ///
 /// async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
 ///     init_and_start!(p);
-///     static RFID_STATIC: RfidStatic = Rfid::new_static();
+///     static RFID_STATIC: RfidStatic = RfidEsp::new_static();
 ///
-///     let rfid = Rfid::new(
+///     let rfid = RfidEsp::new(
 ///         &RFID_STATIC,
 ///         p.SPI2,
 ///         p.GPIO6,
@@ -64,11 +64,11 @@ type Mfrc522Device =
 ///     }
 /// }
 /// ```
-pub struct Rfid<'a> {
+pub struct RfidEsp<'a> {
     rfid_static: &'a RfidStatic,
 }
 
-impl Rfid<'_> {
+impl RfidEsp<'_> {
     /// Create static channel resources for an RFID reader.
     #[must_use]
     pub const fn new_static() -> RfidStatic {
@@ -95,7 +95,7 @@ impl Rfid<'_> {
     }
 }
 
-impl RfidTrait for Rfid<'_> {
+impl Rfid for RfidEsp<'_> {
     async fn wait_for_tap(&self) -> RfidEvent {
         self.rfid_static.receive().await
     }

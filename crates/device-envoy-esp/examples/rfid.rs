@@ -17,7 +17,7 @@ use log::info;
 
 use device_envoy_esp::{
     init_and_start,
-    rfid::{Rfid, RfidEvent, RfidStatic, RfidTrait as _},
+    rfid::{Rfid, RfidEsp, RfidEvent, RfidStatic},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -31,13 +31,13 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
-    static RFID_STATIC: RfidStatic = Rfid::new_static();
+    static RFID_STATIC: RfidStatic = RfidEsp::new_static();
 
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("rfid example started");
 
-    let rfid = Rfid::new(
+    let rfid = RfidEsp::new(
         &RFID_STATIC,
         p.SPI2,
         p.GPIO6,

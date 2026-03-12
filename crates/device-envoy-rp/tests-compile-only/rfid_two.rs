@@ -10,13 +10,13 @@ use core::panic::PanicInfo;
 
 use device_envoy_rp::{
     Result,
-    rfid::{Rfid, RfidStatic},
+    rfid::{RfidRp, RfidStatic},
 };
 use embassy_executor::Spawner;
 
 async fn test_two_rfid(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    static RFID0_STATIC: RfidStatic = Rfid::new_static();
-    let _rfid0 = Rfid::new_spi0(
+    static RFID0_STATIC: RfidStatic = RfidRp::new_static();
+    let _rfid0 = RfidRp::new_spi0(
         &RFID0_STATIC,
         p.SPI0,
         p.PIN_2,
@@ -30,8 +30,8 @@ async fn test_two_rfid(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<(
     )
     .await?;
 
-    static RFID1_STATIC: RfidStatic = Rfid::new_static();
-    let _rfid1 = Rfid::new_spi1(
+    static RFID1_STATIC: RfidStatic = RfidRp::new_static();
+    let _rfid1 = RfidRp::new_spi1(
         &RFID1_STATIC,
         p.SPI1,
         p.PIN_10,

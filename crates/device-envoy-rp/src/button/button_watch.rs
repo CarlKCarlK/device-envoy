@@ -271,6 +271,17 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
 ///
 /// See [`ButtonWatchGenerated`](crate::button::button_watch_generated::ButtonWatchGenerated) for a sample of what the macro generates.
 ///
+/// **Syntax:**
+///
+/// ```text
+/// button_watch! {
+///     [<attributes>]
+///     [<visibility>] <Name> {
+///         pin: <pin_ident>,
+///     }
+/// }
+/// ```
+///
 /// # Constructors
 ///
 /// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
@@ -308,11 +319,13 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
 ///     }
 /// }
 ///
-/// async fn example(p: embassy_rp::Peripherals, spawner: Spawner) {
+/// async fn example(
+///     p: embassy_rp::Peripherals,
+///     spawner: Spawner,
+/// ) -> device_envoy_rp::Result<()> {
 ///     // Create the button monitor (spawns background task automatically)
 ///     let mut button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)
-///         .await
-///         .expect("Failed to create button monitor");
+///         .await?;
 ///
 ///     loop {
 ///         // Wait for button press - never misses events even if this loop is slow
@@ -327,17 +340,7 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
 ///             }
 ///         }
 ///     }
-/// }
-/// ```
-///
-/// **Syntax:**
-///
-/// ```text
-/// button_watch! {
-///     [<attributes>]
-///     [<visibility>] <Name> {
-///         pin: <pin_ident>,
-///     }
+///     Ok(())
 /// }
 /// ```
 #[doc(hidden)]

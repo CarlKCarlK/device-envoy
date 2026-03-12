@@ -670,7 +670,7 @@ impl Led2dFont {
 /// Rectangle::new(Frame::TOP_LEFT, Frame::SIZE)
 ///     .into_styled(PrimitiveStyle::with_stroke(colors::RED.to_rgb888(), 1))
 ///     .draw(&mut frame)
-///     .expect("rectangle draw must succeed");
+///     ?;
 ///
 /// // Direct pixel access: set the upper-left LED pixel (x = 0, y = 0).
 /// // Frame2d stores LED colors directly, so we write an LED color here.
@@ -682,7 +682,7 @@ impl Led2dFont {
 /// Circle::new(CIRCLE_TOP_LEFT, DIAMETER)
 ///     .into_styled(PrimitiveStyle::with_stroke(colors::LIME.to_rgb888(), 1))
 ///     .draw(&mut frame)
-///     .expect("circle draw must succeed");
+///     ?;
 /// # }
 /// ```
 #[derive(Clone, Copy, Debug)]

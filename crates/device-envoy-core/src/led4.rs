@@ -48,13 +48,13 @@ pub enum BlinkState {
 pub struct AnimationFrame {
     /// Text to display (4 characters for a 4-digit display).
     pub text: [char; CELL_COUNT],
-    /// Duration to display this frame. This uses [`embassy_time::Duration`].
+    /// Duration to display this frame. This uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html).
     pub duration: embassy_time::Duration,
 }
 
 impl AnimationFrame {
     /// Creates a new animation frame with text and duration.
-    /// This method uses [`embassy_time::Duration`] for frame timing.
+    /// This method uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html) for frame timing.
     #[must_use]
     pub const fn new(text: [char; CELL_COUNT], duration: embassy_time::Duration) -> Self {
         Self { text, duration }

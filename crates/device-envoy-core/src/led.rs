@@ -75,7 +75,7 @@ pub trait Led {
 
     /// Play a looped animation sequence.
     ///
-    /// The duration type is [`embassy_time::Duration`].
+    /// The duration type is [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html).
     ///
     /// See the [Led trait documentation](Self) for usage examples.
     fn animate<I>(&self, frames: I)

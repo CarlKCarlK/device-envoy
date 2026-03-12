@@ -88,7 +88,7 @@ impl ServoPlayer<16> for ServoPlayerGenerated {
     /// Each step is a tuple `(degrees, duration)`. Accepts both owned iterators and
     /// references to collections.
     ///
-    /// This uses [`embassy_time::Duration`] for step timing.
+    /// This uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html) for step timing.
     ///
     /// See the [`servo_player`](mod@crate::servo) module docs for usage.
     fn animate<I>(&self, steps: I, at_end: AtEnd)

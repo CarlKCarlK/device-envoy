@@ -188,7 +188,7 @@ pub trait Led2d<const W: usize, const H: usize> {
 
     /// Animate frames on the LED panel.
     ///
-    /// The duration type is [`embassy_time::Duration`], and `frames` can be any iterator whose
+    /// The duration type is [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html), and `frames` can be any iterator whose
     /// items borrow `(Frame2d<W, H>, embassy_time::Duration)`.
     ///
     /// See the [Led2d trait documentation](Self) for usage examples.
@@ -651,7 +651,8 @@ impl Led2dFont {
 ///     primitives::{Circle, PrimitiveStyle, Rectangle},
 /// };
 /// use smart_leds::colors;
-/// # fn example() {
+/// # use core::convert::Infallible;
+/// # fn example() -> Result<(), Infallible> {
 ///
 /// type Frame = Frame2d<12, 8>;
 ///
@@ -683,6 +684,7 @@ impl Led2dFont {
 ///     .into_styled(PrimitiveStyle::with_stroke(colors::LIME.to_rgb888(), 1))
 ///     .draw(&mut frame)
 ///     ?;
+/// # Ok(())
 /// # }
 /// ```
 #[derive(Clone, Copy, Debug)]

@@ -1,6 +1,8 @@
 //! A device abstraction for RFID readers using the MFRC522 chip.
 //!
 //! See [`Rfid`] for the primary example; helper methods link back there.
+//!
+//! You can create up to two concurrent `Rfid` instances per program; a third is expected to fail at runtime because the `rfid` task pool uses `pool_size = 2`.
 
 use defmt::info;
 pub use device_envoy_core::rfid::{Rfid as RfidTrait, RfidEvent, RfidStatic};

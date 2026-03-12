@@ -1,7 +1,7 @@
 //! A device abstraction that combines NTP time synchronization with a local clock.
 //!
 //! This module provides platform-independent types and logic for [`ClockSync`]
-//! and [`ClockSyncRuntime`].
+//! and a concrete runtime implementation re-exported by platform crates.
 //! For a complete usage example see the platform crate's `clock_sync` module
 //! (for example `device_envoy_rp::clock_sync` or `device_envoy_esp::clock_sync`).
 //!
@@ -43,7 +43,8 @@ pub const ONE_DAY: Duration = Duration::from_secs(86_400);
 // Helpers
 // ============================================================================
 
-/// Extract hour (12-hour format), minute, and second from an [`OffsetDateTime`].
+/// Extract hour (12-hour format), minute, and second from an
+/// [`OffsetDateTime`](https://docs.rs/time/latest/time/struct.OffsetDateTime.html).
 pub fn h12_m_s(dt: &OffsetDateTime) -> (u8, u8, u8) {
     let hour_24 = dt.hour() as u8;
     let hour_12 = match hour_24 {
@@ -121,7 +122,7 @@ pub trait ClockSync {
 
     /// Set the tick interval. Use `None` to disable periodic ticks.
     ///
-    /// This uses [`embassy_time::Duration`] for interval timing.
+    /// This uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html) for interval timing.
     fn set_tick_interval(&self, interval: Option<embassy_time::Duration>);
 
     /// Update the speed multiplier (1.0 = real time).
@@ -133,7 +134,6 @@ pub trait ClockSync {
 
 type SyncReadySignal = Signal<CriticalSectionRawMutex, ()>;
 
-/// Resources needed to construct a [`ClockSyncRuntime`].
 pub struct ClockSyncStatic {
     clock_static: ClockStatic,
     clock_cell: static_cell::StaticCell<Clock>,
@@ -143,13 +143,6 @@ pub struct ClockSyncStatic {
     synced: AtomicBool,
 }
 
-/// Combines NTP synchronization with a local clock and tick events.
-///
-/// Does not emit ticks until the first successful sync (or a manual call to
-/// [`ClockSync::set_utc_time`]). Each tick includes how long it has been since the last
-/// successful sync.
-///
-/// See the platform crate's `clock_sync` module for a complete usage example.
 pub struct ClockSyncRuntime {
     clock: &'static Clock,
     time_sync: &'static TimeSync,
@@ -159,7 +152,7 @@ pub struct ClockSyncRuntime {
 }
 
 impl ClockSyncStatic {
-    /// Creates static resources for the [`ClockSyncRuntime`] device.
+    /// Creates static resources for the clock-sync runtime device.
     #[must_use]
     pub(crate) const fn new() -> Self {
         Self {
@@ -174,16 +167,17 @@ impl ClockSyncStatic {
 }
 
 impl ClockSyncRuntime {
-    /// Create [`ClockSyncRuntime`] static resources.
+    /// Create clock-sync static resources.
     #[must_use]
     pub const fn new_static() -> ClockSyncStatic {
         ClockSyncStatic::new()
     }
 
-    /// Create a [`ClockSyncRuntime`] using an existing network stack.
+    /// Create a clock-sync runtime using an existing network stack.
     ///
-    /// See the platform crate's `clock_sync` module for a full usage example.
-    /// The `tick_interval` parameter uses [`embassy_time::Duration`].
+    /// See the platform crate `clock_sync` module documentation for a full usage example.
+    /// The `tick_interval` parameter uses
+    /// [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html).
     pub fn new(
         clock_sync_static: &'static ClockSyncStatic,
         stack: &'static Stack<'static>,

@@ -8,10 +8,103 @@ pub mod button;
 #[cfg(target_os = "none")]
 pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.
-    //! See [`ClockSync`] for clock operations and [`ClockSyncEsp`] for constructors.
+    //!
+    //! See [`ClockSyncEsp`] for constructors and [`ClockSync`] for clock operations.
+    //!
+    //! You can create up to two concurrent `ClockSyncEsp` instances per program; a third is expected to fail at runtime because the `clock_sync` task pool uses `pool_size = 2`.
+    //!
+    //! # Example: WiFi + ClockSync logging
+    //!
+    //! ```rust,no_run
+    //! # #![no_std]
+    //! # #![no_main]
+    //! use device_envoy_esp::{
+    //!     Error,
+    //!     Result,
+    //!     button::PressedTo,
+    //!     button_watch,
+    //!     clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStaticEsp, ONE_SECOND, h12_m_s},
+    //!     flash_block::FlashBlockEsp,
+    //!     wifi_auto::{
+    //!         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
+    //!         fields::{TimezoneField, TimezoneFieldStatic},
+    //!     },
+    //! };
+    //! use log::info;
+    //!
+    //! button_watch! {
+    //!     ButtonWatch6 {
+    //!         pin: GPIO6,
+    //!     }
+    //! }
+    //!
+    //! async fn run(
+    //!     spawner: embassy_executor::Spawner,
+    //!     p: esp_hal::peripherals::Peripherals,
+    //! ) -> Result<()> {
+    //!     let [wifi_credentials_flash_block, timezone_flash_block] =
+    //!         FlashBlockEsp::new_array::<2>(p.FLASH)?;
+    //!
+    //!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
+    //!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
+    //!
+    //!     let button_watch6 = ButtonWatch6::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    //!     let wifi_auto = WifiAutoEsp::new(
+    //!         p.WIFI,
+    //!         wifi_credentials_flash_block,
+    //!         "ClockSync",
+    //!         [timezone_field],
+    //!         spawner,
+    //!     )?;
+    //!
+    //!     let stack = wifi_auto
+    //!         .connect(&mut *button_watch6, |event| async move {
+    //!             match event {
+    //!                 WifiAutoEvent::CaptivePortalReady => {
+    //!                     info!("WifiAutoEsp: setup mode ready");
+    //!                 }
+    //!                 WifiAutoEvent::Connecting { .. } => {
+    //!                     info!("WifiAutoEsp: connecting");
+    //!                 }
+    //!                 WifiAutoEvent::ConnectionFailed => {
+    //!                     info!("WifiAutoEsp: connection failed");
+    //!                 }
+    //!             }
+    //!             Ok(())
+    //!         })
+    //!         .await?;
+    //!
+    //!     let offset_minutes = timezone_field
+    //!         .offset_minutes()?
+    //!         .ok_or(Error::MissingCustomWifiAutoField)?;
+    //!     static CLOCK_SYNC_STATIC: ClockSyncStaticEsp = ClockSyncEsp::new_static();
+    //!     let clock_sync = ClockSyncEsp::new(
+    //!         &CLOCK_SYNC_STATIC,
+    //!         stack,
+    //!         offset_minutes,
+    //!         Some(ONE_SECOND),
+    //!         spawner,
+    //!     );
+    //!
+    //!     loop {
+    //!         let tick = clock_sync.wait_for_tick().await;
+    //!         let (hours, minutes, seconds) = h12_m_s(&tick.local_time);
+    //!         info!(
+    //!             "Time {:02}:{:02}:{:02}, since sync {}s",
+    //!             hours,
+    //!             minutes,
+    //!             seconds,
+    //!             tick.since_last_sync.as_secs()
+    //!         );
+    //!     }
+    //! }
+    //! ```
+    /// A device abstraction that combines NTP time synchronization with a local clock.
+    pub use device_envoy_core::clock_sync::ClockSyncRuntime as ClockSyncEsp;
+    /// Resources needed to construct [`ClockSyncEsp`].
+    pub use device_envoy_core::clock_sync::ClockSyncStatic as ClockSyncStaticEsp;
     pub use device_envoy_core::clock_sync::{
-        h12_m_s, ClockSync, ClockSyncRuntime as ClockSyncEsp, ClockSyncStatic, ClockSyncTick,
-        UnixSeconds, ONE_DAY, ONE_MINUTE, ONE_SECOND,
+        h12_m_s, ClockSync, ClockSyncTick, UnixSeconds, ONE_DAY, ONE_MINUTE, ONE_SECOND,
     };
 }
 #[cfg(target_os = "none")]

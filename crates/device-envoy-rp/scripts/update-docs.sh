@@ -10,7 +10,11 @@ rm -rf "${WORKSPACE_TARGET}/thumbv6m-none-eabi/doc"
 
 bash "$(dirname "$0")/../../../scripts/update-doc-images.sh"
 cargo xtask check-docs
-cargo update-docs --features doc-images
+cargo doc \
+    --target thumbv8m.main-none-eabihf \
+    --no-deps \
+    --features pico2,arm,wifi,doc-images \
+    --no-default-features
 
 DOCS_DIR="${WORKSPACE_TARGET}/thumbv8m.main-none-eabihf/doc/device_envoy_rp/docs/assets"
 mkdir -p "${DOCS_DIR}"

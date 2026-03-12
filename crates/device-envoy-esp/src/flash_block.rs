@@ -1,6 +1,9 @@
 //! A device abstraction for type-safe persistent storage in flash memory.
 //!
-//! See [`FlashBlockEsp`] for details and usage.
+//! This module provides a generic flash block storage system that allows storing any
+//! `serde`-compatible type in ESP's internal flash memory.
+//!
+//! See [`FlashBlockEsp`] for details and usage examples.
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
 #[cfg(target_os = "none")]
@@ -211,7 +214,7 @@ impl FlashBlockEspStatic {
 }
 
 #[cfg(target_os = "none")]
-/// A type-safe flash block for persistent storage.
+/// A device abstraction for type-safe persistent storage in flash memory.
 ///
 /// See this API for storing values such as Wi-Fi credentials and additional
 /// setup field values used by `wifi_auto`.

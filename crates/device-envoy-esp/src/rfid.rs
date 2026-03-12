@@ -1,6 +1,8 @@
 //! A device abstraction for RFID readers using the MFRC522 chip.
 //!
 //! See [`RfidEsp`] for the primary example.
+//!
+//! You can create up to two concurrent `RfidEsp` instances per program; a third is expected to fail at runtime because the `rfid` task pool uses `pool_size = 2`.
 
 pub use device_envoy_core::rfid::{Rfid, RfidEvent, RfidStatic};
 use embassy_executor::Spawner;

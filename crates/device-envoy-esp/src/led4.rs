@@ -1,6 +1,8 @@
 //! A device abstraction for a 4-digit, 7-segment LED display.
 //!
 //! See [`Led4Esp`] for construction and [`device_envoy_core::led4::Led4`] for text, blinking, and animation control.
+//!
+//! You can create up to two concurrent `Led4Esp` instances per program; a third is expected to fail at runtime because the `led4` task pool uses `pool_size = 2`.
 
 pub use device_envoy_core::led4::{
     circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES, CELL_COUNT,

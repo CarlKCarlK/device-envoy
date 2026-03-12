@@ -384,7 +384,7 @@ pub trait LedStrip<const N: usize> {
 
     /// Animate frames on the LED strip.
     ///
-    /// The duration type is [`embassy_time::Duration`], and `frames` can be any iterator whose
+    /// The duration type is [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html), and `frames` can be any iterator whose
     /// items borrow `(Frame1d<N>, embassy_time::Duration)`.
     ///
     /// See the [LedStrip trait documentation](Self) for usage examples.

@@ -38,7 +38,7 @@ pub enum FlashBlockError<E> {
     StorageCorrupted,
 }
 
-/// Canonical typed block operations for flash-backed persistence.
+/// Operations on blocks of flash memory.
 ///
 /// Platform crates implement this trait on their concrete flash block handle
 /// types.

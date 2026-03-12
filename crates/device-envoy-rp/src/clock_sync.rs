@@ -1,6 +1,8 @@
 //! A device abstraction that combines NTP time synchronization with a local clock.
 //!
-//! See [`ClockSync`] for clock operations and [`ClockSyncRp`] for constructors.
+//! See [`ClockSyncRp`] for constructors and [`ClockSync`] for clock operations.
+//!
+//! You can create up to two concurrent `ClockSyncRp` instances per program; a third is expected to fail at runtime because the `clock_sync` task pool uses `pool_size = 2`.
 //!
 //! # Example: WiFi + ClockSync logging
 //!
@@ -14,7 +16,7 @@
 //!     Result,
 //!     button::PressedTo,
 //!     button_watch,
-//!     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStatic, ONE_SECOND, h12_m_s},
+//!     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStaticRp, ONE_SECOND, h12_m_s},
 //!     flash_block::FlashBlockRp,
 //!     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
 //!     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
@@ -70,7 +72,7 @@
 //!     let offset_minutes = timezone_field
 //!         .offset_minutes()?
 //!         .ok_or(Error::MissingCustomWifiAutoField)?;
-//!     static CLOCK_SYNC_STATIC: ClockSyncStatic = ClockSyncRp::new_static();
+//!     static CLOCK_SYNC_STATIC: ClockSyncStaticRp = ClockSyncRp::new_static();
 //!     let clock_sync = ClockSyncRp::new(
 //!         &CLOCK_SYNC_STATIC,
 //!         stack,
@@ -95,7 +97,10 @@
 
 #![cfg(feature = "wifi")]
 
+/// A device abstraction that combines NTP time synchronization with a local clock.
+pub use device_envoy_core::clock_sync::ClockSyncRuntime as ClockSyncRp;
+/// Resources needed to construct [`ClockSyncRp`].
+pub use device_envoy_core::clock_sync::ClockSyncStatic as ClockSyncStaticRp;
 pub use device_envoy_core::clock_sync::{
-    ClockSync, ClockSyncRuntime as ClockSyncRp, ClockSyncStatic, ClockSyncTick, ONE_DAY,
-    ONE_MINUTE, ONE_SECOND, UnixSeconds, h12_m_s,
+    ClockSync, ClockSyncTick, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds, h12_m_s,
 };

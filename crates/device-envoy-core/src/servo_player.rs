@@ -42,7 +42,7 @@ pub enum AtEnd {
 
 /// Build a const linear sequence of animation steps as an array.
 ///
-/// This uses [`embassy_time::Duration`] for step timing.
+/// This uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html) for step timing.
 #[must_use]
 pub const fn linear<const N: usize>(
     start_degrees: u16,
@@ -72,7 +72,7 @@ pub const fn linear<const N: usize>(
 
 /// Combine two animation step arrays into one larger array.
 ///
-/// This uses [`embassy_time::Duration`] for step timing.
+/// This uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html) for step timing.
 #[must_use]
 pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
     first: [(u16, embassy_time::Duration); N1],
@@ -253,7 +253,7 @@ pub trait ServoPlayer<const MAX_STEPS: usize>: Servo {
 
     /// Animate through a sequence of angles with per-step hold durations.
     ///
-    /// This uses [`embassy_time::Duration`] for step timing.
+    /// This uses [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html) for step timing.
     ///
     /// See the [ServoPlayer trait documentation](Self) for usage examples.
     fn animate<I>(&self, steps: I, at_end: AtEnd)

@@ -2,6 +2,8 @@
 //!
 //! See [`Led4Rp`] for the primary text/blinking example and [`Led4`] for trait methods.
 //!
+//! You can create up to two concurrent `Led4Rp` instances per program; a third is expected to fail at runtime because the `led4` task pool uses `pool_size = 2`.
+//!
 //! This module provides device abstraction for controlling common-cathode
 //! 4-digit 7-segment LED displays. Supports displaying text and numbers with
 //! optional blinking.

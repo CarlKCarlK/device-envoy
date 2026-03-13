@@ -7,7 +7,18 @@ use super::WifiCredentials;
 /// Captive-portal page buffer type.
 pub type HtmlBuffer = String<16384>;
 
-/// Trait for custom setup fields rendered and parsed by the captive portal.
+/// Shared trait for custom setup fields rendered and parsed by the captive portal.
+///
+/// This is the platform-agnostic contract used by both RP and ESP ports.
+///
+/// To define your own field type, implement:
+///
+/// - [`WifiAutoField::render`] to write the HTML form UI.
+/// - [`WifiAutoField::parse`] to read submitted form values.
+/// - [`WifiAutoField::is_satisfied`] when setup should require the field.
+///
+/// For ready-to-use field types, see platform modules:
+/// `device_envoy_rp::wifi_auto::fields` and `device_envoy_esp::wifi_auto::fields`.
 pub trait WifiAutoField {
     /// Platform crate error type used by field implementations.
     type Error;

@@ -1,6 +1,11 @@
 //! A device abstraction for extra setup fields used by [`WifiAutoEsp`](crate::wifi_auto::WifiAutoEsp).
 //!
 //! See the [`WifiAutoEsp` struct example](crate::wifi_auto::WifiAutoEsp) for the full setup.
+//!
+//! There are two levels of customization:
+//!
+//! 1. Use built-in helpers like [`TextField`] and [`TimezoneField`].
+//! 2. Define your own field type by implementing [`WifiAutoField`].
 
 #![allow(
     unsafe_code,

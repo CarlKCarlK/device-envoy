@@ -11,10 +11,12 @@ use heapless::Vec;
 use static_cell::StaticCell;
 
 use crate::Result;
-use device_envoy_core::wifi_auto::{HtmlBuffer, WifiCredentials};
+use device_envoy_core::wifi_auto::{
+    HtmlBuffer, WifiAutoField as CoreWifiAutoField, WifiCredentials,
+};
 
-/// Traits for custom extra information that [`WifiAutoRp`](crate::wifi_auto::WifiAutoRp) can ask the
-/// user for on its setup web page. Supports HTML snippets.
+/// RP-specific adapter trait for custom extra information that
+/// [`WifiAutoRp`](crate::wifi_auto::WifiAutoRp) can ask the user for on its setup web page.
 ///
 /// Implement this trait to collect additional configuration beyond WiFi credentials
 /// during the captive portal setup. Fields must be `Sync` since they're shared across
@@ -22,17 +24,13 @@ use device_envoy_core::wifi_auto::{HtmlBuffer, WifiCredentials};
 ///
 /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
 ///
-/// This trait forwards to [`device_envoy_core::wifi_auto::WifiAutoField`] with
+/// This trait forwards to `device_envoy_core::wifi_auto::WifiAutoField` with
 /// `Error = crate::Error` and adds `Sync` for static shared usage in RP tasks.
-pub trait WifiAutoField:
-    device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error> + Sync
-{
-}
+///
+/// For cross-platform custom fields, implement `device_envoy_core::wifi_auto::WifiAutoField`.
+pub trait WifiAutoField: CoreWifiAutoField<Error = crate::Error> + Sync {}
 
-impl<T> WifiAutoField for T where
-    T: device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error> + Sync
-{
-}
+impl<T> WifiAutoField for T where T: CoreWifiAutoField<Error = crate::Error> + Sync {}
 
 static CREDENTIAL_CHANNEL: Channel<CriticalSectionRawMutex, WifiCredentials, 1> = Channel::new();
 
@@ -229,13 +227,10 @@ fn core_fields(
     fields: &[&'static dyn WifiAutoField],
 ) -> Option<Vec<&'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>, 16>>
 {
-    let mut core_fields: Vec<
-        &'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>,
-        16,
-    > = Vec::new();
+    let mut core_fields: Vec<&'static dyn CoreWifiAutoField<Error = crate::Error>, 16> = Vec::new();
     for field in fields {
         if core_fields
-            .push(*field as &'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>)
+            .push(*field as &'static dyn CoreWifiAutoField<Error = crate::Error>)
             .is_err()
         {
             warn!("WifiAutoRp portal has too many fields to parse");

@@ -1,13 +1,11 @@
+use device_envoy_core::wifi_auto::{generate_config_page, parse_post, WifiCredentials};
 use device_envoy_esp::wifi_auto::fields::{TextField, TimezoneField};
-use device_envoy_core::wifi_auto::{WifiCredentials, WifiStartMode};
-use device_envoy_esp::wifi_auto::{WifiAutoEsp, WifiAutoField};
+use device_envoy_esp::wifi_auto::WifiAutoField;
 
 #[test]
 fn parse_post_decodes_credentials() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\nContent-Length: 29\r\n\r\nssid=Home+WiFi&password=s3cr%21";
-    let wifi_credentials = wifi_auto
-        .parse_post(request, None)
+    let wifi_credentials = parse_post::<device_envoy_esp::Error>(request, None, &[])
         .expect("valid credentials expected");
 
     assert_eq!(wifi_credentials.ssid.as_str(), "Home WiFi");
@@ -19,12 +17,10 @@ fn parse_post_applies_custom_field_parsing() {
     let timezone_field_static = Box::leak(Box::new(TimezoneField::new_static()));
     let timezone_field = TimezoneField::new(timezone_field_static);
     let fields: [&'static dyn WifiAutoField<Error = device_envoy_esp::Error>; 1] = [timezone_field];
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &fields);
 
     let request =
         "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&password=abc123&timezone=-300";
-    let _wifi_credentials = wifi_auto
-        .parse_post(request, None)
+    let _wifi_credentials = parse_post::<device_envoy_esp::Error>(request, None, &fields)
         .expect("valid request expected");
 
     assert_eq!(
@@ -33,25 +29,23 @@ fn parse_post_applies_custom_field_parsing() {
             .expect("timezone offset should load"),
         Some(-300)
     );
-    assert!(wifi_auto
-        .custom_fields_satisfied()
+    assert!(timezone_field
+        .is_satisfied()
         .expect("state query should succeed"));
 }
 
 #[test]
 fn parse_post_requires_ssid() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\npassword=s3cr3t";
 
-    assert!(wifi_auto.parse_post(request, None).is_none());
+    assert!(parse_post::<device_envoy_esp::Error>(request, None, &[]).is_none());
 }
 
 #[test]
 fn generate_config_page_escapes_defaults() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let wifi_credentials = WifiCredentials::new("A&B\"<ssid>", "p@ss<word>&\"");
 
-    let page = wifi_auto.generate_config_page(Some(&wifi_credentials));
+    let page = generate_config_page::<device_envoy_esp::Error>(Some(&wifi_credentials), &[]);
 
     assert!(page.contains("A&amp;B&quot;&lt;ssid&gt;"));
     assert!(!page.contains("p@ss&lt;word&gt;&amp;&quot;"));
@@ -69,12 +63,10 @@ fn text_field_roundtrip_from_post() {
         "DeskSensor",
     );
     let fields: [&'static dyn WifiAutoField<Error = device_envoy_esp::Error>; 1] = [text_field];
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &fields);
 
     let request =
         "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Lab&password=abc123&device_name=Panel01";
-    let _wifi_credentials = wifi_auto
-        .parse_post(request, None)
+    let _wifi_credentials = parse_post::<device_envoy_esp::Error>(request, None, &fields)
         .expect("valid request expected");
 
     assert_eq!(
@@ -92,13 +84,12 @@ fn text_field_roundtrip_from_post() {
 
 #[test]
 fn parse_post_keeps_saved_password_when_checkbox_selected() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let defaults_wifi_credentials = WifiCredentials::new("Office", "saved-secret");
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&keep_saved_password=1";
 
-    let wifi_credentials = wifi_auto
-        .parse_post(request, Some(&defaults_wifi_credentials))
-        .expect("valid credentials expected");
+    let wifi_credentials =
+        parse_post::<device_envoy_esp::Error>(request, Some(&defaults_wifi_credentials), &[])
+            .expect("valid credentials expected");
 
     assert_eq!(wifi_credentials.ssid.as_str(), "Office");
     assert_eq!(wifi_credentials.password.as_str(), "saved-secret");
@@ -106,81 +97,27 @@ fn parse_post_keeps_saved_password_when_checkbox_selected() {
 
 #[test]
 fn parse_post_rejects_keep_saved_password_without_defaults() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&keep_saved_password=1";
 
-    assert!(wifi_auto.parse_post(request, None).is_none());
+    assert!(parse_post::<device_envoy_esp::Error>(request, None, &[]).is_none());
 }
 
 #[test]
 fn generate_config_page_hides_keep_saved_password_when_saved_password_is_blank() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let wifi_credentials = WifiCredentials::new("Office", "");
 
-    let page = wifi_auto.generate_config_page(Some(&wifi_credentials));
+    let page = generate_config_page::<device_envoy_esp::Error>(Some(&wifi_credentials), &[]);
 
     assert!(!page.contains("name=\"keep_saved_password\""));
 }
 
 #[test]
 fn parse_post_rejects_keep_saved_password_when_saved_password_is_blank() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
     let defaults_wifi_credentials = WifiCredentials::new("Office", "");
     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&keep_saved_password=1";
 
-    assert!(wifi_auto
-        .parse_post(request, Some(&defaults_wifi_credentials))
-        .is_none());
-}
-
-#[test]
-fn wifi_auto_credentials_roundtrip_in_memory() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
-    let wifi_credentials = WifiCredentials::new("OfficeWifi", "supersecret");
-
-    assert!(wifi_auto
-        .load_persisted_credentials()
-        .expect("credentials load should succeed")
-        .is_none());
-
-    wifi_auto
-        .persist_credentials(&wifi_credentials)
-        .expect("credentials save should succeed");
-
-    let loaded_wifi_credentials = wifi_auto
-        .load_persisted_credentials()
-        .expect("credentials load should succeed")
-        .expect("credentials should exist");
-    assert_eq!(loaded_wifi_credentials, wifi_credentials);
-
-    wifi_auto
-        .clear_persisted_credentials()
-        .expect("credentials clear should succeed");
-    assert!(wifi_auto
-        .load_persisted_credentials()
-        .expect("credentials load should succeed")
-        .is_none());
-}
-
-#[test]
-fn wifi_auto_start_mode_roundtrip_in_memory() {
-    let wifi_auto = WifiAutoEsp::new("PortalSsid", &[]);
-
-    assert_eq!(
-        wifi_auto
-            .start_mode()
-            .expect("start mode load should succeed"),
-        WifiStartMode::Client
-    );
-
-    wifi_auto
-        .set_start_mode(WifiStartMode::CaptivePortal)
-        .expect("start mode save should succeed");
-
-    assert_eq!(
-        wifi_auto
-            .start_mode()
-            .expect("start mode load should succeed"),
-        WifiStartMode::CaptivePortal
+    assert!(
+        parse_post::<device_envoy_esp::Error>(request, Some(&defaults_wifi_credentials), &[])
+            .is_none()
     );
 }

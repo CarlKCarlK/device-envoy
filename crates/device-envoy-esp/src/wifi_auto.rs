@@ -39,46 +39,54 @@ use embassy_futures::select::{select4, Either4};
 
 #[cfg(target_os = "none")]
 use device_envoy_core::wifi_auto::WifiAutoError;
-use device_envoy_core::wifi_auto::{HtmlBuffer, WifiAutoPersistedState, WifiCredentials, WifiStartMode};
+use device_envoy_core::wifi_auto::{
+    HtmlBuffer, WifiAutoPersistedState, WifiCredentials, WifiStartMode,
+};
 pub use device_envoy_core::wifi_auto::{WifiAuto, WifiAutoEvent, WifiAutoField, WifiStack};
 
 const MAX_WIFI_AUTO_FIELDS: usize = 8;
 
+#[cfg_attr(feature = "host", allow(dead_code))]
 enum WifiAutoStorage {
     #[cfg(target_os = "none")]
     Flash(RefCell<FlashBlockEsp>),
+    #[cfg(not(target_os = "none"))]
     Memory(RefCell<WifiAutoPersistedState>),
 }
 
-/// A device abstraction that connects ESP devices to Wi-Fi and supports captive-portal setup.
+/// A device abstraction that connects ESP devices with WiFi to the Internet and, when needed,
+/// creates a temporary WiFi network to enter credentials.
 ///
-/// `WifiAutoEsp` handles Wi-Fi connections end-to-end. It normally connects using
-/// a saved Wi-Fi network name (SSID) and password. If those values are missing
-/// or invalid, it temporarily creates its own Wi-Fi network (a captive portal)
-/// and hosts a web form where the user can enter local Wi-Fi credentials.
+/// `WifiAutoEsp` handles WiFi connections end-to-end. It normally connects using
+/// a saved WiFi network name (SSID) and password. If those values are missing
+/// or invalid, it temporarily creates its own WiFi network (a captive
+/// portal) and hosts a web form where the user can enter local WiFi
+/// ssid and password.
 ///
 /// The typical usage pattern is:
 ///
-/// 1. Construct a [`crate::flash_block::FlashBlockEsp`] to store Wi-Fi credentials.
-/// 2. Use [`WifiAutoEsp::new`] to construct a `WifiAutoEsp`.
-/// 3. Use [`WifiAuto::connect`] to connect while optionally showing status.
+/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
+/// 2. Construct a [`ButtonEsp`](crate::button::ButtonEsp) to control the physical button.
+/// 3. Construct a [`FlashBlockEsp`] to store WiFi credentials.
+/// 4. Use [`WifiAutoEsp::new`] to construct a `WifiAutoEsp`.
+/// 5. Use [`WifiAuto::connect`] to connect to WiFi while optionally showing status.
 ///
-/// The [`WifiAuto::connect`] method borrows your button, returns a network stack,
-/// and consumes the `WifiAutoEsp`.
-///
-/// For additional examples, see the [wifi_auto::fields module example](crate::wifi_auto::fields)
-/// and the [`WifiAuto::connect`] docs.
+/// Let’s look at an example. Following the example, we’ll explain the details.
+/// (For additional examples, see the [wifi_auto::fields module example](crate::wifi_auto::fields)
+/// and the [`WifiAuto::connect`] docs.)
 ///
 /// ## Example: Connect with logging
+///
+/// This example connects to WiFi and logs progress.
 ///
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
 /// use device_envoy_esp::{
-///     Result, init_and_start,
+///     Result,
 ///     button::{ButtonEsp, PressedTo},
 ///     flash_block::FlashBlockEsp,
-///     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+///     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoEsp},
 /// };
 /// use embassy_time::Duration;
 /// use log::info;
@@ -87,26 +95,40 @@ enum WifiAutoStorage {
 ///     spawner: embassy_executor::Spawner,
 ///     p: esp_hal::peripherals::Peripherals,
 /// ) -> Result<core::convert::Infallible> {
-///     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+///     // Set up ButtonEsp to control the physical button.
 ///     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+///
+///     // Set up flash storage for WiFi credentials.
+///     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+///
+///     // Construct WifiAutoEsp.
 ///     let wifi_auto = WifiAutoEsp::new(
 ///         p.WIFI,
 ///         wifi_auto_flash_block,
-///         "DeviceEnvoySetup",
-///         [],
+///         "DeviceEnvoySetup", // Captive-portal SSID
+///         [],                 // Any extra fields
 ///         spawner,
 ///     )?;
 ///
+///     // Connect (logging status as we go).
 ///     let stack = wifi_auto
 ///         .connect(&mut button6, |wifi_auto_event| async move {
 ///             match wifi_auto_event {
-///                 WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
-///                 WifiAutoEvent::Connecting { .. } => info!("Connecting to Wi-Fi"),
-///                 WifiAutoEvent::ConnectionFailed => info!("Connection failed"),
+///                 WifiAutoEvent::CaptivePortalReady => {
+///                     info!("Captive portal ready");
+///                 }
+///                 WifiAutoEvent::Connecting { .. } => {
+///                     info!("Connecting to WiFi");
+///                 }
+///                 WifiAutoEvent::ConnectionFailed => {
+///                     info!("WiFi connection failed");
+///                 }
 ///             }
 ///             Ok(())
 ///         })
 ///         .await?;
+///
+///     info!("WiFi connected");
 ///
 ///     loop {
 ///         if let Ok(addresses) = stack.dns_query("google.com", embassy_net::dns::DnsQueryType::A).await {
@@ -123,13 +145,20 @@ enum WifiAutoStorage {
 ///
 /// While `connect` is running:
 ///
-/// - Wi-Fi may reset while switching between client mode and captive-portal mode.
-/// - User peripherals should tolerate brief disruption during mode changes.
+/// - The WiFi subsystem may reset as it switches between normal WiFi operation and
+///   hosting its own temporary WiFi network.
+/// - Your code should tolerate these resets.
+///   Initializing LEDs or displays before WiFi is fine; just be aware they may be
+///   momentarily disrupted during mode changes.
 ///
-/// ## Wi-Fi limitations
+/// ## WiFi limitations
 ///
-/// - Client mode requires a 2.4 GHz network compatible with the ESP Wi-Fi driver.
-/// - Captive portal runs locally at `http://192.168.4.1` when setup mode is active.
+/// - Only standard SSID/password 2.4 GHz WiFi networks are supported.
+///
+/// ## Hardware model
+///
+/// On ESP devices, the WiFi radio is integrated on-chip.
+#[cfg_attr(feature = "host", allow(dead_code))]
 pub struct WifiAutoEsp<'a> {
     captive_portal_ssid: &'static str,
     fields: Vec<&'a dyn WifiAutoField<Error = crate::Error>, MAX_WIFI_AUTO_FIELDS>,
@@ -140,6 +169,7 @@ pub struct WifiAutoEsp<'a> {
     spawner: embassy_executor::Spawner,
 }
 
+#[cfg_attr(feature = "host", allow(dead_code))]
 impl<'a> WifiAutoEsp<'a> {
     /// Create a new setup flow configuration.
     ///
@@ -167,53 +197,6 @@ impl<'a> WifiAutoEsp<'a> {
                 wifi_start_mode: WifiStartMode::Client,
             })),
         }
-    }
-
-    /// Create an in-memory setup flow for embedded targets with runtime Wi-Fi resources.
-    ///
-    /// This constructor is available on embedded targets (`target_os = "none"`).
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if custom field validation fails while resolving startup mode.
-    #[cfg(target_os = "none")]
-    #[must_use]
-    pub fn new_in_memory<const N: usize>(
-        captive_portal_ssid: &'static str,
-        wifi: esp_hal::peripherals::WIFI<'static>,
-        custom_fields: [&'a dyn WifiAutoField<Error = crate::Error>; N],
-        spawner: embassy_executor::Spawner,
-    ) -> Result<Self> {
-        assert!(
-            N <= MAX_WIFI_AUTO_FIELDS,
-            "custom_fields supports up to {MAX_WIFI_AUTO_FIELDS} entries"
-        );
-        let fields =
-            Vec::from_slice(&custom_fields).expect("custom_fields length was validated above");
-        let wifi_auto = Self {
-            captive_portal_ssid,
-            fields,
-            storage: WifiAutoStorage::Memory(RefCell::new(WifiAutoPersistedState {
-                wifi_credentials: None,
-                wifi_start_mode: WifiStartMode::Client,
-            })),
-            wifi: RefCell::new(Some(wifi)),
-            spawner,
-        };
-
-        let wifi_start_mode = wifi_auto.start_mode()?;
-        let custom_fields_satisfied = wifi_auto.custom_fields_satisfied()?;
-        let has_persisted_credentials = wifi_auto.load_persisted_credentials()?.is_some();
-        if device_envoy_core::wifi_auto::should_enter_captive_portal(
-            wifi_start_mode,
-            false,
-            has_persisted_credentials,
-            custom_fields_satisfied,
-        ) {
-            wifi_auto.set_start_mode(WifiStartMode::CaptivePortal)?;
-        }
-
-        Ok(wifi_auto)
     }
 
     /// Create a setup flow backed by persistent flash storage.
@@ -265,7 +248,7 @@ impl<'a> WifiAutoEsp<'a> {
     ///
     /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
-    pub const fn captive_portal_ssid(&self) -> &'static str {
+    pub(crate) const fn captive_portal_ssid(&self) -> &'static str {
         self.captive_portal_ssid
     }
 
@@ -273,7 +256,7 @@ impl<'a> WifiAutoEsp<'a> {
     ///
     /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
-    pub fn generate_config_page(&self, defaults: Option<&WifiCredentials>) -> HtmlBuffer {
+    pub(crate) fn generate_config_page(&self, defaults: Option<&WifiCredentials>) -> HtmlBuffer {
         device_envoy_core::wifi_auto::generate_config_page(defaults, self.fields.as_slice())
     }
 
@@ -284,7 +267,7 @@ impl<'a> WifiAutoEsp<'a> {
     ///
     /// See the [WifiAutoEsp struct example](Self) for usage.
     #[must_use]
-    pub fn parse_post(
+    pub(crate) fn parse_post(
         &self,
         request: &str,
         defaults: Option<&WifiCredentials>,
@@ -295,33 +278,26 @@ impl<'a> WifiAutoEsp<'a> {
     /// Load persisted Wi-Fi credentials from storage.
     ///
     /// Returns `None` when no credentials have been persisted yet.
-    pub fn load_persisted_credentials(&self) -> Result<Option<WifiCredentials>> {
+    pub(crate) fn load_persisted_credentials(&self) -> Result<Option<WifiCredentials>> {
         let wifi_auto_persisted_state = self.load_persisted_state()?;
         Ok(wifi_auto_persisted_state.wifi_credentials)
     }
 
     /// Persist Wi-Fi credentials to storage.
-    pub fn persist_credentials(&self, wifi_credentials: &WifiCredentials) -> Result<()> {
+    pub(crate) fn persist_credentials(&self, wifi_credentials: &WifiCredentials) -> Result<()> {
         let mut wifi_auto_persisted_state = self.load_persisted_state()?;
         wifi_auto_persisted_state.wifi_credentials = Some(wifi_credentials.clone());
         self.store_persisted_state(&wifi_auto_persisted_state)
     }
 
-    /// Clear persisted Wi-Fi credentials from storage.
-    pub fn clear_persisted_credentials(&self) -> Result<()> {
-        let mut wifi_auto_persisted_state = self.load_persisted_state()?;
-        wifi_auto_persisted_state.wifi_credentials = None;
-        self.store_persisted_state(&wifi_auto_persisted_state)
-    }
-
     /// Load the persisted startup mode.
-    pub fn start_mode(&self) -> Result<WifiStartMode> {
+    pub(crate) fn start_mode(&self) -> Result<WifiStartMode> {
         let wifi_auto_persisted_state = self.load_persisted_state()?;
         Ok(wifi_auto_persisted_state.wifi_start_mode)
     }
 
     /// Persist the startup mode.
-    pub fn set_start_mode(&self, wifi_start_mode: WifiStartMode) -> Result<()> {
+    pub(crate) fn set_start_mode(&self, wifi_start_mode: WifiStartMode) -> Result<()> {
         let mut wifi_auto_persisted_state = self.load_persisted_state()?;
         wifi_auto_persisted_state.wifi_start_mode = wifi_start_mode;
         self.store_persisted_state(&wifi_auto_persisted_state)
@@ -330,7 +306,7 @@ impl<'a> WifiAutoEsp<'a> {
     /// Force captive-portal mode when a sampled press state is `true`.
     ///
     /// Returns `true` if startup mode was changed to [`WifiStartMode::CaptivePortal`].
-    pub fn force_captive_portal_if_pressed_state(&self, is_pressed: bool) -> Result<bool> {
+    pub(crate) fn force_captive_portal_if_pressed_state(&self, is_pressed: bool) -> Result<bool> {
         if is_pressed {
             self.set_start_mode(WifiStartMode::CaptivePortal)?;
             Ok(true)
@@ -339,18 +315,10 @@ impl<'a> WifiAutoEsp<'a> {
         }
     }
 
-    /// Force captive-portal mode if the button is currently pressed.
-    ///
-    /// Returns `true` if startup mode was changed to [`WifiStartMode::CaptivePortal`].
-    #[cfg(target_os = "none")]
-    pub fn force_captive_portal_if_pressed(&self, button: &impl Button) -> Result<bool> {
-        self.force_captive_portal_if_pressed_state(button.is_pressed())
-    }
-
     /// Check whether every custom field reports a satisfied state.
     ///
     /// See the [WifiAutoEsp struct example](Self) for usage.
-    pub fn custom_fields_satisfied(&self) -> Result<bool> {
+    pub(crate) fn custom_fields_satisfied(&self) -> Result<bool> {
         for field in self.fields.as_slice() {
             if !field.is_satisfied()? {
                 return Ok(false);
@@ -369,6 +337,7 @@ impl<'a> WifiAutoEsp<'a> {
                     .unwrap_or_default();
                 Ok(wifi_auto_persisted_state)
             }
+            #[cfg(not(target_os = "none"))]
             WifiAutoStorage::Memory(wifi_auto_persisted_state) => {
                 Ok(wifi_auto_persisted_state.borrow().clone())
             }
@@ -384,6 +353,7 @@ impl<'a> WifiAutoEsp<'a> {
             WifiAutoStorage::Flash(wifi_auto_flash_block) => wifi_auto_flash_block
                 .borrow_mut()
                 .save(wifi_auto_persisted_state),
+            #[cfg(not(target_os = "none"))]
             WifiAutoStorage::Memory(stored_state) => {
                 *stored_state.borrow_mut() = wifi_auto_persisted_state.clone();
                 Ok(())
@@ -727,9 +697,115 @@ impl<'a> WifiAutoEsp<'a> {
 impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     type Error = crate::Error;
 
-    /// Connect using persisted credentials or captive-portal setup flow.
+    /// Connects to WiFi (if possible), reports status, and returns the
+    /// network stack, consuming the `WifiAutoEsp`.
     ///
-    /// See the [WifiAutoEsp struct example](Self) for setup.
+    /// See the [WifiAutoEsp struct example](Self) for a usage example.
+    ///
+    /// This method does not return until WiFi is connected. It may briefly
+    /// restart WiFi while switching between normal WiFi operation
+    /// and hosting its temporary setup network.
+    ///
+    /// This `connect` method reports progress by calling a user-provided async
+    /// handler whenever the WiFi state changes.
+    /// The handler receives a [`WifiAutoEvent`].
+    /// The handler is called sequentially for each event and may `await`.
+    ///
+    /// The three events are:
+    /// - `CaptivePortalReady`: The device is hosting a captive portal and waiting for user input.
+    /// - `Connecting`: The device is attempting to connect to the WiFi network.
+    /// - `ConnectionFailed`: All connection attempts failed. The device
+    ///   will reset and re-enter setup mode (for example, if the password
+    ///   is incorrect).
+    ///
+    /// The first example uses a handler that does nothing.
+    /// The second example shows how to use an LED panel to display status messages.
+    /// The example on the [`WifiAutoEsp`] struct shows simple logging.
+    ///
+    /// # Example 1: No-op event handler
+    /// ```rust,no_run
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # use device_envoy_esp::{
+    /// #     Result,
+    /// #     button::{ButtonEsp, PressedTo},
+    /// #     flash_block::FlashBlockEsp,
+    /// #     wifi_auto::{WifiAuto as _, WifiAutoEsp},
+    /// # };
+    /// # async fn example(
+    /// #     spawner: embassy_executor::Spawner,
+    /// #     p: esp_hal::peripherals::Peripherals,
+    /// # ) -> Result<()> {
+    /// # let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// # let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    /// # let wifi_auto = WifiAutoEsp::new(
+    /// #     p.WIFI,
+    /// #     wifi_auto_flash_block,
+    /// #     "DeviceEnvoySetup",
+    /// #     [],
+    /// #     spawner,
+    /// # )?;
+    /// let _stack = wifi_auto
+    ///     .connect(&mut button6, |_event| async move { Ok(()) })
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Example 2: Using a display to show status
+    /// ```rust,no_run
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # use device_envoy_esp::{
+    /// #     Result,
+    /// #     button::{ButtonEsp, PressedTo},
+    /// #     flash_block::FlashBlockEsp,
+    /// #     led_strip::colors,
+    /// #     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoEsp},
+    /// # };
+    /// # use smart_leds::RGB8;
+    /// # async fn example(
+    /// #     spawner: embassy_executor::Spawner,
+    /// #     p: esp_hal::peripherals::Peripherals,
+    /// # ) -> Result<()> {
+    /// # let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// # let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    /// # let wifi_auto = WifiAutoEsp::new(
+    /// #     p.WIFI,
+    /// #     wifi_auto_flash_block,
+    /// #     "DeviceEnvoySetup",
+    /// #     [],
+    /// #     spawner,
+    /// # )?;
+    /// # struct Led8x12;
+    /// # impl Led8x12 {
+    /// #     async fn write_text(&self, _text: &str, _colors: &[RGB8]) -> Result<()> { Ok(()) }
+    /// # }
+    /// # async fn show_animated_dots(_led8x12: &Led8x12) -> Result<()> { Ok(()) }
+    /// # const COLORS: &[RGB8] = &[colors::WHITE];
+    /// # let led8x12 = Led8x12;
+    /// // Keep a reference so the handler can reuse the display across events.
+    /// let led8x12_ref = &led8x12;
+    /// let stack = wifi_auto
+    ///     .connect(&mut button6, |wifi_auto_event| async move {
+    ///         match wifi_auto_event {
+    ///             WifiAutoEvent::CaptivePortalReady => {
+    ///                 led8x12_ref.write_text("JO\nIN", COLORS).await?;
+    ///             }
+    ///             WifiAutoEvent::Connecting { .. } => {
+    ///                 show_animated_dots(led8x12_ref).await?;
+    ///             }
+    ///             WifiAutoEvent::ConnectionFailed => {
+    ///                 led8x12_ref.write_text("FA\nIL", COLORS).await?;
+    ///             }
+    ///         }
+    ///         Ok(())
+    ///     })
+    ///     .await?;
+    /// # let _stack = stack;
+    /// # Ok(())
+    /// # }
+    /// ```
     async fn connect<OnEvent, OnEventFuture>(
         self,
         button: &mut impl Button,

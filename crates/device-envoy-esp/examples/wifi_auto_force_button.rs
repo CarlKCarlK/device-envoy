@@ -1,4 +1,4 @@
-//! Demonstrates forcing WifiAuto startup mode to captive portal using a button.
+//! Demonstrates forcing WifiAuto captive-portal flow using a physical button.
 //!
 //! Wiring:
 //! - GPIO6 <-> button <-> GND
@@ -11,7 +11,12 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{flash_block::FlashBlockEsp, init_and_start, wifi_auto::WifiAutoEsp};
+use device_envoy_esp::{
+    button::{ButtonEsp, PressedTo},
+    flash_block::FlashBlockEsp,
+    init_and_start,
+    wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -28,6 +33,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
@@ -36,14 +42,16 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         spawner,
     )?;
 
-    let before_mode = wifi_auto.start_mode()?;
-    let changed = wifi_auto.force_captive_portal_if_pressed_state(true)?;
-    let after_mode = wifi_auto.start_mode()?;
-
-    info!("wifi_auto_force_button");
-    info!("  before_mode={:?}", before_mode);
-    info!("  changed={}", changed);
-    info!("  after_mode={:?}", after_mode);
+    let _stack = wifi_auto
+        .connect(&mut button6, |wifi_auto_event| async move {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
+                WifiAutoEvent::Connecting { .. } => info!("Connecting"),
+                WifiAutoEvent::ConnectionFailed => info!("Connection failed"),
+            }
+            Ok(())
+        })
+        .await?;
 
     core::future::pending().await
 }

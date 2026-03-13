@@ -124,7 +124,7 @@ pub(crate) struct WifiAutoStatic {
 ///         p.PIO0,            // WiFi PIO
 ///         p.DMA_CH0,         // WiFi DMA
 ///         wifi_flash,
-///         "PicoAccess",      // Captive-portal SSID
+///         "DeviceEnvoySetup", // Captive-portal SSID
 ///         [],                // Any extra fields
 ///         spawner,
 ///     )?;
@@ -389,7 +389,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
     /// #     wifi_flash,
-    /// #     "PicoAccess",
+    /// #     "DeviceEnvoySetup",
     /// #     [],
     /// #     spawner,
     /// # )?;
@@ -439,7 +439,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
     /// #     wifi_flash,
-    /// #     "PicoAccess",
+    /// #     "DeviceEnvoySetup",
     /// #     [],
     /// #     spawner,
     /// # )?;

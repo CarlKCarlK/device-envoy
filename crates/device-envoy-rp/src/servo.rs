@@ -676,16 +676,361 @@ macro_rules! __servo_impl {
     (
         $($fields:tt)*
     ) => {
-        $crate::__servo_impl! {
-            @__fill_defaults
-            pin: _UNSET_,
-            slice: _UNSET_,
-            channel: _UNSET_,
-            min_us: $crate::servo::SERVO_MIN_US_DEFAULT,
-            max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
-            max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
+        {
+            $crate::__servo_validate_fields! { fields: [ $($fields)* ] }
+            $crate::__servo_impl! {
+                @__fill_defaults
+                pin: _UNSET_,
+                slice: _UNSET_,
+                channel: _UNSET_,
+                min_us: $crate::servo::SERVO_MIN_US_DEFAULT,
+                max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
+                max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
+                fields: [ $($fields)* ]
+            }
+        }
+    };
+}
+
+/// Public for macro expansion in downstream crates.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __servo_validate_fields {
+    (fields: [ $($fields:tt)* ]) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [],
+            slice: [],
+            channel: [],
+            min_us: [],
+            max_us: [],
+            max_degrees: [],
             fields: [ $($fields)* ]
         }
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ ]
+    ) => {};
+
+    (@__parse
+        pin: [],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ pin: $pin:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [set],
+            slice: [$($slice_seen)?],
+            channel: [$($channel_seen)?],
+            min_us: [$($min_us_seen)?],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [set],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ pin: $pin:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `pin` field");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ slice: $slice:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [set],
+            channel: [$($channel_seen)?],
+            min_us: [$($min_us_seen)?],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [set],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ slice: $slice:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `slice` field");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ channel: A $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [$($slice_seen)?],
+            channel: [set],
+            min_us: [$($min_us_seen)?],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ channel: B $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [$($slice_seen)?],
+            channel: [set],
+            min_us: [$($min_us_seen)?],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [set],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ channel: A $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `channel` field");
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [set],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ channel: B $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `channel` field");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ even $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [$($slice_seen)?],
+            channel: [set],
+            min_us: [$($min_us_seen)?],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [set],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ even $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate channel selector (`channel`, `odd`, or `even`)");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ odd $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [$($slice_seen)?],
+            channel: [set],
+            min_us: [$($min_us_seen)?],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [set],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ odd $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate channel selector (`channel`, `odd`, or `even`)");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [$($slice_seen)?],
+            channel: [$($channel_seen)?],
+            min_us: [set],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [set],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `min_us` field");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [$($slice_seen)?],
+            channel: [$($channel_seen)?],
+            min_us: [$($min_us_seen)?],
+            max_us: [set],
+            max_degrees: [$($max_degrees_seen)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [set],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `max_us` field");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [],
+        fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_validate_fields! {
+            @__parse
+            pin: [$($pin_seen)?],
+            slice: [$($slice_seen)?],
+            channel: [$($channel_seen)?],
+            min_us: [$($min_us_seen)?],
+            max_us: [$($max_us_seen)?],
+            max_degrees: [set],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [set],
+        fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `max_degrees` field");
+    };
+
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ $field:ident : $($value:tt)+ ]
+    ) => {
+        compile_error!(
+            "servo! unknown field; expected `pin`, `slice`, `channel`, `odd`, `even`, `min_us`, `max_us`, or `max_degrees`"
+        );
+    };
+    (@__parse
+        pin: [$($pin_seen:tt)?],
+        slice: [$($slice_seen:tt)?],
+        channel: [$($channel_seen:tt)?],
+        min_us: [$($min_us_seen:tt)?],
+        max_us: [$($max_us_seen:tt)?],
+        max_degrees: [$($max_degrees_seen:tt)?],
+        fields: [ $unknown:tt $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!(
+            "servo! unknown field; expected `pin`, `slice`, `channel`, `odd`, `even`, `min_us`, `max_us`, or `max_degrees`"
+        );
     };
 }
 

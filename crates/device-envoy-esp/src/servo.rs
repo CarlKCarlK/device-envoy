@@ -313,13 +313,310 @@ pub use servo;
 macro_rules! __servo_impl {
     (
         $name:ident {
-            pin: $pin:ident,
-            timer: $timer:ident,
-            channel: $channel:ident,
-            $(min_us: $min_us:expr,)?
-            $(max_us: $max_us:expr,)?
-            $(max_degrees: $max_degrees:expr $(,)?)?
+            $($fields:tt)*
         }
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [],
+            timer: [],
+            channel: [],
+            min_us: [],
+            max_us: [],
+            max_degrees: [],
+            fields: [ $($fields)* ]
+        }
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [$pin],
+            timer: [$($timer)?],
+            channel: [$($channel)?],
+            min_us: [$($min_us)?],
+            max_us: [$($max_us)?],
+            max_degrees: [$($max_degrees)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        name: $name:ident,
+        pin: [$_pin_seen:ident],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `pin` field");
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ timer: $timer:ident $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [$($pin)?],
+            timer: [$timer],
+            channel: [$($channel)?],
+            min_us: [$($min_us)?],
+            max_us: [$($max_us)?],
+            max_degrees: [$($max_degrees)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$_timer_seen:ident],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ timer: $timer:ident $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `timer` field");
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ channel: $channel:ident $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [$($pin)?],
+            timer: [$($timer)?],
+            channel: [$channel],
+            min_us: [$($min_us)?],
+            max_us: [$($max_us)?],
+            max_degrees: [$($max_degrees)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$_channel_seen:ident],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ channel: $channel:ident $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `channel` field");
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [$($pin)?],
+            timer: [$($timer)?],
+            channel: [$($channel)?],
+            min_us: [$min_us],
+            max_us: [$($max_us)?],
+            max_degrees: [$($max_degrees)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$_min_us_seen:expr],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `min_us` field");
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [$($pin)?],
+            timer: [$($timer)?],
+            channel: [$($channel)?],
+            min_us: [$($min_us)?],
+            max_us: [$max_us],
+            max_degrees: [$($max_degrees)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$_max_us_seen:expr],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `max_us` field");
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [],
+        fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [$($pin)?],
+            timer: [$($timer)?],
+            channel: [$($channel)?],
+            min_us: [$($min_us)?],
+            max_us: [$($max_us)?],
+            max_degrees: [$max_degrees],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$_max_degrees_seen:expr],
+        fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `max_degrees` field");
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ ]
+    ) => {
+        $crate::__servo_impl! {
+            @__finish
+            name: $name,
+            pin: [$($pin)?],
+            timer: [$($timer)?],
+            channel: [$($channel)?],
+            min_us: [$($min_us)?],
+            max_us: [$($max_us)?],
+            max_degrees: [$($max_degrees)?]
+        }
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        fields: [ $field:ident : $($value:tt)+ ]
+    ) => {
+        compile_error!(
+            "servo! unknown field; expected `pin`, `timer`, `channel`, `min_us`, `max_us`, or `max_degrees`"
+        );
+    };
+
+    (@__finish
+        name: $name:ident,
+        pin: [],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?]
+    ) => {
+        compile_error!("servo! missing required `pin` field");
+    };
+    (@__finish
+        name: $name:ident,
+        pin: [$pin:ident],
+        timer: [],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?]
+    ) => {
+        compile_error!("servo! missing required `timer` field");
+    };
+    (@__finish
+        name: $name:ident,
+        pin: [$pin:ident],
+        timer: [$timer:ident],
+        channel: [],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?]
+    ) => {
+        compile_error!("servo! missing required `channel` field");
+    };
+    (@__finish
+        name: $name:ident,
+        pin: [$pin:ident],
+        timer: [$timer:ident],
+        channel: [$channel:ident],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?]
     ) => {
         $crate::servo::paste::paste! {
             pub struct $name;

@@ -234,6 +234,11 @@ macro_rules! __led2d_impl {
         $vis:vis $name:ident,
         $($fields:tt)*
     ) => {
+        $crate::__validate_keyword_fields_expr! {
+            macro_name: "led2d!",
+            allowed_macro: $crate::__led2d_allowed_field,
+            fields: [ $($fields)* ]
+        }
         $crate::__led2d_impl! {
             @__fill_defaults
             vis: $vis,
@@ -256,6 +261,11 @@ macro_rules! __led2d_impl {
             $($fields:tt)*
         }
     ) => {
+        $crate::__validate_keyword_fields_expr! {
+            macro_name: "led2d!",
+            allowed_macro: $crate::__led2d_allowed_field,
+            fields: [ $($fields)* ]
+        }
         $crate::__led2d_impl! {
             @__fill_defaults
             vis: pub(self),
@@ -278,6 +288,11 @@ macro_rules! __led2d_impl {
             $($fields:tt)*
         }
     ) => {
+        $crate::__validate_keyword_fields_expr! {
+            macro_name: "led2d!",
+            allowed_macro: $crate::__led2d_allowed_field,
+            fields: [ $($fields)* ]
+        }
         $crate::__led2d_impl! {
             @__fill_defaults
             vis: $vis,
@@ -683,6 +698,27 @@ macro_rules! __led2d_impl {
                 }
             }
         }
+    };
+}
+
+/// Public for macro expansion in downstream crates.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led2d_allowed_field {
+    (pio, $macro_name:literal) => {};
+    (pin, $macro_name:literal) => {};
+    (dma, $macro_name:literal) => {};
+    (led_layout, $macro_name:literal) => {};
+    (max_current, $macro_name:literal) => {};
+    (gamma, $macro_name:literal) => {};
+    (max_frames, $macro_name:literal) => {};
+    (font, $macro_name:literal) => {};
+    ($field:ident, $macro_name:literal) => {
+        compile_error!(concat!(
+            $macro_name,
+            " unknown field; expected `pio`, `pin`, `dma`, `led_layout`, `max_current`, `gamma`, `max_frames`, or `font`"
+        ));
     };
 }
 

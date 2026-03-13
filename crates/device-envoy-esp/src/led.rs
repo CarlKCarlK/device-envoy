@@ -205,33 +205,124 @@ macro_rules! led {
 macro_rules! __led_impl {
     (
         $vis:vis $name:ident {
-            pin: $pin:ident,
-            max_steps: $max_steps:expr $(,)?
+            $($fields:tt)*
         }
     ) => {
-        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
-    };
-    (
-        $vis:vis $name:ident {
-            max_steps: $max_steps:expr,
-            pin: $pin:ident $(,)?
-        }
-    ) => {
-        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
-    };
-    (
-        $vis:vis $name:ident {
-            pin: $pin:ident $(,)?
-        }
-    ) => {
-        $crate::__led_impl!(
-            @__emit
+        $crate::__led_impl! {
+            @__parse
             vis: $vis,
             name: $name,
-            pin: $pin,
-            max_steps: $crate::led::DEFAULT_MAX_STEPS
-        );
+            pin: [],
+            max_steps: [],
+            fields: [ $($fields)* ]
+        }
     };
+
+    (@__parse
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [],
+        max_steps: [$($max_steps:expr)?],
+        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__led_impl! {
+            @__parse
+            vis: $vis,
+            name: $name,
+            pin: [$pin],
+            max_steps: [$($max_steps)?],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [$_pin_seen:ident],
+        max_steps: [$($max_steps:expr)?],
+        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("led! duplicate `pin` field");
+    };
+
+    (@__parse
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        max_steps: [],
+        fields: [ max_steps: $max_steps:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__led_impl! {
+            @__parse
+            vis: $vis,
+            name: $name,
+            pin: [$($pin)?],
+            max_steps: [$max_steps],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        max_steps: [$_max_steps_seen:expr],
+        fields: [ max_steps: $max_steps:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("led! duplicate `max_steps` field");
+    };
+
+    (@__parse
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        max_steps: [$($max_steps:expr)?],
+        fields: [ ]
+    ) => {
+        $crate::__led_impl! {
+            @__finish
+            vis: $vis,
+            name: $name,
+            pin: [$($pin)?],
+            max_steps: [$($max_steps)?]
+        }
+    };
+
+    (@__parse
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        max_steps: [$($max_steps:expr)?],
+        fields: [ $field:ident : $value:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("led! unknown field; expected `pin` or `max_steps`");
+    };
+
+    (@__finish
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [],
+        max_steps: [$($max_steps:expr)?]
+    ) => {
+        compile_error!("led! missing required `pin` field");
+    };
+
+    (@__finish
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [$pin:ident],
+        max_steps: []
+    ) => {
+        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $crate::led::DEFAULT_MAX_STEPS);
+    };
+
+    (@__finish
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: [$pin:ident],
+        max_steps: [$max_steps:expr]
+    ) => {
+        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
+    };
+
     (
         @__emit
         vis: $vis:vis,

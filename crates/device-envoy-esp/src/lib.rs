@@ -146,6 +146,33 @@ use device_envoy_core::wifi_auto::WifiAutoError;
 #[doc(hidden)]
 pub use paste::paste as __paste;
 
+/// Public for macro expansion in downstream crates.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __validate_keyword_fields_expr {
+    (
+        macro_name: $macro_name:literal,
+        allowed_macro: $allowed_macro:path,
+        fields: [ $( $field:ident : $value:expr ),* $(,)? ]
+    ) => {
+        const _: () = {
+            $( $allowed_macro!($field, $macro_name); )*
+            #[allow(non_snake_case)]
+            mod __device_envoy_keyword_fields_uniqueness {
+                $( pub(super) mod $field {} )*
+            }
+        };
+    };
+
+    (
+        macro_name: $macro_name:literal,
+        allowed_macro: $allowed_macro:path,
+        fields: [ $($fields:tt)* ]
+    ) => {
+        compile_error!(concat!($macro_name, " fields must use `name: value` syntax"));
+    };
+}
+
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but
 // esp-radio only defines them with #[cfg(xtensa)], leaving RISC-V targets with unresolved

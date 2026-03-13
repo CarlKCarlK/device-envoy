@@ -589,6 +589,11 @@ macro_rules! __audio_player_impl {
             $($fields:tt)*
         }
     ) => {
+        $crate::__validate_keyword_fields_expr! {
+            macro_name: "audio_player!",
+            allowed_macro: $crate::__audio_player_allowed_field,
+            fields: [ $($fields)* ]
+        }
         $crate::__audio_player_impl! {
             @__fill_defaults
             vis: pub(self),
@@ -611,6 +616,11 @@ macro_rules! __audio_player_impl {
             $($fields:tt)*
         }
     ) => {
+        $crate::__validate_keyword_fields_expr! {
+            macro_name: "audio_player!",
+            allowed_macro: $crate::__audio_player_allowed_field,
+            fields: [ $($fields)* ]
+        }
         $crate::__audio_player_impl! {
             @__fill_defaults
             vis: $vis,
@@ -1119,6 +1129,27 @@ macro_rules! __audio_player_impl {
                 >(audio_player_static, pio, dma, data_pin, bit_clock_pin, word_select_pin).await
             }
         }
+    };
+}
+
+/// Public for macro expansion in downstream crates.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __audio_player_allowed_field {
+    (data_pin, $macro_name:literal) => {};
+    (sample_rate_hz, $macro_name:literal) => {};
+    (bit_clock_pin, $macro_name:literal) => {};
+    (word_select_pin, $macro_name:literal) => {};
+    (pio, $macro_name:literal) => {};
+    (dma, $macro_name:literal) => {};
+    (max_clips, $macro_name:literal) => {};
+    (max_volume, $macro_name:literal) => {};
+    (initial_volume, $macro_name:literal) => {};
+    ($field:ident, $macro_name:literal) => {
+        compile_error!(concat!(
+            $macro_name,
+            " unknown field; expected `data_pin`, `sample_rate_hz`, `bit_clock_pin`, `word_select_pin`, `pio`, `dma`, `max_clips`, `max_volume`, or `initial_volume`"
+        ));
     };
 }
 

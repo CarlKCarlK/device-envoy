@@ -2321,6 +2321,11 @@ macro_rules! __led_strip_impl {
             $($fields:tt)*
         }
     ) => {
+        $crate::__validate_keyword_fields_expr! {
+            macro_name: "led_strip!",
+            allowed_macro: $crate::__led_strip_allowed_field,
+            fields: [ $($fields)* ]
+        }
         $crate::__led_strip_impl! {
             @__fill_defaults
             vis: pub(self),
@@ -2342,6 +2347,11 @@ macro_rules! __led_strip_impl {
             $($fields:tt)*
         }
     ) => {
+        $crate::__validate_keyword_fields_expr! {
+            macro_name: "led_strip!",
+            allowed_macro: $crate::__led_strip_allowed_field,
+            fields: [ $($fields)* ]
+        }
         $crate::__led_strip_impl! {
             @__fill_defaults
             vis: $vis,
@@ -2774,6 +2784,26 @@ macro_rules! __led_strip_impl {
                 >(driver, command_signal, &$name::COMBO_TABLE).await
             }
         }
+    };
+}
+
+/// Public for macro expansion in downstream crates.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __led_strip_allowed_field {
+    (pin, $macro_name:literal) => {};
+    (len, $macro_name:literal) => {};
+    (pio, $macro_name:literal) => {};
+    (dma, $macro_name:literal) => {};
+    (max_current, $macro_name:literal) => {};
+    (gamma, $macro_name:literal) => {};
+    (max_frames, $macro_name:literal) => {};
+    ($field:ident, $macro_name:literal) => {
+        compile_error!(concat!(
+            $macro_name,
+            " unknown field; expected `pin`, `len`, `pio`, `dma`, `max_current`, `gamma`, or `max_frames`"
+        ));
     };
 }
 

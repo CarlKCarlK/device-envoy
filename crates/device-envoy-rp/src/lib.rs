@@ -78,3 +78,30 @@ pub use device_envoy_core::tone;
 /// Used internally by other macros.
 #[doc(hidden)]
 pub use paste::paste as __paste;
+
+/// Public for macro expansion in downstream crates.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __validate_keyword_fields_expr {
+    (
+        macro_name: $macro_name:literal,
+        allowed_macro: $allowed_macro:path,
+        fields: [ $( $field:ident : $value:expr ),* $(,)? ]
+    ) => {
+        const _: () = {
+            $( $allowed_macro!($field, $macro_name); )*
+            #[allow(non_snake_case)]
+            mod __device_envoy_keyword_fields_uniqueness {
+                $( pub(super) mod $field {} )*
+            }
+        };
+    };
+
+    (
+        macro_name: $macro_name:literal,
+        allowed_macro: $allowed_macro:path,
+        fields: [ $($fields:tt)* ]
+    ) => {
+        compile_error!(concat!($macro_name, " fields must use `name: value` syntax"));
+    };
+}

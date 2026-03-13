@@ -25,7 +25,7 @@
 //! # use log::info;
 //! #
 //! ir! {
-//!     Ir7: { pin: GPIO7 }
+//!     Ir7 { pin: GPIO7 }
 //! }
 //!
 //! # #[esp_rtos::main]
@@ -72,7 +72,7 @@
 //! }
 //!
 //! ir_mapping! {
-//!     IrMapping7: {
+//!     IrMapping7 {
 //!         pin: GPIO7,
 //!         button: RemoteKeys,
 //!         capacity: 3,
@@ -126,7 +126,7 @@
 //! # use log::info;
 //! #
 //! ir_kepler! {
-//!     IrKepler7: { pin: GPIO7 }
+//!     IrKepler7 { pin: GPIO7 }
 //! }
 //!
 //! # #[esp_rtos::main]
@@ -793,14 +793,26 @@ macro_rules! __irs_impl {
 #[macro_export]
 macro_rules! ir {
     (
-        $name:ident : { pin: $pin:ident $(,)? }
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident : { $($deprecated_fields:tt)* }
+    ) => {
+        compile_error!(
+            "ir! no longer supports `Name: { ... }`. Use `Name { ... }` instead."
+        );
+    };
+    (
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident { pin: $pin:ident $(,)? }
     ) => {
         $crate::ir::paste::paste! {
             $crate::irs! {
                 [<__ $name:camel Group>] {
-                    $name: { pin: $pin }
+                    [<__ $name:camel Ir>]: { pin: $pin }
                 }
             }
+
+            $(#[$attrs])*
+            $vis type $name = [<__ $name:camel Ir>];
         }
     };
 }
@@ -813,7 +825,8 @@ macro_rules! ir {
 ///
 /// ```text
 /// ir_kepler! {
-///     <Name>: {
+///     [attrs...]
+///     [vis?] <Name> {
 ///         pin: <pin_ident>,
 ///     }
 /// }
@@ -868,7 +881,8 @@ pub use crate::ir_keplers;
 ///
 /// ```text
 /// ir_mapping! {
-///     <Name>: {
+///     [attrs...]
+///     [vis?] <Name> {
 ///         pin: <pin_ident>,
 ///         button: <button_type>,
 ///         capacity: <usize_expr>,
@@ -931,7 +945,8 @@ pub use crate::ir_mappings;
 ///
 /// ```text
 /// ir! {
-///     <Name>: {
+///     [attrs...]
+///     [vis?] <Name> {
 ///         pin: <pin_ident>,
 ///     }
 /// }

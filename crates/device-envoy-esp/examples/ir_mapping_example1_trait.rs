@@ -24,7 +24,7 @@ const APP_BUTTON_MAP: [(u16, u8, AppButton); 3] = [
 ];
 
 ir_mapping! {
-    IrMapping7: {
+    IrMapping7 {
         pin: GPIO7,
         button: AppButton,
         capacity: 3,

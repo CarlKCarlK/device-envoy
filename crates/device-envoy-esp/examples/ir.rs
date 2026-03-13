@@ -20,7 +20,7 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 ir! {
-    Ir7: { pin: GPIO7 }
+    Ir7 { pin: GPIO7 }
 }
 
 #[esp_rtos::main]

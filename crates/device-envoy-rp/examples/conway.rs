@@ -29,7 +29,7 @@ led2d! {
 }
 
 ir_kepler! {
-    IrKepler15: { pio: PIO1, pin: PIN_15 }
+    IrKepler15 { pio: PIO1, pin: PIN_15 }
 }
 
 #[embassy_executor::main]

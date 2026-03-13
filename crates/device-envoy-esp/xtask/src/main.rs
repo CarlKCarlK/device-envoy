@@ -341,9 +341,11 @@ fn check_embedded_tests() -> ExitCode {
         "ir_four_receivers_compile",
         "ir_mapping_four_receivers_compile",
         "ir_kepler_four_receivers_compile",
+        "ir_visibility_compile",
     ];
     let compile_fail_tests = [
         "ir_duplicate_channel_compile_fail",
+        "ir_colon_form_compile_fail",
         "lcd_text_duplicate_address_compile_fail",
     ];
     let Some(s3_linker_dir) = require_s3_toolchain() else {

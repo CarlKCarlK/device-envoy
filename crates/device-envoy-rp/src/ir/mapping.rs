@@ -627,6 +627,14 @@ macro_rules! __ir_mappings_impl {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ir_mapping {
+    (
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident : { $($deprecated_fields:tt)* }
+    ) => {
+        compile_error!(
+            "ir_mapping! no longer supports `Name: { ... }`. Use `Name { ... }` instead."
+        );
+    };
     ($($tt:tt)*) => { $crate::__ir_mapping_impl! { $($tt)* } };
 }
 
@@ -635,7 +643,8 @@ macro_rules! ir_mapping {
 #[macro_export]
 macro_rules! __ir_mapping_impl {
     (
-        $name:ident : {
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident {
             pio: $pio:ident,
             pin: $pin:ident,
             button: $button_ty:ty,
@@ -648,9 +657,12 @@ macro_rules! __ir_mapping_impl {
                 button: $button_ty,
                 capacity: $capacity,
                 [<__ $name:camel Mappings>] {
-                    $name: { pin: $pin }
+                    [<__ $name:camel Mapping>]: { pin: $pin }
                 }
             }
+
+            $(#[$attrs])*
+            $vis type $name = [<__ $name:camel Mapping>];
         }
     };
 }

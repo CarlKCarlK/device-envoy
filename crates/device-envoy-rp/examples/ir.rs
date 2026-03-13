@@ -10,7 +10,7 @@ use embassy_executor::Spawner;
 use panic_probe as _;
 
 ir! {
-    Ir15: { pio: PIO0, pin: PIN_15 }
+    Ir15 { pio: PIO0, pin: PIN_15 }
 }
 
 #[embassy_executor::main]

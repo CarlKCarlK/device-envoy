@@ -17,7 +17,7 @@ use device_envoy_esp::{init_and_start, ir::IrKepler as _, ir_kepler};
 esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_kepler! {
-    IrKepler7: { pin: GPIO7 }
+    IrKepler7 { pin: GPIO7 }
 }
 
 #[esp_rtos::main]

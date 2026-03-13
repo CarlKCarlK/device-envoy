@@ -491,15 +491,27 @@ macro_rules! __ir_keplers_impl {
 #[macro_export]
 macro_rules! ir_kepler {
     (
-        $name:ident : { pio: $pio:ident, pin: $pin:ident $(,)? }
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident : { $($deprecated_fields:tt)* }
+    ) => {
+        compile_error!(
+            "ir_kepler! no longer supports `Name: { ... }`. Use `Name { ... }` instead."
+        );
+    };
+    (
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident { pio: $pio:ident, pin: $pin:ident $(,)? }
     ) => {
         $crate::ir::paste::paste! {
             $crate::ir_keplers! {
                 pio: $pio,
                 [<__ $name:camel Keplers>] {
-                    $name: { pin: $pin }
+                    [<__ $name:camel Kepler>]: { pin: $pin }
                 }
             }
+
+            $(#[$attrs])*
+            $vis type $name = [<__ $name:camel Kepler>];
         }
     };
 }

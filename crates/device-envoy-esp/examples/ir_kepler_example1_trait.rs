@@ -15,7 +15,7 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_kepler! {
-    IrKepler7: { pin: GPIO7 }
+    IrKepler7 { pin: GPIO7 }
 }
 
 async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {

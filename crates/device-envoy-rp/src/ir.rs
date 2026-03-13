@@ -26,7 +26,7 @@
 //! # use defmt::info;
 //! #
 //! ir! {
-//!     Ir15: { pio: PIO0, pin: PIN_15 }
+//!     Ir15 { pio: PIO0, pin: PIN_15 }
 //! }
 //!
 //! # #[embassy_executor::main]
@@ -64,7 +64,7 @@
 //! }
 //!
 //! ir_mapping! {
-//!     IrMapping15: {
+//!     IrMapping15 {
 //!         pio: PIO0,
 //!         pin: PIN_15,
 //!         button: RemoteKeys,
@@ -111,7 +111,7 @@
 //! # use defmt::info;
 //! #
 //! ir_kepler! {
-//!     IrKepler15: { pio: PIO0, pin: PIN_15 }
+//!     IrKepler15 { pio: PIO0, pin: PIN_15 }
 //! }
 //!
 //! # #[embassy_executor::main]
@@ -869,15 +869,27 @@ macro_rules! __irs_impl {
 #[macro_export]
 macro_rules! ir {
     (
-        $name:ident : { pio: $pio:ident, pin: $pin:ident $(,)? }
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident : { $($deprecated_fields:tt)* }
+    ) => {
+        compile_error!(
+            "ir! no longer supports `Name: { ... }`. Use `Name { ... }` instead."
+        );
+    };
+    (
+        $(#[$attrs:meta])*
+        $vis:vis $name:ident { pio: $pio:ident, pin: $pin:ident $(,)? }
     ) => {
         $crate::ir::paste::paste! {
             $crate::irs! {
                 pio: $pio,
                 [<__ $name:camel Group>] {
-                    $name: { pin: $pin }
+                    [<__ $name:camel Ir>]: { pin: $pin }
                 }
             }
+
+            $(#[$attrs])*
+            $vis type $name = [<__ $name:camel Ir>];
         }
     };
 }
@@ -890,7 +902,8 @@ macro_rules! ir {
 ///
 /// ```text
 /// ir_kepler! {
-///     <Name>: {
+///     [attrs...]
+///     [vis?] <Name> {
 ///         pio: <pio_ident>,
 ///         pin: <pin_ident>,
 ///     }
@@ -949,7 +962,8 @@ pub use crate::ir_keplers;
 ///
 /// ```text
 /// ir_mapping! {
-///     <Name>: {
+///     [attrs...]
+///     [vis?] <Name> {
 ///         pio: <pio_ident>,
 ///         pin: <pin_ident>,
 ///         button: <button_type>,
@@ -1016,7 +1030,8 @@ pub use crate::ir_mappings;
 ///
 /// ```text
 /// ir! {
-///     <Name>: {
+///     [attrs...]
+///     [vis?] <Name> {
 ///         pio: <pio_ident>,
 ///         pin: <pin_ident>,
 ///     }

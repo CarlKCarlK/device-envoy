@@ -15,7 +15,7 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 ir! {
-    Ir7: { pin: GPIO7 }
+    Ir7 { pin: GPIO7 }
 }
 
 async fn handle_ir_presses(ir: &impl Ir) -> ! {

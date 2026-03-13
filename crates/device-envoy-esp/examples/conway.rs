@@ -31,7 +31,7 @@ led2d! {
 }
 
 ir_kepler! {
-    IrKepler7: { pin: GPIO7 }
+    IrKepler7 { pin: GPIO7 }
 }
 
 #[esp_rtos::main]

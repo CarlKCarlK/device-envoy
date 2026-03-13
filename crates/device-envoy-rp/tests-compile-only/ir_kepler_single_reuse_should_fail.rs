@@ -11,7 +11,7 @@ use device_envoy_rp::ir_kepler;
 use embassy_executor::Spawner;
 
 ir_kepler! {
-    IrKepler15: { pio: PIO0, pin: PIN_15 }
+    IrKepler15 { pio: PIO0, pin: PIN_15 }
 }
 
 async fn test_reuse_single_ir_kepler(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {

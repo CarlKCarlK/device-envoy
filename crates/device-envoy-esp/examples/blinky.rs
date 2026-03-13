@@ -99,7 +99,6 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     info!("SOS blinky starting on GPIO{LED_PIN_NUM}");
 
-    // TODO0 The C6 is limited to 2 transmit channels. Can we be general across more ESP32 models?
     #[cfg(target_arch = "riscv32")]
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel0, spawner)?;
     #[cfg(target_arch = "xtensa")]

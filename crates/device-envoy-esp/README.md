@@ -1,7 +1,7 @@
 # device-envoy-esp
 
-<!-- todo0 create and publish template repo: device-envoy-blinky-esp -->
-<!-- todo0 create and publish template repo: device-envoy-blinky-rp -->
+<!-- todo000 create and publish template repo: device-envoy-blinky-esp -->
+<!-- todo000 create and publish template repo: device-envoy-blinky-rp -->
 
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
 [![crates.io](https://img.shields.io/crates/v/device-envoy-esp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-esp)

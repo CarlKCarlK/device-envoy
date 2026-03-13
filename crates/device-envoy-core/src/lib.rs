@@ -1,9 +1,6 @@
 #![cfg_attr(target_os = "none", no_std)]
 
 //! Shared building blocks for the device-envoy workspace.
-// TODO0 Audit all device macros to ensure optional keyword fields are accepted
-// TODO0 in any order, with consistent duplicate/unknown-field diagnostics.
-
 pub mod audio_player;
 pub mod button;
 pub mod clock;

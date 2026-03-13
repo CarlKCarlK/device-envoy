@@ -14,7 +14,7 @@ use embassy_time::Duration;
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
-    LedStrip8 {
+    LedStripLen8 {
         pin: PIN_0,
         len: 8,
         max_frames: 2,
@@ -32,7 +32,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     const COLORS: [RGB8; 4] = [colors::YELLOW, colors::ORANGE, colors::GREEN, colors::BLUE];
     let mut colors_iter = COLORS.iter().cycle();
@@ -41,7 +41,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut steady_frame = Frame1d::filled(color);
     let mut blink_frame = steady_frame; // copy
 
-    let mut led_index_iter = (0..LedStrip8::LEN).cycle();
+    let mut led_index_iter = (0..LedStripLen8::LEN).cycle();
     let mut led_index = led_index_iter.next().unwrap();
 
     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
@@ -50,7 +50,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         blink_frame[led_index] = colors::BLACK;
         steady_frame[led_index] = color;
         const BLINK_DELAY: Duration = Duration::from_millis(150);
-        led_strip8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)]);
+        led_strip_len8.animate([(blink_frame, BLINK_DELAY), (steady_frame, BLINK_DELAY)]);
 
         // Wait for a button press.
         // Tells if a long or short press.

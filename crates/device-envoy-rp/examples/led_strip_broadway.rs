@@ -14,7 +14,7 @@ use embassy_time::Duration;
 use panic_probe as _;
 
 led_strip! {
-    Gpio5LedStrip {
+    LedStripLen160 {
         pin: PIN_5,
         len: 160,
         max_current: Current::Milliamps(500),
@@ -32,7 +32,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let gpio5_led_strip = Gpio5LedStrip::new(p.PIN_5, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip_len160 = LedStripLen160::new(p.PIN_5, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!("Christmas marquee demo starting on GPIO5");
 
@@ -49,12 +49,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     for frame_offset in 0..FRAME_COUNT {
         let mut frame = Frame1d::filled(GAP);
 
-        for start in (0..Gpio5LedStrip::LEN).step_by(PULSE_SPACING) {
-            let head_index = (start + frame_offset) % Gpio5LedStrip::LEN;
+        for start in (0..LedStripLen160::LEN).step_by(PULSE_SPACING) {
+            let head_index = (start + frame_offset) % LedStripLen160::LEN;
             frame[head_index] = HEAD;
 
             for distance in 1..=TAIL_LENGTH {
-                let tail_index = (head_index + Gpio5LedStrip::LEN - distance) % Gpio5LedStrip::LEN;
+                let tail_index =
+                    (head_index + LedStripLen160::LEN - distance) % LedStripLen160::LEN;
                 frame[tail_index] = TAIL;
             }
         }
@@ -67,7 +68,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         frames.len()
     );
 
-    gpio5_led_strip.animate(frames);
+    led_strip_len160.animate(frames);
 
     future::pending::<Result<Infallible>>().await // Run forever
 }

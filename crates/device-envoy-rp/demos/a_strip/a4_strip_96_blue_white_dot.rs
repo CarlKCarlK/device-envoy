@@ -14,7 +14,7 @@ use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
-    pub LedStrip96 { // can add 'pub' to make struct public
+    pub LedStripLen96 { // can add 'pub' to make struct public
         pin: PIN_4,
         len: 96,
         // Optionals
@@ -37,14 +37,14 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    // Must match the pin, pio, dma in LedStrip96 above to avoid compilation error.
-    let led_strip96 = LedStrip96::new(p.PIN_4, p.PIO1, p.DMA_CH5, spawner)?;
+    // Must match the pin, pio, dma in LedStripLen96 above to avoid compilation error.
+    let led_strip_len96 = LedStripLen96::new(p.PIN_4, p.PIO1, p.DMA_CH5, spawner)?;
 
     let mut frame1d = Frame1d::filled(colors::BLUE);
     loop {
-        for dot_index in 0..LedStrip96::LEN {
+        for dot_index in 0..LedStripLen96::LEN {
             frame1d[dot_index] = colors::LIGHT_GRAY;
-            led_strip96.write_frame(frame1d);
+            led_strip_len96.write_frame(frame1d);
             Timer::after(Duration::from_millis(50)).await;
             frame1d[dot_index] = colors::BLUE;
         }

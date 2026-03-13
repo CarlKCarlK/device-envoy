@@ -13,7 +13,7 @@ use embassy_time::Duration;
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
-    LedStrip {
+    LedStripLen8 {
         pin: PIN_0,
         len: 8,
         max_current: Current::Milliamps(50),
@@ -30,9 +30,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Create strip - no tuple unpacking needed!
-    let led_strip = LedStrip::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
-    info!("LED strip initialized with {} LEDs", LedStrip::LEN);
+    info!("LED strip initialized with {} LEDs", LedStripLen8::LEN);
 
     // Create frames for the animation
 
@@ -51,7 +51,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting rainbow animation...");
     const FRAME_DURATION: Duration = Duration::from_secs(1);
-    led_strip.animate([
+    led_strip_len8.animate([
         (rainbow_frame, FRAME_DURATION),
         (black_frame, FRAME_DURATION),
     ]);

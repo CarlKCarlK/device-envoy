@@ -12,9 +12,9 @@ use device_envoy_rp::{
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
-// Define a struct `LedStrip8` to control 8 LEDs on PIN_0
+// Define a struct `LedStripLen8` to control 8 LEDs on PIN_0
 led_strip! {
-    LedStrip8 {
+    LedStripLen8 {
         pin: PIN_0,
         len: 8,
     }
@@ -31,7 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Create a struct to control the LED strip from Pico resources.
-    let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Fill an array of pixels with alternating blue and gray colors
     let mut frame1d = Frame1d::new(); // just an owned array of RGB pixels
@@ -41,7 +41,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
 
     // Write the frame to the LED strip. Will stay until replaced.
-    led_strip8.write_frame(frame1d);
+    led_strip_len8.write_frame(frame1d);
 
     future::pending().await // run forever
 }

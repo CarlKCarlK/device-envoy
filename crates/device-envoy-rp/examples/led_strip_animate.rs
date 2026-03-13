@@ -13,7 +13,7 @@ use embassy_time::Duration;
 use panic_probe as _;
 
 led_strip! {
-    LedStrip4 {
+    LedStripLen96 {
         pin: PIN_4,
         len: 96,
         pio: PIO1,
@@ -33,10 +33,10 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip4 = LedStrip4::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;
+    let led_strip_len96 = LedStripLen96::new(p.PIN_4, p.PIO1, p.DMA_CH3, spawner)?;
 
     let frame_duration = Duration::from_secs(1);
-    led_strip4.animate([
+    led_strip_len96.animate([
         (Frame1d::filled(colors::GREEN), frame_duration),
         (Frame1d::filled(colors::YELLOW), frame_duration),
         (Frame1d::filled(colors::RED), frame_duration),

@@ -26,13 +26,6 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-// todo0 delete
-// const STRIP8_PIN_NUM: u8 = 10;
-// #[cfg(target_arch = "riscv32")]
-// const BUILTIN_LED_PIN_NUM: u8 = 8;
-// #[cfg(target_arch = "xtensa")]
-// const BUILTIN_LED_PIN_NUM: u8 = 48;
-
 // Morse timing (in milliseconds).
 const DOT_MS: u64 = 200;
 const DASH_MS: u64 = DOT_MS * 3;

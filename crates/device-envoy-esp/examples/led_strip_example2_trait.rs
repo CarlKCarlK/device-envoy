@@ -18,7 +18,7 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
-    LedStripAnimated {
+    LedStripLen96 {
         pin: GPIO18,
         len: 96,
         max_current: Current::Milliamps(1000),
@@ -51,8 +51,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("LED strip trait example 2: RGB animation on GPIO18");
 
-    let led_strip_animated = LedStripAnimated::new(p.GPIO18, rmt80.channel0, spawner)?;
-    animate_rgb_cycle(led_strip_animated);
+    let led_strip_len96 = LedStripLen96::new(p.GPIO18, rmt80.channel0, spawner)?;
+    animate_rgb_cycle(led_strip_len96);
 
     core::future::pending().await
 }

@@ -14,7 +14,7 @@ use device_envoy_rp::led_strip::led_strip;
 use embassy_executor::Spawner;
 
 led_strip! {
-    Gpio16LedStrip {
+    LedStripLen48 {
         pio: PIO1,
         dma: DMA_CH3,
         pin: PIN_16,
@@ -25,7 +25,7 @@ led_strip! {
 
 /// Verify that led_strip! works with PIO1
 async fn test_pio1_strip(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let _gpio16_led_strip = Gpio16LedStrip::new(p.PIN_16, p.PIO1, p.DMA_CH3, spawner)?;
+    let _led_strip_len48 = LedStripLen48::new(p.PIN_16, p.PIO1, p.DMA_CH3, spawner)?;
 
     Ok(())
 }

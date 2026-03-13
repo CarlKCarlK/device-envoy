@@ -14,7 +14,7 @@ use embassy_time::Duration;
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
-    LedStrip8 {
+    LedStripLen8 {
         pin: PIN_0,
         len: 8,
     }
@@ -29,7 +29,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     // Create two frames
     let palette = [colors::BLUE, colors::LIGHT_GRAY];
@@ -42,7 +42,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Animate between the two frames forever until replaced
     const FRAME_DURATION: Duration = Duration::from_millis(150);
-    led_strip8.animate([(frame0, FRAME_DURATION), (frame1, FRAME_DURATION)]);
+    led_strip_len8.animate([(frame0, FRAME_DURATION), (frame1, FRAME_DURATION)]);
 
     // Could do more things here. The animation runs in the background.
 

@@ -17,7 +17,7 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
-    LedStripSimple {
+    LedStripLen8 {
         pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(250),
@@ -49,8 +49,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("LED strip trait example 1: alternating blue/gray frame on GPIO10");
 
-    let led_strip_simple = LedStripSimple::new(p.GPIO10, rmt80.channel0, spawner)?;
-    write_alternating_blue_gray(led_strip_simple);
+    let led_strip_len8 = LedStripLen8::new(p.GPIO10, rmt80.channel0, spawner)?;
+    write_alternating_blue_gray(led_strip_len8);
 
     core::future::pending().await
 }

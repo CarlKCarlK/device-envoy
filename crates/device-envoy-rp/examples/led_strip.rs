@@ -12,7 +12,7 @@ use embassy_time::Timer;
 use panic_probe as _;
 
 led_strip! {
-    Gpio0LedStrip {
+    LedStripLen8 {
         pin: PIN_0,
         len: 8,
         max_current: Current::Milliamps(50),
@@ -30,27 +30,27 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
-    let gpio0_led_strip = Gpio0LedStrip::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     info!("LED strip demo starting (GPIO0 data, VSYS power)");
 
     let mut hue: u8 = 0;
 
     loop {
-        update_rainbow(&gpio0_led_strip, hue).await?;
+        update_rainbow(&led_strip_len8, hue).await?;
 
         hue = hue.wrapping_add(3);
         Timer::after_millis(80).await;
     }
 }
 
-async fn update_rainbow(led_strip: &Gpio0LedStrip, base: u8) -> Result<()> {
+async fn update_rainbow(led_strip_len8: &LedStripLen8, base: u8) -> Result<()> {
     let mut frame = Frame1d::new();
-    for idx in 0..Gpio0LedStrip::LEN {
+    for idx in 0..LedStripLen8::LEN {
         let offset = base.wrapping_add((idx as u8).wrapping_mul(16));
         frame[idx] = wheel(offset);
     }
-    led_strip.write_frame(frame);
+    led_strip_len8.write_frame(frame);
     Ok(())
 }
 

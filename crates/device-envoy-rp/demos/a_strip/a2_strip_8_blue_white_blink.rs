@@ -14,7 +14,7 @@ use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
 led_strip! {
-    LedStrip8 {
+    LedStripLen8 {
         pin: PIN_0,
         len: 8,
     }
@@ -29,7 +29,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let led_strip8 = LedStrip8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
 
     let palette = [colors::BLUE, colors::LIGHT_GRAY];
     // Create two frames (array of pixels), black, 8-long (inferred).
@@ -43,9 +43,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Display frames in a loop with delay to create a blinking effect.
     loop {
-        led_strip8.write_frame(frame0);
+        led_strip_len8.write_frame(frame0);
         Timer::after(Duration::from_millis(150)).await;
-        led_strip8.write_frame(frame1);
+        led_strip_len8.write_frame(frame1);
         Timer::after(Duration::from_millis(150)).await;
     }
 }

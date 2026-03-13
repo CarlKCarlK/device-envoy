@@ -19,7 +19,7 @@ const STRIP8_PIN_NUM: u8 = 10;
 const FRAME_DURATION: Duration = Duration::from_millis(350);
 
 led_strip! {
-    LedStrip8Spi {
+    LedStripLen8Spi {
         pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(180),
@@ -39,9 +39,9 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
-    info!("led_strip8_spi starting on GPIO{} via SPI2", STRIP8_PIN_NUM);
+    info!("led_strip_len8_spi starting on GPIO{} via SPI2", STRIP8_PIN_NUM);
 
-    let led_strip8_spi = LedStrip8Spi::new(p.GPIO10, p.SPI2, spawner)?;
+    let led_strip_len8_spi = LedStripLen8Spi::new(p.GPIO10, p.SPI2, spawner)?;
     let frame0 = Frame1d([
         colors::BLUE,
         colors::BLACK,
@@ -62,7 +62,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         colors::BLACK,
         colors::ORANGE,
     ]);
-    led_strip8_spi.animate([(frame0, FRAME_DURATION), (frame1, FRAME_DURATION)]);
+    led_strip_len8_spi.animate([(frame0, FRAME_DURATION), (frame1, FRAME_DURATION)]);
 
     core::future::pending().await
 }

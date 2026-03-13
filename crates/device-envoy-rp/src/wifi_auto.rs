@@ -40,8 +40,8 @@ pub(crate) use stack::{Wifi, WifiEvent};
 
 pub use device_envoy_core::wifi_auto::WifiAuto;
 pub use device_envoy_core::wifi_auto::WifiAutoEvent;
+pub use device_envoy_core::wifi_auto::WifiAutoField;
 pub use device_envoy_core::wifi_auto::WifiStack;
-pub use portal::WifiAutoField;
 
 const MAX_CONNECT_ATTEMPTS: u8 = 4;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(40);
@@ -56,7 +56,9 @@ pub(crate) struct WifiAutoStatic {
     wifi_auto_cell: StaticCell<WifiAutoInner>,
     force_captive_portal: AtomicBool,
     defaults: Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>>,
-    fields_storage: StaticCell<Vec<&'static dyn WifiAutoField, MAX_WIFI_AUTO_FIELDS>>,
+    fields_storage: StaticCell<
+        Vec<&'static (dyn WifiAutoField<Error = crate::Error> + Sync), MAX_WIFI_AUTO_FIELDS>,
+    >,
 }
 /// A device abstraction that connects a Pico with WiFi to the Internet and, when needed,
 /// creates a temporary WiFi network to enter credentials.
@@ -183,7 +185,7 @@ struct WifiAutoInner {
     spawner: Spawner,
     force_captive_portal: &'static AtomicBool,
     defaults: &'static Mutex<CriticalSectionRawMutex, RefCell<Option<InnerWifiCredentials>>>,
-    fields: &'static [&'static dyn WifiAutoField],
+    fields: &'static [&'static (dyn WifiAutoField<Error = crate::Error> + Sync)],
 }
 
 impl WifiAutoStatic {
@@ -235,7 +237,7 @@ impl WifiAutoRp {
         dma: Peri<'static, DMA>,
         wifi_credentials_flash_block: FlashBlockType,
         captive_portal_ssid: &'static str,
-        custom_fields: [&'static dyn WifiAutoField; N],
+        custom_fields: [&'static (dyn WifiAutoField<Error = crate::Error> + Sync); N],
         spawner: Spawner,
     ) -> Result<Self>
     where
@@ -287,13 +289,17 @@ impl WifiAutoRp {
         );
 
         // Store fields array and convert to slice
-        let fields_ref: &'static [&'static dyn WifiAutoField] = if N > 0 {
+        let fields_ref: &'static [&'static (dyn WifiAutoField<Error = crate::Error> + Sync)] =
+            if N > 0 {
             assert!(
                 N <= MAX_WIFI_AUTO_FIELDS,
                 "WifiAutoRp supports at most {} custom fields",
                 MAX_WIFI_AUTO_FIELDS
             );
-            let mut storage: Vec<&'static dyn WifiAutoField, MAX_WIFI_AUTO_FIELDS> = Vec::new();
+            let mut storage: Vec<
+                &'static (dyn WifiAutoField<Error = crate::Error> + Sync),
+                MAX_WIFI_AUTO_FIELDS,
+            > = Vec::new();
             for field in custom_fields {
                 storage.push(field).unwrap_or_else(|_| unreachable!());
             }

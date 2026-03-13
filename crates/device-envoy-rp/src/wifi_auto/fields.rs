@@ -9,9 +9,7 @@
 //! There are two levels of customization:
 //!
 //! 1. Use built-in helpers like [`TextField`] and [`TimezoneField`].
-//! 2. Define your own field type by implementing [`WifiAutoField`](crate::wifi_auto::WifiAutoField)
-//!    (or the shared `device_envoy_core::wifi_auto::WifiAutoField` contract with
-//!    `Error = crate::Error` plus `Sync`).
+//! 2. Define your own field type by implementing [`WifiAutoField`](crate::wifi_auto::WifiAutoField).
 //!
 //! # Example
 //!

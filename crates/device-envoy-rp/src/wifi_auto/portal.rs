@@ -15,23 +15,6 @@ use device_envoy_core::wifi_auto::{
     HtmlBuffer, WifiAutoField as CoreWifiAutoField, WifiCredentials,
 };
 
-/// RP-specific adapter trait for custom extra information that
-/// [`WifiAutoRp`](crate::wifi_auto::WifiAutoRp) can ask the user for on its setup web page.
-///
-/// Implement this trait to collect additional configuration beyond WiFi credentials
-/// during the captive portal setup. Fields must be `Sync` since they're shared across
-/// async tasks.
-///
-/// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
-///
-/// This trait forwards to `device_envoy_core::wifi_auto::WifiAutoField` with
-/// `Error = crate::Error` and adds `Sync` for static shared usage in RP tasks.
-///
-/// For cross-platform custom fields, implement `device_envoy_core::wifi_auto::WifiAutoField`.
-pub trait WifiAutoField: CoreWifiAutoField<Error = crate::Error> + Sync {}
-
-impl<T> WifiAutoField for T where T: CoreWifiAutoField<Error = crate::Error> + Sync {}
-
 static CREDENTIAL_CHANNEL: Channel<CriticalSectionRawMutex, WifiCredentials, 1> = Channel::new();
 
 #[derive(Clone)]
@@ -42,14 +25,16 @@ struct FormState {
 static FORM_STATE: Mutex<CriticalSectionRawMutex, RefCell<FormState>> =
     Mutex::new(RefCell::new(FormState { defaults: None }));
 
-static FORM_FIELDS: Mutex<CriticalSectionRawMutex, RefCell<&'static [&'static dyn WifiAutoField]>> =
-    Mutex::new(RefCell::new(&[]));
+static FORM_FIELDS: Mutex<
+    CriticalSectionRawMutex,
+    RefCell<&'static [&'static (dyn CoreWifiAutoField<Error = crate::Error> + Sync)]>,
+> = Mutex::new(RefCell::new(&[]));
 
 pub async fn collect_credentials(
     stack: &'static Stack<'static>,
     spawner: Spawner,
     defaults: Option<&WifiCredentials>,
-    fields: &'static [&'static dyn WifiAutoField],
+    fields: &'static [&'static (dyn CoreWifiAutoField<Error = crate::Error> + Sync)],
 ) -> Result<WifiCredentials> {
     info!(
         "WifiAutoRp portal registering {} custom fields",
@@ -151,7 +136,7 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
 fn parse_post(
     request: &str,
     defaults: Option<&WifiCredentials>,
-    fields: &[&'static dyn WifiAutoField],
+    fields: &[&'static (dyn CoreWifiAutoField<Error = crate::Error> + Sync)],
 ) -> Option<WifiCredentials> {
     let core_fields = core_fields(fields)?;
     device_envoy_core::wifi_auto::parse_post(request, defaults, core_fields.as_slice())
@@ -159,7 +144,7 @@ fn parse_post(
 
 fn generate_config_page(
     defaults: Option<&WifiCredentials>,
-    fields: &[&'static dyn WifiAutoField],
+    fields: &[&'static (dyn CoreWifiAutoField<Error = crate::Error> + Sync)],
 ) -> Option<HtmlBuffer> {
     info!("WifiAutoRp portal rendering {} fields", fields.len());
     let core_fields = core_fields(fields)?;
@@ -224,8 +209,8 @@ fn static_page(content: &'static str) -> HtmlBuffer {
 }
 
 fn core_fields(
-    fields: &[&'static dyn WifiAutoField],
-) -> Option<Vec<&'static dyn device_envoy_core::wifi_auto::WifiAutoField<Error = crate::Error>, 16>>
+    fields: &[&'static (dyn CoreWifiAutoField<Error = crate::Error> + Sync)],
+) -> Option<Vec<&'static dyn CoreWifiAutoField<Error = crate::Error>, 16>>
 {
     let mut core_fields: Vec<&'static dyn CoreWifiAutoField<Error = crate::Error>, 16> = Vec::new();
     for field in fields {

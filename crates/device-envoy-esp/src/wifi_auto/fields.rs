@@ -2,10 +2,74 @@
 //!
 //! See the [`WifiAutoEsp` struct example](crate::wifi_auto::WifiAutoEsp) for the full setup.
 //!
+//! This module provides ready-to-use field types that can be passed to
+//! [`WifiAutoEsp::new`](crate::wifi_auto::WifiAutoEsp::new) for collecting additional
+//! configuration beyond WiFi credentials.
+//!
 //! There are two levels of customization:
 //!
 //! 1. Use built-in helpers like [`TextField`] and [`TimezoneField`].
 //! 2. Define your own field type by implementing [`WifiAutoField`].
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! # #![no_std]
+//! # #![no_main]
+//! use device_envoy_esp::{
+//!     Error, Result,
+//!     button::{ButtonEsp, PressedTo},
+//!     flash_block::FlashBlockEsp,
+//!     wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoEsp},
+//!     wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
+//! };
+//!
+//! async fn example(
+//!     spawner: embassy_executor::Spawner,
+//!     p: esp_hal::peripherals::Peripherals,
+//! ) -> Result<()> {
+//!     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+//!     let [wifi_flash, website_flash, timezone_flash] = FlashBlockEsp::new_array::<3>(p.FLASH)?;
+//!
+//!     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
+//!     let website_field = TextField::new(
+//!         &WEBSITE_STATIC,
+//!         website_flash,
+//!         "website",
+//!         "Website",
+//!         "google.com",
+//!     );
+//!
+//!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
+//!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
+//!
+//!     let wifi_auto = WifiAutoEsp::new(
+//!         p.WIFI,
+//!         wifi_flash,
+//!         "DeviceEnvoySetup",
+//!         [website_field, timezone_field],
+//!         spawner,
+//!     )?;
+//!
+//!     let _stack = wifi_auto
+//!         .connect(&mut button6, |wifi_auto_event| async move {
+//!             match wifi_auto_event {
+//!                 WifiAutoEvent::CaptivePortalReady => {}
+//!                 WifiAutoEvent::Connecting { .. } => {}
+//!                 WifiAutoEvent::ConnectionFailed => {}
+//!             }
+//!             Ok(())
+//!         })
+//!         .await?;
+//!
+//!     let _website = website_field.text()?.unwrap_or_default();
+//!     let _offset_minutes = timezone_field
+//!         .offset_minutes()?
+//!         .ok_or(Error::MissingCustomWifiAutoField)?;
+//!
+//!     Ok(())
+//! }
+//! ```
 
 #![allow(
     unsafe_code,

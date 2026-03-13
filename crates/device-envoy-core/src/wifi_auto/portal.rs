@@ -14,7 +14,7 @@ pub type HtmlBuffer = String<16384>;
 /// To define your own field type, implement:
 ///
 /// - [`WifiAutoField::render`] to write the HTML form UI.
-/// - [`WifiAutoField::parse`] to read submitted form values.
+/// - [`WifiAutoField::parse`] to read submitted form values and typically persist them.
 /// - [`WifiAutoField::is_satisfied`] when setup should require the field.
 ///
 /// For ready-to-use field types, see platform modules:
@@ -26,7 +26,7 @@ pub trait WifiAutoField {
     /// Render form HTML elements.
     fn render(&self, page: &mut HtmlBuffer) -> Result<(), Self::Error>;
 
-    /// Parse submitted form data.
+    /// Parse submitted form data and typically persist the field value.
     fn parse(&self, form: &FormData<'_>) -> Result<(), Self::Error>;
 
     /// Whether this field currently has valid configured data.

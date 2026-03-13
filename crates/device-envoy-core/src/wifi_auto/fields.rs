@@ -162,16 +162,19 @@ macro_rules! __impl_wifi_auto_fields {
 
             fn render(&self, page: &mut $html_buffer) -> core::result::Result<(), $error> {
                 let current_offset_minutes = self.offset_minutes()?.unwrap_or(0);
+                let mut selected_option_rendered = false;
                 write!(page, "<label for=\"timezone\">Time zone:</label>")
                     .map_err(|_| wifi_auto_format_error())?;
                 write!(page, "<select id=\"timezone\" name=\"timezone\" required>")
                     .map_err(|_| wifi_auto_format_error())?;
                 for timezone_option in TIMEZONE_OPTIONS {
-                    let selected = if timezone_option.minutes == current_offset_minutes {
-                        " selected"
-                    } else {
-                        ""
-                    };
+                    let selected =
+                        if !selected_option_rendered && timezone_option.minutes == current_offset_minutes {
+                            selected_option_rendered = true;
+                            " selected"
+                        } else {
+                            ""
+                        };
                     write!(
                         page,
                         "<option value=\"{}\"{}>{}</option>",

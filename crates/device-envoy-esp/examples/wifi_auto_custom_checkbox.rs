@@ -1,4 +1,4 @@
-//! Demonstrates a custom WiFi setup checkbox field with a configurable label.
+//! This example shows how to define a general checkbox field that can prompt the user for a boolean choice.
 //!
 //! Wiring:
 //! - GPIO6 <-> button <-> GND

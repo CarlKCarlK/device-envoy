@@ -9,7 +9,7 @@
 //! There are two levels of customization:
 //!
 //! 1. Use built-in helpers like [`TextField`] and [`TimezoneField`].
-//! 2. Define your own field type by implementing [`WifiAutoField`].
+//! 2. Define your own field type by implementing [`WifiAutoField`]. See example there.
 //!
 //! # Example
 //!

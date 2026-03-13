@@ -19,6 +19,112 @@ pub type HtmlBuffer = String<16384>;
 ///
 /// For ready-to-use field types, see platform modules:
 /// `device_envoy_rp::wifi_auto::fields` and `device_envoy_esp::wifi_auto::fields`.
+///
+/// # Example
+///
+/// This example mirrors the platform example `wifi_auto_custom_checkbox.rs`, but keeps
+/// everything core-only. It shows a checkbox field that:
+///
+/// - renders a checkbox in the captive portal,
+/// - parses submitted form data,
+/// - stores the latest value in field-local state, and
+/// - requires at least one explicit user choice before setup is considered complete.
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// use core::{cell::Cell, convert::Infallible, fmt::Write as _};
+///
+/// use device_envoy_core::wifi_auto::{
+///     FormData, HtmlBuffer, WifiAutoField, parse_post,
+/// };
+///
+/// // Custom field type used by WifiAuto setup.
+/// struct CheckboxField {
+///     // HTML form key.
+///     field_name: &'static str,
+///     // Label shown next to the checkbox.
+///     label: &'static str,
+///     // Render-only fallback before the first submit.
+///     default_checked: bool,
+///     // Tri-state: None = never configured, Some(true/false) = explicit user choice.
+///     checked: Cell<Option<bool>>,
+/// }
+///
+/// impl CheckboxField {
+///     const fn new(
+///         field_name: &'static str,
+///         label: &'static str,
+///         default_checked: bool,
+///     ) -> Self {
+///         Self {
+///             field_name,
+///             label,
+///             default_checked,
+///             checked: Cell::new(None),
+///         }
+///     }
+///
+///     fn checked(&self) -> Option<bool> {
+///         self.checked.get()
+///     }
+///
+///     // UI fallback only; setup completeness is driven by `checked()`.
+///     fn checked_or_default(&self) -> bool {
+///         self.checked().unwrap_or(self.default_checked)
+///     }
+/// }
+///
+/// impl WifiAutoField for CheckboxField {
+///     type Error = Infallible;
+///
+///     fn render(&self, page: &mut HtmlBuffer) -> Result<(), Self::Error> {
+///         // render() controls what appears on the captive-portal page.
+///         let checked_attribute = if self.checked_or_default() {
+///             " checked"
+///         } else {
+///             ""
+///         };
+///         let _ = write!(
+///             page,
+///             "<p><label><input type=\"checkbox\" name=\"{}\" value=\"1\"{}> {}</label></p>",
+///             self.field_name, checked_attribute, self.label
+///         );
+///         Ok(())
+///     }
+///
+///     fn parse(&self, form: &FormData<'_>) -> Result<(), Self::Error> {
+///         // parse() reads the submitted field value.
+///         let checked = matches!(
+///             form.get(self.field_name),
+///             Some("1") | Some("on") | Some("true")
+///         );
+///         // This example persists to in-memory field state; platform fields can
+///         // persist to flash instead.
+///         self.checked.set(Some(checked));
+///         Ok(())
+///     }
+///
+///     fn is_satisfied(&self) -> Result<bool, Self::Error> {
+///         // Require at least one explicit submit before provisioning is complete.
+///         Ok(self.checked().is_some())
+///     }
+/// }
+///
+/// fn example() {
+///     // Instantiate the custom field.
+///     let checkbox_field = CheckboxField::new(
+///         "share_telemetry",
+///         "Share anonymous telemetry",
+///         false,
+///     );
+///     // Pass it to the same parse pipeline used by WifiAuto internals.
+///     let fields: [&dyn WifiAutoField<Error = Infallible>; 1] = [&checkbox_field];
+///
+///     // Simulate a captive-portal form submission.
+///     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&password=abc123&share_telemetry=1";
+///     let _wifi_credentials = parse_post::<Infallible>(request, None, &fields);
+/// }
+/// ```
 pub trait WifiAutoField {
     /// Platform crate error type used by field implementations.
     type Error;

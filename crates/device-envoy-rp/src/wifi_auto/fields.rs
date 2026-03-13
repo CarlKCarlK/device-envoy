@@ -9,7 +9,7 @@
 //! There are two levels of customization:
 //!
 //! 1. Use built-in helpers like [`TextField`] and [`TimezoneField`].
-//! 2. Define your own field type by implementing [`WifiAutoField`](crate::wifi_auto::WifiAutoField).
+//! 2. Define your own field type by implementing [`WifiAutoField`](crate::wifi_auto::WifiAutoField). See example there.
 //!
 //! # Example
 //!

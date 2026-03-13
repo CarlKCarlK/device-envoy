@@ -136,16 +136,16 @@ type SyncReadySignal = Signal<CriticalSectionRawMutex, ()>;
 
 pub struct ClockSyncStatic {
     clock_static: ClockStatic,
-    clock_cell: static_cell::StaticCell<Clock>,
     time_sync_static: TimeSyncStatic,
+    initialized: AtomicBool,
     sync_ready: SyncReadySignal,
     last_sync_ticks: AtomicU64,
     synced: AtomicBool,
 }
 
 pub struct ClockSyncRuntime {
-    clock: &'static Clock,
-    time_sync: &'static TimeSync,
+    clock: Clock,
+    time_sync: TimeSync,
     sync_ready: &'static SyncReadySignal,
     last_sync_ticks: &'static AtomicU64,
     synced: &'static AtomicBool,
@@ -157,8 +157,8 @@ impl ClockSyncStatic {
     pub(crate) const fn new() -> Self {
         Self {
             clock_static: Clock::new_static(),
-            clock_cell: static_cell::StaticCell::new(),
             time_sync_static: TimeSync::new_static(),
+            initialized: AtomicBool::new(false),
             sync_ready: Signal::new(),
             last_sync_ticks: AtomicU64::new(0),
             synced: AtomicBool::new(false),
@@ -185,13 +185,21 @@ impl ClockSyncRuntime {
         tick_interval: Option<embassy_time::Duration>,
         spawner: Spawner,
     ) -> Self {
+        let clock_sync_uninitialized = clock_sync_static
+            .initialized
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok();
+        assert!(
+            clock_sync_uninitialized,
+            "ClockSyncRuntime::new must be called at most once per ClockSyncStatic"
+        );
+
         let clock = Clock::new(
             &clock_sync_static.clock_static,
             offset_minutes,
             tick_interval,
             spawner,
         );
-        let clock = clock_sync_static.clock_cell.init(clock);
         let time_sync = TimeSync::new(&clock_sync_static.time_sync_static, stack, spawner);
 
         let clock_sync = Self {
@@ -204,8 +212,8 @@ impl ClockSyncRuntime {
 
         spawner
             .spawn(clock_sync_loop(
-                clock_sync.clock,
-                clock_sync.time_sync,
+                &clock_sync_static.clock_static,
+                clock_sync.time_sync.events(),
                 clock_sync.sync_ready,
                 clock_sync.last_sync_ticks,
                 clock_sync.synced,
@@ -283,14 +291,15 @@ impl ClockSync for ClockSyncRuntime {
 
 #[embassy_executor::task(pool_size = 2)]
 async fn clock_sync_loop(
-    clock: &'static Clock,
-    time_sync: &'static TimeSync,
+    clock_static: &'static ClockStatic,
+    time_sync_events: &'static crate::time_sync::TimeSyncEvents,
     sync_ready: &'static SyncReadySignal,
     last_sync_ticks: &'static AtomicU64,
     synced: &'static AtomicBool,
 ) -> ! {
+    let clock = Clock::from_static(clock_static);
     loop {
-        match time_sync.wait_for_sync().await {
+        match time_sync_events.wait().await {
             TimeSyncEvent::Ok(unix_seconds) => {
                 clock.set_utc_time(unix_seconds);
                 let now_ticks = Instant::now().as_ticks();

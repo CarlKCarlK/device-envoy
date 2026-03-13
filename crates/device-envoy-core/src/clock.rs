@@ -121,6 +121,18 @@ pub struct Clock {
 }
 
 impl Clock {
+    pub(crate) const fn from_static(clock_static: &'static ClockStatic) -> Self {
+        Self {
+            updates: &clock_static.updates,
+            ticks: &clock_static.ticks,
+            offset_minutes: &clock_static.offset_minutes,
+            tick_interval_ms: &clock_static.tick_interval_ms,
+            base_unix_micros: &clock_static.base_unix_micros,
+            base_instant_ticks: &clock_static.base_instant_ticks,
+            speed_scaled_ppm: &clock_static.speed_scaled_ppm,
+        }
+    }
+
     /// Create [`Clock`] static resources.
     #[must_use]
     pub const fn new_static() -> ClockStatic {
@@ -149,15 +161,7 @@ impl Clock {
         spawner
             .spawn(clock_device_loop(clock_static))
             .expect("clock task spawn should succeed");
-        Self {
-            updates: &clock_static.updates,
-            ticks: &clock_static.ticks,
-            offset_minutes: &clock_static.offset_minutes,
-            tick_interval_ms: &clock_static.tick_interval_ms,
-            base_unix_micros: &clock_static.base_unix_micros,
-            base_instant_ticks: &clock_static.base_instant_ticks,
-            speed_scaled_ppm: &clock_static.speed_scaled_ppm,
-        }
+        Self::from_static(clock_static)
     }
 
     /// Wait for and return the next clock tick event.

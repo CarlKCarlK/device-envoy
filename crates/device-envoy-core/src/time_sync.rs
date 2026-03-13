@@ -15,7 +15,7 @@ use embassy_net::{Stack, dns, udp};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
-use static_cell::StaticCell;
+use portable_atomic::{AtomicBool, Ordering};
 
 use crate::clock::UnixSeconds;
 
@@ -34,12 +34,12 @@ pub enum TimeSyncEvent {
 }
 
 /// Signal type used by [`TimeSync`] to publish events.
-type TimeSyncEvents = Signal<CriticalSectionRawMutex, TimeSyncEvent>;
+pub(crate) type TimeSyncEvents = Signal<CriticalSectionRawMutex, TimeSyncEvent>;
 
 /// Resources needed to construct a [`TimeSync`].
 pub struct TimeSyncStatic {
     events: TimeSyncEvents,
-    time_sync_cell: StaticCell<TimeSync>,
+    initialized: AtomicBool,
 }
 
 // ============================================================================
@@ -67,7 +67,7 @@ impl TimeSync {
     pub const fn new_static() -> TimeSyncStatic {
         TimeSyncStatic {
             events: Signal::new(),
-            time_sync_cell: StaticCell::new(),
+            initialized: AtomicBool::new(false),
         }
     }
 
@@ -76,19 +76,32 @@ impl TimeSync {
         time_sync_static: &'static TimeSyncStatic,
         stack: &'static Stack<'static>,
         spawner: Spawner,
-    ) -> &'static Self {
+    ) -> Self {
+        let time_sync_uninitialized = time_sync_static
+            .initialized
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok();
+        assert!(
+            time_sync_uninitialized,
+            "TimeSync::new must be called at most once per TimeSyncStatic"
+        );
+
         spawner
             .spawn(time_sync_stack_loop(stack, &time_sync_static.events))
             .expect("time_sync task spawn should succeed");
 
-        time_sync_static.time_sync_cell.init(Self {
+        Self {
             events: &time_sync_static.events,
-        })
+        }
     }
 
     /// Wait for and return the next [`TimeSyncEvent`].
     pub async fn wait_for_sync(&self) -> TimeSyncEvent {
         self.events.wait().await
+    }
+
+    pub(crate) fn events(&self) -> &'static TimeSyncEvents {
+        self.events
     }
 }
 

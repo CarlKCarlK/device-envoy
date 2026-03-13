@@ -11,3 +11,5 @@ lcd-text-trait-c6 = "run --package device-envoy-esp --example lcd_text_example1_
 lcd-text-trait-c6-check = "check --package device-envoy-esp --example lcd_text_example1_trait --release --target riscv32imac-unknown-none-elf --no-default-features"
 led-trait-c6 = "run --package device-envoy-esp --example led_example1_trait --release --target riscv32imac-unknown-none-elf --no-default-features"
 led-trait-c6-check = "check --package device-envoy-esp --example led_example1_trait --release --target riscv32imac-unknown-none-elf --no-default-features"
+wifi-auto-checkbox = "run --package device-envoy-esp --example wifi_auto_custom_checkbox --release --target riscv32imac-unknown-none-elf --no-default-features"
+wifi-auto-checkbox-check = "check --package device-envoy-esp --example wifi_auto_custom_checkbox --release --target riscv32imac-unknown-none-elf --no-default-features"

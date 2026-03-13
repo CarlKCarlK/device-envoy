@@ -65,7 +65,7 @@ const SOS: [(Frame1d<1>, Duration); 18] = [
 ];
 
 led_strip! {
-    LedStrip8 {
+    LedStripLen8 {
         pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(200),
@@ -105,8 +105,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 
     //info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");
 
-    // todo0 Name mismatch
-    let led_strip8 = LedStrip8::new(p.GPIO10, rmt80.channel0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.GPIO10, rmt80.channel0, spawner)?;
     #[cfg(target_arch = "riscv32")]
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel1, spawner)?;
     #[cfg(target_arch = "xtensa")]
@@ -122,7 +121,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         colors::BLUE,
         colors::GRAY,
     ]);
-    led_strip8.write_frame(frame);
+    led_strip_len8.write_frame(frame);
     sos_strip.animate(&SOS);
 
     core::future::pending().await

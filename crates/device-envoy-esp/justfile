@@ -35,10 +35,10 @@ led-example1-trait-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
 
 led-strip8-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_strip8 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_strip_len8 --target xtensa-esp32s3-none-elf --release --no-default-features
 
 led-strip8-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_strip8 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_strip_len8 --target xtensa-esp32s3-none-elf --release --no-default-features
 
 button-read-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features

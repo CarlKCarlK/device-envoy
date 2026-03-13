@@ -39,7 +39,10 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
-    info!("led_strip_len8_spi starting on GPIO{} via SPI2", STRIP8_PIN_NUM);
+    info!(
+        "led_strip_len8_spi starting on GPIO{} via SPI2",
+        STRIP8_PIN_NUM
+    );
 
     let led_strip_len8_spi = LedStripLen8Spi::new(p.GPIO10, p.SPI2, spawner)?;
     let frame0 = Frame1d([

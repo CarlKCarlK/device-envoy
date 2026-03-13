@@ -2,7 +2,7 @@
 //!
 //! Standard demo pin map in this repo:
 //! - GPIO8/C6 or GPIO48/S3: built-in single LED strip demo (`blinky.rs`)
-//! - GPIO10: external 8-pixel strip demo (`led_strip8.rs`)
+//! - GPIO10: external 8-pixel strip demo (`led_strip_len8.rs`)
 //! - GPIO18: 12x8 panel `Go`/`\\nGo` demo (this file)
 
 #![no_std]

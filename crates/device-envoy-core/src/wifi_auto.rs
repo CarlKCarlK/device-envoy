@@ -53,19 +53,21 @@ macro_rules! __impl_wifi_auto_connect {
     };
 }
 
-/// Events emitted while driving a Wi-Fi setup flow.
+/// Events emitted while connecting.
+///
+/// See [`WifiAuto::connect`] for usage examples.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WifiAutoEvent {
-    /// Captive portal is ready and waiting for user input.
+    /// Captive portal is ready and waiting for user configuration.
     CaptivePortalReady,
-    /// Device is attempting to connect using saved credentials.
+    /// Attempting to connect to WiFi network.
     Connecting {
         /// Current attempt number (0-based).
         try_index: u8,
-        /// Total number of attempts planned.
+        /// Total number of attempts that will be made.
         try_count: u8,
     },
-    /// Connection failed after all attempts.
+    /// Connection failed after all attempts, device will reset.
     ConnectionFailed,
 }
 

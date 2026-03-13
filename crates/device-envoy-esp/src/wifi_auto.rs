@@ -1,5 +1,7 @@
-//! A device abstraction for automatic Wi-Fi credential collection workflows.
-//! See [`WifiAutoEsp`] for the main struct and usage.
+//! A device abstraction that connects ESP devices with Wi-Fi to the Internet and, when needed,
+//! creates a temporary Wi-Fi network to enter credentials.
+//!
+//! See [`WifiAutoEsp`] for the main struct and usage examples.
 
 #[cfg(target_os = "none")]
 mod dhcp;
@@ -35,10 +37,10 @@ use alloc::string::String;
 #[cfg(target_os = "none")]
 use embassy_futures::select::{select4, Either4};
 
-pub use device_envoy_core::wifi_auto::{
-    FormData, HtmlBuffer, WifiAuto, WifiAutoError, WifiAutoEvent, WifiAutoField,
-    WifiAutoPersistedState, WifiCredentials, WifiStack, WifiStartMode,
-};
+#[cfg(target_os = "none")]
+use device_envoy_core::wifi_auto::WifiAutoError;
+use device_envoy_core::wifi_auto::{HtmlBuffer, WifiAutoPersistedState, WifiCredentials, WifiStartMode};
+pub use device_envoy_core::wifi_auto::{WifiAuto, WifiAutoEvent, WifiAutoField, WifiStack};
 
 const MAX_WIFI_AUTO_FIELDS: usize = 8;
 
@@ -48,13 +50,86 @@ enum WifiAutoStorage {
     Memory(RefCell<WifiAutoPersistedState>),
 }
 
-/// Captive-portal workflow configuration and parsing helpers.
+/// A device abstraction that connects ESP devices to Wi-Fi and supports captive-portal setup.
 ///
-/// This is the ESP32 port of the Pico `wifi_auto` setup surface for parsing
-/// form submissions and rendering setup pages.
+/// `WifiAutoEsp` handles Wi-Fi connections end-to-end. It normally connects using
+/// a saved Wi-Fi network name (SSID) and password. If those values are missing
+/// or invalid, it temporarily creates its own Wi-Fi network (a captive portal)
+/// and hosts a web form where the user can enter local Wi-Fi credentials.
 ///
-/// Create this type using inherent constructors (`new` / `new_in_memory`), then
-/// call [`WifiAuto::connect`] from the re-exported trait for connection flow.
+/// The typical usage pattern is:
+///
+/// 1. Construct a [`crate::flash_block::FlashBlockEsp`] to store Wi-Fi credentials.
+/// 2. Use [`WifiAutoEsp::new`] to construct a `WifiAutoEsp`.
+/// 3. Use [`WifiAuto::connect`] to connect while optionally showing status.
+///
+/// The [`WifiAuto::connect`] method borrows your button, returns a network stack,
+/// and consumes the `WifiAutoEsp`.
+///
+/// For additional examples, see the [wifi_auto::fields module example](crate::wifi_auto::fields)
+/// and the [`WifiAuto::connect`] docs.
+///
+/// ## Example: Connect with logging
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// use device_envoy_esp::{
+///     Result, init_and_start,
+///     button::{ButtonEsp, PressedTo},
+///     flash_block::FlashBlockEsp,
+///     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+/// };
+/// use embassy_time::Duration;
+/// use log::info;
+///
+/// async fn connect_wifi(
+///     spawner: embassy_executor::Spawner,
+///     p: esp_hal::peripherals::Peripherals,
+/// ) -> Result<core::convert::Infallible> {
+///     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+///     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+///     let wifi_auto = WifiAutoEsp::new(
+///         p.WIFI,
+///         wifi_auto_flash_block,
+///         "DeviceEnvoySetup",
+///         [],
+///         spawner,
+///     )?;
+///
+///     let stack = wifi_auto
+///         .connect(&mut button6, |wifi_auto_event| async move {
+///             match wifi_auto_event {
+///                 WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
+///                 WifiAutoEvent::Connecting { .. } => info!("Connecting to Wi-Fi"),
+///                 WifiAutoEvent::ConnectionFailed => info!("Connection failed"),
+///             }
+///             Ok(())
+///         })
+///         .await?;
+///
+///     loop {
+///         if let Ok(addresses) = stack.dns_query("google.com", embassy_net::dns::DnsQueryType::A).await {
+///             info!("google.com: {:?}", addresses);
+///         } else {
+///             info!("google.com: lookup failed");
+///         }
+///         embassy_time::Timer::after(Duration::from_secs(15)).await;
+///     }
+/// }
+/// ```
+///
+/// ## What happens during connection
+///
+/// While `connect` is running:
+///
+/// - Wi-Fi may reset while switching between client mode and captive-portal mode.
+/// - User peripherals should tolerate brief disruption during mode changes.
+///
+/// ## Wi-Fi limitations
+///
+/// - Client mode requires a 2.4 GHz network compatible with the ESP Wi-Fi driver.
+/// - Captive portal runs locally at `http://192.168.4.1` when setup mode is active.
 pub struct WifiAutoEsp<'a> {
     captive_portal_ssid: &'static str,
     fields: Vec<&'a dyn WifiAutoField<Error = crate::Error>, MAX_WIFI_AUTO_FIELDS>,

@@ -103,7 +103,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect Wi-Fi, using the LED panel for status.
     let led12x4_ref = &led12x4;
-    // TODO00 verify startup ButtonWatch13 behavior still matches reset-button expectations.
     let stack = wifi_auto
         .connect(&mut *button_watch13, |event| {
             let led12x4_ref = led12x4_ref;
@@ -190,7 +189,6 @@ async fn show_connecting(led12x4: &Led12x4, try_index: u8, _try_count: u8) -> Re
     Ok(())
 }
 
-// todo00 should these return result? (may no longer apply)
 async fn show_connected(led12x4: &Led12x4) {
     led12x4.write_text("DONE", &DIGIT_COLORS);
 }

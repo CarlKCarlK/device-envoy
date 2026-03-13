@@ -1,6 +1,5 @@
 //! A device abstraction for hobby servos that can animate motion sequences.
 //!
-//! todo00 merge servo and servo_player into same module.
 //! This page provides the primary documentation and examples for controlling servos that can
 //! animate motion sequences. The device abstraction supports moving to angles,
 //! holding/relaxing position, and sequenced animation.

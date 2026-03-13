@@ -7,8 +7,6 @@ use device_envoy_rp::{Result, lcd_text::LcdText as _};
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
-// todo00 be sure none of the esp's would allow you to use a macro struct twice because they don't include pins.
-
 device_envoy_rp::lcd_text! {
     i2c: I2C0,
     sda_pin: PIN_4,

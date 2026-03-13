@@ -2,7 +2,6 @@
 
 <!-- todo0 create and publish template repo: device-envoy-blinky-esp -->
 <!-- todo0 create and publish template repo: device-envoy-blinky-rp -->
-<!-- todo00 want "hey open-docs" to work for both rp and esp -->
 
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
 [![crates.io](https://img.shields.io/crates/v/device-envoy-rp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-rp)

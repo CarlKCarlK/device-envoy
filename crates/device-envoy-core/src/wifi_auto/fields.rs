@@ -33,7 +33,13 @@ macro_rules! __impl_wifi_auto_fields {
             Memory(RefCell<Option<i32>>),
         }
 
-        /// A custom field that stores a timezone offset in minutes from UTC.
+        /// A timezone selection field for WiFi provisioning.
+        ///
+        /// Allows users to select their timezone from a dropdown during captive-portal setup.
+        /// The selected offset (in minutes from UTC) is persisted in memory or flash and can be
+        /// retrieved later by application code.
+        ///
+        /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
         pub struct TimezoneField {
             storage: TimezoneFieldStorage,
         }
@@ -43,7 +49,9 @@ macro_rules! __impl_wifi_auto_fields {
         // Sync is required so the field can be stored behind static WifiAutoField references.
         unsafe impl Sync for TimezoneField {}
 
-        /// Static resources for [`TimezoneField`].
+        /// Static for [`TimezoneField`].
+        ///
+        /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
         pub struct TimezoneFieldStatic {
             timezone_field_cell: StaticCell<TimezoneField>,
         }
@@ -58,6 +66,8 @@ macro_rules! __impl_wifi_auto_fields {
 
         impl TimezoneField {
             /// Create static resources for [`TimezoneField`].
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             #[must_use]
             pub const fn new_static() -> TimezoneFieldStatic {
                 TimezoneFieldStatic::new()
@@ -65,7 +75,7 @@ macro_rules! __impl_wifi_auto_fields {
 
             /// Initialize a timezone field backed by in-memory state.
             ///
-            /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             pub fn new_in_memory(
                 timezone_field_static: &'static TimezoneFieldStatic,
             ) -> &'static Self {
@@ -75,6 +85,8 @@ macro_rules! __impl_wifi_auto_fields {
             }
 
             /// Initialize a timezone field backed by a flash block.
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             $(#[cfg($flash_cfg)])?
             pub fn new_with_flash(
                 timezone_field_static: &'static TimezoneFieldStatic,
@@ -85,9 +97,11 @@ macro_rules! __impl_wifi_auto_fields {
                 })
             }
 
-            /// Read the configured offset in minutes.
+            /// Load the stored timezone offset in minutes from UTC.
             ///
-            /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+            /// Returns `None` if no timezone has been configured yet.
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             pub fn offset_minutes(&self) -> core::result::Result<Option<i32>, $error> {
                 match &self.storage {
                     $(#[cfg($flash_cfg)])?
@@ -98,9 +112,14 @@ macro_rules! __impl_wifi_auto_fields {
                 }
             }
 
-            /// Set the configured offset in minutes.
+            /// Save a timezone offset in minutes from UTC.
             ///
-            /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+            /// This allows programmatic updates to timezone settings.
+            ///
+            /// For flash-backed fields, this only writes when the value changes to reduce
+            /// unnecessary flash wear.
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             pub fn set_offset_minutes(
                 &self,
                 offset_minutes: i32,
@@ -121,9 +140,9 @@ macro_rules! __impl_wifi_auto_fields {
                 }
             }
 
-            /// Clear the configured offset.
+            /// Clear the stored timezone offset.
             ///
-            /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             pub fn clear(&self) -> core::result::Result<(), $error> {
                 match &self.storage {
                     $(#[cfg($flash_cfg)])?
@@ -368,7 +387,15 @@ macro_rules! __impl_wifi_auto_fields {
             Memory(RefCell<Option<String<N>>>),
         }
 
-        /// A custom text field persisted in memory or flash.
+        /// A generic text input field for collecting user input during WiFi provisioning.
+        ///
+        /// Presents a customizable text input box in the captive portal that validates and
+        /// stores user-provided text in memory or flash.
+        ///
+        /// Multiple `TextField` instances can be created with different labels and field names
+        /// to collect additional configuration beyond WiFi credentials.
+        ///
+        /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
         pub struct TextField<const N: usize> {
             storage: TextFieldStorage<N>,
             field_name: &'static str,
@@ -381,7 +408,9 @@ macro_rules! __impl_wifi_auto_fields {
         // Sync is required so the field can be stored behind static WifiAutoField references.
         unsafe impl<const N: usize> Sync for TextField<N> {}
 
-        /// Static resources for [`TextField`].
+        /// Static for [`TextField`].
+        ///
+        /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
         pub struct TextFieldStatic<const N: usize> {
             text_field_cell: StaticCell<TextField<N>>,
         }
@@ -396,6 +425,8 @@ macro_rules! __impl_wifi_auto_fields {
 
         impl<const N: usize> TextField<N> {
             /// Create static resources for [`TextField`].
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             #[must_use]
             pub const fn new_static() -> TextFieldStatic<N> {
                 TextFieldStatic::new()
@@ -403,7 +434,16 @@ macro_rules! __impl_wifi_auto_fields {
 
             /// Initialize a text field backed by in-memory state.
             ///
-            /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+            /// The maximum text length is determined by the generic parameter `N`.
+            ///
+            /// Parameters:
+            ///
+            /// - `text_field_static`: Static resources for initialization.
+            /// - `field_name`: HTML form field name (for example, `device_name`).
+            /// - `label`: HTML label text shown in the captive portal form.
+            /// - `default_value`: Initial value if nothing has been configured yet.
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             pub fn new_in_memory(
                 text_field_static: &'static TextFieldStatic<N>,
                 field_name: &'static str,
@@ -419,6 +459,18 @@ macro_rules! __impl_wifi_auto_fields {
             }
 
             /// Initialize a text field backed by a flash block.
+            ///
+            /// The maximum text length is determined by the generic parameter `N`.
+            ///
+            /// Parameters:
+            ///
+            /// - `text_field_static`: Static resources for initialization.
+            /// - `text_flash_block`: Flash block for persistent storage.
+            /// - `field_name`: HTML form field name (for example, `device_name`).
+            /// - `label`: HTML label text shown in the captive portal form.
+            /// - `default_value`: Initial value if nothing has been configured yet.
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             $(#[cfg($flash_cfg)])?
             pub fn new_with_flash(
                 text_field_static: &'static TextFieldStatic<N>,
@@ -437,7 +489,9 @@ macro_rules! __impl_wifi_auto_fields {
 
             /// Return the current text, if present.
             ///
-            /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+            /// Returns `None` when no text has been configured yet.
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             pub fn text(&self) -> core::result::Result<Option<String<N>>, $error> {
                 match &self.storage {
                     $(#[cfg($flash_cfg)])?
@@ -450,7 +504,11 @@ macro_rules! __impl_wifi_auto_fields {
 
             /// Set the current text.
             ///
-            /// See the [WifiAuto struct example](crate::wifi_auto::WifiAuto) for usage.
+            /// This allows programmatic updates to the field value.
+            ///
+            /// The text must be non-empty and fit within the maximum length `N`.
+            ///
+            /// See the [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.
             pub fn set_text(&self, text: &str) -> core::result::Result<(), $error> {
                 assert!(
                     !text.is_empty() && text.len() <= N,

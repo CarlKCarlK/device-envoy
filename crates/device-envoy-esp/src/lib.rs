@@ -1,7 +1,4 @@
 #![doc = include_str!("../README.md")]
-// todo00 does led_strip for esp have two methods that rp doesn't?
-// todo00 check if every async method should be async?
-// todo00 rename check-all to check-rp and check-esp? likewise attach
 #![cfg_attr(target_os = "none", no_std)]
 
 pub mod button;

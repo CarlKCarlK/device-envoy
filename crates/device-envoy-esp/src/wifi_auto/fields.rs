@@ -1,4 +1,5 @@
-//! A device abstraction for extra setup fields used by [`crate::wifi_auto::WifiAutoEsp`].
+//! A device abstraction for extra setup fields used by [`WifiAutoEsp`](crate::wifi_auto::WifiAutoEsp).
+//!
 //! See the [`WifiAutoEsp` struct example](crate::wifi_auto::WifiAutoEsp) for the full setup.
 
 #![allow(
@@ -12,6 +13,7 @@ use crate::Error;
 use device_envoy_core::__impl_wifi_auto_fields;
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer, WifiAutoField};
 
+// TODO0 Add docs showing how users can define their own additional WifiAutoField types.
 __impl_wifi_auto_fields!(
     flash_block = FlashBlockEsp,
     error = Error,

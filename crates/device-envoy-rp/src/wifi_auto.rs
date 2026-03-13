@@ -71,13 +71,11 @@ pub(crate) struct WifiAutoStatic {
 ///
 /// The typical usage pattern is:
 ///
-/// 0. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
-/// 1. Construct a [`FlashBlockRp`] to store WiFi credentials.
-/// 2. Use [`WifiAutoRp::new`] to construct a `WifiAutoRp`.
-/// 3. Use [`WifiAuto::connect`] to connect to WiFi while optionally showing status.
-///
-/// The [`WifiAuto::connect`] method borrows your button, returns a network stack,
-/// and consumes the `WifiAutoRp`. See its documentation for examples and details.
+/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
+/// 2. Construct a [`ButtonWatch`](macro@crate::button::button_watch) to control the physical button.
+/// 3. Construct a [`FlashBlockRp`] to store WiFi credentials.
+/// 4. Use [`WifiAutoRp::new`] to construct a `WifiAutoRp`.
+/// 5. Use [`WifiAuto::connect`] to connect to WiFi while optionally showing status.
 ///
 /// Let’s look at an example. Following the example, we’ll explain the details.
 /// (For additional examples, see the [wifi_auto::fields module example](crate::wifi_auto::fields)
@@ -111,10 +109,11 @@ pub(crate) struct WifiAutoStatic {
 ///     spawner: embassy_executor::Spawner,
 ///     p: embassy_rp::Peripherals,
 /// ) -> Result<()> {
-///     // Set up flash storage for WiFi credentials
-///     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-///
+///     // Set up ButtonWatch to control the physical button.
 ///     let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
+///
+///     // Set up flash storage for WiFi credentials.
+///     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 ///
 ///     // Construct WifiAutoRp
 ///     let wifi_auto = WifiAutoRp::new(
@@ -172,36 +171,9 @@ pub(crate) struct WifiAutoStatic {
 ///
 /// - Only standard SSID/password 2.4 GHz WiFi networks are supported.
 ///
-/// ## Performance and code size
-///
-/// You may choose any PIO instance and any DMA channel for WiFi.
-/// With **Thin LTO enabled**, this flexibility should have no impact on
-/// code size.
-///
-/// Recommended release profile:
-///
-/// ```toml
-/// [profile.release]
-/// # debug = 2    # uncomment for better backtraces, at the cost of code size
-/// lto = "thin"
-/// codegen-units = 1
-/// panic = "abort"
-/// ```
-///
-/// (Your application could also enable linker garbage collection (`--gc-sections`)
-/// for embedded targets. We enable it in our `rustflags`, but in recent builds
-/// it had no measurable effect on size. See the
-/// [rustc linker argument docs](https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg)
-/// and the
-/// [Cargo rustflags docs](https://doc.rust-lang.org/cargo/reference/config.html#buildrustflags).)
-///
 /// ## Hardware model
 ///
-/// On the Pico W, the CYW43 WiFi chip is wired to fixed GPIOs. You must
-/// also provide a PIO instance and a DMA channel for the WiFi driver.
-///
-/// These are supplied explicitly to [`WifiAutoRp::new`]. The chosen PIO/DMA
-/// pair cannot be shared with other uses; the compiler enforces this.
+/// On the Pico W, the CYW43 WiFi chip is wired to fixed GPIOs.
 pub struct WifiAutoRp {
     wifi_auto: &'static WifiAutoInner,
 }
@@ -246,7 +218,7 @@ impl WifiAutoRp {
     /// - `pio`: PIO resource used for WiFi.
     /// - `dma`: DMA resource for WiFi.
     /// - `wifi_credentials_flash_block`: a flash block implementing
-    ///   [`crate::flash_block::FlashBlock`] for WiFi credentials.
+    ///   [`FlashBlock`](crate::flash_block::FlashBlock) for WiFi credentials.
     /// - `captive_portal_ssid`: SSID shown when the device starts setup mode.
     /// - `custom_fields`: Extra fields collected in the setup page. See the
     ///   [wifi_auto::fields module example](crate::wifi_auto::fields) for usage.

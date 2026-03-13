@@ -91,7 +91,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect Wi-Fi, using the clock display for status.
     let led4_ref = &led4;
-    // TODO00 verify startup ButtonWatch13 behavior still matches reset-button expectations.
     let stack = wifi_auto
         .connect(&mut *button_watch13, |event| async move {
             match event {

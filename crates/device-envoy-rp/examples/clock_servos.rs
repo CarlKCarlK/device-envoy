@@ -90,7 +90,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect Wi-Fi, using the servos for status indications.
     let servo_display_ref = &servo_display;
-    // TODO00 verify startup ButtonWatch13 behavior still matches reset-button expectations.
     let stack = wifi_auto
         .connect(&mut *button_watch13, |event| {
             let servo_display_ref = servo_display_ref;

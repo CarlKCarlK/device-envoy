@@ -210,8 +210,7 @@ fn static_page(content: &'static str) -> HtmlBuffer {
 
 fn core_fields(
     fields: &[&'static (dyn CoreWifiAutoField<Error = crate::Error> + Sync)],
-) -> Option<Vec<&'static dyn CoreWifiAutoField<Error = crate::Error>, 16>>
-{
+) -> Option<Vec<&'static dyn CoreWifiAutoField<Error = crate::Error>, 16>> {
     let mut core_fields: Vec<&'static dyn CoreWifiAutoField<Error = crate::Error>, 16> = Vec::new();
     for field in fields {
         if core_fields

@@ -124,6 +124,9 @@ pub type HtmlBuffer = String<16384>;
 ///     let request = "POST / HTTP/1.1\r\nHost: 192.168.4.1\r\n\r\nssid=Office&password=abc123&share_telemetry=1";
 ///     let _wifi_credentials = parse_post::<Infallible>(request, None, &fields);
 /// }
+/// # fn main() {
+/// #     example();
+/// # }
 /// ```
 pub trait WifiAutoField {
     /// Platform crate error type used by field implementations.

@@ -1232,14 +1232,14 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// #         Self::INITIAL_VOLUME
 /// #     }
 /// # }
-/// # struct DemoButton;
-/// # impl device_envoy_core::button::__ButtonMonitor for DemoButton {
+/// # struct ButtonMock;
+/// # impl device_envoy_core::button::__ButtonMonitor for ButtonMock {
 /// #     fn is_pressed_raw(&self) -> bool { false }
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
-/// # impl Button for DemoButton {}
+/// # impl Button for ButtonMock {}
 /// fn main() {
-///     let mut button = DemoButton;
+///     let mut button = ButtonMock;
 ///     let audio_player = DemoAudioPlayer;
 ///     let _future = play_nasa_with_runtime_volume(&audio_player, &mut button);
 /// }
@@ -1318,14 +1318,14 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> Playable<SAMPLE_RATE_HZ> for T where
 /// #         Self::INITIAL_VOLUME
 /// #     }
 /// # }
-/// # struct DemoButton;
-/// # impl device_envoy_core::button::__ButtonMonitor for DemoButton {
+/// # struct ButtonMock;
+/// # impl device_envoy_core::button::__ButtonMonitor for ButtonMock {
 /// #     fn is_pressed_raw(&self) -> bool { false }
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
-/// # impl Button for DemoButton {}
+/// # impl Button for ButtonMock {}
 /// fn main() {
-///     let mut button = DemoButton;
+///     let mut button = ButtonMock;
 ///     let audio_player = DemoAudioPlayer;
 ///     play_resampled_countdown(&audio_player);
 ///     let _future = button.wait_for_press();

@@ -138,8 +138,6 @@ use crate::led_strip::{Frame1d as StripFrame, LedStrip as LedStripTrait};
 /// # let led8x12 = Led8x12;
 /// # animate_go_go(&led8x12);
 /// ```
-// TODO0 Consider splitting this into separate traits if animation semantics diverge from
-// simple frame writes across platforms.
 pub trait Led2d<const W: usize, const H: usize> {
     /// The width of the panel.
     const WIDTH: usize = W;
@@ -183,7 +181,7 @@ pub trait Led2d<const W: usize, const H: usize> {
 
     /// Write a frame to the LED panel.
     ///
-    /// See your platform crate's led2d module docs for possible usage examples. //TODO00 consider adding examples here
+    /// See your platform crate's led2d module docs for possible usage examples.
     fn write_frame(&self, frame2d: Frame2d<W, H>);
 
     /// Animate frames on the LED panel.
@@ -210,7 +208,6 @@ pub trait Led2d<const W: usize, const H: usize> {
     ///
     /// See the [Led2d trait documentation](Self) for usage examples.
     fn write_text_to_frame(&self, text: &str, colors: &[RGB8], frame: &mut Frame2d<W, H>) {
-        // TODO0 should render_text_to_frame be rolled into here?
         render_text_to_frame(
             frame,
             &Self::FONT.to_font(),

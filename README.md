@@ -10,4 +10,5 @@ Current migration intent:
 
 - Keep platform crates working as-is while moving toward shared functionality in `device-envoy-core`.
 
-todo0 Thank Brad
+todo000 top level readme
+todo000 Thank Brad

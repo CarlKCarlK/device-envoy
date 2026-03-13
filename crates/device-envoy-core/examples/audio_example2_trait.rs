@@ -80,9 +80,9 @@ impl AudioPlayer<VOICE_22050_HZ> for DemoAudioPlayer {
     }
 }
 
-struct DemoButton;
+struct ButtonMock;
 
-impl device_envoy_core::button::__ButtonMonitor for DemoButton {
+impl device_envoy_core::button::__ButtonMonitor for ButtonMock {
     fn is_pressed_raw(&self) -> bool {
         false
     }
@@ -90,11 +90,10 @@ impl device_envoy_core::button::__ButtonMonitor for DemoButton {
     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 }
 
-impl Button for DemoButton {}
+impl Button for ButtonMock {}
 
 fn main() {
-    let mut button = DemoButton;
+    let mut button = ButtonMock;
     let audio_player = DemoAudioPlayer;
     let _future = play_nasa_with_runtime_volume(&audio_player, &mut button);
 }
-// todo00 understand every use of DemoButton.

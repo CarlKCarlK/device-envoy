@@ -78,14 +78,14 @@ pub trait __ButtonMonitor {
 ///     }
 /// }
 ///
-/// # struct DemoButton;
-/// # impl device_envoy_core::button::__ButtonMonitor for DemoButton {
+/// # struct ButtonMock;
+/// # impl device_envoy_core::button::__ButtonMonitor for ButtonMock {
 /// #     fn is_pressed_raw(&self) -> bool { false }
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
-/// # impl Button for DemoButton {}
+/// # impl Button for ButtonMock {}
 /// # fn main() {
-/// #     let mut button = DemoButton;
+/// #     let mut button = ButtonMock;
 /// #     let _future = log_button_presses(&mut button);
 /// # }
 /// ```

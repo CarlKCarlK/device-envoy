@@ -187,7 +187,7 @@ impl Default for WifiAutoPersistedState {
 ///     wifi_auto: impl WifiAuto<Error = Infallible>,
 /// ) -> Result<WifiStack, Infallible> {
 ///     wifi_auto
-///         .connect(&mut DemoButton, |wifi_auto_event| async move {
+///         .connect(&mut ButtonMock, |wifi_auto_event| async move {
 ///             match wifi_auto_event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     // Captive portal is ready for Wi-Fi credential entry.
@@ -204,12 +204,12 @@ impl Default for WifiAutoPersistedState {
 ///         .await
 /// }
 ///
-/// # struct DemoButton;
-/// # impl device_envoy_core::button::__ButtonMonitor for DemoButton {
+/// # struct ButtonMock;
+/// # impl device_envoy_core::button::__ButtonMonitor for ButtonMock {
 /// #     fn is_pressed_raw(&self) -> bool { false }
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
-/// # impl Button for DemoButton {}
+/// # impl Button for ButtonMock {}
 /// # struct DemoWifiAuto;
 /// # impl WifiAuto for DemoWifiAuto {
 /// #     type Error = Infallible;

@@ -291,23 +291,23 @@ impl WifiAutoRp {
         // Store fields array and convert to slice
         let fields_ref: &'static [&'static (dyn WifiAutoField<Error = crate::Error> + Sync)] =
             if N > 0 {
-            assert!(
-                N <= MAX_WIFI_AUTO_FIELDS,
-                "WifiAutoRp supports at most {} custom fields",
-                MAX_WIFI_AUTO_FIELDS
-            );
-            let mut storage: Vec<
-                &'static (dyn WifiAutoField<Error = crate::Error> + Sync),
-                MAX_WIFI_AUTO_FIELDS,
-            > = Vec::new();
-            for field in custom_fields {
-                storage.push(field).unwrap_or_else(|_| unreachable!());
-            }
-            let stored_vec = wifi_auto_static.fields_storage.init(storage);
-            stored_vec.as_slice()
-        } else {
-            &[]
-        };
+                assert!(
+                    N <= MAX_WIFI_AUTO_FIELDS,
+                    "WifiAutoRp supports at most {} custom fields",
+                    MAX_WIFI_AUTO_FIELDS
+                );
+                let mut storage: Vec<
+                    &'static (dyn WifiAutoField<Error = crate::Error> + Sync),
+                    MAX_WIFI_AUTO_FIELDS,
+                > = Vec::new();
+                for field in custom_fields {
+                    storage.push(field).unwrap_or_else(|_| unreachable!());
+                }
+                let stored_vec = wifi_auto_static.fields_storage.init(storage);
+                stored_vec.as_slice()
+            } else {
+                &[]
+            };
 
         let instance = wifi_auto_static.wifi_auto_cell.init(WifiAutoInner {
             wifi,

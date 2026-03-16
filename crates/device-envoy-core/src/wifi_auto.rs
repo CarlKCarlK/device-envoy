@@ -1,6 +1,6 @@
 //! A device abstraction for common Wi-Fi auto-provisioning types and portal helpers.
 //!
-//! See [`WifiCredentials`] for the primary shared data type.
+//! See [`WifiAuto`] for the primary trait and [`WifiAutoEvent`] for connection flow events.
 
 use crate::button::Button;
 use core::future::Future;
@@ -8,7 +8,14 @@ use core::future::Future;
 mod fields;
 mod portal;
 
-pub use portal::{FormData, HtmlBuffer, WifiAutoField, generate_config_page, parse_post};
+pub use portal::FormData;
+#[doc(hidden)] // Platform plumbing helper type used by RP/ESP captive portal code.
+pub use portal::HtmlBuffer;
+pub use portal::WifiAutoField;
+#[doc(hidden)] // Platform plumbing helper used by RP/ESP captive portal code.
+pub use portal::generate_config_page;
+#[doc(hidden)] // Platform plumbing helper used by RP/ESP captive portal code.
+pub use portal::parse_post;
 
 /// Canonical network stack type returned by [`WifiAuto::connect`].
 pub type WifiStack = &'static embassy_net::Stack<'static>;
@@ -84,6 +91,7 @@ pub enum WifiAutoError {
 
 /// Preferred Wi-Fi startup mode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[doc(hidden)] // Startup-policy plumbing used by platform wifi_auto state machines.
 pub enum WifiStartMode {
     /// Start directly in Wi-Fi client mode using saved credentials.
     Client,
@@ -114,6 +122,7 @@ pub const fn should_enter_captive_portal(
 
 /// Wi-Fi credentials collected from the captive portal.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[doc(hidden)] // Shared plumbing type used across platform wifi_auto implementations.
 pub struct WifiCredentials {
     /// Network name (SSID).
     pub ssid: heapless::String<32>,
@@ -143,6 +152,7 @@ impl WifiCredentials {
 
 /// Persisted Wi-Fi auto state shared across platform ports.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[doc(hidden)] // Shared persistence type used by platform wifi_auto storage backends.
 pub struct WifiAutoPersistedState {
     /// Persisted credentials, if available.
     pub wifi_credentials: Option<WifiCredentials>,

@@ -145,6 +145,7 @@ pub trait WifiAutoField {
 }
 
 /// Parsed key/value form data from a URL-encoded POST body.
+#[doc(hidden)] // Shared parser view type used by platform/custom field plumbing.
 pub struct FormData<'a> {
     params: &'a FormMap,
 }

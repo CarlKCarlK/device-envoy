@@ -1,10 +1,7 @@
-//! Platform-independent RFID types and traits.
+//! A device abstraction support module for RFID readers.
 //!
-//! See the platform-specific crate (for example `device_envoy_rp::rfid` or
-//! `device_envoy_esp::rfid`) for the primary documentation and examples.
-
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel as EmbassyChannel;
+//! See [`Rfid`] for the trait-based API, and use platform crates
+//! (`device_envoy-rp` or `device_envoy-esp`) for hardware-specific constructors/examples.
 
 /// Events received from an RFID reader.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -51,25 +48,4 @@ pub trait Rfid {
     ///
     /// See the [Rfid trait documentation](Self) for usage examples.
     async fn wait_for_tap(&self) -> RfidEvent;
-}
-
-/// Static resources for the [`Rfid`] device abstraction.
-pub struct RfidStatic(EmbassyChannel<CriticalSectionRawMutex, RfidEvent, 4>);
-
-impl RfidStatic {
-    /// Creates static resources for an RFID device instance.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self(EmbassyChannel::new())
-    }
-
-    /// Send an RFID event to waiting receivers.
-    pub async fn send(&self, event: RfidEvent) {
-        self.0.send(event).await;
-    }
-
-    /// Wait for the next RFID event.
-    pub async fn receive(&self) -> RfidEvent {
-        self.0.receive().await
-    }
 }

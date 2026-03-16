@@ -13,15 +13,18 @@ use embassy_time::Timer;
 use heapless::{LinearMap, Vec};
 
 /// The number of cells (digits) in a 4-digit display.
+#[doc(hidden)] // Platform plumbing constant; user-facing APIs should use CELL_COUNT.
 pub const CELL_COUNT_U8: u8 = 4;
 
 /// The number of cells (digits) in a 4-digit display.
 pub const CELL_COUNT: usize = CELL_COUNT_U8 as usize;
 
 /// The number of segments per digit.
+#[doc(hidden)] // Platform plumbing constant used by RP/ESP led4 internals.
 pub const SEGMENT_COUNT: usize = 8;
 
 /// Sleep duration between multiplexing updates.
+#[doc(hidden)] // Platform plumbing timing constant used by shared loops.
 pub const MULTIPLEX_SLEEP: Duration = Duration::from_millis(3);
 
 /// Maximum number of animation frames accepted by led4-style APIs.
@@ -98,6 +101,7 @@ pub fn circular_outline_animation(clockwise: bool) -> Vec<AnimationFrame, ANIMAT
 
 /// Commands sent to the shared led4 command loop.
 #[derive(Clone)]
+#[doc(hidden)] // Platform plumbing command type; not part of trait-facing API.
 pub enum Led4Command {
     /// Display static text with selected blink behavior.
     Text {
@@ -111,9 +115,11 @@ pub enum Led4Command {
 }
 
 /// Signal used to send [`Led4Command`] values.
+#[doc(hidden)] // Platform plumbing signal type used by RP/ESP implementations.
 pub type Led4CommandSignal = Signal<CriticalSectionRawMutex, Led4Command>;
 
 /// Signals static text to a led4 command loop.
+#[doc(hidden)] // Platform plumbing helper used by RP/ESP implementations.
 pub fn signal_text(
     led4_command_signal: &Led4CommandSignal,
     text: [char; CELL_COUNT],
@@ -123,6 +129,7 @@ pub fn signal_text(
 }
 
 /// Signals an animation to a led4 command loop.
+#[doc(hidden)] // Platform plumbing helper used by RP/ESP implementations.
 pub fn signal_animation<I>(led4_command_signal: &Led4CommandSignal, animation: I)
 where
     I: IntoIterator,
@@ -192,6 +199,7 @@ pub trait Led4 {
 }
 
 /// Shared command loop for blinking/animated led4 text.
+#[doc(hidden)] // Platform plumbing loop used by RP/ESP device tasks.
 pub async fn run_command_loop<F>(
     led4_command_signal: &'static Led4CommandSignal,
     mut write_text: F,
@@ -277,6 +285,7 @@ where
 /// Error returned when building [`BitsToIndexes`] exceeds preallocated capacity.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[doc(hidden)] // Platform plumbing error for shared multiplex internals.
 pub enum Led4BitsToIndexesError {
     /// `BitsToIndexes` does not have enough preallocated space.
     Full,
@@ -285,9 +294,11 @@ pub enum Led4BitsToIndexesError {
 /// Internal type for multiplex optimization.
 ///
 /// Maps segment bit patterns to the indexes of digits sharing that pattern.
+#[doc(hidden)] // Platform plumbing map type used by shared multiplex loop.
 pub type BitsToIndexes = LinearMap<NonZeroU8, Vec<u8, CELL_COUNT>, CELL_COUNT>;
 
 /// Output adapter used by the shared led4 multiplex loop.
+#[doc(hidden)] // Platform plumbing adapter trait implemented in platform crates.
 pub trait Led4OutputAdapter {
     /// Platform-specific error returned by GPIO writes.
     type Error;
@@ -304,6 +315,7 @@ pub trait Led4OutputAdapter {
 
 /// Errors produced by [`run_simple_loop`].
 #[derive(Debug)]
+#[doc(hidden)] // Platform plumbing error used by platform task wiring.
 pub enum Led4SimpleLoopError<E> {
     /// Failed while grouping bit patterns for multiplexing.
     BitsToIndexes(Led4BitsToIndexesError),
@@ -320,6 +332,7 @@ pub enum Led4SimpleLoopError<E> {
 ///
 /// Returns [`Led4SimpleLoopError`] when either bit grouping or output writes
 /// fail.
+#[doc(hidden)] // Platform plumbing loop used by RP/ESP implementations.
 pub async fn run_simple_loop<T>(
     led4_output_adapter: &mut T,
     bit_matrix_signal: &'static Signal<CriticalSectionRawMutex, BitMatrixLed4>,
@@ -370,6 +383,7 @@ where
 /// LED segment state for a 4-digit 7-segment display.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[doc(hidden)] // Platform plumbing frame type used by shared multiplex internals.
 pub struct BitMatrixLed4([u8; CELL_COUNT]);
 
 impl BitMatrixLed4 {

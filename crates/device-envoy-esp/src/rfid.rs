@@ -4,8 +4,10 @@
 //!
 //! You can create up to two concurrent `RfidEsp` instances per program; a third is expected to fail at runtime because the `rfid` task pool uses `pool_size = 2`.
 
-pub use device_envoy_core::rfid::{Rfid, RfidEvent, RfidStatic};
+pub use device_envoy_core::rfid::{Rfid, RfidEvent};
 use embassy_executor::Spawner;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel as EmbassyChannel;
 use embassy_time::{Instant, Timer};
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::gpio::interconnect::{PeripheralInput, PeripheralOutput};
@@ -19,6 +21,25 @@ use crate::{Error, Result};
 
 type Mfrc522Device =
     MFRC522<SpiDriver<ExclusiveDevice<Spi<'static, esp_hal::Async>, Output<'static>, NoDelay>>>;
+
+/// Static resources for the [`RfidEsp`] device abstraction.
+pub struct RfidStatic(EmbassyChannel<CriticalSectionRawMutex, RfidEvent, 4>);
+
+impl RfidStatic {
+    /// Create static resources for an RFID reader.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self(EmbassyChannel::new())
+    }
+
+    async fn send(&self, event: RfidEvent) {
+        self.0.send(event).await;
+    }
+
+    async fn receive(&self) -> RfidEvent {
+        self.0.receive().await
+    }
+}
 
 /// A device abstraction for an RFID reader using the MFRC522 chip.
 ///

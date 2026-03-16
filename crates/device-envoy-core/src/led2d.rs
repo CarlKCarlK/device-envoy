@@ -237,6 +237,7 @@ pub trait Led2d<const W: usize, const H: usize> {
 ///
 /// This keeps the base [`Led2d`] trait backend-agnostic while still providing
 /// reusable default behavior for implementations that render via a [`crate::led_strip::LedStrip`].
+#[doc(hidden)] // Platform plumbing trait used by RP/ESP generated led2d wrappers.
 pub trait Led2dStripBacked<const N: usize> {
     /// Concrete strip type used by this panel implementation.
     type Strip: LedStripTrait<N> + ?Sized;
@@ -294,6 +295,7 @@ pub trait Led2dStripBacked<const N: usize> {
 ///
 /// Platform crates can use this to build their `led2d` wrappers while keeping
 /// mapping and frame-conversion logic in `device-envoy-core`.
+#[doc(hidden)] // Platform plumbing adapter used by RP/ESP implementations.
 pub struct Led2dStripAdapter<'a, const N: usize, S>
 where
     S: LedStripTrait<N> + ?Sized,

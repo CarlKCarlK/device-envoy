@@ -63,6 +63,8 @@ pub trait IrMapping<Button> {
 /// Static channel resources for IR mapping events.
 ///
 /// Create with `IrMapping::new_static()` from the platform-specific crate.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub struct IrMappingStatic(IrStatic);
 
 impl IrMappingStatic {

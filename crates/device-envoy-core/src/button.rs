@@ -12,12 +12,18 @@ use embassy_time::Timer;
 // ============================================================================
 
 /// Debounce delay for the button.
+// Public for cross-crate compatibility; hidden from end-user docs.
+#[doc(hidden)]
 pub const BUTTON_DEBOUNCE_DELAY: Duration = Duration::from_millis(10);
 
 /// Duration representing a long button press.
+// Public for cross-crate compatibility; hidden from end-user docs.
+#[doc(hidden)]
 pub const LONG_PRESS_DURATION: Duration = Duration::from_millis(500);
 
 /// Polling interval used by default button wait helpers.
+// Public for cross-crate compatibility; hidden from end-user docs.
+#[doc(hidden)]
 pub const BUTTON_POLL_INTERVAL: Duration = Duration::from_millis(1);
 
 /// Internal primitive methods used to build the public [`Button`] API.

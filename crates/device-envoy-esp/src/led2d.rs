@@ -804,6 +804,7 @@ macro_rules! __led2d_dispatch_engine {
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
+            [],
             [$led_layout],
             [$font],
         }

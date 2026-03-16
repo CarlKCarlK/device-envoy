@@ -142,6 +142,8 @@ pub trait FlashBlock {
 ///
 /// Implement this trait in the platform crate to connect the shared block
 /// protocol to the hardware driver.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub trait FlashDevice {
     /// The error type returned by I/O operations.
     type Error;
@@ -158,6 +160,8 @@ pub trait FlashDevice {
 
 /// Maximum payload bytes for a flash block size.
 #[must_use]
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub const fn max_payload_size(block_size: usize) -> usize {
     assert!(block_size > HEADER_SIZE + CRC_SIZE, "block_size too small");
     block_size - HEADER_SIZE - CRC_SIZE
@@ -167,6 +171,8 @@ pub const fn max_payload_size(block_size: usize) -> usize {
 ///
 /// The block is erased before writing. On success the block contains:
 /// magic + type hash + payload length + serialized payload + CRC32.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub fn save_block<const BLOCK_SIZE: usize, T, F>(
     flash: &mut F,
     block_offset: u32,
@@ -206,6 +212,8 @@ where
 ///
 /// Returns `Ok(None)` when the block has no recognized magic or the stored
 /// type hash does not match `T`. Returns `Err` when the data is corrupt.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub fn load_block<const BLOCK_SIZE: usize, T, F>(
     flash: &mut F,
     block_offset: u32,
@@ -252,6 +260,8 @@ where
 }
 
 /// Erase the block at `block_offset`.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub fn clear_block<const BLOCK_SIZE: usize, F: FlashDevice>(
     flash: &mut F,
     block_offset: u32,

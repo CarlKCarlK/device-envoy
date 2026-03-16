@@ -22,8 +22,11 @@ pub use button_watch::button_watch_task;
 #[doc(hidden)]
 pub use device_envoy_core::button::__ButtonMonitor;
 pub use device_envoy_core::button::Button;
+pub use device_envoy_core::button::{PressDuration, PressedTo};
+// Public for compatibility; hidden from end-user docs.
+#[doc(hidden)]
 pub use device_envoy_core::button::{
-    BUTTON_DEBOUNCE_DELAY, BUTTON_POLL_INTERVAL, LONG_PRESS_DURATION, PressDuration, PressedTo,
+    BUTTON_DEBOUNCE_DELAY, BUTTON_POLL_INTERVAL, LONG_PRESS_DURATION,
 };
 
 use embassy_rp::Peri;

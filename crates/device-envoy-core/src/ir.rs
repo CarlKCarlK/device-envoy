@@ -74,6 +74,8 @@ pub trait Ir {
 /// Static resources for the [`Ir`] device abstraction.
 ///
 /// See the platform-specific crate for usage examples.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub struct IrStatic(EmbassyChannel<CriticalSectionRawMutex, IrEvent, 8>);
 
 impl IrStatic {
@@ -107,6 +109,8 @@ impl IrStatic {
 /// Extended NEC uses 16-bit address (bytes 0-1) without inversion check.
 ///
 /// Returns `Some((address, command))` if valid, `None` if checksum fails.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub fn decode_nec_frame(frame: u32) -> Option<(u16, u8)> {
     let byte0 = (frame & 0xFF) as u8;
     let byte1 = ((frame >> 8) & 0xFF) as u8;

@@ -15,6 +15,8 @@ pub enum LcdTextError {
 
 /// A packed text frame for an HD44780 display.
 #[derive(Clone, Copy, Debug)]
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub struct LcdTextFrame<const MAX_CHARS: usize> {
     /// Frame width in characters.
     pub width: usize,
@@ -72,6 +74,8 @@ impl<const MAX_CHARS: usize> LcdTextFrame<MAX_CHARS> {
 /// - Non-ASCII Unicode characters are replaced with `?`.
 /// - Missing characters are padded with spaces.
 #[must_use]
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub fn render_lcd_text_frame<const W: usize, const H: usize, const MAX_CHARS: usize>(
     text: &str,
 ) -> LcdTextFrame<MAX_CHARS> {
@@ -148,6 +152,8 @@ const LCD_ENABLE: u8 = 0x04;
 const LCD_RS: u8 = 0x01;
 
 /// HD44780 protocol driver over a byte-oriented I2C expander transport.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub struct LcdTextDriver {
     address: u8,
 }

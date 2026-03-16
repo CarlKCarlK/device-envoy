@@ -95,6 +95,8 @@ where
 /// Static resources for Kepler IR remote events.
 ///
 /// See the platform-specific crate for usage examples.
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub struct IrKeplerStatic(IrMappingStatic);
 
 impl IrKeplerStatic {
@@ -112,6 +114,8 @@ impl IrKeplerStatic {
 }
 
 /// Button mapping for the SunFounder Kepler Kit remote (ordered to match physical layout).
+// Public for cross-crate platform plumbing; hidden from end-user docs.
+#[doc(hidden)]
 pub const KEPLER_MAPPING: [(u16, u8, KeplerKeys); 21] = [
     // Row 1: Power, Mode, Mute
     (0x0000, 0x45, KeplerKeys::Power),

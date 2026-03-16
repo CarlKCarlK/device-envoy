@@ -1,14 +1,112 @@
-# device-envoy workspace
+# device-envoy
 
-This repository is a Rust workspace for platform-specific crates and a shared core crate.
+[![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
 
-- `crates/device-envoy-rp`: Raspberry Pi Pico focused crate (from `device-envoy`)
-- `crates/device-envoy-esp`: ESP focused crate (from `device-envoy-esp32`, now `device-envoy-esp`)
-- `crates/device-envoy-core`: shared crate (currently minimal)
+Rust workspace for composable embedded device abstractions built on Embassy.
 
-Current migration intent:
+<!-- todo000 top level readme -->
+<!-- todo000 Thank Brad -->
 
-- Keep platform crates working as-is while moving toward shared functionality in `device-envoy-core`.
+## Intro
 
-todo000 top level readme
-todo000 Thank Brad
+`device-envoy` is a workspace for building embedded applications in Rust with Embassy, organized around device abstractions.
+
+A device abstraction is a software encapsulation of hardware that manages timing, tasks, control flow, interrupts, channels, and state within the abstraction.
+
+Rather than replacing HALs or drivers, `device-envoy` builds on them and exposes a small set of simple operations to the rest of your program.
+
+Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, and ESP32-C6 and ESP32-S3 via `device-envoy-esp`.
+
+## Workspace Crates
+
+- `crates/device-envoy-rp`: Raspberry Pi Pico focused crate [![crates.io - rp](https://img.shields.io/crates/v/device-envoy-rp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-rp) [![docs.rs - rp](https://img.shields.io/docsrs/device-envoy-rp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-rp)
+- `crates/device-envoy-esp`: ESP32-C6 and ESP32-S3 focused crate [![crates.io - esp](https://img.shields.io/crates/v/device-envoy-esp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-esp) [![docs.rs - esp](https://img.shields.io/docsrs/device-envoy-esp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-esp)
+- `crates/device-envoy-core`: shared core APIs used across platform crates [![crates.io - core](https://img.shields.io/crates/v/device-envoy-core?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-core) [![docs.rs - core](https://img.shields.io/docsrs/device-envoy-core?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-core)
+
+## Status
+
+⚠️ **Alpha / Experimental**
+
+The API is actively evolving. Not recommended for production use, but good for experimentation, learning, and exploratory projects.
+
+This workspace is also in active migration as shared functionality moves into `device-envoy-core` while platform crates remain usable.
+
+## Features
+
+- LED strips and panels for NeoPixel-style (WS2812) hardware
+- WiFi auto-connect and credential management
+- Audio player over I2S
+- Button input and debouncing
+- Servo control and animation
+- Flash storage for persistent configuration
+- LCD text display support
+- IR remote decoding
+- RFID card reading
+- Clock synchronization helpers
+- 4-digit seven-segment display control
+- Single LED control and animation
+
+## Forum
+
+- **[Using Embassy to build applications](https://github.com/CarlKCarlK/device-envoy/discussions)**
+
+  A place to talk about writing embedded applications with Embassy: sharing code, asking practical questions, and learning what works in practice.
+
+## Videos and Articles
+
+- [device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) -- versions: [article](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) or [video](https://www.youtube.com/watch?v=iUu6hvJLVOU)
+- [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson
+- [More Rust articles](https://medium.com/@carlmkadie)
+
+## Example: Animated LED Strip (from RP crate)
+
+This example is from `device-envoy-rp` and cycles a 96-LED strip through red, green, and blue frames.
+
+![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_animated.png)
+
+```rust,no_run
+# #![no_std]
+# #![no_main]
+# use panic_probe as _;
+# use core::convert::Infallible;
+use device_envoy_rp::{Result, led_strip::{LedStrip as _, Frame1d, colors}};
+use device_envoy_rp::led_strip;
+
+led_strip! {
+    LedStripAnimated {
+        pin: PIN_4,
+        len: 96,
+    }
+}
+
+async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+    let p = embassy_rp::init(Default::default());
+    let led_strip_animated = LedStripAnimated::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
+
+    let frame_duration = embassy_time::Duration::from_millis(300);
+    led_strip_animated.animate([
+        (Frame1d::filled(colors::RED), frame_duration),
+        (Frame1d::filled(colors::GREEN), frame_duration),
+        (Frame1d::filled(colors::BLUE), frame_duration),
+    ]);
+
+    core::future::pending().await
+}
+```
+
+## Policy on AI-assisted development and contributions
+
+The use of AI tools is permitted for development and contributions to this repository. AI may be used as a productivity aid for drafting, exploration, and refactoring.
+
+All code and documentation contributed to this repository must be reviewed, edited, and validated by a human contributor. AI tools are not a substitute for design judgment, testing, or responsibility for correctness.
+
+[AGENTS.md](AGENTS.md) contains the general instructions and constraints given to AI tools used during development of this repository.
+
+## License
+
+Licensed under either:
+
+- MIT license (see LICENSE-MIT file)
+- Apache License, Version 2.0
+
+at your option.

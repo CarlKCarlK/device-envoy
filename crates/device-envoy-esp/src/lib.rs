@@ -136,7 +136,7 @@ pub mod wifi_auto;
 #[cfg(doc)]
 pub mod docs {
     //! Documentation-only pages for this crate.
-    #[doc = include_str!("../../device-envoy-core/docs/development.md")]
+    #[doc = include_str!("../../../development.md")]
     pub mod development_guide {}
 }
 

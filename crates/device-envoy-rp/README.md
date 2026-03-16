@@ -118,7 +118,7 @@ See the `examples/` and `demos/` directories for complete runnable code.
 ## Building & Running
 
 - If you just want to use this library, start from the template project: [`device-envoy-blinky-rp`](https://github.com/CarlKCarlK/device-envoy-blinky-rp).
-- If you want to edit this project, see the [Development Guide](crate::docs::development_guide).
+- If you want to edit this project, see the [Development Guide](docs/development_guide/index.html) (or on GitHub: [development.md](https://github.com/CarlKCarlK/device-envoy/blob/main/development.md)).
 
 ## Policy on AI-assisted development and contributions
 
@@ -126,7 +126,7 @@ The use of AI tools is permitted for development and contributions to this repos
 
 All code and documentation contributed to this repository must be reviewed, edited, and validated by a human contributor. AI tools are not a substitute for design judgment, testing, or responsibility for correctness.
 
-[AGENTS.md](AGENTS.md) contains the general instructions and constraints given to AI tools used during development of this repository.
+[AGENTS.md](https://github.com/CarlKCarlK/device-envoy/blob/main/AGENTS.md) contains the general instructions and constraints given to AI tools used during development of this repository.
 
 ## License
 

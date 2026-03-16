@@ -108,7 +108,6 @@ impl device_envoy_core::button::__ButtonMonitor for ButtonEsp<'_> {
         self.pressed_to.is_pressed(self.input.is_high())
     }
 
-    // todo0 test this. It used to poll.
     async fn wait_until_pressed_state(&mut self, pressed: bool) {
         match (pressed, self.pressed_to) {
             (true, PressedTo::Voltage) | (false, PressedTo::Ground) => {

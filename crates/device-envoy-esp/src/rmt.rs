@@ -18,7 +18,6 @@ pub const RMT_RATE_MHZ: u32 = 80;
 /// Create the shared RMT hub at 80 MHz.
 ///
 /// This is the single initialization path for RMT in this crate.
-/// TODO0 Add an ergonomic typed channel allocator on top of `Rmt80` for larger device mixes.
 #[cfg(target_os = "none")]
 pub fn new_rmt80(rmt: esp_hal::peripherals::RMT<'static>) -> Result<Rmt80<'static>> {
     let rmt80 = esp_hal::rmt::Rmt::new(rmt, esp_hal::time::Rate::from_mhz(RMT_RATE_MHZ))

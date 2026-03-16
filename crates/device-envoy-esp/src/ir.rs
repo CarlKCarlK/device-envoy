@@ -275,7 +275,7 @@ fn decode_nec_from_pulses(pulse_codes: &[esp_hal::rmt::PulseCode]) -> Option<(u1
         frame |= bit_value << bit_index;
     }
 
-    // TODO0 Handle NEC repeat frames explicitly (leader + 2.25ms + 560us pattern).
+    // TODO Handle NEC repeat frames explicitly (leader + 2.25ms + 560us pattern).
     decode_nec_frame(frame)
 }
 

@@ -319,15 +319,15 @@ pub mod audio_player_generated;
 pub mod pcm_clip_generated;
 
 #[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file (includes syntax details)."]
-#[doc = include_str!("../../device-envoy-core/src/audio_player/adpcm_clip_docs.md")]
-#[doc = include_str!("../../device-envoy-core/src/audio_player/audio_prep_steps_1_2.md")]
-#[doc = include_str!("../../device-envoy-core/src/audio_player/adpcm_clip_step_3.md")]
+#[doc = include_str!("audio_player/adpcm_clip_docs.md")]
+#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
+#[doc = include_str!("audio_player/adpcm_clip_step_3.md")]
 #[doc(inline)]
 pub use device_envoy_core::audio_player::adpcm_clip;
 #[doc = "Macro to \"compile in\" an uncompressed (PCM) clip from an external file (includes syntax details)."]
-#[doc = include_str!("../../device-envoy-core/src/audio_player/pcm_clip_docs.md")]
-#[doc = include_str!("../../device-envoy-core/src/audio_player/audio_prep_steps_1_2.md")]
-#[doc = include_str!("../../device-envoy-core/src/audio_player/pcm_clip_step_3.md")]
+#[doc = include_str!("audio_player/pcm_clip_docs.md")]
+#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
+#[doc = include_str!("audio_player/pcm_clip_step_3.md")]
 #[doc(inline)]
 pub use device_envoy_core::audio_player::pcm_clip;
 pub use device_envoy_core::audio_player::*;

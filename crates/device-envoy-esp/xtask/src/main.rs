@@ -259,6 +259,35 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    println!("{}", "--> packaged embedded verify (c6)".cyan());
+    if !run(Command::new("cargo").current_dir(&root).args([
+        "package",
+        "--allow-dirty",
+        "--no-verify",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+
+    let packaged_manifest_path = match packaged_manifest_path(&root, "device-envoy-esp") {
+        Ok(path) => path,
+        Err(error) => {
+            eprintln!("{}", error.red().bold());
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let mut packaged_check_command = Command::new("cargo");
+    packaged_check_command
+        .current_dir(&root)
+        .arg("check")
+        .arg("--release")
+        .arg("--manifest-path")
+        .arg(&packaged_manifest_path)
+        .args(["--target", TARGET_C6, "--no-default-features"]);
+    if !run(&mut packaged_check_command) {
+        return ExitCode::FAILURE;
+    }
+
     println!("\n{}", "==> All checks passed! 🎉".green().bold());
     ExitCode::SUCCESS
 }
@@ -638,6 +667,58 @@ fn workspace_root() -> PathBuf {
         .to_owned()
 }
 
+fn package_version_from_cargo_toml(crate_root: &Path) -> Result<String, String> {
+    let cargo_toml_path = crate_root.join("Cargo.toml");
+    let cargo_toml_source = fs::read_to_string(&cargo_toml_path)
+        .map_err(|read_error| format!("{}: {}", cargo_toml_path.display(), read_error))?;
+
+    let mut in_package_section = false;
+    for cargo_toml_line in cargo_toml_source.lines() {
+        let trimmed_line = cargo_toml_line.trim();
+        if trimmed_line.starts_with('[') {
+            in_package_section = trimmed_line == "[package]";
+            continue;
+        }
+
+        if !in_package_section {
+            continue;
+        }
+
+        if let Some(version_fragment) = trimmed_line.strip_prefix("version") {
+            let Some(equals_fragment) = version_fragment.strip_prefix(" = ") else {
+                continue;
+            };
+            let version = equals_fragment.trim_matches('"').trim().to_string();
+            if version.is_empty() {
+                continue;
+            }
+            return Ok(version);
+        }
+    }
+
+    Err(format!(
+        "Failed to find [package] version in {}",
+        cargo_toml_path.display()
+    ))
+}
+
+fn packaged_manifest_path(crate_root: &Path, package_name: &str) -> Result<PathBuf, String> {
+    let package_version = package_version_from_cargo_toml(crate_root)?;
+    let package_dir_name = format!("{package_name}-{package_version}");
+    let target_package_manifest_path = crate_root
+        .join("../../target/package")
+        .join(package_dir_name)
+        .join("Cargo.toml");
+
+    if target_package_manifest_path.exists() {
+        Ok(target_package_manifest_path)
+    } else {
+        Err(format!(
+            "Packaged manifest not found at {}. Run `cargo package --allow-dirty` first.",
+            target_package_manifest_path.display()
+        ))
+    }
+}
 /// Prepends `dir` to the `PATH` environment variable for `cmd`.
 ///
 /// When `dir` is empty (the linker was already found on PATH), this is a no-op.

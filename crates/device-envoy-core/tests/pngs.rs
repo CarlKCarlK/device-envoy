@@ -29,6 +29,7 @@ include!(concat!(
 ));
 
 type Frame = Frame2d<12, 8>;
+type Led1x1Frame = Frame2d<1, 1>;
 type Led12x4Frame = Frame2d<12, 4>;
 type Led8x12Frame = Frame2d<8, 12>;
 type ConwayFrame = Frame2d<16, 16>;
@@ -74,6 +75,12 @@ fn led_strip_animated_apng_matches_expected() -> Result<(), Box<dyn Error>> {
 #[test]
 fn led2d2_apng_matches_expected() -> Result<(), Box<dyn Error>> {
     assert_apng_matches_expected("led2d2.png", 200, 1000, build_led2d2_frames)
+}
+
+#[test]
+fn led2d_sos_1x1_apng_matches_expected() -> Result<(), Box<dyn Error>> {
+    let sos_frames = build_led2d_sos_1x1_frames();
+    assert_apng_matches_expected_for_frames("led2d_sos_1x1.png", 200, 200, &sos_frames)
 }
 
 #[test]
@@ -126,6 +133,52 @@ fn build_led2d1_frame() -> Led12x4Frame {
 
 fn build_led2d2_frames() -> [Led8x12Frame; 2] {
     [build_led2d2_frame_0(), build_led2d2_frame_1()]
+}
+
+fn build_led2d_sos_1x1_frames() -> Vec<Led1x1Frame> {
+    const DOT_UNITS: usize = 1;
+    const DASH_UNITS: usize = 3;
+    const SYMBOL_GAP_UNITS: usize = 1;
+    const LETTER_GAP_UNITS: usize = 3;
+    const WORD_GAP_UNITS: usize = 7;
+
+    let on_frame = Led1x1Frame::filled(colors::WHITE);
+    let off_frame = Led1x1Frame::filled(colors::BLACK);
+    let mut sos_frames = Vec::with_capacity(27);
+
+    push_repeated_frames(&mut sos_frames, on_frame, DOT_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, SYMBOL_GAP_UNITS);
+    push_repeated_frames(&mut sos_frames, on_frame, DOT_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, SYMBOL_GAP_UNITS);
+    push_repeated_frames(&mut sos_frames, on_frame, DOT_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, LETTER_GAP_UNITS);
+
+    push_repeated_frames(&mut sos_frames, on_frame, DASH_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, SYMBOL_GAP_UNITS);
+    push_repeated_frames(&mut sos_frames, on_frame, DASH_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, SYMBOL_GAP_UNITS);
+    push_repeated_frames(&mut sos_frames, on_frame, DASH_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, LETTER_GAP_UNITS);
+
+    push_repeated_frames(&mut sos_frames, on_frame, DOT_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, SYMBOL_GAP_UNITS);
+    push_repeated_frames(&mut sos_frames, on_frame, DOT_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, SYMBOL_GAP_UNITS);
+    push_repeated_frames(&mut sos_frames, on_frame, DOT_UNITS);
+    push_repeated_frames(&mut sos_frames, off_frame, WORD_GAP_UNITS);
+
+    sos_frames
+}
+
+fn push_repeated_frames<const W: usize, const H: usize>(
+    frames: &mut Vec<Frame2d<W, H>>,
+    frame: Frame2d<W, H>,
+    repeat_count: usize,
+) {
+    assert!(repeat_count > 0, "repeat_count must be positive");
+    for _repeat_index in 0..repeat_count {
+        frames.push(frame);
+    }
 }
 
 fn build_led2d2_frame_0() -> Led8x12Frame {

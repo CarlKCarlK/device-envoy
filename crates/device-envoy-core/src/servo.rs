@@ -1,4 +1,4 @@
-//! Platform-agnostic servo control trait shared across platforms.
+//! A device abstraction trait for direct servo control shared across platforms.
 
 #[doc(hidden)]
 pub use crate::servo_player::{

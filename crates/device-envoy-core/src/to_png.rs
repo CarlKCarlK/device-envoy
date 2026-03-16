@@ -1,3 +1,11 @@
+//! Host-only PNG/APNG preview helpers for [`Frame2d`].
+//!
+//! Prefer using the inherent [`Frame2d`] methods:
+//! - [`Frame2d::write_png`]
+//! - [`Frame2d::write_png_with_gamma`]
+//! - [`Frame2d::write_apng`]
+//! - [`Frame2d::write_apng_with_gamma`]
+
 use crate::led2d::Frame2d;
 use png::{BitDepth, ColorType, Encoder, ScaledFloat};
 use std::error::Error;
@@ -7,8 +15,60 @@ use std::path::Path;
 
 const PREVIEW_INVERSE_GAMMA: f32 = 2.2;
 
-/// Render a `Frame2d` into a PNG file sized to the requested maximum dimension.
-pub fn write_frame_png<const W: usize, const H: usize>(
+impl<const W: usize, const H: usize> Frame2d<W, H> {
+    /// Render this frame into a PNG file sized to the requested maximum dimension.
+    pub fn write_png(
+        &self,
+        output_path: impl AsRef<Path>,
+        target_max_dimension: u32,
+    ) -> Result<(), Box<dyn Error>> {
+        write_frame_png(self, output_path, target_max_dimension)
+    }
+
+    /// Render this frame into a PNG file with a custom preview inverse gamma.
+    pub fn write_png_with_gamma(
+        &self,
+        output_path: impl AsRef<Path>,
+        target_max_dimension: u32,
+        preview_inverse_gamma: f32,
+    ) -> Result<(), Box<dyn Error>> {
+        write_frame_png_with_gamma(
+            self,
+            output_path,
+            target_max_dimension,
+            preview_inverse_gamma,
+        )
+    }
+
+    /// Render multiple frames into a looping APNG file.
+    pub fn write_apng(
+        frames: &[Self],
+        output_path: impl AsRef<Path>,
+        target_max_dimension: u32,
+        frame_delay_ms: u32,
+    ) -> Result<(), Box<dyn Error>> {
+        write_frames_apng(frames, output_path, target_max_dimension, frame_delay_ms)
+    }
+
+    /// Render multiple frames into a looping APNG file with a custom preview inverse gamma.
+    pub fn write_apng_with_gamma(
+        frames: &[Self],
+        output_path: impl AsRef<Path>,
+        target_max_dimension: u32,
+        frame_delay_ms: u32,
+        preview_inverse_gamma: f32,
+    ) -> Result<(), Box<dyn Error>> {
+        write_frames_apng_with_gamma(
+            frames,
+            output_path,
+            target_max_dimension,
+            frame_delay_ms,
+            preview_inverse_gamma,
+        )
+    }
+}
+
+fn write_frame_png<const W: usize, const H: usize>(
     frame: &Frame2d<W, H>,
     output_path: impl AsRef<Path>,
     target_max_dimension: u32,
@@ -21,8 +81,7 @@ pub fn write_frame_png<const W: usize, const H: usize>(
     )
 }
 
-/// Render a `Frame2d` into a PNG file with a custom preview inverse gamma.
-pub fn write_frame_png_with_gamma<const W: usize, const H: usize>(
+fn write_frame_png_with_gamma<const W: usize, const H: usize>(
     frame: &Frame2d<W, H>,
     output_path: impl AsRef<Path>,
     target_max_dimension: u32,
@@ -48,8 +107,7 @@ pub fn write_frame_png_with_gamma<const W: usize, const H: usize>(
     Ok(())
 }
 
-/// Render multiple `Frame2d` values into a looping APNG file.
-pub fn write_frames_apng<const W: usize, const H: usize>(
+fn write_frames_apng<const W: usize, const H: usize>(
     frames: &[Frame2d<W, H>],
     output_path: impl AsRef<Path>,
     target_max_dimension: u32,
@@ -64,8 +122,7 @@ pub fn write_frames_apng<const W: usize, const H: usize>(
     )
 }
 
-/// Render multiple `Frame2d` values into a looping APNG file with a custom preview inverse gamma.
-pub fn write_frames_apng_with_gamma<const W: usize, const H: usize>(
+fn write_frames_apng_with_gamma<const W: usize, const H: usize>(
     frames: &[Frame2d<W, H>],
     output_path: impl AsRef<Path>,
     target_max_dimension: u32,

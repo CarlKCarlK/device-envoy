@@ -21,7 +21,7 @@ pub mod servo_player;
 #[cfg(feature = "wifi")]
 pub mod time_sync;
 #[cfg(feature = "host")]
-pub mod to_png;
+mod to_png;
 pub mod wifi_auto;
 
 /// Used internally by other macros.

@@ -5,8 +5,8 @@
 use crate::button::Button;
 use core::future::Future;
 
-pub mod fields;
-pub mod portal;
+mod fields;
+mod portal;
 
 pub use portal::{FormData, HtmlBuffer, WifiAutoField, generate_config_page, parse_post};
 
@@ -99,6 +99,7 @@ impl Default for WifiStartMode {
 
 /// Return whether startup should enter captive-portal mode.
 #[must_use]
+#[doc(hidden)] // Backend-plumbing helper used by platform crates.
 pub const fn should_enter_captive_portal(
     wifi_start_mode: WifiStartMode,
     force_captive_portal: bool,
@@ -255,6 +256,7 @@ pub trait WifiAuto {
 }
 
 /// Backend contract for platform-specific Wi-Fi auto-connect operations.
+#[doc(hidden)] // Backend-plumbing trait used by platform crates.
 pub trait WifiAutoBackend {
     /// Platform-specific error type.
     type Error;
@@ -299,6 +301,7 @@ pub trait WifiAutoBackend {
 }
 
 /// Run the shared Wi-Fi auto-connect flow through a platform backend.
+#[doc(hidden)] // Backend-plumbing helper used by platform crates.
 pub async fn connect_with_backend<Backend, OnEvent, OnEventFuture>(
     backend: &mut Backend,
     on_event: &mut OnEvent,

@@ -115,6 +115,7 @@ pub const fn combine<const N1: usize, const N2: usize, const OUT_N: usize>(
 }
 
 /// Static resources for [`ServoPlayer`].
+#[doc(hidden)] // Public for macro-expanded plumbing; not part of user-facing API docs.
 pub struct ServoPlayerStatic<const MAX_STEPS: usize> {
     command: Signal<CriticalSectionRawMutex, PlayerCommand<MAX_STEPS>>,
 }

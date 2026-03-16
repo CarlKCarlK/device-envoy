@@ -3,7 +3,6 @@
 
 use device_envoy_core::led_strip::{Frame1d, ToRgb888};
 use device_envoy_core::led2d::{Frame2d, Led2dFont, render_text_to_frame};
-use device_envoy_core::to_png::{write_frame_png_with_gamma, write_frames_apng_with_gamma};
 use embassy_time::Duration;
 use embedded_graphics::{
     prelude::*,
@@ -330,7 +329,7 @@ where
     let frame = build_frame();
     let expected_path = docs_assets_path(filename);
     if std::env::var_os("DEVICE_KIT_UPDATE_PNGS").is_some() {
-        write_frame_png_with_gamma(&frame, &expected_path, max_dimension, preview_inverse_gamma)?;
+        frame.write_png_with_gamma(&expected_path, max_dimension, preview_inverse_gamma)?;
         println!("updated PNG at {}", expected_path.display());
         return Ok(());
     }
@@ -339,7 +338,7 @@ where
     }
 
     let output_path = temp_output_path(filename);
-    write_frame_png_with_gamma(&frame, &output_path, max_dimension, preview_inverse_gamma)?;
+    frame.write_png_with_gamma(&output_path, max_dimension, preview_inverse_gamma)?;
 
     let expected_bytes = fs::read(&expected_path)?;
     let actual_bytes = fs::read(&output_path)?;
@@ -492,7 +491,7 @@ fn assert_apng_matches_expected_for_frames_with_gamma<const W: usize, const H: u
     );
     let expected_path = docs_assets_path(filename);
     if std::env::var_os("DEVICE_KIT_UPDATE_PNGS").is_some() {
-        write_frames_apng_with_gamma(
+        Frame2d::<W, H>::write_apng_with_gamma(
             frames,
             &expected_path,
             max_dimension,
@@ -507,7 +506,7 @@ fn assert_apng_matches_expected_for_frames_with_gamma<const W: usize, const H: u
     }
 
     let output_path = temp_output_path(filename);
-    write_frames_apng_with_gamma(
+    Frame2d::<W, H>::write_apng_with_gamma(
         frames,
         &output_path,
         max_dimension,

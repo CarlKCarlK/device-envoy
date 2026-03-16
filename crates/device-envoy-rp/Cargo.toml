@@ -2,7 +2,7 @@
 edition = "2024"
 # if this changes, update .vscode/launch.json and .cargo/config.toml
 name = "device-envoy-rp"
-version = "0.0.5-alpha.0"
+version = "0.0.5-alpha.1"
 description = "Build Pico applications with LED panels, easy Wi-Fi, and composable device abstractions"
 keywords = ["embedded", "rp2040", "rp235x", "ws2812", "i2s"]
 categories = ["embedded", "asynchronous", "no-std", "hardware-support"]

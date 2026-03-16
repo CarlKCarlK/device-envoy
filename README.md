@@ -4,9 +4,6 @@
 
 Rust workspace for composable embedded device abstractions built on Embassy.
 
-<!-- todo000 top level readme -->
-<!-- todo000 Thank Brad -->
-
 ## Intro
 
 `device-envoy` is a workspace for building embedded applications in Rust with Embassy, organized around device abstractions.
@@ -15,7 +12,7 @@ A device abstraction is a software encapsulation of hardware that manages timing
 
 Rather than replacing HALs or drivers, `device-envoy` builds on them and exposes a small set of simple operations to the rest of your program.
 
-Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, and ESP32-C6 and ESP32-S3 via `device-envoy-esp`.
+Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, and ESP via `device-envoy-esp` (actively tested on ESP32-C6 and ESP32-S3).
 
 ## Workspace Crates
 
@@ -57,6 +54,10 @@ This workspace is also in active migration as shared functionality moves into `d
 - [device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) -- versions: [article](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) or [video](https://www.youtube.com/watch?v=iUu6hvJLVOU)
 - [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson
 - [More Rust articles](https://medium.com/@carlmkadie)
+
+## Thanks
+
+Special thanks to [Brad Gibson](https://github.com/U007D/), organizer of the [Seattle Rust User Group](https://www.meetup.com/seattle-rust-meetup/). He introduced me to Rust programming on microcontrollers, suggested the term *device abstraction*, and encouraged thinking in terms of shared traits across controller families. Those conversations helped set the goals for device-envoy.
 
 ## Example: Animated LED Strip (from RP crate)
 
@@ -101,6 +102,10 @@ The use of AI tools is permitted for development and contributions to this repos
 All code and documentation contributed to this repository must be reviewed, edited, and validated by a human contributor. AI tools are not a substitute for design judgment, testing, or responsibility for correctness.
 
 [AGENTS.md](AGENTS.md) contains the general instructions and constraints given to AI tools used during development of this repository.
+
+## Development Guide
+
+If you want to edit this workspace, start here: [development.md](development.md).
 
 ## License
 

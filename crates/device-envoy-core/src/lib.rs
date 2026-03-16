@@ -1,9 +1,10 @@
+#![doc = include_str!("../README.md")]
 #![cfg_attr(target_os = "none", no_std)]
 
-//! Shared building blocks for the device-envoy workspace.
 pub mod audio_player;
 pub mod button;
-pub mod clock;
+#[cfg(feature = "wifi")]
+pub(crate) mod clock;
 #[cfg(feature = "wifi")]
 pub mod clock_sync;
 pub mod flash_block;

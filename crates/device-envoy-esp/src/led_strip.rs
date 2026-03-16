@@ -180,7 +180,7 @@ pub const CURRENT_DEFAULT: Current = Current::Milliamps(250);
 // ============================================================================
 
 #[cfg(target_os = "none")]
-use embassy_futures::select::{select, Either};
+use embassy_futures::select::{Either, select};
 #[cfg(target_os = "none")]
 use embassy_time::Timer;
 
@@ -371,6 +371,7 @@ pub async fn led_strip_device_loop<
 ///         engine: <Engine_expr>,       // optional
 ///         gamma: <Gamma_expr>,         // optional
 ///         max_frames: <usize_expr>,    // optional
+///         reset_us: <u32_expr>,        // optional (SPI only)
 ///     }
 /// }
 /// ```
@@ -386,6 +387,7 @@ pub async fn led_strip_device_loop<
 /// - `engine` — Output engine (default: `Engine::Rmt`)
 /// - `gamma` — Color curve (default: `Gamma::Srgb`)
 /// - `max_frames` — Maximum number of animation frames (default: 16 frames)
+/// - `reset_us` — WS2812 reset/latch interval in microseconds for `Engine::Spi` (default: 60)
 ///
 /// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
 ///
@@ -426,6 +428,7 @@ macro_rules! __led_strip_entry {
             engine = [],
             gamma = [],
             max_frames = [],
+            reset_us = [],
             fields = [$($fields)*],
         }
     };
@@ -446,6 +449,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [],
     ) => {
         $crate::__led_strip_dispatch_engine!(
@@ -456,6 +460,7 @@ macro_rules! __led_strip_collect_fields {
             [$($engine)?],
             [$($gamma)?],
             [$($max_frames)?],
+            [$($reset_us)?],
         );
     };
     (
@@ -466,6 +471,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [],
     ) => {
         compile_error!("led_strip! missing required `pin` field");
@@ -478,6 +484,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [],
     ) => {
         compile_error!("led_strip! missing required `len` field");
@@ -490,6 +497,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [pin: $pin:ident $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -500,6 +508,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [$($engine)?],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -511,6 +520,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [pin: $pin:ident $(, $($rest:tt)*)?],
     ) => {
         compile_error!("led_strip! duplicate `pin` field");
@@ -523,6 +533,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [len: $len:expr $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -533,6 +544,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [$($engine)?],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -544,6 +556,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [len: $len:expr $(, $($rest:tt)*)?],
     ) => {
         compile_error!("led_strip! duplicate `len` field");
@@ -556,6 +569,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [max_current: $max_current:expr $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -566,6 +580,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [$($engine)?],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -577,6 +592,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [max_current: $max_current:expr $(, $($rest:tt)*)?],
     ) => {
         compile_error!("led_strip! duplicate `max_current` field");
@@ -589,6 +605,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: Engine::Spi $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -599,6 +616,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [Spi],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -610,6 +628,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: $crate::led_strip::Engine::Spi $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -620,6 +639,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [Spi],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -631,6 +651,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: device_envoy_esp::led_strip::Engine::Spi $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -641,6 +662,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [Spi],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -652,6 +674,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: Engine::Rmt $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -662,6 +685,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [Rmt],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -673,6 +697,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: $crate::led_strip::Engine::Rmt $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -683,6 +708,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [Rmt],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -694,6 +720,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: device_envoy_esp::led_strip::Engine::Rmt $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -704,6 +731,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [Rmt],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -715,6 +743,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$already_engine:tt],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: $ignored:path $(, $($rest:tt)*)?],
     ) => {
         compile_error!("led_strip! duplicate `engine` field");
@@ -727,6 +756,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [engine: $ignored:path $(, $($rest:tt)*)?],
     ) => {
         compile_error!("led_strip! engine must be Engine::Rmt or Engine::Spi");
@@ -739,6 +769,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [gamma: $gamma:expr $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -749,6 +780,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [$($engine)?],
             gamma = [$gamma],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -760,6 +792,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$already_gamma:expr],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [gamma: $gamma:expr $(, $($rest:tt)*)?],
     ) => {
         compile_error!("led_strip! duplicate `gamma` field");
@@ -772,6 +805,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [],
+        reset_us = [$($reset_us:expr)?],
         fields = [max_frames: $max_frames:expr $(, $($rest:tt)*)?],
     ) => {
         $crate::__led_strip_collect_fields!{
@@ -782,6 +816,7 @@ macro_rules! __led_strip_collect_fields {
             engine = [$($engine)?],
             gamma = [$($gamma)?],
             max_frames = [$max_frames],
+            reset_us = [$($reset_us)?],
             fields = [$($($rest)*)?],
         }
     };
@@ -793,6 +828,7 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$already_max_frames:expr],
+        reset_us = [$($reset_us:expr)?],
         fields = [max_frames: $max_frames:expr $(, $($rest:tt)*)?],
     ) => {
         compile_error!("led_strip! duplicate `max_frames` field");
@@ -805,10 +841,47 @@ macro_rules! __led_strip_collect_fields {
         engine = [$($engine:tt)?],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [],
+        fields = [reset_us: $reset_us:expr $(, $($rest:tt)*)?],
+    ) => {
+        $crate::__led_strip_collect_fields!{
+            name = $name,
+            pin = [$($pin)?],
+            len = [$($len)?],
+            max_current = [$($max_current)?],
+            engine = [$($engine)?],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            reset_us = [$reset_us],
+            fields = [$($($rest)*)?],
+        }
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        reset_us = [$already_reset_us:expr],
+        fields = [reset_us: $reset_us:expr $(, $($rest:tt)*)?],
+    ) => {
+        compile_error!("led_strip! duplicate `reset_us` field");
+    };
+    (
+        name = $name:ident,
+        pin = [$($pin:ident)?],
+        len = [$($len:expr)?],
+        max_current = [$($max_current:expr)?],
+        engine = [$($engine:tt)?],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         fields = [$field:ident : $value:expr $(, $($rest:tt)*)?],
     ) => {
         compile_error!(
-            "led_strip! unknown field; expected `pin`, `len`, `max_current`, `engine`, `gamma`, or `max_frames`"
+            "led_strip! unknown field; expected `pin`, `len`, `max_current`, `engine`, `gamma`, `max_frames`, or `reset_us`"
         );
     };
 }
@@ -862,7 +935,7 @@ macro_rules! __led_strip_inner {
     };
 }
 
-/// Parse optional led_strip! fields (`engine`, `gamma`, `max_frames`) in any order.
+/// Parse optional led_strip! fields (`engine`, `gamma`, `max_frames`, `reset_us`) in any order.
 ///
 /// This is `pub` for downstream macro expansion at call sites.
 #[doc(hidden)]
@@ -876,6 +949,7 @@ macro_rules! __led_strip_parse_options {
         engine = [$($engine:tt)*],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
     ) => {
         $crate::__led_strip_dispatch_engine! {
             $name,
@@ -885,6 +959,7 @@ macro_rules! __led_strip_parse_options {
             [$($engine)*],
             [$($gamma)?],
             [$($max_frames)?],
+            [$($reset_us)?],
         }
     };
     (
@@ -895,6 +970,7 @@ macro_rules! __led_strip_parse_options {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: Engine::Spi
         $(, $($tail:tt)*)?
     ) => {
@@ -906,6 +982,7 @@ macro_rules! __led_strip_parse_options {
             engine = [Spi],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -917,6 +994,7 @@ macro_rules! __led_strip_parse_options {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: $crate::led_strip::Engine::Spi
         $(, $($tail:tt)*)?
     ) => {
@@ -928,6 +1006,7 @@ macro_rules! __led_strip_parse_options {
             engine = [Spi],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -939,6 +1018,7 @@ macro_rules! __led_strip_parse_options {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: device_envoy_esp::led_strip::Engine::Spi
         $(, $($tail:tt)*)?
     ) => {
@@ -950,6 +1030,7 @@ macro_rules! __led_strip_parse_options {
             engine = [Spi],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -961,6 +1042,7 @@ macro_rules! __led_strip_parse_options {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: Engine::Rmt
         $(, $($tail:tt)*)?
     ) => {
@@ -972,6 +1054,7 @@ macro_rules! __led_strip_parse_options {
             engine = [Rmt],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -983,6 +1066,7 @@ macro_rules! __led_strip_parse_options {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: $crate::led_strip::Engine::Rmt
         $(, $($tail:tt)*)?
     ) => {
@@ -994,6 +1078,7 @@ macro_rules! __led_strip_parse_options {
             engine = [Rmt],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -1005,6 +1090,7 @@ macro_rules! __led_strip_parse_options {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: device_envoy_esp::led_strip::Engine::Rmt
         $(, $($tail:tt)*)?
     ) => {
@@ -1016,6 +1102,7 @@ macro_rules! __led_strip_parse_options {
             engine = [Rmt],
             gamma = [$($gamma)?],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -1027,6 +1114,7 @@ macro_rules! __led_strip_parse_options {
         engine = [$($engine:tt)+],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: $ignored:path
         $(, $($tail:tt)*)?
     ) => {
@@ -1040,6 +1128,7 @@ macro_rules! __led_strip_parse_options {
         engine = [],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         engine: $ignored:path
         $(, $($tail:tt)*)?
     ) => {
@@ -1053,6 +1142,7 @@ macro_rules! __led_strip_parse_options {
         engine = [$($engine:tt)*],
         gamma = [],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         gamma: $gamma:expr
         $(, $($tail:tt)*)?
     ) => {
@@ -1064,6 +1154,7 @@ macro_rules! __led_strip_parse_options {
             engine = [$($engine)*],
             gamma = [$gamma],
             max_frames = [$($max_frames)?],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -1075,6 +1166,7 @@ macro_rules! __led_strip_parse_options {
         engine = [$($engine:tt)*],
         gamma = [$already_gamma:expr],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         gamma: $gamma:expr
         $(, $($tail:tt)*)?
     ) => {
@@ -1088,6 +1180,7 @@ macro_rules! __led_strip_parse_options {
         engine = [$($engine:tt)*],
         gamma = [$($gamma:expr)?],
         max_frames = [],
+        reset_us = [$($reset_us:expr)?],
         max_frames: $max_frames:expr
         $(, $($tail:tt)*)?
     ) => {
@@ -1099,6 +1192,7 @@ macro_rules! __led_strip_parse_options {
             engine = [$($engine)*],
             gamma = [$($gamma)?],
             max_frames = [$max_frames],
+            reset_us = [$($reset_us)?],
             $($($tail)*)?
         }
     };
@@ -1110,6 +1204,7 @@ macro_rules! __led_strip_parse_options {
         engine = [$($engine:tt)*],
         gamma = [$($gamma:expr)?],
         max_frames = [$already_max_frames:expr],
+        reset_us = [$($reset_us:expr)?],
         max_frames: $max_frames:expr
         $(, $($tail:tt)*)?
     ) => {
@@ -1123,10 +1218,49 @@ macro_rules! __led_strip_parse_options {
         engine = [$($engine:tt)*],
         gamma = [$($gamma:expr)?],
         max_frames = [$($max_frames:expr)?],
+        reset_us = [],
+        reset_us: $reset_us:expr
+        $(, $($tail:tt)*)?
+    ) => {
+        $crate::__led_strip_parse_options! {
+            name = $name,
+            pin = $pin,
+            len = $len,
+            max_current = $max_current,
+            engine = [$($engine)*],
+            gamma = [$($gamma)?],
+            max_frames = [$($max_frames)?],
+            reset_us = [$reset_us],
+            $($($tail)*)?
+        }
+    };
+    (
+        name = $name:ident,
+        pin = $pin:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        reset_us = [$already_reset_us:expr],
+        reset_us: $reset_us:expr
+        $(, $($tail:tt)*)?
+    ) => {
+        compile_error!("led_strip! duplicate `reset_us` field");
+    };
+    (
+        name = $name:ident,
+        pin = $pin:ident,
+        len = $len:expr,
+        max_current = $max_current:expr,
+        engine = [$($engine:tt)*],
+        gamma = [$($gamma:expr)?],
+        max_frames = [$($max_frames:expr)?],
+        reset_us = [$($reset_us:expr)?],
         $field:ident : $value:expr
         $(, $($tail:tt)*)?
     ) => {
-        compile_error!("led_strip! unknown field; expected `engine`, `gamma`, or `max_frames`");
+        compile_error!("led_strip! unknown field; expected `engine`, `gamma`, `max_frames`, or `reset_us`");
     };
 }
 
@@ -1144,6 +1278,7 @@ macro_rules! __led_strip_dispatch_engine {
         [Spi],
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$($reset_us:expr)?],
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
             $name,
@@ -1152,6 +1287,7 @@ macro_rules! __led_strip_dispatch_engine {
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
+            [$($reset_us)?],
             [],
             [],
         }
@@ -1164,6 +1300,19 @@ macro_rules! __led_strip_dispatch_engine {
         [Rmt],
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$reset_us:expr],
+    ) => {
+        compile_error!("led_strip! `reset_us` is only supported with `engine: Engine::Spi`");
+    };
+    (
+        $name:ident,
+        $pin:ident,
+        $len:expr,
+        $max_current:expr,
+        [Rmt],
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+        [],
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
@@ -1184,6 +1333,19 @@ macro_rules! __led_strip_dispatch_engine {
         [],
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$reset_us:expr],
+    ) => {
+        compile_error!("led_strip! `reset_us` is only supported with `engine: Engine::Spi`");
+    };
+    (
+        $name:ident,
+        $pin:ident,
+        $len:expr,
+        $max_current:expr,
+        [],
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+        [],
     ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
@@ -1278,9 +1440,9 @@ macro_rules! __led2d_strip_trait_impl {
             where
                 I: IntoIterator,
                 I::Item: ::core::borrow::Borrow<(
-                    $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
-                    embassy_time::Duration,
-                )>,
+                        $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
+                        embassy_time::Duration,
+                    )>,
             {
                 let led2d = $crate::led2d::Led2dEsp::new(*self, &$led_layout);
                 $crate::led2d::Led2dStripBacked::animate(&led2d, frames);
@@ -1473,6 +1635,6 @@ pub mod spi;
 
 // Re-export macros so they are visible from the `led_strip` module path.
 pub use crate::{
-    __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_dispatch_engine,
-    __led_strip_first_or_default, __led_strip_impl, __led_strip_inner, __led_strip_parse_options,
+    __led_strip_dispatch_engine, __led_strip_first_or_default, __led_strip_impl, __led_strip_inner,
+    __led_strip_parse_options, __led2d_strip_methods, __led2d_strip_trait_impl,
 };

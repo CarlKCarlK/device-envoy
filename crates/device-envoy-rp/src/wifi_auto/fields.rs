@@ -94,7 +94,6 @@ use crate::flash_block::FlashBlockRp;
 use device_envoy_core::__impl_wifi_auto_fields;
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer};
 
-// TODO0 Add docs showing how users can define their own additional WifiAutoField types.
 __impl_wifi_auto_fields!(
     flash_block = FlashBlockRp,
     error = Error,

@@ -44,7 +44,7 @@ pub const PRO_48000_HZ: u32 = 48_000;
 /// Absolute playback loudness setting for the whole player.
 ///
 /// `Volume` is used by the player-level controls
-/// [`max_volume`, `initial_volume`](macro@crate::audio_player), and
+/// [`max_volume`, `initial_volume`](mod@crate::audio_player), and
 /// [`set_volume`](AudioPlayer::set_volume),
 /// which set the absolute playback loudness behavior for the whole player.
 ///
@@ -130,7 +130,7 @@ impl Volume {
 /// - [`Gain::db`] where positive dB is louder and negative dB is quieter.
 ///
 /// This is different from [`Volume`] used by
-/// [`max_volume`, `initial_volume`](macro@crate::audio_player), and
+/// [`max_volume`, `initial_volume`](mod@crate::audio_player), and
 /// [`set_volume`](AudioPlayer::set_volume),
 /// which set the absolute playback loudness behavior for the whole player.
 ///

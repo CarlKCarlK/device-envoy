@@ -2,9 +2,18 @@
 show-docs-rp:
     cd crates/device-envoy-rp && just show-docs-rp
 
+# Build core docs and open them in a browser
+show-docs-core:
+    just update-docs-core
+    bash -lc 'if command -v xdg-open >/dev/null; then xdg-open target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; elif command -v wslview >/dev/null; then wslview target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; else echo "Docs built at target/doc/device_envoy_core/index.html"; fi'
+
 # Build ESP docs and open them in a browser
 show-docs-esp:
     cd crates/device-envoy-esp && just show-docs-esp
+
+# Update core docs only
+update-docs-core:
+    cargo doc -p device-envoy-core --no-deps --features host
 
 # Update ESP docs only
 update-docs-esp:

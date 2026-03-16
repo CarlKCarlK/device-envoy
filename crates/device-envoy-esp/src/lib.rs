@@ -109,7 +109,7 @@ pub mod clock_sync {
 pub mod time_sync {
     //! A device abstraction for Network Time Protocol (NTP) time synchronization over Wi-Fi.
     //! See the [`clock_sync` module](crate::clock_sync) for the high-level clock API.
-    pub use device_envoy_core::clock::UnixSeconds;
+    pub use device_envoy_core::clock_sync::UnixSeconds;
     pub use device_envoy_core::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 }
 pub mod audio_player;

@@ -2,20 +2,32 @@
 //!
 //! Used internally by `led_strip!` when `engine: Engine::Spi`.
 
-use embassy_futures::select::{select, Either};
+use embassy_futures::select::{Either, select};
 use embassy_time::Timer;
 
-use super::{apply_correction, Command, Frame1d, LedStripCommandSignal};
+use super::{Command, Frame1d, LedStripCommandSignal, apply_correction};
 
 /// WS2812-over-SPI bitrate in Hz.
 ///
 /// 2.4 MHz with 3 SPI bits per WS2812 bit gives 1.25 us WS2812 bit time.
 pub const WS2812_SPI_HZ: u32 = 2_400_000;
 
+/// Default WS2812 reset/latch interval for SPI output, in microseconds.
+pub const RESET_US_DEFAULT: u32 = 60;
+
+/// Convert a WS2812 reset/latch interval (microseconds) into trailing SPI zero bytes.
+///
+/// This uses ceiling division so the generated tail is never shorter than requested.
+#[must_use]
+pub const fn reset_bytes_for_us(reset_us: u32) -> usize {
+    // bytes = ceil(reset_us * WS2812_SPI_HZ / 8_000_000)
+    ((reset_us as u64 * WS2812_SPI_HZ as u64 + 7_999_999) / 8_000_000) as usize
+}
+
 /// Trailing zero bytes clocked after frame payload to satisfy the WS2812 reset/latch interval.
 ///
-/// TODO0 Revisit reset tail length per board/chip and make configurable if needed.
-pub const RESET_BYTES: usize = 18;
+/// Defaults to [`RESET_US_DEFAULT`] converted at [`WS2812_SPI_HZ`].
+pub const RESET_BYTES: usize = reset_bytes_for_us(RESET_US_DEFAULT);
 
 /// WS2812 driver backed by an ESP32 SPI master peripheral.
 ///
@@ -36,11 +48,12 @@ impl<'d, const LEDS: usize, const BYTES: usize> SpiWs2812<'d, LEDS, BYTES> {
     pub fn new(
         spi: impl esp_hal::spi::master::Instance + 'd,
         mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'d>,
+        reset_bytes: usize,
     ) -> crate::Result<Self> {
         assert_eq!(
             BYTES,
-            LEDS * 9 + RESET_BYTES,
-            "BYTES must equal LEDS * 9 + RESET_BYTES; this is enforced by led_strip!"
+            LEDS * 9 + reset_bytes,
+            "BYTES must equal LEDS * 9 + reset_bytes; this is enforced by led_strip!"
         );
 
         let config = esp_hal::spi::master::Config::default()
@@ -155,6 +168,7 @@ macro_rules! __led_strip_spi_inner {
         $max_current:expr,
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$($reset_us:expr)?],
         [$($led2d_layout:expr)?],
         [$($led2d_font:expr)?],
     ) => {
@@ -170,6 +184,10 @@ macro_rules! __led_strip_spi_inner {
             max_frames  = $crate::__led_strip_first_or_default!(
                               [$($max_frames)?],
                               $crate::led_strip::MAX_FRAMES_DEFAULT
+                          ),
+            reset_us    = $crate::__led_strip_first_or_default!(
+                              [$($reset_us)?],
+                              $crate::led_strip::spi::RESET_US_DEFAULT
                           ),
             led2d_layout = [$($led2d_layout)?],
             led2d_font = [$($led2d_font)?],
@@ -188,13 +206,15 @@ macro_rules! __led_strip_spi_impl {
         max_current = $max_current:expr,
         gamma       = $gamma:expr,
         max_frames  = $max_frames:expr,
+        reset_us    = $reset_us:expr,
         led2d_layout = [$($led2d_layout:expr)?],
         led2d_font = [$($led2d_font:expr)?],
     ) => {
         ::paste::paste! {
             mod [<$name:snake _consts>] {
                 pub const LEDS: usize = $len;
-                pub const BYTES: usize = LEDS * 9 + $crate::led_strip::spi::RESET_BYTES;
+                pub const RESET_BYTES: usize = $crate::led_strip::spi::reset_bytes_for_us($reset_us);
+                pub const BYTES: usize = LEDS * 9 + RESET_BYTES;
                 pub const WORST_CASE_MA: u32 = LEDS as u32 * 60;
             }
 
@@ -245,7 +265,7 @@ macro_rules! __led_strip_spi_impl {
                         $crate::led_strip::spi::SpiWs2812::<
                             { [<$name:snake _consts>]::LEDS },
                             { [<$name:snake _consts>]::BYTES },
-                        >::new(spi, pin)?;
+                        >::new(spi, pin, [<$name:snake _consts>]::RESET_BYTES)?;
 
                     let strip_static: &'static _ = &[<$name:snake:upper _STATIC>];
 

@@ -1,0 +1,11 @@
+set shell := ["bash", "-cu"]
+
+# Core docs checks (doctests + docs build, fail on rustdoc warnings).
+check-docs-core:
+    RUSTDOCFLAGS="-D warnings" cargo test --doc --features host
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features host
+
+# Full validation for device-envoy-core.
+check-all:
+    cargo test --features host --lib --tests
+    just check-docs-core

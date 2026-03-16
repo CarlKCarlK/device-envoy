@@ -10,13 +10,13 @@ use crc32fast::Hasher;
 use serde::{Deserialize, Serialize};
 
 /// Magic number identifying a valid flash block: `'BLKS'`.
-pub const MAGIC: u32 = 0x424C_4B53;
+pub(crate) const MAGIC: u32 = 0x424C_4B53;
 
 /// Number of bytes in the block header: magic(4) + type\_hash(4) + payload\_len(2).
-pub const HEADER_SIZE: usize = 10;
+pub(crate) const HEADER_SIZE: usize = 10;
 
 /// Number of bytes used by the CRC trailer.
-pub const CRC_SIZE: usize = 4;
+pub(crate) const CRC_SIZE: usize = 4;
 
 /// Size of one flash erase block in bytes.
 pub const FLASH_BLOCK_SIZE: usize = 4096;
@@ -25,7 +25,7 @@ pub const FLASH_BLOCK_SIZE: usize = 4096;
 pub const FLASH_BLOCK_SIZE_U32: u32 = FLASH_BLOCK_SIZE as u32;
 
 /// Maximum number of payload bytes that fit in one block.
-pub const MAX_PAYLOAD_SIZE: usize = FLASH_BLOCK_SIZE - HEADER_SIZE - CRC_SIZE;
+pub(crate) const MAX_PAYLOAD_SIZE: usize = FLASH_BLOCK_SIZE - HEADER_SIZE - CRC_SIZE;
 
 /// Errors returned by [`save_block`], [`load_block`], and [`clear_block`].
 #[derive(Debug)]
@@ -265,7 +265,7 @@ pub fn clear_block<F: FlashDevice>(
 ///
 /// Used as a type-safety tag stored alongside serialized data so that an attempt
 /// to load the wrong type returns `Ok(None)` rather than corrupt data.
-pub fn compute_type_hash<T>() -> u32 {
+pub(crate) fn compute_type_hash<T>() -> u32 {
     const FNV_OFFSET: u32 = 2_166_136_261;
     const FNV_PRIME: u32 = 16_777_619;
 
@@ -278,7 +278,7 @@ pub fn compute_type_hash<T>() -> u32 {
 }
 
 /// CRC32 checksum.
-pub fn compute_crc(bytes: &[u8]) -> u32 {
+pub(crate) fn compute_crc(bytes: &[u8]) -> u32 {
     let mut hasher = Hasher::new();
     hasher.update(bytes);
     hasher.finalize()

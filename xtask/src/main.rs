@@ -31,7 +31,17 @@ fn check_all() -> ExitCode {
         run_command(
             Command::new("cargo")
                 .current_dir(core_workspace_root.join("crates/device-envoy-core"))
-                .args(["test", "--features", "host"]),
+                .args(["test", "--features", "host", "--lib", "--tests"]),
+        ) && run_command(
+            Command::new("cargo")
+                .current_dir(core_workspace_root.join("crates/device-envoy-core"))
+                .env("RUSTDOCFLAGS", "-D warnings")
+                .args(["test", "--doc", "--features", "host"]),
+        ) && run_command(
+            Command::new("cargo")
+                .current_dir(core_workspace_root.join("crates/device-envoy-core"))
+                .env("RUSTDOCFLAGS", "-D warnings")
+                .args(["doc", "--no-deps", "--features", "host"]),
         ) && run_command(
             Command::new("cargo")
                 .current_dir(core_workspace_root.join("crates/device-envoy-core"))

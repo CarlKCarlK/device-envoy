@@ -180,7 +180,7 @@ pub const CURRENT_DEFAULT: Current = Current::Milliamps(250);
 // ============================================================================
 
 #[cfg(target_os = "none")]
-use embassy_futures::select::{Either, select};
+use embassy_futures::select::{select, Either};
 #[cfg(target_os = "none")]
 use embassy_time::Timer;
 
@@ -1440,9 +1440,9 @@ macro_rules! __led2d_strip_trait_impl {
             where
                 I: IntoIterator,
                 I::Item: ::core::borrow::Borrow<(
-                        $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
-                        embassy_time::Duration,
-                    )>,
+                    $crate::led2d::Frame2d<{ $led_layout.width() }, { $led_layout.height() }>,
+                    embassy_time::Duration,
+                )>,
             {
                 let led2d = $crate::led2d::Led2dEsp::new(*self, &$led_layout);
                 $crate::led2d::Led2dStripBacked::animate(&led2d, frames);
@@ -1635,6 +1635,6 @@ pub mod spi;
 
 // Re-export macros so they are visible from the `led_strip` module path.
 pub use crate::{
-    __led_strip_dispatch_engine, __led_strip_first_or_default, __led_strip_impl, __led_strip_inner,
-    __led_strip_parse_options, __led2d_strip_methods, __led2d_strip_trait_impl,
+    __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_dispatch_engine,
+    __led_strip_first_or_default, __led_strip_impl, __led_strip_inner, __led_strip_parse_options,
 };

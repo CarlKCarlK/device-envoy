@@ -2,6 +2,13 @@
 name = "device-envoy-esp"
 version = "0.0.5-alpha.0"
 edition = "2021"
+description = "Build ESP32 applications with composable device abstractions"
+keywords = ["embedded", "esp32", "esp32c6", "esp32s3", "ws2812"]
+categories = ["embedded", "asynchronous", "no-std", "hardware-support"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/CarlKCarlK/device-envoy"
+documentation = "https://docs.rs/device-envoy-esp"
+homepage = "https://github.com/CarlKCarlK/device-envoy"
 
 [features]
 host = []

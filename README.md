@@ -16,6 +16,7 @@ Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, 
 
 ## Workspace Crates
 
+- `crates/device-envoy`: top-level landing crate [![crates.io - device-envoy](https://img.shields.io/crates/v/device-envoy?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy) [![docs.rs - device-envoy](https://img.shields.io/docsrs/device-envoy?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy)
 - `crates/device-envoy-rp`: Raspberry Pi Pico focused crate [![crates.io - rp](https://img.shields.io/crates/v/device-envoy-rp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-rp) [![docs.rs - rp](https://img.shields.io/docsrs/device-envoy-rp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-rp)
 - `crates/device-envoy-esp`: ESP32-C6 and ESP32-S3 focused crate [![crates.io - esp](https://img.shields.io/crates/v/device-envoy-esp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-esp) [![docs.rs - esp](https://img.shields.io/docsrs/device-envoy-esp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-esp)
 - `crates/device-envoy-core`: shared core APIs used across platform crates [![crates.io - core](https://img.shields.io/crates/v/device-envoy-core?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-core) [![docs.rs - core](https://img.shields.io/docsrs/device-envoy-core?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-core)

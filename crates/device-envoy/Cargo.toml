@@ -1,0 +1,15 @@
+[package]
+name = "device-envoy"
+version = "0.0.5-alpha.0"
+edition = "2024"
+description = "Top-level landing crate for device-envoy platform crates"
+keywords = ["embedded", "no-std", "embassy", "ws2812", "device-abstraction"]
+categories = ["embedded", "asynchronous", "no-std", "hardware-support"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/CarlKCarlK/device-envoy"
+documentation = "https://docs.rs/device-envoy"
+homepage = "https://github.com/CarlKCarlK/device-envoy"
+
+[lib]
+name = "device_envoy"
+path = "src/lib.rs"

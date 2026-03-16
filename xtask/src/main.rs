@@ -49,6 +49,15 @@ fn check_all() -> ExitCode {
         )
     });
 
+    let device_envoy_workspace_root = workspace_root.clone();
+    let device_envoy_handle = thread::spawn(move || -> bool {
+        run_command(
+            Command::new("cargo")
+                .current_dir(&device_envoy_workspace_root)
+                .args(["check", "-p", "device-envoy"]),
+        )
+    });
+
     let esp_workspace_root = workspace_root.clone();
     let esp_handle = thread::spawn(move || -> bool {
         run_command(
@@ -98,6 +107,17 @@ fn check_all() -> ExitCode {
         }
         Err(_) => {
             eprintln!("rp check thread panicked");
+            failed = true;
+        }
+    }
+    match device_envoy_handle.join() {
+        Ok(device_envoy_ok) => {
+            if !device_envoy_ok {
+                failed = true;
+            }
+        }
+        Err(_) => {
+            eprintln!("device-envoy check thread panicked");
             failed = true;
         }
     }

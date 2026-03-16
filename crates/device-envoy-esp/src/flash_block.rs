@@ -22,13 +22,16 @@ use crate::{Error, Result};
 #[cfg(target_os = "none")]
 use device_envoy_core::flash_block::{
     self as core_flash, FlashBlock as CoreFlashBlock, FlashBlockError, FlashDevice,
-    FLASH_BLOCK_SIZE_U32,
 };
 
 pub use device_envoy_core::flash_block::FlashBlock;
 
 #[cfg(target_os = "none")]
-const DEFAULT_FLASH_REGION_BYTES: u32 = 16 * core_flash::FLASH_BLOCK_SIZE_U32;
+const FLASH_BLOCK_SIZE: usize = <esp_storage::FlashStorage<'static> as NorFlash>::ERASE_SIZE;
+#[cfg(target_os = "none")]
+const FLASH_BLOCK_SIZE_U32: u32 = FLASH_BLOCK_SIZE as u32;
+#[cfg(target_os = "none")]
+const DEFAULT_FLASH_REGION_BYTES: u32 = 16 * FLASH_BLOCK_SIZE_U32;
 
 // Local adapter — wraps esp_storage::FlashStorage so core's FlashDevice trait can be
 // implemented for a type defined in this crate (required by the orphan rule).
@@ -289,7 +292,7 @@ impl CoreFlashBlock for FlashBlockEsp {
         let block_offset = self.manager.block_offset(self.block_id)?;
         self.manager.with_flash(|flash_storage| {
             let mut adapter = EspFlashAdapter(flash_storage);
-            core_flash::load_block::<T, _>(&mut adapter, block_offset)
+            core_flash::load_block::<{ FLASH_BLOCK_SIZE }, T, _>(&mut adapter, block_offset)
                 .map_err(convert_flash_block_error)
         })
     }
@@ -301,7 +304,7 @@ impl CoreFlashBlock for FlashBlockEsp {
         let block_offset = self.manager.block_offset(self.block_id)?;
         self.manager.with_flash(|flash_storage| {
             let mut adapter = EspFlashAdapter(flash_storage);
-            core_flash::save_block(&mut adapter, block_offset, value)
+            core_flash::save_block::<{ FLASH_BLOCK_SIZE }, _, _>(&mut adapter, block_offset, value)
                 .map_err(convert_flash_block_error)
         })
     }
@@ -310,7 +313,8 @@ impl CoreFlashBlock for FlashBlockEsp {
         let block_offset = self.manager.block_offset(self.block_id)?;
         self.manager.with_flash(|flash_storage| {
             let mut adapter = EspFlashAdapter(flash_storage);
-            core_flash::clear_block(&mut adapter, block_offset).map_err(convert_flash_block_error)
+            core_flash::clear_block::<{ FLASH_BLOCK_SIZE }, _>(&mut adapter, block_offset)
+                .map_err(convert_flash_block_error)
         })
     }
 }

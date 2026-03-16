@@ -207,8 +207,6 @@ pub mod lcd_text_generated {
 }
 
 #[doc(hidden)]
-pub const __MAX_LCD_CHARS: usize = device_envoy_core::lcd_text::MAX_LCD_CHARS;
-#[doc(hidden)]
 pub type __I2csSignal<T> = Signal<CriticalSectionRawMutex, T>;
 #[doc(hidden)]
 pub use device_envoy_core::lcd_text::render_lcd_text_frame as __render_lcd_text_frame;
@@ -217,7 +215,21 @@ pub use device_envoy_core::lcd_text::LcdText as __LcdText;
 #[doc(hidden)]
 pub use device_envoy_core::lcd_text::LcdTextDriver as __LcdTextDriver;
 #[doc(hidden)]
-pub use device_envoy_core::lcd_text::LcdTextFrame as __LcdTextFrame;
+pub type __LcdTextFrame<const MAX_CHARS: usize> =
+    device_envoy_core::lcd_text::LcdTextFrame<MAX_CHARS>;
+#[doc(hidden)]
+pub const fn __max_lcd_cells<const N: usize>(widths: [usize; N], heights: [usize; N]) -> usize {
+    let mut max_cells = 0;
+    let mut index = 0;
+    while index < N {
+        let cells = widths[index] * heights[index];
+        if cells > max_cells {
+            max_cells = cells;
+        }
+        index += 1;
+    }
+    max_cells
+}
 #[doc(hidden)]
 pub async fn __select_array<Fut, const N: usize>(futures: [Fut; N]) -> (Fut::Output, usize)
 where
@@ -242,7 +254,7 @@ pub const fn __assert_unique_addresses<const N: usize>(addresses: [u8; N]) {
 }
 
 #[doc(hidden)]
-pub async fn __write_lcd_text_cells<const ADDRESS_COUNT: usize>(
+pub async fn __write_lcd_text_cells<const ADDRESS_COUNT: usize, const MAX_CHARS: usize>(
     lcd_text_driver: &mut LcdTextDriver,
     lcd_text_write: &mut impl LcdTextWrite,
     initialized_addresses: &mut Vec<u8, ADDRESS_COUNT>,
@@ -263,7 +275,7 @@ pub async fn __write_lcd_text_cells<const ADDRESS_COUNT: usize>(
         let _ = initialized_addresses.push(address);
     }
 
-    let mut lcd_text_frame = LcdTextFrame::new_blank(width, height);
+    let mut lcd_text_frame = LcdTextFrame::<MAX_CHARS>::new_blank(width, height);
     let cell_count = core::cmp::min(width * height, cells.len());
     for cell_index in 0..cell_count {
         lcd_text_frame.cells[cell_index] = cells[cell_index];
@@ -348,10 +360,14 @@ macro_rules! __i2cs_impl {
             const _: () = {
                 $crate::lcd_text::__assert_unique_addresses([$($address,)+]);
             };
+            const [<__ $group_name:upper _MAX_LCD_CELLS>]: usize =
+                $crate::lcd_text::__max_lcd_cells([$($width,)+], [$($height,)+]);
 
             $(
                 static [<$lcd_name:upper _FRAME_SIGNAL>]:
-                    $crate::lcd_text::__I2csSignal<$crate::lcd_text::__LcdTextFrame> =
+                    $crate::lcd_text::__I2csSignal<
+                        $crate::lcd_text::__LcdTextFrame<{ [<__ $group_name:upper _MAX_LCD_CELLS>] }>
+                    > =
                     $crate::lcd_text::__I2csSignal::new();
             )+
 
@@ -424,13 +440,12 @@ macro_rules! __i2cs_impl {
                             $height <= 4,
                             "lcd_text height must be <= 4 for HD44780 row map"
                         );
-                        ::core::assert!(
-                            $width * $height <= $crate::lcd_text::__MAX_LCD_CHARS,
-                            "lcd_text width*height must fit MAX_LCD_CHARS"
-                        );
-
                         let lcd_text_frame =
-                            $crate::lcd_text::__render_lcd_text_frame::<$width, $height>(text.as_ref());
+                            $crate::lcd_text::__render_lcd_text_frame::<
+                                $width,
+                                $height,
+                                { [<__ $group_name:upper _MAX_LCD_CELLS>] }
+                            >(text.as_ref());
                         [<$lcd_name:upper _FRAME_SIGNAL>].signal(lcd_text_frame);
                     }
                 }
@@ -470,7 +485,10 @@ macro_rules! __i2cs_impl {
                     let (lcd_text_frame, ready_index) = $crate::lcd_text::__select_array([
                         $([<$lcd_name:upper _FRAME_SIGNAL>].wait(),)+
                     ]).await;
-                    $crate::lcd_text::__write_lcd_text_cells(
+                    $crate::lcd_text::__write_lcd_text_cells::<
+                        ADDRESS_COUNT,
+                        { [<__ $group_name:upper _MAX_LCD_CELLS>] }
+                    >(
                         &mut lcd_text_driver,
                         &mut esp_lcd_text_write,
                         &mut initialized_addresses,

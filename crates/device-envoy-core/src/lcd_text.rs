@@ -2,12 +2,7 @@
 //!
 //! See `device_envoy_rp::lcd_text` for constructors and usage examples.
 
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::signal::Signal;
 use embassy_time::Timer;
-
-/// Maximum characters supported by this shared frame container (20x4).
-pub const MAX_LCD_CHARS: usize = 80;
 
 /// Character LCD operation errors shared across platform crates.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -20,23 +15,27 @@ pub enum LcdTextError {
 
 /// A packed text frame for an HD44780 display.
 #[derive(Clone, Copy, Debug)]
-pub struct LcdTextFrame {
+pub struct LcdTextFrame<const MAX_CHARS: usize> {
     /// Frame width in characters.
     pub width: usize,
     /// Frame height in characters.
     pub height: usize,
     /// Packed row-major cell bytes.
-    pub cells: [u8; MAX_LCD_CHARS],
+    pub cells: [u8; MAX_CHARS],
 }
 
-impl LcdTextFrame {
+impl<const MAX_CHARS: usize> LcdTextFrame<MAX_CHARS> {
     /// Create a blank frame with spaces.
     #[must_use]
     pub const fn new_blank(width: usize, height: usize) -> Self {
+        assert!(
+            width * height <= MAX_CHARS,
+            "frame geometry exceeds capacity"
+        );
         Self {
             width,
             height,
-            cells: [b' '; MAX_LCD_CHARS],
+            cells: [b' '; MAX_CHARS],
         }
     }
 
@@ -73,7 +72,9 @@ impl LcdTextFrame {
 /// - Non-ASCII Unicode characters are replaced with `?`.
 /// - Missing characters are padded with spaces.
 #[must_use]
-pub fn render_lcd_text_frame<const W: usize, const H: usize>(text: &str) -> LcdTextFrame {
+pub fn render_lcd_text_frame<const W: usize, const H: usize, const MAX_CHARS: usize>(
+    text: &str,
+) -> LcdTextFrame<MAX_CHARS> {
     let mut rows = [[b' '; W]; H];
 
     for (row_index, line) in text.split('\n').enumerate() {
@@ -89,7 +90,7 @@ pub fn render_lcd_text_frame<const W: usize, const H: usize>(text: &str) -> LcdT
         }
     }
 
-    LcdTextFrame::from_rows(rows)
+    LcdTextFrame::<MAX_CHARS>::from_rows(rows)
 }
 
 /// Platform-agnostic LCD text device contract.
@@ -133,31 +134,6 @@ pub trait LcdText<const W: usize, const H: usize> {
     /// Write text to the display.
     /// See the [LcdText trait documentation](Self) for usage examples.
     fn write_text(&self, text: impl AsRef<str>);
-}
-
-/// Static signal resources for LCD frame delivery.
-pub struct LcdTextStatic {
-    frame_signal: Signal<CriticalSectionRawMutex, LcdTextFrame>,
-}
-
-impl LcdTextStatic {
-    /// Creates static resources for the character LCD device.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            frame_signal: Signal::new(),
-        }
-    }
-
-    /// Signal one full frame to the LCD task.
-    pub fn signal_frame(&self, frame: LcdTextFrame) {
-        self.frame_signal.signal(frame);
-    }
-
-    /// Wait for the next frame signaled to the LCD task.
-    pub async fn wait_frame(&self) -> LcdTextFrame {
-        self.frame_signal.wait().await
-    }
 }
 
 /// Character LCD write adapter for platform crates.
@@ -215,10 +191,10 @@ impl LcdTextDriver {
     }
 
     /// Write one full frame to the LCD.
-    pub async fn write_frame(
+    pub async fn write_frame<const MAX_CHARS: usize>(
         &mut self,
         lcd_text_write: &mut impl LcdTextWrite,
-        lcd_text_frame: &LcdTextFrame,
+        lcd_text_frame: &LcdTextFrame<MAX_CHARS>,
     ) -> Result<(), LcdTextError> {
         self.clear(lcd_text_write).await?;
 

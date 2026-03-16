@@ -196,7 +196,7 @@ impl CoreFlashBlock for FlashBlockRp {
         let offset = block_offset(self.block);
         let result = self.manager.with_flash(|flash| {
             let mut adapter = RpFlashAdapter(flash);
-            core_flash::load_block::<T, _>(&mut adapter, offset)
+            core_flash::load_block::<{ ERASE_SIZE }, T, _>(&mut adapter, offset)
                 .map_err(flash_block_error_to_crate_error)
         })?;
         if result.is_some() {
@@ -214,7 +214,7 @@ impl CoreFlashBlock for FlashBlockRp {
         let offset = block_offset(self.block);
         self.manager.with_flash(|flash| {
             let mut adapter = RpFlashAdapter(flash);
-            core_flash::save_block(&mut adapter, offset, value)
+            core_flash::save_block::<{ ERASE_SIZE }, _, _>(&mut adapter, offset, value)
                 .map_err(flash_block_error_to_crate_error)
         })?;
         info!("Flash: Saved to block {}", self.block);
@@ -225,7 +225,8 @@ impl CoreFlashBlock for FlashBlockRp {
         let offset = block_offset(self.block);
         self.manager.with_flash(|flash| {
             let mut adapter = RpFlashAdapter(flash);
-            core_flash::clear_block(&mut adapter, offset).map_err(flash_block_error_to_crate_error)
+            core_flash::clear_block::<{ ERASE_SIZE }, _>(&mut adapter, offset)
+                .map_err(flash_block_error_to_crate_error)
         })?;
         info!("Flash: Cleared block {}", self.block);
         Ok(())

@@ -2,9 +2,7 @@
 //!
 //! See the platform-specific crate for primary documentation and examples.
 
-use crate::ir::{Ir, IrEvent, IrStatic};
-use heapless::LinearMap;
-
+use crate::ir::IrStatic;
 /// Platform-agnostic IR button mapper device contract.
 ///
 /// Platform crates implement this for their concrete `IrMapping` types so shared logic can wait
@@ -60,62 +58,6 @@ pub trait IrMapping<Button> {
     ///
     /// See the [IrMapping trait documentation](Self) for usage examples.
     async fn wait_for_press(&self) -> Button;
-}
-
-/// Shared mapper implementation for platform IR devices.
-///
-/// This owns a platform IR device plus a `(addr, cmd) -> Button` table and provides
-/// the common `wait_for_press` behavior used by RP/ESP wrappers.
-pub struct IrMappingAdapter<I, B, const N: usize> {
-    ir: I,
-    button_map: LinearMap<(u16, u8), B, N>,
-}
-
-impl<I, B, const N: usize> IrMappingAdapter<I, B, N>
-where
-    B: Copy,
-{
-    /// Build a new adapter from a platform IR device and mapping table entries.
-    ///
-    /// Panics if `button_map` exceeds `N` entries or contains duplicate `(addr, cmd)` keys.
-    #[must_use]
-    pub fn new(ir: I, button_map: &[(u16, u8, B)]) -> Self {
-        let mut linear_map = LinearMap::new();
-        for &(addr, cmd, button) in button_map {
-            let previous_button = match linear_map.insert((addr, cmd), button) {
-                Ok(previous_button) => previous_button,
-                Err(_) => panic!("button_map entries exceed IrMapping capacity"),
-            };
-            assert!(
-                previous_button.is_none(),
-                "button_map contains duplicate (addr, cmd) entries"
-            );
-        }
-
-        Self {
-            ir,
-            button_map: linear_map,
-        }
-    }
-}
-
-impl<I, B, const N: usize> IrMapping<B> for IrMappingAdapter<I, B, N>
-where
-    I: Ir,
-    B: Copy,
-{
-    async fn wait_for_press(&self) -> B {
-        loop {
-            let IrEvent::Press { addr, cmd } = self.ir.wait_for_press().await;
-            #[cfg(feature = "defmt")]
-            defmt::info!("IR received - addr=0x{:04X} cmd=0x{:02X}", addr, cmd);
-            if let Some(&button) = self.button_map.get(&(addr, cmd)) {
-                return button;
-            }
-            #[cfg(feature = "defmt")]
-            defmt::info!("  (unrecognized - ignoring)");
-        }
-    }
 }
 
 /// Static channel resources for IR mapping events.

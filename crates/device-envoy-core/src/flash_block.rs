@@ -18,15 +18,6 @@ pub(crate) const HEADER_SIZE: usize = 10;
 /// Number of bytes used by the CRC trailer.
 pub(crate) const CRC_SIZE: usize = 4;
 
-/// Size of one flash erase block in bytes.
-pub const FLASH_BLOCK_SIZE: usize = 4096;
-
-/// [`FLASH_BLOCK_SIZE`] as a `u32`.
-pub const FLASH_BLOCK_SIZE_U32: u32 = FLASH_BLOCK_SIZE as u32;
-
-/// Maximum number of payload bytes that fit in one block.
-pub(crate) const MAX_PAYLOAD_SIZE: usize = FLASH_BLOCK_SIZE - HEADER_SIZE - CRC_SIZE;
-
 /// Errors returned by [`save_block`], [`load_block`], and [`clear_block`].
 #[derive(Debug)]
 pub enum FlashBlockError<E> {
@@ -165,11 +156,18 @@ pub trait FlashDevice {
     fn erase(&mut self, from: u32, to: u32) -> Result<(), Self::Error>;
 }
 
+/// Maximum payload bytes for a flash block size.
+#[must_use]
+pub const fn max_payload_size(block_size: usize) -> usize {
+    assert!(block_size > HEADER_SIZE + CRC_SIZE, "block_size too small");
+    block_size - HEADER_SIZE - CRC_SIZE
+}
+
 /// Serialize `value` and write it into the block starting at `block_offset`.
 ///
 /// The block is erased before writing. On success the block contains:
 /// magic + type hash + payload length + serialized payload + CRC32.
-pub fn save_block<T, F>(
+pub fn save_block<const BLOCK_SIZE: usize, T, F>(
     flash: &mut F,
     block_offset: u32,
     value: &T,
@@ -178,12 +176,13 @@ where
     T: Serialize + for<'de> Deserialize<'de>,
     F: FlashDevice,
 {
-    let mut payload_buffer = [0u8; MAX_PAYLOAD_SIZE];
-    let payload =
-        postcard::to_slice(value, &mut payload_buffer).map_err(|_| FlashBlockError::FormatError)?;
+    let max_payload_size = max_payload_size(BLOCK_SIZE);
+    let mut payload_buffer = [0u8; BLOCK_SIZE];
+    let payload = postcard::to_slice(value, &mut payload_buffer[..max_payload_size])
+        .map_err(|_| FlashBlockError::FormatError)?;
     let payload_len = payload.len();
 
-    let mut block_bytes = [0xFFu8; FLASH_BLOCK_SIZE];
+    let mut block_bytes = [0xFFu8; BLOCK_SIZE];
     block_bytes[0..4].copy_from_slice(&MAGIC.to_le_bytes());
     block_bytes[4..8].copy_from_slice(&compute_type_hash::<T>().to_le_bytes());
     block_bytes[8..10].copy_from_slice(&(payload_len as u16).to_le_bytes());
@@ -193,8 +192,9 @@ where
     let crc = compute_crc(&block_bytes[..crc_offset]);
     block_bytes[crc_offset..crc_offset + CRC_SIZE].copy_from_slice(&crc.to_le_bytes());
 
+    let block_size_u32 = u32::try_from(BLOCK_SIZE).expect("block size must fit in u32");
     flash
-        .erase(block_offset, block_offset + FLASH_BLOCK_SIZE_U32)
+        .erase(block_offset, block_offset + block_size_u32)
         .map_err(FlashBlockError::Io)?;
     flash
         .write(block_offset, &block_bytes)
@@ -206,7 +206,7 @@ where
 ///
 /// Returns `Ok(None)` when the block has no recognized magic or the stored
 /// type hash does not match `T`. Returns `Err` when the data is corrupt.
-pub fn load_block<T, F>(
+pub fn load_block<const BLOCK_SIZE: usize, T, F>(
     flash: &mut F,
     block_offset: u32,
 ) -> Result<Option<T>, FlashBlockError<F::Error>>
@@ -214,7 +214,7 @@ where
     T: Serialize + for<'de> Deserialize<'de>,
     F: FlashDevice,
 {
-    let mut block_bytes = [0u8; FLASH_BLOCK_SIZE];
+    let mut block_bytes = [0u8; BLOCK_SIZE];
     flash
         .read(block_offset, &mut block_bytes)
         .map_err(FlashBlockError::Io)?;
@@ -231,7 +231,7 @@ where
 
     let payload_len =
         u16::from_le_bytes(block_bytes[8..10].try_into().expect("2-byte slice")) as usize;
-    if payload_len > MAX_PAYLOAD_SIZE {
+    if payload_len > max_payload_size(BLOCK_SIZE) {
         return Err(FlashBlockError::StorageCorrupted);
     }
 
@@ -252,12 +252,13 @@ where
 }
 
 /// Erase the block at `block_offset`.
-pub fn clear_block<F: FlashDevice>(
+pub fn clear_block<const BLOCK_SIZE: usize, F: FlashDevice>(
     flash: &mut F,
     block_offset: u32,
 ) -> Result<(), FlashBlockError<F::Error>> {
+    let block_size_u32 = u32::try_from(BLOCK_SIZE).expect("block size must fit in u32");
     flash
-        .erase(block_offset, block_offset + FLASH_BLOCK_SIZE_U32)
+        .erase(block_offset, block_offset + block_size_u32)
         .map_err(FlashBlockError::Io)
 }
 
@@ -287,11 +288,12 @@ pub(crate) fn compute_crc(bytes: &[u8]) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        FLASH_BLOCK_SIZE, FlashBlockError, FlashDevice, HEADER_SIZE, clear_block, load_block,
+        FlashBlockError, FlashDevice, HEADER_SIZE, clear_block, load_block, max_payload_size,
         save_block,
     };
 
-    const TEST_FLASH_SIZE: usize = FLASH_BLOCK_SIZE * 4;
+    const TEST_FLASH_BLOCK_SIZE: usize = 4096;
+    const TEST_FLASH_SIZE: usize = TEST_FLASH_BLOCK_SIZE * 4;
 
     struct MemoryFlashDevice {
         bytes: [u8; TEST_FLASH_SIZE],
@@ -347,14 +349,15 @@ mod tests {
             timezone_offset_minutes: -300,
         };
 
-        save_block(&mut device, 0, &state).expect("save succeeds");
-        let loaded = load_block::<WifiPersistedState, _>(&mut device, 0)
+        save_block::<TEST_FLASH_BLOCK_SIZE, _, _>(&mut device, 0, &state).expect("save succeeds");
+        let loaded = load_block::<TEST_FLASH_BLOCK_SIZE, WifiPersistedState, _>(&mut device, 0)
             .expect("load succeeds")
             .expect("value exists");
         assert_eq!(loaded, state);
 
-        clear_block(&mut device, 0).expect("clear succeeds");
-        let cleared = load_block::<WifiPersistedState, _>(&mut device, 0).expect("load succeeds");
+        clear_block::<TEST_FLASH_BLOCK_SIZE, _>(&mut device, 0).expect("clear succeeds");
+        let cleared = load_block::<TEST_FLASH_BLOCK_SIZE, WifiPersistedState, _>(&mut device, 0)
+            .expect("load succeeds");
         assert!(cleared.is_none());
     }
 
@@ -364,8 +367,9 @@ mod tests {
         let other = OtherState {
             timezone_offset_minutes: 60,
         };
-        save_block(&mut device, 0, &other).expect("save succeeds");
-        let result = load_block::<WifiPersistedState, _>(&mut device, 0).expect("load succeeds");
+        save_block::<TEST_FLASH_BLOCK_SIZE, _, _>(&mut device, 0, &other).expect("save succeeds");
+        let result = load_block::<TEST_FLASH_BLOCK_SIZE, WifiPersistedState, _>(&mut device, 0)
+            .expect("load succeeds");
         assert!(result.is_none());
     }
 
@@ -377,11 +381,19 @@ mod tests {
             password: heapless::String::new(),
             timezone_offset_minutes: 0,
         };
-        save_block(&mut device, 0, &state).expect("save succeeds");
+        save_block::<TEST_FLASH_BLOCK_SIZE, _, _>(&mut device, 0, &state).expect("save succeeds");
         device.bytes[HEADER_SIZE + 1] ^= 0x5A;
 
-        let error = load_block::<WifiPersistedState, _>(&mut device, 0)
+        let error = load_block::<TEST_FLASH_BLOCK_SIZE, WifiPersistedState, _>(&mut device, 0)
             .expect_err("crc mismatch should fail");
         assert!(matches!(error, FlashBlockError::<()>::StorageCorrupted));
+    }
+
+    #[test]
+    fn max_payload_size_is_header_and_crc_aware() {
+        assert_eq!(
+            max_payload_size(TEST_FLASH_BLOCK_SIZE),
+            TEST_FLASH_BLOCK_SIZE - 14
+        );
     }
 }

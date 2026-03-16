@@ -8,7 +8,7 @@ pub mod kepler;
 pub mod mapping;
 
 pub use kepler::{IrKepler, IrKeplerStatic, KEPLER_MAPPING, KeplerKeys};
-pub use mapping::{IrMapping, IrMappingAdapter, IrMappingStatic};
+pub use mapping::{IrMapping, IrMappingStatic};
 
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel as EmbassyChannel;

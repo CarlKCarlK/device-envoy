@@ -66,8 +66,8 @@ impl Led2dGenerated {
     ///
     /// See the [`led2d`](mod@crate::led2d) module docs for usage examples.
     pub fn new(
-        pin: crate::esp_hal::peripherals::GPIO2<'static>,
-        channel_creator: impl crate::esp_hal::rmt::TxChannelCreator<'static, crate::esp_hal::Blocking>,
+        pin: impl Sized,
+        channel_creator: impl Sized,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
         static INSTANCE: Led2dGenerated = Led2dGenerated;

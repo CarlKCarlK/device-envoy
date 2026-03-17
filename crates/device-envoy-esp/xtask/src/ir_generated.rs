@@ -29,8 +29,8 @@ impl IrGenerated {
     ///
     /// See the [`ir`](mod@crate::ir) module docs for usage examples.
     pub fn new(
-        pin: crate::esp_hal::peripherals::GPIO7<'static>,
-        channel_creator: impl crate::esp_hal::rmt::RxChannelCreator<'static, crate::esp_hal::Async>,
+        pin: impl Sized,
+        channel_creator: impl Sized,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
         static INSTANCE: IrGenerated = IrGenerated;
@@ -74,8 +74,8 @@ impl IrMappingGenerated {
     ///
     /// See the [`ir`](mod@crate::ir) module docs for usage examples.
     pub fn new(
-        pin: crate::esp_hal::peripherals::GPIO7<'static>,
-        channel_creator: impl crate::esp_hal::rmt::RxChannelCreator<'static, crate::esp_hal::Async>,
+        pin: impl Sized,
+        channel_creator: impl Sized,
         button_map: &[(u16, u8, RemoteKeysGenerated)],
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
@@ -108,8 +108,8 @@ impl IrKeplerGenerated {
     ///
     /// See the [`ir`](mod@crate::ir) module docs for usage examples.
     pub fn new(
-        pin: crate::esp_hal::peripherals::GPIO7<'static>,
-        channel_creator: impl crate::esp_hal::rmt::RxChannelCreator<'static, crate::esp_hal::Async>,
+        pin: impl Sized,
+        channel_creator: impl Sized,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
         static INSTANCE: IrKeplerGenerated = IrKeplerGenerated;

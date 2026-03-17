@@ -43,8 +43,8 @@ impl ServoPlayerGenerated {
     /// - `pin`: GPIO pin for servo output
     /// - `spawner`: Task spawner for background operations
     pub fn new(
-        ledc: &crate::esp_hal::ledc::Ledc<'static>,
-        pin: crate::esp_hal::peripherals::GPIO12<'static>,
+        ledc: &impl Sized,
+        pin: impl Sized,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
         static INSTANCE: ServoPlayerGenerated = ServoPlayerGenerated;

@@ -136,8 +136,9 @@ pub mod wifi_auto;
 #[cfg(doc)]
 pub mod docs {
     //! Documentation-only pages for this crate.
-    #[doc = include_str!("docs/development_guide.md")]
-    pub mod development_guide {}
+    pub mod development_guide {
+        #![doc = include_str!("docs/development_guide.md")]
+    }
 }
 
 pub use device_envoy_core::tone;

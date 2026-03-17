@@ -61,11 +61,11 @@ impl AudioPlayerGenerated {
     ///
     /// See the [`audio_player`](mod@crate::audio_player) module docs for usage.
     pub fn new(
-        data_pin: crate::esp_hal::peripherals::GPIO21<'static>,
-        bit_clock_pin: crate::esp_hal::peripherals::GPIO12<'static>,
-        word_select_pin: crate::esp_hal::peripherals::GPIO13<'static>,
-        i2s: crate::esp_hal::peripherals::I2S0<'static>,
-        dma: crate::esp_hal::peripherals::DMA<'static>,
+        data_pin: impl Sized,
+        bit_clock_pin: impl Sized,
+        word_select_pin: impl Sized,
+        i2s: impl Sized,
+        dma: impl Sized,
         spawner: embassy_executor::Spawner,
     ) -> Result<&'static Self> {
         static INSTANCE: AudioPlayerGenerated = AudioPlayerGenerated;

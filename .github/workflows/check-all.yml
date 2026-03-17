@@ -1,0 +1,61 @@
+name: Check All
+
+"on":
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 1 * *"
+
+concurrency:
+  group: check-all-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-all:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf,riscv32imac-unknown-none-elf
+
+      - name: Install ESP toolchain
+        shell: bash
+        run: |
+          cargo install espup --locked
+          espup install \
+            --targets esp32c6,esp32s3 \
+            --export-file "$HOME/export-esp.sh"
+
+      - name: Run workspace check-all
+        run: cargo run --manifest-path xtask/Cargo.toml -- check-all
+
+      - name: Clone blinky compatibility repos
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-rp-blinky.git ../device-envoy-rp-blinky
+          git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-esp-blinky.git ../device-envoy-esp-blinky
+
+      - name: Check device-envoy-rp-blinky on Pico 1 and Pico 2
+        shell: bash
+        run: |
+          cd ../device-envoy-rp-blinky
+          cargo blinky-check
+          cargo blinky-2-check
+
+      - name: Check device-envoy-esp-blinky on ESP32-C6 and ESP32-S3
+        shell: bash
+        run: |
+          cd ../device-envoy-esp-blinky
+          cargo blinky-check
+          source "$HOME/export-esp.sh"
+          cargo +esp blinky-s3-check

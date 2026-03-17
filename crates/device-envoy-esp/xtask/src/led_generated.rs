@@ -32,7 +32,7 @@ impl LedGenerated {
     ///
     /// See the [`led`](mod@crate::led) module docs for usage examples.
     pub fn new(
-        pin: crate::esp_hal::peripherals::GPIO2<'static>,
+        pin: impl Sized,
         on_level: OnLevel,
         spawner: embassy_executor::Spawner,
     ) -> Result<Self> {

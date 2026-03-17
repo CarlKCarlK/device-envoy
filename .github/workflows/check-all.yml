@@ -45,6 +45,20 @@ jobs:
           git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-rp-blinky.git ../device-envoy-rp-blinky
           git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-esp-blinky.git ../device-envoy-esp-blinky
 
+      - name: Patch blinky repos to local device-envoy checkout
+        shell: bash
+        run: |
+          cat <<'EOF' >> ../device-envoy-rp-blinky/Cargo.toml
+
+          [patch.crates-io]
+          device-envoy-rp = { path = "../device-envoy/crates/device-envoy-rp" }
+          EOF
+          cat <<'EOF' >> ../device-envoy-esp-blinky/Cargo.toml
+
+          [patch.crates-io]
+          device-envoy-esp = { path = "../device-envoy/crates/device-envoy-esp" }
+          EOF
+
       - name: Check device-envoy-rp-blinky on Pico 1 and Pico 2
         shell: bash
         run: |

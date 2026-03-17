@@ -41,7 +41,7 @@ enum Commands {
     CheckCompileOnly,
     /// Check all examples (pico1 + pico2, with and without wifi)
     CheckExamples,
-    /// Check all demos (pico1 + pico2, no wifi)
+    /// Check all demos (pico1 + pico2, with and without wifi)
     CheckDemos,
     /// Check documentation: run doc tests and generate docs
     CheckDocs,
@@ -336,7 +336,6 @@ fn check_all() -> ExitCode {
     }
     let examples = discover_examples(&workspace_root);
     let demos = discover_demo_bins(&workspace_root);
-    let no_wifi_demos: Vec<_> = demos.iter().filter(|demo| !demo.wifi_required).collect();
     let no_wifi_examples: Vec<_> = examples
         .iter()
         .filter(|example| !example.wifi_required)
@@ -434,13 +433,23 @@ fn check_all() -> ExitCode {
             });
         });
 
-        // 5. Demos (pico2 + pico1, no wifi)
+        // 5. Demos (pico2 + pico1, with and without wifi)
         s.spawn(|_| {
             println!(
                 "{}",
-                "  [5/10] Demos (pico2 + pico1, no wifi)...".bright_black()
+                "  [5/10] Demos (pico2 + pico1, with and without wifi)...".bright_black()
             );
-            no_wifi_demos.par_iter().for_each(|demo| {
+            demos.par_iter().for_each(|demo| {
+                let features_pico2 = if demo.wifi_required {
+                    features_wifi_pico2.as_str()
+                } else {
+                    features_no_wifi.as_str()
+                };
+                let features_pico1 = if demo.wifi_required {
+                    features_wifi_pico1.as_str()
+                } else {
+                    features_no_wifi_pico1.as_str()
+                };
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                     "build",
                     "-p",
@@ -450,10 +459,10 @@ fn check_all() -> ExitCode {
                     "--target",
                     target_pico2,
                     "--features",
-                    features_no_wifi.as_str(),
+                    features_pico2,
                     "--no-default-features",
                 ])) {
-                    failures.lock().unwrap().push("demos (pico2, no wifi)");
+                    failures.lock().unwrap().push("demos (pico2)");
                 }
                 if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                     "build",
@@ -464,10 +473,10 @@ fn check_all() -> ExitCode {
                     "--target",
                     target_pico1,
                     "--features",
-                    features_no_wifi_pico1.as_str(),
+                    features_pico1,
                     "--no-default-features",
                 ])) {
-                    failures.lock().unwrap().push("demos (pico1, no wifi)");
+                    failures.lock().unwrap().push("demos (pico1)");
                 }
             });
         });
@@ -976,13 +985,22 @@ fn check_demos() -> ExitCode {
     let target_pico1 = arch.target(board_pico1);
     let features_no_wifi_pico2 = build_features(board_pico2, arch, false);
     let features_no_wifi_pico1 = build_features(board_pico1, arch, false);
+    let features_wifi_pico2 = build_features(board_pico2, arch, true);
+    let features_wifi_pico1 = build_features(board_pico1, arch, true);
 
     println!("{}", "==> Checking demos...".cyan());
 
     for demo in &demos {
-        if demo.wifi_required {
-            continue;
-        }
+        let features_pico2 = if demo.wifi_required {
+            features_wifi_pico2.as_str()
+        } else {
+            features_no_wifi_pico2.as_str()
+        };
+        let features_pico1 = if demo.wifi_required {
+            features_wifi_pico1.as_str()
+        } else {
+            features_no_wifi_pico1.as_str()
+        };
         if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
             "build",
             "-p",
@@ -992,7 +1010,7 @@ fn check_demos() -> ExitCode {
             "--target",
             target_pico2,
             "--features",
-            features_no_wifi_pico2.as_str(),
+            features_pico2,
             "--no-default-features",
         ])) {
             return ExitCode::FAILURE;
@@ -1006,7 +1024,7 @@ fn check_demos() -> ExitCode {
             "--target",
             target_pico1,
             "--features",
-            features_no_wifi_pico1.as_str(),
+            features_pico1,
             "--no-default-features",
         ])) {
             return ExitCode::FAILURE;

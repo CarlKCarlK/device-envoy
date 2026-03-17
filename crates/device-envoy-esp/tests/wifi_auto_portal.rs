@@ -1,6 +1,8 @@
 use device_envoy_core::wifi_auto::{generate_config_page, parse_post, WifiCredentials};
-use device_envoy_esp::wifi_auto::fields::{TextField, TimezoneField};
-use device_envoy_esp::wifi_auto::WifiAutoField;
+use device_envoy_esp::wifi_auto::{
+    WifiAutoField,
+    fields::{TextField, TimezoneField},
+};
 
 #[test]
 fn parse_post_decodes_credentials() {

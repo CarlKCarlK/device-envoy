@@ -24,6 +24,7 @@ use device_envoy_esp::{
     led2d::Led2d as _,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::{colors, Current, Gamma},
+    Result,
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
@@ -72,7 +73,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 

@@ -11,13 +11,16 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
+    Error,
     esp_hal::{
         gpio::Level,
         rmt::{PulseCode, TxChannelCreator as _},
     },
     init_and_start,
+    init_and_start::rmt,
     led2d::layout::LedLayout,
     led_strip::{colors, RGB8},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -39,7 +42,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(_spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(_spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
@@ -49,7 +52,7 @@ async fn inner_main(_spawner: Spawner) -> device_envoy_esp::Result<core::convert
 
     let mut tx_channel = rmt80.channel0.configure_tx(
         p.GPIO2,
-        device_envoy_esp::init_and_start::rmt::ws2812_tx_config(),
+        rmt::ws2812_tx_config(),
     )?;
 
     let mut frame1d = [colors::BLACK; LEDS];
@@ -67,7 +70,7 @@ async fn inner_main(_spawner: Spawner) -> device_envoy_esp::Result<core::convert
                 tx_channel
                     .transmit(&pulse_buf)
                     .await
-                    .map_err(device_envoy_esp::Error::Rmt)?;
+                    .map_err(Error::Rmt)?;
                 Timer::after(DOT_DELAY).await;
             }
         }

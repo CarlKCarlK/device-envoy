@@ -13,18 +13,19 @@
 //! use device_envoy_esp::{
 //!     Result,
 //!     init_and_start,
+//!     led,
 //!     led::{Led as _, LedLevel, OnLevel},
 //! };
 //! use embassy_time::Duration;
 //! # #[panic_handler]
 //! # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 //!
-//! device_envoy_esp::led! {
+//! led! {
 //!     pub LedOne {
 //!         pin: GPIO2
 //!     }
 //! }
-//! device_envoy_esp::led! {
+//! led! {
 //!     pub LedTwo {
 //!         pin: GPIO3,
 //!         max_steps: 2

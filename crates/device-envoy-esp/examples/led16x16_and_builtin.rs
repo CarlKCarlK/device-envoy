@@ -17,6 +17,7 @@ use device_envoy_esp::{
     led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
     led_strip,
     led_strip::{colors, Current, Frame1d, LedStrip as _},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -67,7 +68,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(

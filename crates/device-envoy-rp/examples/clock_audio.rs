@@ -20,19 +20,20 @@ use core::time::Duration as StdDuration;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
-use device_envoy_rp::audio_player::SilenceClip;
-use device_envoy_rp::audio_player::{
-    AtEnd, AudioPlayer as _, Gain, VOICE_22050_HZ, Volume, audio_player,
+use device_envoy_rp::{
+    Error, Result, tone,
+    audio_player::{
+        AtEnd, AudioPlayer as _, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
+    },
+    button::PressedTo,
+    button_watch,
+    clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE, h12_m_s},
+    flash_block::FlashBlockRp,
+    wifi_auto::{
+        WifiAutoEvent, WifiAutoRp,
+        fields::{TimezoneField, TimezoneFieldStatic},
+    },
 };
-use device_envoy_rp::button::PressedTo;
-use device_envoy_rp::button_watch;
-use device_envoy_rp::clock_sync::{
-    ClockSync as _, ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE, h12_m_s,
-};
-use device_envoy_rp::flash_block::FlashBlockRp;
-use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
-use device_envoy_rp::{Error, Result, tone};
 use embassy_executor::Spawner;
 use panic_probe as _;
 

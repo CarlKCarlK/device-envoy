@@ -301,10 +301,11 @@ async fn signal_press_durations<B: __ButtonMonitor>(
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_esp::button_watch;
-/// use device_envoy_esp::button::PressDuration;
-/// use device_envoy_esp::button::PressedTo;
-/// use device_envoy_esp::button::Button as _;
+/// use device_envoy_esp::{
+///     Result,
+///     button::{Button as _, PressDuration, PressedTo},
+///     button_watch,
+/// };
 /// use embassy_executor::Spawner;
 /// # use esp_backtrace as _;
 /// # #[panic_handler]
@@ -319,7 +320,7 @@ async fn signal_press_durations<B: __ButtonMonitor>(
 /// async fn example(
 ///     p: esp_hal::peripherals::Peripherals,
 ///     spawner: Spawner,
-/// ) -> device_envoy_esp::Result<()> {
+/// ) -> Result<()> {
 ///     // Create the button monitor (spawns background task automatically)
 ///     let mut button_watch13 = ButtonWatch13::new(p.GPIO13, PressedTo::Ground, spawner)
 ///         .await?;

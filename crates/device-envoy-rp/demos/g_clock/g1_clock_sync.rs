@@ -10,11 +10,11 @@ use core::{convert::Infallible, panic};
 use defmt::info;
 use device_envoy_rp::{
     Error, Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStaticRp, ONE_SECOND, h12_m_s},
     flash_block::FlashBlockRp,
     wifi_auto::fields::{TimezoneField, TimezoneFieldStatic},
-    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
+    wifi_auto::{WifiAutoEvent, WifiAutoRp},
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -35,6 +35,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Timezone is an optional field that users can set on the setup website.
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
+    let mut button13 = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,
@@ -44,15 +45,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO0,
         p.DMA_CH0,
         wifi_credentials_flash_block,
-        p.PIN_13,
-        PressedTo::Ground,
         "ClockSync",
         [timezone_field], // Additional field(s)
         spawner,
     )?;
 
-    let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+    let stack = wifi_auto
+        .connect(&mut button13, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("WifiAutoRp: setup mode ready");

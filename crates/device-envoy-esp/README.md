@@ -51,6 +51,10 @@ The API is actively evolving and may change without compatibility guarantees.
 - [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson.
 - [More Rust articles](https://medium.com/@carlmkadie)
 
+## Thanks
+
+Special thanks to [Brad Gibson](https://github.com/U007D/), organizer of the [Seattle Rust User Group](https://www.meetup.com/seattle-rust-meetup/). He introduced me to Rust programming on microcontrollers, suggested the term *device abstraction*, and encouraged thinking in terms of shared traits across controller families. Those conversations helped set the goals for device-envoy.
+
 ## Examples & Demos
 
 The project includes **examples** (single-device tests) in `examples/` showing integration patterns:

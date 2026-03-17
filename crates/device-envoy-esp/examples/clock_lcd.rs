@@ -18,7 +18,7 @@ use device_envoy_esp::{
     lcd_text::LcdText as _,
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
-        WifiAuto as _, WifiAutoEsp,
+        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
     },
     Error, Result,
 };
@@ -79,13 +79,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             let lcd_text_clock_ref = lcd_text_clock_ref;
             async move {
                 match wifi_auto_event {
-                    device_envoy_esp::wifi_auto::WifiAutoEvent::CaptivePortalReady => {
+                    WifiAutoEvent::CaptivePortalReady => {
                         lcd_text_clock_ref.write_text("Join WiFi:\nDeviceEnvoyClock");
                     }
-                    device_envoy_esp::wifi_auto::WifiAutoEvent::Connecting { .. } => {
+                    WifiAutoEvent::Connecting { .. } => {
                         lcd_text_clock_ref.write_text("Connecting...\nPlease wait");
                     }
-                    device_envoy_esp::wifi_auto::WifiAutoEvent::ConnectionFailed => {
+                    WifiAutoEvent::ConnectionFailed => {
                         lcd_text_clock_ref.write_text("WiFi failed\nRetry setup");
                     }
                 }

@@ -8,7 +8,7 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 
-use device_envoy_esp::{init_and_start, lcd_text, lcd_text::LcdText as _};
+use device_envoy_esp::{init_and_start, lcd_text, lcd_text::LcdText as _, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -31,7 +31,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
     let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;

@@ -20,7 +20,7 @@ use log::info;
 
 use device_envoy_esp::{
     audio_player::{
-        audio_player, pcm_clip, AtEnd, AudioPlayer as _, Gain, SilenceClip, Volume, VOICE_22050_HZ,
+        audio_player, pcm_clip, AtEnd, AudioPlayer, Gain, SilenceClip, Volume, VOICE_22050_HZ,
     },
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start, tone, Result,
@@ -92,9 +92,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         audio_player_gpio21.stop();
         Timer::after(Duration::from_secs(1)).await;
         audio_player_gpio21.set_volume(
-            <AudioPlayerGpio21 as device_envoy_esp::audio_player::AudioPlayer<
-                { AudioPlayerGpio21::SAMPLE_RATE_HZ },
-            >>::INITIAL_VOLUME,
+            <AudioPlayerGpio21 as AudioPlayer<{ AudioPlayerGpio21::SAMPLE_RATE_HZ }>>::INITIAL_VOLUME,
         );
         audio_player_gpio21.play([NASA], AtEnd::Stop);
     }

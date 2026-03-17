@@ -17,7 +17,10 @@ use device_envoy_esp::{
     led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
     led_strip,
     led_strip::{colors, Current, Frame1d, LedStrip as _},
+    Result,
 };
+#[allow(unused_imports)]
+use device_envoy_esp::led_strip::Engine;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -35,7 +38,7 @@ led2d! {
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
         font: Led2dFont::Font4x6Trim,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: Engine::Spi,
         max_frames: 4,
     }
 }
@@ -68,7 +71,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(

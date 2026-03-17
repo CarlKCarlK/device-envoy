@@ -14,20 +14,20 @@ use core::convert::Infallible;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
-use device_envoy_rp::button::PressedTo;
-use device_envoy_rp::button_watch;
-use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE};
-use device_envoy_rp::flash_block::FlashBlockRp;
-use device_envoy_rp::led_strip::Current;
-use device_envoy_rp::led_strip::Gamma;
-use device_envoy_rp::led_strip::colors;
-use device_envoy_rp::led2d;
-use device_envoy_rp::led2d::Frame2d;
-use device_envoy_rp::led2d::Led2dFont;
-use device_envoy_rp::led2d::layout::LedLayout;
-use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
-use device_envoy_rp::{Error, Result, led2d::Led2d as _};
+use device_envoy_rp::{
+    Error, Result,
+    button::PressedTo,
+    button_watch,
+    clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE},
+    flash_block::FlashBlockRp,
+    led2d,
+    led2d::{Frame2d, Led2d as _, Led2dFont, layout::LedLayout},
+    led_strip::{Current, Gamma, colors},
+    wifi_auto::{
+        WifiAutoEvent, WifiAutoRp,
+        fields::{TimezoneField, TimezoneFieldStatic},
+    },
+};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use heapless::String;

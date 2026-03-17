@@ -10,18 +10,19 @@
 use core::convert::Infallible;
 use defmt::{info, warn};
 use defmt_rtt as _;
-use device_envoy_rp::button::Button as _;
-use device_envoy_rp::button::{ButtonRp, PressedTo};
-use device_envoy_rp::clock_sync::UnixSeconds;
-use device_envoy_rp::flash_block::FlashBlockRp;
-use device_envoy_rp::led4::{
-    BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
+use device_envoy_rp::{
+    Error, Result,
+    button::{Button as _, ButtonRp, PressedTo},
+    clock_sync::UnixSeconds,
+    flash_block::FlashBlockRp,
+    led4::{
+        BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
+    },
+    wifi_auto::{
+        WifiAutoEvent, WifiAutoRp,
+        fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
+    },
 };
-use device_envoy_rp::wifi_auto::fields::{
-    TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic,
-};
-use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
-use device_envoy_rp::{Error, Result};
 use embassy_executor::Spawner;
 use embassy_net::{Stack, dns::DnsQueryType, udp};
 use embassy_rp::gpio::{self, Level};

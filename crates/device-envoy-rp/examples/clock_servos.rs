@@ -14,16 +14,18 @@ use core::convert::{Infallible, TryFrom};
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
-use device_envoy_rp::button::PressedTo;
-use device_envoy_rp::button_watch;
-use device_envoy_rp::clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE};
-use device_envoy_rp::flash_block::FlashBlockRp;
-use device_envoy_rp::wifi_auto::fields::{TimezoneField, TimezoneFieldStatic};
-use device_envoy_rp::wifi_auto::{WifiAutoEvent, WifiAutoRp};
-use device_envoy_rp::{Error, Result};
 use device_envoy_rp::{
+    Error, Result,
+    button::PressedTo,
+    button_watch,
+    clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE},
+    flash_block::FlashBlockRp,
     servo::Servo as _,
     servo::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
+    wifi_auto::{
+        WifiAutoEvent, WifiAutoRp,
+        fields::{TimezoneField, TimezoneFieldStatic},
+    },
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};

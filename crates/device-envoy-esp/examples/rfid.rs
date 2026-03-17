@@ -18,6 +18,7 @@ use log::info;
 use device_envoy_esp::{
     init_and_start,
     rfid::{Rfid, RfidEsp, RfidEvent, RfidStatic},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -30,7 +31,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     static RFID_STATIC: RfidStatic = RfidEsp::new_static();
 
     init_and_start!(p);

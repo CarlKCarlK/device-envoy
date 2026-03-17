@@ -13,6 +13,7 @@ use device_envoy_esp::{
     init_and_start, led2d,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::{Current, Gamma},
+    Result,
 };
 use smart_leds::colors;
 
@@ -56,7 +57,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 

@@ -127,7 +127,7 @@
 //! # use core::result::Result::Ok;
 //! use device_envoy_esp::{
 //!     Result,
-//!     audio_player::{AudioPlayer as _,
+//!     audio_player::{AudioPlayer,
 //!         AtEnd, Gain, SilenceClip, Volume, pcm_clip, audio_player, VOICE_22050_HZ,
 //!     },
 //!     button::{ButtonEsp, PressedTo},
@@ -216,7 +216,7 @@
 //!             }
 //!         }
 //!         audio_player8.stop();
-//!         audio_player8.set_volume(<AudioPlayer8 as device_envoy_esp::audio_player::AudioPlayer<{ AudioPlayer8::SAMPLE_RATE_HZ }>>::INITIAL_VOLUME);
+//!         audio_player8.set_volume(<AudioPlayer8 as AudioPlayer<{ AudioPlayer8::SAMPLE_RATE_HZ }>>::INITIAL_VOLUME);
 //!
 //!     }
 //! }

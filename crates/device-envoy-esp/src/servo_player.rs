@@ -1,7 +1,6 @@
 //! A device abstraction for servo animation control on ESP LEDC PWM.
 //!
 //! Use [`servo_player!`] for typed servo players.
-// TODO0 Document LEDC timer/channel ownership protocol and link-time claim behavior in module docs/README.
 
 /// Sample generated servo-player type documentation.
 pub mod servo_player_generated;
@@ -53,6 +52,17 @@ macro_rules! combine {
 /// Use this macro when your project has a servo that needs scripted animation control.
 /// The macro generates a struct type and spawns a background task to execute
 /// animation sequences.
+///
+/// The macro claims one whole [LEDC](crate#glossary) timer resource and one whole
+/// [LEDC](crate#glossary) channel resource for the generated servo player. These
+/// resources cannot be shared with other servo players or other [LEDC](crate#glossary)
+/// users. If you need multiple servo players, generate separate types with separate
+/// timer/channel selections.
+///
+/// Current [LEDC](crate#glossary) resource counts:
+///
+/// - ESP32-C6: 4 timers, 6 channels
+/// - ESP32-S3: 4 timers, 8 channels
 ///
 /// **Syntax:**
 ///

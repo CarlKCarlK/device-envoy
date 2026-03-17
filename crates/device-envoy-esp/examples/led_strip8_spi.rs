@@ -11,7 +11,10 @@ use log::info;
 use device_envoy_esp::{
     init_and_start, led_strip,
     led_strip::{colors, Current, Frame1d, LedStrip as _},
+    Result,
 };
+#[allow(unused_imports)]
+use device_envoy_esp::led_strip::Engine;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -23,7 +26,7 @@ led_strip! {
         pin: GPIO10,
         len: 8,
         max_current: Current::Milliamps(180),
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: Engine::Spi,
         max_frames: 2,
     }
 }
@@ -36,7 +39,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(

@@ -14,7 +14,7 @@ use log::info;
 use device_envoy_esp::{
     button::{ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
-    init_and_start,
+    init_and_start, Result,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
 };
 
@@ -28,7 +28,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 

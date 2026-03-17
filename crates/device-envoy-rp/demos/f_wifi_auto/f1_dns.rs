@@ -9,13 +9,13 @@
 use core::{convert::Infallible, fmt::Write, panic};
 use device_envoy_rp::{
     Result,
-    button::PressedTo,
+    button::{ButtonRp, PressedTo},
     flash_block::FlashBlockRp,
     led_strip::colors,
     led2d,
     led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},
-    wifi_auto::{WifiAuto as _, WifiAutoEvent, WifiAutoRp},
+    wifi_auto::{WifiAutoEvent, WifiAutoRp},
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
@@ -49,6 +49,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Flash stores WiFi credentials after first setup
     let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    let mut button15 = ButtonRp::new(p.PIN_15, PressedTo::Ground);
 
     // Create a WifiAutoRp instance.
     // A button is used to force reconfiguration via setup web page.
@@ -61,8 +62,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIO1,    // Needs a PIO resource
         p.DMA_CH1, // Needs a DMA resource
         wifi_credentials_flash_block,
-        p.PIN_15, // Button for forced reconfiguration
-        PressedTo::Ground,
         "PicoDemo", // Setup SSID
         [],         // Any custom fields
         spawner,
@@ -73,18 +72,18 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     //
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
     let led8x12_ref = &led8x12;
-    let (stack, _button) = wifi_auto
-        .connect(|event| async move {
+    let stack = wifi_auto
+        .connect(&mut button15, |event| async move {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    led8x12_ref.write_text("JO\nIN", COLORS)? // Join setup network
+                    led8x12_ref.write_text("JO\nIN", COLORS); // Join setup network
                 }
-                WifiAutoEvent::Connecting { .. } => show_animated_dots(led8x12_ref)?,
-                WifiAutoEvent::ConnectionFailed => led8x12_ref.write_text("FA\nIL", COLORS)?,
+                WifiAutoEvent::Connecting { .. } => show_animated_dots(led8x12_ref).await?,
+                WifiAutoEvent::ConnectionFailed => led8x12_ref.write_text("FA\nIL", COLORS),
             }
             Ok(())
         })
-        .await;
+        .await?;
 
     // Show initial state with dashes until DNS is fetched.
     led8x12.write_text("--\n--", COLORS);
@@ -125,5 +124,6 @@ async fn show_animated_dots(led8x12: &Led8x12) -> Result<()> {
     led8x12.write_text_to_frame(" \n .", &[COLORS[2]], &mut frames[2].0);
     led8x12.write_text_to_frame(" \n. ", &[COLORS[3]], &mut frames[3].0);
 
-    led8x12.animate(frames)
+    led8x12.animate(frames);
+    Ok(())
 }

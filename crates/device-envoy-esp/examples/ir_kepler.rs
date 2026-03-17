@@ -12,7 +12,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{init_and_start, ir::IrKepler as _, ir_kepler};
+use device_envoy_esp::{init_and_start, ir::IrKepler as _, ir_kepler, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -28,7 +28,7 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 

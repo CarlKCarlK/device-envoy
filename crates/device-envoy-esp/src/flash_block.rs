@@ -245,7 +245,7 @@ impl FlashBlockEspStatic {
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
-/// use device_envoy_esp::{init_and_start, flash_block::{FlashBlockEsp, FlashBlock as _}};
+/// use device_envoy_esp::{Result, init_and_start, flash_block::{FlashBlockEsp, FlashBlock as _}};
 ///
 /// #[derive(serde::Serialize, serde::Deserialize, Clone)]
 /// struct WifiPersistedState {
@@ -254,7 +254,7 @@ impl FlashBlockEspStatic {
 ///     timezone_offset_minutes: i32,
 /// }
 ///
-/// # async fn example() -> device_envoy_esp::Result<core::convert::Infallible> {
+/// # async fn example() -> Result<core::convert::Infallible> {
 /// init_and_start!(p);
 /// let [mut wifi_persisted_state_flash_block, mut fields_flash_block] =
 ///     FlashBlockEsp::new_array::<2>(p.FLASH)?;

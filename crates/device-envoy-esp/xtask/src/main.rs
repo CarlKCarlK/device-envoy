@@ -10,10 +10,12 @@ mod led_strip_generated;
 mod servo_player_generated;
 
 use clap::{Parser, Subcommand};
+use flate2::read::GzDecoder;
 use owo_colors::OwoColorize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+use tar::Archive;
 
 const TARGET_C6: &str = "riscv32imac-unknown-none-elf";
 const TARGET_S3: &str = "xtensa-esp32s3-none-elf";
@@ -741,19 +743,60 @@ fn package_version_from_cargo_toml(crate_root: &Path) -> Result<String, String> 
 fn packaged_manifest_path(crate_root: &Path, package_name: &str) -> Result<PathBuf, String> {
     let package_version = package_version_from_cargo_toml(crate_root)?;
     let package_dir_name = format!("{package_name}-{package_version}");
-    let target_package_manifest_path = crate_root
-        .join("../../target/package")
-        .join(package_dir_name)
-        .join("Cargo.toml");
+    let target_package_dir = crate_root.join("../../target/package");
+    let package_archive_path = target_package_dir.join(format!("{package_dir_name}.crate"));
 
-    if target_package_manifest_path.exists() {
-        Ok(target_package_manifest_path)
-    } else {
-        Err(format!(
-            "Packaged manifest not found at {}. Run `cargo package --allow-dirty` first.",
-            target_package_manifest_path.display()
-        ))
+    if !package_archive_path.exists() {
+        return Err(format!(
+            "Packaged archive not found at {}. Run `cargo package --allow-dirty` first.",
+            package_archive_path.display()
+        ));
     }
+
+    let unpack_root = target_package_dir.join("tmp-crate-unpacked");
+    let unpacked_package_dir = unpack_root.join(&package_dir_name);
+    if unpacked_package_dir.exists() {
+        fs::remove_dir_all(&unpacked_package_dir).map_err(|error| {
+            format!(
+                "Failed to remove previous unpacked package at {}: {error}",
+                unpacked_package_dir.display()
+            )
+        })?;
+    }
+
+    fs::create_dir_all(&unpack_root).map_err(|error| {
+        format!(
+            "Failed to create unpack directory at {}: {error}",
+            unpack_root.display()
+        )
+    })?;
+
+    let archive_file = fs::File::open(&package_archive_path).map_err(|error| {
+        format!(
+            "Failed to open packaged archive at {}: {error}",
+            package_archive_path.display()
+        )
+    })?;
+    let archive_decoder = GzDecoder::new(archive_file);
+    let mut archive = Archive::new(archive_decoder);
+    archive.unpack(&unpack_root).map_err(|error| {
+        format!(
+            "Failed to unpack packaged archive {} into {}: {error}",
+            package_archive_path.display(),
+            unpack_root.display()
+        )
+    })?;
+
+    let target_package_manifest_path = unpacked_package_dir.join("Cargo.toml");
+    if !target_package_manifest_path.exists() {
+        return Err(format!(
+            "Unpacked packaged manifest not found at {} after extracting {}.",
+            target_package_manifest_path.display(),
+            package_archive_path.display()
+        ));
+    }
+
+    Ok(target_package_manifest_path)
 }
 /// Prepends `dir` to the `PATH` environment variable for `cmd`.
 ///

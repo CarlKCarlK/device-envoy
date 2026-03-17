@@ -1,6 +1,6 @@
 [package]
 name = "device-envoy-esp"
-version = "0.0.5-alpha.2"
+version = "0.0.5-alpha.3"
 edition = "2021"
 description = "Build ESP32 applications with composable device abstractions"
 keywords = ["embedded", "esp32", "esp32c6", "esp32s3", "ws2812"]
@@ -15,6 +15,7 @@ all-features = false
 no-default-features = true
 default-target = "riscv32imac-unknown-none-elf"
 targets = ["riscv32imac-unknown-none-elf"]
+features = ["doc-images"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]

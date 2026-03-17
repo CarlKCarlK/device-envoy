@@ -64,5 +64,4 @@ impl crate::button::__ButtonMonitor for ButtonWatchGenerated {
 }
 
 #[cfg(doc)]
-impl crate::button::Button for ButtonWatchGenerated {
-}
+impl crate::button::Button for ButtonWatchGenerated {}

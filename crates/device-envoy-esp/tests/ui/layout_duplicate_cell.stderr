@@ -5,7 +5,12 @@ error[E0080]: evaluation panicked: duplicate (col,row) in mapping
   |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `INVALID` failed inside this call
   |
 note: inside `LedLayout::<3, 3, 1>::new`
- --> $WORKSPACE/crates/device-envoy-core/src/led2d/layout.rs
+ --> $RUST/core/src/panic.rs
+  |
+  |         $crate::panicking::panic_fmt($crate::const_format_args!($($t)+));
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the failure occurred here
+  |
+ ::: $WORKSPACE/crates/device-envoy-core/src/led2d/layout.rs
   |
   |             assert!(!seen[cell], "duplicate (col,row) in mapping");
-  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the failure occurred here
+  |             ------------------------------------------------------ in this macro invocation

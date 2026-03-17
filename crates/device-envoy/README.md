@@ -8,11 +8,12 @@ Top-level landing crate for the device-envoy platform crates.
 
 `device-envoy` is a lightweight crate intended to help users pick the correct platform crate.
 
-Use one of these crates for device APIs and platform setup:
+Do not start a new project with `device-envoy` itself. Choose one of the platform crates below instead.
+
+
 
 - [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/) for Raspberry Pi Pico targets
 - [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/) for ESP32 targets
-- [`device-envoy-core`](https://docs.rs/device-envoy-core/latest/device_envoy_core/) for shared traits and types
 
 ## Status
 

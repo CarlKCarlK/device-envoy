@@ -112,7 +112,7 @@ If you want to edit this workspace, start here: [development.md](development.md)
 
 Licensed under either:
 
-- MIT license (see LICENSE-MIT file)
-- Apache License, Version 2.0
+- MIT license (see LICENSE-MIT)
+- Apache License, Version 2.0 (see LICENSE-APACHE)
 
 at your option.

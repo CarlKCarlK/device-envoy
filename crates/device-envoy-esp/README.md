@@ -1,8 +1,5 @@
 # device-envoy-esp
 
-<!-- todo000 create and publish template repo: device-envoy-blinky-esp -->
-<!-- todo000 create and publish template repo: device-envoy-blinky-rp -->
-
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
 [![crates.io](https://img.shields.io/crates/v/device-envoy-esp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-esp)
 [![docs.rs](https://img.shields.io/docsrs/device-envoy-esp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-esp)
@@ -141,7 +138,7 @@ All code and documentation contributed to this repository must be reviewed, edit
 
 Licensed under either:
 
-- MIT license (see LICENSE-MIT file)
-- Apache License, Version 2.0
+- MIT license (see the repository root `LICENSE-MIT` file)
+- Apache License, Version 2.0 (see the repository root `LICENSE-APACHE` file)
 
 at your option.

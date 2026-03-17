@@ -132,7 +132,7 @@ All code and documentation contributed to this repository must be reviewed, edit
 
 Licensed under either:
 
-- MIT license (see LICENSE-MIT file)
-- Apache License, Version 2.0
+- MIT license (see the repository root `LICENSE-MIT` file)
+- Apache License, Version 2.0 (see the repository root `LICENSE-APACHE` file)
 
 at your option.

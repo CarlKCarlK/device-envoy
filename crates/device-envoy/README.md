@@ -24,7 +24,7 @@ APIs are actively evolving.
 
 Licensed under either:
 
-- MIT license (see `LICENSE-MIT`)
-- Apache License, Version 2.0
+- MIT license (see the repository root `LICENSE-MIT` file)
+- Apache License, Version 2.0 (see the repository root `LICENSE-APACHE` file)
 
 at your option.

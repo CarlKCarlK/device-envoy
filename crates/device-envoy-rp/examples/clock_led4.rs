@@ -20,9 +20,7 @@ use device_envoy_rp::{
     button_watch,
     clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE},
     flash_block::FlashBlockRp,
-    led4::{
-        BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
-    },
+    led4::{BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation},
     wifi_auto::{
         WifiAutoEvent, WifiAutoRp,
         fields::{TimezoneField, TimezoneFieldStatic},

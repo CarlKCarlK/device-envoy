@@ -15,9 +15,7 @@ use device_envoy_rp::{
     button::{Button as _, ButtonRp, PressedTo},
     clock_sync::UnixSeconds,
     flash_block::FlashBlockRp,
-    led4::{
-        BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation,
-    },
+    led4::{BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation},
     wifi_auto::{
         WifiAutoEvent, WifiAutoRp,
         fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},

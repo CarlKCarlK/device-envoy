@@ -24,11 +24,11 @@ use device_envoy_esp::{
     led2d::Led2d as _,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::{colors, Current, Gamma},
-    Result,
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
     },
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

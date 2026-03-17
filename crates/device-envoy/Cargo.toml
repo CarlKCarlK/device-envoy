@@ -1,6 +1,6 @@
 [package]
 name = "device-envoy"
-version = "0.0.5-alpha.0"
+version = "0.0.5-alpha.4"
 edition = "2024"
 description = "Top-level landing crate for device-envoy platform crates"
 keywords = ["embedded", "no-std", "embassy", "ws2812", "device-abstraction"]

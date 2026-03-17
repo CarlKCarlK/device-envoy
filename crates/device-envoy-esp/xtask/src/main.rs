@@ -298,11 +298,19 @@ fn check_all() -> ExitCode {
     }
 
     println!("{}", "--> packaged embedded verify (c6)".cyan());
-    if !run(Command::new("cargo").current_dir(&root).args([
-        "package",
-        "--allow-dirty",
-        "--no-verify",
-    ])) {
+    let device_envoy_core_path = root.join("../device-envoy-core");
+    let device_envoy_core_patch = format!(
+        "patch.crates-io.device-envoy-core.path=\"{}\"",
+        device_envoy_core_path.display()
+    );
+    let mut package_command = Command::new("cargo");
+    package_command
+        .current_dir(&root)
+        .args(["package", "--allow-dirty", "--no-verify"]);
+    package_command
+        .arg("--config")
+        .arg(&device_envoy_core_patch);
+    if !run(&mut package_command) {
         return ExitCode::FAILURE;
     }
 
@@ -321,7 +329,9 @@ fn check_all() -> ExitCode {
         .arg("--release")
         .arg("--manifest-path")
         .arg(&packaged_manifest_path)
-        .args(["--target", TARGET_C6, "--no-default-features"]);
+        .args(["--target", TARGET_C6, "--no-default-features"])
+        .arg("--config")
+        .arg(&device_envoy_core_patch);
     if !run(&mut packaged_check_command) {
         return ExitCode::FAILURE;
     }
@@ -597,6 +607,7 @@ fn check_readme_example() -> ExitCode {
         }
         cmd.args([
             "check",
+            "--release",
             "--example",
             "__readme_example_generated",
             "--target",

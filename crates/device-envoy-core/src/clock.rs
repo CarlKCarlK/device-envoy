@@ -312,6 +312,7 @@ async fn clock_device_loop(resources: &'static ClockStatic) -> ! {
 }
 
 async fn inner_clock_device_loop(resources: &'static ClockStatic) -> ! {
+    let clock = Clock::from_static(resources);
     let mut tick_interval_ms = resources.tick_interval_ms.load(Ordering::Relaxed);
     let mut speed_scaled_ppm = resources.speed_scaled_ppm.load(Ordering::Relaxed);
     let offset_minutes = resources.offset_minutes.load(Ordering::Relaxed);
@@ -326,42 +327,98 @@ async fn inner_clock_device_loop(resources: &'static ClockStatic) -> ! {
     #[cfg(not(feature = "defmt"))]
     let _ = offset_minutes;
 
-    let sleep_until_boundary = |interval_micros: u64| -> Duration {
-        assert!(interval_micros > 0);
-        let now_ticks = Instant::now().as_ticks();
-        let ticks_until_next = interval_micros - (now_ticks % interval_micros);
-        Duration::from_micros(ticks_until_next)
-    };
+    let mut time_was_set = resources.base_unix_micros.load(Ordering::Relaxed) != 0;
 
-    let mut emit_tick = true;
     loop {
-        if emit_tick {
-            resources.ticks.signal(());
-        }
-        emit_tick = true;
-
         if tick_interval_ms == 0 {
-            // No periodic ticks; wait for a command to trigger a single tick.
+            // No periodic ticks; emit only when time/offset/speed/tick interval changes.
             resources.updates.wait().await;
             tick_interval_ms = resources.tick_interval_ms.load(Ordering::Relaxed);
             speed_scaled_ppm = resources.speed_scaled_ppm.load(Ordering::Relaxed);
+            let time_is_set = resources.base_unix_micros.load(Ordering::Relaxed) != 0;
+            if tick_interval_ms == 0 && time_is_set {
+                resources.ticks.signal(());
+            }
+            time_was_set = time_is_set;
+            continue;
+        }
+
+        let time_is_set = resources.base_unix_micros.load(Ordering::Relaxed) != 0;
+        if !time_is_set {
+            resources.updates.wait().await;
+            tick_interval_ms = resources.tick_interval_ms.load(Ordering::Relaxed);
+            speed_scaled_ppm = resources.speed_scaled_ppm.load(Ordering::Relaxed);
+            let time_is_set = resources.base_unix_micros.load(Ordering::Relaxed) != 0;
+            if !time_was_set && time_is_set && tick_interval_ms != 0 {
+                resources.ticks.signal(());
+            }
+            time_was_set = time_is_set;
             continue;
         }
 
         let interval_micros = scaled_interval_microseconds(tick_interval_ms, speed_scaled_ppm);
-        let sleep_duration = sleep_until_boundary(interval_micros);
+        let sleep_duration = Duration::from_micros(real_micros_until_next_clock_boundary(
+            &clock,
+            interval_micros,
+            speed_scaled_ppm,
+        ));
 
         match select(Timer::after(sleep_duration), resources.updates.wait()).await {
             Either::First(_) => {
-                // Timer elapsed — tick occurred; loop will signal again.
+                // Timer elapsed — emit the aligned periodic tick.
+                resources.ticks.signal(());
+                time_was_set = true;
             }
             Either::Second(_) => {
                 tick_interval_ms = resources.tick_interval_ms.load(Ordering::Relaxed);
                 speed_scaled_ppm = resources.speed_scaled_ppm.load(Ordering::Relaxed);
-                emit_tick = true;
+                let time_is_set = resources.base_unix_micros.load(Ordering::Relaxed) != 0;
+                if !time_was_set && time_is_set && tick_interval_ms != 0 {
+                    resources.ticks.signal(());
+                }
+                time_was_set = time_is_set;
             }
         }
     }
+}
+
+fn real_micros_until_next_clock_boundary(
+    clock: &Clock,
+    interval_micros: u64,
+    speed_scaled_ppm: u64,
+) -> u64 {
+    assert!(interval_micros > 0, "interval must be positive");
+    assert!(speed_scaled_ppm > 0, "speed must be positive");
+
+    let local_unix_micros = clock.now_local().unix_timestamp_nanos() / 1_000;
+    let local_micros_until_boundary =
+        micros_until_next_boundary(local_unix_micros, interval_micros);
+    scale_local_microseconds_to_real(local_micros_until_boundary, speed_scaled_ppm)
+}
+
+fn micros_until_next_boundary(local_unix_micros: i128, interval_micros: u64) -> u64 {
+    assert!(interval_micros > 0, "interval must be positive");
+
+    let interval_micros = i128::from(interval_micros);
+    let remainder = local_unix_micros.rem_euclid(interval_micros);
+    let micros_until_boundary = if remainder == 0 {
+        interval_micros
+    } else {
+        interval_micros - remainder
+    };
+
+    u64::try_from(micros_until_boundary).expect("boundary duration fits in u64")
+}
+
+fn scale_local_microseconds_to_real(local_micros: u64, speed_scaled_ppm: u64) -> u64 {
+    assert!(local_micros > 0, "local duration must be positive");
+    assert!(speed_scaled_ppm > 0, "speed must be positive");
+
+    let scaled =
+        u128::from(local_micros) * u128::from(SPEED_SCALE_PPM) / u128::from(speed_scaled_ppm);
+    let scaled = u64::try_from(scaled).expect("scaled duration fits in u64");
+    assert!(scaled > 0, "scaled duration must be positive");
+    scaled
 }
 
 fn scaled_interval_microseconds(interval_ms: u64, speed_scaled_ppm: u64) -> u64 {
@@ -382,4 +439,37 @@ fn scale_elapsed_microseconds(elapsed_ticks: u64, speed_scaled_ppm: u64) -> i64 
     let scaled =
         u128::from(elapsed_ticks) * u128::from(speed_scaled_ppm) / u128::from(SPEED_SCALE_PPM);
     i64::try_from(scaled).expect("scaled elapsed fits in i64")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SPEED_SCALE_PPM, micros_until_next_boundary, scale_local_microseconds_to_real};
+
+    #[test]
+    fn next_boundary_for_partial_minute_is_remaining_time() {
+        assert_eq!(
+            micros_until_next_boundary(12_59_53i128 * 1_000_000, 60_000_000),
+            7_000_000
+        );
+    }
+
+    #[test]
+    fn next_boundary_at_exact_boundary_waits_full_interval() {
+        assert_eq!(
+            micros_until_next_boundary(13_00_00i128 * 1_000_000, 60_000_000),
+            60_000_000
+        );
+    }
+
+    #[test]
+    fn local_duration_scales_back_to_real_time() {
+        assert_eq!(
+            scale_local_microseconds_to_real(7_000_000, SPEED_SCALE_PPM),
+            7_000_000
+        );
+        assert_eq!(
+            scale_local_microseconds_to_real(7_000_000, SPEED_SCALE_PPM * 2),
+            3_500_000
+        );
+    }
 }

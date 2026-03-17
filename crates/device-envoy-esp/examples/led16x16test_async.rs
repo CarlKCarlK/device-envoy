@@ -11,7 +11,6 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Error,
     esp_hal::{
         gpio::Level,
         rmt::{PulseCode, TxChannelCreator as _},
@@ -20,7 +19,7 @@ use device_envoy_esp::{
     init_and_start::rmt,
     led2d::layout::LedLayout,
     led_strip::{colors, RGB8},
-    Result,
+    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -50,10 +49,9 @@ async fn inner_main(_spawner: Spawner) -> Result<core::convert::Infallible> {
         PANEL_16X16_PIN_NUM
     );
 
-    let mut tx_channel = rmt80.channel0.configure_tx(
-        p.GPIO2,
-        rmt::ws2812_tx_config(),
-    )?;
+    let mut tx_channel = rmt80
+        .channel0
+        .configure_tx(p.GPIO2, rmt::ws2812_tx_config())?;
 
     let mut frame1d = [colors::BLACK; LEDS];
     let mut pulse_buf = [PulseCode::end_marker(); PULSES];
@@ -67,10 +65,7 @@ async fn inner_main(_spawner: Spawner) -> Result<core::convert::Infallible> {
                 frame1d[led_index] = colors::WHITE;
 
                 encode_ws2812(&frame1d, &mut pulse_buf);
-                tx_channel
-                    .transmit(&pulse_buf)
-                    .await
-                    .map_err(Error::Rmt)?;
+                tx_channel.transmit(&pulse_buf).await.map_err(Error::Rmt)?;
                 Timer::after(DOT_DELAY).await;
             }
         }

@@ -1,0 +1,106 @@
+#![allow(missing_docs)]
+//! Minimal Wi-Fi clock that logs the local time once per minute.
+
+#![no_std]
+#![no_main]
+
+use core::convert::Infallible;
+
+use embassy_executor::Spawner;
+use esp_backtrace as _;
+use log::info;
+
+use device_envoy_esp::{
+    button::{ButtonEsp, PressedTo},
+    clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStaticEsp, ONE_MINUTE},
+    flash_block::FlashBlockEsp,
+    init_and_start,
+    wifi_auto::{
+        fields::{TimezoneField, TimezoneFieldStatic},
+        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
+    },
+    Error, Result,
+};
+
+esp_bootloader_esp_idf::esp_app_desc!();
+
+#[esp_rtos::main]
+async fn main(spawner: Spawner) -> ! {
+    match inner_main(spawner).await {
+        Ok(infallible) => match infallible {},
+        Err(error) => panic!("{error:?}"),
+    }
+}
+
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+    init_and_start!(p);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
+    info!("Starting simple console clock");
+
+    let [wifi_auto_flash_block, timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
+
+    static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
+    let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+
+    let wifi_auto = WifiAutoEsp::new(
+        p.WIFI,
+        wifi_auto_flash_block,
+        "DeviceEnvoyClock",
+        [timezone_field],
+        spawner,
+    )?;
+
+    let stack = wifi_auto
+        .connect(&mut button6, |wifi_auto_event| async move {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    info!("Captive portal ready; connect to DeviceEnvoyClock");
+                }
+                WifiAutoEvent::Connecting {
+                    try_index,
+                    try_count,
+                } => {
+                    info!(
+                        "Connecting to Wi-Fi (attempt {} of {})",
+                        try_index + 1,
+                        try_count
+                    );
+                }
+                WifiAutoEvent::ConnectionFailed => {
+                    info!("Wi-Fi connection failed");
+                }
+            }
+            Ok(())
+        })
+        .await?;
+
+    let timezone_offset_minutes = timezone_field
+        .offset_minutes()?
+        .ok_or(Error::MissingCustomWifiAutoField)?;
+
+    static CLOCK_SYNC_STATIC: ClockSyncStaticEsp = ClockSyncEsp::new_static();
+    let clock_sync = ClockSyncEsp::new(
+        &CLOCK_SYNC_STATIC,
+        stack,
+        timezone_offset_minutes,
+        Some(ONE_MINUTE),
+        spawner,
+    );
+
+    info!("Wi-Fi connected; logging the time every minute");
+
+    loop {
+        let tick = clock_sync.wait_for_tick().await;
+        let local_time = tick.local_time;
+        info!(
+            "Current time: {:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+            local_time.year(),
+            u8::from(local_time.month()),
+            local_time.day(),
+            local_time.hour(),
+            local_time.minute(),
+            local_time.second(),
+        );
+    }
+}

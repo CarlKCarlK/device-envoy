@@ -622,11 +622,20 @@ fn check_all() -> ExitCode {
         "==> Verifying packaged embedded build (pico2)...".cyan()
     );
 
-    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
-        "package",
-        "--allow-dirty",
-        "--no-verify",
-    ])) {
+    let device_envoy_core_path = workspace_root.join("../device-envoy-core");
+    let device_envoy_core_patch = format!(
+        "patch.crates-io.device-envoy-core.path=\"{}\"",
+        device_envoy_core_path.display()
+    );
+
+    let mut package_command = Command::new("cargo");
+    package_command
+        .current_dir(&workspace_root)
+        .args(["package", "--allow-dirty", "--no-verify"]);
+    package_command
+        .arg("--config")
+        .arg(&device_envoy_core_patch);
+    if !run_command(&mut package_command) {
         return ExitCode::FAILURE;
     }
 
@@ -651,6 +660,9 @@ fn check_all() -> ExitCode {
             features_no_wifi.as_str(),
             "--no-default-features",
         ]);
+    packaged_check_command
+        .arg("--config")
+        .arg(&device_envoy_core_patch);
     if !run_command(&mut packaged_check_command) {
         return ExitCode::FAILURE;
     }

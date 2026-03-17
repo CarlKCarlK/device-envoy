@@ -20,9 +20,9 @@ use device_envoy_rp::{
     button_watch,
     clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE},
     flash_block::FlashBlockRp,
+    led_strip::{Current, Gamma, colors},
     led2d,
     led2d::{Frame2d, Led2d as _, Led2dFont, layout::LedLayout},
-    led_strip::{Current, Gamma, colors},
     wifi_auto::{
         WifiAutoEvent, WifiAutoRp,
         fields::{TimezoneField, TimezoneFieldStatic},

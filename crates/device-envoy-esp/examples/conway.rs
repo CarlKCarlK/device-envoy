@@ -8,14 +8,14 @@ use device_envoy_example_common::conway::conway_with_led2d_ir_kepler;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 
+#[allow(unused_imports)]
+use device_envoy_esp::led_strip::Engine;
 use device_envoy_esp::{
     init_and_start, ir_kepler, led2d,
     led2d::{layout::LedLayout, Led2dFont},
     led_strip::Current,
     Result,
 };
-#[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

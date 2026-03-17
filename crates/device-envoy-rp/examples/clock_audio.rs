@@ -21,7 +21,7 @@ use defmt::info;
 use defmt_rtt as _;
 use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use device_envoy_rp::{
-    Error, Result, tone,
+    Error, Result,
     audio_player::{
         AtEnd, AudioPlayer as _, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
     },
@@ -29,6 +29,7 @@ use device_envoy_rp::{
     button_watch,
     clock_sync::{ClockSync as _, ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE, h12_m_s},
     flash_block::FlashBlockRp,
+    tone,
     wifi_auto::{
         WifiAutoEvent, WifiAutoRp,
         fields::{TimezoneField, TimezoneFieldStatic},

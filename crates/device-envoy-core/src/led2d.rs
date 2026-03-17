@@ -9,8 +9,8 @@
 //! displays. See the platform crate (`device-envoy-rp` or `device-envoy-esp`) for the
 //! primary documentation and examples.
 //!
-//! [led2d1]: https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d1.png
-//! [led2d2]: https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d2.png
+//! [led2d1]: https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led2d1.png
+//! [led2d2]: https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led2d2.png
 
 pub mod layout;
 
@@ -67,7 +67,7 @@ use crate::led_strip::{Frame1d as StripFrame, LedStrip as LedStripTrait};
 ///
 /// In this example, we render text on a 12x4 panel.
 ///
-/// ![LED panel preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d1.png)
+/// ![LED panel preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led2d1.png)
 ///
 /// ```rust,no_run
 /// use device_envoy_core::led2d::Led2d;
@@ -104,7 +104,7 @@ use crate::led_strip::{Frame1d as StripFrame, LedStrip as LedStripTrait};
 ///
 /// This example animates text on an LED panel.
 ///
-/// ![LED panel preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d2.png)
+/// ![LED panel preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led2d2.png)
 ///
 /// ```rust,no_run
 /// use device_envoy_core::led2d::{Frame2d, Led2d};

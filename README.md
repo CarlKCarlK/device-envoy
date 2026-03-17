@@ -64,7 +64,7 @@ Special thanks to [Brad Gibson](https://github.com/U007D/), organizer of the [Se
 
 This example is from `device-envoy-rp` and cycles a 96-LED strip through red, green, and blue frames.
 
-![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_animated.png)
+![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led_strip_animated.png)
 
 ```rust,no_run
 # #![no_std]

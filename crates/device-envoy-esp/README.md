@@ -63,7 +63,7 @@ The project includes **examples** (single-device tests) in `examples/` showing i
 
 This example cycles a 96-LED strip through red, green, and blue frames.
 
-![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_animated.png)
+![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-esp/docs/assets/led_strip_animated.png)
 
 It shows how device-envoy generates a struct (device abstraction) for an LED
 strip and then animates a sequence of frames.
@@ -105,7 +105,7 @@ async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 - **LED Strip Examples**: Simple animations, color control, text rendering
 - **LED Panel Examples**: 12×8, 16×16, and multi-panel configurations with graphics
 
-![Animated LED panel Go Go example](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led2d2.png)
+![Animated LED panel Go Go example](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-esp/docs/assets/led2d2.png)
 
 - **Button Examples**: Debouncing and state handling
 - **Servo Examples**: Position sweeps and animation playback

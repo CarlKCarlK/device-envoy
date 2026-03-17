@@ -306,7 +306,7 @@ use heapless::Vec;
 ///
 /// In this example, we set every other LED to blue and gray.
 ///
-/// ![LED strip preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_simple.png)
+/// ![LED strip preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led_strip_simple.png)
 ///
 /// ```rust,no_run
 /// use device_envoy_core::led_strip::{Frame1d, LedStrip, colors};
@@ -340,7 +340,7 @@ use heapless::Vec;
 /// This example animates a 96-LED strip through red, green, and blue frames, cycling
 /// continuously.
 ///
-/// ![LED strip preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/docs/assets/led_strip_animated.png)
+/// ![LED strip preview](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led_strip_animated.png)
 ///
 /// ```rust,no_run
 /// use device_envoy_core::led_strip::{Frame1d, LedStrip, colors};

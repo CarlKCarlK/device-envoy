@@ -16,7 +16,7 @@ Currently targeting ESP32-C6 and ESP32-S3 in [`device-envoy-esp`](https://docs.r
 
 Want a minimal starting project?
 
-- [`device-envoy-blinky-esp` on GitHub](https://github.com/CarlKCarlK/device-envoy-blinky-esp)
+- [`device-envoy-esp-blinky` on GitHub](https://github.com/CarlKCarlK/device-envoy-esp-blinky)
 
 ## Status
 
@@ -112,7 +112,7 @@ See the `examples/` directory for complete runnable code.
 
 ## Building & Running
 
-- If you just want to use this library, start from the template project: [`device-envoy-blinky-esp`](https://github.com/CarlKCarlK/device-envoy-blinky-esp).
+- If you just want to use this library, start from the template project: [`device-envoy-esp-blinky`](https://github.com/CarlKCarlK/device-envoy-esp-blinky).
 - If you want to edit this project, see the [Development Guide](docs/development_guide/index.html) (or on GitHub: [development.md](https://github.com/CarlKCarlK/device-envoy/blob/main/development.md)).
 
 ## Glossary

@@ -1,7 +1,5 @@
 # device-envoy-rp
 
-<!-- todo0 create and publish template repo: device-envoy-blinky-esp -->
-<!-- todo0 create and publish template repo: device-envoy-blinky-rp -->
 
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
 [![crates.io](https://img.shields.io/crates/v/device-envoy-rp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-rp)
@@ -21,7 +19,7 @@ Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores) in [`device-envoy
 
 Want a minimal starting project?
 
-- [`device-envoy-blinky-rp` on GitHub](https://github.com/CarlKCarlK/device-envoy-blinky-rp)
+- [`device-envoy-rp-blinky` on GitHub](https://github.com/CarlKCarlK/device-envoy-rp-blinky)
 
 ## Status
 
@@ -117,7 +115,7 @@ See the `examples/` and `demos/` directories for complete runnable code.
 
 ## Building & Running
 
-- If you just want to use this library, start from the template project: [`device-envoy-blinky-rp`](https://github.com/CarlKCarlK/device-envoy-blinky-rp).
+- If you just want to use this library, start from the template project: [`device-envoy-rp-blinky`](https://github.com/CarlKCarlK/device-envoy-rp-blinky).
 - If you want to edit this project, see the [Development Guide](docs/development_guide/index.html) (or on GitHub: [development.md](https://github.com/CarlKCarlK/device-envoy/blob/main/development.md)).
 
 ## Policy on AI-assisted development and contributions

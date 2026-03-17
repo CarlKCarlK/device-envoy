@@ -10,6 +10,13 @@ repository = "https://github.com/CarlKCarlK/device-envoy"
 documentation = "https://docs.rs/device-envoy-esp"
 homepage = "https://github.com/CarlKCarlK/device-envoy"
 
+[package.metadata.docs.rs]
+all-features = false
+no-default-features = true
+default-target = "riscv32imac-unknown-none-elf"
+targets = ["riscv32imac-unknown-none-elf"]
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
 host = []
 compile-fail-tests = []

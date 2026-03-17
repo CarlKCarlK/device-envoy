@@ -68,7 +68,7 @@ pub mod wifi_auto;
 #[cfg(doc)]
 pub mod docs {
     //! Documentation-only pages for this crate.
-    #[doc = include_str!("../../../development.md")]
+    #[doc = include_str!("docs/development_guide.md")]
     pub mod development_guide {}
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "device-envoy-core"
-version = "0.0.5-alpha.3"
+version = "0.0.5-alpha.5"
 edition = "2024"
 description = "Shared traits and data types for device-envoy platform crates"
 keywords = ["embedded", "no-std", "embassy", "ws2812", "device-abstraction"]

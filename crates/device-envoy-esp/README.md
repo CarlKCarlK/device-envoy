@@ -10,7 +10,7 @@
 It organizes hardware around device abstractions so application code can use
 small, focused APIs instead of managing low-level coordination directly.
 
-Currently targeting ESP32-C6 and ESP32-S3 in [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/), and Raspberry Pi Pico 1 and Pico 2 (ARM cores) in [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/).
+`device-envoy-esp` currently runs on and is tested with ESP32-C6 and ESP32-S3.
 
 ## Start From a Template
 

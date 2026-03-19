@@ -76,6 +76,12 @@ ir-kepler-example1-trait-s3:
 ir-kepler-example1-trait-s3-check:
     source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_kepler_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
 
+conway-s3:
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example conway --target xtensa-esp32s3-none-elf --release --no-default-features
+
+conway-s3-check:
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example conway --target xtensa-esp32s3-none-elf --release --no-default-features
+
 rfid-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example rfid --target xtensa-esp32s3-none-elf --release --no-default-features
 

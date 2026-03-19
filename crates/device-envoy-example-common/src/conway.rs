@@ -46,6 +46,7 @@ where
     let mut pattern_index = 0usize;
     let mut speed_mode = SpeedMode::Slow;
     let mut paused = false;
+    let mut display_power = DisplayPower::On;
     let mut color_index = 0usize;
     let mut alive_color = ALIVE_COLORS[color_index];
     board.add_pattern(PATTERNS[pattern_index]);
@@ -54,76 +55,73 @@ where
     let mut empty_tracker = 0u8;
 
     loop {
-        let frame2d = board.to_frame(alive_color);
-        led2d.write_frame(frame2d);
+        match display_power {
+            DisplayPower::On => {
+                let frame2d = board.to_frame(alive_color);
+                led2d.write_frame(frame2d);
 
-        let frame_duration = speed_mode.frame_duration();
+                let frame_duration = speed_mode.frame_duration();
 
-        match select(Timer::after(frame_duration), ir_kepler.wait_for_press()).await {
-            Either::First(_) => {
-                if paused {
-                    continue;
-                }
+                match select(Timer::after(frame_duration), ir_kepler.wait_for_press()).await {
+                    Either::First(_) => {
+                        if paused {
+                            continue;
+                        }
 
-                board.step();
-                evaluate_auto_reset(
-                    &mut board,
-                    pattern_index,
-                    &mut stasis_tracker,
-                    &mut empty_tracker,
-                );
-            }
-            Either::Second(button) => match button {
-                KeplerKeys::Num(number) => {
-                    if number < PATTERNS.len() as u8 {
-                        pattern_index = number as usize;
-                        reset_board_for_pattern(
-                            &mut board,
-                            pattern_index,
-                            &mut stasis_tracker,
-                            &mut empty_tracker,
-                        );
-                    }
-                }
-                KeplerKeys::Minus => {
-                    speed_mode = speed_mode.slower();
-                }
-                KeplerKeys::Plus => {
-                    speed_mode = speed_mode.faster();
-                }
-                KeplerKeys::Next => {
-                    if paused {
                         board.step();
-                    } else {
-                        pattern_index = (pattern_index + 1) % PATTERNS.len();
-                        reset_board_for_pattern(
+                        evaluate_auto_reset(
                             &mut board,
                             pattern_index,
                             &mut stasis_tracker,
                             &mut empty_tracker,
                         );
                     }
+                    Either::Second(button) => match button {
+                        KeplerKeys::Power => {
+                            display_power = DisplayPower::Off;
+                            led2d.write_frame(Frame2d::<W, H>::new());
+                        }
+                        KeplerKeys::Num(number) => {
+                            if number < PATTERNS.len() as u8 {
+                                pattern_index = number as usize;
+                                reset_board_for_pattern(
+                                    &mut board,
+                                    pattern_index,
+                                    &mut stasis_tracker,
+                                    &mut empty_tracker,
+                                );
+                            }
+                        }
+                        KeplerKeys::Minus => {
+                            speed_mode = speed_mode.slower();
+                        }
+                        KeplerKeys::Plus => {
+                            speed_mode = speed_mode.faster();
+                        }
+                        KeplerKeys::Next => {
+                            if paused {
+                                board.step();
+                            }
+                        }
+                        KeplerKeys::Prev => {}
+                        KeplerKeys::PlayPause => {
+                            paused = !paused;
+                        }
+                        KeplerKeys::Mode => {
+                            color_index = (color_index + 1) % ALIVE_COLORS.len();
+                            alive_color = ALIVE_COLORS[color_index];
+                        }
+                        _ => {}
+                    },
                 }
-                KeplerKeys::Prev => {
-                    if !paused {
-                        pattern_index = (pattern_index + PATTERNS.len() - 1) % PATTERNS.len();
-                        reset_board_for_pattern(
-                            &mut board,
-                            pattern_index,
-                            &mut stasis_tracker,
-                            &mut empty_tracker,
-                        );
-                    }
+            }
+            DisplayPower::Off => {
+                let button = ir_kepler.wait_for_press().await;
+                if button == KeplerKeys::Power {
+                    display_power = DisplayPower::On;
+                    led2d.write_frame(board.to_frame(alive_color));
                 }
-                KeplerKeys::PlayPause => {
-                    paused = !paused;
-                }
-                KeplerKeys::Mode => {
-                    color_index = (color_index + 1) % ALIVE_COLORS.len();
-                    alive_color = ALIVE_COLORS[color_index];
-                }
-                _ => {}
-            },
+            }
         }
     }
 }
@@ -181,6 +179,12 @@ enum SpeedMode {
     Slow,
     Medium,
     Fast,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DisplayPower {
+    On,
+    Off,
 }
 
 impl SpeedMode {

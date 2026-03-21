@@ -65,7 +65,7 @@
 //!
 //! # Example: Two LCDs Sharing One I2C Peripheral
 //!
-//! In this example, the generated group type is `LcdTexts0`.
+//! In this example, the generated group type is `I2cs0`.
 //!
 //! ```rust,no_run
 //! # #![no_std]
@@ -79,7 +79,7 @@
 //!     i2c: I2C0,
 //!     sda_pin: PIN_4,
 //!     scl_pin: PIN_5,
-//!     LcdTexts0 {
+//!     I2cs0 {
 //!         LcdText16x2 { width: 16, height: 2, address: 0x27 },
 //!         LcdText20x4 { width: 20, height: 4, address: 0x3F },
 //!     }
@@ -92,7 +92,7 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     let (lcd_text16x2, lcd_text20x4) = LcdTexts0::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+//!     let (lcd_text16x2, lcd_text20x4) = I2cs0::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
 //!
 //!     lcd_text16x2.write_text("16x2\nready");
 //!     lcd_text20x4.write_text("20x4\nshared i2c\naddress 0x3F");

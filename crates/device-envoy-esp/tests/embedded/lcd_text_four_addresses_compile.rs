@@ -15,7 +15,7 @@ i2cs! {
     i2c: I2C0,
     sda_pin: GPIO16,
     scl_pin: GPIO17,
-    LcdTexts4 {
+    I2cs4 {
         LcdTextA { width: 16, height: 2, address: 0x27 },
         LcdTextB { width: 20, height: 4, address: 0x26 },
         LcdTextC { width: 16, height: 2, address: 0x25 },
@@ -35,7 +35,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     init_and_start!(p);
 
     let (lcd_text_a, lcd_text_b, lcd_text_c, lcd_text_d) =
-        LcdTexts4::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
+        I2cs4::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
 
     lcd_text_a.write_text("A");
     lcd_text_b.write_text("B");

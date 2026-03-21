@@ -13,7 +13,7 @@ i2cs! {
     i2c: I2C0,
     sda_pin: PIN_4,
     scl_pin: PIN_5,
-    LcdTextsDuplicateAddress {
+    I2csDuplicateAddress {
         LcdTextA { width: 16, height: 2, address: 0x27 },
         LcdTextB { width: 20, height: 4, address: 0x27 },
     }

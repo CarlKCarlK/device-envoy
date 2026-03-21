@@ -17,7 +17,7 @@ i2cs! {
     i2c: I2C0,
     sda_pin: GPIO16,
     scl_pin: GPIO17,
-    LcdTextsDuplicateAddressCompileFail {
+    I2csDuplicateAddressCompileFail {
         LcdTextA { width: 16, height: 2, address: 0x27 },
         LcdTextB { width: 20, height: 4, address: 0x27 },
     }
@@ -35,7 +35,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     init_and_start!(p);
 
     let (_lcd_text_a, _lcd_text_b) =
-        LcdTextsDuplicateAddressCompileFail::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
+        I2csDuplicateAddressCompileFail::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
 
     core::future::pending().await
 }

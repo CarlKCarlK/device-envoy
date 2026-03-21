@@ -121,6 +121,8 @@ enum Commands {
     CheckDocs,
     /// Build all examples (catches linker errors)
     CheckExamples,
+    /// Build all demos (catches linker errors)
+    CheckDemos,
     /// Verify README Rust example extraction + compile
     CheckReadmeExample,
 }
@@ -131,6 +133,7 @@ fn main() -> ExitCode {
         Commands::CheckAll => check_all(),
         Commands::CheckDocs => check_docs(),
         Commands::CheckExamples => check_examples(),
+        Commands::CheckDemos => check_demos(),
         Commands::CheckReadmeExample => check_readme_example(),
     }
 }
@@ -274,6 +277,10 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    if check_demos() != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+
     if check_embedded_tests() != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
@@ -379,6 +386,62 @@ fn check_examples() -> ExitCode {
                 "build",
                 "--example",
                 example,
+                "--release",
+                "--target",
+                target,
+                "--no-default-features",
+            ]);
+            if *build_std {
+                cmd.arg("-Zbuild-std=core,alloc");
+            }
+            if !run(&mut cmd) {
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+
+    ExitCode::SUCCESS
+}
+
+#[derive(Debug, Clone)]
+struct DemoInfo {
+    name: String,
+}
+
+fn check_demos() -> ExitCode {
+    let root = workspace_root();
+    let demos = discover_demo_bins(&root);
+    if demos.is_empty() {
+        println!("{}", "No demos found.".yellow());
+        return ExitCode::SUCCESS;
+    }
+
+    let Some(s3_linker_dir) = require_s3_toolchain() else {
+        return ExitCode::FAILURE;
+    };
+    // (label, target, toolchain_override, build_std)
+    let targets: &[(&str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, None, false),
+        ("s3", TARGET_S3, Some("+esp"), true),
+    ];
+    for (label, target, toolchain, build_std) in targets {
+        println!("{}", format!("--> build demos ({label})").cyan());
+        for demo in &demos {
+            println!("    build demo: {}", demo.name);
+            let mut cmd = Command::new("cargo");
+            cmd.current_dir(&root);
+            if *build_std {
+                prepend_path(&mut cmd, &s3_linker_dir);
+            }
+            if let Some(tc) = toolchain {
+                cmd.arg(tc);
+            }
+            cmd.args([
+                "build",
+                "--package",
+                "device-envoy-esp-demos",
+                "--bin",
+                &demo.name,
                 "--release",
                 "--target",
                 target,
@@ -714,6 +777,64 @@ fn workspace_root() -> PathBuf {
         .parent()
         .expect("xtask must be a subdirectory of the workspace root")
         .to_owned()
+}
+
+fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
+    let cargo_toml = workspace_root.join("demos/Cargo.toml");
+    let contents = fs::read_to_string(&cargo_toml).expect("Failed to read demos/Cargo.toml");
+    let mut demos = Vec::new();
+
+    let mut in_bin = false;
+    let mut current_name: Option<String> = None;
+
+    let finalize = |current_name: &mut Option<String>, demos: &mut Vec<DemoInfo>| {
+        if let Some(name) = current_name.take() {
+            demos.push(DemoInfo { name });
+        }
+    };
+
+    for line in contents.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[[bin]]" {
+            if in_bin {
+                finalize(&mut current_name, &mut demos);
+            }
+            in_bin = true;
+            continue;
+        }
+
+        if in_bin && trimmed.starts_with('[') && trimmed != "[[bin]]" {
+            finalize(&mut current_name, &mut demos);
+            in_bin = false;
+            continue;
+        }
+
+        if !in_bin {
+            continue;
+        }
+
+        if let Some(value) = parse_toml_string(trimmed, "name") {
+            current_name = Some(value);
+        }
+    }
+
+    if in_bin {
+        finalize(&mut current_name, &mut demos);
+    }
+
+    demos.sort_by(|a, b| a.name.cmp(&b.name));
+    demos
+}
+
+fn parse_toml_string(line: &str, key: &str) -> Option<String> {
+    let line = line.split('#').next()?.trim();
+    let prefix = format!("{key} =");
+    if !line.starts_with(&prefix) {
+        return None;
+    }
+    let value = line[prefix.len()..].trim();
+    let value = value.strip_prefix('"')?.strip_suffix('"')?;
+    Some(value.to_string())
 }
 
 fn package_version_from_cargo_toml(crate_root: &Path) -> Result<String, String> {

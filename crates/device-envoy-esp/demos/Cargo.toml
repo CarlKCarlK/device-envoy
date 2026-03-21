@@ -1,0 +1,50 @@
+[package]
+name = "device-envoy-esp-demos"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[features]
+default = []
+
+[dependencies]
+device-envoy-esp = { path = "..", default-features = false }
+embassy-executor = { version = "0.9.0" }
+embassy-time = { version = "0.5.0" }
+smart-leds = { version = "0.4.0" }
+paste = { version = "1.0" }
+static_cell = { version = "2.1.0" }
+
+[target.'cfg(all(target_os = "none", target_arch = "riscv32"))'.dependencies]
+esp-hal = { version = "1.0.0", features = ["esp32c6", "unstable"] }
+esp-rtos = { version = "0.2.0", features = ["esp32c6", "embassy", "esp-radio", "esp-alloc"] }
+esp-backtrace = { version = "0.18.1", features = [
+    "esp32c6",
+    "panic-handler",
+    "halt-cores",
+    "println",
+] }
+esp-println = { version = "0.16.1", default-features = false, features = ["esp32c6", "uart", "log-04"] }
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32c6"] }
+
+[target.'cfg(all(target_os = "none", target_arch = "xtensa"))'.dependencies]
+esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable"] }
+esp-rtos = { version = "0.2.0", features = ["esp32s3", "embassy", "esp-radio", "esp-alloc"] }
+esp-backtrace = { version = "0.18.1", features = [
+    "esp32s3",
+    "panic-handler",
+    "halt-cores",
+    "println",
+] }
+esp-println = { version = "0.16.1", default-features = false, features = ["esp32s3", "uart", "log-04"] }
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32s3"] }
+
+[[bin]]
+name = "demo_a1_strip_8_blue_gray"
+path = "a_strip/a1_strip_8_blue_gray.rs"
+test = false
+
+[[bin]]
+name = "demo_a3_strip_8_blue_white_blink_animate"
+path = "a_strip/a3_strip_8_blue_white_blink_animate.rs"
+test = false

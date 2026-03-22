@@ -2,7 +2,7 @@
 //!
 //! Wiring:
 //! - GPIO2: 16x16 NeoPixel-style (WS2812) panel data-in
-//! - GPIO8 (C6) or GPIO48 (S3): built-in NeoPixel-style (WS2812) LED
+//! - GPIO8 (esp_gdma_family) or GPIO0 (esp_pdma_family): built-in NeoPixel-style (WS2812) LED
 
 #![no_std]
 #![no_main]
@@ -23,10 +23,10 @@ use device_envoy_esp::{
 esp_bootloader_esp_idf::esp_app_desc!();
 
 const PANEL_16X16_PIN_NUM: u8 = 2;
-#[cfg(target_arch = "riscv32")]
+#[cfg(esp_gdma_family)] // C6, S3, etc
 const BUILTIN_LED_PIN_NUM: u8 = 8;
-#[cfg(target_arch = "xtensa")]
-const BUILTIN_LED_PIN_NUM: u8 = 48;
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+const BUILTIN_LED_PIN_NUM: u8 = 0;
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 led2d! {
@@ -40,7 +40,7 @@ led2d! {
     }
 }
 
-#[cfg(target_arch = "riscv32")]
+#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     BuiltinLedDual {
         pin: GPIO8,
@@ -50,10 +50,10 @@ led_strip! {
     }
 }
 
-#[cfg(target_arch = "xtensa")]
+#[cfg(esp_pdma_family)] // original ESP32 & s2
 led_strip! {
     BuiltinLedDual {
-        pin: GPIO48,
+        pin: GPIO0,
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 4,
@@ -77,10 +77,10 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     );
 
     let led16x16_dual = Led16x16Dual::new(p.GPIO2, rmt80.channel0, spawner)?;
-    #[cfg(target_arch = "riscv32")]
+    #[cfg(esp_gdma_family)]
     let builtin_led_dual = BuiltinLedDual::new(p.GPIO8, rmt80.channel1, spawner)?;
-    #[cfg(target_arch = "xtensa")]
-    let builtin_led_dual = BuiltinLedDual::new(p.GPIO48, rmt80.channel1, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let builtin_led_dual = BuiltinLedDual::new(p.GPIO0, rmt80.channel1, spawner)?;
 
     let mut panel_x_index = 0usize;
     let mut panel_y_index = 0usize;

@@ -19,9 +19,22 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 servo_player! {
     ServoSweep {
         pin: GPIO10,
+        timer: Timer0,
+        channel: Channel0,
+        min_us: 500,
+        max_us: 2500,
+        max_degrees: 180,
+        max_steps: 40,
+    }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+servo_player! {
+    ServoSweep {
+        pin: GPIO4,
         timer: Timer0,
         channel: Channel0,
         min_us: 500,
@@ -63,8 +76,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, ledc: ledc);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
+    #[cfg(esp_gdma_family)]
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    #[cfg(esp_pdma_family)]
+    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    #[cfg(esp_gdma_family)]
     let servo_sweep = ServoSweep::new(&ledc, p.GPIO10, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let servo_sweep = ServoSweep::new(&ledc, p.GPIO4, spawner)?;
 
     loop {
         run_sweep_animation(&servo_sweep).await;

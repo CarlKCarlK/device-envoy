@@ -40,6 +40,112 @@ struct BuildTarget {
     build_std: bool,
 }
 
+#[derive(Clone, Copy)]
+struct ChipCapabilities {
+    has_rmt: bool,
+    has_i2s: bool,
+    has_wifi: bool,
+    has_extended_gpio: bool,
+}
+
+#[derive(Clone, Copy)]
+struct ExampleRequirements {
+    requires_rmt: bool,
+    requires_i2s: bool,
+    requires_wifi: bool,
+    requires_extended_gpio: bool,
+}
+
+fn chip_capabilities(chip_feature: &str) -> ChipCapabilities {
+    match chip_feature {
+        CHIP_FEATURE_ESP32 => ChipCapabilities {
+            has_rmt: true,
+            has_i2s: true,
+            has_wifi: true,
+            has_extended_gpio: true,
+        },
+        CHIP_FEATURE_ESP32C2 => ChipCapabilities {
+            has_rmt: false,
+            has_i2s: false,
+            has_wifi: true,
+            has_extended_gpio: false,
+        },
+        CHIP_FEATURE_ESP32C3 => ChipCapabilities {
+            has_rmt: true,
+            has_i2s: true,
+            has_wifi: true,
+            has_extended_gpio: false,
+        },
+        CHIP_FEATURE_ESP32C6 => ChipCapabilities {
+            has_rmt: true,
+            has_i2s: true,
+            has_wifi: true,
+            has_extended_gpio: true,
+        },
+        CHIP_FEATURE_ESP32H2 => ChipCapabilities {
+            has_rmt: true,
+            has_i2s: true,
+            has_wifi: false,
+            has_extended_gpio: true,
+        },
+        CHIP_FEATURE_ESP32S2 => ChipCapabilities {
+            has_rmt: true,
+            has_i2s: true,
+            has_wifi: true,
+            has_extended_gpio: true,
+        },
+        CHIP_FEATURE_ESP32S3 => ChipCapabilities {
+            has_rmt: true,
+            has_i2s: true,
+            has_wifi: true,
+            has_extended_gpio: true,
+        },
+        _ => panic!("unknown chip feature: {chip_feature}"),
+    }
+}
+
+fn example_requirements(example: &str) -> ExampleRequirements {
+    let requires_i2s = example.starts_with("audio");
+    let requires_rmt = example == "blinky"
+        || example.starts_with("conway")
+        || example.starts_with("ir")
+        || example.starts_with("led16x16")
+        || example.starts_with("led2d")
+        || example.starts_with("led_strip")
+        || example == "wifi_dns_hex";
+    let requires_wifi = example.starts_with("wifi_") || example.starts_with("clock_");
+    let requires_extended_gpio = example.starts_with("clock_")
+        || example.starts_with("lcd_text")
+        || example == "led2d_example1_trait";
+
+    ExampleRequirements {
+        requires_rmt,
+        requires_i2s,
+        requires_wifi,
+        requires_extended_gpio,
+    }
+}
+
+fn missing_example_capabilities(
+    chip_capabilities: ChipCapabilities,
+    example_requirements: ExampleRequirements,
+) -> Vec<&'static str> {
+    let mut missing_capabilities = Vec::new();
+    if example_requirements.requires_rmt && !chip_capabilities.has_rmt {
+        missing_capabilities.push("RMT");
+    }
+    if example_requirements.requires_i2s && !chip_capabilities.has_i2s {
+        missing_capabilities.push("I2S");
+    }
+    if example_requirements.requires_wifi && !chip_capabilities.has_wifi {
+        missing_capabilities.push("Wi-Fi");
+    }
+    if example_requirements.requires_extended_gpio && !chip_capabilities.has_extended_gpio {
+        missing_capabilities.push("extended GPIO set");
+    }
+    missing_capabilities
+}
+
 const BUILD_TARGET_ESP32: BuildTarget = BuildTarget {
     label: "esp32",
     target: TARGET_XTENSA_ESP32,
@@ -482,6 +588,7 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
         return ExitCode::FAILURE;
     };
     for build_target in targets {
+        let chip_capabilities = chip_capabilities(build_target.chip_feature);
         let target_message = if link_examples {
             format!("--> build examples ({})", build_target.label)
         } else {
@@ -492,6 +599,18 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
             target_message.cyan()
         );
         for example in &examples {
+            let missing_capabilities = missing_example_capabilities(
+                chip_capabilities,
+                example_requirements(example),
+            );
+            if !missing_capabilities.is_empty() {
+                println!(
+                    "    skip example: {example} ({} unavailable on {})",
+                    missing_capabilities.join(", "),
+                    build_target.label
+                );
+                continue;
+            }
             if link_examples {
                 println!("    build example: {example}");
             } else {

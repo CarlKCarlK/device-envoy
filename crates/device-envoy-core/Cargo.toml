@@ -36,7 +36,7 @@ crc32fast = { version = "1.4.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
 defmt = { version = "0.3", optional = true }
 png = { version = "0.17", optional = true }
-portable-atomic = { version = "1.11.1", features = ["critical-section"] }
+portable-atomic = { version = "1.11.1" }
 static_cell = "2.1.0"
 time = { version = "0.3", default-features = false }
 embed-doc-image = { version = "0.1.4", optional = true }

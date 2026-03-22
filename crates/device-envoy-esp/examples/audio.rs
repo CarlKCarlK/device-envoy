@@ -3,8 +3,8 @@
 //!
 //! Wiring:
 //! - Data pin (`DIN`) -> GPIO21
-//! - Bit clock pin (`BCLK`) -> GPIO11
-//! - Word select pin (`LRC` / `LRCLK`) -> GPIO12
+//! - Bit clock pin (`BCLK`) -> GPIO3
+//! - Word select pin (`LRC` / `LRCLK`) -> GPIO4
 //! - Button -> GPIO6 to GND (starts playback)
 
 #![no_std]
@@ -28,12 +28,12 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(esp_gdma_family)]
+#[cfg(esp_gdma_family)] // C6, S3, etc
 audio_player! {
     AudioPlayerGpio21 {
         data_pin: GPIO21,
-        bit_clock_pin: GPIO11,
-        word_select_pin: GPIO12,
+        bit_clock_pin: GPIO3,
+        word_select_pin: GPIO4,
         sample_rate_hz: VOICE_22050_HZ,
         dma: DMA_CH0,
         max_volume: Volume::percent(50),
@@ -41,7 +41,7 @@ audio_player! {
     }
 }
 
-#[cfg(esp_pdma_family)]
+#[cfg(esp_pdma_family)] // original ESP32 & s2
 audio_player! {
     AudioPlayerGpio21 {
         data_pin: GPIO21,
@@ -90,13 +90,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     #[cfg(esp_gdma_family)]
     let audio_player_gpio21 =
-        AudioPlayerGpio21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
+        AudioPlayerGpio21::new(p.GPIO21, p.GPIO3, p.GPIO4, p.I2S0, p.DMA_CH0, spawner)?;
     #[cfg(esp_pdma_family)]
     let audio_player_gpio21 =
         AudioPlayerGpio21::new(p.GPIO21, p.GPIO4, p.GPIO5, p.I2S0, p.DMA_I2S0, spawner)?;
 
     #[cfg(esp_gdma_family)]
-    info!("I2S ready: GPIO21 DIN, GPIO11 BCLK, GPIO12 LRCLK");
+    info!("I2S ready: GPIO21 DIN, GPIO3 BCLK, GPIO4 LRCLK");
     #[cfg(esp_pdma_family)]
     info!("I2S ready: GPIO21 DIN, GPIO4 BCLK, GPIO5 LRCLK");
     info!(

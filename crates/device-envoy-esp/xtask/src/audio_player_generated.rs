@@ -19,9 +19,9 @@ use crate::audio_player;
 ))]
 audio_player! {
     pub AudioPlayerGenerated {
-        data_pin: GPIO21,
-        bit_clock_pin: GPIO12,
-        word_select_pin: GPIO13,
+        data_pin: GPIO2,
+        bit_clock_pin: GPIO3,
+        word_select_pin: GPIO4,
         sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
         dma: DMA_I2S0,
     }
@@ -35,9 +35,9 @@ audio_player! {
 ))]
 audio_player! {
     pub AudioPlayerGenerated {
-        data_pin: GPIO21,
-        bit_clock_pin: GPIO12,
-        word_select_pin: GPIO13,
+        data_pin: GPIO2,
+        bit_clock_pin: GPIO3,
+        word_select_pin: GPIO4,
         sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
         dma: DMA_CH0,
     }

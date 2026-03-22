@@ -41,7 +41,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    #[cfg(esp_gdma_family)]
     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    #[cfg(esp_pdma_family)]
+    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,

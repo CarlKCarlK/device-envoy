@@ -50,7 +50,10 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    #[cfg(esp_gdma_family)]
     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    #[cfg(esp_pdma_family)]
+    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,

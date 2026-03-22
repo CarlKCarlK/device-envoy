@@ -13,7 +13,7 @@ use core::cell::RefCell;
 #[cfg(target_os = "none")]
 use core::future::Future;
 #[cfg(target_os = "none")]
-use core::sync::atomic::{AtomicBool, Ordering};
+use portable_atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "none")]
 use crate::button::Button;

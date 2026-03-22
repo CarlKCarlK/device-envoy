@@ -7,10 +7,17 @@
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none"))]
 use crate::button_watch;
 
-#[cfg(all(not(doc), not(feature = "host"), target_os = "none"))]
+#[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_gdma_family))]
 button_watch! {
     pub ButtonWatchGenerated {
-        pin: GPIO13,
+        pin: GPIO0,
+    }
+}
+
+#[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_pdma_family))]
+button_watch! {
+    pub ButtonWatchGenerated {
+        pin: GPIO0,
     }
 }
 

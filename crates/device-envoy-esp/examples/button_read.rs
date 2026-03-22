@@ -31,7 +31,10 @@ async fn inner_main(_spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
+    #[cfg(esp_gdma_family)]
     let button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    #[cfg(esp_pdma_family)]
+    let button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
     let mut was_pressed = button.is_pressed();
     info!(
         "button_read ready: GPIO6, pressed={} (PressedTo::Ground)",

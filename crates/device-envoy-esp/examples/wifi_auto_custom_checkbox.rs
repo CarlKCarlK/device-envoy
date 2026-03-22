@@ -119,7 +119,10 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert:
         "Share anonymous telemetry",
         false,
     );
+    #[cfg(esp_gdma_family)]
     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    #[cfg(esp_pdma_family)]
+    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,

@@ -38,6 +38,7 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("rfid example started");
 
+    #[cfg(esp_gdma_family)]
     let rfid = RfidEsp::new(
         &RFID_STATIC,
         p.SPI2,
@@ -46,6 +47,18 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
         p.GPIO2,
         p.GPIO10,
         p.GPIO5,
+        spawner,
+    )
+    .await?;
+    #[cfg(esp_pdma_family)]
+    let rfid = RfidEsp::new(
+        &RFID_STATIC,
+        p.SPI2,
+        p.GPIO18,
+        p.GPIO23,
+        p.GPIO19,
+        p.GPIO5,
+        p.GPIO4,
         spawner,
     )
     .await?;

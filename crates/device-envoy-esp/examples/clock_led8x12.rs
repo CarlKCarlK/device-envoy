@@ -47,9 +47,16 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
     LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 button_watch! {
     ForcePortalButtonWatch {
         pin: GPIO6,
+    }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+button_watch! {
+    ForcePortalButtonWatch {
+        pin: GPIO0,
     }
 }
 
@@ -84,7 +91,10 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     let [wifi_auto_flash_block, mut timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    #[cfg(esp_gdma_family)]
     let button6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    #[cfg(esp_pdma_family)]
+    let button6 = ForcePortalButtonWatch::new(p.GPIO0, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,

@@ -46,7 +46,7 @@ compile_error!(
 compile_error!("Select exactly one chip feature for embedded builds, not both.");
 
 pub mod button;
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_wifi))]
 pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.
     //!
@@ -148,7 +148,7 @@ pub mod clock_sync {
         h12_m_s, ClockSync, ClockSyncTick, UnixSeconds, ONE_DAY, ONE_MINUTE, ONE_SECOND,
     };
 }
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_wifi))]
 #[doc(hidden)]
 pub mod time_sync {
     //! A device abstraction for Network Time Protocol (NTP) time synchronization over Wi-Fi.
@@ -156,25 +156,31 @@ pub mod time_sync {
     pub use device_envoy_core::clock_sync::UnixSeconds;
     pub use device_envoy_core::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 }
+#[cfg(esp_has_i2s)]
 pub mod audio_player;
 pub mod flash_block;
 pub mod init_and_start;
+#[cfg(esp_has_rmt)]
 pub mod ir;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
 #[cfg(target_os = "none")]
 pub mod led;
+#[cfg(esp_has_rmt)]
 pub mod led2d;
 pub mod led4;
+#[cfg(esp_has_rmt)]
 pub mod led_strip;
 #[cfg(target_os = "none")]
 pub mod rfid;
+#[cfg(esp_has_rmt)]
 mod rmt;
 mod rmt_mode;
 #[cfg(target_os = "none")]
 pub mod servo;
 #[cfg(target_os = "none")]
 mod servo_player;
+#[cfg(esp_has_wifi)]
 pub mod wifi_auto;
 
 #[cfg(doc)]
@@ -186,6 +192,7 @@ pub mod docs {
 }
 
 pub use device_envoy_core::tone;
+#[cfg(esp_has_wifi)]
 use device_envoy_core::wifi_auto::WifiAutoError;
 /// Used internally by other macros.
 #[doc(hidden)]
@@ -261,7 +268,7 @@ pub enum Error {
     Led4BitsToIndexesFull,
     MissingCustomWifiAutoField,
     Ntp(&'static str),
-    #[cfg(target_os = "none")]
+    #[cfg(all(target_os = "none", esp_has_rmt))]
     Rmt(esp_hal::rmt::Error),
     #[cfg(target_os = "none")]
     SpiConfig(esp_hal::spi::master::ConfigError),
@@ -277,9 +284,9 @@ pub enum Error {
     LedcTimer(esp_hal::ledc::timer::Error),
     #[cfg(target_os = "none")]
     LedcChannel(esp_hal::ledc::channel::Error),
-    #[cfg(target_os = "none")]
+    #[cfg(all(target_os = "none", esp_has_wifi))]
     WifiInit(esp_radio::InitializationError),
-    #[cfg(target_os = "none")]
+    #[cfg(all(target_os = "none", esp_has_wifi))]
     Wifi(esp_radio::wifi::WifiError),
 }
 
@@ -297,6 +304,7 @@ impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
     }
 }
 
+#[cfg(esp_has_wifi)]
 impl From<WifiAutoError> for Error {
     fn from(error: WifiAutoError) -> Self {
         match error {
@@ -314,14 +322,14 @@ impl From<esp_storage::FlashStorageError> for Error {
     }
 }
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_wifi))]
 impl From<esp_radio::InitializationError> for Error {
     fn from(error: esp_radio::InitializationError) -> Self {
         Self::WifiInit(error)
     }
 }
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 impl From<esp_hal::rmt::Error> for Error {
     fn from(error: esp_hal::rmt::Error) -> Self {
         Self::Rmt(error)
@@ -363,7 +371,7 @@ impl From<esp_hal::ledc::channel::Error> for Error {
     }
 }
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_wifi))]
 impl From<esp_radio::wifi::WifiError> for Error {
     fn from(error: esp_radio::wifi::WifiError) -> Self {
         Self::Wifi(error)

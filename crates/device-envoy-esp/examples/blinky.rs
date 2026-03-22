@@ -22,9 +22,9 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(esp_gdma_family)]
+#[cfg(esp_gdma_family)] // C6, S3, etc
 const LED_PIN_NUM: u8 = 8;
-#[cfg(esp_pdma_family)]
+#[cfg(esp_pdma_family)] // original ESP32 & s2
 const LED_PIN_NUM: u8 = 0;
 
 // Morse timing (in milliseconds).
@@ -66,7 +66,7 @@ const SOS: [(Frame1d<1>, Duration); 18] = [
     (OFF_COLOR, WORD_GAP),
 ];
 
-#[cfg(esp_gdma_family)]
+#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     SosStrip {
         pin: GPIO8,
@@ -76,7 +76,7 @@ led_strip! {
     }
 }
 
-#[cfg(esp_pdma_family)]
+#[cfg(esp_pdma_family)] // original ESP32 & s2
 led_strip! {
     SosStrip {
         pin: GPIO0,

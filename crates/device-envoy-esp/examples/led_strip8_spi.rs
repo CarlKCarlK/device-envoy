@@ -18,12 +18,26 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 const STRIP8_PIN_NUM: u8 = 10;
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+const STRIP8_PIN_NUM: u8 = 4;
 const FRAME_DURATION: Duration = Duration::from_millis(350);
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     LedStripLen8Spi {
         pin: GPIO10,
+        len: 8,
+        max_current: Current::Milliamps(180),
+        engine: Engine::Spi,
+        max_frames: 2,
+    }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+led_strip! {
+    LedStripLen8Spi {
+        pin: GPIO4,
         len: 8,
         max_current: Current::Milliamps(180),
         engine: Engine::Spi,
@@ -47,7 +61,10 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
         STRIP8_PIN_NUM
     );
 
+    #[cfg(esp_gdma_family)]
     let led_strip_len8_spi = LedStripLen8Spi::new(p.GPIO10, p.SPI2, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let led_strip_len8_spi = LedStripLen8Spi::new(p.GPIO4, p.SPI2, spawner)?;
     let frame0 = Frame1d([
         colors::BLUE,
         colors::BLACK,

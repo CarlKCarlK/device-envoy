@@ -3,6 +3,7 @@
 //! See [`init_and_start!`] for one-line startup patterns.
 
 /// Shared RMT setup utilities used by generated devices.
+#[cfg(esp_has_rmt)]
 pub mod rmt {
     pub use crate::rmt::*;
 }

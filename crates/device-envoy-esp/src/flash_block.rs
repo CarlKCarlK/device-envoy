@@ -16,6 +16,8 @@ use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
 use serde::{Deserialize, Serialize};
 #[cfg(target_os = "none")]
 use static_cell::StaticCell;
+#[cfg(target_os = "none")]
+use portable_atomic::{AtomicU32, Ordering};
 
 #[cfg(target_os = "none")]
 use crate::{Error, Result};
@@ -110,7 +112,7 @@ impl FlashRegionRequest {
 struct FlashManager {
     flash_storage:
         Mutex<CriticalSectionRawMutex, core::cell::RefCell<esp_storage::FlashStorage<'static>>>,
-    next_block: core::sync::atomic::AtomicU32,
+    next_block: AtomicU32,
     requested_region: FlashRegionRequest,
     resolved_region: ResolvedFlashRegion,
 }
@@ -126,7 +128,7 @@ impl FlashManager {
         let resolved_region = requested_region.resolve(flash_capacity)?;
         Ok(Self {
             flash_storage: Mutex::new(core::cell::RefCell::new(flash_storage)),
-            next_block: core::sync::atomic::AtomicU32::new(0),
+            next_block: AtomicU32::new(0),
             requested_region,
             resolved_region,
         })
@@ -145,13 +147,13 @@ impl FlashManager {
     fn reserve<const N: usize>(&'static self) -> Result<[FlashBlockEsp; N]> {
         let start_block = self
             .next_block
-            .fetch_add(N as u32, core::sync::atomic::Ordering::SeqCst);
+            .fetch_add(N as u32, Ordering::SeqCst);
         let end_block = start_block
             .checked_add(N as u32)
             .ok_or(Error::IndexOutOfBounds)?;
         if end_block > self.resolved_region.block_count {
             self.next_block
-                .fetch_sub(N as u32, core::sync::atomic::Ordering::SeqCst);
+                .fetch_sub(N as u32, Ordering::SeqCst);
             return Err(Error::IndexOutOfBounds);
         }
 

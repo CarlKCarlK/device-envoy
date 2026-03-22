@@ -65,6 +65,7 @@ const SOS: [(Frame1d<1>, Duration); 18] = [
     (OFF_COLOR, WORD_GAP),
 ];
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     LedStripLen8 {
         pin: GPIO10,
@@ -73,7 +74,16 @@ led_strip! {
         max_frames: 2,
     }
 }
-#[cfg(target_arch = "riscv32")]
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+led_strip! {
+    LedStripLen8 {
+        pin: GPIO4,
+        len: 8,
+        max_current: Current::Milliamps(200),
+        max_frames: 2,
+    }
+}
+#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     SosStrip {
         pin: GPIO8,
@@ -82,10 +92,10 @@ led_strip! {
         max_frames: 20,
     }
 }
-#[cfg(target_arch = "xtensa")]
+#[cfg(esp_pdma_family)] // original ESP32 & s2
 led_strip! {
     SosStrip {
-        pin: GPIO48,
+        pin: GPIO0,
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 20,
@@ -106,11 +116,14 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
 
     //info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");
 
+    #[cfg(esp_gdma_family)]
     let led_strip_len8 = LedStripLen8::new(p.GPIO10, rmt80.channel0, spawner)?;
-    #[cfg(target_arch = "riscv32")]
+    #[cfg(esp_pdma_family)]
+    let led_strip_len8 = LedStripLen8::new(p.GPIO4, rmt80.channel0, spawner)?;
+    #[cfg(esp_gdma_family)]
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel1, spawner)?;
-    #[cfg(target_arch = "xtensa")]
-    let sos_strip = SosStrip::new(p.GPIO48, rmt80.channel1, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let sos_strip = SosStrip::new(p.GPIO0, rmt80.channel1, spawner)?;
 
     let frame = Frame1d([
         colors::BLUE,

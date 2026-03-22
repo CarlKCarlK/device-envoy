@@ -14,8 +14,13 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 ir_kepler! {
     IrKepler7 { pin: GPIO7 }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+ir_kepler! {
+    IrKepler7 { pin: GPIO4 }
 }
 
 async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
@@ -52,7 +57,10 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let channel_creator = rmt80.channel4;
     #[cfg(not(target_arch = "xtensa"))]
     let channel_creator = rmt80.channel2;
+    #[cfg(esp_gdma_family)]
     let ir_kepler7 = IrKepler7::new(p.GPIO7, channel_creator, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let ir_kepler7 = IrKepler7::new(p.GPIO4, channel_creator, spawner)?;
 
     handle_kepler_button_presses(ir_kepler7).await
 }

@@ -33,8 +33,13 @@ led2d! {
     }
 }
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 ir_kepler! {
     IrKepler7 { pin: GPIO7 }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+ir_kepler! {
+    IrKepler7 { pin: GPIO4 }
 }
 
 #[esp_rtos::main]
@@ -56,7 +61,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     #[cfg(not(target_arch = "xtensa"))]
     let channel_creator = rmt80.channel2; // On ESP32-C6, channels 0–3 all support RX.
 
+    #[cfg(esp_gdma_family)]
     let ir_kepler7 = IrKepler7::new(p.GPIO7, channel_creator, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let ir_kepler7 = IrKepler7::new(p.GPIO4, channel_creator, spawner)?;
 
     conway_with_led2d_ir_kepler(led16x16, ir_kepler7).await
 }

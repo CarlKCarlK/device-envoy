@@ -23,9 +23,18 @@ const APP_BUTTON_MAP: [(u16, u8, AppButton); 3] = [
     (0x0000, 0x15, AppButton::Minus),
 ];
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 ir_mapping! {
     IrMapping7 {
         pin: GPIO7,
+        button: AppButton,
+        capacity: 3,
+    }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+ir_mapping! {
+    IrMapping7 {
+        pin: GPIO4,
         button: AppButton,
         capacity: 3,
     }
@@ -65,7 +74,10 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let channel_creator = rmt80.channel4;
     #[cfg(not(target_arch = "xtensa"))]
     let channel_creator = rmt80.channel2;
+    #[cfg(esp_gdma_family)]
     let ir_mapping7 = IrMapping7::new(p.GPIO7, channel_creator, &APP_BUTTON_MAP, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let ir_mapping7 = IrMapping7::new(p.GPIO4, channel_creator, &APP_BUTTON_MAP, spawner)?;
 
     handle_mapped_button_presses(ir_mapping7).await
 }

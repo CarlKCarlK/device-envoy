@@ -25,9 +25,16 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 button_watch! {
     ForcePortalButtonWatch {
         pin: GPIO6,
+    }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+button_watch! {
+    ForcePortalButtonWatch {
+        pin: GPIO0,
     }
 }
 
@@ -63,7 +70,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
+    #[cfg(esp_gdma_family)]
     let button_watch6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    #[cfg(esp_pdma_family)]
+    let button_watch6 = ForcePortalButtonWatch::new(p.GPIO0, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,

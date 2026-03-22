@@ -20,9 +20,18 @@ use device_envoy_esp::{init_and_start, servo, servo::Servo as _, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(esp_gdma_family)] // C6, S3, etc
 servo! {
     ServoA {
         pin: GPIO10,
+        timer: Timer0,
+        channel: Channel0,
+    }
+}
+#[cfg(esp_pdma_family)] // original ESP32 & s2
+servo! {
+    ServoA {
+        pin: GPIO4,
         timer: Timer0,
         channel: Channel0,
     }
@@ -50,7 +59,10 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting dual servo example");
 
+    #[cfg(esp_gdma_family)]
     let servo_a = ServoA::new(&ledc, p.GPIO10)?;
+    #[cfg(esp_pdma_family)]
+    let servo_a = ServoA::new(&ledc, p.GPIO4)?;
     let servo_b = ServoB::new(&ledc, p.GPIO18)?;
 
     info!("Moving servos in opposite directions for 2 seconds");

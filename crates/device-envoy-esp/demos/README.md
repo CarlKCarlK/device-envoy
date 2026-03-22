@@ -96,3 +96,29 @@ Run/flash (ESP32-S3):
 ```bash
 cargo +esp run --package device-envoy-esp-demos --bin demo_b2_panel_12x8_text_graphics --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
 ```
+
+## F1 - WiFi auto with DNS hex display
+
+Uses WiFi auto-provisioning with flash-backed credentials and a force-setup
+button, then queries `google.com` and shows the last 4 hex digits of the IPv4
+address on a 12x8 panel.
+
+Wiring (ESP32-C6 and ESP32-S3):
+
+- `GPIO18` -> NeoPixel-style (WS2812) panel `DIN` (96 pixels, rotated 8x12 layout)
+- `GPIO6` -> button -> `GND` (force captive portal)
+- Board `GND` -> panel `GND`
+- Panel `5V` -> external 5V supply
+- External supply `GND` -> board `GND`
+
+Run/flash (ESP32-C6):
+
+```bash
+cargo run --package device-envoy-esp-demos --bin demo_f1_dns --release --target riscv32imac-unknown-none-elf --no-default-features
+```
+
+Run/flash (ESP32-S3):
+
+```bash
+cargo +esp run --package device-envoy-esp-demos --bin demo_f1_dns --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
+```

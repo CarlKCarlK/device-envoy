@@ -3,24 +3,23 @@
 
 #![no_std]
 #![no_main]
-#![cfg(feature = "wifi")]
-#![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use core::{convert::Infallible, fmt::Write, panic};
-use device_envoy_rp::{
+
+use device_envoy_esp::{
     Result,
-    button::{ButtonRp, PressedTo},
-    flash_block::FlashBlockRp,
-    led_strip::colors,
-    led2d,
+    button::{ButtonEsp, PressedTo},
+    flash_block::FlashBlockEsp,
+    init_and_start, led2d,
     led2d::Led2d as _,
     led2d::{Led2dFont, layout::LedLayout},
-    wifi_auto::{WifiAutoEvent, WifiAutoRp},
+    led_strip::colors,
+    wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
 use embassy_time::{Duration, Timer};
-use {defmt_rtt as _, panic_probe as _};
+use esp_backtrace as _;
 
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
@@ -30,38 +29,36 @@ const COLORS: &[smart_leds::RGB8] = &[colors::YELLOW, colors::LIME, colors::CYAN
 
 led2d! {
     Led8x12 {
-        pin: PIN_4,
+        pin: GPIO18,
+        len: 96,
         led_layout: LED_LAYOUT_8X12,
         font: Led2dFont::Font4x6Trim,
     }
 }
 
-#[embassy_executor::main]
+esp_bootloader_esp_idf::esp_app_desc!();
+
+// Nice trick: Two "mains" lets us use Results.
+#[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
-    panic!("{err}");
+    panic!("{err:?}");
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    let p = embassy_rp::init(Default::default());
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 
-    let led8x12 = Led8x12::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
+    let led8x12 = Led8x12::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // Flash stores WiFi credentials after first setup
-    let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    let [wifi_credentials_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
 
-    // Create a WifiAutoRp instance.
-    // Pico W uses the CYW43 chip wired to fixed GPIOs; we pass those here.
-    let wifi_auto = WifiAutoRp::new(
-        p.PIN_23,
-        p.PIN_24,
-        p.PIN_25,
-        p.PIN_29,  // CYW43 pins (fixed)
-        p.PIO1,    // Needs a PIO resource
-        p.DMA_CH1, // Needs a DMA resource
+    // Create a WifiAutoEsp instance.
+    let wifi_auto = WifiAutoEsp::new(
+        p.WIFI,
         wifi_credentials_flash_block,
         "DeviceEnvoyDemo", // Setup SSID
-        [],         // Any custom fields
+        [],          // Any custom fields
         spawner,
     )?;
 
@@ -69,12 +66,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Returns network stack and button.
     //
     // A button is used to force reconfiguration via setup web page.
-    let mut button15 = ButtonRp::new(p.PIN_15, PressedTo::Ground);
+    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
     let led8x12_ref = &led8x12;
     let stack = wifi_auto
-        .connect(&mut button15, |event| async move {
-            match event {
+        .connect(&mut button6, |wifi_auto_event| async move {
+            match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led8x12_ref.write_text("JO\nIN", COLORS); // Join setup network
                 }
@@ -116,7 +113,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 //  - Networks that require their own login web page after connecting
 //    (for example, public WiFi with an acceptance form) are not supported.
 
-async fn show_animated_dots(led8x12: &Led8x12) -> Result<()> {
+async fn show_animated_dots(led8x12: &'static Led8x12) -> Result<()> {
     const FRAME_DURATION: Duration = Duration::from_millis(200);
     let mut frames = [(led2d::Frame2d::new(), FRAME_DURATION); 4];
     led8x12.write_text_to_frame(".\n ", &[COLORS[0]], &mut frames[0].0);

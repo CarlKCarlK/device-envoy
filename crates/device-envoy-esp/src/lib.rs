@@ -1,12 +1,48 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(target_os = "none", no_std)]
 
-#[cfg(all(target_os = "none", not(any(feature = "esp32c6", feature = "esp32s3"))))]
+#[cfg(all(
+    target_os = "none",
+    not(any(
+        feature = "esp32",
+        feature = "esp32c2",
+        feature = "esp32c3",
+        feature = "esp32c6",
+        feature = "esp32h2",
+        feature = "esp32s2",
+        feature = "esp32s3"
+    ))
+))]
 compile_error!(
-    "Select one chip feature for embedded builds: `esp32c6` or `esp32s3` (with `--no-default-features --features <chip>`)."
+    "Select one chip feature for embedded builds: `esp32`, `esp32c2`, `esp32c3`, `esp32c6`, `esp32h2`, `esp32s2`, or `esp32s3` (with `--no-default-features --features <chip>`)."
 );
 
-#[cfg(all(target_os = "none", feature = "esp32c6", feature = "esp32s3"))]
+#[cfg(all(
+    target_os = "none",
+    any(
+        all(feature = "esp32", feature = "esp32c2"),
+        all(feature = "esp32", feature = "esp32c3"),
+        all(feature = "esp32", feature = "esp32c6"),
+        all(feature = "esp32", feature = "esp32h2"),
+        all(feature = "esp32", feature = "esp32s2"),
+        all(feature = "esp32", feature = "esp32s3"),
+        all(feature = "esp32c2", feature = "esp32c3"),
+        all(feature = "esp32c2", feature = "esp32c6"),
+        all(feature = "esp32c2", feature = "esp32h2"),
+        all(feature = "esp32c2", feature = "esp32s2"),
+        all(feature = "esp32c2", feature = "esp32s3"),
+        all(feature = "esp32c3", feature = "esp32c6"),
+        all(feature = "esp32c3", feature = "esp32h2"),
+        all(feature = "esp32c3", feature = "esp32s2"),
+        all(feature = "esp32c3", feature = "esp32s3"),
+        all(feature = "esp32c6", feature = "esp32h2"),
+        all(feature = "esp32c6", feature = "esp32s2"),
+        all(feature = "esp32c6", feature = "esp32s3"),
+        all(feature = "esp32h2", feature = "esp32s2"),
+        all(feature = "esp32h2", feature = "esp32s3"),
+        all(feature = "esp32s2", feature = "esp32s3"),
+    )
+))]
 compile_error!("Select exactly one chip feature for embedded builds, not both.");
 
 pub mod button;

@@ -2,6 +2,7 @@
 xtask        = "run --manifest-path xtask/Cargo.toml --target x86_64-unknown-linux-gnu --"
 check-all    = "xtask check-all"
 check-demos  = "xtask check-demos"
+check-examples-all-processors = "xtask check-examples-all-processors"
 demo-a1 = "run --package device-envoy-esp-demos --bin demo_a1_strip_8_blue_gray --target riscv32imac-unknown-none-elf --release --no-default-features --features esp32c6"
 demo-a1-check = "check --package device-envoy-esp-demos --bin demo_a1_strip_8_blue_gray --target riscv32imac-unknown-none-elf --no-default-features --features esp32c6"
 demo-a1-s3 = "+esp run --package device-envoy-esp-demos --bin demo_a1_strip_8_blue_gray --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3 -Zbuild-std=core,alloc"

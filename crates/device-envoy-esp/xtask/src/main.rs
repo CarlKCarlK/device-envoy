@@ -17,24 +17,95 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use tar::Archive;
 
-const TARGET_C6: &str = "riscv32imac-unknown-none-elf";
-const TARGET_S3: &str = "xtensa-esp32s3-none-elf";
-const CHIP_FEATURE_C6: &str = "esp32c6";
-const CHIP_FEATURE_S3: &str = "esp32s3";
+const TARGET_RISCV32IMC: &str = "riscv32imc-unknown-none-elf";
+const TARGET_RISCV32IMAC: &str = "riscv32imac-unknown-none-elf";
+const TARGET_XTENSA_ESP32: &str = "xtensa-esp32-none-elf";
+const TARGET_XTENSA_ESP32S2: &str = "xtensa-esp32s2-none-elf";
+const TARGET_XTENSA_ESP32S3: &str = "xtensa-esp32s3-none-elf";
 
-/// Locates the `xtensa-esp32s3-elf-gcc` linker and returns its parent directory.
-///
-/// `espup install` places the linker inside the `esp` rustup toolchain directory,
-/// which is not automatically on PATH in every shell.  This function checks PATH
-/// first, then falls back to searching the toolchain tree so that S3 builds work
-/// after `espup install` without requiring `source ~/export-esp.sh`.
-///
-/// Returns `None` with a descriptive error printed if the linker is not found.
-fn find_s3_linker_dir() -> Option<PathBuf> {
-    const LINKER: &str = "xtensa-esp32s3-elf-gcc";
+const CHIP_FEATURE_ESP32: &str = "esp32";
+const CHIP_FEATURE_ESP32C2: &str = "esp32c2";
+const CHIP_FEATURE_ESP32C3: &str = "esp32c3";
+const CHIP_FEATURE_ESP32C6: &str = "esp32c6";
+const CHIP_FEATURE_ESP32H2: &str = "esp32h2";
+const CHIP_FEATURE_ESP32S2: &str = "esp32s2";
+const CHIP_FEATURE_ESP32S3: &str = "esp32s3";
+
+#[derive(Clone, Copy)]
+struct BuildTarget {
+    label: &'static str,
+    target: &'static str,
+    chip_feature: &'static str,
+    toolchain: Option<&'static str>,
+    build_std: bool,
+}
+
+const BUILD_TARGET_ESP32: BuildTarget = BuildTarget {
+    label: "esp32",
+    target: TARGET_XTENSA_ESP32,
+    chip_feature: CHIP_FEATURE_ESP32,
+    toolchain: Some("+esp"),
+    build_std: true,
+};
+const BUILD_TARGET_ESP32C2: BuildTarget = BuildTarget {
+    label: "esp32c2",
+    target: TARGET_RISCV32IMC,
+    chip_feature: CHIP_FEATURE_ESP32C2,
+    toolchain: None,
+    build_std: false,
+};
+const BUILD_TARGET_ESP32C3: BuildTarget = BuildTarget {
+    label: "esp32c3",
+    target: TARGET_RISCV32IMC,
+    chip_feature: CHIP_FEATURE_ESP32C3,
+    toolchain: None,
+    build_std: false,
+};
+const BUILD_TARGET_ESP32C6: BuildTarget = BuildTarget {
+    label: "esp32c6",
+    target: TARGET_RISCV32IMAC,
+    chip_feature: CHIP_FEATURE_ESP32C6,
+    toolchain: None,
+    build_std: false,
+};
+const BUILD_TARGET_ESP32H2: BuildTarget = BuildTarget {
+    label: "esp32h2",
+    target: TARGET_RISCV32IMAC,
+    chip_feature: CHIP_FEATURE_ESP32H2,
+    toolchain: None,
+    build_std: false,
+};
+const BUILD_TARGET_ESP32S2: BuildTarget = BuildTarget {
+    label: "esp32s2",
+    target: TARGET_XTENSA_ESP32S2,
+    chip_feature: CHIP_FEATURE_ESP32S2,
+    toolchain: Some("+esp"),
+    build_std: true,
+};
+const BUILD_TARGET_ESP32S3: BuildTarget = BuildTarget {
+    label: "esp32s3",
+    target: TARGET_XTENSA_ESP32S3,
+    chip_feature: CHIP_FEATURE_ESP32S3,
+    toolchain: Some("+esp"),
+    build_std: true,
+};
+
+const CHECK_ALL_TARGETS: &[BuildTarget] = &[BUILD_TARGET_ESP32C6, BUILD_TARGET_ESP32S3];
+const ALL_PROCESSOR_TARGETS: &[BuildTarget] = &[
+    BUILD_TARGET_ESP32,
+    BUILD_TARGET_ESP32C2,
+    BUILD_TARGET_ESP32C3,
+    BUILD_TARGET_ESP32C6,
+    BUILD_TARGET_ESP32H2,
+    BUILD_TARGET_ESP32S2,
+    BUILD_TARGET_ESP32S3,
+];
+
+/// Locates the requested Xtensa linker and returns its parent directory.
+fn find_xtensa_linker_dir(linker: &str) -> Option<PathBuf> {
 
     // Check PATH first.
-    if Command::new(LINKER)
+    if Command::new(linker)
         .arg("--version")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -71,25 +142,22 @@ fn find_s3_linker_dir() -> Option<PathBuf> {
         None
     }
 
-    if let Some(dir) = find_in(&esp_toolchain, LINKER, 6) {
+    if let Some(dir) = find_in(&esp_toolchain, linker, 6) {
         return Some(dir);
     }
 
-    eprintln!(
-        "{}",
-        "error: xtensa-esp32s3-elf-gcc not found.\n\
-         Run `espup install` to install the Xtensa GCC linker, then re-run check-all."
-            .red()
-            .bold()
-    );
     None
 }
 
-/// Returns `Some(linker_dir)` when the full S3 toolchain is ready, `None` otherwise.
+/// Returns `Some(linker_dir)` when the full Xtensa toolchain is ready, `None` otherwise.
 ///
-/// Requires the `esp` rustup toolchain with `rust-src` *and* the Xtensa GCC linker.
-/// Prints a clear error if anything is missing.
-fn require_s3_toolchain() -> Option<PathBuf> {
+/// Requires the `esp` rustup toolchain with `rust-src` and Xtensa GCC linkers.
+fn require_xtensa_toolchain() -> Option<PathBuf> {
+    const XTENSA_LINKERS: &[&str] = &[
+        "xtensa-esp32-elf-gcc",
+        "xtensa-esp32s2-elf-gcc",
+        "xtensa-esp32s3-elf-gcc",
+    ];
     let home = std::env::var_os("HOME").unwrap_or_default();
     let rust_src = Path::new(&home).join(".rustup/toolchains/esp/lib/rustlib/src/rust");
 
@@ -104,7 +172,36 @@ fn require_s3_toolchain() -> Option<PathBuf> {
         return None;
     }
 
-    find_s3_linker_dir()
+    let mut linker_dirs = Vec::new();
+    for linker in XTENSA_LINKERS {
+        let Some(linker_dir) = find_xtensa_linker_dir(linker) else {
+            eprintln!(
+                "{}",
+                format!(
+                    "error: {linker} not found.\n\
+                     Run `espup install` to install the Xtensa GCC linkers, then re-run check-all."
+                )
+                .red()
+                .bold()
+            );
+            return None;
+        };
+        linker_dirs.push(linker_dir);
+    }
+
+    let first_linker_dir = linker_dirs[0].clone();
+    if linker_dirs.iter().any(|linker_dir| *linker_dir != first_linker_dir) {
+        eprintln!(
+            "{}",
+            "error: Xtensa linker binaries were found in different directories.\n\
+             Run `espup install` and ensure the Xtensa toolchain is installed correctly."
+                .red()
+                .bold()
+        );
+        return None;
+    }
+
+    Some(first_linker_dir)
 }
 
 #[derive(Parser)]
@@ -123,6 +220,8 @@ enum Commands {
     CheckDocs,
     /// Build all examples (catches linker errors)
     CheckExamples,
+    /// Build all examples for all supported ESP processor feature/target combinations
+    CheckExamplesAllProcessors,
     /// Build all demos (catches linker errors)
     CheckDemos,
     /// Verify README Rust example extraction + compile
@@ -135,8 +234,17 @@ fn main() -> ExitCode {
         Commands::CheckAll => check_all(),
         Commands::CheckDocs => check_docs(),
         Commands::CheckExamples => check_examples(),
+        Commands::CheckExamplesAllProcessors => check_examples_all_processors(),
         Commands::CheckDemos => check_demos(),
         Commands::CheckReadmeExample => check_readme_example(),
+    }
+}
+
+fn xtensa_linker_dir_if_needed(targets: &[BuildTarget]) -> Option<PathBuf> {
+    if targets.iter().any(|build_target| build_target.build_std) {
+        require_xtensa_toolchain()
+    } else {
+        Some(PathBuf::new())
     }
 }
 
@@ -186,7 +294,7 @@ fn check_docs() -> ExitCode {
         "--no-deps",
         "--release",
         "--target",
-        TARGET_C6,
+        TARGET_RISCV32IMAC,
         "--features",
         "doc-images,esp32c6",
         "--no-default-features",
@@ -239,24 +347,19 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    // Build the library itself for both supported chips.
-    // S3 uses -Zbuild-std because the `esp` toolchain ships no prebuilt Xtensa sysroot.
-    let Some(s3_linker_dir) = require_s3_toolchain() else {
+    // Build the library itself for all supported chips.
+    // Xtensa chips use -Zbuild-std because the `esp` toolchain ships no prebuilt Xtensa sysroot.
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
         return ExitCode::FAILURE;
     };
-    // (label, target, chip_feature, toolchain_override, build_std)
-    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
-        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
-    ];
-    for (label, target, chip_feature, toolchain, build_std) in targets {
-        println!("{}", format!("--> build lib ({label})").cyan());
+    for build_target in CHECK_ALL_TARGETS {
+        println!("{}", format!("--> build lib ({})", build_target.label).cyan());
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root);
-        if *build_std {
-            prepend_path(&mut cmd, &s3_linker_dir);
+        if build_target.build_std {
+            prepend_path(&mut cmd, &xtensa_linker_dir);
         }
-        if let Some(tc) = toolchain {
+        if let Some(tc) = build_target.toolchain {
             cmd.arg(tc);
         }
         cmd.args([
@@ -264,12 +367,12 @@ fn check_all() -> ExitCode {
             "--lib",
             "--release",
             "--target",
-            target,
+            build_target.target,
             "--no-default-features",
             "--features",
-            chip_feature,
+            build_target.chip_feature,
         ]);
-        if *build_std {
+        if build_target.build_std {
             cmd.arg("-Zbuild-std=core,alloc");
         }
         if !run(&mut cmd) {
@@ -300,7 +403,7 @@ fn check_all() -> ExitCode {
         "--no-deps",
         "--release",
         "--target",
-        TARGET_C6,
+        TARGET_RISCV32IMAC,
         "--features",
         "doc-images,esp32c6",
         "--no-default-features",
@@ -340,8 +443,8 @@ fn check_all() -> ExitCode {
         .arg("--release")
         .arg("--manifest-path")
         .arg(&packaged_manifest_path)
-        .args(["--target", TARGET_C6, "--no-default-features"])
-        .args(["--features", CHIP_FEATURE_C6])
+        .args(["--target", TARGET_RISCV32IMAC, "--no-default-features"])
+        .args(["--features", CHIP_FEATURE_ESP32C6])
         .arg("--config")
         .arg(&device_envoy_core_patch);
     if !run(&mut packaged_check_command) {
@@ -353,6 +456,14 @@ fn check_all() -> ExitCode {
 }
 
 fn check_examples() -> ExitCode {
+    check_examples_for_targets(CHECK_ALL_TARGETS)
+}
+
+fn check_examples_all_processors() -> ExitCode {
+    check_examples_for_targets(ALL_PROCESSOR_TARGETS)
+}
+
+fn check_examples_for_targets(targets: &[BuildTarget]) -> ExitCode {
     let root = workspace_root();
 
     let examples_dir = root.join("examples");
@@ -367,24 +478,22 @@ fn check_examples() -> ExitCode {
         .collect();
     examples.sort();
 
-    let Some(s3_linker_dir) = require_s3_toolchain() else {
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
         return ExitCode::FAILURE;
     };
-    // (label, target, chip_feature, toolchain_override, build_std)
-    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
-        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
-    ];
-    for (label, target, chip_feature, toolchain, build_std) in targets {
-        println!("{}", format!("--> build examples ({label})").cyan());
+    for build_target in targets {
+        println!(
+            "{}",
+            format!("--> build examples ({})", build_target.label).cyan()
+        );
         for example in &examples {
             println!("    build example: {example}");
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
-            if *build_std {
-                prepend_path(&mut cmd, &s3_linker_dir);
+            if build_target.build_std {
+                prepend_path(&mut cmd, &xtensa_linker_dir);
             }
-            if let Some(tc) = toolchain {
+            if let Some(tc) = build_target.toolchain {
                 cmd.arg(tc);
             }
             cmd.args([
@@ -393,12 +502,12 @@ fn check_examples() -> ExitCode {
                 example,
                 "--release",
                 "--target",
-                target,
+                build_target.target,
                 "--no-default-features",
                 "--features",
-                chip_feature,
+                build_target.chip_feature,
             ]);
-            if *build_std {
+            if build_target.build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
             }
             if !run(&mut cmd) {
@@ -423,24 +532,19 @@ fn check_demos() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    let Some(s3_linker_dir) = require_s3_toolchain() else {
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
         return ExitCode::FAILURE;
     };
-    // (label, target, chip_feature, toolchain_override, build_std)
-    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
-        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
-    ];
-    for (label, target, chip_feature, toolchain, build_std) in targets {
-        println!("{}", format!("--> build demos ({label})").cyan());
+    for build_target in CHECK_ALL_TARGETS {
+        println!("{}", format!("--> build demos ({})", build_target.label).cyan());
         for demo in &demos {
             println!("    build demo: {}", demo.name);
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
-            if *build_std {
-                prepend_path(&mut cmd, &s3_linker_dir);
+            if build_target.build_std {
+                prepend_path(&mut cmd, &xtensa_linker_dir);
             }
-            if let Some(tc) = toolchain {
+            if let Some(tc) = build_target.toolchain {
                 cmd.arg(tc);
             }
             cmd.args([
@@ -451,12 +555,12 @@ fn check_demos() -> ExitCode {
                 &demo.name,
                 "--release",
                 "--target",
-                target,
+                build_target.target,
                 "--no-default-features",
                 "--features",
-                chip_feature,
+                build_target.chip_feature,
             ]);
-            if *build_std {
+            if build_target.build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
             }
             if !run(&mut cmd) {
@@ -497,24 +601,19 @@ fn check_embedded_tests() -> ExitCode {
         "ir_colon_form_compile_fail",
         "lcd_text_duplicate_address_compile_fail",
     ];
-    let Some(s3_linker_dir) = require_s3_toolchain() else {
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
         return ExitCode::FAILURE;
     };
-    // (label, target, chip_feature, toolchain_override, build_std)
-    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
-        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
-    ];
-    for (label, target, chip_feature, toolchain, build_std) in targets {
-        println!("{}", format!("    target: {label}").cyan());
+    for build_target in CHECK_ALL_TARGETS {
+        println!("{}", format!("    target: {}", build_target.label).cyan());
         for embedded_test in &compile_pass_tests {
             println!("      compile-pass test: {embedded_test}");
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
-            if *build_std {
-                prepend_path(&mut cmd, &s3_linker_dir);
+            if build_target.build_std {
+                prepend_path(&mut cmd, &xtensa_linker_dir);
             }
-            if let Some(tc) = toolchain {
+            if let Some(tc) = build_target.toolchain {
                 cmd.arg(tc);
             }
             cmd.args([
@@ -523,12 +622,12 @@ fn check_embedded_tests() -> ExitCode {
                 embedded_test,
                 "--release",
                 "--target",
-                target,
+                build_target.target,
                 "--no-default-features",
                 "--features",
-                chip_feature,
+                build_target.chip_feature,
             ]);
-            if *build_std {
+            if build_target.build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
             }
             if !run(&mut cmd) {
@@ -538,16 +637,17 @@ fn check_embedded_tests() -> ExitCode {
 
         for embedded_test in &compile_fail_tests {
             println!("      compile-fail test: {embedded_test}");
-            let compile_fail_features = format!("{chip_feature},compile-fail-tests");
+            let compile_fail_features =
+                format!("{},compile-fail-tests", build_target.chip_feature);
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
             // Compile-fail tests are expected to fail. Keep their output non-colored so
             // expected rustc errors do not show as alarming red blocks in the check log.
             cmd.env("CARGO_TERM_COLOR", "never");
-            if *build_std {
-                prepend_path(&mut cmd, &s3_linker_dir);
+            if build_target.build_std {
+                prepend_path(&mut cmd, &xtensa_linker_dir);
             }
-            if let Some(tc) = toolchain {
+            if let Some(tc) = build_target.toolchain {
                 cmd.arg(tc);
             }
             cmd.args([
@@ -556,19 +656,20 @@ fn check_embedded_tests() -> ExitCode {
                 embedded_test,
                 "--release",
                 "--target",
-                target,
+                build_target.target,
                 "--no-default-features",
                 "--features",
                 &compile_fail_features,
             ]);
-            if *build_std {
+            if build_target.build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
             }
             if run_expect_failure(&mut cmd) {
                 eprintln!(
                     "{}",
                     format!(
-                        "error: compile-fail test `{embedded_test}` unexpectedly compiled for target `{target}`"
+                        "error: compile-fail test `{embedded_test}` unexpectedly compiled for target `{}`",
+                        build_target.target
                     )
                     .red()
                     .bold()
@@ -663,21 +764,20 @@ fn check_readme_example() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    let Some(s3_linker_dir) = require_s3_toolchain() else {
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
         return ExitCode::FAILURE;
     };
-    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
-        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
-    ];
-    for (label, target, chip_feature, toolchain, build_std) in targets {
-        println!("{}", format!("    README example target: {label}").cyan());
+    for build_target in CHECK_ALL_TARGETS {
+        println!(
+            "{}",
+            format!("    README example target: {}", build_target.label).cyan()
+        );
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root);
-        if *build_std {
-            prepend_path(&mut cmd, &s3_linker_dir);
+        if build_target.build_std {
+            prepend_path(&mut cmd, &xtensa_linker_dir);
         }
-        if let Some(tc) = toolchain {
+        if let Some(tc) = build_target.toolchain {
             cmd.arg(tc);
         }
         cmd.args([
@@ -686,12 +786,12 @@ fn check_readme_example() -> ExitCode {
             "--example",
             "__readme_example_generated",
             "--target",
-            target,
+            build_target.target,
             "--no-default-features",
             "--features",
-            chip_feature,
+            build_target.chip_feature,
         ]);
-        if *build_std {
+        if build_target.build_std {
             cmd.arg("-Zbuild-std=core,alloc");
         }
         if !run(&mut cmd) {

@@ -6,6 +6,30 @@ publish = false
 
 [features]
 default = []
+esp32 = [
+    "device-envoy-esp/esp32",
+    "esp-hal/esp32",
+    "esp-rtos/esp32",
+    "esp-backtrace/esp32",
+    "esp-println/esp32",
+    "esp-bootloader-esp-idf/esp32",
+]
+esp32c2 = [
+    "device-envoy-esp/esp32c2",
+    "esp-hal/esp32c2",
+    "esp-rtos/esp32c2",
+    "esp-backtrace/esp32c2",
+    "esp-println/esp32c2",
+    "esp-bootloader-esp-idf/esp32c2",
+]
+esp32c3 = [
+    "device-envoy-esp/esp32c3",
+    "esp-hal/esp32c3",
+    "esp-rtos/esp32c3",
+    "esp-backtrace/esp32c3",
+    "esp-println/esp32c3",
+    "esp-bootloader-esp-idf/esp32c3",
+]
 esp32c6 = [
     "device-envoy-esp/esp32c6",
     "esp-hal/esp32c6",
@@ -13,6 +37,22 @@ esp32c6 = [
     "esp-backtrace/esp32c6",
     "esp-println/esp32c6",
     "esp-bootloader-esp-idf/esp32c6",
+]
+esp32h2 = [
+    "device-envoy-esp/esp32h2",
+    "esp-hal/esp32h2",
+    "esp-rtos/esp32h2",
+    "esp-backtrace/esp32h2",
+    "esp-println/esp32h2",
+    "esp-bootloader-esp-idf/esp32h2",
+]
+esp32s2 = [
+    "device-envoy-esp/esp32s2",
+    "esp-hal/esp32s2",
+    "esp-rtos/esp32s2",
+    "esp-backtrace/esp32s2",
+    "esp-println/esp32s2",
+    "esp-bootloader-esp-idf/esp32s2",
 ]
 esp32s3 = [
     "device-envoy-esp/esp32s3",

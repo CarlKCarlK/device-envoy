@@ -21,6 +21,18 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> =
     LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4).rotate_cw();
 
+#[cfg(feature = "esp32h2")]
+led2d! {
+    Led12x8 {
+        pin: GPIO2,
+        len: 96,
+        led_layout: LED_LAYOUT_12X8_ROTATED,
+        font: Led2dFont::Font4x6Trim,
+        // Same options as led_strip! (RMT channel, engine, gamma, max current, max frames)
+    }
+}
+
+#[cfg(not(feature = "esp32h2"))]
 led2d! {
     Led12x8 {
         pin: GPIO18,
@@ -42,7 +54,9 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-
+    #[cfg(feature = "esp32h2")]
+    let led12x8 = Led12x8::new(p.GPIO2, rmt80.channel0, spawner)?;
+    #[cfg(not(feature = "esp32h2"))]
     let led12x8 = Led12x8::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // A 2D array of pixels.

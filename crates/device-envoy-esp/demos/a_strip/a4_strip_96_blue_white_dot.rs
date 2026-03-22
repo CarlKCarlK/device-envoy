@@ -12,6 +12,21 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 
+#[cfg(feature = "esp32h2")]
+led_strip! {
+    pub LedStripLen96 { // can add 'pub' to make struct public
+        pin: GPIO2,
+        len: 96,
+        // Optionals
+        max_current: Current::Milliamps(500), // default is 250ma
+        gamma: Gamma::SmartLeds, // compatibility curve (= 2.8)
+        max_frames: 0, // Disable animation; write_frame() still works
+    }
+    // Gamma correction and current limiting are folded into a single
+    // lookup table (one table lookup per RGB channel at runtime).
+}
+
+#[cfg(not(feature = "esp32h2"))]
 led_strip! {
     pub LedStripLen96 { // can add 'pub' to make struct public
         pin: GPIO18,
@@ -36,7 +51,9 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-
+    #[cfg(feature = "esp32h2")]
+    let led_strip_len96 = LedStripLen96::new(p.GPIO2, rmt80.channel0, spawner)?;
+    #[cfg(not(feature = "esp32h2"))]
     // Must match the pin in LedStripLen96 above to avoid compilation error.
     let led_strip_len96 = LedStripLen96::new(p.GPIO18, rmt80.channel0, spawner)?;
 

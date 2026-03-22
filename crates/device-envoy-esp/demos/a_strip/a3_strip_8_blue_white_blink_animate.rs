@@ -12,6 +12,15 @@ use embassy_executor::Spawner;
 use embassy_time::Duration;
 use esp_backtrace as _;
 
+#[cfg(any(feature = "esp32", feature = "esp32h2"))]
+led_strip! {
+    LedStripLen8 {
+        pin: GPIO2,
+        len: 8,
+    }
+}
+
+#[cfg(not(any(feature = "esp32", feature = "esp32h2")))]
 led_strip! {
     LedStripLen8 {
         pin: GPIO10,
@@ -30,7 +39,9 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-
+    #[cfg(any(feature = "esp32", feature = "esp32h2"))]
+    let led_strip_len8 = LedStripLen8::new(p.GPIO2, rmt80.channel0, spawner)?;
+    #[cfg(not(any(feature = "esp32", feature = "esp32h2")))]
     let led_strip_len8 = LedStripLen8::new(p.GPIO10, rmt80.channel0, spawner)?;
 
     // Create two frames

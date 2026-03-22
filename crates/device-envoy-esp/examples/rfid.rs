@@ -55,7 +55,7 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
         &RFID_STATIC,
         p.SPI2,
         p.GPIO18,
-        p.GPIO23,
+        p.GPIO21,
         p.GPIO19,
         p.GPIO5,
         p.GPIO4,

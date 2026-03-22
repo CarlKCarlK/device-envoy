@@ -121,8 +121,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         Output::new(p.GPIO18, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO19, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO21, Level::Low, OutputConfig::default()),
-        Output::new(p.GPIO22, Level::Low, OutputConfig::default()),
-        Output::new(p.GPIO23, Level::Low, OutputConfig::default()),
+        Output::new(p.GPIO1, Level::Low, OutputConfig::default()),
+        Output::new(p.GPIO2, Level::Low, OutputConfig::default()),
     ]);
 
     static LED4_STATIC: Led4EspStatic = Led4Esp::new_static();

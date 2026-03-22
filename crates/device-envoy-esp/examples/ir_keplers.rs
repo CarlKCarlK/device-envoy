@@ -45,16 +45,15 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    // On ESP32-S3, RMT channels 0–3 are TX-only; RX requires channel 4+.
-    // On ESP32-C6, channels 0–3 all support RX.
-    #[cfg(target_arch = "xtensa")]
+    // ESP32-S3 requires RX channel 4+.
+    #[cfg(feature = "esp32s3")]
     let channel_creator0 = rmt80.channel4;
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let channel_creator0 = rmt80.channel2;
 
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     let channel_creator1 = rmt80.channel5;
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let channel_creator1 = rmt80.channel3;
 
     #[cfg(esp_gdma_family)]

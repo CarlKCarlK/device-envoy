@@ -27,6 +27,17 @@ const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
 
 const COLORS: &[smart_leds::RGB8] = &[colors::YELLOW, colors::LIME, colors::CYAN, colors::RED];
 
+#[cfg(feature = "esp32h2")]
+led2d! {
+    Led8x12 {
+        pin: GPIO2,
+        len: 96,
+        led_layout: LED_LAYOUT_8X12,
+        font: Led2dFont::Font4x6Trim,
+    }
+}
+
+#[cfg(not(feature = "esp32h2"))]
 led2d! {
     Led8x12 {
         pin: GPIO18,
@@ -47,7 +58,9 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-
+    #[cfg(feature = "esp32h2")]
+    let led8x12 = Led8x12::new(p.GPIO2, rmt80.channel0, spawner)?;
+    #[cfg(not(feature = "esp32h2"))]
     let led8x12 = Led8x12::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // Flash stores WiFi credentials after first setup
@@ -66,6 +79,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Returns network stack and button.
     //
     // A button is used to force reconfiguration via setup web page.
+    #[cfg(feature = "esp32")]
+    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    #[cfg(not(feature = "esp32"))]
     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
     let led8x12_ref = &led8x12;

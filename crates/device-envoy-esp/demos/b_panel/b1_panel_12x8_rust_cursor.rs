@@ -18,6 +18,18 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4);
 const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
 
+#[cfg(feature = "esp32h2")]
+led2d! {
+    Led12x8 {
+        pin: GPIO2,
+        len: 96,
+        led_layout: LED_LAYOUT_12X8_ROTATED,
+        // Use a 4x6 pixel font with no gap between characters
+        font: Led2dFont::Font4x6Trim,
+    }
+}
+
+#[cfg(not(feature = "esp32h2"))]
 // Define a struct `Led12x8` to control a 12x8 LED panel on GPIO18
 led2d! {
     Led12x8 {
@@ -40,7 +52,9 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-
+    #[cfg(feature = "esp32h2")]
+    let led12x8 = Led12x8::new(p.GPIO2, rmt80.channel0, spawner)?;
+    #[cfg(not(feature = "esp32h2"))]
     let led12x8 = Led12x8::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // Text supports "\n" for multiple lines.

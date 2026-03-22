@@ -42,11 +42,10 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("ir example started: listening on GPIO7");
 
-    // On ESP32-S3, RMT channels 0–3 are TX-only; RX requires channel 4+.
-    // On ESP32-C6, channels 0–3 all support RX.
-    #[cfg(target_arch = "xtensa")]
+    // ESP32-S3 requires RX channel 4+.
+    #[cfg(feature = "esp32s3")]
     let channel_creator = rmt80.channel4;
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let channel_creator = rmt80.channel2;
     #[cfg(esp_gdma_family)]
     let ir7 = Ir7::new(p.GPIO7, channel_creator, spawner)?;

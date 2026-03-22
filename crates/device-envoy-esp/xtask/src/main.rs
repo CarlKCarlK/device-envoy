@@ -40,6 +40,10 @@ struct BuildTarget {
     build_std: bool,
 }
 
+
+// TODO000 use bools for capabilities and requirements, or bitflags if we want to get fancy. The current struct+vec approach is a bit verbose.
+// TODO000 could also have a single `Capability` enum and then have Vec<Capability> for both chip capabilities and example/demo requirements, which would simplify the logic but be less explicit about which capabilities are relevant to which examples/demos.
+// TOOD000 or some enum+struct approach where the enum variants are the capabilities and the struct has bools for which ones are present/required, which would be more concise but less flexible/extensible if we want to have parameters for capabilities in the future (for example, "has_audio_gpio" could become "audio_gpio_pin_count: u8" or something like that).
 #[derive(Clone, Copy)]
 struct ChipCapabilities {
     has_rmt: bool,
@@ -224,22 +228,6 @@ fn explicit_example_skip_reason(
         if s2_stack_limited_examples.contains(&example_name) {
             return Some("ESP32-S2 linker memory budget");
         }
-        let s2_rmt_rx_examples = [
-            "conway",
-            "ir",
-            "ir_example1_trait",
-            "ir_kepler",
-            "ir_kepler_example1_trait",
-            "ir_keplers",
-            "ir_mapping_example1_trait",
-        ];
-        if s2_rmt_rx_examples.contains(&example_name) {
-            return Some("ESP32-S2 RMT RX channel availability");
-        }
-        let s2_pin_map_examples = ["clock_led4", "rfid"];
-        if s2_pin_map_examples.contains(&example_name) {
-            return Some("ESP32-S2 pin map mismatch");
-        }
     }
 
     None
@@ -250,7 +238,7 @@ fn demo_requirements(demo_name: &str) -> DemoRequirements {
     let requires_rmt = demo_name.starts_with("demo_a")
         || demo_name.starts_with("demo_b")
         || demo_name.starts_with("demo_f");
-    let requires_high_gpio_pins = true;
+    let requires_high_gpio_pins = false;
     let requires_extended_gpio = demo_name.starts_with("demo_f");
 
     DemoRequirements {
@@ -282,27 +270,6 @@ fn missing_demo_capabilities(
 }
 
 fn explicit_demo_skip_reason(chip_feature: &str, demo_name: &str) -> Option<&'static str> {
-    if chip_feature == CHIP_FEATURE_ESP32 {
-        let esp32_pin_map_demos = [
-            "demo_a1_strip_8_blue_gray",
-            "demo_a3_strip_8_blue_white_blink_animate",
-            "demo_f1_dns",
-        ];
-        if esp32_pin_map_demos.contains(&demo_name) {
-            return Some("ESP32 pin map mismatch");
-        }
-    }
-    if chip_feature == CHIP_FEATURE_ESP32H2 {
-        let esp32h2_pin_map_demos = [
-            "demo_a4_strip_96_blue_white_dot",
-            "demo_b1_panel_12x8_rust_cursor",
-            "demo_b2_panel_12x8_text_graphics",
-            "demo_f1_dns",
-        ];
-        if esp32h2_pin_map_demos.contains(&demo_name) {
-            return Some("ESP32-H2 pin map mismatch");
-        }
-    }
     if chip_feature == CHIP_FEATURE_ESP32S2 && demo_name == "demo_f1_dns" {
         return Some("ESP32-S2 linker memory budget");
     }

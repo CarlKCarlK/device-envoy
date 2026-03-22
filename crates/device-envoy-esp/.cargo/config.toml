@@ -128,6 +128,12 @@ rustflags = [
     "-C", "link-arg=-Tlinkall.x",
 ]
 
+[target.riscv32imc-unknown-none-elf]
+runner = "espflash flash --monitor"
+rustflags = [
+    "-C", "link-arg=-Tlinkall.x",
+]
+
 [target.xtensa-esp32s3-none-elf]
 runner = "espflash flash --monitor"
 rustflags = [

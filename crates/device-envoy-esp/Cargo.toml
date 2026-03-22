@@ -15,13 +15,33 @@ all-features = false
 no-default-features = true
 default-target = "riscv32imac-unknown-none-elf"
 targets = ["riscv32imac-unknown-none-elf"]
-features = ["doc-images"]
+features = ["doc-images", "esp32c6"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 host = []
 compile-fail-tests = []
 doc-images = ["dep:embed-doc-image"]
+esp32c6 = [
+    "esp-hal/esp32c6",
+    "esp-rtos/esp32c6",
+    "esp-storage/esp32c6",
+    "esp-alloc/esp32c6",
+    "esp-radio/esp32c6",
+    "esp-backtrace/esp32c6",
+    "esp-println/esp32c6",
+    "esp-bootloader-esp-idf/esp32c6",
+]
+esp32s3 = [
+    "esp-hal/esp32s3",
+    "esp-rtos/esp32s3",
+    "esp-storage/esp32s3",
+    "esp-alloc/esp32s3",
+    "esp-radio/esp32s3",
+    "esp-backtrace/esp32s3",
+    "esp-println/esp32s3",
+    "esp-bootloader-esp-idf/esp32s3",
+]
 
 [dependencies]
 embassy-executor = { version = "0.9.0" }
@@ -40,23 +60,12 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 time = { version = "0.3", default-features = false }
 portable-atomic = { version = "1.11.1", features = ["critical-section"] }
 
-[target.'cfg(all(target_os = "none", target_arch = "riscv32"))'.dependencies]
-esp-hal = { version = "1.0.0", features = ["esp32c6", "unstable"] }
-esp-rtos = { version = "0.2.0", features = ["esp32c6", "embassy", "esp-radio", "esp-alloc"] }
-esp-storage = { version = "0.8.1", features = ["esp32c6"] }
-esp-alloc = { version = "0.9.0", features = ["esp32c6"] }
-esp-radio = { version = "0.17.0", default-features = false, features = ["esp32c6", "wifi", "esp-alloc", "log-04", "unstable"] }
-embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
-log = { version = "0.4", default-features = false }
-embedded-hal-bus = { version = "0.3.0", features = ["async"] }
-esp-hal-mfrc522 = "0.3.3"
-
-[target.'cfg(all(target_os = "none", target_arch = "xtensa"))'.dependencies]
-esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable"] }
-esp-rtos = { version = "0.2.0", features = ["esp32s3", "embassy", "esp-radio", "esp-alloc"] }
-esp-storage = { version = "0.8.1", features = ["esp32s3"] }
-esp-alloc = { version = "0.9.0", features = ["esp32s3"] }
-esp-radio = { version = "0.17.0", default-features = false, features = ["esp32s3", "wifi", "esp-alloc", "log-04", "unstable"] }
+[target.'cfg(target_os = "none")'.dependencies]
+esp-hal = { version = "1.0.0", features = ["unstable"] }
+esp-rtos = { version = "0.2.0", features = ["embassy", "esp-radio", "esp-alloc"] }
+esp-storage = { version = "0.8.1" }
+esp-alloc = { version = "0.9.0" }
+esp-radio = { version = "0.17.0", default-features = false, features = ["wifi", "esp-alloc", "log-04", "unstable"] }
 embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
 log = { version = "0.4", default-features = false }
 embedded-hal-bus = { version = "0.3.0", features = ["async"] }
@@ -69,27 +78,15 @@ device-envoy-example-common = { path = "../device-envoy-example-common" }
 png = { version = "0.17" }
 trybuild = { version = "1.0" }
 
-[target.'cfg(all(target_os = "none", target_arch = "riscv32"))'.dev-dependencies]
+[target.'cfg(target_os = "none")'.dev-dependencies]
 esp-backtrace = { version = "0.18.1", features = [
-    "esp32c6",
     "panic-handler",
     "halt-cores",
     "println",
 ] }
-esp-println = { version = "0.16.1", default-features = false, features = ["esp32c6", "uart", "log-04"] }
+esp-println = { version = "0.16.1", default-features = false, features = ["uart", "log-04"] }
 log = { version = "0.4", default-features = false }
-esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32c6"] }
-
-[target.'cfg(all(target_os = "none", target_arch = "xtensa"))'.dev-dependencies]
-esp-backtrace = { version = "0.18.1", features = [
-    "esp32s3",
-    "panic-handler",
-    "halt-cores",
-    "println",
-] }
-esp-println = { version = "0.16.1", default-features = false, features = ["esp32s3", "uart", "log-04"] }
-log = { version = "0.4", default-features = false }
-esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32s3"] }
+esp-bootloader-esp-idf = { version = "0.4.0" }
 
 [[test]]
 name = "ir_two_receivers_compile"

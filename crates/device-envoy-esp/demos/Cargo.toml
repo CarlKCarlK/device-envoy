@@ -6,6 +6,22 @@ publish = false
 
 [features]
 default = []
+esp32c6 = [
+    "device-envoy-esp/esp32c6",
+    "esp-hal/esp32c6",
+    "esp-rtos/esp32c6",
+    "esp-backtrace/esp32c6",
+    "esp-println/esp32c6",
+    "esp-bootloader-esp-idf/esp32c6",
+]
+esp32s3 = [
+    "device-envoy-esp/esp32s3",
+    "esp-hal/esp32s3",
+    "esp-rtos/esp32s3",
+    "esp-backtrace/esp32s3",
+    "esp-println/esp32s3",
+    "esp-bootloader-esp-idf/esp32s3",
+]
 
 [dependencies]
 device-envoy-esp = { path = "..", default-features = false }
@@ -17,30 +33,16 @@ heapless = { version = "0.8.0" }
 paste = { version = "1.0" }
 static_cell = { version = "2.1.0" }
 
-[target.'cfg(all(target_os = "none", target_arch = "riscv32"))'.dependencies]
-esp-hal = { version = "1.0.0", features = ["esp32c6", "unstable"] }
-esp-rtos = { version = "0.2.0", features = ["esp32c6", "embassy", "esp-radio", "esp-alloc"] }
+[target.'cfg(target_os = "none")'.dependencies]
+esp-hal = { version = "1.0.0", features = ["unstable"] }
+esp-rtos = { version = "0.2.0", features = ["embassy", "esp-radio", "esp-alloc"] }
 esp-backtrace = { version = "0.18.1", features = [
-    "esp32c6",
     "panic-handler",
     "halt-cores",
     "println",
 ] }
-esp-println = { version = "0.16.1", default-features = false, features = ["esp32c6", "uart", "log-04"] }
-esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32c6"] }
-embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
-
-[target.'cfg(all(target_os = "none", target_arch = "xtensa"))'.dependencies]
-esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable"] }
-esp-rtos = { version = "0.2.0", features = ["esp32s3", "embassy", "esp-radio", "esp-alloc"] }
-esp-backtrace = { version = "0.18.1", features = [
-    "esp32s3",
-    "panic-handler",
-    "halt-cores",
-    "println",
-] }
-esp-println = { version = "0.16.1", default-features = false, features = ["esp32s3", "uart", "log-04"] }
-esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32s3"] }
+esp-println = { version = "0.16.1", default-features = false, features = ["uart", "log-04"] }
+esp-bootloader-esp-idf = { version = "0.4.0" }
 embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
 
 [[bin]]

@@ -1,6 +1,14 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(target_os = "none", no_std)]
 
+#[cfg(all(target_os = "none", not(any(feature = "esp32c6", feature = "esp32s3"))))]
+compile_error!(
+    "Select one chip feature for embedded builds: `esp32c6` or `esp32s3` (with `--no-default-features --features <chip>`)."
+);
+
+#[cfg(all(target_os = "none", feature = "esp32c6", feature = "esp32s3"))]
+compile_error!("Select exactly one chip feature for embedded builds, not both.");
+
 pub mod button;
 #[cfg(target_os = "none")]
 pub mod clock_sync {

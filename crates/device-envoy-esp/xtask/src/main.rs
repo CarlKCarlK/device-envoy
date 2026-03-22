@@ -19,6 +19,8 @@ use tar::Archive;
 
 const TARGET_C6: &str = "riscv32imac-unknown-none-elf";
 const TARGET_S3: &str = "xtensa-esp32s3-none-elf";
+const CHIP_FEATURE_C6: &str = "esp32c6";
+const CHIP_FEATURE_S3: &str = "esp32s3";
 
 /// Locates the `xtensa-esp32s3-elf-gcc` linker and returns its parent directory.
 ///
@@ -186,7 +188,7 @@ fn check_docs() -> ExitCode {
         "--target",
         TARGET_C6,
         "--features",
-        "doc-images",
+        "doc-images,esp32c6",
         "--no-default-features",
     ])) {
         return ExitCode::FAILURE;
@@ -242,12 +244,12 @@ fn check_all() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    // (label, target, toolchain_override, build_std)
-    let targets: &[(&str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, None, false),
-        ("s3", TARGET_S3, Some("+esp"), true),
+    // (label, target, chip_feature, toolchain_override, build_std)
+    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
+        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
     ];
-    for (label, target, toolchain, build_std) in targets {
+    for (label, target, chip_feature, toolchain, build_std) in targets {
         println!("{}", format!("--> build lib ({label})").cyan());
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root);
@@ -264,6 +266,8 @@ fn check_all() -> ExitCode {
             "--target",
             target,
             "--no-default-features",
+            "--features",
+            chip_feature,
         ]);
         if *build_std {
             cmd.arg("-Zbuild-std=core,alloc");
@@ -298,7 +302,7 @@ fn check_all() -> ExitCode {
         "--target",
         TARGET_C6,
         "--features",
-        "doc-images",
+        "doc-images,esp32c6",
         "--no-default-features",
     ])) {
         return ExitCode::FAILURE;
@@ -337,6 +341,7 @@ fn check_all() -> ExitCode {
         .arg("--manifest-path")
         .arg(&packaged_manifest_path)
         .args(["--target", TARGET_C6, "--no-default-features"])
+        .args(["--features", CHIP_FEATURE_C6])
         .arg("--config")
         .arg(&device_envoy_core_patch);
     if !run(&mut packaged_check_command) {
@@ -365,12 +370,12 @@ fn check_examples() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    // (label, target, toolchain_override, build_std)
-    let targets: &[(&str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, None, false),
-        ("s3", TARGET_S3, Some("+esp"), true),
+    // (label, target, chip_feature, toolchain_override, build_std)
+    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
+        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
     ];
-    for (label, target, toolchain, build_std) in targets {
+    for (label, target, chip_feature, toolchain, build_std) in targets {
         println!("{}", format!("--> build examples ({label})").cyan());
         for example in &examples {
             println!("    build example: {example}");
@@ -390,6 +395,8 @@ fn check_examples() -> ExitCode {
                 "--target",
                 target,
                 "--no-default-features",
+                "--features",
+                chip_feature,
             ]);
             if *build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
@@ -419,12 +426,12 @@ fn check_demos() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    // (label, target, toolchain_override, build_std)
-    let targets: &[(&str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, None, false),
-        ("s3", TARGET_S3, Some("+esp"), true),
+    // (label, target, chip_feature, toolchain_override, build_std)
+    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
+        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
     ];
-    for (label, target, toolchain, build_std) in targets {
+    for (label, target, chip_feature, toolchain, build_std) in targets {
         println!("{}", format!("--> build demos ({label})").cyan());
         for demo in &demos {
             println!("    build demo: {}", demo.name);
@@ -446,6 +453,8 @@ fn check_demos() -> ExitCode {
                 "--target",
                 target,
                 "--no-default-features",
+                "--features",
+                chip_feature,
             ]);
             if *build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
@@ -491,12 +500,12 @@ fn check_embedded_tests() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    // (label, target, toolchain_override, build_std)
-    let targets: &[(&str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, None, false),
-        ("s3", TARGET_S3, Some("+esp"), true),
+    // (label, target, chip_feature, toolchain_override, build_std)
+    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
+        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
     ];
-    for (label, target, toolchain, build_std) in targets {
+    for (label, target, chip_feature, toolchain, build_std) in targets {
         println!("{}", format!("    target: {label}").cyan());
         for embedded_test in &compile_pass_tests {
             println!("      compile-pass test: {embedded_test}");
@@ -516,6 +525,8 @@ fn check_embedded_tests() -> ExitCode {
                 "--target",
                 target,
                 "--no-default-features",
+                "--features",
+                chip_feature,
             ]);
             if *build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
@@ -527,6 +538,7 @@ fn check_embedded_tests() -> ExitCode {
 
         for embedded_test in &compile_fail_tests {
             println!("      compile-fail test: {embedded_test}");
+            let compile_fail_features = format!("{chip_feature},compile-fail-tests");
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
             // Compile-fail tests are expected to fail. Keep their output non-colored so
@@ -547,7 +559,7 @@ fn check_embedded_tests() -> ExitCode {
                 target,
                 "--no-default-features",
                 "--features",
-                "compile-fail-tests",
+                &compile_fail_features,
             ]);
             if *build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
@@ -654,11 +666,11 @@ fn check_readme_example() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    let targets: &[(&str, &str, Option<&str>, bool)] = &[
-        ("c6", TARGET_C6, None, false),
-        ("s3", TARGET_S3, Some("+esp"), true),
+    let targets: &[(&str, &str, &str, Option<&str>, bool)] = &[
+        ("c6", TARGET_C6, CHIP_FEATURE_C6, None, false),
+        ("s3", TARGET_S3, CHIP_FEATURE_S3, Some("+esp"), true),
     ];
-    for (label, target, toolchain, build_std) in targets {
+    for (label, target, chip_feature, toolchain, build_std) in targets {
         println!("{}", format!("    README example target: {label}").cyan());
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root);
@@ -676,6 +688,8 @@ fn check_readme_example() -> ExitCode {
             "--target",
             target,
             "--no-default-features",
+            "--features",
+            chip_feature,
         ]);
         if *build_std {
             cmd.arg("-Zbuild-std=core,alloc");

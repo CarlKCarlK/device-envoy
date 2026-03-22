@@ -128,10 +128,9 @@ fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
             Capability::Wifi,
             Capability::ExtendedGpio,
         ]),
-        CHIP_FEATURE_ESP32C2 => CapabilitySet::from_capabilities(&[
-            Capability::ButtonGpio,
-            Capability::Wifi,
-        ]),
+        CHIP_FEATURE_ESP32C2 => {
+            CapabilitySet::from_capabilities(&[Capability::ButtonGpio, Capability::Wifi])
+        }
         CHIP_FEATURE_ESP32C3 => CapabilitySet::from_capabilities(&[
             Capability::Rmt,
             Capability::I2s,
@@ -236,10 +235,7 @@ fn missing_capabilities(
     missing_capabilities
 }
 
-fn explicit_example_skip_reason(
-    chip_feature: &str,
-    example_name: &str,
-) -> Option<&'static str> {
+fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Option<&'static str> {
     if chip_feature == CHIP_FEATURE_ESP32S2 {
         let s2_stack_limited_examples = [
             "clock_console_simple",
@@ -352,7 +348,6 @@ const ALL_PROCESSOR_TARGETS: &[BuildTarget] = &[
 
 /// Locates the requested Xtensa linker and returns its parent directory.
 fn find_xtensa_linker_dir(linker: &str) -> Option<PathBuf> {
-
     // Check PATH first.
     if Command::new(linker)
         .arg("--version")
@@ -439,7 +434,10 @@ fn require_xtensa_toolchain() -> Option<PathBuf> {
     }
 
     let first_linker_dir = linker_dirs[0].clone();
-    if linker_dirs.iter().any(|linker_dir| *linker_dir != first_linker_dir) {
+    if linker_dirs
+        .iter()
+        .any(|linker_dir| *linker_dir != first_linker_dir)
+    {
         eprintln!(
             "{}",
             "error: Xtensa linker binaries were found in different directories.\n\
@@ -605,7 +603,10 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     };
     for build_target in CHECK_ALL_TARGETS {
-        println!("{}", format!("--> build lib ({})", build_target.label).cyan());
+        println!(
+            "{}",
+            format!("--> build lib ({})", build_target.label).cyan()
+        );
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root);
         if build_target.build_std {
@@ -766,10 +767,7 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
         } else {
             format!("--> check examples ({})", build_target.label)
         };
-        println!(
-            "{}",
-            target_message.cyan()
-        );
+        println!("{}", target_message.cyan());
         for example in &examples {
             if let Some(skip_reason) =
                 explicit_example_skip_reason(build_target.chip_feature, example)
@@ -780,10 +778,8 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
                 );
                 continue;
             }
-            let missing_capabilities = missing_capabilities(
-                chip_capabilities,
-                example_requirements(example),
-            );
+            let missing_capabilities =
+                missing_capabilities(chip_capabilities, example_requirements(example));
             if !missing_capabilities.is_empty() {
                 println!(
                     "    skip example: {example} ({} unavailable on {})",
@@ -850,22 +846,22 @@ fn check_demos_for_targets(targets: &[BuildTarget]) -> ExitCode {
     };
     for build_target in targets {
         let chip_capabilities = chip_capabilities(build_target.chip_feature);
-        println!("{}", format!("--> build demos ({})", build_target.label).cyan());
+        println!(
+            "{}",
+            format!("--> build demos ({})", build_target.label).cyan()
+        );
         for demo in &demos {
             if let Some(skip_reason) =
                 explicit_demo_skip_reason(build_target.chip_feature, &demo.name)
             {
                 println!(
                     "    skip demo: {} ({skip_reason} on {})",
-                    demo.name,
-                    build_target.label
+                    demo.name, build_target.label
                 );
                 continue;
             }
-            let missing_capabilities = missing_capabilities(
-                chip_capabilities,
-                demo_requirements(&demo.name),
-            );
+            let missing_capabilities =
+                missing_capabilities(chip_capabilities, demo_requirements(&demo.name));
             if !missing_capabilities.is_empty() {
                 println!(
                     "    skip demo: {} ({} unavailable on {})",
@@ -974,8 +970,7 @@ fn check_embedded_tests() -> ExitCode {
 
         for embedded_test in &compile_fail_tests {
             println!("      compile-fail test: {embedded_test}");
-            let compile_fail_features =
-                format!("{},compile-fail-tests", build_target.chip_feature);
+            let compile_fail_features = format!("{},compile-fail-tests", build_target.chip_feature);
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
             // Compile-fail tests are expected to fail. Keep their output non-colored so

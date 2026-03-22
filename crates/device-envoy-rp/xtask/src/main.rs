@@ -129,6 +129,60 @@ impl Arch {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum Capability {
+    Wifi,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CapabilitySet {
+    bits: u16,
+}
+
+impl Capability {
+    const fn bit(self) -> u16 {
+        match self {
+            Capability::Wifi => 1 << 0,
+        }
+    }
+
+    const fn feature_name(self) -> &'static str {
+        match self {
+            Capability::Wifi => "wifi",
+        }
+    }
+}
+
+impl CapabilitySet {
+    const fn empty() -> Self {
+        Self { bits: 0 }
+    }
+
+    fn with_capabilities(capabilities: &[Capability]) -> Self {
+        let mut capability_set = Self::empty();
+        for capability in capabilities {
+            capability_set.insert(*capability);
+        }
+        capability_set
+    }
+
+    fn insert(&mut self, capability: Capability) {
+        self.bits |= capability.bit();
+    }
+
+    const fn contains(self, capability: Capability) -> bool {
+        (self.bits & capability.bit()) != 0
+    }
+}
+
+fn capability_set_from_wifi_enabled(wifi_enabled: bool) -> CapabilitySet {
+    if wifi_enabled {
+        CapabilitySet::with_capabilities(&[Capability::Wifi])
+    } else {
+        CapabilitySet::empty()
+    }
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
 
@@ -172,19 +226,28 @@ fn main() -> ExitCode {
                 ExitCode::SUCCESS
             }
         }
-        Commands::Build { board, arch, wifi } => build_lib(board, arch, wifi),
+        Commands::Build { board, arch, wifi } => {
+            let capability_set = capability_set_from_wifi_enabled(wifi);
+            build_lib(board, arch, capability_set)
+        }
         Commands::Example {
             name,
             board,
             arch,
             wifi,
-        } => build_example(&name, board, arch, wifi),
+        } => {
+            let capability_set = capability_set_from_wifi_enabled(wifi);
+            build_example(&name, board, arch, capability_set)
+        }
         Commands::Uf2 {
             name,
             board,
             arch,
             wifi,
-        } => build_uf2(&name, board, arch, wifi),
+        } => {
+            let capability_set = capability_set_from_wifi_enabled(wifi);
+            build_uf2(&name, board, arch, capability_set)
+        }
     }
 }
 
@@ -198,8 +261,10 @@ fn check_quick() -> ExitCode {
     let arch = Arch::Arm;
     let board_pico2 = Board::Pico2;
     let target_pico2 = arch.target(board_pico2);
-    let features_no_wifi = build_features(board_pico2, arch, false);
-    let features_wifi_pico2 = build_features(board_pico2, arch, true);
+    let no_capabilities = CapabilitySet::empty();
+    let wifi_capabilities = CapabilitySet::with_capabilities(&[Capability::Wifi]);
+    let features_no_wifi = build_features(board_pico2, arch, no_capabilities);
+    let features_wifi_pico2 = build_features(board_pico2, arch, wifi_capabilities);
 
     println!(
         "{}",
@@ -338,17 +403,19 @@ fn check_all() -> ExitCode {
     let demos = discover_demo_bins(&workspace_root);
     let no_wifi_examples: Vec<_> = examples
         .iter()
-        .filter(|example| !example.wifi_required)
+        .filter(|example| !example.required_capabilities.contains(Capability::Wifi))
         .collect();
     let arch = Arch::Arm;
     let board_pico2 = Board::Pico2;
     let board_pico1 = Board::Pico1;
     let target_pico2 = arch.target(board_pico2);
     let target_pico1 = arch.target(board_pico1);
-    let features_no_wifi = build_features(board_pico2, arch, false);
-    let features_no_wifi_pico1 = build_features(board_pico1, arch, false);
-    let features_wifi_pico2 = build_features(board_pico2, arch, true);
-    let features_wifi_pico1 = build_features(board_pico1, arch, true);
+    let no_capabilities = CapabilitySet::empty();
+    let wifi_capabilities = CapabilitySet::with_capabilities(&[Capability::Wifi]);
+    let features_no_wifi = build_features(board_pico2, arch, no_capabilities);
+    let features_no_wifi_pico1 = build_features(board_pico1, arch, no_capabilities);
+    let features_wifi_pico2 = build_features(board_pico2, arch, wifi_capabilities);
+    let features_wifi_pico1 = build_features(board_pico1, arch, wifi_capabilities);
 
     println!("{}", "==> Running all checks in parallel...".cyan());
 
@@ -440,12 +507,12 @@ fn check_all() -> ExitCode {
                 "  [5/10] Demos (pico2 + pico1, with and without wifi)...".bright_black()
             );
             demos.par_iter().for_each(|demo| {
-                let features_pico2 = if demo.wifi_required {
+                let features_pico2 = if demo.required_capabilities.contains(Capability::Wifi) {
                     features_wifi_pico2.as_str()
                 } else {
                     features_no_wifi.as_str()
                 };
-                let features_pico1 = if demo.wifi_required {
+                let features_pico1 = if demo.required_capabilities.contains(Capability::Wifi) {
                     features_wifi_pico1.as_str()
                 } else {
                     features_no_wifi_pico1.as_str()
@@ -725,7 +792,8 @@ fn check_readme_example() -> ExitCode {
     let arch = Arch::Arm;
     let board = Board::Pico2;
     let target = arch.target(board);
-    let features = build_features(board, arch, true);
+    let wifi_capabilities = CapabilitySet::with_capabilities(&[Capability::Wifi]);
+    let features = build_features(board, arch, wifi_capabilities);
 
     if !run_command(Command::new("cargo").current_dir(&crate_root).args([
         "check",
@@ -809,7 +877,8 @@ fn check_docs() -> ExitCode {
     let arch = Arch::Arm;
     let board = Board::Pico2;
     let target = arch.target(board);
-    let features = build_features(board, arch, true);
+    let wifi_capabilities = CapabilitySet::with_capabilities(&[Capability::Wifi]);
+    let features = build_features(board, arch, wifi_capabilities);
 
     println!("{}", "==> Checking documentation...".cyan());
 
@@ -889,16 +958,18 @@ fn check_examples() -> ExitCode {
     let examples = discover_examples(&workspace_root);
     let no_wifi_examples: Vec<_> = examples
         .iter()
-        .filter(|example| !example.wifi_required)
+        .filter(|example| !example.required_capabilities.contains(Capability::Wifi))
         .collect();
     let arch = Arch::Arm;
     let board_pico2 = Board::Pico2;
     let board_pico1 = Board::Pico1;
     let target_pico2 = arch.target(board_pico2);
     let target_pico1 = arch.target(board_pico1);
-    let features_no_wifi = build_features(board_pico2, arch, false);
-    let features_wifi_pico2 = build_features(board_pico2, arch, true);
-    let features_wifi_pico1 = build_features(board_pico1, arch, true);
+    let no_capabilities = CapabilitySet::empty();
+    let wifi_capabilities = CapabilitySet::with_capabilities(&[Capability::Wifi]);
+    let features_no_wifi = build_features(board_pico2, arch, no_capabilities);
+    let features_wifi_pico2 = build_features(board_pico2, arch, wifi_capabilities);
+    let features_wifi_pico1 = build_features(board_pico1, arch, wifi_capabilities);
 
     println!("{}", "==> Checking all examples in parallel...".cyan());
 
@@ -995,20 +1066,22 @@ fn check_demos() -> ExitCode {
     let board_pico1 = Board::Pico1;
     let target_pico2 = arch.target(board_pico2);
     let target_pico1 = arch.target(board_pico1);
-    let features_no_wifi_pico2 = build_features(board_pico2, arch, false);
-    let features_no_wifi_pico1 = build_features(board_pico1, arch, false);
-    let features_wifi_pico2 = build_features(board_pico2, arch, true);
-    let features_wifi_pico1 = build_features(board_pico1, arch, true);
+    let no_capabilities = CapabilitySet::empty();
+    let wifi_capabilities = CapabilitySet::with_capabilities(&[Capability::Wifi]);
+    let features_no_wifi_pico2 = build_features(board_pico2, arch, no_capabilities);
+    let features_no_wifi_pico1 = build_features(board_pico1, arch, no_capabilities);
+    let features_wifi_pico2 = build_features(board_pico2, arch, wifi_capabilities);
+    let features_wifi_pico1 = build_features(board_pico1, arch, wifi_capabilities);
 
     println!("{}", "==> Checking demos...".cyan());
 
     for demo in &demos {
-        let features_pico2 = if demo.wifi_required {
+        let features_pico2 = if demo.required_capabilities.contains(Capability::Wifi) {
             features_wifi_pico2.as_str()
         } else {
             features_no_wifi_pico2.as_str()
         };
-        let features_pico1 = if demo.wifi_required {
+        let features_pico1 = if demo.required_capabilities.contains(Capability::Wifi) {
             features_wifi_pico1.as_str()
         } else {
             features_no_wifi_pico1.as_str()
@@ -1046,10 +1119,10 @@ fn check_demos() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn build_lib(board: Board, arch: Arch, wifi: bool) -> ExitCode {
+fn build_lib(board: Board, arch: Arch, capability_set: CapabilitySet) -> ExitCode {
     let workspace_root = workspace_root();
     let target = arch.target(board);
-    let features = build_features(board, arch, wifi);
+    let features = build_features(board, arch, capability_set);
     println!(
         "{}",
         format!("Building library with features: {features}").cyan()
@@ -1071,10 +1144,10 @@ fn build_lib(board: Board, arch: Arch, wifi: bool) -> ExitCode {
     }
 }
 
-fn build_example(name: &str, board: Board, arch: Arch, wifi: bool) -> ExitCode {
+fn build_example(name: &str, board: Board, arch: Arch, capability_set: CapabilitySet) -> ExitCode {
     let workspace_root = workspace_root();
     let target = arch.target(board);
-    let features = build_features(board, arch, wifi);
+    let features = build_features(board, arch, capability_set);
     println!(
         "{}",
         format!("Building example '{name}' with features: {features}").cyan()
@@ -1097,10 +1170,10 @@ fn build_example(name: &str, board: Board, arch: Arch, wifi: bool) -> ExitCode {
     }
 }
 
-fn build_uf2(name: &str, board: Board, arch: Arch, wifi: bool) -> ExitCode {
+fn build_uf2(name: &str, board: Board, arch: Arch, capability_set: CapabilitySet) -> ExitCode {
     let workspace_root = workspace_root();
     let target = arch.target(board);
-    let features = build_features(board, arch, wifi);
+    let features = build_features(board, arch, capability_set);
 
     println!(
         "{}",
@@ -1150,7 +1223,7 @@ fn build_uf2(name: &str, board: Board, arch: Arch, wifi: bool) -> ExitCode {
 #[derive(Debug, Clone)]
 struct ExampleInfo {
     name: String,
-    wifi_required: bool,
+    required_capabilities: CapabilitySet,
 }
 
 fn discover_examples(workspace_root: &Path) -> Vec<ExampleInfo> {
@@ -1175,10 +1248,14 @@ fn discover_examples(workspace_root: &Path) -> Vec<ExampleInfo> {
             );
             continue;
         }
-        let wifi_required = source.contains("#![cfg(feature = \"wifi\")]");
+        let required_capabilities = if source.contains("#![cfg(feature = \"wifi\")]") {
+            CapabilitySet::with_capabilities(&[Capability::Wifi])
+        } else {
+            CapabilitySet::empty()
+        };
         examples.push(ExampleInfo {
             name,
-            wifi_required,
+            required_capabilities,
         });
     }
     examples.sort_by(|a, b| a.name.cmp(&b.name));
@@ -1188,7 +1265,7 @@ fn discover_examples(workspace_root: &Path) -> Vec<ExampleInfo> {
 #[derive(Debug, Clone)]
 struct DemoInfo {
     name: String,
-    wifi_required: bool,
+    required_capabilities: CapabilitySet,
 }
 
 fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
@@ -1199,26 +1276,31 @@ fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
     let mut in_bin = false;
     let mut current_name: Option<String> = None;
     let mut current_path: Option<String> = None;
-    let mut current_wifi_required = false;
+    let mut current_requires_wifi = false;
 
     let finalize = |current_name: &mut Option<String>,
                     current_path: &mut Option<String>,
-                    current_wifi_required: &mut bool,
+                    current_requires_wifi: &mut bool,
                     demos: &mut Vec<DemoInfo>| {
         if let (Some(name), Some(path)) = (current_name.take(), current_path.take()) {
             let demo_path = workspace_root.join("demos").join(&path);
-            let mut wifi_required = *current_wifi_required;
-            if !wifi_required {
+            let mut requires_wifi = *current_requires_wifi;
+            if !requires_wifi {
                 let source = fs::read_to_string(&demo_path)
                     .unwrap_or_else(|_| panic!("Failed to read {}", demo_path.display()));
-                wifi_required = source.contains("#![cfg(feature = \"wifi\")]");
+                requires_wifi = source.contains("#![cfg(feature = \"wifi\")]");
             }
+            let required_capabilities = if requires_wifi {
+                CapabilitySet::with_capabilities(&[Capability::Wifi])
+            } else {
+                CapabilitySet::empty()
+            };
             demos.push(DemoInfo {
                 name,
-                wifi_required,
+                required_capabilities,
             });
         }
-        *current_wifi_required = false;
+        *current_requires_wifi = false;
     };
 
     for line in contents.lines() {
@@ -1228,7 +1310,7 @@ fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
                 finalize(
                     &mut current_name,
                     &mut current_path,
-                    &mut current_wifi_required,
+                    &mut current_requires_wifi,
                     &mut demos,
                 );
             }
@@ -1240,7 +1322,7 @@ fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
             finalize(
                 &mut current_name,
                 &mut current_path,
-                &mut current_wifi_required,
+                &mut current_requires_wifi,
                 &mut demos,
             );
             in_bin = false;
@@ -1256,7 +1338,7 @@ fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
         } else if let Some(value) = parse_toml_string(trimmed, "path") {
             current_path = Some(value);
         } else if trimmed.starts_with("required-features") && trimmed.contains("wifi") {
-            current_wifi_required = true;
+            current_requires_wifi = true;
         }
     }
 
@@ -1264,7 +1346,7 @@ fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
         finalize(
             &mut current_name,
             &mut current_path,
-            &mut current_wifi_required,
+            &mut current_requires_wifi,
             &mut demos,
         );
     }
@@ -1284,10 +1366,10 @@ fn parse_toml_string(line: &str, key: &str) -> Option<String> {
     Some(value.to_string())
 }
 
-fn build_features(board: Board, arch: Arch, wifi: bool) -> String {
+fn build_features(board: Board, arch: Arch, capability_set: CapabilitySet) -> String {
     let mut features = vec![board.to_string(), arch.to_string()];
-    if wifi {
-        features.push("wifi".to_string());
+    if capability_set.contains(Capability::Wifi) {
+        features.push(Capability::Wifi.feature_name().to_string());
     }
     features.join(",")
 }

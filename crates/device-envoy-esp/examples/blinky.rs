@@ -15,15 +15,15 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{init_and_start, Result};
-#[cfg(esp_has_rmt)]
-use device_envoy_esp::{
-    led_strip,
-    led_strip::{colors, Current, Frame1d, LedStrip as _},
-};
 #[cfg(not(esp_has_rmt))]
 use device_envoy_esp::{
     led,
     led::{Led as _, LedLevel, OnLevel},
+};
+#[cfg(esp_has_rmt)]
+use device_envoy_esp::{
+    led_strip,
+    led_strip::{colors, Current, Frame1d, LedStrip as _},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

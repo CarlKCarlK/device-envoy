@@ -5,10 +5,11 @@
 use core::{convert::Infallible, future, panic};
 
 use device_envoy_esp::{
-    Result, init_and_start, led2d,
+    init_and_start, led2d,
     led2d::Led2d as _,
-    led2d::{Led2dFont, layout::LedLayout},
+    led2d::{layout::LedLayout, Led2dFont},
     led_strip::colors,
+    Result,
 };
 use embassy_executor::Spawner;
 use esp_backtrace as _;

@@ -13,11 +13,11 @@ use embassy_sync::blocking_mutex::Mutex;
 #[cfg(target_os = "none")]
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
 #[cfg(target_os = "none")]
+use portable_atomic::{AtomicU32, Ordering};
+#[cfg(target_os = "none")]
 use serde::{Deserialize, Serialize};
 #[cfg(target_os = "none")]
 use static_cell::StaticCell;
-#[cfg(target_os = "none")]
-use portable_atomic::{AtomicU32, Ordering};
 
 #[cfg(target_os = "none")]
 use crate::{Error, Result};
@@ -145,15 +145,12 @@ impl FlashManager {
     }
 
     fn reserve<const N: usize>(&'static self) -> Result<[FlashBlockEsp; N]> {
-        let start_block = self
-            .next_block
-            .fetch_add(N as u32, Ordering::SeqCst);
+        let start_block = self.next_block.fetch_add(N as u32, Ordering::SeqCst);
         let end_block = start_block
             .checked_add(N as u32)
             .ok_or(Error::IndexOutOfBounds)?;
         if end_block > self.resolved_region.block_count {
-            self.next_block
-                .fetch_sub(N as u32, Ordering::SeqCst);
+            self.next_block.fetch_sub(N as u32, Ordering::SeqCst);
             return Err(Error::IndexOutOfBounds);
         }
 

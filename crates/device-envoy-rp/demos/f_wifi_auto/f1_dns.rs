@@ -61,7 +61,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.DMA_CH1, // Needs a DMA resource
         wifi_credentials_flash_block,
         "DeviceEnvoyDemo", // Setup SSID
-        [],         // Any custom fields
+        [],                // Any custom fields
         spawner,
     )?;
 

@@ -769,6 +769,7 @@ dependencies = [
  "device-envoy-esp",
  "embassy-executor",
  "embassy-time",
+ "embedded-graphics",
  "esp-backtrace",
  "esp-bootloader-esp-idf",
  "esp-hal",

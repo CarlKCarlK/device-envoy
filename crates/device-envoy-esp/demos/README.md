@@ -79,3 +79,20 @@ Run/flash (ESP32-S3):
 ```bash
 cargo +esp run --package device-envoy-esp-demos --bin demo_b1_panel_12x8_rust_cursor --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
 ```
+
+## B2 - 12x8 panel, text to frame and graphics
+
+Writes colored `Go` to a 2D frame, edits pixels directly, then draws crossing
+lines with embedded-graphics before writing the frame to the panel.
+
+Run/flash (ESP32-C6):
+
+```bash
+cargo run --package device-envoy-esp-demos --bin demo_b2_panel_12x8_text_graphics --release --target riscv32imac-unknown-none-elf --no-default-features
+```
+
+Run/flash (ESP32-S3):
+
+```bash
+cargo +esp run --package device-envoy-esp-demos --bin demo_b2_panel_12x8_text_graphics --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
+```

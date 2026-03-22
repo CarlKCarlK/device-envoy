@@ -48,3 +48,8 @@ test = false
 name = "demo_a3_strip_8_blue_white_blink_animate"
 path = "a_strip/a3_strip_8_blue_white_blink_animate.rs"
 test = false
+
+[[bin]]
+name = "demo_a4_strip_96_blue_white_dot"
+path = "a_strip/a4_strip_96_blue_white_dot.rs"
+test = false

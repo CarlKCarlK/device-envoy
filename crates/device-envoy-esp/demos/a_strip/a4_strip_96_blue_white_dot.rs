@@ -1,0 +1,59 @@
+#![allow(missing_docs)]
+#![no_std]
+#![no_main]
+
+use core::{convert::Infallible, panic};
+
+use device_envoy_esp::{
+    Result, init_and_start, led_strip,
+    led_strip::{Current, Frame1d, Gamma, LedStrip as _, colors},
+};
+use embassy_executor::Spawner;
+use embassy_time::{Duration, Timer};
+use esp_backtrace as _;
+
+led_strip! {
+    LedStripLen96 { // visibility modifier is not supported in this macro form
+        pin: GPIO18,
+        len: 96,
+        // Optionals
+        max_current: Current::Milliamps(500), // default is 250ma
+        gamma: Gamma::SmartLeds, // compatibility curve (= 2.8)
+        max_frames: 0, // Disable animation; write_frame() still works
+    }
+    // Gamma correction and current limiting are folded into a single
+    // lookup table (one table lookup per RGB channel at runtime).
+}
+
+esp_bootloader_esp_idf::esp_app_desc!();
+
+// Nice trick: Two "mains" lets us use Results.
+#[esp_rtos::main]
+async fn main(spawner: Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
+}
+
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+
+    // Must match the pin in LedStripLen96 above to avoid compilation error.
+    let led_strip_len96 = LedStripLen96::new(p.GPIO18, rmt80.channel0, spawner)?;
+
+    let mut frame1d = Frame1d::filled(colors::BLUE);
+    loop {
+        for dot_index in 0..LedStripLen96::LEN {
+            frame1d[dot_index] = colors::LIGHT_GRAY;
+            led_strip_len96.write_frame(frame1d);
+            Timer::after(Duration::from_millis(50)).await;
+            frame1d[dot_index] = colors::BLUE;
+        }
+    }
+}
+
+// Issues Fixed:
+//   -- Full-white estimate: ~60mA/pixel × 96 ≈ 5.76A (too much for my supply).
+//   -- Web and X11 colors, PNGs, mp4 assume sRGB color space. LEDs are linear.
+// Issues Remaining:
+// - Because of the weird wiring, it is hard to write text or draw a line.
+// - Can only connect 2 or 3 strips.

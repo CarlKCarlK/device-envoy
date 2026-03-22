@@ -39,3 +39,19 @@ Run/flash (ESP32-S3):
 ```bash
 cargo +esp run --package device-envoy-esp-demos --bin demo_a3_strip_8_blue_white_blink_animate --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
 ```
+
+## A4 - 96-LED strip, white dot on blue background
+
+Moves a single white dot along a 96-LED strip on GPIO18.
+
+Run/flash (ESP32-C6):
+
+```bash
+cargo run --package device-envoy-esp-demos --bin demo_a4_strip_96_blue_white_dot --release --target riscv32imac-unknown-none-elf --no-default-features
+```
+
+Run/flash (ESP32-S3):
+
+```bash
+cargo +esp run --package device-envoy-esp-demos --bin demo_a4_strip_96_blue_white_dot --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
+```

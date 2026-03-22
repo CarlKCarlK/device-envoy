@@ -117,10 +117,10 @@ time = { version = "0.3", default-features = false }
 portable-atomic = { version = "1.11.1" }
 
 [target.'cfg(target_os = "none")'.dependencies]
-esp-hal = { version = "1.0.0", features = ["unstable"] }
-esp-rtos = { version = "0.2.0", features = ["embassy", "esp-radio", "esp-alloc"] }
-esp-storage = { version = "0.8.1" }
-esp-alloc = { version = "0.9.0" }
+esp-hal = { version = "1.0.0", default-features = false, features = ["unstable"] }
+esp-rtos = { version = "0.2.0", default-features = false, features = ["embassy", "esp-radio", "esp-alloc"] }
+esp-storage = { version = "0.8.1", default-features = false }
+esp-alloc = { version = "0.9.0", default-features = false }
 esp-radio = { version = "0.17.0", default-features = false, features = ["esp-alloc", "log-04", "unstable"] }
 embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
 log = { version = "0.4", default-features = false }
@@ -135,14 +135,14 @@ png = { version = "0.17" }
 trybuild = { version = "1.0" }
 
 [target.'cfg(target_os = "none")'.dev-dependencies]
-esp-backtrace = { version = "0.18.1", features = [
+esp-backtrace = { version = "0.18.1", default-features = false, features = [
     "panic-handler",
     "halt-cores",
     "println",
 ] }
 esp-println = { version = "0.16.1", default-features = false, features = ["uart", "log-04"] }
 log = { version = "0.4", default-features = false }
-esp-bootloader-esp-idf = { version = "0.4.0" }
+esp-bootloader-esp-idf = { version = "0.4.0", default-features = false }
 
 [[test]]
 name = "ir_two_receivers_compile"

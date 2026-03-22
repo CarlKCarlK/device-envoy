@@ -180,7 +180,7 @@ mod rmt_mode;
 pub mod servo;
 #[cfg(target_os = "none")]
 mod servo_player;
-#[cfg(esp_has_wifi)]
+#[cfg(any(feature = "host", esp_has_wifi))]
 pub mod wifi_auto;
 
 #[cfg(doc)]
@@ -192,7 +192,7 @@ pub mod docs {
 }
 
 pub use device_envoy_core::tone;
-#[cfg(esp_has_wifi)]
+#[cfg(any(feature = "host", esp_has_wifi))]
 use device_envoy_core::wifi_auto::WifiAutoError;
 /// Used internally by other macros.
 #[doc(hidden)]
@@ -304,7 +304,7 @@ impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
     }
 }
 
-#[cfg(esp_has_wifi)]
+#[cfg(any(feature = "host", esp_has_wifi))]
 impl From<WifiAutoError> for Error {
     fn from(error: WifiAutoError) -> Self {
         match error {

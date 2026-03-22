@@ -465,6 +465,8 @@ struct Cli {
 enum Commands {
     /// Run all checks: lib + all examples + docs
     CheckAll,
+    /// Pre-push validation: required host tests first, then full check-all
+    CheckPrePush,
     /// Check documentation workflows and build docs
     CheckDocs,
     /// Build all examples (catches linker errors)
@@ -481,6 +483,7 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
         Commands::CheckAll => check_all(),
+        Commands::CheckPrePush => check_pre_push(),
         Commands::CheckDocs => check_docs(),
         Commands::CheckExamples => check_examples(),
         Commands::CheckExamplesAllProcessors => check_examples_all_processors(),
@@ -702,6 +705,32 @@ fn check_all() -> ExitCode {
 
     println!("\n{}", "==> All checks passed! 🎉".green().bold());
     ExitCode::SUCCESS
+}
+
+fn check_pre_push() -> ExitCode {
+    let root = workspace_root();
+    println!(
+        "{}",
+        "==> cargo check-pre-push: device-envoy-esp".cyan().bold()
+    );
+
+    let required_host_tests = ["compile_fail", "wifi_auto_portal"];
+    for host_test in required_host_tests {
+        println!("--> required host test: {host_test}");
+        if !run(Command::new("cargo").current_dir(&root).args([
+            "test",
+            "--test",
+            host_test,
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "--features",
+            "host",
+        ])) {
+            return ExitCode::FAILURE;
+        }
+    }
+
+    check_all()
 }
 
 fn check_examples() -> ExitCode {

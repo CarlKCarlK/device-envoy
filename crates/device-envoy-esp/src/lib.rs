@@ -192,11 +192,49 @@ pub mod docs {
 }
 
 pub use device_envoy_core::tone;
+pub use device_envoy_core::capabilities::{
+    Capability, CapabilitySet, PlatformCapabilities,
+};
 #[cfg(any(feature = "host", esp_has_wifi))]
 use device_envoy_core::wifi_auto::WifiAutoError;
 /// Used internally by other macros.
 #[doc(hidden)]
 pub use paste::paste as __paste;
+
+/// Compile-time capability marker for the active ESP chip/feature selection.
+pub struct EspCurrentCapabilities;
+
+const fn esp_current_capabilities() -> CapabilitySet {
+    #[cfg(not(any(feature = "host", esp_has_wifi, esp_has_rmt, esp_has_i2s)))]
+    {
+        return CapabilitySet::EMPTY;
+    }
+
+    let mut capability_set = CapabilitySet::EMPTY;
+    #[cfg(any(feature = "host", esp_has_wifi))]
+    {
+        capability_set = capability_set.with(Capability::Wifi);
+    }
+    #[cfg(esp_has_rmt)]
+    {
+        capability_set = capability_set.with(Capability::Rmt);
+    }
+    #[cfg(esp_has_i2s)]
+    {
+        capability_set = capability_set.with(Capability::I2s);
+    }
+    capability_set
+}
+
+impl PlatformCapabilities for EspCurrentCapabilities {
+    const CAPABILITIES: CapabilitySet = esp_current_capabilities();
+}
+
+/// Returns capabilities available in the current ESP build.
+#[must_use]
+pub const fn capabilities() -> CapabilitySet {
+    EspCurrentCapabilities::CAPABILITIES
+}
 
 /// Public for macro expansion in downstream crates.
 #[doc(hidden)]

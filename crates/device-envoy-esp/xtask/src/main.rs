@@ -44,6 +44,9 @@ struct BuildTarget {
 struct ChipCapabilities {
     has_rmt: bool,
     has_i2s: bool,
+    has_audio_gpio: bool,
+    has_button_gpio: bool,
+    has_high_gpio_pins: bool,
     has_wifi: bool,
     has_extended_gpio: bool,
 }
@@ -52,7 +55,18 @@ struct ChipCapabilities {
 struct ExampleRequirements {
     requires_rmt: bool,
     requires_i2s: bool,
+    requires_audio_gpio: bool,
+    requires_button_gpio: bool,
+    requires_high_gpio_pins: bool,
     requires_wifi: bool,
+    requires_extended_gpio: bool,
+}
+
+#[derive(Clone, Copy)]
+struct DemoRequirements {
+    requires_rmt: bool,
+    requires_wifi: bool,
+    requires_high_gpio_pins: bool,
     requires_extended_gpio: bool,
 }
 
@@ -61,42 +75,63 @@ fn chip_capabilities(chip_feature: &str) -> ChipCapabilities {
         CHIP_FEATURE_ESP32 => ChipCapabilities {
             has_rmt: true,
             has_i2s: true,
+            has_audio_gpio: true,
+            has_button_gpio: true,
+            has_high_gpio_pins: true,
             has_wifi: true,
             has_extended_gpio: true,
         },
         CHIP_FEATURE_ESP32C2 => ChipCapabilities {
             has_rmt: false,
             has_i2s: false,
+            has_audio_gpio: false,
+            has_button_gpio: true,
+            has_high_gpio_pins: false,
             has_wifi: true,
             has_extended_gpio: false,
         },
         CHIP_FEATURE_ESP32C3 => ChipCapabilities {
             has_rmt: true,
             has_i2s: true,
+            has_audio_gpio: true,
+            has_button_gpio: true,
+            has_high_gpio_pins: true,
             has_wifi: true,
             has_extended_gpio: false,
         },
         CHIP_FEATURE_ESP32C6 => ChipCapabilities {
             has_rmt: true,
             has_i2s: true,
+            has_audio_gpio: true,
+            has_button_gpio: true,
+            has_high_gpio_pins: true,
             has_wifi: true,
             has_extended_gpio: true,
         },
         CHIP_FEATURE_ESP32H2 => ChipCapabilities {
             has_rmt: true,
             has_i2s: true,
+            has_audio_gpio: false,
+            has_button_gpio: false,
+            has_high_gpio_pins: false,
             has_wifi: false,
             has_extended_gpio: true,
         },
         CHIP_FEATURE_ESP32S2 => ChipCapabilities {
             has_rmt: true,
             has_i2s: true,
+            has_audio_gpio: true,
+            has_button_gpio: true,
+            has_high_gpio_pins: true,
             has_wifi: true,
             has_extended_gpio: true,
         },
         CHIP_FEATURE_ESP32S3 => ChipCapabilities {
             has_rmt: true,
             has_i2s: true,
+            has_audio_gpio: true,
+            has_button_gpio: true,
+            has_high_gpio_pins: true,
             has_wifi: true,
             has_extended_gpio: true,
         },
@@ -106,6 +141,18 @@ fn chip_capabilities(chip_feature: &str) -> ChipCapabilities {
 
 fn example_requirements(example: &str) -> ExampleRequirements {
     let requires_i2s = example.starts_with("audio");
+    let requires_audio_gpio = example.starts_with("audio");
+    let requires_button_gpio = example.starts_with("button_");
+    let requires_high_gpio_pins = example == "conway"
+        || example.starts_with("ir")
+        || example.starts_with("lcd_text")
+        || example.starts_with("led2d")
+        || example == "led_strip_example2_trait"
+        || example == "rfid"
+        || example == "servos"
+        || example == "servo_example1_trait"
+        || example == "servo_player_example1_trait"
+        || example == "servo_player_example2_trait";
     let requires_rmt = example == "blinky"
         || example.starts_with("conway")
         || example.starts_with("ir")
@@ -121,6 +168,9 @@ fn example_requirements(example: &str) -> ExampleRequirements {
     ExampleRequirements {
         requires_rmt,
         requires_i2s,
+        requires_audio_gpio,
+        requires_button_gpio,
+        requires_high_gpio_pins,
         requires_wifi,
         requires_extended_gpio,
     }
@@ -137,6 +187,15 @@ fn missing_example_capabilities(
     if example_requirements.requires_i2s && !chip_capabilities.has_i2s {
         missing_capabilities.push("I2S");
     }
+    if example_requirements.requires_audio_gpio && !chip_capabilities.has_audio_gpio {
+        missing_capabilities.push("audio GPIO mapping");
+    }
+    if example_requirements.requires_button_gpio && !chip_capabilities.has_button_gpio {
+        missing_capabilities.push("button GPIO mapping");
+    }
+    if example_requirements.requires_high_gpio_pins && !chip_capabilities.has_high_gpio_pins {
+        missing_capabilities.push("high GPIO pin set");
+    }
     if example_requirements.requires_wifi && !chip_capabilities.has_wifi {
         missing_capabilities.push("Wi-Fi");
     }
@@ -144,6 +203,110 @@ fn missing_example_capabilities(
         missing_capabilities.push("extended GPIO set");
     }
     missing_capabilities
+}
+
+fn explicit_example_skip_reason(
+    chip_feature: &str,
+    example_name: &str,
+) -> Option<&'static str> {
+    if chip_feature == CHIP_FEATURE_ESP32S2 {
+        let s2_stack_limited_examples = [
+            "clock_console_simple",
+            "clock_lcd",
+            "clock_led8x12",
+            "clock_servos",
+            "clock_sync_example1_trait",
+            "wifi_auto_custom_checkbox",
+            "wifi_auto_example1_trait",
+            "wifi_auto_force_button",
+            "wifi_dns_hex",
+        ];
+        if s2_stack_limited_examples.contains(&example_name) {
+            return Some("ESP32-S2 linker memory budget");
+        }
+        let s2_rmt_rx_examples = [
+            "conway",
+            "ir",
+            "ir_example1_trait",
+            "ir_kepler",
+            "ir_kepler_example1_trait",
+            "ir_keplers",
+            "ir_mapping_example1_trait",
+        ];
+        if s2_rmt_rx_examples.contains(&example_name) {
+            return Some("ESP32-S2 RMT RX channel availability");
+        }
+        let s2_pin_map_examples = ["clock_led4", "rfid"];
+        if s2_pin_map_examples.contains(&example_name) {
+            return Some("ESP32-S2 pin map mismatch");
+        }
+    }
+
+    None
+}
+
+fn demo_requirements(demo_name: &str) -> DemoRequirements {
+    let requires_wifi = demo_name.starts_with("demo_f");
+    let requires_rmt = demo_name.starts_with("demo_a")
+        || demo_name.starts_with("demo_b")
+        || demo_name.starts_with("demo_f");
+    let requires_high_gpio_pins = true;
+    let requires_extended_gpio = demo_name.starts_with("demo_f");
+
+    DemoRequirements {
+        requires_rmt,
+        requires_wifi,
+        requires_high_gpio_pins,
+        requires_extended_gpio,
+    }
+}
+
+fn missing_demo_capabilities(
+    chip_capabilities: ChipCapabilities,
+    demo_requirements: DemoRequirements,
+) -> Vec<&'static str> {
+    let mut missing_capabilities = Vec::new();
+    if demo_requirements.requires_rmt && !chip_capabilities.has_rmt {
+        missing_capabilities.push("RMT");
+    }
+    if demo_requirements.requires_wifi && !chip_capabilities.has_wifi {
+        missing_capabilities.push("Wi-Fi");
+    }
+    if demo_requirements.requires_high_gpio_pins && !chip_capabilities.has_high_gpio_pins {
+        missing_capabilities.push("high GPIO pin set");
+    }
+    if demo_requirements.requires_extended_gpio && !chip_capabilities.has_extended_gpio {
+        missing_capabilities.push("extended GPIO set");
+    }
+    missing_capabilities
+}
+
+fn explicit_demo_skip_reason(chip_feature: &str, demo_name: &str) -> Option<&'static str> {
+    if chip_feature == CHIP_FEATURE_ESP32 {
+        let esp32_pin_map_demos = [
+            "demo_a1_strip_8_blue_gray",
+            "demo_a3_strip_8_blue_white_blink_animate",
+            "demo_f1_dns",
+        ];
+        if esp32_pin_map_demos.contains(&demo_name) {
+            return Some("ESP32 pin map mismatch");
+        }
+    }
+    if chip_feature == CHIP_FEATURE_ESP32H2 {
+        let esp32h2_pin_map_demos = [
+            "demo_a4_strip_96_blue_white_dot",
+            "demo_b1_panel_12x8_rust_cursor",
+            "demo_b2_panel_12x8_text_graphics",
+            "demo_f1_dns",
+        ];
+        if esp32h2_pin_map_demos.contains(&demo_name) {
+            return Some("ESP32-H2 pin map mismatch");
+        }
+    }
+    if chip_feature == CHIP_FEATURE_ESP32S2 && demo_name == "demo_f1_dns" {
+        return Some("ESP32-S2 linker memory budget");
+    }
+    None
 }
 
 const BUILD_TARGET_ESP32: BuildTarget = BuildTarget {
@@ -486,11 +649,11 @@ fn check_all() -> ExitCode {
         }
     }
 
-    if check_examples() != ExitCode::SUCCESS {
+    if check_examples_for_targets(ALL_PROCESSOR_TARGETS, true) != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
 
-    if check_demos() != ExitCode::SUCCESS {
+    if check_demos_for_targets(ALL_PROCESSOR_TARGETS) != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
 
@@ -599,6 +762,15 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
             target_message.cyan()
         );
         for example in &examples {
+            if let Some(skip_reason) =
+                explicit_example_skip_reason(build_target.chip_feature, example)
+            {
+                println!(
+                    "    skip example: {example} ({skip_reason} on {})",
+                    build_target.label
+                );
+                continue;
+            }
             let missing_capabilities = missing_example_capabilities(
                 chip_capabilities,
                 example_requirements(example),
@@ -653,6 +825,10 @@ struct DemoInfo {
 }
 
 fn check_demos() -> ExitCode {
+    check_demos_for_targets(CHECK_ALL_TARGETS)
+}
+
+fn check_demos_for_targets(targets: &[BuildTarget]) -> ExitCode {
     let root = workspace_root();
     let demos = discover_demo_bins(&root);
     if demos.is_empty() {
@@ -660,12 +836,36 @@ fn check_demos() -> ExitCode {
         return ExitCode::SUCCESS;
     }
 
-    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
         return ExitCode::FAILURE;
     };
-    for build_target in CHECK_ALL_TARGETS {
+    for build_target in targets {
+        let chip_capabilities = chip_capabilities(build_target.chip_feature);
         println!("{}", format!("--> build demos ({})", build_target.label).cyan());
         for demo in &demos {
+            if let Some(skip_reason) =
+                explicit_demo_skip_reason(build_target.chip_feature, &demo.name)
+            {
+                println!(
+                    "    skip demo: {} ({skip_reason} on {})",
+                    demo.name,
+                    build_target.label
+                );
+                continue;
+            }
+            let missing_capabilities = missing_demo_capabilities(
+                chip_capabilities,
+                demo_requirements(&demo.name),
+            );
+            if !missing_capabilities.is_empty() {
+                println!(
+                    "    skip demo: {} ({} unavailable on {})",
+                    demo.name,
+                    missing_capabilities.join(", "),
+                    build_target.label
+                );
+                continue;
+            }
             println!("    build demo: {}", demo.name);
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);

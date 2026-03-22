@@ -13,7 +13,7 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 
 led_strip! {
-    LedStripLen96 { // visibility modifier is not supported in this macro form
+    pub LedStripLen96 { // can add 'pub' to make struct public
         pin: GPIO18,
         len: 96,
         // Optionals

@@ -364,7 +364,7 @@ pub async fn led_strip_device_loop<
 ///
 /// ```text
 /// led_strip! {
-///     <Name> {
+///     [<visibility>] <Name> {
 ///         pin: <pin_ident>,
 ///         len: <usize_expr>,
 ///         max_current: <Current_expr>, // optional
@@ -430,6 +430,20 @@ macro_rules! __led_strip_entry {
             max_frames = [],
             reset_us = [],
             fields = [$($fields)*],
+        }
+    };
+    (
+        $vis:vis $name:ident {
+            $($fields:tt)*
+        }
+    ) => {
+        $crate::__paste! {
+            $crate::__led_strip_entry! {
+                [<__ $name _visibility_inner>] {
+                    $($fields)*
+                }
+            }
+            $vis type $name = [<__ $name _visibility_inner>];
         }
     };
 }

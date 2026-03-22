@@ -68,7 +68,7 @@ macro_rules! combine {
 ///
 /// ```text
 /// servo_player! {
-///     <Name> {
+///     [<visibility>] <Name> {
 ///         pin: <pin_ident>,
 ///         timer: <timer_ident>,
 ///         channel: <channel_ident>,
@@ -170,6 +170,32 @@ macro_rules! __servo_player_impl {
             ) -> ! {
                 $crate::servo::device_loop(servo_player_static, servo).await
             }
+        }
+    };
+    (
+        $vis:vis $name:ident {
+            pin: $pin:ident,
+            timer: $timer:ident,
+            channel: $channel:ident,
+            $(min_us: $min_us:expr,)?
+            $(max_us: $max_us:expr,)?
+            $(max_degrees: $max_degrees:expr,)?
+            $(max_steps: $max_steps:expr $(,)?)?
+        }
+    ) => {
+        $crate::__paste! {
+            $crate::__servo_player_impl! {
+                [<__ $name _visibility_inner>] {
+                    pin: $pin,
+                    timer: $timer,
+                    channel: $channel,
+                    $(min_us: $min_us,)?
+                    $(max_us: $max_us,)?
+                    $(max_degrees: $max_degrees,)?
+                    $(max_steps: $max_steps,)?
+                }
+            }
+            $vis type $name = [<__ $name _visibility_inner>];
         }
     };
 

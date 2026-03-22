@@ -233,6 +233,20 @@ macro_rules! __led2d_impl {
             fields = [$($fields)*],
         }
     };
+    (
+        $vis:vis $name:ident {
+            $($fields:tt)*
+        }
+    ) => {
+        $crate::__paste! {
+            $crate::__led2d_impl! {
+                [<__ $name _visibility_inner>] {
+                    $($fields)*
+                }
+            }
+            $vis type $name = [<__ $name _visibility_inner>];
+        }
+    };
 
     (
         $name:ident,

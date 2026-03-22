@@ -16,6 +16,15 @@ show-docs-esp:
 attach-esp:
     source "$HOME/export-esp.sh" && espflash monitor
 
+run name chip="c6":
+    ./scripts/device-action.sh run {{name}} {{chip}}
+
+check name chip="c6":
+    ./scripts/device-action.sh check {{name}} {{chip}}
+
+build name chip="c6":
+    ./scripts/device-action.sh build {{name}} {{chip}}
+
 blinky-s3:
     source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features
 

@@ -1,3 +1,5 @@
+set shell := ["bash", "-cu"]
+
 # RP docs only
 update-docs-rp:
 	./scripts/update-docs.sh
@@ -18,6 +20,15 @@ update-docs-esp:
 # Build ESP docs and open them in a browser (pass-through)
 show-docs-esp:
 	cd ../device-envoy-esp && just show-docs-esp
+
+run name board="1":
+	./scripts/device-action.sh run {{name}} {{board}}
+
+check name board="1":
+	./scripts/device-action.sh check {{name}} {{board}}
+
+build name board="1":
+	./scripts/device-action.sh build {{name}} {{board}}
 
 regenerate-text-pngs:
 	./scripts/regenerate-text-pngs.sh

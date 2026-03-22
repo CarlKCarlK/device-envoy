@@ -28,26 +28,39 @@ ESP32-S3 requires the ESP Rust toolchain/runtime flow used by this repo:
 
 - Install/use the `+esp` toolchain as needed for Xtensa builds.
 - Load your ESP environment before S3 commands (for this repo that is usually `source "$HOME/export-esp.sh"`).
-- Use `just` recipes for S3 run/check commands in `crates/device-envoy-esp/justfile`.
+- Use `just run/check/build` commands in `crates/device-envoy-esp/justfile`.
 
 ## Run Examples
 
-Use this alias naming scheme:
+Use `just` from the crate you are in (`crates/device-envoy-rp` or `crates/device-envoy-esp`):
 
-- `cargo <name-of-example>`: Pico 1 (default; or ESP C6 where a root alias exists)
-- `cargo <name-of-example>-2`: Pico 2
-- `cargo <name-of-example>-w`: Pico 1 with WiFi
-- `cargo <name-of-example>-2w`: Pico 2 with WiFi
-- `just <name-of-example>-s3`: ESP32-S3
+- `just run <name> [target]`
+- `just check <name> [target]`
+- `just build <name> [target]`
+
+Defaults:
+
+- ESP crate default target: `c6`
+- RP crate default target: `1`
+
+Common target suffixes:
+
+- ESP: `c2`, `c3`, `c6`, `h2`, `esp32`, `s2`, `s3`
+- RP: `1`, `2`, `w`, `2w`, `2r`
 
 Examples:
 
 ```bash
-cargo blinky
-cargo blinky-2
-cargo clock-lcd-w
-cargo clock-lcd-2w
-cd crates/device-envoy-esp && just led-example1-trait-s3
+cd crates/device-envoy-esp
+just run blinky
+just run blinky c2
+just run blinky s3
+just build f1 s3
+
+cd ../device-envoy-rp
+just run blinky
+just run blinky 2
+just check f1 2w
 ```
 
 ## Run Full Workspace Checks

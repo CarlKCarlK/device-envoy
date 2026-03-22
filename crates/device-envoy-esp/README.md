@@ -10,7 +10,10 @@
 It organizes hardware around device abstractions so application code can use
 small, focused APIs instead of managing low-level coordination directly.
 
-`device-envoy-esp` currently runs on and is tested with ESP32-C6 and ESP32-S3.
+`device-envoy-esp` is compile-validated across ESP32, ESP32-C2, ESP32-C3, ESP32-C6,
+ESP32-H2, ESP32-S2, and ESP32-S3 (with capability-aware checks for chip-specific
+peripherals). Hardware runs in this repository are primarily exercised on ESP32-C6
+and ESP32-S3 boards.
 
 ## Start From a Template
 
@@ -121,14 +124,16 @@ See the `examples/` directory for complete runnable code.
 
 ## Glossary
 
-Resources commonly used in `device-envoy-esp`:
+Resources commonly used in `device-envoy-esp` (availability/count varies by chip):
 
-- **RMT** ([Remote Control Transceiver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/rmt.html)): ESP32-C6: 4 channels. ESP32-S3: 8 channels.
-- **LEDC** ([LED PWM Controller](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/ledc.html)): ESP32-C6: 4 timers, 6 channels. ESP32-S3: 4 timers, 8 channels.
-- **DMA** ([Direct Memory Access](https://en.wikipedia.org/wiki/Direct_memory_access)): ESP32-C6: 3 channels (`DMA_CH0`-`DMA_CH2`). ESP32-S3: 5 channels (`DMA_CH0`-`DMA_CH4`).
-- **I2S** ([Inter-IC Sound](https://en.wikipedia.org/wiki/I%C2%B2S)): ESP32-C6: 1 controller (`I2S0`). ESP32-S3: 2 controllers (`I2S0`, `I2S1`).
-- **I2C** ([Inter-Integrated Circuit](https://en.wikipedia.org/wiki/I2C)): ESP32-C6: 2 controllers. ESP32-S3: 2 controllers.
-- **SPI** ([Serial Peripheral Interface](https://en.wikipedia.org/wiki/Serial_Peripheral_Interface)): ESP32-C6: 2 peripherals. ESP32-S3: 3 peripherals.
+- **RMT** ([Remote Control Transceiver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/rmt.html))
+- **LEDC** ([LED PWM Controller](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/ledc.html))
+- **DMA** ([Direct Memory Access](https://en.wikipedia.org/wiki/Direct_memory_access))
+- **I2S** ([Inter-IC Sound](https://en.wikipedia.org/wiki/I%C2%B2S))
+- **I2C** ([Inter-Integrated Circuit](https://en.wikipedia.org/wiki/I2C))
+- **SPI** ([Serial Peripheral Interface](https://en.wikipedia.org/wiki/Serial_Peripheral_Interface))
+
+See your selected ESP chip datasheet/reference docs for exact peripheral counts and pin constraints.
 
 ## Policy on AI-assisted development and contributions
 

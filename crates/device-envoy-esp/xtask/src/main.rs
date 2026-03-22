@@ -217,6 +217,7 @@ fn explicit_example_skip_reason(
         let s2_stack_limited_examples = [
             "clock_console_simple",
             "clock_lcd",
+            "clock_led4",
             "clock_led8x12",
             "clock_servos",
             "clock_sync_example1_trait",

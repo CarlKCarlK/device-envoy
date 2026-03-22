@@ -19,6 +19,7 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(esp_gdma_family)]
 audio_player! {
     AudioPlayer21 {
         data_pin: GPIO21,
@@ -26,6 +27,18 @@ audio_player! {
         word_select_pin: GPIO12,
         sample_rate_hz: NARROWBAND_8000_HZ,
         dma: DMA_CH0,
+        max_volume: Volume::percent(50),
+    }
+}
+
+#[cfg(esp_pdma_family)]
+audio_player! {
+    AudioPlayer21 {
+        data_pin: GPIO21,
+        bit_clock_pin: GPIO4,
+        word_select_pin: GPIO5,
+        sample_rate_hz: NARROWBAND_8000_HZ,
+        dma: DMA_I2S0,
         max_volume: Volume::percent(50),
     }
 }
@@ -97,10 +110,17 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
+    #[cfg(esp_gdma_family)]
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    #[cfg(esp_pdma_family)]
+    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
+    #[cfg(esp_gdma_family)]
     let audio_player21 =
         AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
+    #[cfg(esp_pdma_family)]
+    let audio_player21 =
+        AudioPlayer21::new(p.GPIO21, p.GPIO4, p.GPIO5, p.I2S0, p.DMA_I2S0, spawner)?;
 
     loop {
         play_resampled_countdown(audio_player21);

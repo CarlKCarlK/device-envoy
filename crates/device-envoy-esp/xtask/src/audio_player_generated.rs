@@ -15,7 +15,7 @@ use crate::audio_player;
     not(doc),
     not(feature = "host"),
     target_os = "none",
-    any(feature = "esp32", feature = "esp32s2")
+    esp_pdma_family
 ))]
 audio_player! {
     pub AudioPlayerGenerated {
@@ -31,13 +31,7 @@ audio_player! {
     not(doc),
     not(feature = "host"),
     target_os = "none",
-    any(
-        feature = "esp32c2",
-        feature = "esp32c3",
-        feature = "esp32c6",
-        feature = "esp32h2",
-        feature = "esp32s3"
-    )
+    esp_gdma_family
 ))]
 audio_player! {
     pub AudioPlayerGenerated {

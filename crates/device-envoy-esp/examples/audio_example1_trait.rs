@@ -19,13 +19,7 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(any(
-    feature = "esp32c2",
-    feature = "esp32c3",
-    feature = "esp32c6",
-    feature = "esp32h2",
-    feature = "esp32s3"
-))]
+#[cfg(esp_gdma_family)]
 audio_player! {
     AudioPlayer21 {
         data_pin: GPIO21,
@@ -37,7 +31,7 @@ audio_player! {
     }
 }
 
-#[cfg(any(feature = "esp32", feature = "esp32s2"))]
+#[cfg(esp_pdma_family)]
 audio_player! {
     AudioPlayer21 {
         data_pin: GPIO21,
@@ -81,27 +75,15 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    #[cfg(any(
-        feature = "esp32c2",
-        feature = "esp32c3",
-        feature = "esp32c6",
-        feature = "esp32h2",
-        feature = "esp32s3"
-    ))]
+    #[cfg(esp_gdma_family)]
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    #[cfg(any(feature = "esp32", feature = "esp32s2"))]
+    #[cfg(esp_pdma_family)]
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
-    #[cfg(any(
-        feature = "esp32c2",
-        feature = "esp32c3",
-        feature = "esp32c6",
-        feature = "esp32h2",
-        feature = "esp32s3"
-    ))]
+    #[cfg(esp_gdma_family)]
     let audio_player21 =
         AudioPlayer21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
-    #[cfg(any(feature = "esp32", feature = "esp32s2"))]
+    #[cfg(esp_pdma_family)]
     let audio_player21 =
         AudioPlayer21::new(p.GPIO21, p.GPIO4, p.GPIO5, p.I2S0, p.DMA_I2S0, spawner)?;
 

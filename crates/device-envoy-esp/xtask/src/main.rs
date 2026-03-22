@@ -220,7 +220,7 @@ enum Commands {
     CheckDocs,
     /// Build all examples (catches linker errors)
     CheckExamples,
-    /// Build all examples for all supported ESP processor feature/target combinations
+    /// Check all examples for all supported ESP processor feature/target combinations
     CheckExamplesAllProcessors,
     /// Build all demos (catches linker errors)
     CheckDemos,
@@ -456,14 +456,14 @@ fn check_all() -> ExitCode {
 }
 
 fn check_examples() -> ExitCode {
-    check_examples_for_targets(CHECK_ALL_TARGETS)
+    check_examples_for_targets(CHECK_ALL_TARGETS, true)
 }
 
 fn check_examples_all_processors() -> ExitCode {
-    check_examples_for_targets(ALL_PROCESSOR_TARGETS)
+    check_examples_for_targets(ALL_PROCESSOR_TARGETS, false)
 }
 
-fn check_examples_for_targets(targets: &[BuildTarget]) -> ExitCode {
+fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> ExitCode {
     let root = workspace_root();
 
     let examples_dir = root.join("examples");
@@ -482,12 +482,21 @@ fn check_examples_for_targets(targets: &[BuildTarget]) -> ExitCode {
         return ExitCode::FAILURE;
     };
     for build_target in targets {
+        let target_message = if link_examples {
+            format!("--> build examples ({})", build_target.label)
+        } else {
+            format!("--> check examples ({})", build_target.label)
+        };
         println!(
             "{}",
-            format!("--> build examples ({})", build_target.label).cyan()
+            target_message.cyan()
         );
         for example in &examples {
-            println!("    build example: {example}");
+            if link_examples {
+                println!("    build example: {example}");
+            } else {
+                println!("    check example: {example}");
+            }
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
             if build_target.build_std {
@@ -497,7 +506,7 @@ fn check_examples_for_targets(targets: &[BuildTarget]) -> ExitCode {
                 cmd.arg(tc);
             }
             cmd.args([
-                "build",
+                if link_examples { "build" } else { "check" },
                 "--example",
                 example,
                 "--release",

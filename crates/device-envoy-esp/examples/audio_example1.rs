@@ -16,6 +16,13 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(any(
+    feature = "esp32c2",
+    feature = "esp32c3",
+    feature = "esp32c6",
+    feature = "esp32h2",
+    feature = "esp32s3"
+))]
 audio_player! {
     AudioPlayerGpio21 {
         data_pin: GPIO21,
@@ -23,6 +30,18 @@ audio_player! {
         word_select_pin: GPIO12,
         sample_rate_hz: VOICE_22050_HZ,
         dma: DMA_CH0,
+        max_volume: Volume::percent(25),
+    }
+}
+
+#[cfg(any(feature = "esp32", feature = "esp32s2"))]
+audio_player! {
+    AudioPlayerGpio21 {
+        data_pin: GPIO21,
+        bit_clock_pin: GPIO4,
+        word_select_pin: GPIO5,
+        sample_rate_hz: VOICE_22050_HZ,
+        dma: DMA_I2S0,
         max_volume: Volume::percent(25),
     }
 }
@@ -45,8 +64,18 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const NOTE_D4: &AudioPlayerGpio21Playable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
     const NOTE_C4: &AudioPlayerGpio21Playable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
 
+    #[cfg(any(
+        feature = "esp32c2",
+        feature = "esp32c3",
+        feature = "esp32c6",
+        feature = "esp32h2",
+        feature = "esp32s3"
+    ))]
     let audio_player_gpio21 =
         AudioPlayerGpio21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
+    #[cfg(any(feature = "esp32", feature = "esp32s2"))]
+    let audio_player_gpio21 =
+        AudioPlayerGpio21::new(p.GPIO21, p.GPIO4, p.GPIO5, p.I2S0, p.DMA_I2S0, spawner)?;
     audio_player_gpio21.play(
         [
             NOTE_E4, REST, NOTE_D4, REST, NOTE_C4, REST, NOTE_D4, REST, NOTE_E4, REST, NOTE_E4,

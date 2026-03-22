@@ -29,6 +29,7 @@ audio_player! {
         bit_clock_pin: GPIO11,
         word_select_pin: GPIO12,
         sample_rate_hz: VOICE_22050_HZ,
+        dma: DMA_CH0,
         max_clips: 8,
         max_volume: Volume::spinal_tap(11),
         initial_volume: Volume::spinal_tap(5),

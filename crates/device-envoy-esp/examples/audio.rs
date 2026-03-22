@@ -28,12 +28,33 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(any(
+    feature = "esp32c2",
+    feature = "esp32c3",
+    feature = "esp32c6",
+    feature = "esp32h2",
+    feature = "esp32s3"
+))]
 audio_player! {
     AudioPlayerGpio21 {
         data_pin: GPIO21,
         bit_clock_pin: GPIO11,
         word_select_pin: GPIO12,
         sample_rate_hz: VOICE_22050_HZ,
+        dma: DMA_CH0,
+        max_volume: Volume::percent(50),
+        initial_volume: Volume::percent(100),
+    }
+}
+
+#[cfg(any(feature = "esp32", feature = "esp32s2"))]
+audio_player! {
+    AudioPlayerGpio21 {
+        data_pin: GPIO21,
+        bit_clock_pin: GPIO4,
+        word_select_pin: GPIO5,
+        sample_rate_hz: VOICE_22050_HZ,
+        dma: DMA_I2S0,
         max_volume: Volume::percent(50),
         initial_volume: Volume::percent(100),
     }
@@ -68,17 +89,55 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const SILENCE_100MS: &AudioPlayerGpio21Playable =
         &SilenceClip::new(StdDuration::from_millis(100));
 
+    #[cfg(any(
+        feature = "esp32c2",
+        feature = "esp32c3",
+        feature = "esp32c6",
+        feature = "esp32h2",
+        feature = "esp32s3"
+    ))]
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    #[cfg(any(feature = "esp32", feature = "esp32s2"))]
+    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+
+    #[cfg(any(
+        feature = "esp32c2",
+        feature = "esp32c3",
+        feature = "esp32c6",
+        feature = "esp32h2",
+        feature = "esp32s3"
+    ))]
     let audio_player_gpio21 =
         AudioPlayerGpio21::new(p.GPIO21, p.GPIO11, p.GPIO12, p.I2S0, p.DMA_CH0, spawner)?;
+    #[cfg(any(feature = "esp32", feature = "esp32s2"))]
+    let audio_player_gpio21 =
+        AudioPlayerGpio21::new(p.GPIO21, p.GPIO4, p.GPIO5, p.I2S0, p.DMA_I2S0, spawner)?;
 
+    #[cfg(any(
+        feature = "esp32c2",
+        feature = "esp32c3",
+        feature = "esp32c6",
+        feature = "esp32h2",
+        feature = "esp32s3"
+    ))]
     info!("I2S ready: GPIO21 DIN, GPIO11 BCLK, GPIO12 LRCLK");
+    #[cfg(any(feature = "esp32", feature = "esp32s2"))]
+    info!("I2S ready: GPIO21 DIN, GPIO4 BCLK, GPIO5 LRCLK");
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
         Nasa::PCM_SAMPLE_COUNT,
         Nasa::PCM_SAMPLE_COUNT * 2
     );
+    #[cfg(any(
+        feature = "esp32c2",
+        feature = "esp32c3",
+        feature = "esp32c6",
+        feature = "esp32h2",
+        feature = "esp32s3"
+    ))]
     info!("Button on GPIO6 starts playback");
+    #[cfg(any(feature = "esp32", feature = "esp32s2"))]
+    info!("Button on GPIO0 starts playback");
 
     loop {
         button.wait_for_press().await;

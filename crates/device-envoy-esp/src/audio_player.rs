@@ -73,6 +73,7 @@
 //!         bit_clock_pin: GPIO9,
 //!         word_select_pin: GPIO10,
 //!         sample_rate_hz: VOICE_22050_HZ, // Convenience constant for this example; any hardware-supported sample rate can be used.
+//!         dma: DMA_CH0,
 //!         max_volume: Volume::percent(50),
 //!     }
 //! }
@@ -145,7 +146,7 @@
 //!         word_select_pin: GPIO10,
 //!         sample_rate_hz: VOICE_22050_HZ,
 //!         i2s: I2S0,                             // optional, defaults to I2S0
-//!         dma: DMA_CH1,                          // optional, defaults to DMA_CH0
+//!         dma: DMA_CH1,                          // required
 //!         max_clips: 8,                          // optional, defaults to 16
 //!         max_volume: Volume::spinal_tap(11),    // optional, defaults to Volume::MAX
 //!         initial_volume: Volume::spinal_tap(5), // optional, defaults to Volume::MAX
@@ -255,6 +256,7 @@
 //!         bit_clock_pin: GPIO9,
 //!         word_select_pin: GPIO10,
 //!         sample_rate_hz: NARROWBAND_8000_HZ,
+//!         dma: DMA_CH0,
 //!         max_volume: Volume::percent(50),
 //!     }
 //! }
@@ -653,7 +655,7 @@ async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) ->
 ///         word_select_pin: <pin_ident>,
 ///         sample_rate_hz: <sample_rate_expr>,
 ///         i2s: <i2s_ident>,                // optional (for example: I2S0)
-///         dma: <dma_ident>,                 // optional
+///         dma: <dma_ident>,
 ///         max_clips: <usize_expr>,          // optional
 ///         max_volume: <Volume_expr>,        // optional
 ///         initial_volume: <Volume_expr>,    // optional
@@ -677,11 +679,11 @@ async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) ->
 /// - `word_select_pin` - GPIO pin carrying I²S word-select / LR clock (`LRC` / `LRCLK`)
 /// - `sample_rate_hz` - Playback sample rate in hertz (for example:
 ///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
+/// - `dma` - DMA channel resource (for example: `DMA_CH0`)
 ///
 /// **Optional fields:**
 ///
 /// - `i2s` - I2S peripheral resource (default: `I2S0`)
-/// - `dma` - DMA channel (default: `DMA_CH0`)
 /// - `max_clips` - Maximum clips per queued play request (default: `16`)
 /// - `max_volume` - Runtime volume ceiling (default: [`Volume::MAX`])
 /// - `initial_volume` - Initial runtime volume relative to `max_volume`
@@ -730,7 +732,7 @@ macro_rules! __audio_player_impl {
             word_select_pin: _UNSET_,
             sample_rate_hz: _UNSET_,
             i2s: I2S0,
-            dma: DMA_CH0,
+            dma: _UNSET_,
             max_clips: 16,
             max_volume: $crate::audio_player::Volume::MAX,
             initial_volume: $crate::audio_player::Volume::MAX,
@@ -757,7 +759,7 @@ macro_rules! __audio_player_impl {
             word_select_pin: _UNSET_,
             sample_rate_hz: _UNSET_,
             i2s: I2S0,
-            dma: DMA_CH0,
+            dma: _UNSET_,
             max_clips: 16,
             max_volume: $crate::audio_player::Volume::MAX,
             initial_volume: $crate::audio_player::Volume::MAX,
@@ -1110,6 +1112,23 @@ macro_rules! __audio_player_impl {
         fields: [ ]
     ) => {
         compile_error!("audio_player! requires sample_rate_hz");
+    };
+
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        data_pin: $data_pin:ident,
+        bit_clock_pin: $bit_clock_pin:ident,
+        word_select_pin: $word_select_pin:ident,
+        sample_rate_hz: $sample_rate_hz:expr,
+        i2s: $i2s:ident,
+        dma: _UNSET_,
+        max_clips: $max_clips:expr,
+        max_volume: $max_volume:expr,
+        initial_volume: $initial_volume:expr,
+        fields: [ ]
+    ) => {
+        compile_error!("audio_player! requires dma");
     };
 
     (@__fill_defaults

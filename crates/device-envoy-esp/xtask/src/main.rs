@@ -40,113 +40,152 @@ struct BuildTarget {
     build_std: bool,
 }
 
-
-// TODO000 use bools for capabilities and requirements, or bitflags if we want to get fancy. The current struct+vec approach is a bit verbose.
-// TODO000 could also have a single `Capability` enum and then have Vec<Capability> for both chip capabilities and example/demo requirements, which would simplify the logic but be less explicit about which capabilities are relevant to which examples/demos.
-// TOOD000 or some enum+struct approach where the enum variants are the capabilities and the struct has bools for which ones are present/required, which would be more concise but less flexible/extensible if we want to have parameters for capabilities in the future (for example, "has_audio_gpio" could become "audio_gpio_pin_count: u8" or something like that).
+// TODO000 use bools for capabilities and requirements, or bitflags if we want to get fancy. The current struct+vec approach is a bit verbose. (may no longer apply)
+// TODO000 could also have a single `Capability` enum and then have Vec<Capability> for both chip capabilities and example/demo requirements, which would simplify the logic but be less explicit about which capabilities are relevant to which examples/demos. (may no longer apply)
+// TOOD000 or some enum+struct approach where the enum variants are the capabilities and the struct has bools for which ones are present/required, which would be more concise but less flexible/extensible if we want to have parameters for capabilities in the future (for example, "has_audio_gpio" could become "audio_gpio_pin_count: u8" or something like that). (may no longer apply)
 #[derive(Clone, Copy)]
-struct ChipCapabilities {
-    has_rmt: bool,
-    has_i2s: bool,
-    has_audio_gpio: bool,
-    has_button_gpio: bool,
-    has_high_gpio_pins: bool,
-    has_wifi: bool,
-    has_extended_gpio: bool,
+enum Capability {
+    Rmt,
+    I2s,
+    AudioGpio,
+    ButtonGpio,
+    HighGpioPins,
+    Wifi,
+    ExtendedGpio,
 }
 
 #[derive(Clone, Copy)]
-struct ExampleRequirements {
-    requires_rmt: bool,
-    requires_i2s: bool,
-    requires_audio_gpio: bool,
-    requires_button_gpio: bool,
-    requires_high_gpio_pins: bool,
-    requires_wifi: bool,
-    requires_extended_gpio: bool,
+struct CapabilitySet {
+    bits: u16,
 }
 
-#[derive(Clone, Copy)]
-struct DemoRequirements {
-    requires_rmt: bool,
-    requires_wifi: bool,
-    requires_high_gpio_pins: bool,
-    requires_extended_gpio: bool,
+const ALL_CAPABILITIES: [Capability; 7] = [
+    Capability::Rmt,
+    Capability::I2s,
+    Capability::AudioGpio,
+    Capability::ButtonGpio,
+    Capability::HighGpioPins,
+    Capability::Wifi,
+    Capability::ExtendedGpio,
+];
+
+impl Capability {
+    const fn bit(self) -> u16 {
+        match self {
+            Capability::Rmt => 1 << 0,
+            Capability::I2s => 1 << 1,
+            Capability::AudioGpio => 1 << 2,
+            Capability::ButtonGpio => 1 << 3,
+            Capability::HighGpioPins => 1 << 4,
+            Capability::Wifi => 1 << 5,
+            Capability::ExtendedGpio => 1 << 6,
+        }
+    }
+
+    const fn name(self) -> &'static str {
+        match self {
+            Capability::Rmt => "RMT",
+            Capability::I2s => "I2S",
+            Capability::AudioGpio => "audio GPIO mapping",
+            Capability::ButtonGpio => "button GPIO mapping",
+            Capability::HighGpioPins => "high GPIO pin set",
+            Capability::Wifi => "Wi-Fi",
+            Capability::ExtendedGpio => "extended GPIO set",
+        }
+    }
 }
 
-fn chip_capabilities(chip_feature: &str) -> ChipCapabilities {
+impl CapabilitySet {
+    const fn empty() -> Self {
+        Self { bits: 0 }
+    }
+
+    fn from_capabilities(capabilities: &[Capability]) -> Self {
+        let mut capability_set = Self::empty();
+        for capability in capabilities {
+            capability_set.insert(*capability);
+        }
+        capability_set
+    }
+
+    fn insert(&mut self, capability: Capability) {
+        self.bits |= capability.bit();
+    }
+
+    const fn contains(self, capability: Capability) -> bool {
+        (self.bits & capability.bit()) != 0
+    }
+}
+
+fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
     match chip_feature {
-        CHIP_FEATURE_ESP32 => ChipCapabilities {
-            has_rmt: true,
-            has_i2s: true,
-            has_audio_gpio: true,
-            has_button_gpio: true,
-            has_high_gpio_pins: true,
-            has_wifi: true,
-            has_extended_gpio: true,
-        },
-        CHIP_FEATURE_ESP32C2 => ChipCapabilities {
-            has_rmt: false,
-            has_i2s: false,
-            has_audio_gpio: false,
-            has_button_gpio: true,
-            has_high_gpio_pins: false,
-            has_wifi: true,
-            has_extended_gpio: false,
-        },
-        CHIP_FEATURE_ESP32C3 => ChipCapabilities {
-            has_rmt: true,
-            has_i2s: true,
-            has_audio_gpio: true,
-            has_button_gpio: true,
-            has_high_gpio_pins: true,
-            has_wifi: true,
-            has_extended_gpio: false,
-        },
-        CHIP_FEATURE_ESP32C6 => ChipCapabilities {
-            has_rmt: true,
-            has_i2s: true,
-            has_audio_gpio: true,
-            has_button_gpio: true,
-            has_high_gpio_pins: true,
-            has_wifi: true,
-            has_extended_gpio: true,
-        },
-        CHIP_FEATURE_ESP32H2 => ChipCapabilities {
-            has_rmt: true,
-            has_i2s: true,
-            has_audio_gpio: false,
-            has_button_gpio: false,
-            has_high_gpio_pins: false,
-            has_wifi: false,
-            has_extended_gpio: true,
-        },
-        CHIP_FEATURE_ESP32S2 => ChipCapabilities {
-            has_rmt: true,
-            has_i2s: true,
-            has_audio_gpio: true,
-            has_button_gpio: true,
-            has_high_gpio_pins: true,
-            has_wifi: true,
-            has_extended_gpio: true,
-        },
-        CHIP_FEATURE_ESP32S3 => ChipCapabilities {
-            has_rmt: true,
-            has_i2s: true,
-            has_audio_gpio: true,
-            has_button_gpio: true,
-            has_high_gpio_pins: true,
-            has_wifi: true,
-            has_extended_gpio: true,
-        },
+        CHIP_FEATURE_ESP32 => CapabilitySet::from_capabilities(&[
+            Capability::Rmt,
+            Capability::I2s,
+            Capability::AudioGpio,
+            Capability::ButtonGpio,
+            Capability::HighGpioPins,
+            Capability::Wifi,
+            Capability::ExtendedGpio,
+        ]),
+        CHIP_FEATURE_ESP32C2 => CapabilitySet::from_capabilities(&[
+            Capability::ButtonGpio,
+            Capability::Wifi,
+        ]),
+        CHIP_FEATURE_ESP32C3 => CapabilitySet::from_capabilities(&[
+            Capability::Rmt,
+            Capability::I2s,
+            Capability::AudioGpio,
+            Capability::ButtonGpio,
+            Capability::HighGpioPins,
+            Capability::Wifi,
+        ]),
+        CHIP_FEATURE_ESP32C6 => CapabilitySet::from_capabilities(&[
+            Capability::Rmt,
+            Capability::I2s,
+            Capability::AudioGpio,
+            Capability::ButtonGpio,
+            Capability::HighGpioPins,
+            Capability::Wifi,
+            Capability::ExtendedGpio,
+        ]),
+        CHIP_FEATURE_ESP32H2 => CapabilitySet::from_capabilities(&[
+            Capability::Rmt,
+            Capability::I2s,
+            Capability::ExtendedGpio,
+        ]),
+        CHIP_FEATURE_ESP32S2 => CapabilitySet::from_capabilities(&[
+            Capability::Rmt,
+            Capability::I2s,
+            Capability::AudioGpio,
+            Capability::ButtonGpio,
+            Capability::HighGpioPins,
+            Capability::Wifi,
+            Capability::ExtendedGpio,
+        ]),
+        CHIP_FEATURE_ESP32S3 => CapabilitySet::from_capabilities(&[
+            Capability::Rmt,
+            Capability::I2s,
+            Capability::AudioGpio,
+            Capability::ButtonGpio,
+            Capability::HighGpioPins,
+            Capability::Wifi,
+            Capability::ExtendedGpio,
+        ]),
         _ => panic!("unknown chip feature: {chip_feature}"),
     }
 }
 
-fn example_requirements(example: &str) -> ExampleRequirements {
-    let requires_i2s = example.starts_with("audio");
-    let requires_audio_gpio = example.starts_with("audio");
-    let requires_button_gpio = example.starts_with("button_");
+fn example_requirements(example: &str) -> CapabilitySet {
+    let mut capability_set = CapabilitySet::empty();
+
+    if example.starts_with("audio") {
+        capability_set.insert(Capability::I2s);
+        capability_set.insert(Capability::AudioGpio);
+    }
+    if example.starts_with("button_") {
+        capability_set.insert(Capability::ButtonGpio);
+    }
     let requires_high_gpio_pins = example == "conway"
         || example.starts_with("ir")
         || example.starts_with("lcd_text")
@@ -157,6 +196,9 @@ fn example_requirements(example: &str) -> ExampleRequirements {
         || example == "servo_example1_trait"
         || example == "servo_player_example1_trait"
         || example == "servo_player_example2_trait";
+    if requires_high_gpio_pins {
+        capability_set.insert(Capability::HighGpioPins);
+    }
     let requires_rmt = example == "blinky"
         || example.starts_with("conway")
         || example.starts_with("ir")
@@ -164,47 +206,32 @@ fn example_requirements(example: &str) -> ExampleRequirements {
         || example.starts_with("led2d")
         || example.starts_with("led_strip")
         || example == "wifi_dns_hex";
+    if requires_rmt {
+        capability_set.insert(Capability::Rmt);
+    }
     let requires_wifi = example.starts_with("wifi_") || example.starts_with("clock_");
+    if requires_wifi {
+        capability_set.insert(Capability::Wifi);
+    }
     let requires_extended_gpio = example.starts_with("clock_")
         || example.starts_with("lcd_text")
         || example == "led2d_example1_trait";
-
-    ExampleRequirements {
-        requires_rmt,
-        requires_i2s,
-        requires_audio_gpio,
-        requires_button_gpio,
-        requires_high_gpio_pins,
-        requires_wifi,
-        requires_extended_gpio,
+    if requires_extended_gpio {
+        capability_set.insert(Capability::ExtendedGpio);
     }
+
+    capability_set
 }
 
-fn missing_example_capabilities(
-    chip_capabilities: ChipCapabilities,
-    example_requirements: ExampleRequirements,
+fn missing_capabilities(
+    chip_capabilities: CapabilitySet,
+    required_capabilities: CapabilitySet,
 ) -> Vec<&'static str> {
     let mut missing_capabilities = Vec::new();
-    if example_requirements.requires_rmt && !chip_capabilities.has_rmt {
-        missing_capabilities.push("RMT");
-    }
-    if example_requirements.requires_i2s && !chip_capabilities.has_i2s {
-        missing_capabilities.push("I2S");
-    }
-    if example_requirements.requires_audio_gpio && !chip_capabilities.has_audio_gpio {
-        missing_capabilities.push("audio GPIO mapping");
-    }
-    if example_requirements.requires_button_gpio && !chip_capabilities.has_button_gpio {
-        missing_capabilities.push("button GPIO mapping");
-    }
-    if example_requirements.requires_high_gpio_pins && !chip_capabilities.has_high_gpio_pins {
-        missing_capabilities.push("high GPIO pin set");
-    }
-    if example_requirements.requires_wifi && !chip_capabilities.has_wifi {
-        missing_capabilities.push("Wi-Fi");
-    }
-    if example_requirements.requires_extended_gpio && !chip_capabilities.has_extended_gpio {
-        missing_capabilities.push("extended GPIO set");
+    for capability in ALL_CAPABILITIES {
+        if required_capabilities.contains(capability) && !chip_capabilities.contains(capability) {
+            missing_capabilities.push(capability.name());
+        }
     }
     missing_capabilities
 }
@@ -234,40 +261,25 @@ fn explicit_example_skip_reason(
     None
 }
 
-fn demo_requirements(demo_name: &str) -> DemoRequirements {
+fn demo_requirements(demo_name: &str) -> CapabilitySet {
+    let mut capability_set = CapabilitySet::empty();
+
     let requires_wifi = demo_name.starts_with("demo_f");
+    if requires_wifi {
+        capability_set.insert(Capability::Wifi);
+    }
     let requires_rmt = demo_name.starts_with("demo_a")
         || demo_name.starts_with("demo_b")
         || demo_name.starts_with("demo_f");
-    let requires_high_gpio_pins = false;
+    if requires_rmt {
+        capability_set.insert(Capability::Rmt);
+    }
     let requires_extended_gpio = demo_name.starts_with("demo_f");
+    if requires_extended_gpio {
+        capability_set.insert(Capability::ExtendedGpio);
+    }
 
-    DemoRequirements {
-        requires_rmt,
-        requires_wifi,
-        requires_high_gpio_pins,
-        requires_extended_gpio,
-    }
-}
-
-fn missing_demo_capabilities(
-    chip_capabilities: ChipCapabilities,
-    demo_requirements: DemoRequirements,
-) -> Vec<&'static str> {
-    let mut missing_capabilities = Vec::new();
-    if demo_requirements.requires_rmt && !chip_capabilities.has_rmt {
-        missing_capabilities.push("RMT");
-    }
-    if demo_requirements.requires_wifi && !chip_capabilities.has_wifi {
-        missing_capabilities.push("Wi-Fi");
-    }
-    if demo_requirements.requires_high_gpio_pins && !chip_capabilities.has_high_gpio_pins {
-        missing_capabilities.push("high GPIO pin set");
-    }
-    if demo_requirements.requires_extended_gpio && !chip_capabilities.has_extended_gpio {
-        missing_capabilities.push("extended GPIO set");
-    }
-    missing_capabilities
+    capability_set
 }
 
 fn explicit_demo_skip_reason(chip_feature: &str, demo_name: &str) -> Option<&'static str> {
@@ -739,7 +751,7 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
                 );
                 continue;
             }
-            let missing_capabilities = missing_example_capabilities(
+            let missing_capabilities = missing_capabilities(
                 chip_capabilities,
                 example_requirements(example),
             );
@@ -821,7 +833,7 @@ fn check_demos_for_targets(targets: &[BuildTarget]) -> ExitCode {
                 );
                 continue;
             }
-            let missing_capabilities = missing_demo_capabilities(
+            let missing_capabilities = missing_capabilities(
                 chip_capabilities,
                 demo_requirements(&demo.name),
             );

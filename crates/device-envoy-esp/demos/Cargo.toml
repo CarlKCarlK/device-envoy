@@ -53,3 +53,8 @@ test = false
 name = "demo_a4_strip_96_blue_white_dot"
 path = "a_strip/a4_strip_96_blue_white_dot.rs"
 test = false
+
+[[bin]]
+name = "demo_b1_panel_12x8_rust_cursor"
+path = "b_panel/b1_panel_12x8_rust_cursor.rs"
+test = false

@@ -55,3 +55,27 @@ Run/flash (ESP32-S3):
 ```bash
 cargo +esp run --package device-envoy-esp-demos --bin demo_a4_strip_96_blue_white_dot --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
 ```
+
+## B1 - 12x8 panel, "Go/Go" text colors
+
+Writes `Go\nGo` on a rotated 12x8 panel, with per-character colors:
+light gray, light gray, orange, hot pink.
+
+Wiring (ESP32-C6 and ESP32-S3):
+
+- `GPIO18` -> NeoPixel-style (WS2812) panel `DIN`
+- Board `GND` -> panel `GND`
+- Panel `5V` -> external 5V supply
+- External supply `GND` -> board `GND`
+
+Run/flash (ESP32-C6):
+
+```bash
+cargo run --package device-envoy-esp-demos --bin demo_b1_panel_12x8_rust_cursor --release --target riscv32imac-unknown-none-elf --no-default-features
+```
+
+Run/flash (ESP32-S3):
+
+```bash
+cargo +esp run --package device-envoy-esp-demos --bin demo_b1_panel_12x8_rust_cursor --release --target xtensa-esp32s3-none-elf --no-default-features -Zbuild-std=core,alloc
+```

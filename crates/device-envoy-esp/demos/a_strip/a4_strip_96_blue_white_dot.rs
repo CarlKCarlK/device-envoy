@@ -45,8 +45,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         for dot_index in 0..LedStripLen96::LEN {
             frame1d[dot_index] = colors::LIGHT_GRAY;
             led_strip_len96.write_frame(frame1d);
-            Timer::after(Duration::from_millis(50)).await;
             frame1d[dot_index] = colors::BLUE;
+            Timer::after(Duration::from_millis(50)).await;
         }
     }
 }

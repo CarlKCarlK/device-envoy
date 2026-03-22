@@ -658,8 +658,42 @@ let sos_strip = SosStrip::new(&SOS_STRIP_STATIC, channel, spawner)?;
 
 ### LED Hardware Configuration (ESP-specific)
 
-Pin assignments and portability guardrails are documented in `README.md` under `Default Pin Assignments`.
-Treat that README section as the single source of truth for examples and docs.
+Examples use the following standard pin assignments:
+
+- **GPIO10** — 8 LEDs in a line (for example, `a1_strip_8_blue_gray`, `a3_strip_8_blue_white_blink_animate`)
+- **GPIO18** — 96-pixel strip / 12x8 panel style layouts (for example, `a4_strip_96_blue_white_dot`, `led2d.rs`)
+- **GPIO8 (ESP32-C6) / GPIO48 (ESP32-S3)** — built-in single NeoPixel-style (WS2812) LED in strip demos
+
+When writing new examples or documentation, follow this convention for consistency.
+
+#### Button Pin (ESP-specific)
+
+The standard button pin across examples is **GPIO6**:
+
+```rust
+let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+```
+
+Use this consistently when adding button input to examples.
+
+#### Servo Pins (ESP-specific)
+
+The standard servo pins across examples are **GPIO10** and **GPIO18**.
+
+#### LCD Text I2C Pins (ESP-specific)
+
+The standard LCD text I2C pins across examples are:
+
+- **SDA: GPIO16**
+- **SCL: GPIO17**
+
+#### Audio Player I2S Pins (ESP-specific)
+
+The standard audio-player I2S pins across examples are:
+
+- **Data (`DIN`): GPIO21**
+- **Bit clock (`BCLK`): GPIO11**
+- **Word select (`LRC` / `LRCLK`): GPIO12**
 
 ### Documentation (ESP-specific)
 

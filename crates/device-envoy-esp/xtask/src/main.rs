@@ -239,7 +239,7 @@ fn check_all() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    // (label, target, toolchain_override, build_std, chip_feature)
+    // (label, target, toolchain, build_std, chip_feature)
     let targets: &[(&str, &str, Option<&str>, bool, &str)] = &[
         ("c6", TARGET_C6, None, false, "esp32c6"),
         ("s3", TARGET_S3, Some("+esp"), true, "esp32s3"),
@@ -360,7 +360,7 @@ fn check_examples() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    // (label, target, toolchain_override, build_std, chip_feature)
+    // (label, target, toolchain, build_std, chip_feature)
     let targets: &[(&str, &str, Option<&str>, bool, &str)] = &[
         ("c6", TARGET_C6, None, false, "esp32c6"),
         ("s3", TARGET_S3, Some("+esp"), true, "esp32s3"),
@@ -432,7 +432,7 @@ fn check_embedded_tests() -> ExitCode {
     let Some(s3_linker_dir) = require_s3_toolchain() else {
         return ExitCode::FAILURE;
     };
-    // (label, target, toolchain_override, build_std, chip_feature)
+    // (label, target, toolchain, build_std, chip_feature)
     let targets: &[(&str, &str, Option<&str>, bool, &str)] = &[
         ("c6", TARGET_C6, None, false, "esp32c6"),
         ("s3", TARGET_S3, Some("+esp"), true, "esp32s3"),

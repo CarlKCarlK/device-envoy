@@ -30,7 +30,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     {
         let (_ir7, _ir6, _ir5, _ir4) = IrsFourCompileTest::new(
             p.GPIO7,
@@ -45,7 +45,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         )?;
     }
 
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let _ = (rmt80, spawner);
 
     core::future::pending().await

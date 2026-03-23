@@ -73,7 +73,7 @@ led_strip! {
         max_frames: 2,
     }
 }
-#[cfg(target_arch = "riscv32")]
+#[cfg(feature = "esp32c6")]
 led_strip! {
     SosStrip {
         pin: GPIO8,
@@ -82,7 +82,7 @@ led_strip! {
         max_frames: 20,
     }
 }
-#[cfg(target_arch = "xtensa")]
+#[cfg(feature = "esp32s3")]
 led_strip! {
     SosStrip {
         pin: GPIO48,
@@ -107,9 +107,9 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     //info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");
 
     let led_strip_len8 = LedStripLen8::new(p.GPIO10, rmt80.channel0, spawner)?;
-    #[cfg(target_arch = "riscv32")]
+    #[cfg(feature = "esp32c6")]
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel1, spawner)?;
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     let sos_strip = SosStrip::new(p.GPIO48, rmt80.channel1, spawner)?;
 
     let frame = Frame1d([

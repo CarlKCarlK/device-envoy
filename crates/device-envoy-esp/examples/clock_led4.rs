@@ -84,9 +84,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let segment_pins = OutputArray::new([
         Output::new(p.GPIO10, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO9, Level::Low, OutputConfig::default()),
-        #[cfg(target_arch = "xtensa")]
+        #[cfg(feature = "esp32s3")]
         Output::new(p.GPIO46, Level::Low, OutputConfig::default()),
-        #[cfg(not(target_arch = "xtensa"))]
+        #[cfg(not(feature = "esp32s3"))]
         Output::new(p.GPIO4, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO3, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO8, Level::Low, OutputConfig::default()),

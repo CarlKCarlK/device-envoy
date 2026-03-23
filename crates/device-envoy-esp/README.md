@@ -24,6 +24,13 @@ Want a minimal starting project?
 
 The API is actively evolving and may change without compatibility guarantees.
 
+## Chip Selection
+
+Select your chip by enabling the corresponding Cargo feature:
+
+- **ESP32-C6**: `device-envoy-esp = { features = ["esp32c6"] }`
+- **ESP32-S3**: `device-envoy-esp = { features = ["esp32s3"] }`
+
 ## Features
 
 - **[LED Strips](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/led_strip/) & [Panels](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/led2d/)** - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, embedded-graphics support. Provides efficient options for power limiting and color correction.

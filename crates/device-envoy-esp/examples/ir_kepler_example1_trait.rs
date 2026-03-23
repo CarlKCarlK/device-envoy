@@ -48,9 +48,9 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     // On ESP32-S3, RMT channels 0-3 are TX-only; RX requires channel 4+.
     // On ESP32-C6, channels 0-3 all support RX.
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     let channel_creator = rmt80.channel4;
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let channel_creator = rmt80.channel2;
     let ir_kepler7 = IrKepler7::new(p.GPIO7, channel_creator, spawner)?;
 

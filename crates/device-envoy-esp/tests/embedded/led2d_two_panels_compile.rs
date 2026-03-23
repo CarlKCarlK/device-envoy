@@ -27,7 +27,7 @@ led2d! {
     }
 }
 
-#[cfg(target_arch = "xtensa")]
+#[cfg(feature = "esp32s3")]
 led2d! {
     Led2dPanelB {
         font: Led2dFont::Font4x6,
@@ -38,7 +38,7 @@ led2d! {
     }
 }
 
-#[cfg(not(target_arch = "xtensa"))]
+#[cfg(not(feature = "esp32s3"))]
 led2d! {
     Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
@@ -61,9 +61,9 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 
     let led2d_panel_a = Led2dPanelA::new(p.GPIO10, rmt80.channel0, spawner)?;
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     let led2d_panel_b = Led2dPanelB::new(p.GPIO48, rmt80.channel1, spawner)?;
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let led2d_panel_b = Led2dPanelB::new(p.GPIO8, rmt80.channel1, spawner)?;
 
     led2d_panel_a.write_frame(Frame2d::<4, 2>::new());

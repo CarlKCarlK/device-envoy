@@ -183,7 +183,7 @@ macro_rules! __validate_keyword_fields_expr {
 // SAFETY: `no_mangle` is required because the linker script demands these exact C symbol
 // names.  The functions are no-ops that match the Xtensa stubs in esp-radio's
 // common_adapter.rs; they are called by the wifi blob and must have C linkage.
-#[cfg(all(target_arch = "riscv32", target_os = "none"))]
+#[cfg(all(feature = "esp32c6", target_os = "none"))]
 mod _esp_radio_nvs_stubs {
     #[unsafe(no_mangle)]
     unsafe extern "C" fn __esp_radio_misc_nvs_deinit() {}

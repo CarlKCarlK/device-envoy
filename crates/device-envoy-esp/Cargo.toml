@@ -19,6 +19,8 @@ features = ["doc-images"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
+esp32c6 = []
+esp32s3 = []
 host = []
 compile-fail-tests = []
 doc-images = ["dep:embed-doc-image"]

@@ -56,13 +56,13 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
         Output::new(p.GPIO19, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO20, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO21, Level::Low, OutputConfig::default()),
-        #[cfg(target_arch = "xtensa")]
+        #[cfg(feature = "esp32s3")]
         Output::new(p.GPIO46, Level::Low, OutputConfig::default()),
-        #[cfg(not(target_arch = "xtensa"))]
+        #[cfg(not(feature = "esp32s3"))]
         Output::new(p.GPIO22, Level::Low, OutputConfig::default()),
-        #[cfg(target_arch = "xtensa")]
+        #[cfg(feature = "esp32s3")]
         Output::new(p.GPIO48, Level::Low, OutputConfig::default()),
-        #[cfg(not(target_arch = "xtensa"))]
+        #[cfg(not(feature = "esp32s3"))]
         Output::new(p.GPIO23, Level::Low, OutputConfig::default()),
     ]);
 

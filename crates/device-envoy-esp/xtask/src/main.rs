@@ -481,6 +481,7 @@ fn check_embedded_tests() -> ExitCode {
             if let Some(tc) = toolchain {
                 cmd.arg(tc);
             }
+            let compile_fail_features = format!("compile-fail-tests,{chip_feature}");
             cmd.args([
                 "build",
                 "--test",
@@ -490,9 +491,8 @@ fn check_embedded_tests() -> ExitCode {
                 target,
                 "--no-default-features",
                 "--features",
-                "compile-fail-tests",
+                &compile_fail_features,
             ]);
-            cmd.arg("--features").arg(chip_feature);
             if *build_std {
                 cmd.arg("-Zbuild-std=core,alloc");
             }

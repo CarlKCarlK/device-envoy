@@ -39,14 +39,14 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
 
     // On ESP32-S3, RMT channels 0–3 are TX-only; RX requires channel 4+.
     // On ESP32-C6, channels 0–3 all support RX.
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     let channel_creator0 = rmt80.channel4;
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let channel_creator0 = rmt80.channel2;
 
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     let channel_creator1 = rmt80.channel5;
-    #[cfg(not(target_arch = "xtensa"))]
+    #[cfg(not(feature = "esp32s3"))]
     let channel_creator1 = rmt80.channel3;
 
     let (ir_kepler7, ir_kepler4) = IrKeplers0::new(

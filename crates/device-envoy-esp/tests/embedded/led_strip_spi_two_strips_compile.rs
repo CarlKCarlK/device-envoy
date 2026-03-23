@@ -59,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
         colors::GRAY,
     ]));
 
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     {
         let led_strip_spi_b = LedStripSpiB::new(p.GPIO11, p.SPI3, spawner)?;
         led_strip_spi_b.write_frame(Frame1d([colors::RED]));

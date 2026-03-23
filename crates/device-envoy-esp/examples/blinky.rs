@@ -22,9 +22,9 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(target_arch = "riscv32")]
+#[cfg(feature = "esp32c6")]
 const LED_PIN_NUM: u8 = 8;
-#[cfg(target_arch = "xtensa")]
+#[cfg(feature = "esp32s3")]
 const LED_PIN_NUM: u8 = 38;
 
 // Morse timing (in milliseconds).
@@ -66,7 +66,7 @@ const SOS: [(Frame1d<1>, Duration); 18] = [
     (OFF_COLOR, WORD_GAP),
 ];
 
-#[cfg(target_arch = "riscv32")]
+#[cfg(feature = "esp32c6")]
 led_strip! {
     SosStrip {
         pin: GPIO8,
@@ -76,7 +76,7 @@ led_strip! {
     }
 }
 
-#[cfg(target_arch = "xtensa")]
+#[cfg(feature = "esp32s3")]
 led_strip! {
     SosStrip {
         pin: GPIO38,
@@ -100,9 +100,9 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
 
     info!("SOS blinky starting on GPIO{LED_PIN_NUM}");
 
-    #[cfg(target_arch = "riscv32")]
+    #[cfg(feature = "esp32c6")]
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel0, spawner)?;
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s3")]
     let sos_strip = SosStrip::new(p.GPIO38, rmt80.channel0, spawner)?;
     sos_strip.animate(&SOS);
 

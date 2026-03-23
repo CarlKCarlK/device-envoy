@@ -86,10 +86,7 @@ case "$chip" in
     ;;
 esac
 
-release_args=()
-if [[ "$action" != "check" ]]; then
-  release_args=(--release)
-fi
+release_args=(--release)
 
 if [[ "${#build_std_args[@]}" -gt 0 ]]; then
   # Required for Xtensa builds.

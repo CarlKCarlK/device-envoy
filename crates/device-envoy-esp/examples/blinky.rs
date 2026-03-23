@@ -2,9 +2,9 @@
 //!
 //! Wiring:
 //! - RMT-capable chips: built-in NeoPixel-style (WS2812) LED on GPIO8/0
-//! - Non-RMT chips (for example ESP32-C2): digital LED fallback on GPIO0
+//! - Non-RMT chips (for example ESP32-C2): NeoPixel-style (WS2812) LED via SPI on GPIO0
 //!
-//! No external wiring needed.
+//! Non-RMT chips usually need an external NeoPixel-style (WS2812) LED/strip on GPIO0.
 
 #![no_std]
 #![no_main]
@@ -14,16 +14,12 @@ use embassy_time::Duration;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{init_and_start, Result};
-#[cfg(not(esp_has_rmt))]
-use device_envoy_esp::{
-    led,
-    led::{Led as _, LedLevel, OnLevel},
-};
-#[cfg(esp_has_rmt)]
+#[allow(unused_imports)]
+use device_envoy_esp::led_strip::Engine;
 use device_envoy_esp::{
     led_strip,
-    led_strip::{colors, Current, Frame1d, LedStrip as _},
+    led_strip::{colors, Frame1d, LedStrip as _},
+    init_and_start, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -47,13 +43,10 @@ const LETTER_GAP: Duration = Duration::from_millis(LETTER_GAP_MS);
 const WORD_GAP: Duration = Duration::from_millis(WORD_GAP_MS);
 
 // Use a dim white so the LED is visible but not blinding.
-#[cfg(esp_has_rmt)]
 const ON_COLOR: Frame1d<1> = Frame1d([colors::WHITE]);
-#[cfg(esp_has_rmt)]
 const OFF_COLOR: Frame1d<1> = Frame1d([colors::BLACK]);
 
 // SOS: . . .   - - -   . . .
-#[cfg(esp_has_rmt)]
 const SOS: [(Frame1d<1>, Duration); 18] = [
     (ON_COLOR, DOT_DURATION),
     (OFF_COLOR, SYMBOL_GAP),
@@ -80,47 +73,25 @@ led_strip! {
     SosStrip {
         pin: GPIO8,
         len: 1,
-        max_current: Current::Milliamps(10),
         max_frames: 20,
     }
 }
 
-#[cfg(not(esp_has_rmt))]
-led! {
+#[cfg(not(esp_has_rmt))] // non-RMT chips (currently ESP32-C2)
+led_strip! {
     SosStrip {
         pin: GPIO0,
-        max_steps: 20,
+        len: 1,
+        engine: Engine::Spi,
+        max_frames: 20,
     }
 }
-
-#[cfg(not(esp_has_rmt))]
-const SOS_LEVELS: [(LedLevel, Duration); 18] = [
-    (LedLevel::On, DOT_DURATION),
-    (LedLevel::Off, SYMBOL_GAP),
-    (LedLevel::On, DOT_DURATION),
-    (LedLevel::Off, SYMBOL_GAP),
-    (LedLevel::On, DOT_DURATION),
-    (LedLevel::Off, LETTER_GAP),
-    (LedLevel::On, DASH_DURATION),
-    (LedLevel::Off, SYMBOL_GAP),
-    (LedLevel::On, DASH_DURATION),
-    (LedLevel::Off, SYMBOL_GAP),
-    (LedLevel::On, DASH_DURATION),
-    (LedLevel::Off, LETTER_GAP),
-    (LedLevel::On, DOT_DURATION),
-    (LedLevel::Off, SYMBOL_GAP),
-    (LedLevel::On, DOT_DURATION),
-    (LedLevel::Off, SYMBOL_GAP),
-    (LedLevel::On, DOT_DURATION),
-    (LedLevel::Off, WORD_GAP),
-];
 
 #[cfg(all(esp_has_rmt, esp_pdma_family))] // original ESP32 & s2
 led_strip! {
     SosStrip {
         pin: GPIO0,
         len: 1,
-        max_current: Current::Milliamps(10),
         max_frames: 20,
     }
 }
@@ -136,7 +107,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     #[cfg(esp_has_rmt)]
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    #[cfg(not(esp_has_rmt))]
+    #[cfg(not(esp_has_rmt))] // non-RMT chips (currently ESP32-C2)
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
@@ -146,13 +117,9 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel0, spawner)?;
     #[cfg(all(esp_has_rmt, esp_pdma_family))] // original ESP32 & s2
     let sos_strip = SosStrip::new(p.GPIO0, rmt80.channel0, spawner)?;
-    #[cfg(esp_has_rmt)]
+    #[cfg(not(esp_has_rmt))] // non-RMT chips (currently ESP32-C2)
+    let sos_strip = SosStrip::new(p.GPIO0, p.SPI2, spawner)?;
     sos_strip.animate(&SOS);
-    #[cfg(not(esp_has_rmt))]
-    {
-        let sos_strip = SosStrip::new(p.GPIO0, OnLevel::High, spawner)?;
-        sos_strip.animate(&SOS_LEVELS);
-    }
 
     core::future::pending().await
 }

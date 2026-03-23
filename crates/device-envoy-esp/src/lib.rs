@@ -169,7 +169,7 @@ pub mod led;
 #[cfg(any(feature = "host", esp_has_rmt))]
 pub mod led2d;
 pub mod led4;
-#[cfg(esp_has_rmt)]
+#[cfg(target_os = "none")]
 pub mod led_strip;
 #[cfg(target_os = "none")]
 pub mod rfid;

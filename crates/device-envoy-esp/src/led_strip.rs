@@ -164,6 +164,15 @@ pub enum Engine {
 
 impl Default for Engine {
     fn default() -> Self {
+        #[cfg(esp_has_rmt)]
+        {
+            return Self::Rmt;
+        }
+        #[cfg(not(esp_has_rmt))]
+        {
+            return Self::Spi;
+        }
+        #[allow(unreachable_code)]
         Self::Rmt
     }
 }
@@ -179,22 +188,22 @@ pub const CURRENT_DEFAULT: Current = Current::Milliamps(250);
 // RMT driver (ESP32-specific)
 // ============================================================================
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 use embassy_futures::select::{select, Either};
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 use embassy_time::Timer;
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 use esp_hal::gpio::Level;
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 use esp_hal::rmt::{Channel, PulseCode, Tx};
 
 // WS2812 timing at 80 MHz RMT clock with clk_divider=4 → 50 ns per tick.
 //   T0H =  0.4 µs  → 8 ticks     T0L = 0.85 µs → 17 ticks
 //   T1H =  0.8 µs  → 16 ticks    T1L = 0.45 µs →  9 ticks
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 const BIT0: PulseCode = PulseCode::new(Level::High, 8, Level::Low, 17);
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 const BIT1: PulseCode = PulseCode::new(Level::High, 16, Level::Low, 9);
 
 /// WS2812 driver backed by an ESP32 RMT TX channel.
@@ -205,7 +214,7 @@ const BIT1: PulseCode = PulseCode::new(Level::High, 16, Level::Low, 9);
 ///
 /// The pulse buffer is a **field** of this struct so that it lives in BSS /
 /// static memory rather than on the stack.
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 // Must be `pub` for macro expansion at foreign call sites.
 // This is an implementation detail, not part of the user-facing API.
 #[doc(hidden)]
@@ -214,7 +223,7 @@ pub struct RmtWs2812<'d, const LEDS: usize, const PULSES: usize> {
     pulse_buf: [PulseCode; PULSES],
 }
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
     /// Create a new driver, taking ownership of an RMT TX channel.
     ///
@@ -267,7 +276,7 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
     }
 }
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 #[doc(hidden)]
 /// Errors returned by [`RmtWs2812::write`].
 #[derive(Debug)]
@@ -292,7 +301,7 @@ pub enum WritingError {
 ///
 /// `#[doc(hidden)]` — called exclusively from macro-generated task code.
 #[doc(hidden)]
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_rmt))]
 pub async fn led_strip_device_loop<
     'd,
     const LEDS: usize,
@@ -384,7 +393,7 @@ pub async fn led_strip_device_loop<
 /// **Optional fields:**
 ///
 /// - `max_current` — Electrical current budget (default: 250 mA)
-/// - `engine` — Output engine (default: `Engine::Rmt`)
+/// - `engine` — Output engine (default: `Engine::Rmt` on RMT-capable chips, otherwise `Engine::Spi`)
 /// - `gamma` — Color curve (default: `Gamma::Srgb`)
 /// - `max_frames` — Maximum number of animation frames (default: 16 frames)
 /// - `reset_us` — WS2812 reset/latch interval in microseconds for `Engine::Spi` (default: 60)
@@ -1328,15 +1337,13 @@ macro_rules! __led_strip_dispatch_engine {
         [$($max_frames:expr)?],
         [],
     ) => {
-        $crate::led_strip::__led_strip_inner!{
+        $crate::__led_strip_dispatch_rmt_engine!{
             $name,
             $pin,
             $len,
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
-            [],
-            [],
         }
     };
     (
@@ -1361,6 +1368,30 @@ macro_rules! __led_strip_dispatch_engine {
         [$($max_frames:expr)?],
         [],
     ) => {
+        $crate::__led_strip_dispatch_default_engine!{
+            $name,
+            $pin,
+            $len,
+            $max_current,
+            [$($gamma)?],
+            [$($max_frames)?],
+        }
+    };
+}
+
+/// Internal helper used by `led_strip!` to dispatch explicit `Engine::Rmt`.
+#[doc(hidden)]
+#[cfg(esp_has_rmt)]
+#[macro_export]
+macro_rules! __led_strip_dispatch_rmt_engine {
+    (
+        $name:ident,
+        $pin:ident,
+        $len:expr,
+        $max_current:expr,
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
         $crate::led_strip::__led_strip_inner!{
             $name,
             $pin,
@@ -1368,6 +1399,76 @@ macro_rules! __led_strip_dispatch_engine {
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
+            [],
+            [],
+        }
+    };
+}
+
+/// Internal helper used by `led_strip!` to dispatch explicit `Engine::Rmt`.
+#[doc(hidden)]
+#[cfg(not(esp_has_rmt))]
+#[macro_export]
+macro_rules! __led_strip_dispatch_rmt_engine {
+    (
+        $name:ident,
+        $pin:ident,
+        $len:expr,
+        $max_current:expr,
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
+        compile_error!(
+            "led_strip! `engine: Engine::Rmt` requires an RMT-capable chip; use `engine: Engine::Spi`."
+        );
+    };
+}
+
+/// Internal helper used by `led_strip!` to dispatch the default engine.
+#[doc(hidden)]
+#[cfg(esp_has_rmt)]
+#[macro_export]
+macro_rules! __led_strip_dispatch_default_engine {
+    (
+        $name:ident,
+        $pin:ident,
+        $len:expr,
+        $max_current:expr,
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
+        $crate::__led_strip_dispatch_rmt_engine!{
+            $name,
+            $pin,
+            $len,
+            $max_current,
+            [$($gamma)?],
+            [$($max_frames)?],
+        }
+    };
+}
+
+/// Internal helper used by `led_strip!` to dispatch the default engine.
+#[doc(hidden)]
+#[cfg(not(esp_has_rmt))]
+#[macro_export]
+macro_rules! __led_strip_dispatch_default_engine {
+    (
+        $name:ident,
+        $pin:ident,
+        $len:expr,
+        $max_current:expr,
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
+        $crate::led_strip::spi::__led_strip_spi_inner!{
+            $name,
+            $pin,
+            $len,
+            $max_current,
+            [$($gamma)?],
+            [$($max_frames)?],
+            [],
             [],
             [],
         }
@@ -1650,5 +1751,6 @@ pub mod spi;
 // Re-export macros so they are visible from the `led_strip` module path.
 pub use crate::{
     __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_dispatch_engine,
+    __led_strip_dispatch_default_engine, __led_strip_dispatch_rmt_engine,
     __led_strip_first_or_default, __led_strip_impl, __led_strip_inner, __led_strip_parse_options,
 };

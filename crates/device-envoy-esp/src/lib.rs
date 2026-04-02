@@ -191,10 +191,8 @@ pub mod docs {
     }
 }
 
+pub use device_envoy_core::capabilities::{Capability, CapabilitySet, PlatformCapabilities};
 pub use device_envoy_core::tone;
-pub use device_envoy_core::capabilities::{
-    Capability, CapabilitySet, PlatformCapabilities,
-};
 #[cfg(any(feature = "host", esp_has_wifi))]
 use device_envoy_core::wifi_auto::WifiAutoError;
 /// Used internally by other macros.

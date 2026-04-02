@@ -26,169 +26,169 @@ build name chip="c6":
     ./scripts/device-action.sh build {{name}} {{chip}}
 
 blinky-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 blinky-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example blinky --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 led2d-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led2d --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led2d --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 led2d-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led2d --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led2d --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 led-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 led-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 led-strip8-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_strip_len8 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example led_strip_len8 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 led-strip8-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_strip_len8 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example led_strip_len8 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 button-read-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 button-read-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_read --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 button-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 button-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example button_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 wifi-auto-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_auto_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_auto_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 wifi-auto-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example wifi_auto_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example wifi_auto_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 ir-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 ir-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 ir-mapping-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_mapping_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_mapping_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 ir-mapping-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_mapping_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_mapping_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 ir-kepler-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_kepler_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example ir_kepler_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 ir-kepler-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_kepler_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example ir_kepler_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 conway-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example conway --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example conway --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 conway-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example conway --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example conway --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 rfid-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example rfid --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example rfid --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 rfid-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example rfid --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example rfid --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 flash-block-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 flash-block-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example flash_block_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-led8x12-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-led8x12-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_led8x12 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-led4-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_led4 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_led4 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-led4-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_led4 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_led4 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-servos-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_servos --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_servos --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-servos-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_servos --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_servos --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-lcd-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_lcd --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example clock_lcd --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 clock-lcd-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_lcd --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example clock_lcd --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-basic-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_basic --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_basic --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-basic-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_basic --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_basic --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servos-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servos --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servos --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servos-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servos --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servos --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-player-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_player_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_player_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-player-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_player_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_player_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-player-example2-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_player_example2_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example servo_player_example2_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 servo-player-example2-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_player_example2_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example servo_player_example2_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 wifi-scan-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 wifi-scan-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example wifi_scan --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 audio-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example audio --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example audio --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 audio-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example audio --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example audio --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 audio-example1-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example audio_example1 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example audio_example1 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 audio-example1-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example audio_example1 --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example audio_example1 --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 lcd-text-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_text --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_text --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 lcd-text-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_text --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_text --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 lcd-texts-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_texts --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_texts --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 lcd-texts-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_texts --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_texts --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 lcd-text-example1-trait-s3:
-    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_text_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp run -Z build-std=core,alloc --example lcd_text_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3
 
 lcd-text-example1-trait-s3-check:
-    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_text_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features
+    source "$HOME/export-esp.sh" && cargo +esp check -Z build-std=core,alloc --example lcd_text_example1_trait --target xtensa-esp32s3-none-elf --release --no-default-features --features esp32s3

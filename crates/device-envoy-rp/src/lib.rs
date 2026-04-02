@@ -74,9 +74,7 @@ pub mod docs {
 
 // Re-export error types and result (used throughout)
 pub use crate::error::{Error, Result};
-pub use device_envoy_core::capabilities::{
-    Capability, CapabilitySet, PlatformCapabilities,
-};
+pub use device_envoy_core::capabilities::{Capability, CapabilitySet, PlatformCapabilities};
 pub use device_envoy_core::tone;
 /// Used internally by other macros.
 #[doc(hidden)]

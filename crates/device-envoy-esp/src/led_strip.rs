@@ -1750,7 +1750,7 @@ pub mod spi;
 
 // Re-export macros so they are visible from the `led_strip` module path.
 pub use crate::{
-    __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_dispatch_engine,
-    __led_strip_dispatch_default_engine, __led_strip_dispatch_rmt_engine,
-    __led_strip_first_or_default, __led_strip_impl, __led_strip_inner, __led_strip_parse_options,
+    __led2d_strip_methods, __led2d_strip_trait_impl, __led_strip_dispatch_default_engine,
+    __led_strip_dispatch_engine, __led_strip_dispatch_rmt_engine, __led_strip_first_or_default,
+    __led_strip_impl, __led_strip_inner, __led_strip_parse_options,
 };

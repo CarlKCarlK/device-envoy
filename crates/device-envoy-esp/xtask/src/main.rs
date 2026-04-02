@@ -335,7 +335,6 @@ const BUILD_TARGET_ESP32S3: BuildTarget = BuildTarget {
     build_std: true,
 };
 
-const CHECK_ALL_TARGETS: &[BuildTarget] = &[BUILD_TARGET_ESP32C6, BUILD_TARGET_ESP32S3];
 const ALL_PROCESSOR_TARGETS: &[BuildTarget] = &[
     BUILD_TARGET_ESP32,
     BUILD_TARGET_ESP32C2,
@@ -345,6 +344,7 @@ const ALL_PROCESSOR_TARGETS: &[BuildTarget] = &[
     BUILD_TARGET_ESP32S2,
     BUILD_TARGET_ESP32S3,
 ];
+const CHECK_ALL_TARGETS: &[BuildTarget] = ALL_PROCESSOR_TARGETS;
 
 /// Locates the requested Xtensa linker and returns its parent directory.
 fn find_xtensa_linker_dir(linker: &str) -> Option<PathBuf> {
@@ -708,12 +708,49 @@ fn check_all() -> ExitCode {
     ExitCode::SUCCESS
 }
 
+fn check_s3_just_feature_flags(workspace_root: &Path) -> Result<(), String> {
+    let justfile_path = workspace_root.join("justfile");
+    let justfile = std::fs::read_to_string(&justfile_path)
+        .map_err(|error| format!("error: failed to read {}: {error}", justfile_path.display()))?;
+
+    let mut invalid_lines = Vec::new();
+    for (line_index, line) in justfile.lines().enumerate() {
+        let is_s3_recipe_line =
+            line.contains("cargo +esp run") || line.contains("cargo +esp check");
+        if !is_s3_recipe_line || !line.contains("--target xtensa-esp32s3-none-elf") {
+            continue;
+        }
+        if line.contains("--no-default-features") && !line.contains("--features esp32s3") {
+            invalid_lines.push(line_index + 1);
+        }
+    }
+
+    if invalid_lines.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "error: justfile S3 commands missing `--features esp32s3` at lines: {}",
+        invalid_lines
+            .iter()
+            .map(|line_number| line_number.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    ))
+}
+
 fn check_pre_push() -> ExitCode {
     let root = workspace_root();
     println!(
         "{}",
         "==> cargo check-pre-push: device-envoy-esp".cyan().bold()
     );
+
+    if let Err(err) = check_s3_just_feature_flags(&root) {
+        eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
+
 
     let required_host_tests = ["compile_fail", "wifi_auto_portal"];
     for host_test in required_host_tests {

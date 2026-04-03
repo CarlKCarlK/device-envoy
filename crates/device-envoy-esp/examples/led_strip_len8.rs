@@ -1,14 +1,14 @@
-//! LED strip example: 8 NeoPixel-style (WS2812) LEDs on GPIO10 (blue/gray pattern)
-//! plus SOS blink on the built-in WS2812 LED, using two RMT TX channels.
+//! LED strip example: 8 smart LEDs on GPIO10 (blue/gray pattern)
+//! plus SOS blink on the built-in smart LED, using two RMT TX channels.
 //!
 //! Standard demo pin map in this repo:
-//! - GPIO8/C6 or GPIO48/S3: built-in single LED strip demo (`blinky.rs`)
+//! - GPIO8 (default): built-in single smart-LED demo (`blinky_smart_led.rs`)
 //! - GPIO10: external 8-pixel strip demo (this file)
 //! - GPIO18: 12x8 panel `Go`/`\\nGo` demo (`led2d.rs`)
 //!
 //! Wiring:
-//! - GPIO10: data-in of an 8-pixel NeoPixel-style (WS2812) strip
-//! - GPIO8 (C6) or GPIO48 (S3): on-board NeoPixel-style (WS2812) RGB LED
+//! - GPIO10: data-in of an 8-pixel smart LED strip
+//! - GPIO8 (C6) or GPIO48 (S3): on-board smart RGB LED
 //!
 //! Both strips share one RMT hub with explicit TX channel ownership.
 

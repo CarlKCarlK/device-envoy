@@ -1,7 +1,7 @@
 //! Animated text on a 12x8 panel (displayed as rotated 8x12) on GPIO18.
 //!
 //! Standard demo pin map in this repo:
-//! - GPIO8/C6 or GPIO48/S3: built-in single LED strip demo (`blinky.rs`)
+//! - GPIO8 (default): built-in single smart-LED demo (`blinky_smart_led.rs`)
 //! - GPIO10: external 8-pixel strip demo (`led_strip_len8.rs`)
 //! - GPIO18: 12x8 panel `Go`/`\\nGo` demo (this file)
 

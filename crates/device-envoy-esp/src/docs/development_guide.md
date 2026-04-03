@@ -55,9 +55,9 @@ Examples:
 
 ```bash
 cd crates/device-envoy-esp
-just run blinky
-just run blinky c2
-just run blinky s3
+just run blinky_plain_led
+just run blinky_smart_led c2
+just run blinky_smart_led s3
 just build f1 s3
 
 cd ../device-envoy-rp
@@ -121,8 +121,8 @@ ESP defaults:
 - `GPIO2`: 16x16 panel examples and singular `led_example1_trait` external LED example
 - `GPIO6`: Button input (`PressedTo::Ground` in examples)
 - `GPIO7`: IR receiver data input
-- Built-in NeoPixel-style (WS2812) RGB LED: `GPIO8` on ESP32-C6-DevKitC-1, `GPIO48` on ESP32-S3-DevKitC-1
-- `GPIO10`: External 8-pixel NeoPixel-style (WS2812) strip
+- Built-in smart RGB LED: `GPIO8` on ESP32-C6-DevKitC-1, `GPIO48` on ESP32-S3-DevKitC-1
+- `GPIO10`: External 8-pixel smart LED strip
 - `GPIO11`: I2S bit clock (`BCLK`)
 - `GPIO12`: I2S word select (`WS` / `LRCLK`)
 - `GPIO18`: 12x8 panel examples

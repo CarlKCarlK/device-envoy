@@ -198,7 +198,7 @@ fn example_requirements(example: &str) -> CapabilitySet {
     if requires_high_gpio_pins {
         capability_set.insert(Capability::HighGpioPins);
     }
-    let requires_rmt = example == "blinky"
+    let requires_rmt = example == "blinky_smart_led"
         || example.starts_with("conway")
         || example.starts_with("ir")
         || example.starts_with("led16x16")
@@ -236,6 +236,10 @@ fn missing_capabilities(
 }
 
 fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Option<&'static str> {
+    if example_name.starts_with("led_probe_c3_") && chip_feature != CHIP_FEATURE_ESP32C3 {
+        return Some("C3-only GPIO probe example");
+    }
+
     if chip_feature == CHIP_FEATURE_ESP32S2 {
         let s2_stack_limited_examples = [
             "clock_console_simple",
@@ -751,7 +755,6 @@ fn check_pre_push() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-
     let required_host_tests = ["compile_fail", "wifi_auto_portal"];
     for host_test in required_host_tests {
         println!("--> required host test: {host_test}");
@@ -975,8 +978,29 @@ fn check_embedded_tests() -> ExitCode {
         return ExitCode::FAILURE;
     };
     for build_target in CHECK_ALL_TARGETS {
+        // TODO00 Expand embedded compile-test pin mappings so these tests also run on ESP32, ESP32-C2, and ESP32-H2.
+        if matches!(
+            build_target.chip_feature,
+            CHIP_FEATURE_ESP32 | CHIP_FEATURE_ESP32C2 | CHIP_FEATURE_ESP32H2
+        ) {
+            println!(
+                "    skip embedded tests on {} (compile-only embedded test pin maps are currently maintained for ESP32-C3/ESP32-C6/ESP32-S2/ESP32-S3)",
+                build_target.label
+            );
+            continue;
+        }
+
         println!("{}", format!("    target: {}", build_target.label).cyan());
         for embedded_test in &compile_pass_tests {
+            if let Some(reason) =
+                explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
+            {
+                println!(
+                    "      skip compile-pass test: {embedded_test} ({reason} on {})",
+                    build_target.label
+                );
+                continue;
+            }
             println!("      compile-pass test: {embedded_test}");
             let mut cmd = Command::new("cargo");
             cmd.current_dir(&root);
@@ -1006,6 +1030,15 @@ fn check_embedded_tests() -> ExitCode {
         }
 
         for embedded_test in &compile_fail_tests {
+            if let Some(reason) =
+                explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
+            {
+                println!(
+                    "      skip compile-fail test: {embedded_test} ({reason} on {})",
+                    build_target.label
+                );
+                continue;
+            }
             println!("      compile-fail test: {embedded_test}");
             let compile_fail_features = format!("{},compile-fail-tests", build_target.chip_feature);
             let mut cmd = Command::new("cargo");
@@ -1049,6 +1082,23 @@ fn check_embedded_tests() -> ExitCode {
     }
 
     ExitCode::SUCCESS
+}
+
+fn explicit_embedded_test_skip_reason(
+    chip_feature: &str,
+    embedded_test: &str,
+) -> Option<&'static str> {
+    // TODO00 Add ESP32-C3 coverage for two-strip SPI compile tests once a stable second SPI/pin mapping is defined for this test target.
+    if embedded_test == "led_strip_spi_two_strips_compile" && chip_feature == CHIP_FEATURE_ESP32C3
+    {
+        return Some("two-strip SPI compile test is only mapped for ESP32-C6/ESP32-S3");
+    }
+    // TODO00 Add an ESP32-C3-specific two-display Led4 compile test variant with valid C3 GPIO ranges.
+    if embedded_test == "led4_two_displays_compile" && chip_feature == CHIP_FEATURE_ESP32C3 {
+        return Some("second Led4 display pin map requires GPIOs unavailable on ESP32-C3");
+    }
+
+    None
 }
 
 fn check_host_tests() -> ExitCode {

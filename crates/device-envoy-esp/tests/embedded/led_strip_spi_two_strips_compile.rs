@@ -27,12 +27,23 @@ led_strip! {
     }
 }
 
+#[cfg(target_arch = "xtensa")]
 led_strip! {
     LedStripSpiB {
         max_frames: 2,
         engine: device_envoy_esp::led_strip::Engine::Spi,
         len: 1,
         pin: GPIO11,
+    }
+}
+
+#[cfg(not(target_arch = "xtensa"))]
+led_strip! {
+    LedStripSpiB {
+        max_frames: 2,
+        engine: device_envoy_esp::led_strip::Engine::Spi,
+        len: 1,
+        pin: GPIO6,
     }
 }
 

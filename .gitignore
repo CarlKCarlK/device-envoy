@@ -1,1 +1,6 @@
 /target/
+.codex
+.vscode/settings.json
+crates/device-envoy-esp/.vscode/
+crates/device-envoy-esp/device-envoy.code-workspace
+device-envoy-all.code-workspace

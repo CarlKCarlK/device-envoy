@@ -4,9 +4,35 @@ set -euo pipefail
 action="${1:-}"
 name="${2:-}"
 chip="${3:-c6}"
+port_arg="${4:-}"
+port="${port_arg:-${ESPFLASH_PORT:-}}"
+
+normalize_port() {
+  local port_value="${1:-}"
+  if [[ -z "$port_value" ]]; then
+    printf "%s" ""
+    return
+  fi
+  if [[ "$port_value" == /dev/* ]]; then
+    printf "%s" "$port_value"
+    return
+  fi
+  if [[ "$port_value" == tty* ]]; then
+    printf "%s" "/dev/$port_value"
+    return
+  fi
+  if [[ "$port_value" == ACM* || "$port_value" == USB* ]]; then
+    printf "%s" "/dev/tty$port_value"
+    return
+  fi
+  printf "%s" "$port_value"
+}
+
+port="$(normalize_port "$port")"
 
 if [[ -z "$action" || -z "$name" ]]; then
-  echo "usage: scripts/device-action.sh <run|check|build> <name> [chip]" >&2
+  echo "usage: scripts/device-action.sh <run|check|build> <name> [chip] [port]" >&2
+  echo "port can be /dev/ttyUSB0, ttyUSB0, USB0, ACM0, etc." >&2
   exit 1
 fi
 
@@ -94,6 +120,12 @@ if [[ "${#build_std_args[@]}" -gt 0 ]]; then
 fi
 
 if [[ "$has_example" -eq 1 ]]; then
+  # When multiple ESP boards are connected, set an explicit serial port to avoid
+  # espflash interactive selection prompts.
+  if [[ "$action" == "run" && -n "$port" ]]; then
+    export ESPFLASH_PORT="$port"
+  fi
+
   "${cargo_bin[@]}" "$action" \
     --example "$name" \
     --target "$target" \

@@ -9,6 +9,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(esp_has_rmt)");
     println!("cargo:rustc-check-cfg=cfg(esp_has_i2s)");
     println!("cargo:rustc-check-cfg=cfg(esp_has_wifi)");
+    println!("cargo:rustc-check-cfg=cfg(rust_analyzer)");
 
     if feature_enabled("ESP32") || feature_enabled("ESP32S2") {
         println!("cargo:rustc-cfg=esp_pdma_family");

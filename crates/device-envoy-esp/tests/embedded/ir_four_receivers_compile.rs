@@ -30,7 +30,22 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s2")]
+    {
+        let (_ir7, _ir6, _ir5, _ir4) = IrsFourCompileTest::new(
+            p.GPIO7,
+            rmt80.channel0,
+            p.GPIO6,
+            rmt80.channel1,
+            p.GPIO5,
+            rmt80.channel2,
+            p.GPIO4,
+            rmt80.channel3,
+            spawner,
+        )?;
+    }
+
+    #[cfg(all(target_arch = "xtensa", not(feature = "esp32s2")))]
     {
         let (_ir7, _ir6, _ir5, _ir4) = IrsFourCompileTest::new(
             p.GPIO7,

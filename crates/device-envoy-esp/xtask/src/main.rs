@@ -1089,8 +1089,7 @@ fn explicit_embedded_test_skip_reason(
     embedded_test: &str,
 ) -> Option<&'static str> {
     // TODO00 Add ESP32-C3 coverage for two-strip SPI compile tests once a stable second SPI/pin mapping is defined for this test target.
-    if embedded_test == "led_strip_spi_two_strips_compile" && chip_feature == CHIP_FEATURE_ESP32C3
-    {
+    if embedded_test == "led_strip_spi_two_strips_compile" && chip_feature == CHIP_FEATURE_ESP32C3 {
         return Some("two-strip SPI compile test is only mapped for ESP32-C6/ESP32-S3");
     }
     // TODO00 Add an ESP32-C3-specific two-display Led4 compile test variant with valid C3 GPIO ranges.

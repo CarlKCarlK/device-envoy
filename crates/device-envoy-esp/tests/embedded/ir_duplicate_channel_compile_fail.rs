@@ -31,7 +31,9 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(feature = "esp32s2")]
+    let channel_creator = rmt80.channel0;
+    #[cfg(all(target_arch = "xtensa", not(feature = "esp32s2")))]
     let channel_creator = rmt80.channel4;
     #[cfg(not(target_arch = "xtensa"))]
     let channel_creator = rmt80.channel2;

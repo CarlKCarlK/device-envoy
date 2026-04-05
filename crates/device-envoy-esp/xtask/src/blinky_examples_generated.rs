@@ -164,9 +164,9 @@ pub fn generate_blinky_board_examples(workspace_root: &Path) -> Result<(), Box<d
     let examples_dir = workspace_root.join("examples");
     let templates_dir = examples_dir.join("templates");
 
-    let blinky_plain_template = fs::read_to_string(templates_dir.join("blinky_plain.rs"))?;
-    let blinky_rmt_template = fs::read_to_string(templates_dir.join("blinky_rmt.rs"))?;
-    let blinky_spi_template = fs::read_to_string(templates_dir.join("blinky_spi.rs"))?;
+    let blinky_plain_template = fs::read_to_string(templates_dir.join("blinky_plain.rs.j2"))?;
+    let blinky_rmt_template = fs::read_to_string(templates_dir.join("blinky_rmt.rs.j2"))?;
+    let blinky_spi_template = fs::read_to_string(templates_dir.join("blinky_spi.rs.j2"))?;
 
     let mut minijinja_environment = Environment::new();
     minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;

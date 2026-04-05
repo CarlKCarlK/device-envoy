@@ -55,15 +55,41 @@ Examples:
 
 ```bash
 cd crates/device-envoy-esp
-just run blinky_plain_led
-just run blinky_smart_led c2
-just run blinky_smart_led s3
+cd examples/c6/devkitc1_n8
+just run blinky
+cd ../../..
+cd examples/s3/generic
+just run blinky
+cd ../../..
 just build f1 s3
 
 cd ../device-envoy-rp
 just run blinky
 just run blinky 2
 just check f1 2w
+```
+
+For board-generated ESP blinkies, the preferred flow is to run from the board directory:
+
+```bash
+cd crates/device-envoy-esp/examples/<chip-dir>/<board-dir>
+just run blinky
+```
+
+### ESP board blinky generation
+
+Board-specific ESP blinky examples are generated files under `examples/<chip>/<board>/blinky.rs`.
+
+Source of truth:
+
+- Board map and rendering logic: `xtask/src/blinky_examples_generated.rs`
+- Templates: `examples/templates/blinky_plain.rs.j2`, `examples/templates/blinky_rmt.rs.j2`, `examples/templates/blinky_spi.rs.j2`
+
+Regenerate after changing templates or board mappings:
+
+```bash
+cd crates/device-envoy-esp
+cargo xtask generate-blinky-examples
 ```
 
 ## Run Full Workspace Checks

@@ -6,6 +6,7 @@ name="${2:-}"
 chip="${3:-}"
 port_arg="${4:-}"
 invocation_dir="${5:-}"
+requested_name="${name}"
 
 # If the chip slot contains a serial-port token and no explicit port was given,
 # treat it as the port argument so callers can do: `just run blinky USB0`.
@@ -147,6 +148,12 @@ if [[ -z "$action" || -z "$name" ]]; then
 fi
 
 infer_blinky_example_from_invocation_dir
+
+if [[ "$requested_name" != "blinky" && "$name" == blinky_esp32* ]]; then
+  echo "board blinky examples must be run from their board directory using 'blinky'" >&2
+  echo "example: cd crates/device-envoy-esp/examples/c6/devkitc1_n8 && just $action blinky" >&2
+  exit 1
+fi
 
 case "$action" in
   run|check|build) ;;

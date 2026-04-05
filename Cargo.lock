@@ -3572,6 +3572,7 @@ dependencies = [
  "flate2",
  "minijinja",
  "owo-colors",
+ "rayon",
  "tar",
 ]
 

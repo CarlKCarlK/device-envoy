@@ -1,4 +1,5 @@
 [alias]
+check-all = "run --manifest-path xtask/Cargo.toml -- check-all"
 publish-core-dry-run = "publish --package device-envoy-core --dry-run"
 publish-core = "publish --package device-envoy-core"
 publish-rp-dry-run = "publish --package device-envoy-rp --dry-run --no-verify"

@@ -76,20 +76,20 @@ cd crates/device-envoy-esp/examples/<chip-dir>/<board-dir>
 just run blinky
 ```
 
-### ESP board blinky generation
+### ESP board example generation
 
-Board-specific ESP blinky examples are generated files under `examples/<chip>/<board>/blinky.rs`.
+Board-specific ESP examples are generated files under `examples/<chip>/<board>/`.
 
 Source of truth:
 
-- Board map and rendering logic: `xtask/src/blinky_examples_generated.rs`
-- Templates: `examples/templates/blinky_plain.rs.j2`, `examples/templates/blinky_rmt.rs.j2`, `examples/templates/blinky_spi.rs.j2`
+- Board map and rendering logic: `xtask/src/board_examples_generated.rs`
+- Templates: `examples/templates/blinky_plain.rs.j2`, `examples/templates/blinky_rmt.rs.j2`, `examples/templates/blinky_spi.rs.j2`, `examples/templates/led16x16_plus_1.rs.j2`, `examples/templates/led16x16_plus_1_spi.rs.j2`
 
 Regenerate after changing templates or board mappings:
 
 ```bash
 cd crates/device-envoy-esp
-cargo xtask generate-blinky-examples
+cargo xtask generate-board-examples
 ```
 
 ## Run Full Workspace Checks

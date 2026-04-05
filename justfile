@@ -35,7 +35,3 @@ update-docs-rp-fast:
 update-docs-fast:
     just update-docs-rp-fast
     just update-docs-esp-fast
-
-# Run all checks across all three crates.
-check-all:
-    cargo run --manifest-path xtask/Cargo.toml -- check-all

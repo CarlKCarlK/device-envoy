@@ -8,6 +8,11 @@ port_arg="${4:-}"
 invocation_dir="${5:-}"
 requested_name="${name}"
 
+# Convenience: allow passing a Rust filename like `foo.rs`.
+if [[ "$name" == *.rs ]]; then
+  name="${name%.rs}"
+fi
+
 # If the chip slot contains a serial-port token and no explicit port was given,
 # treat it as the port argument so callers can do: `just run blinky USB0`.
 if [[ -z "$port_arg" ]]; then
@@ -92,6 +97,73 @@ infer_blinky_example_from_invocation_dir() {
   fi
 }
 
+infer_board_example_from_invocation_dir() {
+  if [[ -z "$invocation_dir" ]]; then
+    return
+  fi
+
+  local relative_invocation_dir="$invocation_dir"
+  local workspace_root="$PWD"
+  if [[ "$relative_invocation_dir" == "$workspace_root"* ]]; then
+    relative_invocation_dir="${relative_invocation_dir#"$workspace_root"/}"
+  fi
+  if [[ "$relative_invocation_dir" != examples/*/* ]]; then
+    return
+  fi
+
+  local chip_dir="${relative_invocation_dir#examples/}"
+  chip_dir="${chip_dir%%/*}"
+  local board_dir="${relative_invocation_dir#examples/${chip_dir}/}"
+  board_dir="${board_dir%%/*}"
+  local chip_feature=""
+  local inferred_chip=""
+  case "$chip_dir" in
+    esp32)
+      chip_feature="esp32"
+      inferred_chip="esp32"
+      ;;
+    c2)
+      chip_feature="esp32c2"
+      inferred_chip="c2"
+      ;;
+    c3)
+      chip_feature="esp32c3"
+      inferred_chip="c3"
+      ;;
+    c6)
+      chip_feature="esp32c6"
+      inferred_chip="c6"
+      ;;
+    h2)
+      chip_feature="esp32h2"
+      inferred_chip="h2"
+      ;;
+    s2)
+      chip_feature="esp32s2"
+      inferred_chip="s2"
+      ;;
+    s3)
+      chip_feature="esp32s3"
+      inferred_chip="s3"
+      ;;
+    *)
+      return
+      ;;
+  esac
+
+  if [[ ! -f "$invocation_dir/${name}.rs" ]]; then
+    return
+  fi
+
+  local inferred_example="${name}_${chip_feature}_${board_dir}"
+  if grep -Eq "^[[:space:]]*name[[:space:]]*=[[:space:]]*\"${inferred_example}\"[[:space:]]*$" Cargo.toml; then
+    name="$inferred_example"
+    if [[ -z "$chip" ]]; then
+      chip="$inferred_chip"
+    fi
+  fi
+}
+
 normalize_port() {
   local port_value="${1:-}"
   if [[ -z "$port_value" ]]; then
@@ -148,6 +220,7 @@ if [[ -z "$action" || -z "$name" ]]; then
 fi
 
 infer_blinky_example_from_invocation_dir
+infer_board_example_from_invocation_dir
 
 if [[ "$requested_name" != "blinky" && "$name" == blinky_esp32* ]]; then
   echo "board blinky examples must be run from their board directory using 'blinky'" >&2

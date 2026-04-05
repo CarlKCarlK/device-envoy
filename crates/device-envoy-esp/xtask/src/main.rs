@@ -3,7 +3,7 @@
 //! Run with: `cargo xtask <command>`
 
 mod audio_player_generated;
-mod blinky_examples_generated;
+mod board_examples_generated;
 mod ir_generated;
 mod led2d_generated;
 mod led_generated;
@@ -13,6 +13,7 @@ mod servo_player_generated;
 use clap::{Parser, Subcommand};
 use flate2::read::GzDecoder;
 use owo_colors::OwoColorize;
+use rayon::prelude::*;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -480,8 +481,9 @@ enum Commands {
     CheckDemos,
     /// Verify README Rust example extraction + compile
     CheckReadmeExample,
-    /// Generate board-specific blinky examples
-    GenerateBlinkyExamples,
+    /// Generate board-specific examples from templates
+    #[command(alias = "generate-blinky-examples")]
+    GenerateBoardExamples,
 }
 
 fn main() -> ExitCode {
@@ -494,7 +496,7 @@ fn main() -> ExitCode {
         Commands::CheckExamplesAllProcessors => check_examples_all_processors(),
         Commands::CheckDemos => check_demos(),
         Commands::CheckReadmeExample => check_readme_example(),
-        Commands::GenerateBlinkyExamples => generate_blinky_examples(),
+        Commands::GenerateBoardExamples => generate_board_examples(),
     }
 }
 
@@ -514,8 +516,8 @@ fn check_docs() -> ExitCode {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = blinky_examples_generated::generate_blinky_board_examples(&root) {
-        eprintln!("Error generating blinky board examples: {err}");
+    if let Err(err) = board_examples_generated::generate_board_examples(&root) {
+        eprintln!("Error generating board examples: {err}");
         return ExitCode::FAILURE;
     }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
@@ -577,8 +579,8 @@ fn check_all() -> ExitCode {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = blinky_examples_generated::generate_blinky_board_examples(&root) {
-        eprintln!("Error generating blinky board examples: {err}");
+    if let Err(err) = board_examples_generated::generate_board_examples(&root) {
+        eprintln!("Error generating board examples: {err}");
         return ExitCode::FAILURE;
     }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
@@ -618,35 +620,13 @@ fn check_all() -> ExitCode {
     let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
         return ExitCode::FAILURE;
     };
-    for build_target in CHECK_ALL_TARGETS {
-        println!(
-            "{}",
-            format!("--> build lib ({})", build_target.label).cyan()
-        );
-        let mut cmd = Command::new("cargo");
-        cmd.current_dir(&root);
-        if build_target.build_std {
-            prepend_path(&mut cmd, &xtensa_linker_dir);
-        }
-        if let Some(tc) = build_target.toolchain {
-            cmd.arg(tc);
-        }
-        cmd.args([
-            "build",
-            "--lib",
-            "--release",
-            "--target",
-            build_target.target,
-            "--no-default-features",
-            "--features",
-            build_target.chip_feature,
-        ]);
-        if build_target.build_std {
-            cmd.arg("-Zbuild-std=core,alloc");
-        }
-        if !run(&mut cmd) {
-            return ExitCode::FAILURE;
-        }
+    let lib_build_results: Vec<bool> = CHECK_ALL_TARGETS
+        .par_iter()
+        .copied()
+        .map(|build_target| build_lib_for_target(&root, &xtensa_linker_dir, build_target))
+        .collect();
+    if lib_build_results.iter().any(|ok| !ok) {
+        return ExitCode::FAILURE;
     }
 
     if check_examples_for_targets(ALL_PROCESSOR_TARGETS, true) != ExitCode::SUCCESS {
@@ -807,12 +787,12 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
                 .then(|| name.trim_end_matches(".rs").to_owned())
         })
         .collect();
-    for generated_blinky_example in blinky_examples_generated::generated_blinky_example_names() {
+    for generated_board_example in board_examples_generated::generated_board_example_names() {
         if !examples
             .iter()
-            .any(|example| example == generated_blinky_example)
+            .any(|example| example == generated_board_example)
         {
-            examples.push(generated_blinky_example.to_string());
+            examples.push(generated_board_example.to_string());
         }
     }
     examples.sort();
@@ -820,76 +800,21 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
     let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
         return ExitCode::FAILURE;
     };
-    for build_target in targets {
-        let chip_capabilities = chip_capabilities(build_target.chip_feature);
-        let target_message = if link_examples {
-            format!("--> build examples ({})", build_target.label)
-        } else {
-            format!("--> check examples ({})", build_target.label)
-        };
-        println!("{}", target_message.cyan());
-        for example in &examples {
-            if let Some(required_chip_feature) =
-                blinky_examples_generated::board_example_required_chip(example)
-            {
-                if required_chip_feature != build_target.chip_feature {
-                    println!(
-                        "    skip example: {example} (board example targets {required_chip_feature}, not {})",
-                        build_target.label
-                    );
-                    continue;
-                }
-            }
-            if let Some(skip_reason) =
-                explicit_example_skip_reason(build_target.chip_feature, example)
-            {
-                println!(
-                    "    skip example: {example} ({skip_reason} on {})",
-                    build_target.label
-                );
-                continue;
-            }
-            let missing_capabilities =
-                missing_capabilities(chip_capabilities, example_requirements(example));
-            if !missing_capabilities.is_empty() {
-                println!(
-                    "    skip example: {example} ({} unavailable on {})",
-                    missing_capabilities.join(", "),
-                    build_target.label
-                );
-                continue;
-            }
-            if link_examples {
-                println!("    build example: {example}");
-            } else {
-                println!("    check example: {example}");
-            }
-            let mut cmd = Command::new("cargo");
-            cmd.current_dir(&root);
-            if build_target.build_std {
-                prepend_path(&mut cmd, &xtensa_linker_dir);
-            }
-            if let Some(tc) = build_target.toolchain {
-                cmd.arg(tc);
-            }
-            cmd.args([
-                if link_examples { "build" } else { "check" },
-                "--example",
-                example,
-                "--release",
-                "--target",
-                build_target.target,
-                "--no-default-features",
-                "--features",
-                build_target.chip_feature,
-            ]);
-            if build_target.build_std {
-                cmd.arg("-Zbuild-std=core,alloc");
-            }
-            if !run(&mut cmd) {
-                return ExitCode::FAILURE;
-            }
-        }
+    let example_results: Vec<bool> = targets
+        .par_iter()
+        .copied()
+        .map(|build_target| {
+            check_examples_for_target(
+                &root,
+                &xtensa_linker_dir,
+                build_target,
+                &examples,
+                link_examples,
+            )
+        })
+        .collect();
+    if example_results.iter().any(|ok| !ok) {
+        return ExitCode::FAILURE;
     }
 
     ExitCode::SUCCESS
@@ -915,62 +840,13 @@ fn check_demos_for_targets(targets: &[BuildTarget]) -> ExitCode {
     let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
         return ExitCode::FAILURE;
     };
-    for build_target in targets {
-        let chip_capabilities = chip_capabilities(build_target.chip_feature);
-        println!(
-            "{}",
-            format!("--> build demos ({})", build_target.label).cyan()
-        );
-        for demo in &demos {
-            if let Some(skip_reason) =
-                explicit_demo_skip_reason(build_target.chip_feature, &demo.name)
-            {
-                println!(
-                    "    skip demo: {} ({skip_reason} on {})",
-                    demo.name, build_target.label
-                );
-                continue;
-            }
-            let missing_capabilities =
-                missing_capabilities(chip_capabilities, demo_requirements(&demo.name));
-            if !missing_capabilities.is_empty() {
-                println!(
-                    "    skip demo: {} ({} unavailable on {})",
-                    demo.name,
-                    missing_capabilities.join(", "),
-                    build_target.label
-                );
-                continue;
-            }
-            println!("    build demo: {}", demo.name);
-            let mut cmd = Command::new("cargo");
-            cmd.current_dir(&root);
-            if build_target.build_std {
-                prepend_path(&mut cmd, &xtensa_linker_dir);
-            }
-            if let Some(tc) = build_target.toolchain {
-                cmd.arg(tc);
-            }
-            cmd.args([
-                "build",
-                "--package",
-                "device-envoy-esp-demos",
-                "--bin",
-                &demo.name,
-                "--release",
-                "--target",
-                build_target.target,
-                "--no-default-features",
-                "--features",
-                build_target.chip_feature,
-            ]);
-            if build_target.build_std {
-                cmd.arg("-Zbuild-std=core,alloc");
-            }
-            if !run(&mut cmd) {
-                return ExitCode::FAILURE;
-            }
-        }
+    let demo_results: Vec<bool> = targets
+        .par_iter()
+        .copied()
+        .map(|build_target| check_demos_for_target(&root, &xtensa_linker_dir, build_target, &demos))
+        .collect();
+    if demo_results.iter().any(|ok| !ok) {
+        return ExitCode::FAILURE;
     }
 
     ExitCode::SUCCESS
@@ -1008,111 +884,302 @@ fn check_embedded_tests() -> ExitCode {
     let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
         return ExitCode::FAILURE;
     };
-    for build_target in CHECK_ALL_TARGETS {
-        // TODO00 Expand embedded compile-test pin mappings so these tests also run on ESP32, ESP32-C2, and ESP32-H2.
-        if matches!(
-            build_target.chip_feature,
-            CHIP_FEATURE_ESP32 | CHIP_FEATURE_ESP32C2 | CHIP_FEATURE_ESP32H2
-        ) {
+    let embedded_results: Vec<bool> = CHECK_ALL_TARGETS
+        .par_iter()
+        .copied()
+        .map(|build_target| {
+            check_embedded_tests_for_target(
+                &root,
+                &xtensa_linker_dir,
+                build_target,
+                &compile_pass_tests,
+                &compile_fail_tests,
+            )
+        })
+        .collect();
+    if embedded_results.iter().any(|ok| !ok) {
+        return ExitCode::FAILURE;
+    }
+
+    ExitCode::SUCCESS
+}
+
+fn build_lib_for_target(root: &Path, xtensa_linker_dir: &Path, build_target: BuildTarget) -> bool {
+    println!("{}", format!("--> build lib ({})", build_target.label).cyan());
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(root);
+    configure_target_artifact_dir(&mut cmd, root, build_target);
+    if build_target.build_std {
+        prepend_path(&mut cmd, xtensa_linker_dir);
+    }
+    if let Some(tc) = build_target.toolchain {
+        cmd.arg(tc);
+    }
+    cmd.args([
+        "build",
+        "--lib",
+        "--release",
+        "--target",
+        build_target.target,
+        "--no-default-features",
+        "--features",
+        build_target.chip_feature,
+    ]);
+    if build_target.build_std {
+        cmd.arg("-Zbuild-std=core,alloc");
+    }
+    run(&mut cmd)
+}
+
+fn check_examples_for_target(
+    root: &Path,
+    xtensa_linker_dir: &Path,
+    build_target: BuildTarget,
+    examples: &[String],
+    link_examples: bool,
+) -> bool {
+    let chip_capabilities = chip_capabilities(build_target.chip_feature);
+    let target_message = if link_examples {
+        format!("--> build examples ({})", build_target.label)
+    } else {
+        format!("--> check examples ({})", build_target.label)
+    };
+    println!("{}", target_message.cyan());
+    for example in examples {
+        if let Some(required_chip_feature) = board_examples_generated::board_example_required_chip(example)
+        {
+            if required_chip_feature != build_target.chip_feature {
+                println!(
+                    "    skip example: {example} (board example targets {required_chip_feature}, not {})",
+                    build_target.label
+                );
+                continue;
+            }
+        }
+        if let Some(skip_reason) = explicit_example_skip_reason(build_target.chip_feature, example) {
             println!(
-                "    skip embedded tests on {} (compile-only embedded test pin maps are currently maintained for ESP32-C3/ESP32-C6/ESP32-S2/ESP32-S3)",
+                "    skip example: {example} ({skip_reason} on {})",
                 build_target.label
             );
             continue;
         }
-
-        println!("{}", format!("    target: {}", build_target.label).cyan());
-        for embedded_test in &compile_pass_tests {
-            if let Some(reason) =
-                explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
-            {
-                println!(
-                    "      skip compile-pass test: {embedded_test} ({reason} on {})",
-                    build_target.label
-                );
-                continue;
-            }
-            println!("      compile-pass test: {embedded_test}");
-            let mut cmd = Command::new("cargo");
-            cmd.current_dir(&root);
-            if build_target.build_std {
-                prepend_path(&mut cmd, &xtensa_linker_dir);
-            }
-            if let Some(tc) = build_target.toolchain {
-                cmd.arg(tc);
-            }
-            cmd.args([
-                "build",
-                "--test",
-                embedded_test,
-                "--release",
-                "--target",
-                build_target.target,
-                "--no-default-features",
-                "--features",
-                build_target.chip_feature,
-            ]);
-            if build_target.build_std {
-                cmd.arg("-Zbuild-std=core,alloc");
-            }
-            if !run(&mut cmd) {
-                return ExitCode::FAILURE;
-            }
+        let missing_capabilities =
+            missing_capabilities(chip_capabilities, example_requirements(example));
+        if !missing_capabilities.is_empty() {
+            println!(
+                "    skip example: {example} ({} unavailable on {})",
+                missing_capabilities.join(", "),
+                build_target.label
+            );
+            continue;
         }
+        if link_examples {
+            println!("    build example: {example}");
+        } else {
+            println!("    check example: {example}");
+        }
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(root);
+        configure_target_artifact_dir(&mut cmd, root, build_target);
+        if build_target.build_std {
+            prepend_path(&mut cmd, xtensa_linker_dir);
+        }
+        if let Some(tc) = build_target.toolchain {
+            cmd.arg(tc);
+        }
+        cmd.args([
+            if link_examples { "build" } else { "check" },
+            "--example",
+            example,
+            "--release",
+            "--target",
+            build_target.target,
+            "--no-default-features",
+            "--features",
+            build_target.chip_feature,
+        ]);
+        if build_target.build_std {
+            cmd.arg("-Zbuild-std=core,alloc");
+        }
+        if !run(&mut cmd) {
+            return false;
+        }
+    }
+    true
+}
 
-        for embedded_test in &compile_fail_tests {
-            if let Some(reason) =
-                explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
-            {
-                println!(
-                    "      skip compile-fail test: {embedded_test} ({reason} on {})",
-                    build_target.label
-                );
-                continue;
-            }
-            println!("      compile-fail test: {embedded_test}");
-            let compile_fail_features = format!("{},compile-fail-tests", build_target.chip_feature);
-            let mut cmd = Command::new("cargo");
-            cmd.current_dir(&root);
-            // Compile-fail tests are expected to fail. Keep their output non-colored so
-            // expected rustc errors do not show as alarming red blocks in the check log.
-            cmd.env("CARGO_TERM_COLOR", "never");
-            if build_target.build_std {
-                prepend_path(&mut cmd, &xtensa_linker_dir);
-            }
-            if let Some(tc) = build_target.toolchain {
-                cmd.arg(tc);
-            }
-            cmd.args([
-                "build",
-                "--test",
-                embedded_test,
-                "--release",
-                "--target",
-                build_target.target,
-                "--no-default-features",
-                "--features",
-                &compile_fail_features,
-            ]);
-            if build_target.build_std {
-                cmd.arg("-Zbuild-std=core,alloc");
-            }
-            if run_expect_failure(&mut cmd) {
-                eprintln!(
-                    "{}",
-                    format!(
-                        "error: compile-fail test `{embedded_test}` unexpectedly compiled for target `{}`",
-                        build_target.target
-                    )
-                    .red()
-                    .bold()
-                );
-                return ExitCode::FAILURE;
-            }
+fn check_demos_for_target(
+    root: &Path,
+    xtensa_linker_dir: &Path,
+    build_target: BuildTarget,
+    demos: &[DemoInfo],
+) -> bool {
+    let chip_capabilities = chip_capabilities(build_target.chip_feature);
+    println!("{}", format!("--> build demos ({})", build_target.label).cyan());
+    for demo in demos {
+        if let Some(skip_reason) = explicit_demo_skip_reason(build_target.chip_feature, &demo.name) {
+            println!(
+                "    skip demo: {} ({skip_reason} on {})",
+                demo.name, build_target.label
+            );
+            continue;
+        }
+        let missing_capabilities =
+            missing_capabilities(chip_capabilities, demo_requirements(&demo.name));
+        if !missing_capabilities.is_empty() {
+            println!(
+                "    skip demo: {} ({} unavailable on {})",
+                demo.name,
+                missing_capabilities.join(", "),
+                build_target.label
+            );
+            continue;
+        }
+        println!("    build demo: {}", demo.name);
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(root);
+        configure_target_artifact_dir(&mut cmd, root, build_target);
+        if build_target.build_std {
+            prepend_path(&mut cmd, xtensa_linker_dir);
+        }
+        if let Some(tc) = build_target.toolchain {
+            cmd.arg(tc);
+        }
+        cmd.args([
+            "build",
+            "--package",
+            "device-envoy-esp-demos",
+            "--bin",
+            &demo.name,
+            "--release",
+            "--target",
+            build_target.target,
+            "--no-default-features",
+            "--features",
+            build_target.chip_feature,
+        ]);
+        if build_target.build_std {
+            cmd.arg("-Zbuild-std=core,alloc");
+        }
+        if !run(&mut cmd) {
+            return false;
+        }
+    }
+    true
+}
+
+fn check_embedded_tests_for_target(
+    root: &Path,
+    xtensa_linker_dir: &Path,
+    build_target: BuildTarget,
+    compile_pass_tests: &[&str],
+    compile_fail_tests: &[&str],
+) -> bool {
+    // TODO00 Expand embedded compile-test pin mappings so these tests also run on ESP32, ESP32-C2, and ESP32-H2.
+    if matches!(
+        build_target.chip_feature,
+        CHIP_FEATURE_ESP32 | CHIP_FEATURE_ESP32C2 | CHIP_FEATURE_ESP32H2
+    ) {
+        println!(
+            "    skip embedded tests on {} (compile-only embedded test pin maps are currently maintained for ESP32-C3/ESP32-C6/ESP32-S2/ESP32-S3)",
+            build_target.label
+        );
+        return true;
+    }
+
+    println!("{}", format!("    target: {}", build_target.label).cyan());
+    for embedded_test in compile_pass_tests {
+        if let Some(reason) =
+            explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
+        {
+            println!(
+                "      skip compile-pass test: {embedded_test} ({reason} on {})",
+                build_target.label
+            );
+            continue;
+        }
+        println!("      compile-pass test: {embedded_test}");
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(root);
+        configure_target_artifact_dir(&mut cmd, root, build_target);
+        if build_target.build_std {
+            prepend_path(&mut cmd, xtensa_linker_dir);
+        }
+        if let Some(tc) = build_target.toolchain {
+            cmd.arg(tc);
+        }
+        cmd.args([
+            "build",
+            "--test",
+            embedded_test,
+            "--release",
+            "--target",
+            build_target.target,
+            "--no-default-features",
+            "--features",
+            build_target.chip_feature,
+        ]);
+        if build_target.build_std {
+            cmd.arg("-Zbuild-std=core,alloc");
+        }
+        if !run(&mut cmd) {
+            return false;
         }
     }
 
-    ExitCode::SUCCESS
+    for embedded_test in compile_fail_tests {
+        if let Some(reason) =
+            explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
+        {
+            println!(
+                "      skip compile-fail test: {embedded_test} ({reason} on {})",
+                build_target.label
+            );
+            continue;
+        }
+        println!("      compile-fail test: {embedded_test}");
+        let compile_fail_features = format!("{},compile-fail-tests", build_target.chip_feature);
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(root);
+        // Compile-fail tests are expected to fail. Keep their output non-colored so
+        // expected rustc errors do not show as alarming red blocks in the check log.
+        cmd.env("CARGO_TERM_COLOR", "never");
+        configure_target_artifact_dir(&mut cmd, root, build_target);
+        if build_target.build_std {
+            prepend_path(&mut cmd, xtensa_linker_dir);
+        }
+        if let Some(tc) = build_target.toolchain {
+            cmd.arg(tc);
+        }
+        cmd.args([
+            "build",
+            "--test",
+            embedded_test,
+            "--release",
+            "--target",
+            build_target.target,
+            "--no-default-features",
+            "--features",
+            &compile_fail_features,
+        ]);
+        if build_target.build_std {
+            cmd.arg("-Zbuild-std=core,alloc");
+        }
+        if run_expect_failure(&mut cmd) {
+            eprintln!(
+                "{}",
+                format!(
+                    "error: compile-fail test `{embedded_test}` unexpectedly compiled for target `{}`",
+                    build_target.target
+                )
+                .red()
+                .bold()
+            );
+            return false;
+        }
+    }
+
+    true
 }
 
 fn explicit_embedded_test_skip_reason(
@@ -1223,6 +1290,7 @@ fn check_readme_example() -> ExitCode {
         );
         let mut cmd = Command::new("cargo");
         cmd.current_dir(&root);
+        configure_target_artifact_dir(&mut cmd, &root, *build_target);
         if build_target.build_std {
             prepend_path(&mut cmd, &xtensa_linker_dir);
         }
@@ -1303,21 +1371,21 @@ fn extract_single_rust_example(readme_source: &str, readme_path: &Path) -> Resul
     Ok(normalized_lines.join("\n"))
 }
 
-fn generate_blinky_examples() -> ExitCode {
+fn generate_board_examples() -> ExitCode {
     let root = workspace_root();
     println!(
         "{}",
-        "==> cargo xtask generate-blinky-examples: device-envoy-esp"
+        "==> cargo xtask generate-board-examples: device-envoy-esp"
             .cyan()
             .bold()
     );
 
-    if let Err(err) = blinky_examples_generated::generate_blinky_board_examples(&root) {
-        eprintln!("Error generating blinky board examples: {err}");
+    if let Err(err) = board_examples_generated::generate_board_examples(&root) {
+        eprintln!("Error generating board examples: {err}");
         return ExitCode::FAILURE;
     }
 
-    println!("{}", "==> Blinky board examples generated".green().bold());
+    println!("{}", "==> Board examples generated".green().bold());
     ExitCode::SUCCESS
 }
 
@@ -1524,6 +1592,19 @@ fn prepend_path(cmd: &mut Command, dir: &Path) {
     cmd.env(
         "PATH",
         std::env::join_paths(paths).expect("PATH join failed"),
+    );
+}
+
+fn target_artifact_dir(workspace_root: &Path, build_target: BuildTarget) -> PathBuf {
+    workspace_root
+        .join("../../target/check-all")
+        .join(build_target.label)
+}
+
+fn configure_target_artifact_dir(cmd: &mut Command, workspace_root: &Path, build_target: BuildTarget) {
+    cmd.env(
+        "CARGO_TARGET_DIR",
+        target_artifact_dir(workspace_root, build_target),
     );
 }
 

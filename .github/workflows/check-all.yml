@@ -37,7 +37,7 @@ jobs:
             --export-file "$HOME/export-esp.sh"
 
       - name: Run workspace check-all
-        run: cargo run --manifest-path xtask/Cargo.toml -- check-all
+        run: cargo check-all
 
       - name: Clone blinky compatibility repos
         shell: bash

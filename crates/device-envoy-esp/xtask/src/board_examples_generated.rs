@@ -11,14 +11,35 @@ enum BlinkyKind {
     SmartSpi,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BoardId {
+    Esp32Generic,
+    Esp32c2Generic,
+    Esp32c3Generic,
+    Esp32c3Luatos,
+    Esp32c6Generic,
+    Esp32c6Devkitc1N8,
+    Esp32h2Generic,
+    Esp32s2Generic,
+    Esp32s3Generic,
+    Esp32s3Devkitc1V1_1N16r8,
+    Esp32s3Devkitc1V1_0N16r8,
+}
+
 #[derive(Clone, Copy)]
-struct BlinkyBoardExample {
-    example_name: &'static str,
+struct BoardProfile {
+    id: BoardId,
     chip_dir: &'static str,
     board_dir: &'static str,
     board_slug: &'static str,
     chip_feature: &'static str,
     chip_name: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct BlinkyBoardExample {
+    example_name: &'static str,
+    board_id: BoardId,
     blinky_kind: BlinkyKind,
     led_pin_num: u8,
     led_pin_ident: &'static str,
@@ -28,27 +49,110 @@ struct BlinkyBoardExample {
 #[derive(Clone, Copy)]
 struct Led16x16BoardExample {
     example_name: &'static str,
-    chip_dir: &'static str,
-    board_dir: &'static str,
-    board_slug: &'static str,
-    chip_feature: &'static str,
-    chip_name: &'static str,
+    board_id: BoardId,
     panel_pin_num: u8,
     panel_pin_ident: &'static str,
-    ledstrip1_pin_num: u8,
-    ledstrip1_pin_ident: &'static str,
-    ledstrip1_built_in: bool,
+    led_strip1_pin_num: u8,
+    led_strip1_pin_ident: &'static str,
+    led_strip1_built_in: bool,
     use_spi: bool,
 }
 
-const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
-    BlinkyBoardExample {
-        example_name: "blinky_esp32_generic",
+const BOARD_PROFILES: &[BoardProfile] = &[
+    BoardProfile {
+        id: BoardId::Esp32Generic,
         chip_dir: "esp32",
         board_dir: "generic",
         board_slug: "generic",
         chip_feature: "esp32",
         chip_name: "ESP32",
+    },
+    BoardProfile {
+        id: BoardId::Esp32c2Generic,
+        chip_dir: "c2",
+        board_dir: "generic",
+        board_slug: "generic",
+        chip_feature: "esp32c2",
+        chip_name: "ESP32-C2",
+    },
+    BoardProfile {
+        id: BoardId::Esp32c3Generic,
+        chip_dir: "c3",
+        board_dir: "generic",
+        board_slug: "generic",
+        chip_feature: "esp32c3",
+        chip_name: "ESP32-C3",
+    },
+    BoardProfile {
+        id: BoardId::Esp32c3Luatos,
+        chip_dir: "c3",
+        board_dir: "luatos",
+        board_slug: "luatos",
+        chip_feature: "esp32c3",
+        chip_name: "ESP32-C3",
+    },
+    BoardProfile {
+        id: BoardId::Esp32c6Generic,
+        chip_dir: "c6",
+        board_dir: "generic",
+        board_slug: "generic",
+        chip_feature: "esp32c6",
+        chip_name: "ESP32-C6",
+    },
+    BoardProfile {
+        id: BoardId::Esp32c6Devkitc1N8,
+        chip_dir: "c6",
+        board_dir: "devkitc1_n8",
+        board_slug: "esp32-c6-devkitc-1-n8",
+        chip_feature: "esp32c6",
+        chip_name: "ESP32-C6",
+    },
+    BoardProfile {
+        id: BoardId::Esp32h2Generic,
+        chip_dir: "h2",
+        board_dir: "generic",
+        board_slug: "generic",
+        chip_feature: "esp32h2",
+        chip_name: "ESP32-H2",
+    },
+    BoardProfile {
+        id: BoardId::Esp32s2Generic,
+        chip_dir: "s2",
+        board_dir: "generic",
+        board_slug: "generic",
+        chip_feature: "esp32s2",
+        chip_name: "ESP32-S2",
+    },
+    BoardProfile {
+        id: BoardId::Esp32s3Generic,
+        chip_dir: "s3",
+        board_dir: "generic",
+        board_slug: "generic",
+        chip_feature: "esp32s3",
+        chip_name: "ESP32-S3",
+    },
+    BoardProfile {
+        id: BoardId::Esp32s3Devkitc1V1_1N16r8,
+        chip_dir: "s3",
+        board_dir: "devkitc1_v1_1_n16r8",
+        board_slug: "esp32-s3-devkitc-1-v1.1-n16r8",
+        chip_feature: "esp32s3",
+        chip_name: "ESP32-S3",
+    },
+    BoardProfile {
+        id: BoardId::Esp32s3Devkitc1V1_0N16r8,
+        chip_dir: "s3",
+        board_dir: "devkitc1_v1_0_n16r8",
+        board_slug: "esp32-s3-devkitc-1-v1.0-n16r8",
+        chip_feature: "esp32s3",
+        chip_name: "ESP32-S3",
+    },
+];
+
+const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
+    BlinkyBoardExample {
+        example_name: "blinky_esp32_generic",
+        board_id: BoardId::Esp32Generic,
         blinky_kind: BlinkyKind::Plain,
         led_pin_num: 0,
         led_pin_ident: "GPIO0",
@@ -56,11 +160,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32c2_generic",
-        chip_dir: "c2",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32c2",
-        chip_name: "ESP32-C2",
+        board_id: BoardId::Esp32c2Generic,
         blinky_kind: BlinkyKind::Plain,
         led_pin_num: 8,
         led_pin_ident: "GPIO8",
@@ -68,11 +168,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32c3_generic",
-        chip_dir: "c3",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32c3",
-        chip_name: "ESP32-C3",
+        board_id: BoardId::Esp32c3Generic,
         blinky_kind: BlinkyKind::Plain,
         led_pin_num: 7,
         led_pin_ident: "GPIO7",
@@ -80,11 +176,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32c3_luatos",
-        chip_dir: "c3",
-        board_dir: "luatos",
-        board_slug: "luatos",
-        chip_feature: "esp32c3",
-        chip_name: "ESP32-C3",
+        board_id: BoardId::Esp32c3Luatos,
         blinky_kind: BlinkyKind::Plain,
         led_pin_num: 7,
         led_pin_ident: "GPIO7",
@@ -92,11 +184,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32c6_generic",
-        chip_dir: "c6",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32c6",
-        chip_name: "ESP32-C6",
+        board_id: BoardId::Esp32c6Generic,
         blinky_kind: BlinkyKind::Plain,
         led_pin_num: 8,
         led_pin_ident: "GPIO8",
@@ -104,11 +192,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32c6_devkitc1_n8",
-        chip_dir: "c6",
-        board_dir: "devkitc1_n8",
-        board_slug: "esp32-c6-devkitc-1-n8",
-        chip_feature: "esp32c6",
-        chip_name: "ESP32-C6",
+        board_id: BoardId::Esp32c6Devkitc1N8,
         blinky_kind: BlinkyKind::SmartRmt,
         led_pin_num: 8,
         led_pin_ident: "GPIO8",
@@ -116,11 +200,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32h2_generic",
-        chip_dir: "h2",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32h2",
-        chip_name: "ESP32-H2",
+        board_id: BoardId::Esp32h2Generic,
         blinky_kind: BlinkyKind::Plain,
         led_pin_num: 8,
         led_pin_ident: "GPIO8",
@@ -128,11 +208,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32s2_generic",
-        chip_dir: "s2",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32s2",
-        chip_name: "ESP32-S2",
+        board_id: BoardId::Esp32s2Generic,
         blinky_kind: BlinkyKind::Plain,
         led_pin_num: 0,
         led_pin_ident: "GPIO0",
@@ -140,11 +216,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32s3_generic",
-        chip_dir: "s3",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Generic,
         blinky_kind: BlinkyKind::SmartRmt,
         led_pin_num: 38,
         led_pin_ident: "GPIO38",
@@ -152,11 +224,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32s3_devkitc1_v1_1_n16r8",
-        chip_dir: "s3",
-        board_dir: "devkitc1_v1_1_n16r8",
-        board_slug: "esp32-s3-devkitc-1-v1.1-n16r8",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Devkitc1V1_1N16r8,
         blinky_kind: BlinkyKind::SmartRmt,
         led_pin_num: 38,
         led_pin_ident: "GPIO38",
@@ -164,11 +232,7 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
     },
     BlinkyBoardExample {
         example_name: "blinky_esp32s3_devkitc1_v1_0_n16r8",
-        chip_dir: "s3",
-        board_dir: "devkitc1_v1_0_n16r8",
-        board_slug: "esp32-s3-devkitc-1-v1.0-n16r8",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Devkitc1V1_0N16r8,
         blinky_kind: BlinkyKind::SmartRmt,
         led_pin_num: 48,
         led_pin_ident: "GPIO48",
@@ -179,285 +243,212 @@ const BLINKY_BOARD_EXAMPLES: &[BlinkyBoardExample] = &[
 const LED16X16_BOARD_EXAMPLES: &[Led16x16BoardExample] = &[
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32_generic",
-        chip_dir: "esp32",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32",
-        chip_name: "ESP32",
+        board_id: BoardId::Esp32Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 0,
-        ledstrip1_pin_ident: "GPIO0",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 0,
+        led_strip1_pin_ident: "GPIO0",
+        led_strip1_built_in: false,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32_generic",
-        chip_dir: "esp32",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32",
-        chip_name: "ESP32",
+        board_id: BoardId::Esp32Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 0,
-        ledstrip1_pin_ident: "GPIO0",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 0,
+        led_strip1_pin_ident: "GPIO0",
+        led_strip1_built_in: false,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32c3_generic",
-        chip_dir: "c3",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32c3",
-        chip_name: "ESP32-C3",
+        board_id: BoardId::Esp32c3Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 7,
-        ledstrip1_pin_ident: "GPIO7",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 7,
+        led_strip1_pin_ident: "GPIO7",
+        led_strip1_built_in: false,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32c3_generic",
-        chip_dir: "c3",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32c3",
-        chip_name: "ESP32-C3",
+        board_id: BoardId::Esp32c3Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 7,
-        ledstrip1_pin_ident: "GPIO7",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 7,
+        led_strip1_pin_ident: "GPIO7",
+        led_strip1_built_in: false,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32c3_luatos",
-        chip_dir: "c3",
-        board_dir: "luatos",
-        board_slug: "luatos",
-        chip_feature: "esp32c3",
-        chip_name: "ESP32-C3",
+        board_id: BoardId::Esp32c3Luatos,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 7,
-        ledstrip1_pin_ident: "GPIO7",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 7,
+        led_strip1_pin_ident: "GPIO7",
+        led_strip1_built_in: false,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32c3_luatos",
-        chip_dir: "c3",
-        board_dir: "luatos",
-        board_slug: "luatos",
-        chip_feature: "esp32c3",
-        chip_name: "ESP32-C3",
+        board_id: BoardId::Esp32c3Luatos,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 7,
-        ledstrip1_pin_ident: "GPIO7",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 7,
+        led_strip1_pin_ident: "GPIO7",
+        led_strip1_built_in: false,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32c6_generic",
-        chip_dir: "c6",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32c6",
-        chip_name: "ESP32-C6",
+        board_id: BoardId::Esp32c6Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 8,
-        ledstrip1_pin_ident: "GPIO8",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 8,
+        led_strip1_pin_ident: "GPIO8",
+        led_strip1_built_in: false,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32c6_generic",
-        chip_dir: "c6",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32c6",
-        chip_name: "ESP32-C6",
+        board_id: BoardId::Esp32c6Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 8,
-        ledstrip1_pin_ident: "GPIO8",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 8,
+        led_strip1_pin_ident: "GPIO8",
+        led_strip1_built_in: false,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32c6_devkitc1_n8",
-        chip_dir: "c6",
-        board_dir: "devkitc1_n8",
-        board_slug: "esp32-c6-devkitc-1-n8",
-        chip_feature: "esp32c6",
-        chip_name: "ESP32-C6",
+        board_id: BoardId::Esp32c6Devkitc1N8,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 8,
-        ledstrip1_pin_ident: "GPIO8",
-        ledstrip1_built_in: true,
+        led_strip1_pin_num: 8,
+        led_strip1_pin_ident: "GPIO8",
+        led_strip1_built_in: true,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32c6_devkitc1_n8",
-        chip_dir: "c6",
-        board_dir: "devkitc1_n8",
-        board_slug: "esp32-c6-devkitc-1-n8",
-        chip_feature: "esp32c6",
-        chip_name: "ESP32-C6",
+        board_id: BoardId::Esp32c6Devkitc1N8,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 8,
-        ledstrip1_pin_ident: "GPIO8",
-        ledstrip1_built_in: true,
+        led_strip1_pin_num: 8,
+        led_strip1_pin_ident: "GPIO8",
+        led_strip1_built_in: true,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32h2_generic",
-        chip_dir: "h2",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32h2",
-        chip_name: "ESP32-H2",
+        board_id: BoardId::Esp32h2Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 8,
-        ledstrip1_pin_ident: "GPIO8",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 8,
+        led_strip1_pin_ident: "GPIO8",
+        led_strip1_built_in: false,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32h2_generic",
-        chip_dir: "h2",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32h2",
-        chip_name: "ESP32-H2",
+        board_id: BoardId::Esp32h2Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 8,
-        ledstrip1_pin_ident: "GPIO8",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 8,
+        led_strip1_pin_ident: "GPIO8",
+        led_strip1_built_in: false,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32s2_generic",
-        chip_dir: "s2",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32s2",
-        chip_name: "ESP32-S2",
+        board_id: BoardId::Esp32s2Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 0,
-        ledstrip1_pin_ident: "GPIO0",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 0,
+        led_strip1_pin_ident: "GPIO0",
+        led_strip1_built_in: false,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32s2_generic",
-        chip_dir: "s2",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32s2",
-        chip_name: "ESP32-S2",
+        board_id: BoardId::Esp32s2Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 0,
-        ledstrip1_pin_ident: "GPIO0",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 0,
+        led_strip1_pin_ident: "GPIO0",
+        led_strip1_built_in: false,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32s3_generic",
-        chip_dir: "s3",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 10,
-        ledstrip1_pin_ident: "GPIO10",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 10,
+        led_strip1_pin_ident: "GPIO10",
+        led_strip1_built_in: false,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32s3_generic",
-        chip_dir: "s3",
-        board_dir: "generic",
-        board_slug: "generic",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Generic,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 10,
-        ledstrip1_pin_ident: "GPIO10",
-        ledstrip1_built_in: false,
+        led_strip1_pin_num: 10,
+        led_strip1_pin_ident: "GPIO10",
+        led_strip1_built_in: false,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32s3_devkitc1_v1_1_n16r8",
-        chip_dir: "s3",
-        board_dir: "devkitc1_v1_1_n16r8",
-        board_slug: "esp32-s3-devkitc-1-v1.1-n16r8",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Devkitc1V1_1N16r8,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 38,
-        ledstrip1_pin_ident: "GPIO38",
-        ledstrip1_built_in: true,
+        led_strip1_pin_num: 38,
+        led_strip1_pin_ident: "GPIO38",
+        led_strip1_built_in: true,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32s3_devkitc1_v1_1_n16r8",
-        chip_dir: "s3",
-        board_dir: "devkitc1_v1_1_n16r8",
-        board_slug: "esp32-s3-devkitc-1-v1.1-n16r8",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Devkitc1V1_1N16r8,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 38,
-        ledstrip1_pin_ident: "GPIO38",
-        ledstrip1_built_in: true,
+        led_strip1_pin_num: 38,
+        led_strip1_pin_ident: "GPIO38",
+        led_strip1_built_in: true,
         use_spi: true,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_esp32s3_devkitc1_v1_0_n16r8",
-        chip_dir: "s3",
-        board_dir: "devkitc1_v1_0_n16r8",
-        board_slug: "esp32-s3-devkitc-1-v1.0-n16r8",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Devkitc1V1_0N16r8,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 48,
-        ledstrip1_pin_ident: "GPIO48",
-        ledstrip1_built_in: true,
+        led_strip1_pin_num: 48,
+        led_strip1_pin_ident: "GPIO48",
+        led_strip1_built_in: true,
         use_spi: false,
     },
     Led16x16BoardExample {
         example_name: "led16x16_plus_1_spi_esp32s3_devkitc1_v1_0_n16r8",
-        chip_dir: "s3",
-        board_dir: "devkitc1_v1_0_n16r8",
-        board_slug: "esp32-s3-devkitc-1-v1.0-n16r8",
-        chip_feature: "esp32s3",
-        chip_name: "ESP32-S3",
+        board_id: BoardId::Esp32s3Devkitc1V1_0N16r8,
         panel_pin_num: 2,
         panel_pin_ident: "GPIO2",
-        ledstrip1_pin_num: 48,
-        ledstrip1_pin_ident: "GPIO48",
-        ledstrip1_built_in: true,
+        led_strip1_pin_num: 48,
+        led_strip1_pin_ident: "GPIO48",
+        led_strip1_built_in: true,
         use_spi: true,
     },
 ];
+
+fn board_profile(board_id: BoardId) -> &'static BoardProfile {
+    BOARD_PROFILES
+        .iter()
+        .find(|board_profile| board_profile.id == board_id)
+        .unwrap_or_else(|| panic!("missing board profile for {board_id:?}"))
+}
 
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
     let examples_dir = workspace_root.join("examples");
@@ -475,20 +466,17 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;
     minijinja_environment.add_template("blinky_rmt", &blinky_rmt_template)?;
     minijinja_environment.add_template("blinky_spi", &blinky_spi_template)?;
-    minijinja_environment
-        .add_template("led16x16_plus_1", &led16x16_plus_1_template)?;
-    minijinja_environment.add_template(
-        "led16x16_plus_1_spi",
-        &led16x16_plus_1_spi_template,
-    )?;
+    minijinja_environment.add_template("led16x16_plus_1", &led16x16_plus_1_template)?;
+    minijinja_environment.add_template("led16x16_plus_1_spi", &led16x16_plus_1_spi_template)?;
 
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
     let mut expected_generated_paths = Vec::new();
     for board_example in BLINKY_BOARD_EXAMPLES {
+        let board_profile = board_profile(board_example.board_id);
         let output_path = examples_dir
-            .join(board_example.chip_dir)
-            .join(board_example.board_dir)
+            .join(board_profile.chip_dir)
+            .join(board_profile.board_dir)
             .join("blinky.rs");
         if let Some(output_dir) = output_path.parent() {
             fs::create_dir_all(output_dir)?;
@@ -500,31 +488,31 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
             BlinkyKind::SmartSpi => "blinky_spi",
         };
 
-        let generated_source =
-            minijinja_environment
-                .get_template(template_name)?
-                .render(context! {
-                    example_name => board_example.example_name,
-                    board_slug => board_example.board_slug,
-                    chip_name => board_example.chip_name,
-                    chip_feature => board_example.chip_feature,
-                    led_pin_num => board_example.led_pin_num,
-                    led_pin_ident => board_example.led_pin_ident,
-                    built_in_led => board_example.built_in_led,
-                })?;
+        let generated_source = minijinja_environment
+            .get_template(template_name)?
+            .render(context! {
+                example_name => board_example.example_name,
+                board_slug => board_profile.board_slug,
+                chip_name => board_profile.chip_name,
+                chip_feature => board_profile.chip_feature,
+                led_pin_num => board_example.led_pin_num,
+                led_pin_ident => board_example.led_pin_ident,
+                built_in_led => board_example.built_in_led,
+            })?;
         write_if_changed(&output_path, &generated_source)?;
         expected_generated_paths.push(output_path);
     }
 
     for board_example in LED16X16_BOARD_EXAMPLES {
+        let board_profile = board_profile(board_example.board_id);
         let output_filename = if board_example.use_spi {
             "led16x16_plus_1_spi.rs"
         } else {
             "led16x16_plus_1.rs"
         };
         let output_path = examples_dir
-            .join(board_example.chip_dir)
-            .join(board_example.board_dir)
+            .join(board_profile.chip_dir)
+            .join(board_profile.board_dir)
             .join(output_filename);
         if let Some(output_dir) = output_path.parent() {
             fs::create_dir_all(output_dir)?;
@@ -534,20 +522,19 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         } else {
             "led16x16_plus_1"
         };
-        let generated_source =
-            minijinja_environment
-                .get_template(template_name)?
-                .render(context! {
-                    example_name => board_example.example_name,
-                    board_slug => board_example.board_slug,
-                    chip_name => board_example.chip_name,
-                    chip_feature => board_example.chip_feature,
-                    panel_pin_num => board_example.panel_pin_num,
-                    panel_pin_ident => board_example.panel_pin_ident,
-                    ledstrip1_pin_num => board_example.ledstrip1_pin_num,
-                    ledstrip1_pin_ident => board_example.ledstrip1_pin_ident,
-                    ledstrip1_built_in => board_example.ledstrip1_built_in,
-                })?;
+        let generated_source = minijinja_environment
+            .get_template(template_name)?
+            .render(context! {
+                example_name => board_example.example_name,
+                board_slug => board_profile.board_slug,
+                chip_name => board_profile.chip_name,
+                chip_feature => board_profile.chip_feature,
+                panel_pin_num => board_example.panel_pin_num,
+                panel_pin_ident => board_example.panel_pin_ident,
+                led_strip1_pin_num => board_example.led_strip1_pin_num,
+                led_strip1_pin_ident => board_example.led_strip1_pin_ident,
+                led_strip1_built_in => board_example.led_strip1_built_in,
+            })?;
         write_if_changed(&output_path, &generated_source)?;
         expected_generated_paths.push(output_path);
     }
@@ -577,12 +564,12 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
         .iter()
         .find(|board_example| board_example.example_name == example_name)
     {
-        return Some(board_example.chip_feature);
+        return Some(board_profile(board_example.board_id).chip_feature);
     }
     LED16X16_BOARD_EXAMPLES
         .iter()
         .find(|board_example| board_example.example_name == example_name)
-        .map(|board_example| board_example.chip_feature)
+        .map(|board_example| board_profile(board_example.board_id).chip_feature)
 }
 
 fn cleanup_legacy_flat_generated_examples(examples_dir: &Path) -> Result<(), Box<dyn Error>> {

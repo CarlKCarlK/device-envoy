@@ -3,10 +3,10 @@
 //!
 //! Wiring:
 //! - {{ panel_pin_ident }}: 16x16 NeoPixel-style (WS2812) panel data-in
-{%- if ledstrip1_built_in %}
-//! - {{ ledstrip1_pin_ident }}: built-in NeoPixel-style (WS2812) LED
+{%- if led_strip1_built_in %}
+//! - {{ led_strip1_pin_ident }}: built-in NeoPixel-style (WS2812) LED
 {%- else %}
-//! - {{ ledstrip1_pin_ident }}: external NeoPixel-style (WS2812) LED data-in
+//! - {{ led_strip1_pin_ident }}: external NeoPixel-style (WS2812) LED data-in
 {%- endif %}
 
 #![no_std]
@@ -32,7 +32,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 compile_error!("This board example only supports --features {{ chip_feature }}.");
 
 const PANEL_16X16_PIN_NUM: u8 = {{ panel_pin_num }};
-const LED_STRIP1_PIN_NUM: u8 = {{ ledstrip1_pin_num }};
+const LED_STRIP1_PIN_NUM: u8 = {{ led_strip1_pin_num }};
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 led2d! {
@@ -48,7 +48,7 @@ led2d! {
 
 led_strip! {
     LedStrip1 {
-        pin: {{ ledstrip1_pin_ident }},
+        pin: {{ led_strip1_pin_ident }},
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 4,
@@ -70,7 +70,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
 
     let led16x16_dual = Led16x16Dual::new(p.{{ panel_pin_ident }}, rmt80.channel0, spawner)?;
-    let led_strip1 = LedStrip1::new(p.{{ ledstrip1_pin_ident }}, rmt80.channel1, spawner)?;
+    let led_strip1 = LedStrip1::new(p.{{ led_strip1_pin_ident }}, rmt80.channel1, spawner)?;
 
     let mut panel_x_index = 0usize;
     let mut panel_y_index = 0usize;

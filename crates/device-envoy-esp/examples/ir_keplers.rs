@@ -9,6 +9,7 @@
 #![no_std]
 #![no_main]
 
+use core::convert::Infallible;
 use embassy_executor::Spawner;
 use embassy_futures::select::{select, Either};
 use esp_backtrace as _;
@@ -35,13 +36,11 @@ ir_keplers! {
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(error) => panic!("{error:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
-async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 

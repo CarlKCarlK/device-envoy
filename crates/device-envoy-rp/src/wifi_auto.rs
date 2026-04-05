@@ -5,7 +5,8 @@
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::{cell::RefCell, convert::Infallible, future::Future};
+use core::convert::Infallible;
+use core::{cell::RefCell, future::Future};
 use cortex_m::peripheral::SCB;
 use defmt::{info, warn};
 use embassy_executor::Spawner;

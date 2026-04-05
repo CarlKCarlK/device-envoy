@@ -8,6 +8,7 @@
 #![no_main]
 
 use core::cell::RefCell;
+use core::convert::Infallible;
 use core::fmt::Write;
 
 use esp_backtrace as _;
@@ -102,13 +103,11 @@ impl WifiAutoField for CheckboxField {
 
 #[esp_rtos::main]
 async fn main(spawner: embassy_executor::Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(error) => panic!("{error:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
-async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 

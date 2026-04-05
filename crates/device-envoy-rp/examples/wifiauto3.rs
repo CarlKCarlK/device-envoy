@@ -9,6 +9,7 @@
 extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
+use core::convert::Infallible;
 use device_envoy_rp::{
     Error, Result,
     button::{ButtonRp, PressedTo},
@@ -23,7 +24,7 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
     core::panic!("{err}");
 }
 
-async fn inner_main(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     let [wifi_flash, website_flash, timezone_flash] = FlashBlockRp::new_array::<3>(p.FLASH)?;

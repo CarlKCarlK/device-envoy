@@ -30,12 +30,10 @@
 //!
 //! # #[esp_rtos::main]
 //! # async fn main(spawner: embassy_executor::Spawner) -> ! {
-//! #     match example(spawner).await {
-//! #         Ok(infallible) => match infallible {},
-//! #         Err(error) => panic!("{error:?}"),
-//! #     }
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err:?}");
 //! # }
-//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 //!     esp_println::logger::init_logger(log::LevelFilter::Info);
 //!
@@ -87,12 +85,10 @@
 //!
 //! # #[esp_rtos::main]
 //! # async fn main(spawner: embassy_executor::Spawner) -> ! {
-//! #     match example(spawner).await {
-//! #         Ok(infallible) => match infallible {},
-//! #         Err(error) => panic!("{error:?}"),
-//! #     }
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err:?}");
 //! # }
-//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 //!
 //!     #[cfg(target_arch = "xtensa")]
@@ -131,12 +127,10 @@
 //!
 //! # #[esp_rtos::main]
 //! # async fn main(spawner: embassy_executor::Spawner) -> ! {
-//! #     match example(spawner).await {
-//! #         Ok(infallible) => match infallible {},
-//! #         Err(error) => panic!("{error:?}"),
-//! #     }
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err:?}");
 //! # }
-//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
 //!     esp_println::logger::init_logger(log::LevelFilter::Info);
 //!

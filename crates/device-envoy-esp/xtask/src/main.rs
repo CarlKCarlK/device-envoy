@@ -3,6 +3,7 @@
 //! Run with: `cargo xtask <command>`
 
 mod audio_player_generated;
+mod blinky_examples_generated;
 mod ir_generated;
 mod led2d_generated;
 mod led_generated;
@@ -479,6 +480,8 @@ enum Commands {
     CheckDemos,
     /// Verify README Rust example extraction + compile
     CheckReadmeExample,
+    /// Generate board-specific blinky examples
+    GenerateBlinkyExamples,
 }
 
 fn main() -> ExitCode {
@@ -491,6 +494,7 @@ fn main() -> ExitCode {
         Commands::CheckExamplesAllProcessors => check_examples_all_processors(),
         Commands::CheckDemos => check_demos(),
         Commands::CheckReadmeExample => check_readme_example(),
+        Commands::GenerateBlinkyExamples => generate_blinky_examples(),
     }
 }
 
@@ -508,6 +512,10 @@ fn check_docs() -> ExitCode {
 
     if let Err(err) = check_shared_markdown_sync(&root) {
         eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = blinky_examples_generated::generate_blinky_board_examples(&root) {
+        eprintln!("Error generating blinky board examples: {err}");
         return ExitCode::FAILURE;
     }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
@@ -567,6 +575,10 @@ fn check_all() -> ExitCode {
 
     if let Err(err) = check_shared_markdown_sync(&root) {
         eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
+    if let Err(err) = blinky_examples_generated::generate_blinky_board_examples(&root) {
+        eprintln!("Error generating blinky board examples: {err}");
         return ExitCode::FAILURE;
     }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
@@ -795,6 +807,14 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
                 .then(|| name.trim_end_matches(".rs").to_owned())
         })
         .collect();
+    for generated_blinky_example in blinky_examples_generated::generated_blinky_example_names() {
+        if !examples
+            .iter()
+            .any(|example| example == generated_blinky_example)
+        {
+            examples.push(generated_blinky_example.to_string());
+        }
+    }
     examples.sort();
 
     let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
@@ -809,6 +829,17 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
         };
         println!("{}", target_message.cyan());
         for example in &examples {
+            if let Some(required_chip_feature) =
+                blinky_examples_generated::board_example_required_chip(example)
+            {
+                if required_chip_feature != build_target.chip_feature {
+                    println!(
+                        "    skip example: {example} (board example targets {required_chip_feature}, not {})",
+                        build_target.label
+                    );
+                    continue;
+                }
+            }
             if let Some(skip_reason) =
                 explicit_example_skip_reason(build_target.chip_feature, example)
             {
@@ -1270,6 +1301,24 @@ fn extract_single_rust_example(readme_source: &str, readme_path: &Path) -> Resul
         normalized_lines.push(extracted_line.to_string());
     }
     Ok(normalized_lines.join("\n"))
+}
+
+fn generate_blinky_examples() -> ExitCode {
+    let root = workspace_root();
+    println!(
+        "{}",
+        "==> cargo xtask generate-blinky-examples: device-envoy-esp"
+            .cyan()
+            .bold()
+    );
+
+    if let Err(err) = blinky_examples_generated::generate_blinky_board_examples(&root) {
+        eprintln!("Error generating blinky board examples: {err}");
+        return ExitCode::FAILURE;
+    }
+
+    println!("{}", "==> Blinky board examples generated".green().bold());
+    ExitCode::SUCCESS
 }
 
 struct TemporaryFileCleanup {

@@ -42,10 +42,8 @@ fn write_rust<const W: usize, const H: usize>(led2d: &impl Led2d<W, H>) {
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(error) => panic!("{error:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {

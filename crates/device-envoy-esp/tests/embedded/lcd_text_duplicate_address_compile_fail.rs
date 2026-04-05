@@ -6,6 +6,7 @@
 #![no_std]
 #![no_main]
 
+use core::convert::Infallible;
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 
@@ -37,13 +38,11 @@ i2cs! {
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(error) => panic!("{error:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
 
     #[cfg(feature = "esp32c3")]

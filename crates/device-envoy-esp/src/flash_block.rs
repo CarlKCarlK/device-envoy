@@ -253,7 +253,7 @@ impl FlashBlockEspStatic {
 ///     timezone_offset_minutes: i32,
 /// }
 ///
-/// # async fn example() -> Result<core::convert::Infallible> {
+/// # async fn example() -> Result<Infallible> {
 /// init_and_start!(p);
 /// let [mut wifi_persisted_state_flash_block, mut fields_flash_block] =
 ///     FlashBlockEsp::new_array::<2>(p.FLASH)?;

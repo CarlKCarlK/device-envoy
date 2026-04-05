@@ -42,10 +42,8 @@ async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
 
 #[esp_rtos::main]
 async fn main(spawner: embassy_executor::Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(error) => panic!("{error:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {

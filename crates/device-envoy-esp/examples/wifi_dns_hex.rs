@@ -10,6 +10,7 @@
 
 extern crate alloc;
 
+use core::convert::Infallible;
 use core::fmt::Write;
 
 use embassy_executor::Spawner;
@@ -53,13 +54,11 @@ led2d! {
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(e) => panic!("{e:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
-async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 

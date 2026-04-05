@@ -15,8 +15,8 @@
 #![no_std]
 #![no_main]
 
+use core::convert::Infallible;
 #[cfg(not(esp_has_rmt))]
-#[allow(unused_imports)]
 use device_envoy_esp::led_strip::Engine;
 use device_envoy_esp::{
     init_and_start, led_strip,
@@ -143,13 +143,11 @@ led_strip! {
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(error) => panic!("{error:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
-async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     #[cfg(esp_has_rmt)]
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     #[cfg(not(esp_has_rmt))]

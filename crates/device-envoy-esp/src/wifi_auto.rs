@@ -94,7 +94,7 @@ enum WifiAutoStorage {
 /// async fn connect_wifi(
 ///     spawner: embassy_executor::Spawner,
 ///     p: esp_hal::peripherals::Peripherals,
-/// ) -> Result<core::convert::Infallible> {
+/// ) -> Result<Infallible> {
 ///     // Set up ButtonEsp to control the physical button.
 ///     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
 ///

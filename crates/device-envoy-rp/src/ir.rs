@@ -21,6 +21,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
+//! # use core::convert::Infallible;
 //! use device_envoy_rp::{Result, ir, ir::Ir as _, ir::IrEvent};
 //! # use panic_probe as _;
 //! # use defmt::info;
@@ -34,7 +35,7 @@
 //! #     let err = example(spawner).await.unwrap_err();
 //! #     panic!("{err}");
 //! # }
-//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
 //!     let ir15 = Ir15::new(p.PIO0, p.PIN_15, spawner)?;
 //!
@@ -53,6 +54,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
+//! # use core::convert::Infallible;
 //! use device_envoy_rp::{Result, ir::IrMapping as _, ir_mapping};
 //! # use panic_probe as _;
 //! #
@@ -83,7 +85,7 @@
 //! #     let err = example(spawner).await.unwrap_err();
 //! #     panic!("{err}");
 //! # }
-//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
 //!     let ir_mapping15 = IrMapping15::new(p.PIO0, p.PIN_15, &REMOTE_KEYS_MAP, spawner)?;
 //!
@@ -106,6 +108,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
+//! # use core::convert::Infallible;
 //! use device_envoy_rp::{Result, ir::IrKepler as _, ir::KeplerKeys, ir_kepler};
 //! # use panic_probe as _;
 //! # use defmt::info;
@@ -119,7 +122,7 @@
 //! #     let err = example(spawner).await.unwrap_err();
 //! #     panic!("{err}");
 //! # }
-//! async fn example(spawner: embassy_executor::Spawner) -> Result<core::convert::Infallible> {
+//! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
 //!     let ir_kepler15 = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
 //!

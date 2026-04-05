@@ -572,15 +572,15 @@ For this crate, generation is wired through `xtask` for: `audio_player_generated
 Use the `main`/`inner_main` split to allow the `?` operator in example and demo code:
 
 ```rust
+use core::convert::Infallible;
+
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    match inner_main(spawner).await {
-        Ok(infallible) => match infallible {},
-        Err(e) => panic!("{e:?}"),
-    }
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
 }
 
-async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert::Infallible> {
+async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
     // ... use ? freely here ...
     core::future::pending().await
@@ -588,6 +588,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<core::convert:
 ```
 
 This pattern keeps `main` free of `?` (which `-> !` forbids) while keeping `inner_main` ergonomic.
+Prefer consuming the `Result<Infallible>` post-condition with `unwrap_err()` in `main` rather than re-matching the unreachable `Ok` branch.
 
 ### init_and_start! Macro (ESP)
 

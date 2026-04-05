@@ -47,10 +47,8 @@
 //!
 //! # #[esp_rtos::main]
 //! # async fn main(spawner: embassy_executor::Spawner) -> ! {
-//! #     match example(spawner).await {
-//! #         Ok(infallible) => match infallible {},
-//! #         Err(error) => panic!("{error:?}"),
-//! #     }
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err:?}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
@@ -100,10 +98,8 @@
 //!
 //! # #[esp_rtos::main]
 //! # async fn main(spawner: embassy_executor::Spawner) -> ! {
-//! #     match example(spawner).await {
-//! #         Ok(infallible) => match infallible {},
-//! #         Err(error) => panic!("{error:?}"),
-//! #     }
+//! #     let err = example(spawner).await.unwrap_err();
+//! #     panic!("{err:?}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);

@@ -153,6 +153,10 @@ name = "blinky_esp32c2_generic"
 path = "examples/c2/generic/blinky.rs"
 
 [[example]]
+name = "blinky_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/blinky.rs"
+
+[[example]]
 name = "blinky_esp32c3_generic"
 path = "examples/c3/generic/blinky.rs"
 

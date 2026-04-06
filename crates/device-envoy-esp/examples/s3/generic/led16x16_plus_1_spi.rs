@@ -3,7 +3,7 @@
 //!
 //! Wiring:
 //! - GPIO2: 16x16 NeoPixel-style (WS2812) panel data-in (SPI MOSI)
-//! - GPIO10: external NeoPixel-style (WS2812) LED data-in (RMT)
+//! - GPIO38: built-in NeoPixel-style (WS2812) LED (RMT)
 
 #![no_std]
 #![no_main]
@@ -30,7 +30,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 compile_error!("This board example only supports --features esp32s3.");
 
 const PANEL_16X16_PIN_NUM: u8 = 2;
-const LED_STRIP1_PIN_NUM: u8 = 10;
+const LED_STRIP1_PIN_NUM: u8 = 38;
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 led2d! {
@@ -47,7 +47,7 @@ led2d! {
 
 led_strip! {
     LedStrip1Rmt {
-        pin: GPIO10,
+        pin: GPIO38,
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 4,
@@ -69,7 +69,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     );
 
     let led16x16_dual_spi = Led16x16DualSpi::new(p.GPIO2, p.SPI2, spawner)?;
-    let led_strip1_rmt = LedStrip1Rmt::new(p.GPIO10, rmt80.channel1, spawner)?;
+    let led_strip1_rmt = LedStrip1Rmt::new(p.GPIO38, rmt80.channel1, spawner)?;
 
     let mut panel_x_index = 0usize;
     let mut panel_y_index = 0usize;

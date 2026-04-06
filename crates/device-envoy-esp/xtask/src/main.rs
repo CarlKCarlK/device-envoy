@@ -790,9 +790,9 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
     for generated_board_example in board_examples_generated::generated_board_example_names() {
         if !examples
             .iter()
-            .any(|example| example == generated_board_example)
+            .any(|example| example == &generated_board_example)
         {
-            examples.push(generated_board_example.to_string());
+            examples.push(generated_board_example);
         }
     }
     examples.sort();
@@ -905,7 +905,10 @@ fn check_embedded_tests() -> ExitCode {
 }
 
 fn build_lib_for_target(root: &Path, xtensa_linker_dir: &Path, build_target: BuildTarget) -> bool {
-    println!("{}", format!("--> build lib ({})", build_target.label).cyan());
+    println!(
+        "{}",
+        format!("--> build lib ({})", build_target.label).cyan()
+    );
     let mut cmd = Command::new("cargo");
     cmd.current_dir(root);
     configure_target_artifact_dir(&mut cmd, root, build_target);
@@ -946,7 +949,8 @@ fn check_examples_for_target(
     };
     println!("{}", target_message.cyan());
     for example in examples {
-        if let Some(required_chip_feature) = board_examples_generated::board_example_required_chip(example)
+        if let Some(required_chip_feature) =
+            board_examples_generated::board_example_required_chip(example)
         {
             if required_chip_feature != build_target.chip_feature {
                 println!(
@@ -956,7 +960,8 @@ fn check_examples_for_target(
                 continue;
             }
         }
-        if let Some(skip_reason) = explicit_example_skip_reason(build_target.chip_feature, example) {
+        if let Some(skip_reason) = explicit_example_skip_reason(build_target.chip_feature, example)
+        {
             println!(
                 "    skip example: {example} ({skip_reason} on {})",
                 build_target.label
@@ -1015,9 +1020,13 @@ fn check_demos_for_target(
     demos: &[DemoInfo],
 ) -> bool {
     let chip_capabilities = chip_capabilities(build_target.chip_feature);
-    println!("{}", format!("--> build demos ({})", build_target.label).cyan());
+    println!(
+        "{}",
+        format!("--> build demos ({})", build_target.label).cyan()
+    );
     for demo in demos {
-        if let Some(skip_reason) = explicit_demo_skip_reason(build_target.chip_feature, &demo.name) {
+        if let Some(skip_reason) = explicit_demo_skip_reason(build_target.chip_feature, &demo.name)
+        {
             println!(
                 "    skip demo: {} ({skip_reason} on {})",
                 demo.name, build_target.label
@@ -1601,7 +1610,11 @@ fn target_artifact_dir(workspace_root: &Path, build_target: BuildTarget) -> Path
         .join(build_target.label)
 }
 
-fn configure_target_artifact_dir(cmd: &mut Command, workspace_root: &Path, build_target: BuildTarget) {
+fn configure_target_artifact_dir(
+    cmd: &mut Command,
+    workspace_root: &Path,
+    build_target: BuildTarget,
+) {
     cmd.env(
         "CARGO_TARGET_DIR",
         target_artifact_dir(workspace_root, build_target),

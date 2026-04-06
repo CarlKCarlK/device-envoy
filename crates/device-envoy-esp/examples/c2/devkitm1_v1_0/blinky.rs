@@ -9,9 +9,8 @@
 
 use core::convert::Infallible;
 use device_envoy_esp::{
-    init_and_start, led_strip,
-    led_strip::{colors, Engine, Frame1d, LedStrip as _},
-    Result,
+    Result, init_and_start, led_strip,
+    led_strip::{Engine, Frame1d, LedStrip as _, colors},
 };
 use embassy_executor::Spawner;
 use embassy_time::Duration;

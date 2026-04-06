@@ -1,14 +1,18 @@
 use crate::boards::{validate_board_profiles, BOARD_PROFILES};
 use crate::example_specs::{
-    blinky_built_in_led, blinky_example_name, blinky_kind, blinky_led_pin_ident, blinky_led_pin_num,
+    audio_bit_clock_pin_ident, audio_bit_clock_pin_num, audio_button_pin_ident,
+    audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
+    audio_example_name, audio_word_select_pin_ident, audio_word_select_pin_num, blinky_built_in_led,
+    blinky_example_name, blinky_kind, blinky_led_pin_ident, blinky_led_pin_num,
     led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
-    panel16x16_pin_ident, panel16x16_pin_num, supports_led16x16_examples, BlinkyKind,
-    LED16X16_VARIANTS,
+    panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_led16x16_examples,
+    BlinkyKind, AUDIO_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
     validate_board_profiles()?;
@@ -22,6 +26,14 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     let led16x16_plus_1_template = fs::read_to_string(templates_dir.join("led16x16_plus_1.rs.j2"))?;
     let led16x16_plus_1_spi_template =
         fs::read_to_string(templates_dir.join("led16x16_plus_1_spi.rs.j2"))?;
+    let audio_template = fs::read_to_string(templates_dir.join("audio.rs.j2"))?;
+    let audio_example1_template = fs::read_to_string(templates_dir.join("audio_example1.rs.j2"))?;
+    let audio_example1_trait_template =
+        fs::read_to_string(templates_dir.join("audio_example1_trait.rs.j2"))?;
+    let audio_example2_trait_template =
+        fs::read_to_string(templates_dir.join("audio_example2_trait.rs.j2"))?;
+    let audio_example3_trait_template =
+        fs::read_to_string(templates_dir.join("audio_example3_trait.rs.j2"))?;
 
     let mut minijinja_environment = Environment::new();
     minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;
@@ -29,6 +41,11 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     minijinja_environment.add_template("blinky_spi", &blinky_spi_template)?;
     minijinja_environment.add_template("led16x16_plus_1", &led16x16_plus_1_template)?;
     minijinja_environment.add_template("led16x16_plus_1_spi", &led16x16_plus_1_spi_template)?;
+    minijinja_environment.add_template("audio", &audio_template)?;
+    minijinja_environment.add_template("audio_example1", &audio_example1_template)?;
+    minijinja_environment.add_template("audio_example1_trait", &audio_example1_trait_template)?;
+    minijinja_environment.add_template("audio_example2_trait", &audio_example2_trait_template)?;
+    minijinja_environment.add_template("audio_example3_trait", &audio_example3_trait_template)?;
 
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
@@ -50,19 +67,56 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         let example_name = blinky_example_name(*board_profile);
         let led_pin_ident = blinky_led_pin_ident(*board_profile);
 
-        let generated_source = minijinja_environment
-            .get_template(template_name)?
-            .render(context! {
-                example_name => example_name.as_str(),
-                board_slug => board_profile.board_slug(),
-                chip_name => board_profile.chip_name(),
-                chip_feature => board_profile.chip_feature(),
-                led_pin_num => blinky_led_pin_num(*board_profile),
-                led_pin_ident => led_pin_ident.as_str(),
-                built_in_led => blinky_built_in_led(*board_profile),
-            })?;
+        let generated_source =
+            minijinja_environment
+                .get_template(template_name)?
+                .render(context! {
+                    example_name => example_name.as_str(),
+                    board_slug => board_profile.board_slug(),
+                    chip_name => board_profile.chip_name(),
+                    chip_feature => board_profile.chip_feature(),
+                    led_pin_num => blinky_led_pin_num(*board_profile),
+                    led_pin_ident => led_pin_ident.as_str(),
+                    built_in_led => blinky_built_in_led(*board_profile),
+                })?;
         write_if_changed(&output_path, &generated_source)?;
         expected_generated_paths.push(output_path);
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_audio_examples(*board_profile) {
+            continue;
+        }
+        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
+            let output_path = examples_dir
+                .join(board_profile.chip_dir())
+                .join(board_profile.board_dir())
+                .join(format!("{base_name}.rs"));
+            if let Some(output_dir) = output_path.parent() {
+                fs::create_dir_all(output_dir)?;
+            }
+            let example_name = audio_example_name(*board_profile, base_name);
+            let generated_source =
+                minijinja_environment
+                    .get_template(base_name)?
+                    .render(context! {
+                        example_name => example_name.as_str(),
+                        board_slug => board_profile.board_slug(),
+                        chip_name => board_profile.chip_name(),
+                        chip_feature => board_profile.chip_feature(),
+                        data_pin_num => audio_data_pin_num(*board_profile),
+                        data_pin_ident => audio_data_pin_ident(*board_profile),
+                        bit_clock_pin_num => audio_bit_clock_pin_num(*board_profile),
+                        bit_clock_pin_ident => audio_bit_clock_pin_ident(*board_profile),
+                        word_select_pin_num => audio_word_select_pin_num(*board_profile),
+                        word_select_pin_ident => audio_word_select_pin_ident(*board_profile),
+                        button_pin_num => audio_button_pin_num(*board_profile),
+                        button_pin_ident => audio_button_pin_ident(*board_profile),
+                        dma_ident => audio_dma_ident(*board_profile),
+                    })?;
+            write_if_changed(&output_path, &generated_source)?;
+            expected_generated_paths.push(output_path);
+        }
     }
 
     for board_profile in BOARD_PROFILES {
@@ -90,24 +144,26 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
             let example_name = led16x16_example_name(*board_profile, use_spi);
             let panel_pin_ident = panel16x16_pin_ident(*board_profile);
             let led_strip1_pin_ident = led_strip1_pin_ident(*board_profile);
-            let generated_source = minijinja_environment
-                .get_template(template_name)?
-                .render(context! {
-                    example_name => example_name.as_str(),
-                    board_slug => board_profile.board_slug(),
-                    chip_name => board_profile.chip_name(),
-                    chip_feature => board_profile.chip_feature(),
-                    panel_pin_num => panel16x16_pin_num(*board_profile),
-                    panel_pin_ident => panel_pin_ident.as_str(),
-                    led_strip1_pin_num => led_strip1_pin_num(*board_profile),
-                    led_strip1_pin_ident => led_strip1_pin_ident.as_str(),
-                    led_strip1_built_in => led_strip1_built_in(*board_profile),
-                })?;
+            let generated_source =
+                minijinja_environment
+                    .get_template(template_name)?
+                    .render(context! {
+                        example_name => example_name.as_str(),
+                        board_slug => board_profile.board_slug(),
+                        chip_name => board_profile.chip_name(),
+                        chip_feature => board_profile.chip_feature(),
+                        panel_pin_num => panel16x16_pin_num(*board_profile),
+                        panel_pin_ident => panel_pin_ident.as_str(),
+                        led_strip1_pin_num => led_strip1_pin_num(*board_profile),
+                        led_strip1_pin_ident => led_strip1_pin_ident.as_str(),
+                        led_strip1_built_in => led_strip1_built_in(*board_profile),
+                    })?;
             write_if_changed(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);
         }
     }
 
+    rustfmt_generated_files(&expected_generated_paths)?;
     cleanup_stale_nested_generated_examples(&examples_dir, &expected_generated_paths)?;
 
     Ok(())
@@ -115,6 +171,14 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
 
 pub fn generated_board_example_names() -> Vec<String> {
     let mut names = Vec::new();
+    for board_profile in BOARD_PROFILES {
+        if !supports_audio_examples(*board_profile) {
+            continue;
+        }
+        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
+            names.push(audio_example_name(*board_profile, base_name));
+        }
+    }
     names.extend(
         BOARD_PROFILES
             .iter()
@@ -132,6 +196,17 @@ pub fn generated_board_example_names() -> Vec<String> {
 }
 
 pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
+    for board_profile in BOARD_PROFILES {
+        if !supports_audio_examples(*board_profile) {
+            continue;
+        }
+        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
+            if audio_example_name(*board_profile, base_name) == example_name {
+                return Some(board_profile.chip_feature());
+            }
+        }
+    }
+
     for board_profile in BOARD_PROFILES {
         if blinky_example_name(*board_profile) == example_name {
             return Some(board_profile.chip_feature());
@@ -178,6 +253,11 @@ fn cleanup_stale_nested_generated_examples(
         expected_paths.iter().cloned().collect();
     let top_level_dirs = ["esp32", "c2", "c3", "c6", "h2", "s2", "s3"];
     let generated_filenames = [
+        "audio.rs",
+        "audio_example1.rs",
+        "audio_example1_trait.rs",
+        "audio_example2_trait.rs",
+        "audio_example3_trait.rs",
         "blinky.rs",
         "led16x16_plus_1.rs",
         "led16x16_plus_1_spi.rs",
@@ -203,8 +283,8 @@ fn cleanup_stale_nested_generated_examples(
                 }
                 let existing = fs::read_to_string(&candidate)?;
                 if existing.starts_with("// @generated by `cargo xtask generate-blinky-examples`")
-                    || existing
-                        .starts_with("// @generated by `cargo xtask generate-board-examples`")
+                    || existing.starts_with("// @generated by `cargo xtask generate-board-examples`")
+                    || existing.starts_with("// @generated by cargo xtask generate-board-examples")
                 {
                     fs::remove_file(&candidate)?;
                 }
@@ -222,5 +302,24 @@ fn write_if_changed(path: &Path, contents: &str) -> Result<(), Box<dyn Error>> {
             fs::write(path, contents)?;
             Ok(())
         }
+    }
+}
+
+fn rustfmt_generated_files(paths: &[PathBuf]) -> Result<(), Box<dyn Error>> {
+    if paths.is_empty() {
+        return Ok(());
+    }
+
+    let mut rustfmt_command = Command::new("rustfmt");
+    rustfmt_command.arg("--edition").arg("2024");
+    for path in paths {
+        rustfmt_command.arg(path);
+    }
+
+    let rustfmt_status = rustfmt_command.status()?;
+    if rustfmt_status.success() {
+        Ok(())
+    } else {
+        Err("rustfmt failed for generated board examples".into())
     }
 }

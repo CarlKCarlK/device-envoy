@@ -31,8 +31,6 @@ esp_bootloader_esp_idf::esp_app_desc!();
 #[cfg(all(not(rust_analyzer), not(feature = "{{ chip_feature }}")))]
 compile_error!("This board example only supports --features {{ chip_feature }}.");
 
-const PANEL_16X16_PIN_NUM: u8 = {{ panel_pin_num }};
-const LED_STRIP1_PIN_NUM: u8 = {{ led_strip1_pin_num }};
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 led2d! {
@@ -65,8 +63,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
-        "led16x16_plus_1: panel on GPIO{}, strip1 LED on GPIO{} ({{ board_slug }})",
-        PANEL_16X16_PIN_NUM, LED_STRIP1_PIN_NUM
+        "led16x16_plus_1: panel on {{ panel_pin_ident }}, strip1 LED on {{ led_strip1_pin_ident }} ({{ board_slug }})"
     );
 
     let led16x16_dual = Led16x16Dual::new(p.{{ panel_pin_ident }}, rmt80.channel0, spawner)?;

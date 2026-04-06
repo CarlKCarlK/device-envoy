@@ -11,9 +11,8 @@
 
 use core::convert::Infallible;
 use device_envoy_esp::{
-    init_and_start, led,
+    Result, init_and_start, led,
     led::{Led as _, LedLevel, OnLevel},
-    Result,
 };
 use embassy_executor::Spawner;
 use embassy_time::Duration;

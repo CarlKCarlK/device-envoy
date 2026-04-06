@@ -518,8 +518,8 @@ fn check_docs() -> ExitCode {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = board_examples_generated::generate_board_examples(&root) {
-        eprintln!("Error generating board examples: {err}");
+    if let Err(err) = generate_example_templates(&root) {
+        eprintln!("Error generating examples from templates: {err}");
         return ExitCode::FAILURE;
     }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
@@ -581,8 +581,8 @@ fn check_all() -> ExitCode {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = board_examples_generated::generate_board_examples(&root) {
-        eprintln!("Error generating board examples: {err}");
+    if let Err(err) = generate_example_templates(&root) {
+        eprintln!("Error generating examples from templates: {err}");
         return ExitCode::FAILURE;
     }
     if let Err(err) = ir_generated::generate_ir_generated(&root) {
@@ -1391,13 +1391,18 @@ fn generate_board_examples() -> ExitCode {
             .bold()
     );
 
-    if let Err(err) = board_examples_generated::generate_board_examples(&root) {
-        eprintln!("Error generating board examples: {err}");
+    if let Err(err) = generate_example_templates(&root) {
+        eprintln!("Error generating examples from templates: {err}");
         return ExitCode::FAILURE;
     }
 
-    println!("{}", "==> Board examples generated".green().bold());
+    println!("{}", "==> Template-based examples generated".green().bold());
     ExitCode::SUCCESS
+}
+
+fn generate_example_templates(root: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    board_examples_generated::generate_board_examples(root)?;
+    Ok(())
 }
 
 struct TemporaryFileCleanup {

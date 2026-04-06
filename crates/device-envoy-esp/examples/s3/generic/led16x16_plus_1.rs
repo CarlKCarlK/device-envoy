@@ -15,11 +15,10 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    init_and_start, led2d,
-    led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
-    led_strip,
-    led_strip::{colors, Current, Frame1d, LedStrip as _},
-    Result,
+    Result, init_and_start, led_strip,
+    led_strip::{Current, Frame1d, LedStrip as _, colors},
+    led2d,
+    led2d::{Frame2d, Led2d, Led2dFont, layout::LedLayout},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -27,8 +26,6 @@ esp_bootloader_esp_idf::esp_app_desc!();
 #[cfg(all(not(rust_analyzer), not(feature = "esp32s3")))]
 compile_error!("This board example only supports --features esp32s3.");
 
-const PANEL_16X16_PIN_NUM: u8 = 2;
-const LED_STRIP1_PIN_NUM: u8 = 38;
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 led2d! {
@@ -60,10 +57,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
-    info!(
-        "led16x16_plus_1: panel on GPIO{}, strip1 LED on GPIO{} (generic)",
-        PANEL_16X16_PIN_NUM, LED_STRIP1_PIN_NUM
-    );
+    info!("led16x16_plus_1: panel on GPIO2, strip1 LED on GPIO38 (generic)");
 
     let led16x16_dual = Led16x16Dual::new(p.GPIO2, rmt80.channel0, spawner)?;
     let led_strip1 = LedStrip1::new(p.GPIO38, rmt80.channel1, spawner)?;

@@ -1,362 +1,14 @@
+use crate::boards::{validate_board_profiles, BOARD_PROFILES};
+use crate::example_specs::{
+    blinky_built_in_led, blinky_example_name, blinky_kind, blinky_led_pin_ident, blinky_led_pin_num,
+    led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
+    panel16x16_pin_ident, panel16x16_pin_num, supports_led16x16_examples, BlinkyKind,
+    LED16X16_VARIANTS,
+};
 use minijinja::{context, Environment};
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
-
-#[derive(Clone, Copy)]
-enum BlinkyKind {
-    Plain,
-    SmartRmt,
-    #[allow(dead_code)]
-    SmartSpi,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ChipId {
-    Esp32,
-    C2,
-    C3,
-    C6,
-    H2,
-    S2,
-    S3,
-}
-
-impl ChipId {
-    fn feature(self) -> &'static str {
-        match self {
-            ChipId::Esp32 => "esp32",
-            ChipId::C2 => "esp32c2",
-            ChipId::C3 => "esp32c3",
-            ChipId::C6 => "esp32c6",
-            ChipId::H2 => "esp32h2",
-            ChipId::S2 => "esp32s2",
-            ChipId::S3 => "esp32s3",
-        }
-    }
-
-    fn name(self) -> &'static str {
-        match self {
-            ChipId::Esp32 => "ESP32",
-            ChipId::C2 => "ESP32-C2",
-            ChipId::C3 => "ESP32-C3",
-            ChipId::C6 => "ESP32-C6",
-            ChipId::H2 => "ESP32-H2",
-            ChipId::S2 => "ESP32-S2",
-            ChipId::S3 => "ESP32-S3",
-        }
-    }
-
-    fn directory(self) -> &'static str {
-        match self {
-            ChipId::Esp32 => "esp32",
-            ChipId::C2 => "c2",
-            ChipId::C3 => "c3",
-            ChipId::C6 => "c6",
-            ChipId::H2 => "h2",
-            ChipId::S2 => "s2",
-            ChipId::S3 => "s3",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum BoardId {
-    Generic,
-    Luatos,
-    Devkitc1N8,
-    Devkitm1V1_0,
-    Devkitc1V1_1N16r8,
-    Devkitc1V1_0N16r8,
-}
-
-impl BoardId {
-    fn directory(self) -> &'static str {
-        match self {
-            BoardId::Generic => "generic",
-            BoardId::Luatos => "luatos",
-            BoardId::Devkitc1N8 => "devkitc1_n8",
-            BoardId::Devkitm1V1_0 => "devkitm1_v1_0",
-            BoardId::Devkitc1V1_1N16r8 => "devkitc1_v1_1_n16r8",
-            BoardId::Devkitc1V1_0N16r8 => "devkitc1_v1_0_n16r8",
-        }
-    }
-
-    fn slug(self) -> &'static str {
-        match self {
-            BoardId::Generic => "generic",
-            BoardId::Luatos => "luatos",
-            BoardId::Devkitc1N8 => "esp32-c6-devkitc-1-n8",
-            BoardId::Devkitm1V1_0 => "esp8684-devkitm-1-v1.0",
-            BoardId::Devkitc1V1_1N16r8 => "esp32-s3-devkitc-1-v1.1-n16r8",
-            BoardId::Devkitc1V1_0N16r8 => "esp32-s3-devkitc-1-v1.0-n16r8",
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-struct BoardProfile {
-    chip_id: ChipId,
-    board_id: BoardId,
-    rmt_count: u8,
-    spi_count: u8,
-    built_in_smart_led: Option<u8>,
-    built_in_plain_led: Option<u8>,
-    default_external_plain_led: u8,
-    default_external_smart_led: u8,
-}
-
-impl BoardProfile {
-    fn chip_dir(self) -> &'static str {
-        self.chip_id.directory()
-    }
-
-    fn board_dir(self) -> &'static str {
-        self.board_id.directory()
-    }
-
-    fn board_slug(self) -> &'static str {
-        self.board_id.slug()
-    }
-
-    fn chip_feature(self) -> &'static str {
-        self.chip_id.feature()
-    }
-
-    fn chip_name(self) -> &'static str {
-        self.chip_id.name()
-    }
-
-    fn blinky_kind(self) -> BlinkyKind {
-        if self.built_in_smart_led.is_some() {
-            if self.rmt_count > 0 {
-                return BlinkyKind::SmartRmt;
-            }
-            if self.spi_count > 0 {
-                return BlinkyKind::SmartSpi;
-            }
-        }
-        BlinkyKind::Plain
-    }
-
-    fn blinky_led_pin_num(self) -> u8 {
-        match self.blinky_kind() {
-            BlinkyKind::Plain => self
-                .built_in_plain_led
-                .unwrap_or(self.default_external_plain_led),
-            BlinkyKind::SmartRmt | BlinkyKind::SmartSpi => self
-                .built_in_smart_led
-                .expect("smart-led blinky kind requires built_in_smart_led pin"),
-        }
-    }
-
-    fn blinky_led_pin_ident(self) -> String {
-        format!("GPIO{}", self.blinky_led_pin_num())
-    }
-
-    fn blinky_built_in_led(self) -> bool {
-        match self.blinky_kind() {
-            BlinkyKind::Plain => self.built_in_plain_led.is_some(),
-            BlinkyKind::SmartRmt | BlinkyKind::SmartSpi => self.built_in_smart_led.is_some(),
-        }
-    }
-
-    fn led_strip1_pin_num(self) -> u8 {
-        self.built_in_smart_led
-            .unwrap_or(self.default_external_smart_led)
-    }
-
-    fn led_strip1_pin_ident(self) -> String {
-        format!("GPIO{}", self.led_strip1_pin_num())
-    }
-
-    fn led_strip1_built_in(self) -> bool {
-        self.built_in_smart_led.is_some()
-    }
-
-    fn supports_led16x16_examples(self) -> bool {
-        self.chip_id != ChipId::C2
-    }
-
-    fn panel16x16_pin_num(self) -> u8 {
-        2
-    }
-}
-
-const LED16X16_VARIANTS: [bool; 2] = [false, true];
-
-const BOARD_PROFILES: &[BoardProfile] = &[
-    BoardProfile {
-        chip_id: ChipId::Esp32,
-        board_id: BoardId::Generic,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: None,
-        built_in_plain_led: None,
-        default_external_plain_led: 0,
-        default_external_smart_led: 0,
-    },
-    BoardProfile {
-        chip_id: ChipId::C2,
-        board_id: BoardId::Generic,
-        rmt_count: 0,
-        spi_count: 1,
-        built_in_smart_led: None,
-        built_in_plain_led: None,
-        default_external_plain_led: 8,
-        default_external_smart_led: 8,
-    },
-    BoardProfile {
-        chip_id: ChipId::C2,
-        board_id: BoardId::Devkitm1V1_0,
-        rmt_count: 0,
-        spi_count: 1,
-        built_in_smart_led: Some(8),
-        built_in_plain_led: None,
-        default_external_plain_led: 0,
-        default_external_smart_led: 2,
-    },
-    BoardProfile {
-        chip_id: ChipId::C3,
-        board_id: BoardId::Generic,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: None,
-        built_in_plain_led: None,
-        default_external_plain_led: 7,
-        default_external_smart_led: 7,
-    },
-    BoardProfile {
-        chip_id: ChipId::C3,
-        board_id: BoardId::Luatos,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: None,
-        built_in_plain_led: None,
-        default_external_plain_led: 7,
-        default_external_smart_led: 7,
-    },
-    BoardProfile {
-        chip_id: ChipId::C6,
-        board_id: BoardId::Generic,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: None,
-        built_in_plain_led: None,
-        default_external_plain_led: 8,
-        default_external_smart_led: 8,
-    },
-    BoardProfile {
-        chip_id: ChipId::C6,
-        board_id: BoardId::Devkitc1N8,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: Some(8),
-        built_in_plain_led: None,
-        default_external_plain_led: 0,
-        default_external_smart_led: 2,
-    },
-    BoardProfile {
-        chip_id: ChipId::H2,
-        board_id: BoardId::Generic,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: None,
-        built_in_plain_led: None,
-        default_external_plain_led: 8,
-        default_external_smart_led: 8,
-    },
-    BoardProfile {
-        chip_id: ChipId::S2,
-        board_id: BoardId::Generic,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: None,
-        built_in_plain_led: None,
-        default_external_plain_led: 0,
-        default_external_smart_led: 0,
-    },
-    BoardProfile {
-        chip_id: ChipId::S3,
-        board_id: BoardId::Generic,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: Some(38),
-        built_in_plain_led: None,
-        default_external_plain_led: 8,
-        default_external_smart_led: 10,
-    },
-    BoardProfile {
-        chip_id: ChipId::S3,
-        board_id: BoardId::Devkitc1V1_1N16r8,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: Some(38),
-        built_in_plain_led: None,
-        default_external_plain_led: 8,
-        default_external_smart_led: 10,
-    },
-    BoardProfile {
-        chip_id: ChipId::S3,
-        board_id: BoardId::Devkitc1V1_0N16r8,
-        rmt_count: 2,
-        spi_count: 2,
-        built_in_smart_led: Some(48),
-        built_in_plain_led: None,
-        default_external_plain_led: 8,
-        default_external_smart_led: 10,
-    },
-];
-
-fn validate_board_profiles() -> Result<(), Box<dyn Error>> {
-    for board_profile in BOARD_PROFILES {
-        if let Some(built_in_smart_led) = board_profile.built_in_smart_led {
-            if built_in_smart_led == board_profile.default_external_plain_led {
-                return Err(format!(
-                    "invalid board profile {} {}: default_external_plain_led must differ from built_in_smart_led (GPIO{})",
-                    board_profile.chip_feature(),
-                    board_profile.board_dir(),
-                    built_in_smart_led
-                )
-                .into());
-            }
-            if built_in_smart_led == board_profile.default_external_smart_led {
-                return Err(format!(
-                    "invalid board profile {} {}: default_external_smart_led must differ from built_in_smart_led (GPIO{})",
-                    board_profile.chip_feature(),
-                    board_profile.board_dir(),
-                    built_in_smart_led
-                )
-                .into());
-            }
-        }
-    }
-    Ok(())
-}
-
-fn blinky_example_name(board_profile: BoardProfile) -> String {
-    format!(
-        "blinky_{}_{}",
-        board_profile.chip_feature(),
-        board_profile.board_dir()
-    )
-}
-
-fn led16x16_example_name(board_profile: BoardProfile, use_spi: bool) -> String {
-    if use_spi {
-        format!(
-            "led16x16_plus_1_spi_{}_{}",
-            board_profile.chip_feature(),
-            board_profile.board_dir()
-        )
-    } else {
-        format!(
-            "led16x16_plus_1_{}_{}",
-            board_profile.chip_feature(),
-            board_profile.board_dir()
-        )
-    }
-}
 
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
     validate_board_profiles()?;
@@ -390,32 +42,31 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
             fs::create_dir_all(output_dir)?;
         }
 
-        let template_name = match board_profile.blinky_kind() {
+        let template_name = match blinky_kind(*board_profile) {
             BlinkyKind::Plain => "blinky_plain",
             BlinkyKind::SmartRmt => "blinky_rmt",
             BlinkyKind::SmartSpi => "blinky_spi",
         };
         let example_name = blinky_example_name(*board_profile);
-        let led_pin_ident = board_profile.blinky_led_pin_ident();
+        let led_pin_ident = blinky_led_pin_ident(*board_profile);
 
-        let generated_source =
-            minijinja_environment
-                .get_template(template_name)?
-                .render(context! {
-                    example_name => example_name.as_str(),
-                    board_slug => board_profile.board_slug(),
-                    chip_name => board_profile.chip_name(),
-                    chip_feature => board_profile.chip_feature(),
-                    led_pin_num => board_profile.blinky_led_pin_num(),
-                    led_pin_ident => led_pin_ident.as_str(),
-                    built_in_led => board_profile.blinky_built_in_led(),
-                })?;
+        let generated_source = minijinja_environment
+            .get_template(template_name)?
+            .render(context! {
+                example_name => example_name.as_str(),
+                board_slug => board_profile.board_slug(),
+                chip_name => board_profile.chip_name(),
+                chip_feature => board_profile.chip_feature(),
+                led_pin_num => blinky_led_pin_num(*board_profile),
+                led_pin_ident => led_pin_ident.as_str(),
+                built_in_led => blinky_built_in_led(*board_profile),
+            })?;
         write_if_changed(&output_path, &generated_source)?;
         expected_generated_paths.push(output_path);
     }
 
     for board_profile in BOARD_PROFILES {
-        if !board_profile.supports_led16x16_examples() {
+        if !supports_led16x16_examples(*board_profile) {
             continue;
         }
         for use_spi in LED16X16_VARIANTS {
@@ -437,22 +88,21 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
                 "led16x16_plus_1"
             };
             let example_name = led16x16_example_name(*board_profile, use_spi);
-            let panel_pin_ident = format!("GPIO{}", board_profile.panel16x16_pin_num());
-            let led_strip1_pin_ident = board_profile.led_strip1_pin_ident();
-            let generated_source =
-                minijinja_environment
-                    .get_template(template_name)?
-                    .render(context! {
-                        example_name => example_name.as_str(),
-                        board_slug => board_profile.board_slug(),
-                        chip_name => board_profile.chip_name(),
-                        chip_feature => board_profile.chip_feature(),
-                        panel_pin_num => board_profile.panel16x16_pin_num(),
-                        panel_pin_ident => panel_pin_ident.as_str(),
-                        led_strip1_pin_num => board_profile.led_strip1_pin_num(),
-                        led_strip1_pin_ident => led_strip1_pin_ident.as_str(),
-                        led_strip1_built_in => board_profile.led_strip1_built_in(),
-                    })?;
+            let panel_pin_ident = panel16x16_pin_ident(*board_profile);
+            let led_strip1_pin_ident = led_strip1_pin_ident(*board_profile);
+            let generated_source = minijinja_environment
+                .get_template(template_name)?
+                .render(context! {
+                    example_name => example_name.as_str(),
+                    board_slug => board_profile.board_slug(),
+                    chip_name => board_profile.chip_name(),
+                    chip_feature => board_profile.chip_feature(),
+                    panel_pin_num => panel16x16_pin_num(*board_profile),
+                    panel_pin_ident => panel_pin_ident.as_str(),
+                    led_strip1_pin_num => led_strip1_pin_num(*board_profile),
+                    led_strip1_pin_ident => led_strip1_pin_ident.as_str(),
+                    led_strip1_built_in => led_strip1_built_in(*board_profile),
+                })?;
             write_if_changed(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);
         }
@@ -471,7 +121,7 @@ pub fn generated_board_example_names() -> Vec<String> {
             .map(|board_profile| blinky_example_name(*board_profile)),
     );
     for board_profile in BOARD_PROFILES {
-        if !board_profile.supports_led16x16_examples() {
+        if !supports_led16x16_examples(*board_profile) {
             continue;
         }
         for use_spi in LED16X16_VARIANTS {
@@ -489,7 +139,7 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
     }
 
     for board_profile in BOARD_PROFILES {
-        if !board_profile.supports_led16x16_examples() {
+        if !supports_led16x16_examples(*board_profile) {
             continue;
         }
         for use_spi in LED16X16_VARIANTS {

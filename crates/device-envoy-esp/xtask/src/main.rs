@@ -4,6 +4,8 @@
 
 mod audio_player_generated;
 mod board_examples_generated;
+mod boards;
+mod example_specs;
 mod ir_generated;
 mod led2d_generated;
 mod led_generated;

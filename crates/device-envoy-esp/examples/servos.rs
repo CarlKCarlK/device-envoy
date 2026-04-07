@@ -3,7 +3,9 @@
 //! Moves two servos in opposite directions for 2 seconds.
 //!
 //! Wiring:
-//! - Servo A signal -> GPIO10
+//! - Servo A signal:
+//!   - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO10
+//!   - `esp_pdma_family` (ESP32/S2): GPIO4
 //! - Servo B signal -> GPIO18
 
 #![no_std]

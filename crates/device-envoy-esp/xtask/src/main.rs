@@ -190,7 +190,6 @@ fn example_requirements(example: &str) -> CapabilitySet {
         capability_set.insert(Capability::ButtonGpio);
     }
     let requires_high_gpio_pins = example == "conway"
-        || example.starts_with("ir")
         || example.starts_with("lcd_text")
         || example.starts_with("led2d")
         || example == "led_strip_example2_trait"

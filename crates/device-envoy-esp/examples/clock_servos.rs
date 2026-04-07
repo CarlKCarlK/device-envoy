@@ -5,8 +5,12 @@
 //! and the right servo shows hours/minutes with 180-degree reflections applied.
 //!
 //! Hardware defaults:
-//! - force-portal button on GPIO6 (wired to GND)
-//! - bottom servo signal on GPIO10
+//! - force-portal button wired to GND:
+//!   - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6
+//!   - `esp_pdma_family` (ESP32/S2): GPIO0
+//! - bottom servo signal:
+//!   - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO10
+//!   - `esp_pdma_family` (ESP32/S2): GPIO4
 //! - top servo signal on GPIO18
 
 #![no_std]

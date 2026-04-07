@@ -5,7 +5,9 @@
 //!
 //! Hardware:
 //! - 8x12 panel on GPIO18
-//! - optional force-portal button on GPIO6 wired to GND
+//! - optional force-portal button wired to GND:
+//!   - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6
+//!   - `esp_pdma_family` (ESP32/S2): GPIO0
 
 #![no_std]
 #![no_main]

@@ -3,7 +3,9 @@
 //! Display format is two lines (`AB\nCD`) on the 8x12 panel wired to GPIO18.
 //!
 //! Uses `WifiAuto` with flash-backed credentials and captive portal setup.
-//! Hold the GPIO6 button low during boot to force setup mode.
+//! Hold the force button low during boot to force setup mode:
+//! - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6
+//! - `esp_pdma_family` (ESP32/S2): GPIO0
 
 #![no_std]
 #![no_main]

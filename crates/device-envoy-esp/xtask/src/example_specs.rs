@@ -15,6 +15,14 @@ pub(crate) const AUDIO_EXAMPLE_BASE_NAMES: [&str; 5] = [
     "audio_example2_trait",
     "audio_example3_trait",
 ];
+pub(crate) const IR_EXAMPLE_BASE_NAMES: [&str; 6] = [
+    "ir",
+    "ir_example1_trait",
+    "ir_kepler",
+    "ir_kepler_example1_trait",
+    "ir_keplers",
+    "ir_mapping_example1_trait",
+];
 
 pub(crate) struct AudioBoardConfig {
     pub(crate) data_pin_num: u8,
@@ -115,6 +123,85 @@ pub(crate) fn audio_example_name(board_profile: BoardProfile, base_name: &str) -
         board_profile.chip_feature(),
         board_profile.board_dir()
     )
+}
+
+pub(crate) fn supports_ir_examples(board_profile: BoardProfile) -> bool {
+    !matches!(board_profile.chip_feature(), "esp32c2" | "esp32h2")
+}
+
+pub(crate) fn supports_conway_example(board_profile: BoardProfile) -> bool {
+    supports_ir_examples(board_profile)
+}
+
+pub(crate) fn ir_example_name(board_profile: BoardProfile, base_name: &str) -> String {
+    format!(
+        "{}_{}_{}",
+        base_name,
+        board_profile.chip_feature(),
+        board_profile.board_dir()
+    )
+}
+
+pub(crate) fn conway_example_name(board_profile: BoardProfile) -> String {
+    format!(
+        "conway_{}_{}",
+        board_profile.chip_feature(),
+        board_profile.board_dir()
+    )
+}
+
+pub(crate) fn ir_pin_num(board_profile: BoardProfile) -> u8 {
+    match board_profile.chip_feature() {
+        "esp32" | "esp32s2" => 4,
+        _ => 7,
+    }
+}
+
+pub(crate) fn ir_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", ir_pin_num(board_profile))
+}
+
+pub(crate) fn ir_kepler_receiver0_pin_num(board_profile: BoardProfile) -> u8 {
+    ir_pin_num(board_profile)
+}
+
+pub(crate) fn ir_kepler_receiver0_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", ir_kepler_receiver0_pin_num(board_profile))
+}
+
+pub(crate) fn ir_kepler_receiver1_pin_num(board_profile: BoardProfile) -> u8 {
+    match board_profile.chip_feature() {
+        "esp32" | "esp32s2" => 5,
+        _ => 4,
+    }
+}
+
+pub(crate) fn ir_kepler_receiver1_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", ir_kepler_receiver1_pin_num(board_profile))
+}
+
+pub(crate) fn ir_rx_channel_num(board_profile: BoardProfile) -> u8 {
+    if board_profile.chip_feature() == "esp32s3" {
+        4
+    } else {
+        2
+    }
+}
+
+pub(crate) fn ir_rx_channel_ident(board_profile: BoardProfile) -> String {
+    format!("channel{}", ir_rx_channel_num(board_profile))
+}
+
+pub(crate) fn ir_rx_channel1_num(board_profile: BoardProfile) -> u8 {
+    if board_profile.chip_feature() == "esp32s3" {
+        5
+    } else {
+        3
+    }
+}
+
+pub(crate) fn ir_rx_channel1_ident(board_profile: BoardProfile) -> String {
+    format!("channel{}", ir_rx_channel1_num(board_profile))
 }
 
 pub(crate) fn audio_board_config(board_profile: BoardProfile) -> Option<AudioBoardConfig> {

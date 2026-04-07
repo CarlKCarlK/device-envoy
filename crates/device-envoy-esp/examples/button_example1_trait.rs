@@ -49,7 +49,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     #[cfg(esp_pdma_family)]
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
-    info!("button_example1_trait: waiting for short/long presses on GPIO6");
+    info!("button_example1_trait: waiting for short/long presses");
 
     log_button_presses(&mut button).await
 }

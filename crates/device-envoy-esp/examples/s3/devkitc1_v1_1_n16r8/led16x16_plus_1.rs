@@ -23,9 +23,6 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(all(not(rust_analyzer), not(feature = "esp32s3")))]
-compile_error!("This board example only supports --features esp32s3.");
-
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 led2d! {

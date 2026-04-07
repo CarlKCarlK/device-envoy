@@ -30,9 +30,6 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(all(not(rust_analyzer), not(feature = "esp32h2")))]
-compile_error!("This board example only supports --features esp32h2.");
-
 audio_player! {
     AudioPlayerBoard {
         data_pin: GPIO1,

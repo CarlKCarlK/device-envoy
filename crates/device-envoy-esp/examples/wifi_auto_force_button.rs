@@ -1,7 +1,8 @@
 //! Demonstrates forcing WifiAuto captive-portal flow using a physical button.
 //!
 //! Wiring:
-//! - GPIO6 <-> button <-> GND
+//! - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6 <-> button <-> GND
+//! - `esp_pdma_family` (ESP32/S2): GPIO0 <-> button <-> GND
 //! - Use internal pull-up (`PressedTo::Ground`).
 
 #![no_std]

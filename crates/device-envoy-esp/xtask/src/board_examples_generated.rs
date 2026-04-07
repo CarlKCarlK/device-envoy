@@ -2,11 +2,15 @@ use crate::boards::{validate_board_profiles, BOARD_PROFILES};
 use crate::example_specs::{
     audio_bit_clock_pin_ident, audio_bit_clock_pin_num, audio_button_pin_ident,
     audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
-    audio_example_name, audio_word_select_pin_ident, audio_word_select_pin_num, blinky_built_in_led,
-    blinky_example_name, blinky_kind, blinky_led_pin_ident, blinky_led_pin_num,
-    led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
-    panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_led16x16_examples,
-    BlinkyKind, AUDIO_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
+    audio_example_name, audio_word_select_pin_ident, audio_word_select_pin_num,
+    blinky_built_in_led, blinky_example_name, blinky_kind, blinky_led_pin_ident,
+    blinky_led_pin_num, conway_example_name, ir_example_name, ir_kepler_receiver0_pin_ident,
+    ir_kepler_receiver0_pin_num, ir_kepler_receiver1_pin_ident, ir_kepler_receiver1_pin_num,
+    ir_pin_ident, ir_pin_num, ir_rx_channel1_ident, ir_rx_channel1_num, ir_rx_channel_ident,
+    ir_rx_channel_num, led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident,
+    led_strip1_pin_num, panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples,
+    supports_conway_example, supports_ir_examples, supports_led16x16_examples, BlinkyKind,
+    AUDIO_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -34,6 +38,16 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         fs::read_to_string(templates_dir.join("audio_example2_trait.rs.j2"))?;
     let audio_example3_trait_template =
         fs::read_to_string(templates_dir.join("audio_example3_trait.rs.j2"))?;
+    let ir_template = fs::read_to_string(templates_dir.join("ir.rs.j2"))?;
+    let ir_example1_trait_template =
+        fs::read_to_string(templates_dir.join("ir_example1_trait.rs.j2"))?;
+    let ir_kepler_template = fs::read_to_string(templates_dir.join("ir_kepler.rs.j2"))?;
+    let ir_kepler_example1_trait_template =
+        fs::read_to_string(templates_dir.join("ir_kepler_example1_trait.rs.j2"))?;
+    let ir_keplers_template = fs::read_to_string(templates_dir.join("ir_keplers.rs.j2"))?;
+    let ir_mapping_example1_trait_template =
+        fs::read_to_string(templates_dir.join("ir_mapping_example1_trait.rs.j2"))?;
+    let conway_template = fs::read_to_string(templates_dir.join("conway.rs.j2"))?;
 
     let mut minijinja_environment = Environment::new();
     minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;
@@ -46,6 +60,19 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     minijinja_environment.add_template("audio_example1_trait", &audio_example1_trait_template)?;
     minijinja_environment.add_template("audio_example2_trait", &audio_example2_trait_template)?;
     minijinja_environment.add_template("audio_example3_trait", &audio_example3_trait_template)?;
+    minijinja_environment.add_template("ir", &ir_template)?;
+    minijinja_environment.add_template("ir_example1_trait", &ir_example1_trait_template)?;
+    minijinja_environment.add_template("ir_kepler", &ir_kepler_template)?;
+    minijinja_environment.add_template(
+        "ir_kepler_example1_trait",
+        &ir_kepler_example1_trait_template,
+    )?;
+    minijinja_environment.add_template("ir_keplers", &ir_keplers_template)?;
+    minijinja_environment.add_template(
+        "ir_mapping_example1_trait",
+        &ir_mapping_example1_trait_template,
+    )?;
+    minijinja_environment.add_template("conway", &conway_template)?;
 
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
@@ -163,6 +190,71 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         }
     }
 
+    for board_profile in BOARD_PROFILES {
+        if !supports_ir_examples(*board_profile) {
+            continue;
+        }
+        for base_name in IR_EXAMPLE_BASE_NAMES {
+            let output_path = examples_dir
+                .join(board_profile.chip_dir())
+                .join(board_profile.board_dir())
+                .join(format!("{base_name}.rs"));
+            if let Some(output_dir) = output_path.parent() {
+                fs::create_dir_all(output_dir)?;
+            }
+            let example_name = ir_example_name(*board_profile, base_name);
+            let generated_source =
+                minijinja_environment
+                    .get_template(base_name)?
+                    .render(context! {
+                        example_name => example_name.as_str(),
+                        board_slug => board_profile.board_slug(),
+                        chip_name => board_profile.chip_name(),
+                        chip_feature => board_profile.chip_feature(),
+                        ir_pin_num => ir_pin_num(*board_profile),
+                        ir_pin_ident => ir_pin_ident(*board_profile),
+                        ir_receiver0_pin_num => ir_kepler_receiver0_pin_num(*board_profile),
+                        ir_receiver0_pin_ident => ir_kepler_receiver0_pin_ident(*board_profile),
+                        ir_receiver1_pin_num => ir_kepler_receiver1_pin_num(*board_profile),
+                        ir_receiver1_pin_ident => ir_kepler_receiver1_pin_ident(*board_profile),
+                        ir_rx_channel_num => ir_rx_channel_num(*board_profile),
+                        ir_rx_channel_ident => ir_rx_channel_ident(*board_profile),
+                        ir_rx_channel1_num => ir_rx_channel1_num(*board_profile),
+                        ir_rx_channel1_ident => ir_rx_channel1_ident(*board_profile),
+                    })?;
+            write_if_changed(&output_path, &generated_source)?;
+            expected_generated_paths.push(output_path);
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_conway_example(*board_profile) {
+            continue;
+        }
+        let output_path = examples_dir
+            .join(board_profile.chip_dir())
+            .join(board_profile.board_dir())
+            .join("conway.rs");
+        if let Some(output_dir) = output_path.parent() {
+            fs::create_dir_all(output_dir)?;
+        }
+        let example_name = conway_example_name(*board_profile);
+        let generated_source = minijinja_environment
+            .get_template("conway")?
+            .render(context! {
+                example_name => example_name.as_str(),
+                board_slug => board_profile.board_slug(),
+                chip_name => board_profile.chip_name(),
+                chip_feature => board_profile.chip_feature(),
+                ir_pin_num => ir_pin_num(*board_profile),
+                ir_pin_ident => ir_pin_ident(*board_profile),
+                ir_rx_channel_num => ir_rx_channel_num(*board_profile),
+                ir_rx_channel_ident => ir_rx_channel_ident(*board_profile),
+            })?;
+        write_if_changed(&output_path, &generated_source)?;
+        expected_generated_paths.push(output_path);
+    }
+
     rustfmt_generated_files(&expected_generated_paths)?;
     cleanup_stale_nested_generated_examples(&examples_dir, &expected_generated_paths)?;
 
@@ -177,6 +269,19 @@ pub fn generated_board_example_names() -> Vec<String> {
         }
         for base_name in AUDIO_EXAMPLE_BASE_NAMES {
             names.push(audio_example_name(*board_profile, base_name));
+        }
+    }
+    for board_profile in BOARD_PROFILES {
+        if !supports_ir_examples(*board_profile) {
+            continue;
+        }
+        for base_name in IR_EXAMPLE_BASE_NAMES {
+            names.push(ir_example_name(*board_profile, base_name));
+        }
+    }
+    for board_profile in BOARD_PROFILES {
+        if supports_conway_example(*board_profile) {
+            names.push(conway_example_name(*board_profile));
         }
     }
     names.extend(
@@ -204,6 +309,25 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
             if audio_example_name(*board_profile, base_name) == example_name {
                 return Some(board_profile.chip_feature());
             }
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_ir_examples(*board_profile) {
+            continue;
+        }
+        for base_name in IR_EXAMPLE_BASE_NAMES {
+            if ir_example_name(*board_profile, base_name) == example_name {
+                return Some(board_profile.chip_feature());
+            }
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if supports_conway_example(*board_profile)
+            && conway_example_name(*board_profile) == example_name
+        {
+            return Some(board_profile.chip_feature());
         }
     }
 
@@ -258,6 +382,13 @@ fn cleanup_stale_nested_generated_examples(
         "audio_example1_trait.rs",
         "audio_example2_trait.rs",
         "audio_example3_trait.rs",
+        "ir.rs",
+        "ir_example1_trait.rs",
+        "ir_kepler.rs",
+        "ir_kepler_example1_trait.rs",
+        "ir_keplers.rs",
+        "ir_mapping_example1_trait.rs",
+        "conway.rs",
         "blinky.rs",
         "led16x16_plus_1.rs",
         "led16x16_plus_1_spi.rs",
@@ -283,7 +414,8 @@ fn cleanup_stale_nested_generated_examples(
                 }
                 let existing = fs::read_to_string(&candidate)?;
                 if existing.starts_with("// @generated by `cargo xtask generate-blinky-examples`")
-                    || existing.starts_with("// @generated by `cargo xtask generate-board-examples`")
+                    || existing
+                        .starts_with("// @generated by `cargo xtask generate-board-examples`")
                     || existing.starts_with("// @generated by cargo xtask generate-board-examples")
                 {
                     fs::remove_file(&candidate)?;

@@ -1,7 +1,8 @@
-//! Button-read example for an external button on GPIO6.
+//! Button-read example for an external button.
 //!
 //! Wiring (recommended):
-//! - GPIO6 <-> button <-> GND
+//! - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6 <-> button <-> GND
+//! - `esp_pdma_family` (ESP32/S2): GPIO0 <-> button <-> GND
 //! - Uses internal pull-up, so press reads as active-low.
 
 #![no_std]
@@ -36,7 +37,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
     let mut was_pressed = button.is_pressed();
     info!(
-        "button_read ready: GPIO6, pressed={} (PressedTo::Ground)",
+        "button_read ready: pressed={} (PressedTo::Ground)",
         was_pressed
     );
 

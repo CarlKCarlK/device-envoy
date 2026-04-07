@@ -21,9 +21,6 @@ use log::info;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(all(not(rust_analyzer), not(feature = "esp32c2")))]
-compile_error!("This board example only supports --features esp32c2.");
-
 const LED_ON_LEVEL: OnLevel = OnLevel::High;
 
 const DOT_MS: u64 = 200;

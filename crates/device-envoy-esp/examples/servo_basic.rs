@@ -1,7 +1,9 @@
 //! Basic single-servo control example.
 //!
 //! Wiring:
-//! - Servo signal -> GPIO10
+//! - Servo signal:
+//!   - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO10
+//!   - `esp_pdma_family` (ESP32/S2): GPIO4
 
 #![no_std]
 #![no_main]

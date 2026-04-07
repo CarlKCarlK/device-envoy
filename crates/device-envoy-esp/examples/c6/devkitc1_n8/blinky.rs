@@ -19,9 +19,6 @@ use log::info;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(all(not(rust_analyzer), not(feature = "esp32c6")))]
-compile_error!("This board example only supports --features esp32c6.");
-
 const DOT_MS: u64 = 200;
 const DASH_MS: u64 = DOT_MS * 3;
 const SYMBOL_GAP_MS: u64 = DOT_MS;

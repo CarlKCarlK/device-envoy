@@ -5,7 +5,9 @@
 //! clock display reflects progress and, once connected, continues handling user input.
 //!
 //! Hardware defaults:
-//! - force-portal button on GPIO6 (wired to GND)
+//! - force-portal button wired to GND:
+//!   - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6
+//!   - `esp_pdma_family` (ESP32/S2): GPIO0
 //! - LED4 cell pins: GPIO14, GPIO13, GPIO12, GPIO11 (active-low)
 //! - LED4 segment pins: GPIO10, GPIO9, GPIO46 (S3) / GPIO4 (C6), GPIO3, GPIO8, GPIO18, GPIO17, GPIO16 (active-high)
 

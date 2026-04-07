@@ -21,9 +21,6 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(all(not(rust_analyzer), not(feature = "esp32s3")))]
-compile_error!("This board example only supports --features esp32s3.");
-
 audio_player! {
     AudioPlayerBoard {
         data_pin: GPIO21,

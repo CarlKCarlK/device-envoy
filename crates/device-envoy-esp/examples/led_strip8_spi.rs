@@ -1,4 +1,8 @@
-//! LED strip example: 8 NeoPixel-style (WS2812) LEDs on GPIO10 via SPI MOSI.
+//! LED strip example: 8 NeoPixel-style (WS2812) LEDs via SPI MOSI.
+//!
+//! Wiring:
+//! - `esp_gdma_family` (ESP32-C3/C6/S3): data-in on GPIO10
+//! - `esp_pdma_family` (ESP32/S2): data-in on GPIO4
 
 #![no_std]
 #![no_main]

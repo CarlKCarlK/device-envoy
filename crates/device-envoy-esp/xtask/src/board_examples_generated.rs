@@ -25,11 +25,66 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+const PASSTHROUGH_EXAMPLE_BASE_NAMES: &[&str] = &[
+    "button_example1_trait",
+    "button_read",
+    "flash_block_example1_trait",
+    "lcd_text",
+    "lcd_text_example1_trait",
+    "lcd_texts",
+    "led16x16test",
+    "led16x16test_async",
+    "led2d",
+    "led2d_example1_trait",
+    "led2d_example2_trait",
+    "led_example1_trait",
+    "led_probe_c3_d4_d6",
+    "led_probe_c3_gpio_sweep",
+    "led_strip8_spi",
+    "led_strip_example1_trait",
+    "led_strip_example2_trait",
+    "led_strip_len8",
+    "rfid",
+    "servo_basic",
+    "servo_example1_trait",
+    "servo_player_example1_trait",
+    "servo_player_example2_trait",
+    "servos",
+    "wifi_auto_custom_checkbox",
+    "wifi_auto_example1_trait",
+    "wifi_auto_force_button",
+    "wifi_dns_hex",
+    "wifi_scan",
+];
+
+const PASSTHROUGH_DEMO_RELATIVE_PATHS: &[&str] = &[
+    "a_strip/a1_strip_8_blue_gray.rs",
+    "a_strip/a3_strip_8_blue_white_blink_animate.rs",
+    "a_strip/a4_strip_96_blue_white_dot.rs",
+    "b_panel/b1_panel_12x8_rust_cursor.rs",
+    "b_panel/b2_panel_12x8_text_graphics.rs",
+    "f_wifi_auto/f1_dns.rs",
+];
+
+fn passthrough_example_name(
+    board_profile: crate::boards::BoardProfile,
+    base_name: &str,
+) -> String {
+    format!(
+        "{}_{}_{}",
+        base_name,
+        board_profile.chip_feature(),
+        board_profile.board_dir()
+    )
+}
+
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
     validate_board_profiles()?;
 
     let examples_dir = workspace_root.join("examples");
     let templates_dir = examples_dir.join("templates");
+    let demos_dir = workspace_root.join("demos");
+    let demo_templates_dir = demos_dir.join("templates");
 
     let blinky_plain_template = fs::read_to_string(templates_dir.join("blinky_plain.rs.j2"))?;
     let blinky_rmt_template = fs::read_to_string(templates_dir.join("blinky_rmt.rs.j2"))?;
@@ -101,6 +156,14 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
     let mut expected_generated_paths = Vec::new();
+    generate_passthrough_files(
+        &templates_dir,
+        &examples_dir,
+        &demo_templates_dir,
+        &demos_dir,
+        &mut expected_generated_paths,
+    )?;
+
     for board_profile in BOARD_PROFILES {
         let output_path = examples_dir
             .join(board_profile.chip_dir())
@@ -327,8 +390,54 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     Ok(())
 }
 
+fn generate_passthrough_files(
+    example_templates_dir: &Path,
+    examples_dir: &Path,
+    demo_templates_dir: &Path,
+    demos_dir: &Path,
+    expected_generated_paths: &mut Vec<PathBuf>,
+) -> Result<(), Box<dyn Error>> {
+    for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+        let template_path = example_templates_dir.join(format!("{base_name}.rs.j2"));
+        let generated_source = fs::read_to_string(&template_path)?;
+        for board_profile in BOARD_PROFILES {
+            let output_path = examples_dir
+                .join(board_profile.chip_dir())
+                .join(board_profile.board_dir())
+                .join(format!("{base_name}.rs"));
+            if let Some(output_dir) = output_path.parent() {
+                fs::create_dir_all(output_dir)?;
+            }
+            write_if_changed(&output_path, &generated_source)?;
+            expected_generated_paths.push(output_path);
+        }
+        let legacy_top_level_output_path = examples_dir.join(format!("{base_name}.rs"));
+        if legacy_top_level_output_path.exists() {
+            fs::remove_file(&legacy_top_level_output_path)?;
+        }
+    }
+
+    for demo_relative_path in PASSTHROUGH_DEMO_RELATIVE_PATHS {
+        let template_path = demo_templates_dir.join(format!("{demo_relative_path}.j2"));
+        let output_path = demos_dir.join(demo_relative_path);
+        if let Some(output_dir) = output_path.parent() {
+            fs::create_dir_all(output_dir)?;
+        }
+        let generated_source = fs::read_to_string(&template_path)?;
+        write_if_changed(&output_path, &generated_source)?;
+        expected_generated_paths.push(output_path);
+    }
+
+    Ok(())
+}
+
 pub fn generated_board_example_names() -> Vec<String> {
     let mut names = Vec::new();
+    for board_profile in BOARD_PROFILES {
+        for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+            names.push(passthrough_example_name(*board_profile, base_name));
+        }
+    }
     for board_profile in BOARD_PROFILES {
         if !supports_audio_examples(*board_profile) {
             continue;
@@ -375,6 +484,14 @@ pub fn generated_board_example_names() -> Vec<String> {
 }
 
 pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
+    for board_profile in BOARD_PROFILES {
+        for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+            if passthrough_example_name(*board_profile, base_name) == example_name {
+                return Some(board_profile.chip_feature());
+            }
+        }
+    }
+
     for board_profile in BOARD_PROFILES {
         if !supports_audio_examples(*board_profile) {
             continue;
@@ -461,6 +578,35 @@ fn cleanup_stale_nested_generated_examples(
         expected_paths.iter().cloned().collect();
     let top_level_dirs = ["esp32", "c2", "c3", "c6", "h2", "s2", "s3"];
     let generated_filenames = [
+        "button_example1_trait.rs",
+        "button_read.rs",
+        "flash_block_example1_trait.rs",
+        "lcd_text.rs",
+        "lcd_text_example1_trait.rs",
+        "lcd_texts.rs",
+        "led16x16test.rs",
+        "led16x16test_async.rs",
+        "led2d.rs",
+        "led2d_example1_trait.rs",
+        "led2d_example2_trait.rs",
+        "led_example1_trait.rs",
+        "led_probe_c3_d4_d6.rs",
+        "led_probe_c3_gpio_sweep.rs",
+        "led_strip8_spi.rs",
+        "led_strip_example1_trait.rs",
+        "led_strip_example2_trait.rs",
+        "led_strip_len8.rs",
+        "rfid.rs",
+        "servo_basic.rs",
+        "servo_example1_trait.rs",
+        "servo_player_example1_trait.rs",
+        "servo_player_example2_trait.rs",
+        "servos.rs",
+        "wifi_auto_custom_checkbox.rs",
+        "wifi_auto_example1_trait.rs",
+        "wifi_auto_force_button.rs",
+        "wifi_dns_hex.rs",
+        "wifi_scan.rs",
         "audio.rs",
         "audio_example1.rs",
         "audio_example1_trait.rs",

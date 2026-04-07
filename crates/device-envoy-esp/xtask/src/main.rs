@@ -179,6 +179,13 @@ fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
     }
 }
 
+fn is_example_name(example_name: &str, base_name: &str) -> bool {
+    example_name == base_name
+        || example_name
+            .strip_prefix(base_name)
+            .is_some_and(|suffix| suffix.starts_with('_'))
+}
+
 fn example_requirements(example: &str) -> CapabilitySet {
     let mut capability_set = CapabilitySet::empty();
 
@@ -189,25 +196,25 @@ fn example_requirements(example: &str) -> CapabilitySet {
     if example.starts_with("button_") {
         capability_set.insert(Capability::ButtonGpio);
     }
-    let requires_high_gpio_pins = example == "conway"
+    let requires_high_gpio_pins = is_example_name(example, "conway")
         || example.starts_with("lcd_text")
         || example.starts_with("led2d")
-        || example == "led_strip_example2_trait"
-        || example == "rfid"
-        || example == "servos"
-        || example == "servo_example1_trait"
-        || example == "servo_player_example1_trait"
-        || example == "servo_player_example2_trait";
+        || is_example_name(example, "led_strip_example2_trait")
+        || is_example_name(example, "rfid")
+        || is_example_name(example, "servos")
+        || is_example_name(example, "servo_example1_trait")
+        || is_example_name(example, "servo_player_example1_trait")
+        || is_example_name(example, "servo_player_example2_trait");
     if requires_high_gpio_pins {
         capability_set.insert(Capability::HighGpioPins);
     }
-    let requires_rmt = example == "blinky_smart_led"
+    let requires_rmt = is_example_name(example, "blinky_smart_led")
         || example.starts_with("conway")
         || example.starts_with("ir")
         || example.starts_with("led16x16")
         || example.starts_with("led2d")
         || example.starts_with("led_strip")
-        || example == "wifi_dns_hex";
+        || is_example_name(example, "wifi_dns_hex");
     if requires_rmt {
         capability_set.insert(Capability::Rmt);
     }
@@ -217,7 +224,7 @@ fn example_requirements(example: &str) -> CapabilitySet {
     }
     let requires_extended_gpio = example.starts_with("clock_")
         || example.starts_with("lcd_text")
-        || example == "led2d_example1_trait";
+        || is_example_name(example, "led2d_example1_trait");
     if requires_extended_gpio {
         capability_set.insert(Capability::ExtendedGpio);
     }
@@ -253,7 +260,10 @@ fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Optio
             "wifi_auto_force_button",
             "wifi_dns_hex",
         ];
-        if s2_stack_limited_examples.contains(&example_name) {
+        if s2_stack_limited_examples
+            .iter()
+            .any(|base_name| is_example_name(example_name, base_name))
+        {
             return Some("ESP32-S2 linker memory budget");
         }
     }

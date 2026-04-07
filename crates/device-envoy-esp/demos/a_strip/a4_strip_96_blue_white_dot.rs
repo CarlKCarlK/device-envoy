@@ -5,9 +5,8 @@
 use core::{convert::Infallible, panic};
 
 use device_envoy_esp::{
-    init_and_start, led_strip,
-    led_strip::{colors, Current, Frame1d, Gamma, LedStrip as _},
-    Result,
+    Result, init_and_start, led_strip,
+    led_strip::{Current, Frame1d, Gamma, LedStrip as _, colors},
 };
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};

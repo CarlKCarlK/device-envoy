@@ -21,6 +21,7 @@ use crate::example_specs::{
     IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
 };
 use minijinja::{context, Environment};
+use minijinja::value::Value;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -56,6 +57,118 @@ fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_nam
         board_profile.chip_feature(),
         board_profile.board_dir()
     )
+}
+
+fn audio_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
+    context! {
+        board_slug => board_profile.board_slug(),
+        chip_name => board_profile.chip_name(),
+        chip_feature => board_profile.chip_feature(),
+        data_pin_num => audio_data_pin_num(board_profile),
+        data_pin_ident => audio_data_pin_ident(board_profile),
+        bit_clock_pin_num => audio_bit_clock_pin_num(board_profile),
+        bit_clock_pin_ident => audio_bit_clock_pin_ident(board_profile),
+        word_select_pin_num => audio_word_select_pin_num(board_profile),
+        word_select_pin_ident => audio_word_select_pin_ident(board_profile),
+        button_pin_num => audio_button_pin_num(board_profile),
+        button_pin_ident => audio_button_pin_ident(board_profile),
+        dma_ident => audio_dma_ident(board_profile),
+    }
+}
+
+fn generate_family_examples(
+    minijinja_environment: &Environment,
+    examples_dir: &Path,
+    expected_generated_paths: &mut Vec<PathBuf>,
+    base_names: &[&str],
+    supports_board: fn(crate::boards::BoardProfile) -> bool,
+    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
+    context_fn: fn(crate::boards::BoardProfile, &str) -> Value,
+) -> Result<(), Box<dyn Error>> {
+    for board_profile in BOARD_PROFILES {
+        if !supports_board(*board_profile) {
+            continue;
+        }
+        for base_name in base_names {
+            let output_path = examples_dir
+                .join(board_profile.chip_dir())
+                .join(board_profile.board_dir())
+                .join(format!("{base_name}.rs"));
+            if let Some(output_dir) = output_path.parent() {
+                fs::create_dir_all(output_dir)?;
+            }
+            let example_name = example_name_fn(*board_profile, base_name);
+            let extra_context = context_fn(*board_profile, base_name);
+            let generated_source = minijinja_environment
+                .get_template(base_name)?
+                .render(context! {
+                    example_name => example_name.as_str(),
+                    ..extra_context
+                })?;
+            write_if_changed(&output_path, &generated_source)?;
+            expected_generated_paths.push(output_path);
+        }
+    }
+    Ok(())
+}
+
+fn add_family_generated_names(
+    names: &mut Vec<String>,
+    base_names: &[&str],
+    supports_board: fn(crate::boards::BoardProfile) -> bool,
+    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
+) {
+    for board_profile in BOARD_PROFILES {
+        if !supports_board(*board_profile) {
+            continue;
+        }
+        for base_name in base_names {
+            names.push(example_name_fn(*board_profile, base_name));
+        }
+    }
+}
+
+fn add_family_manifest_entries(
+    entries: &mut Vec<ExampleManifestEntry>,
+    base_names: &[&str],
+    supports_board: fn(crate::boards::BoardProfile) -> bool,
+    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
+) {
+    for board_profile in BOARD_PROFILES {
+        if !supports_board(*board_profile) {
+            continue;
+        }
+        for base_name in base_names {
+            entries.push(ExampleManifestEntry {
+                name: example_name_fn(*board_profile, base_name),
+                path: format!(
+                    "examples/{}/{}/{}.rs",
+                    board_profile.chip_dir(),
+                    board_profile.board_dir(),
+                    base_name
+                ),
+            });
+        }
+    }
+}
+
+fn find_family_required_chip(
+    example_name: &str,
+    base_names: &[&str],
+    supports_board: fn(crate::boards::BoardProfile) -> bool,
+    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
+) -> Option<&'static str> {
+    for board_profile in BOARD_PROFILES {
+        if !supports_board(*board_profile) {
+            continue;
+        }
+        for base_name in base_names {
+            if example_name_fn(*board_profile, base_name) == example_name {
+                return Some(board_profile.chip_feature());
+            }
+        }
+    }
+    None
 }
 
 fn passthrough_example_base_names() -> &'static [String] {
@@ -286,41 +399,15 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         expected_generated_paths.push(output_path);
     }
 
-    for board_profile in BOARD_PROFILES {
-        if !supports_audio_examples(*board_profile) {
-            continue;
-        }
-        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
-            let output_path = examples_dir
-                .join(board_profile.chip_dir())
-                .join(board_profile.board_dir())
-                .join(format!("{base_name}.rs"));
-            if let Some(output_dir) = output_path.parent() {
-                fs::create_dir_all(output_dir)?;
-            }
-            let example_name = audio_example_name(*board_profile, base_name);
-            let generated_source =
-                minijinja_environment
-                    .get_template(base_name)?
-                    .render(context! {
-                        example_name => example_name.as_str(),
-                        board_slug => board_profile.board_slug(),
-                        chip_name => board_profile.chip_name(),
-                        chip_feature => board_profile.chip_feature(),
-                        data_pin_num => audio_data_pin_num(*board_profile),
-                        data_pin_ident => audio_data_pin_ident(*board_profile),
-                        bit_clock_pin_num => audio_bit_clock_pin_num(*board_profile),
-                        bit_clock_pin_ident => audio_bit_clock_pin_ident(*board_profile),
-                        word_select_pin_num => audio_word_select_pin_num(*board_profile),
-                        word_select_pin_ident => audio_word_select_pin_ident(*board_profile),
-                        button_pin_num => audio_button_pin_num(*board_profile),
-                        button_pin_ident => audio_button_pin_ident(*board_profile),
-                        dma_ident => audio_dma_ident(*board_profile),
-                    })?;
-            write_if_changed(&output_path, &generated_source)?;
-            expected_generated_paths.push(output_path);
-        }
-    }
+    generate_family_examples(
+        &minijinja_environment,
+        &examples_dir,
+        &mut expected_generated_paths,
+        &AUDIO_EXAMPLE_BASE_NAMES,
+        supports_audio_examples,
+        audio_example_name,
+        audio_example_context,
+    )?;
 
     for board_profile in BOARD_PROFILES {
         if !supports_led16x16_examples(*board_profile) {
@@ -565,14 +652,12 @@ pub fn generated_board_example_names() -> Vec<String> {
             names.push(passthrough_example_name(*board_profile, base_name));
         }
     }
-    for board_profile in BOARD_PROFILES {
-        if !supports_audio_examples(*board_profile) {
-            continue;
-        }
-        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
-            names.push(audio_example_name(*board_profile, base_name));
-        }
-    }
+    add_family_generated_names(
+        &mut names,
+        &AUDIO_EXAMPLE_BASE_NAMES,
+        supports_audio_examples,
+        audio_example_name,
+    );
     for board_profile in BOARD_PROFILES {
         if !supports_ir_examples(*board_profile) {
             continue;
@@ -638,22 +723,12 @@ fn generated_board_example_manifest_entries() -> Vec<ExampleManifestEntry> {
         }
     }
 
-    for board_profile in BOARD_PROFILES {
-        if !supports_audio_examples(*board_profile) {
-            continue;
-        }
-        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
-            entries.push(ExampleManifestEntry {
-                name: audio_example_name(*board_profile, base_name),
-                path: format!(
-                    "examples/{}/{}/{}.rs",
-                    board_profile.chip_dir(),
-                    board_profile.board_dir(),
-                    base_name
-                ),
-            });
-        }
-    }
+    add_family_manifest_entries(
+        &mut entries,
+        &AUDIO_EXAMPLE_BASE_NAMES,
+        supports_audio_examples,
+        audio_example_name,
+    );
 
     for board_profile in BOARD_PROFILES {
         if !supports_ir_examples(*board_profile) {
@@ -851,15 +926,13 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
         }
     }
 
-    for board_profile in BOARD_PROFILES {
-        if !supports_audio_examples(*board_profile) {
-            continue;
-        }
-        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
-            if audio_example_name(*board_profile, base_name) == example_name {
-                return Some(board_profile.chip_feature());
-            }
-        }
+    if let Some(required_chip_feature) = find_family_required_chip(
+        example_name,
+        &AUDIO_EXAMPLE_BASE_NAMES,
+        supports_audio_examples,
+        audio_example_name,
+    ) {
+        return Some(required_chip_feature);
     }
 
     for board_profile in BOARD_PROFILES {

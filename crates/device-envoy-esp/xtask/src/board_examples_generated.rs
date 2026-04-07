@@ -11,13 +11,12 @@ use crate::example_specs::{
     clock_led8x12_panel_pin_ident, clock_led8x12_panel_pin_num, clock_servos_bottom_pin_ident,
     clock_servos_bottom_pin_num, clock_servos_top_pin_ident, clock_servos_top_pin_num,
     conway_example_name, ir_example_name, ir_kepler_receiver0_pin_ident,
-    ir_kepler_receiver0_pin_num, ir_kepler_receiver1_pin_ident, ir_kepler_receiver1_pin_num,
-    ir_pin_ident, ir_pin_num, ir_rx_channel1_ident, ir_rx_channel1_num, ir_rx_channel_ident,
-    ir_rx_channel_num, led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident,
-    led_strip1_pin_num, panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples,
-    supports_clock_examples, supports_conway_example, supports_ir_examples,
-    supports_led16x16_examples, BlinkyKind, AUDIO_EXAMPLE_BASE_NAMES,
-    CLOCK_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
+    ir_kepler_receiver0_pin_num, ir_pin2_ident, ir_pin2_num, ir_pin_ident, ir_pin_num,
+    ir_rx_channel2_ident, ir_rx_channel2_num, ir_rx_channel_ident, ir_rx_channel_num,
+    led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
+    panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_clock_examples,
+    supports_conway_example, supports_ir_examples, supports_led16x16_examples, BlinkyKind,
+    AUDIO_EXAMPLE_BASE_NAMES, CLOCK_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -66,10 +65,7 @@ const PASSTHROUGH_DEMO_RELATIVE_PATHS: &[&str] = &[
     "f_wifi_auto/f1_dns.rs",
 ];
 
-fn passthrough_example_name(
-    board_profile: crate::boards::BoardProfile,
-    base_name: &str,
-) -> String {
+fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
     format!(
         "{}_{}_{}",
         base_name,
@@ -302,12 +298,12 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
                         ir_pin_ident => ir_pin_ident(*board_profile),
                         ir_receiver0_pin_num => ir_kepler_receiver0_pin_num(*board_profile),
                         ir_receiver0_pin_ident => ir_kepler_receiver0_pin_ident(*board_profile),
-                        ir_receiver1_pin_num => ir_kepler_receiver1_pin_num(*board_profile),
-                        ir_receiver1_pin_ident => ir_kepler_receiver1_pin_ident(*board_profile),
+                        ir_receiver1_pin_num => ir_pin2_num(*board_profile),
+                        ir_receiver1_pin_ident => ir_pin2_ident(*board_profile),
                         ir_rx_channel_num => ir_rx_channel_num(*board_profile),
                         ir_rx_channel_ident => ir_rx_channel_ident(*board_profile),
-                        ir_rx_channel1_num => ir_rx_channel1_num(*board_profile),
-                        ir_rx_channel1_ident => ir_rx_channel1_ident(*board_profile),
+                        ir_rx_channel2_num => ir_rx_channel2_num(*board_profile),
+                        ir_rx_channel2_ident => ir_rx_channel2_ident(*board_profile),
                     })?;
             write_if_changed(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);

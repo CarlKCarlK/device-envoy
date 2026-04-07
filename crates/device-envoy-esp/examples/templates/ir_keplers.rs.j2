@@ -38,7 +38,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let channel_creator0 = rmt80.{{ ir_rx_channel_ident }};
-    let channel_creator1 = rmt80.{{ ir_rx_channel1_ident }};
+    let channel_creator1 = rmt80.{{ ir_rx_channel2_ident }};
 
     let (ir_kepler_receiver0, ir_kepler_receiver1) = IrKeplersBoard::new(
         p.{{ ir_receiver0_pin_ident }},

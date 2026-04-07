@@ -1,4 +1,4 @@
-use crate::boards::{BoardId, BoardProfile};
+use crate::boards::{AudioWiring, BoardProfile};
 
 #[derive(Clone, Copy)]
 pub(crate) enum BlinkyKind {
@@ -31,14 +31,6 @@ pub(crate) const CLOCK_EXAMPLE_BASE_NAMES: [&str; 6] = [
     "clock_servos",
     "clock_sync_example1_trait",
 ];
-
-pub(crate) struct AudioBoardConfig {
-    pub(crate) data_pin_num: u8,
-    pub(crate) bit_clock_pin_num: u8,
-    pub(crate) word_select_pin_num: u8,
-    pub(crate) button_pin_num: u8,
-    pub(crate) dma_ident: &'static str,
-}
 
 pub(crate) fn blinky_kind(board_profile: BoardProfile) -> BlinkyKind {
     if board_profile.built_in_smart_led.is_some() {
@@ -86,8 +78,8 @@ pub(crate) fn supports_led16x16_examples(board_profile: BoardProfile) -> bool {
     board_profile.chip_feature() != "esp32c2"
 }
 
-pub(crate) fn panel16x16_pin_num(_board_profile: BoardProfile) -> u8 {
-    2
+pub(crate) fn panel16x16_pin_num(board_profile: BoardProfile) -> u8 {
+    board_profile.panel16x16_pin
 }
 
 pub(crate) fn panel16x16_pin_ident(board_profile: BoardProfile) -> String {
@@ -252,10 +244,7 @@ pub(crate) fn clock_led4_segment_pin_idents(board_profile: BoardProfile) -> [Str
 }
 
 pub(crate) fn ir_pin_num(board_profile: BoardProfile) -> u8 {
-    match board_profile.chip_feature() {
-        "esp32" | "esp32s2" => 4,
-        _ => 7,
-    }
+    board_profile.ir_pin
 }
 
 pub(crate) fn ir_pin_ident(board_profile: BoardProfile) -> String {
@@ -270,80 +259,32 @@ pub(crate) fn ir_kepler_receiver0_pin_ident(board_profile: BoardProfile) -> Stri
     format!("GPIO{}", ir_kepler_receiver0_pin_num(board_profile))
 }
 
-pub(crate) fn ir_kepler_receiver1_pin_num(board_profile: BoardProfile) -> u8 {
-    match board_profile.chip_feature() {
-        "esp32" | "esp32s2" => 5,
-        _ => 4,
-    }
+pub(crate) fn ir_pin2_num(board_profile: BoardProfile) -> u8 {
+    board_profile.ir_pin2
 }
 
-pub(crate) fn ir_kepler_receiver1_pin_ident(board_profile: BoardProfile) -> String {
-    format!("GPIO{}", ir_kepler_receiver1_pin_num(board_profile))
+pub(crate) fn ir_pin2_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", ir_pin2_num(board_profile))
 }
 
 pub(crate) fn ir_rx_channel_num(board_profile: BoardProfile) -> u8 {
-    if board_profile.chip_feature() == "esp32s3" {
-        4
-    } else {
-        2
-    }
+    board_profile.ir_rx_channel
 }
 
 pub(crate) fn ir_rx_channel_ident(board_profile: BoardProfile) -> String {
     format!("channel{}", ir_rx_channel_num(board_profile))
 }
 
-pub(crate) fn ir_rx_channel1_num(board_profile: BoardProfile) -> u8 {
-    if board_profile.chip_feature() == "esp32s3" {
-        5
-    } else {
-        3
-    }
+pub(crate) fn ir_rx_channel2_num(board_profile: BoardProfile) -> u8 {
+    board_profile.ir_rx_channel2
 }
 
-pub(crate) fn ir_rx_channel1_ident(board_profile: BoardProfile) -> String {
-    format!("channel{}", ir_rx_channel1_num(board_profile))
+pub(crate) fn ir_rx_channel2_ident(board_profile: BoardProfile) -> String {
+    format!("channel{}", ir_rx_channel2_num(board_profile))
 }
 
-pub(crate) fn audio_board_config(board_profile: BoardProfile) -> Option<AudioBoardConfig> {
-    if board_profile.board_id == BoardId::Luatos && board_profile.chip_feature() == "esp32c3" {
-        // LuatOS ESP32-C3 exposes GPIO21 as UART0 TX; keep audio DIN off that pin.
-        return Some(AudioBoardConfig {
-            data_pin_num: 5,
-            bit_clock_pin_num: 3,
-            word_select_pin_num: 4,
-            button_pin_num: 6,
-            dma_ident: "DMA_CH0",
-        });
-    }
-
-    match board_profile.chip_feature() {
-        "esp32" | "esp32s2" => Some(AudioBoardConfig {
-            data_pin_num: 21,
-            bit_clock_pin_num: 4,
-            word_select_pin_num: 5,
-            button_pin_num: 0,
-            dma_ident: "DMA_I2S0",
-        }),
-        "esp32c3" | "esp32c6" | "esp32s3" => Some(AudioBoardConfig {
-            data_pin_num: 21,
-            bit_clock_pin_num: 3,
-            word_select_pin_num: 4,
-            button_pin_num: 6,
-            dma_ident: "DMA_CH0",
-        }),
-        "esp32h2" => Some(AudioBoardConfig {
-            data_pin_num: 1,
-            bit_clock_pin_num: 3,
-            word_select_pin_num: 4,
-            button_pin_num: 0,
-            dma_ident: "DMA_CH0",
-        }),
-        // TODO0Audio ESP32-C2 audio examples are currently unsupported in
-        // device-envoy-esp because the current esp-hal configuration for C2
-        // does not expose the needed I2S support.
-        _ => None,
-    }
+pub(crate) fn audio_board_config(board_profile: BoardProfile) -> Option<AudioWiring> {
+    board_profile.audio_wiring
 }
 
 pub(crate) fn supports_audio_examples(board_profile: BoardProfile) -> bool {

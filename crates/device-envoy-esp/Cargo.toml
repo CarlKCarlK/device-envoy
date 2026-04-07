@@ -144,133 +144,1446 @@ esp-println = { version = "0.16.1", default-features = false, features = ["uart"
 log = { version = "0.4", default-features = false }
 esp-bootloader-esp-idf = { version = "0.4.0", default-features = false }
 
+# BEGIN GENERATED BOARD EXAMPLES
 [[example]]
-name = "blinky_esp32_generic"
-path = "examples/esp32/generic/blinky.rs"
+name = "button_example1_trait_esp32_generic"
+path = "examples/esp32/generic/button_example1_trait.rs"
 
 [[example]]
-name = "blinky_esp32c2_generic"
-path = "examples/c2/generic/blinky.rs"
+name = "button_read_esp32_generic"
+path = "examples/esp32/generic/button_read.rs"
 
 [[example]]
-name = "blinky_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/blinky.rs"
+name = "deleteme1_esp32_generic"
+path = "examples/esp32/generic/deleteme1.rs"
 
 [[example]]
-name = "blinky_esp32c3_generic"
-path = "examples/c3/generic/blinky.rs"
+name = "flash_block_example1_trait_esp32_generic"
+path = "examples/esp32/generic/flash_block_example1_trait.rs"
 
 [[example]]
-name = "blinky_esp32c3_luatos"
-path = "examples/c3/luatos/blinky.rs"
+name = "lcd_text_esp32_generic"
+path = "examples/esp32/generic/lcd_text.rs"
 
 [[example]]
-name = "blinky_esp32c6_generic"
-path = "examples/c6/generic/blinky.rs"
+name = "lcd_text_example1_trait_esp32_generic"
+path = "examples/esp32/generic/lcd_text_example1_trait.rs"
 
 [[example]]
-name = "blinky_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/blinky.rs"
+name = "lcd_texts_esp32_generic"
+path = "examples/esp32/generic/lcd_texts.rs"
 
 [[example]]
-name = "blinky_esp32h2_generic"
-path = "examples/h2/generic/blinky.rs"
+name = "led16x16test_esp32_generic"
+path = "examples/esp32/generic/led16x16test.rs"
 
 [[example]]
-name = "blinky_esp32s2_generic"
-path = "examples/s2/generic/blinky.rs"
+name = "led16x16test_async_esp32_generic"
+path = "examples/esp32/generic/led16x16test_async.rs"
 
 [[example]]
-name = "blinky_esp32s3_generic"
-path = "examples/s3/generic/blinky.rs"
+name = "led2d_esp32_generic"
+path = "examples/esp32/generic/led2d.rs"
 
 [[example]]
-name = "blinky_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/blinky.rs"
+name = "led2d_example1_trait_esp32_generic"
+path = "examples/esp32/generic/led2d_example1_trait.rs"
 
 [[example]]
-name = "blinky_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/blinky.rs"
+name = "led2d_example2_trait_esp32_generic"
+path = "examples/esp32/generic/led2d_example2_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32_generic"
-path = "examples/esp32/generic/led16x16_plus_1.rs"
+name = "led_example1_trait_esp32_generic"
+path = "examples/esp32/generic/led_example1_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32_generic"
-path = "examples/esp32/generic/led16x16_plus_1_spi.rs"
+name = "led_probe_c3_d4_d6_esp32_generic"
+path = "examples/esp32/generic/led_probe_c3_d4_d6.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32c3_generic"
-path = "examples/c3/generic/led16x16_plus_1.rs"
+name = "led_probe_c3_gpio_sweep_esp32_generic"
+path = "examples/esp32/generic/led_probe_c3_gpio_sweep.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32c3_generic"
-path = "examples/c3/generic/led16x16_plus_1_spi.rs"
+name = "led_strip8_spi_esp32_generic"
+path = "examples/esp32/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32c3_luatos"
-path = "examples/c3/luatos/led16x16_plus_1.rs"
+name = "led_strip_example1_trait_esp32_generic"
+path = "examples/esp32/generic/led_strip_example1_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32c3_luatos"
-path = "examples/c3/luatos/led16x16_plus_1_spi.rs"
+name = "led_strip_example2_trait_esp32_generic"
+path = "examples/esp32/generic/led_strip_example2_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32c6_generic"
-path = "examples/c6/generic/led16x16_plus_1.rs"
+name = "led_strip_len8_esp32_generic"
+path = "examples/esp32/generic/led_strip_len8.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32c6_generic"
-path = "examples/c6/generic/led16x16_plus_1_spi.rs"
+name = "rfid_esp32_generic"
+path = "examples/esp32/generic/rfid.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led16x16_plus_1.rs"
+name = "servo_basic_esp32_generic"
+path = "examples/esp32/generic/servo_basic.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led16x16_plus_1_spi.rs"
+name = "servo_example1_trait_esp32_generic"
+path = "examples/esp32/generic/servo_example1_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32h2_generic"
-path = "examples/h2/generic/led16x16_plus_1.rs"
+name = "servo_player_example1_trait_esp32_generic"
+path = "examples/esp32/generic/servo_player_example1_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32h2_generic"
-path = "examples/h2/generic/led16x16_plus_1_spi.rs"
+name = "servo_player_example2_trait_esp32_generic"
+path = "examples/esp32/generic/servo_player_example2_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32s2_generic"
-path = "examples/s2/generic/led16x16_plus_1.rs"
+name = "servos_esp32_generic"
+path = "examples/esp32/generic/servos.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32s2_generic"
-path = "examples/s2/generic/led16x16_plus_1_spi.rs"
+name = "wifi_auto_custom_checkbox_esp32_generic"
+path = "examples/esp32/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32s3_generic"
-path = "examples/s3/generic/led16x16_plus_1.rs"
+name = "wifi_auto_example1_trait_esp32_generic"
+path = "examples/esp32/generic/wifi_auto_example1_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32s3_generic"
-path = "examples/s3/generic/led16x16_plus_1_spi.rs"
+name = "wifi_auto_force_button_esp32_generic"
+path = "examples/esp32/generic/wifi_auto_force_button.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led16x16_plus_1.rs"
+name = "wifi_dns_hex_esp32_generic"
+path = "examples/esp32/generic/wifi_dns_hex.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led16x16_plus_1_spi.rs"
+name = "wifi_scan_esp32_generic"
+path = "examples/esp32/generic/wifi_scan.rs"
 
 [[example]]
-name = "led16x16_plus_1_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led16x16_plus_1.rs"
+name = "button_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/button_example1_trait.rs"
 
 [[example]]
-name = "led16x16_plus_1_spi_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led16x16_plus_1_spi.rs"
+name = "button_read_esp32c2_generic"
+path = "examples/c2/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c2_generic"
+path = "examples/c2/generic/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32c2_generic"
+path = "examples/c2/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32c2_generic"
+path = "examples/c2/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32c2_generic"
+path = "examples/c2/generic/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32c2_generic"
+path = "examples/c2/generic/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32c2_generic"
+path = "examples/c2/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32c2_generic"
+path = "examples/c2/generic/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32c2_generic"
+path = "examples/c2/generic/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32c2_generic"
+path = "examples/c2/generic/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c2_generic"
+path = "examples/c2/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32c2_generic"
+path = "examples/c2/generic/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c2_generic"
+path = "examples/c2/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c2_generic"
+path = "examples/c2/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c2_generic"
+path = "examples/c2/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32c2_generic"
+path = "examples/c2/generic/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32c2_generic"
+path = "examples/c2/generic/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c2_generic"
+path = "examples/c2/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32c2_generic"
+path = "examples/c2/generic/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c2_generic"
+path = "examples/c2/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c2_generic"
+path = "examples/c2/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c2_generic"
+path = "examples/c2/generic/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32c3_generic"
+path = "examples/c3/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c3_generic"
+path = "examples/c3/generic/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32c3_generic"
+path = "examples/c3/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32c3_generic"
+path = "examples/c3/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32c3_generic"
+path = "examples/c3/generic/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32c3_generic"
+path = "examples/c3/generic/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32c3_generic"
+path = "examples/c3/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32c3_generic"
+path = "examples/c3/generic/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32c3_generic"
+path = "examples/c3/generic/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32c3_generic"
+path = "examples/c3/generic/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c3_generic"
+path = "examples/c3/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32c3_generic"
+path = "examples/c3/generic/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c3_generic"
+path = "examples/c3/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c3_generic"
+path = "examples/c3/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c3_generic"
+path = "examples/c3/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32c3_generic"
+path = "examples/c3/generic/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32c3_generic"
+path = "examples/c3/generic/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c3_generic"
+path = "examples/c3/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32c3_generic"
+path = "examples/c3/generic/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c3_generic"
+path = "examples/c3/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c3_generic"
+path = "examples/c3/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c3_generic"
+path = "examples/c3/generic/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32c3_luatos"
+path = "examples/c3/luatos/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c3_luatos"
+path = "examples/c3/luatos/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32c3_luatos"
+path = "examples/c3/luatos/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32c3_luatos"
+path = "examples/c3/luatos/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32c3_luatos"
+path = "examples/c3/luatos/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32c3_luatos"
+path = "examples/c3/luatos/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32c3_luatos"
+path = "examples/c3/luatos/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32c3_luatos"
+path = "examples/c3/luatos/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32c3_luatos"
+path = "examples/c3/luatos/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32c3_luatos"
+path = "examples/c3/luatos/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c3_luatos"
+path = "examples/c3/luatos/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32c3_luatos"
+path = "examples/c3/luatos/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c3_luatos"
+path = "examples/c3/luatos/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c3_luatos"
+path = "examples/c3/luatos/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c3_luatos"
+path = "examples/c3/luatos/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32c3_luatos"
+path = "examples/c3/luatos/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32c3_luatos"
+path = "examples/c3/luatos/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c3_luatos"
+path = "examples/c3/luatos/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32c3_luatos"
+path = "examples/c3/luatos/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c3_luatos"
+path = "examples/c3/luatos/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c3_luatos"
+path = "examples/c3/luatos/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c3_luatos"
+path = "examples/c3/luatos/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32c6_generic"
+path = "examples/c6/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c6_generic"
+path = "examples/c6/generic/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32c6_generic"
+path = "examples/c6/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32c6_generic"
+path = "examples/c6/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32c6_generic"
+path = "examples/c6/generic/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32c6_generic"
+path = "examples/c6/generic/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32c6_generic"
+path = "examples/c6/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32c6_generic"
+path = "examples/c6/generic/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32c6_generic"
+path = "examples/c6/generic/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32c6_generic"
+path = "examples/c6/generic/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c6_generic"
+path = "examples/c6/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32c6_generic"
+path = "examples/c6/generic/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c6_generic"
+path = "examples/c6/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c6_generic"
+path = "examples/c6/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c6_generic"
+path = "examples/c6/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32c6_generic"
+path = "examples/c6/generic/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32c6_generic"
+path = "examples/c6/generic/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c6_generic"
+path = "examples/c6/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32c6_generic"
+path = "examples/c6/generic/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c6_generic"
+path = "examples/c6/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c6_generic"
+path = "examples/c6/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c6_generic"
+path = "examples/c6/generic/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32h2_generic"
+path = "examples/h2/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32h2_generic"
+path = "examples/h2/generic/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32h2_generic"
+path = "examples/h2/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32h2_generic"
+path = "examples/h2/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32h2_generic"
+path = "examples/h2/generic/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32h2_generic"
+path = "examples/h2/generic/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32h2_generic"
+path = "examples/h2/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32h2_generic"
+path = "examples/h2/generic/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32h2_generic"
+path = "examples/h2/generic/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32h2_generic"
+path = "examples/h2/generic/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32h2_generic"
+path = "examples/h2/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32h2_generic"
+path = "examples/h2/generic/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32h2_generic"
+path = "examples/h2/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32h2_generic"
+path = "examples/h2/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32h2_generic"
+path = "examples/h2/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32h2_generic"
+path = "examples/h2/generic/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32h2_generic"
+path = "examples/h2/generic/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32h2_generic"
+path = "examples/h2/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32h2_generic"
+path = "examples/h2/generic/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32h2_generic"
+path = "examples/h2/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32h2_generic"
+path = "examples/h2/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32h2_generic"
+path = "examples/h2/generic/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32s2_generic"
+path = "examples/s2/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32s2_generic"
+path = "examples/s2/generic/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32s2_generic"
+path = "examples/s2/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32s2_generic"
+path = "examples/s2/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32s2_generic"
+path = "examples/s2/generic/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32s2_generic"
+path = "examples/s2/generic/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32s2_generic"
+path = "examples/s2/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32s2_generic"
+path = "examples/s2/generic/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32s2_generic"
+path = "examples/s2/generic/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32s2_generic"
+path = "examples/s2/generic/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32s2_generic"
+path = "examples/s2/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32s2_generic"
+path = "examples/s2/generic/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32s2_generic"
+path = "examples/s2/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32s2_generic"
+path = "examples/s2/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32s2_generic"
+path = "examples/s2/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32s2_generic"
+path = "examples/s2/generic/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32s2_generic"
+path = "examples/s2/generic/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32s2_generic"
+path = "examples/s2/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32s2_generic"
+path = "examples/s2/generic/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32s2_generic"
+path = "examples/s2/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32s2_generic"
+path = "examples/s2/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32s2_generic"
+path = "examples/s2/generic/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32s3_generic"
+path = "examples/s3/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32s3_generic"
+path = "examples/s3/generic/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32s3_generic"
+path = "examples/s3/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32s3_generic"
+path = "examples/s3/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32s3_generic"
+path = "examples/s3/generic/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32s3_generic"
+path = "examples/s3/generic/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32s3_generic"
+path = "examples/s3/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32s3_generic"
+path = "examples/s3/generic/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32s3_generic"
+path = "examples/s3/generic/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32s3_generic"
+path = "examples/s3/generic/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32s3_generic"
+path = "examples/s3/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32s3_generic"
+path = "examples/s3/generic/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32s3_generic"
+path = "examples/s3/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32s3_generic"
+path = "examples/s3/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32s3_generic"
+path = "examples/s3/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32s3_generic"
+path = "examples/s3/generic/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32s3_generic"
+path = "examples/s3/generic/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32s3_generic"
+path = "examples/s3/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32s3_generic"
+path = "examples/s3/generic/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32s3_generic"
+path = "examples/s3/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32s3_generic"
+path = "examples/s3/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32s3_generic"
+path = "examples/s3/generic/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/wifi_scan.rs"
+
+[[example]]
+name = "button_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/button_example1_trait.rs"
+
+[[example]]
+name = "button_read_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/deleteme1.rs"
+
+[[example]]
+name = "flash_block_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/flash_block_example1_trait.rs"
+
+[[example]]
+name = "lcd_text_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/lcd_text_example1_trait.rs"
+
+[[example]]
+name = "lcd_texts_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/lcd_texts.rs"
+
+[[example]]
+name = "led16x16test_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led16x16test.rs"
+
+[[example]]
+name = "led16x16test_async_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led16x16test_async.rs"
+
+[[example]]
+name = "led2d_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led2d.rs"
+
+[[example]]
+name = "led2d_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example1_trait.rs"
+
+[[example]]
+name = "led2d_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example2_trait.rs"
+
+[[example]]
+name = "led_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_example1_trait.rs"
+
+[[example]]
+name = "led_probe_c3_d4_d6_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_probe_c3_d4_d6.rs"
+
+[[example]]
+name = "led_probe_c3_gpio_sweep_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_probe_c3_gpio_sweep.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example1_trait.rs"
+
+[[example]]
+name = "led_strip_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example2_trait.rs"
+
+[[example]]
+name = "led_strip_len8_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servo_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example1_trait.rs"
+
+[[example]]
+name = "servo_player_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example2_trait.rs"
+
+[[example]]
+name = "servos_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servos.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_example1_trait.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/wifi_scan.rs"
 
 [[example]]
 name = "audio_esp32_generic"
@@ -471,6 +1784,7 @@ path = "examples/s3/devkitc1_v1_0_n16r8/audio_example2_trait.rs"
 [[example]]
 name = "audio_example3_trait_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/audio_example3_trait.rs"
+
 [[example]]
 name = "ir_esp32_generic"
 path = "examples/esp32/generic/ir.rs"
@@ -892,1492 +2206,6 @@ name = "clock_sync_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/clock_sync_example1_trait.rs"
 
 [[example]]
-name = "button_example1_trait_esp32_generic"
-path = "examples/esp32/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32_generic"
-path = "examples/esp32/generic/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32_generic"
-path = "examples/esp32/generic/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32_generic"
-path = "examples/esp32/generic/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32_generic"
-path = "examples/esp32/generic/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32_generic"
-path = "examples/esp32/generic/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32_generic"
-path = "examples/esp32/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32_generic"
-path = "examples/esp32/generic/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32_generic"
-path = "examples/esp32/generic/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32_generic"
-path = "examples/esp32/generic/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32_generic"
-path = "examples/esp32/generic/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32_generic"
-path = "examples/esp32/generic/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32_generic"
-path = "examples/esp32/generic/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32_generic"
-path = "examples/esp32/generic/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32_generic"
-path = "examples/esp32/generic/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32_generic"
-path = "examples/esp32/generic/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32_generic"
-path = "examples/esp32/generic/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32_generic"
-path = "examples/esp32/generic/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32_generic"
-path = "examples/esp32/generic/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32_generic"
-path = "examples/esp32/generic/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32_generic"
-path = "examples/esp32/generic/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32_generic"
-path = "examples/esp32/generic/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32_generic"
-path = "examples/esp32/generic/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32_generic"
-path = "examples/esp32/generic/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32_generic"
-path = "examples/esp32/generic/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32_generic"
-path = "examples/esp32/generic/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32_generic"
-path = "examples/esp32/generic/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32_generic"
-path = "examples/esp32/generic/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32_generic"
-path = "examples/esp32/generic/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c2_generic"
-path = "examples/c2/generic/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32c2_generic"
-path = "examples/c2/generic/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32c2_generic"
-path = "examples/c2/generic/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32c2_generic"
-path = "examples/c2/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c2_generic"
-path = "examples/c2/generic/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32c2_generic"
-path = "examples/c2/generic/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32c2_generic"
-path = "examples/c2/generic/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32c2_generic"
-path = "examples/c2/generic/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32c2_generic"
-path = "examples/c2/generic/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32c2_generic"
-path = "examples/c2/generic/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32c2_generic"
-path = "examples/c2/generic/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32c2_generic"
-path = "examples/c2/generic/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32c2_generic"
-path = "examples/c2/generic/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32c2_generic"
-path = "examples/c2/generic/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32c2_generic"
-path = "examples/c2/generic/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32c2_generic"
-path = "examples/c2/generic/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32c2_generic"
-path = "examples/c2/generic/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32c2_generic"
-path = "examples/c2/generic/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32c2_generic"
-path = "examples/c2/generic/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32c2_generic"
-path = "examples/c2/generic/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c3_generic"
-path = "examples/c3/generic/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32c3_generic"
-path = "examples/c3/generic/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32c3_generic"
-path = "examples/c3/generic/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32c3_generic"
-path = "examples/c3/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c3_generic"
-path = "examples/c3/generic/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32c3_generic"
-path = "examples/c3/generic/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32c3_generic"
-path = "examples/c3/generic/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32c3_generic"
-path = "examples/c3/generic/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32c3_generic"
-path = "examples/c3/generic/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32c3_generic"
-path = "examples/c3/generic/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32c3_generic"
-path = "examples/c3/generic/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32c3_generic"
-path = "examples/c3/generic/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32c3_generic"
-path = "examples/c3/generic/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32c3_generic"
-path = "examples/c3/generic/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32c3_generic"
-path = "examples/c3/generic/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32c3_generic"
-path = "examples/c3/generic/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32c3_generic"
-path = "examples/c3/generic/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32c3_generic"
-path = "examples/c3/generic/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32c3_generic"
-path = "examples/c3/generic/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32c3_generic"
-path = "examples/c3/generic/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c3_luatos"
-path = "examples/c3/luatos/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32c3_luatos"
-path = "examples/c3/luatos/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32c3_luatos"
-path = "examples/c3/luatos/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32c3_luatos"
-path = "examples/c3/luatos/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c3_luatos"
-path = "examples/c3/luatos/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32c3_luatos"
-path = "examples/c3/luatos/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32c3_luatos"
-path = "examples/c3/luatos/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32c3_luatos"
-path = "examples/c3/luatos/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32c3_luatos"
-path = "examples/c3/luatos/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32c3_luatos"
-path = "examples/c3/luatos/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32c3_luatos"
-path = "examples/c3/luatos/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32c3_luatos"
-path = "examples/c3/luatos/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32c3_luatos"
-path = "examples/c3/luatos/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32c3_luatos"
-path = "examples/c3/luatos/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32c3_luatos"
-path = "examples/c3/luatos/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32c3_luatos"
-path = "examples/c3/luatos/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32c3_luatos"
-path = "examples/c3/luatos/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32c3_luatos"
-path = "examples/c3/luatos/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c6_generic"
-path = "examples/c6/generic/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32c6_generic"
-path = "examples/c6/generic/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32c6_generic"
-path = "examples/c6/generic/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32c6_generic"
-path = "examples/c6/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c6_generic"
-path = "examples/c6/generic/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32c6_generic"
-path = "examples/c6/generic/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32c6_generic"
-path = "examples/c6/generic/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32c6_generic"
-path = "examples/c6/generic/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32c6_generic"
-path = "examples/c6/generic/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32c6_generic"
-path = "examples/c6/generic/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32c6_generic"
-path = "examples/c6/generic/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32c6_generic"
-path = "examples/c6/generic/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32c6_generic"
-path = "examples/c6/generic/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32c6_generic"
-path = "examples/c6/generic/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32c6_generic"
-path = "examples/c6/generic/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32c6_generic"
-path = "examples/c6/generic/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32c6_generic"
-path = "examples/c6/generic/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32c6_generic"
-path = "examples/c6/generic/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32c6_generic"
-path = "examples/c6/generic/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32c6_generic"
-path = "examples/c6/generic/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32h2_generic"
-path = "examples/h2/generic/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32h2_generic"
-path = "examples/h2/generic/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32h2_generic"
-path = "examples/h2/generic/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32h2_generic"
-path = "examples/h2/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32h2_generic"
-path = "examples/h2/generic/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32h2_generic"
-path = "examples/h2/generic/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32h2_generic"
-path = "examples/h2/generic/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32h2_generic"
-path = "examples/h2/generic/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32h2_generic"
-path = "examples/h2/generic/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32h2_generic"
-path = "examples/h2/generic/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32h2_generic"
-path = "examples/h2/generic/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32h2_generic"
-path = "examples/h2/generic/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32h2_generic"
-path = "examples/h2/generic/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32h2_generic"
-path = "examples/h2/generic/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32h2_generic"
-path = "examples/h2/generic/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32h2_generic"
-path = "examples/h2/generic/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32h2_generic"
-path = "examples/h2/generic/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32h2_generic"
-path = "examples/h2/generic/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32h2_generic"
-path = "examples/h2/generic/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32h2_generic"
-path = "examples/h2/generic/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s2_generic"
-path = "examples/s2/generic/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32s2_generic"
-path = "examples/s2/generic/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32s2_generic"
-path = "examples/s2/generic/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32s2_generic"
-path = "examples/s2/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32s2_generic"
-path = "examples/s2/generic/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32s2_generic"
-path = "examples/s2/generic/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32s2_generic"
-path = "examples/s2/generic/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32s2_generic"
-path = "examples/s2/generic/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32s2_generic"
-path = "examples/s2/generic/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32s2_generic"
-path = "examples/s2/generic/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32s2_generic"
-path = "examples/s2/generic/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32s2_generic"
-path = "examples/s2/generic/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32s2_generic"
-path = "examples/s2/generic/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32s2_generic"
-path = "examples/s2/generic/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32s2_generic"
-path = "examples/s2/generic/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32s2_generic"
-path = "examples/s2/generic/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32s2_generic"
-path = "examples/s2/generic/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32s2_generic"
-path = "examples/s2/generic/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32s2_generic"
-path = "examples/s2/generic/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32s2_generic"
-path = "examples/s2/generic/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s3_generic"
-path = "examples/s3/generic/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32s3_generic"
-path = "examples/s3/generic/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32s3_generic"
-path = "examples/s3/generic/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32s3_generic"
-path = "examples/s3/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32s3_generic"
-path = "examples/s3/generic/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32s3_generic"
-path = "examples/s3/generic/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32s3_generic"
-path = "examples/s3/generic/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32s3_generic"
-path = "examples/s3/generic/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32s3_generic"
-path = "examples/s3/generic/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32s3_generic"
-path = "examples/s3/generic/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32s3_generic"
-path = "examples/s3/generic/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32s3_generic"
-path = "examples/s3/generic/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32s3_generic"
-path = "examples/s3/generic/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32s3_generic"
-path = "examples/s3/generic/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32s3_generic"
-path = "examples/s3/generic/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32s3_generic"
-path = "examples/s3/generic/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32s3_generic"
-path = "examples/s3/generic/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32s3_generic"
-path = "examples/s3/generic/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32s3_generic"
-path = "examples/s3/generic/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32s3_generic"
-path = "examples/s3/generic/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/wifi_scan.rs"
-
-[[example]]
-name = "button_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/button_read.rs"
-
-[[example]]
-name = "flash_block_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/flash_block_example1_trait.rs"
-
-[[example]]
-name = "lcd_text_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/lcd_text.rs"
-
-[[example]]
-name = "lcd_text_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/lcd_text_example1_trait.rs"
-
-[[example]]
-name = "lcd_texts_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/lcd_texts.rs"
-
-[[example]]
-name = "led16x16test_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led16x16test_async.rs"
-
-[[example]]
-name = "led2d_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led2d.rs"
-
-[[example]]
-name = "led2d_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example1_trait.rs"
-
-[[example]]
-name = "led2d_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example2_trait.rs"
-
-[[example]]
-name = "led_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_example1_trait.rs"
-
-[[example]]
-name = "led_probe_c3_d4_d6_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_probe_c3_d4_d6.rs"
-
-[[example]]
-name = "led_probe_c3_gpio_sweep_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_probe_c3_gpio_sweep.rs"
-
-[[example]]
-name = "led_strip8_spi_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_strip8_spi.rs"
-
-[[example]]
-name = "led_strip_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example1_trait.rs"
-
-[[example]]
-name = "led_strip_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example2_trait.rs"
-
-[[example]]
-name = "led_strip_len8_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_len8.rs"
-
-[[example]]
-name = "rfid_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/rfid.rs"
-
-[[example]]
-name = "servo_basic_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servo_basic.rs"
-
-[[example]]
-name = "servo_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servo_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example1_trait.rs"
-
-[[example]]
-name = "servo_player_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example2_trait.rs"
-
-[[example]]
-name = "servos_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servos.rs"
-
-[[example]]
-name = "wifi_auto_custom_checkbox_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_custom_checkbox.rs"
-
-[[example]]
-name = "wifi_auto_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_example1_trait.rs"
-
-[[example]]
-name = "wifi_auto_force_button_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_force_button.rs"
-
-[[example]]
-name = "wifi_dns_hex_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/wifi_dns_hex.rs"
-
-[[example]]
-name = "wifi_scan_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/wifi_scan.rs"
-
-[[test]]
-name = "ir_two_receivers_compile"
-path = "tests/embedded/ir_two_receivers_compile.rs"
-harness = false
-
-[[test]]
-name = "led_strip_two_strips_compile"
-path = "tests/embedded/led_strip_two_strips_compile.rs"
-harness = false
-
-[[test]]
-name = "led_strip_spi_two_strips_compile"
-path = "tests/embedded/led_strip_spi_two_strips_compile.rs"
-harness = false
-
-[[test]]
-name = "led2d_two_panels_compile"
-path = "tests/embedded/led2d_two_panels_compile.rs"
-harness = false
-
-[[test]]
-name = "led4_two_displays_compile"
-path = "tests/embedded/led4_two_displays_compile.rs"
-harness = false
-
-[[test]]
-name = "led_five_compile"
-path = "tests/embedded/led_five_compile.rs"
-harness = false
-
-[[test]]
-name = "lcd_text_four_addresses_compile"
-path = "tests/embedded/lcd_text_four_addresses_compile.rs"
-harness = false
-
-[[test]]
-name = "clock_sync_two_compile"
-path = "tests/embedded/clock_sync_two_compile.rs"
-harness = false
-
-[[test]]
-name = "button_five_compile"
-path = "tests/embedded/button_five_compile.rs"
-harness = false
-
-[[test]]
-name = "button_watch_five_compile"
-path = "tests/embedded/button_watch_five_compile.rs"
-harness = false
-
-[[test]]
-name = "rfid_one_compile"
-path = "tests/embedded/rfid_one_compile.rs"
-harness = false
-
-[[test]]
-name = "ir_four_receivers_compile"
-path = "tests/embedded/ir_four_receivers_compile.rs"
-harness = false
-
-[[test]]
-name = "ir_mapping_four_receivers_compile"
-path = "tests/embedded/ir_mapping_four_receivers_compile.rs"
-harness = false
-
-[[test]]
-name = "ir_kepler_four_receivers_compile"
-path = "tests/embedded/ir_kepler_four_receivers_compile.rs"
-harness = false
-
-[[test]]
-name = "ir_visibility_compile"
-path = "tests/embedded/ir_visibility_compile.rs"
-harness = false
-
-[[test]]
-name = "ir_duplicate_channel_compile_fail"
-path = "tests/embedded/ir_duplicate_channel_compile_fail.rs"
-harness = false
-required-features = ["compile-fail-tests"]
-
-[[test]]
-name = "ir_colon_form_compile_fail"
-path = "tests/embedded/ir_colon_form_compile_fail.rs"
-harness = false
-required-features = ["compile-fail-tests"]
-
-[[test]]
-name = "lcd_text_duplicate_address_compile_fail"
-path = "tests/embedded/lcd_text_duplicate_address_compile_fail.rs"
-harness = false
-required-features = ["compile-fail-tests"]
-
-# BEGIN GENERATED TALK1 EXAMPLES
-[[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32_generic"
 path = "examples/esp32/generic/talk1/a1_strip_8_blue_gray.rs"
 
@@ -2665,4 +2493,226 @@ path = "examples/s3/devkitc1_v1_0_n16r8/talk1/b2_panel_12x8_text_graphics.rs"
 name = "talk1_f1_dns_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/talk1/f1_dns.rs"
 
-# END GENERATED TALK1 EXAMPLES
+[[example]]
+name = "blinky_esp32_generic"
+path = "examples/esp32/generic/blinky.rs"
+
+[[example]]
+name = "blinky_esp32c2_generic"
+path = "examples/c2/generic/blinky.rs"
+
+[[example]]
+name = "blinky_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/blinky.rs"
+
+[[example]]
+name = "blinky_esp32c3_generic"
+path = "examples/c3/generic/blinky.rs"
+
+[[example]]
+name = "blinky_esp32c3_luatos"
+path = "examples/c3/luatos/blinky.rs"
+
+[[example]]
+name = "blinky_esp32c6_generic"
+path = "examples/c6/generic/blinky.rs"
+
+[[example]]
+name = "blinky_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/blinky.rs"
+
+[[example]]
+name = "blinky_esp32h2_generic"
+path = "examples/h2/generic/blinky.rs"
+
+[[example]]
+name = "blinky_esp32s2_generic"
+path = "examples/s2/generic/blinky.rs"
+
+[[example]]
+name = "blinky_esp32s3_generic"
+path = "examples/s3/generic/blinky.rs"
+
+[[example]]
+name = "blinky_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/blinky.rs"
+
+[[example]]
+name = "blinky_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/blinky.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32_generic"
+path = "examples/esp32/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32_generic"
+path = "examples/esp32/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32c3_generic"
+path = "examples/c3/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32c3_generic"
+path = "examples/c3/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32c3_luatos"
+path = "examples/c3/luatos/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32c3_luatos"
+path = "examples/c3/luatos/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32c6_generic"
+path = "examples/c6/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32c6_generic"
+path = "examples/c6/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32h2_generic"
+path = "examples/h2/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32h2_generic"
+path = "examples/h2/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32s2_generic"
+path = "examples/s2/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32s2_generic"
+path = "examples/s2/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32s3_generic"
+path = "examples/s3/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32s3_generic"
+path = "examples/s3/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led16x16_plus_1_spi.rs"
+
+# END GENERATED BOARD EXAMPLES
+
+[[test]]
+name = "ir_two_receivers_compile"
+path = "tests/embedded/ir_two_receivers_compile.rs"
+harness = false
+
+[[test]]
+name = "led_strip_two_strips_compile"
+path = "tests/embedded/led_strip_two_strips_compile.rs"
+harness = false
+
+[[test]]
+name = "led_strip_spi_two_strips_compile"
+path = "tests/embedded/led_strip_spi_two_strips_compile.rs"
+harness = false
+
+[[test]]
+name = "led2d_two_panels_compile"
+path = "tests/embedded/led2d_two_panels_compile.rs"
+harness = false
+
+[[test]]
+name = "led4_two_displays_compile"
+path = "tests/embedded/led4_two_displays_compile.rs"
+harness = false
+
+[[test]]
+name = "led_five_compile"
+path = "tests/embedded/led_five_compile.rs"
+harness = false
+
+[[test]]
+name = "lcd_text_four_addresses_compile"
+path = "tests/embedded/lcd_text_four_addresses_compile.rs"
+harness = false
+
+[[test]]
+name = "clock_sync_two_compile"
+path = "tests/embedded/clock_sync_two_compile.rs"
+harness = false
+
+[[test]]
+name = "button_five_compile"
+path = "tests/embedded/button_five_compile.rs"
+harness = false
+
+[[test]]
+name = "button_watch_five_compile"
+path = "tests/embedded/button_watch_five_compile.rs"
+harness = false
+
+[[test]]
+name = "rfid_one_compile"
+path = "tests/embedded/rfid_one_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_four_receivers_compile"
+path = "tests/embedded/ir_four_receivers_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_mapping_four_receivers_compile"
+path = "tests/embedded/ir_mapping_four_receivers_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_kepler_four_receivers_compile"
+path = "tests/embedded/ir_kepler_four_receivers_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_visibility_compile"
+path = "tests/embedded/ir_visibility_compile.rs"
+harness = false
+
+[[test]]
+name = "ir_duplicate_channel_compile_fail"
+path = "tests/embedded/ir_duplicate_channel_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]
+
+[[test]]
+name = "ir_colon_form_compile_fail"
+path = "tests/embedded/ir_colon_form_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]
+
+[[test]]
+name = "lcd_text_duplicate_address_compile_fail"
+path = "tests/embedded/lcd_text_duplicate_address_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]
+

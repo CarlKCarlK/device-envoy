@@ -26,9 +26,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+const GENERATED_EXAMPLES_BEGIN_MARKER: &str = "# BEGIN GENERATED BOARD EXAMPLES";
+const GENERATED_EXAMPLES_END_MARKER: &str = "# END GENERATED BOARD EXAMPLES";
+const LEGACY_TALK1_BEGIN_MARKER: &str = "# BEGIN GENERATED TALK1 EXAMPLES";
+const LEGACY_TALK1_END_MARKER: &str = "# END GENERATED TALK1 EXAMPLES";
+
 const PASSTHROUGH_EXAMPLE_BASE_NAMES: &[&str] = &[
     "button_example1_trait",
     "button_read",
+    "deleteme1",
     "flash_block_example1_trait",
     "lcd_text",
     "lcd_text_example1_trait",
@@ -440,6 +446,7 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
 
     rustfmt_generated_files(&expected_generated_paths)?;
     cleanup_stale_nested_generated_examples(&examples_dir, &expected_generated_paths)?;
+    sync_generated_examples_in_cargo_toml(workspace_root)?;
 
     Ok(())
 }
@@ -451,7 +458,7 @@ fn generate_passthrough_files(
 ) -> Result<(), Box<dyn Error>> {
     for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
         let template_path = example_templates_dir.join(format!("{base_name}.rs.j2"));
-        let generated_source = fs::read_to_string(&template_path)?;
+        let template_source = fs::read_to_string(&template_path)?;
         for board_profile in BOARD_PROFILES {
             let output_path = examples_dir
                 .join(board_profile.chip_dir())
@@ -460,6 +467,22 @@ fn generate_passthrough_files(
             if let Some(output_dir) = output_path.parent() {
                 fs::create_dir_all(output_dir)?;
             }
+            let generated_source = if *base_name == "deleteme1" {
+                let mut minijinja_environment = Environment::new();
+                minijinja_environment.add_template(base_name, &template_source)?;
+                minijinja_environment.get_template(base_name)?.render(context! {
+                    example_name => passthrough_example_name(*board_profile, base_name),
+                    board_slug => board_profile.board_slug(),
+                    chip_name => board_profile.chip_name(),
+                    chip_feature => board_profile.chip_feature(),
+                    talk1_strip8_pin_num => talk1_strip8_pin_num(*board_profile),
+                    talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
+                    force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
+                    force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
+                })?
+            } else {
+                template_source.clone()
+            };
             write_if_changed(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);
         }
@@ -527,6 +550,233 @@ pub fn generated_board_example_names() -> Vec<String> {
         }
     }
     names
+}
+
+#[derive(Clone)]
+struct ExampleManifestEntry {
+    name: String,
+    path: String,
+}
+
+fn generated_board_example_manifest_entries() -> Vec<ExampleManifestEntry> {
+    let mut entries = Vec::new();
+
+    for board_profile in BOARD_PROFILES {
+        for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+            entries.push(ExampleManifestEntry {
+                name: passthrough_example_name(*board_profile, base_name),
+                path: format!(
+                    "examples/{}/{}/{}.rs",
+                    board_profile.chip_dir(),
+                    board_profile.board_dir(),
+                    base_name
+                ),
+            });
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_audio_examples(*board_profile) {
+            continue;
+        }
+        for base_name in AUDIO_EXAMPLE_BASE_NAMES {
+            entries.push(ExampleManifestEntry {
+                name: audio_example_name(*board_profile, base_name),
+                path: format!(
+                    "examples/{}/{}/{}.rs",
+                    board_profile.chip_dir(),
+                    board_profile.board_dir(),
+                    base_name
+                ),
+            });
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_ir_examples(*board_profile) {
+            continue;
+        }
+        for base_name in IR_EXAMPLE_BASE_NAMES {
+            entries.push(ExampleManifestEntry {
+                name: ir_example_name(*board_profile, base_name),
+                path: format!(
+                    "examples/{}/{}/{}.rs",
+                    board_profile.chip_dir(),
+                    board_profile.board_dir(),
+                    base_name
+                ),
+            });
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_conway_example(*board_profile) {
+            continue;
+        }
+        entries.push(ExampleManifestEntry {
+            name: conway_example_name(*board_profile),
+            path: format!(
+                "examples/{}/{}/conway.rs",
+                board_profile.chip_dir(),
+                board_profile.board_dir()
+            ),
+        });
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_clock_examples(*board_profile) {
+            continue;
+        }
+        for base_name in CLOCK_EXAMPLE_BASE_NAMES {
+            entries.push(ExampleManifestEntry {
+                name: clock_example_name(*board_profile, base_name),
+                path: format!(
+                    "examples/{}/{}/{}.rs",
+                    board_profile.chip_dir(),
+                    board_profile.board_dir(),
+                    base_name
+                ),
+            });
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        for base_name in TALK1_BASE_NAMES {
+            entries.push(ExampleManifestEntry {
+                name: talk1_example_name(*board_profile, base_name),
+                path: format!(
+                    "examples/{}/{}/talk1/{}.rs",
+                    board_profile.chip_dir(),
+                    board_profile.board_dir(),
+                    base_name
+                ),
+            });
+        }
+    }
+
+    for board_profile in BOARD_PROFILES {
+        entries.push(ExampleManifestEntry {
+            name: blinky_example_name(*board_profile),
+            path: format!(
+                "examples/{}/{}/blinky.rs",
+                board_profile.chip_dir(),
+                board_profile.board_dir()
+            ),
+        });
+    }
+
+    for board_profile in BOARD_PROFILES {
+        if !supports_led16x16_examples(*board_profile) {
+            continue;
+        }
+        for use_spi in LED16X16_VARIANTS {
+            let base_name = if use_spi {
+                "led16x16_plus_1_spi"
+            } else {
+                "led16x16_plus_1"
+            };
+            entries.push(ExampleManifestEntry {
+                name: led16x16_example_name(*board_profile, use_spi),
+                path: format!(
+                    "examples/{}/{}/{}.rs",
+                    board_profile.chip_dir(),
+                    board_profile.board_dir(),
+                    base_name
+                ),
+            });
+        }
+    }
+
+    entries
+}
+
+fn render_generated_examples_block() -> String {
+    let mut block = String::new();
+    block.push_str(GENERATED_EXAMPLES_BEGIN_MARKER);
+    block.push('\n');
+    for entry in generated_board_example_manifest_entries() {
+        block.push_str("[[example]]\n");
+        block.push_str(&format!("name = \"{}\"\n", entry.name));
+        block.push_str(&format!("path = \"{}\"\n\n", entry.path));
+    }
+    block.push_str(GENERATED_EXAMPLES_END_MARKER);
+    block.push('\n');
+    block
+}
+
+fn remove_optional_marked_block(
+    source: String,
+    begin_marker: &str,
+    end_marker: &str,
+) -> Result<String, Box<dyn Error>> {
+    let begin = source.find(begin_marker);
+    let end = source.find(end_marker);
+    match (begin, end) {
+        (None, None) => Ok(source),
+        (Some(_), None) | (None, Some(_)) => Err(format!(
+            "Cargo.toml marker mismatch: {begin_marker} / {end_marker}"
+        )
+        .into()),
+        (Some(begin_index), Some(end_index)) => {
+            let end_of_marker = end_index + end_marker.len();
+            let trailing_newline_len = source[end_of_marker..]
+                .chars()
+                .next()
+                .is_some_and(|character| character == '\n') as usize;
+            let remove_end = end_of_marker + trailing_newline_len;
+            let mut trimmed = String::with_capacity(source.len());
+            trimmed.push_str(&source[..begin_index]);
+            trimmed.push_str(&source[remove_end..]);
+            Ok(trimmed)
+        }
+    }
+}
+
+fn sync_generated_examples_in_cargo_toml(crate_root: &Path) -> Result<(), Box<dyn Error>> {
+    let cargo_toml_path = crate_root.join("Cargo.toml");
+    let cargo_toml_source = fs::read_to_string(&cargo_toml_path)?;
+    let cargo_toml_source = remove_optional_marked_block(
+        cargo_toml_source,
+        LEGACY_TALK1_BEGIN_MARKER,
+        LEGACY_TALK1_END_MARKER,
+    )?;
+    let generated_block = render_generated_examples_block();
+
+    let updated = if let (Some(begin_index), Some(end_index)) = (
+        cargo_toml_source.find(GENERATED_EXAMPLES_BEGIN_MARKER),
+        cargo_toml_source.find(GENERATED_EXAMPLES_END_MARKER),
+    ) {
+        let block_end = end_index + GENERATED_EXAMPLES_END_MARKER.len();
+        let trailing_newline_len = cargo_toml_source[block_end..]
+            .chars()
+            .next()
+            .is_some_and(|character| character == '\n') as usize;
+        let remove_end = block_end + trailing_newline_len;
+        let mut rewritten = String::with_capacity(cargo_toml_source.len() + generated_block.len());
+        rewritten.push_str(&cargo_toml_source[..begin_index]);
+        rewritten.push_str(&generated_block);
+        rewritten.push_str(&cargo_toml_source[remove_end..]);
+        rewritten
+    } else {
+        let first_example_index = cargo_toml_source
+            .find("\n[[example]]")
+            .ok_or("Cargo.toml is missing [[example]] entries to replace")?;
+        let first_test_index = cargo_toml_source
+            .find("\n[[test]]")
+            .ok_or("Cargo.toml is missing [[test]] section used as insertion anchor")?;
+        if first_test_index <= first_example_index {
+            return Err("Cargo.toml has unexpected ordering: [[test]] before [[example]]".into());
+        }
+        let mut rewritten = String::with_capacity(cargo_toml_source.len() + generated_block.len());
+        rewritten.push_str(&cargo_toml_source[..first_example_index + 1]);
+        rewritten.push_str(&generated_block);
+        rewritten.push('\n');
+        rewritten.push_str(&cargo_toml_source[first_test_index + 1..]);
+        rewritten
+    };
+
+    write_if_changed(&cargo_toml_path, &updated)?;
+    Ok(())
 }
 
 pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
@@ -633,6 +883,7 @@ fn cleanup_stale_nested_generated_examples(
     let generated_filenames = [
         "button_example1_trait.rs",
         "button_read.rs",
+        "deleteme1.rs",
         "flash_block_example1_trait.rs",
         "lcd_text.rs",
         "lcd_text_example1_trait.rs",

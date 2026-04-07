@@ -7,7 +7,6 @@ pub(crate) enum BlinkyKind {
     SmartSpi,
 }
 
-pub(crate) const LED16X16_VARIANTS: [bool; 2] = [false, true];
 pub(crate) const AUDIO_EXAMPLE_BASE_NAMES: [&str; 5] = [
     "audio",
     "audio_example1",

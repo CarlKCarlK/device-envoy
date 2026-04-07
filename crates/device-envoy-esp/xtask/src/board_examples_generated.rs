@@ -43,6 +43,12 @@ const TALK1_BASE_NAMES: &[&str] = &[
 
 static PASSTHROUGH_EXAMPLE_BASE_NAMES: OnceLock<Vec<String>> = OnceLock::new();
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PassthroughTemplateMode {
+    Copy,
+    Render,
+}
+
 fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
     format!(
         "{}_{}_{}",
@@ -110,6 +116,30 @@ fn is_passthrough_template(base_name: &str) -> bool {
         return false;
     }
     true
+}
+
+fn passthrough_template_mode(
+    template_source: &str,
+) -> Result<PassthroughTemplateMode, Box<dyn Error>> {
+    for template_line in template_source.lines() {
+        let Some(mode_fragment) = template_line.split("@board-example mode=").nth(1) else {
+            continue;
+        };
+        let mode = mode_fragment
+            .trim()
+            .trim_end_matches("*/")
+            .trim_end_matches("#}")
+            .trim();
+        return match mode {
+            "copy" => Ok(PassthroughTemplateMode::Copy),
+            "render" => Ok(PassthroughTemplateMode::Render),
+            _ => Err(format!(
+                "invalid @board-example mode `{mode}` (expected `copy` or `render`)"
+            )
+            .into()),
+        };
+    }
+    Ok(PassthroughTemplateMode::Copy)
 }
 
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
@@ -489,9 +519,7 @@ fn generate_passthrough_files(
     for base_name in passthrough_example_base_names() {
         let template_path = example_templates_dir.join(format!("{base_name}.rs.j2"));
         let template_source = fs::read_to_string(&template_path)?;
-        let template_has_jinja_markers = template_source
-            .lines()
-            .any(|template_line| template_line.contains("{{") && template_line.contains("}}"));
+        let template_mode = passthrough_template_mode(&template_source)?;
         for board_profile in BOARD_PROFILES {
             let output_path = examples_dir
                 .join(board_profile.chip_dir())
@@ -500,7 +528,7 @@ fn generate_passthrough_files(
             if let Some(output_dir) = output_path.parent() {
                 fs::create_dir_all(output_dir)?;
             }
-            let generated_source = if template_has_jinja_markers {
+            let generated_source = if template_mode == PassthroughTemplateMode::Render {
                 let mut minijinja_environment = Environment::new();
                 minijinja_environment.add_template(base_name.as_str(), &template_source)?;
                 minijinja_environment

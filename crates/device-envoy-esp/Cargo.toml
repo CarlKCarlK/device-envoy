@@ -154,6 +154,10 @@ name = "button_read_esp32_generic"
 path = "examples/esp32/generic/button_read.rs"
 
 [[example]]
+name = "deleteme1_esp32_generic"
+path = "examples/esp32/generic/deleteme1.rs"
+
+[[example]]
 name = "flash_block_example1_trait_esp32_generic"
 path = "examples/esp32/generic/flash_block_example1_trait.rs"
 
@@ -268,6 +272,10 @@ path = "examples/c2/generic/button_example1_trait.rs"
 [[example]]
 name = "button_read_esp32c2_generic"
 path = "examples/c2/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c2_generic"
+path = "examples/c2/generic/deleteme1.rs"
 
 [[example]]
 name = "flash_block_example1_trait_esp32c2_generic"
@@ -386,6 +394,10 @@ name = "button_read_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/button_read.rs"
 
 [[example]]
+name = "deleteme1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/deleteme1.rs"
+
+[[example]]
 name = "flash_block_example1_trait_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/flash_block_example1_trait.rs"
 
@@ -500,6 +512,10 @@ path = "examples/c3/generic/button_example1_trait.rs"
 [[example]]
 name = "button_read_esp32c3_generic"
 path = "examples/c3/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c3_generic"
+path = "examples/c3/generic/deleteme1.rs"
 
 [[example]]
 name = "flash_block_example1_trait_esp32c3_generic"
@@ -618,6 +634,10 @@ name = "button_read_esp32c3_luatos"
 path = "examples/c3/luatos/button_read.rs"
 
 [[example]]
+name = "deleteme1_esp32c3_luatos"
+path = "examples/c3/luatos/deleteme1.rs"
+
+[[example]]
 name = "flash_block_example1_trait_esp32c3_luatos"
 path = "examples/c3/luatos/flash_block_example1_trait.rs"
 
@@ -732,6 +752,10 @@ path = "examples/c6/generic/button_example1_trait.rs"
 [[example]]
 name = "button_read_esp32c6_generic"
 path = "examples/c6/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32c6_generic"
+path = "examples/c6/generic/deleteme1.rs"
 
 [[example]]
 name = "flash_block_example1_trait_esp32c6_generic"
@@ -850,6 +874,10 @@ name = "button_read_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/button_read.rs"
 
 [[example]]
+name = "deleteme1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/deleteme1.rs"
+
+[[example]]
 name = "flash_block_example1_trait_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/flash_block_example1_trait.rs"
 
@@ -964,6 +992,10 @@ path = "examples/h2/generic/button_example1_trait.rs"
 [[example]]
 name = "button_read_esp32h2_generic"
 path = "examples/h2/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32h2_generic"
+path = "examples/h2/generic/deleteme1.rs"
 
 [[example]]
 name = "flash_block_example1_trait_esp32h2_generic"
@@ -1082,6 +1114,10 @@ name = "button_read_esp32s2_generic"
 path = "examples/s2/generic/button_read.rs"
 
 [[example]]
+name = "deleteme1_esp32s2_generic"
+path = "examples/s2/generic/deleteme1.rs"
+
+[[example]]
 name = "flash_block_example1_trait_esp32s2_generic"
 path = "examples/s2/generic/flash_block_example1_trait.rs"
 
@@ -1196,6 +1232,10 @@ path = "examples/s3/generic/button_example1_trait.rs"
 [[example]]
 name = "button_read_esp32s3_generic"
 path = "examples/s3/generic/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32s3_generic"
+path = "examples/s3/generic/deleteme1.rs"
 
 [[example]]
 name = "flash_block_example1_trait_esp32s3_generic"
@@ -1314,6 +1354,10 @@ name = "button_read_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/button_read.rs"
 
 [[example]]
+name = "deleteme1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/deleteme1.rs"
+
+[[example]]
 name = "flash_block_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/flash_block_example1_trait.rs"
 
@@ -1428,6 +1472,10 @@ path = "examples/s3/devkitc1_v1_0_n16r8/button_example1_trait.rs"
 [[example]]
 name = "button_read_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/button_read.rs"
+
+[[example]]
+name = "deleteme1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/deleteme1.rs"
 
 [[example]]
 name = "flash_block_example1_trait_esp32s3_devkitc1_v1_0_n16r8"

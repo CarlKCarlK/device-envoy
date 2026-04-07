@@ -25,43 +25,12 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
 
 const GENERATED_EXAMPLES_BEGIN_MARKER: &str = "# BEGIN GENERATED BOARD EXAMPLES";
 const GENERATED_EXAMPLES_END_MARKER: &str = "# END GENERATED BOARD EXAMPLES";
 const LEGACY_TALK1_BEGIN_MARKER: &str = "# BEGIN GENERATED TALK1 EXAMPLES";
 const LEGACY_TALK1_END_MARKER: &str = "# END GENERATED TALK1 EXAMPLES";
-
-const PASSTHROUGH_EXAMPLE_BASE_NAMES: &[&str] = &[
-    "button_example1_trait",
-    "button_read",
-    "flash_block_example1_trait",
-    "lcd_text",
-    "lcd_text_example1_trait",
-    "lcd_texts",
-    "led16x16test",
-    "led16x16test_async",
-    "led2d",
-    "led2d_example1_trait",
-    "led2d_example2_trait",
-    "led_example1_trait",
-    "led_probe_c3_d4_d6",
-    "led_probe_c3_gpio_sweep",
-    "led_strip8_spi",
-    "led_strip_example1_trait",
-    "led_strip_example2_trait",
-    "led_strip_len8",
-    "rfid",
-    "servo_basic",
-    "servo_example1_trait",
-    "servo_player_example1_trait",
-    "servo_player_example2_trait",
-    "servos",
-    "wifi_auto_custom_checkbox",
-    "wifi_auto_example1_trait",
-    "wifi_auto_force_button",
-    "wifi_dns_hex",
-    "wifi_scan",
-];
 
 const TALK1_BASE_NAMES: &[&str] = &[
     "a1_strip_8_blue_gray",
@@ -72,6 +41,8 @@ const TALK1_BASE_NAMES: &[&str] = &[
     "f1_dns",
 ];
 
+static PASSTHROUGH_EXAMPLE_BASE_NAMES: OnceLock<Vec<String>> = OnceLock::new();
+
 fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
     format!(
         "{}_{}_{}",
@@ -79,6 +50,66 @@ fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_nam
         board_profile.chip_feature(),
         board_profile.board_dir()
     )
+}
+
+fn passthrough_example_base_names() -> &'static [String] {
+    PASSTHROUGH_EXAMPLE_BASE_NAMES
+        .get_or_init(|| {
+            discover_passthrough_example_base_names(
+                &Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples/templates"),
+            )
+            .unwrap_or_else(|error| {
+                panic!("failed to discover passthrough templates: {error}");
+            })
+        })
+        .as_slice()
+}
+
+fn discover_passthrough_example_base_names(
+    templates_dir: &Path,
+) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut base_names = Vec::new();
+    for template_entry in fs::read_dir(templates_dir)? {
+        let template_entry = template_entry?;
+        let template_path = template_entry.path();
+        if !template_path.is_file() {
+            continue;
+        }
+        let Some(file_name) = template_path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        let Some(base_name) = file_name.strip_suffix(".rs.j2") else {
+            continue;
+        };
+        if !is_passthrough_template(base_name) {
+            continue;
+        }
+        base_names.push(base_name.to_string());
+    }
+    base_names.sort();
+    Ok(base_names)
+}
+
+fn is_passthrough_template(base_name: &str) -> bool {
+    if base_name == "conway"
+        || base_name == "blinky_plain"
+        || base_name == "blinky_rmt"
+        || base_name == "blinky_spi"
+        || base_name == "led16x16_plus_1"
+        || base_name == "led16x16_plus_1_spi"
+    {
+        return false;
+    }
+    if AUDIO_EXAMPLE_BASE_NAMES.iter().any(|name| name == &base_name) {
+        return false;
+    }
+    if IR_EXAMPLE_BASE_NAMES.iter().any(|name| name == &base_name) {
+        return false;
+    }
+    if CLOCK_EXAMPLE_BASE_NAMES.iter().any(|name| name == &base_name) {
+        return false;
+    }
+    true
 }
 
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
@@ -455,9 +486,12 @@ fn generate_passthrough_files(
     examples_dir: &Path,
     expected_generated_paths: &mut Vec<PathBuf>,
 ) -> Result<(), Box<dyn Error>> {
-    for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+    for base_name in passthrough_example_base_names() {
         let template_path = example_templates_dir.join(format!("{base_name}.rs.j2"));
         let template_source = fs::read_to_string(&template_path)?;
+        let template_has_jinja_markers = template_source
+            .lines()
+            .any(|template_line| template_line.contains("{{") && template_line.contains("}}"));
         for board_profile in BOARD_PROFILES {
             let output_path = examples_dir
                 .join(board_profile.chip_dir())
@@ -466,7 +500,24 @@ fn generate_passthrough_files(
             if let Some(output_dir) = output_path.parent() {
                 fs::create_dir_all(output_dir)?;
             }
-            let generated_source = template_source.clone();
+            let generated_source = if template_has_jinja_markers {
+                let mut minijinja_environment = Environment::new();
+                minijinja_environment.add_template(base_name.as_str(), &template_source)?;
+                minijinja_environment
+                    .get_template(base_name.as_str())?
+                    .render(context! {
+                    example_name => passthrough_example_name(*board_profile, base_name),
+                    board_slug => board_profile.board_slug(),
+                    chip_name => board_profile.chip_name(),
+                    chip_feature => board_profile.chip_feature(),
+                    talk1_strip8_pin_num => talk1_strip8_pin_num(*board_profile),
+                    talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
+                    force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
+                    force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
+                })?
+            } else {
+                template_source.clone()
+            };
             write_if_changed(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);
         }
@@ -482,7 +533,7 @@ fn generate_passthrough_files(
 pub fn generated_board_example_names() -> Vec<String> {
     let mut names = Vec::new();
     for board_profile in BOARD_PROFILES {
-        for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+        for base_name in passthrough_example_base_names() {
             names.push(passthrough_example_name(*board_profile, base_name));
         }
     }
@@ -546,7 +597,7 @@ fn generated_board_example_manifest_entries() -> Vec<ExampleManifestEntry> {
     let mut entries = Vec::new();
 
     for board_profile in BOARD_PROFILES {
-        for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+        for base_name in passthrough_example_base_names() {
             entries.push(ExampleManifestEntry {
                 name: passthrough_example_name(*board_profile, base_name),
                 path: format!(
@@ -765,7 +816,7 @@ fn sync_generated_examples_in_cargo_toml(crate_root: &Path) -> Result<(), Box<dy
 
 pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
     for board_profile in BOARD_PROFILES {
-        for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
+        for base_name in passthrough_example_base_names() {
             if passthrough_example_name(*board_profile, base_name) == example_name {
                 return Some(board_profile.chip_feature());
             }
@@ -864,66 +915,41 @@ fn cleanup_stale_nested_generated_examples(
     let expected_paths: std::collections::HashSet<PathBuf> =
         expected_paths.iter().cloned().collect();
     let top_level_dirs = ["esp32", "c2", "c3", "c6", "h2", "s2", "s3"];
-    let generated_filenames = [
-        "button_example1_trait.rs",
-        "button_read.rs",
-        "flash_block_example1_trait.rs",
-        "lcd_text.rs",
-        "lcd_text_example1_trait.rs",
-        "lcd_texts.rs",
-        "led16x16test.rs",
-        "led16x16test_async.rs",
-        "led2d.rs",
-        "led2d_example1_trait.rs",
-        "led2d_example2_trait.rs",
-        "led_example1_trait.rs",
-        "led_probe_c3_d4_d6.rs",
-        "led_probe_c3_gpio_sweep.rs",
-        "led_strip8_spi.rs",
-        "led_strip_example1_trait.rs",
-        "led_strip_example2_trait.rs",
-        "led_strip_len8.rs",
-        "rfid.rs",
-        "servo_basic.rs",
-        "servo_example1_trait.rs",
-        "servo_player_example1_trait.rs",
-        "servo_player_example2_trait.rs",
-        "servos.rs",
-        "wifi_auto_custom_checkbox.rs",
-        "wifi_auto_example1_trait.rs",
-        "wifi_auto_force_button.rs",
-        "wifi_dns_hex.rs",
-        "wifi_scan.rs",
-        "audio.rs",
-        "audio_example1.rs",
-        "audio_example1_trait.rs",
-        "audio_example2_trait.rs",
-        "audio_example3_trait.rs",
-        "ir.rs",
-        "ir_example1_trait.rs",
-        "ir_kepler.rs",
-        "ir_kepler_example1_trait.rs",
-        "ir_keplers.rs",
-        "ir_mapping_example1_trait.rs",
-        "conway.rs",
-        "clock_console_simple.rs",
-        "clock_lcd.rs",
-        "clock_led4.rs",
-        "clock_led8x12.rs",
-        "clock_servos.rs",
-        "clock_sync_example1_trait.rs",
-        "talk1/a1_strip_8_blue_gray.rs",
-        "talk1/a3_strip_8_blue_white_blink_animate.rs",
-        "talk1/a4_strip_96_blue_white_dot.rs",
-        "talk1/b1_panel_12x8_rust_cursor.rs",
-        "talk1/b2_panel_12x8_text_graphics.rs",
-        "talk1/f1_dns.rs",
-        "blinky.rs",
-        "led16x16_plus_1.rs",
-        "led16x16_plus_1_spi.rs",
-        "led16x16_and_builtin.rs",
-        "led16x16_and_builtin_spi.rs",
-    ];
+    let mut generated_filenames: Vec<String> = passthrough_example_base_names()
+        .iter()
+        .map(|base_name| format!("{base_name}.rs"))
+        .collect();
+    generated_filenames.extend([
+        "audio.rs".to_string(),
+        "audio_example1.rs".to_string(),
+        "audio_example1_trait.rs".to_string(),
+        "audio_example2_trait.rs".to_string(),
+        "audio_example3_trait.rs".to_string(),
+        "ir.rs".to_string(),
+        "ir_example1_trait.rs".to_string(),
+        "ir_kepler.rs".to_string(),
+        "ir_kepler_example1_trait.rs".to_string(),
+        "ir_keplers.rs".to_string(),
+        "ir_mapping_example1_trait.rs".to_string(),
+        "conway.rs".to_string(),
+        "clock_console_simple.rs".to_string(),
+        "clock_lcd.rs".to_string(),
+        "clock_led4.rs".to_string(),
+        "clock_led8x12.rs".to_string(),
+        "clock_servos.rs".to_string(),
+        "clock_sync_example1_trait.rs".to_string(),
+        "talk1/a1_strip_8_blue_gray.rs".to_string(),
+        "talk1/a3_strip_8_blue_white_blink_animate.rs".to_string(),
+        "talk1/a4_strip_96_blue_white_dot.rs".to_string(),
+        "talk1/b1_panel_12x8_rust_cursor.rs".to_string(),
+        "talk1/b2_panel_12x8_text_graphics.rs".to_string(),
+        "talk1/f1_dns.rs".to_string(),
+        "blinky.rs".to_string(),
+        "led16x16_plus_1.rs".to_string(),
+        "led16x16_plus_1_spi.rs".to_string(),
+        "led16x16_and_builtin.rs".to_string(),
+        "led16x16_and_builtin_spi.rs".to_string(),
+    ]);
 
     for top_level_dir in top_level_dirs {
         let chip_dir = examples_dir.join(top_level_dir);
@@ -936,7 +962,7 @@ fn cleanup_stale_nested_generated_examples(
             if !board_dir_path.is_dir() {
                 continue;
             }
-            for generated_filename in generated_filenames {
+            for generated_filename in &generated_filenames {
                 let candidate = board_dir_path.join(generated_filename);
                 if !candidate.exists() || expected_paths.contains(&candidate) {
                     continue;

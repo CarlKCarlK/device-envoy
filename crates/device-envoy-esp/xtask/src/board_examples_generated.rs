@@ -34,7 +34,6 @@ const LEGACY_TALK1_END_MARKER: &str = "# END GENERATED TALK1 EXAMPLES";
 const PASSTHROUGH_EXAMPLE_BASE_NAMES: &[&str] = &[
     "button_example1_trait",
     "button_read",
-    "deleteme1",
     "flash_block_example1_trait",
     "lcd_text",
     "lcd_text_example1_trait",
@@ -467,22 +466,7 @@ fn generate_passthrough_files(
             if let Some(output_dir) = output_path.parent() {
                 fs::create_dir_all(output_dir)?;
             }
-            let generated_source = if *base_name == "deleteme1" {
-                let mut minijinja_environment = Environment::new();
-                minijinja_environment.add_template(base_name, &template_source)?;
-                minijinja_environment.get_template(base_name)?.render(context! {
-                    example_name => passthrough_example_name(*board_profile, base_name),
-                    board_slug => board_profile.board_slug(),
-                    chip_name => board_profile.chip_name(),
-                    chip_feature => board_profile.chip_feature(),
-                    talk1_strip8_pin_num => talk1_strip8_pin_num(*board_profile),
-                    talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
-                    force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
-                    force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
-                })?
-            } else {
-                template_source.clone()
-            };
+            let generated_source = template_source.clone();
             write_if_changed(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);
         }
@@ -883,7 +867,6 @@ fn cleanup_stale_nested_generated_examples(
     let generated_filenames = [
         "button_example1_trait.rs",
         "button_read.rs",
-        "deleteme1.rs",
         "flash_block_example1_trait.rs",
         "lcd_text.rs",
         "lcd_text_example1_trait.rs",

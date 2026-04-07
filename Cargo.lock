@@ -763,26 +763,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "device-envoy-esp-demos"
-version = "0.0.0"
-dependencies = [
- "device-envoy-esp",
- "embassy-executor",
- "embassy-net",
- "embassy-time",
- "embedded-graphics",
- "esp-backtrace",
- "esp-bootloader-esp-idf",
- "esp-hal",
- "esp-println",
- "esp-rtos",
- "heapless 0.8.0",
- "paste",
- "smart-leds",
- "static_cell",
-]
-
-[[package]]
 name = "device-envoy-example-common"
 version = "0.0.0"
 dependencies = [

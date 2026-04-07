@@ -45,7 +45,7 @@ struct BuildTarget {
 }
 
 // TODO000 use bools for capabilities and requirements, or bitflags if we want to get fancy. The current struct+vec approach is a bit verbose. (may no longer apply)
-// TODO000 could also have a single `Capability` enum and then have Vec<Capability> for both chip capabilities and example/demo requirements, which would simplify the logic but be less explicit about which capabilities are relevant to which examples/demos. (may no longer apply)
+// TODO000 could also have a single `Capability` enum and then have Vec<Capability> for both chip capabilities and example requirements, which would simplify the logic but be less explicit about which capabilities are relevant to which examples. (may no longer apply)
 // TOOD000 or some enum+struct approach where the enum variants are the capabilities and the struct has bools for which ones are present/required, which would be more concise but less flexible/extensible if we want to have parameters for capabilities in the future (for example, "has_audio_gpio" could become "audio_gpio_pin_count: u8" or something like that). (may no longer apply)
 #[derive(Clone, Copy)]
 enum Capability {
@@ -224,9 +224,20 @@ fn example_requirements(example: &str) -> CapabilitySet {
     }
     let requires_extended_gpio = example.starts_with("clock_")
         || example.starts_with("lcd_text")
-        || is_example_name(example, "led2d_example1_trait");
+        || is_example_name(example, "led2d_example1_trait")
+        || example.starts_with("talk1_f1_dns");
     if requires_extended_gpio {
         capability_set.insert(Capability::ExtendedGpio);
+    }
+
+    if example.starts_with("talk1_a") || example.starts_with("talk1_b") {
+        capability_set.insert(Capability::Rmt);
+    }
+    if example.starts_with("talk1_f1_dns") {
+        capability_set.insert(Capability::Rmt);
+        capability_set.insert(Capability::Wifi);
+        capability_set.insert(Capability::ExtendedGpio);
+        capability_set.insert(Capability::ButtonGpio);
     }
 
     capability_set
@@ -251,6 +262,9 @@ fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Optio
     }
 
     if chip_feature == CHIP_FEATURE_ESP32S2 {
+        if example_name.starts_with("talk1_f1_dns") {
+            return Some("ESP32-S2 linker memory budget");
+        }
         if example_name.starts_with("clock_") {
             return Some("ESP32-S2 linker memory budget");
         }
@@ -268,34 +282,6 @@ fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Optio
         }
     }
 
-    None
-}
-
-fn demo_requirements(demo_name: &str) -> CapabilitySet {
-    let mut capability_set = CapabilitySet::empty();
-
-    let requires_wifi = demo_name.starts_with("demo_f");
-    if requires_wifi {
-        capability_set.insert(Capability::Wifi);
-    }
-    let requires_rmt = demo_name.starts_with("demo_a")
-        || demo_name.starts_with("demo_b")
-        || demo_name.starts_with("demo_f");
-    if requires_rmt {
-        capability_set.insert(Capability::Rmt);
-    }
-    let requires_extended_gpio = demo_name.starts_with("demo_f");
-    if requires_extended_gpio {
-        capability_set.insert(Capability::ExtendedGpio);
-    }
-
-    capability_set
-}
-
-fn explicit_demo_skip_reason(chip_feature: &str, demo_name: &str) -> Option<&'static str> {
-    if chip_feature == CHIP_FEATURE_ESP32S2 && demo_name == "demo_f1_dns" {
-        return Some("ESP32-S2 linker memory budget");
-    }
     None
 }
 
@@ -485,7 +471,7 @@ enum Commands {
     CheckExamples,
     /// Check all examples for all supported ESP processor feature/target combinations
     CheckExamplesAllProcessors,
-    /// Build all demos (catches linker errors)
+    /// Build all talk1 examples (backward-compatible alias for legacy demos)
     CheckDemos,
     /// Verify README Rust example extraction + compile
     CheckReadmeExample,
@@ -638,10 +624,6 @@ fn check_all() -> ExitCode {
     }
 
     if check_examples_for_targets(ALL_PROCESSOR_TARGETS, true) != ExitCode::SUCCESS {
-        return ExitCode::FAILURE;
-    }
-
-    if check_demos_for_targets(ALL_PROCESSOR_TARGETS) != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
 
@@ -828,36 +810,8 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
     ExitCode::SUCCESS
 }
 
-#[derive(Debug, Clone)]
-struct DemoInfo {
-    name: String,
-}
-
 fn check_demos() -> ExitCode {
-    check_demos_for_targets(CHECK_ALL_TARGETS)
-}
-
-fn check_demos_for_targets(targets: &[BuildTarget]) -> ExitCode {
-    let root = workspace_root();
-    let demos = discover_demo_bins(&root);
-    if demos.is_empty() {
-        println!("{}", "No demos found.".yellow());
-        return ExitCode::SUCCESS;
-    }
-
-    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
-        return ExitCode::FAILURE;
-    };
-    let demo_results: Vec<bool> = targets
-        .par_iter()
-        .copied()
-        .map(|build_target| check_demos_for_target(&root, &xtensa_linker_dir, build_target, &demos))
-        .collect();
-    if demo_results.iter().any(|ok| !ok) {
-        return ExitCode::FAILURE;
-    }
-
-    ExitCode::SUCCESS
+    check_examples_for_targets(CHECK_ALL_TARGETS, true)
 }
 
 fn check_embedded_tests() -> ExitCode {
@@ -1004,70 +958,6 @@ fn check_examples_for_target(
             if link_examples { "build" } else { "check" },
             "--example",
             example,
-            "--release",
-            "--target",
-            build_target.target,
-            "--no-default-features",
-            "--features",
-            build_target.chip_feature,
-        ]);
-        if build_target.build_std {
-            cmd.arg("-Zbuild-std=core,alloc");
-        }
-        if !run(&mut cmd) {
-            return false;
-        }
-    }
-    true
-}
-
-fn check_demos_for_target(
-    root: &Path,
-    xtensa_linker_dir: &Path,
-    build_target: BuildTarget,
-    demos: &[DemoInfo],
-) -> bool {
-    let chip_capabilities = chip_capabilities(build_target.chip_feature);
-    println!(
-        "{}",
-        format!("--> build demos ({})", build_target.label).cyan()
-    );
-    for demo in demos {
-        if let Some(skip_reason) = explicit_demo_skip_reason(build_target.chip_feature, &demo.name)
-        {
-            println!(
-                "    skip demo: {} ({skip_reason} on {})",
-                demo.name, build_target.label
-            );
-            continue;
-        }
-        let missing_capabilities =
-            missing_capabilities(chip_capabilities, demo_requirements(&demo.name));
-        if !missing_capabilities.is_empty() {
-            println!(
-                "    skip demo: {} ({} unavailable on {})",
-                demo.name,
-                missing_capabilities.join(", "),
-                build_target.label
-            );
-            continue;
-        }
-        println!("    build demo: {}", demo.name);
-        let mut cmd = Command::new("cargo");
-        cmd.current_dir(root);
-        configure_target_artifact_dir(&mut cmd, root, build_target);
-        if build_target.build_std {
-            prepend_path(&mut cmd, xtensa_linker_dir);
-        }
-        if let Some(tc) = build_target.toolchain {
-            cmd.arg(tc);
-        }
-        cmd.args([
-            "build",
-            "--package",
-            "device-envoy-esp-demos",
-            "--bin",
-            &demo.name,
             "--release",
             "--target",
             build_target.target,
@@ -1448,64 +1338,6 @@ fn workspace_root() -> PathBuf {
         .parent()
         .expect("xtask must be a subdirectory of the workspace root")
         .to_owned()
-}
-
-fn discover_demo_bins(workspace_root: &Path) -> Vec<DemoInfo> {
-    let cargo_toml = workspace_root.join("demos/Cargo.toml");
-    let contents = fs::read_to_string(&cargo_toml).expect("Failed to read demos/Cargo.toml");
-    let mut demos = Vec::new();
-
-    let mut in_bin = false;
-    let mut current_name: Option<String> = None;
-
-    let finalize = |current_name: &mut Option<String>, demos: &mut Vec<DemoInfo>| {
-        if let Some(name) = current_name.take() {
-            demos.push(DemoInfo { name });
-        }
-    };
-
-    for line in contents.lines() {
-        let trimmed = line.trim();
-        if trimmed == "[[bin]]" {
-            if in_bin {
-                finalize(&mut current_name, &mut demos);
-            }
-            in_bin = true;
-            continue;
-        }
-
-        if in_bin && trimmed.starts_with('[') && trimmed != "[[bin]]" {
-            finalize(&mut current_name, &mut demos);
-            in_bin = false;
-            continue;
-        }
-
-        if !in_bin {
-            continue;
-        }
-
-        if let Some(value) = parse_toml_string(trimmed, "name") {
-            current_name = Some(value);
-        }
-    }
-
-    if in_bin {
-        finalize(&mut current_name, &mut demos);
-    }
-
-    demos.sort_by(|a, b| a.name.cmp(&b.name));
-    demos
-}
-
-fn parse_toml_string(line: &str, key: &str) -> Option<String> {
-    let line = line.split('#').next()?.trim();
-    let prefix = format!("{key} =");
-    if !line.starts_with(&prefix) {
-        return None;
-    }
-    let value = line[prefix.len()..].trim();
-    let value = value.strip_prefix('"')?.strip_suffix('"')?;
-    Some(value.to_string())
 }
 
 fn package_version_from_cargo_toml(crate_root: &Path) -> Result<String, String> {

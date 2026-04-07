@@ -115,6 +115,10 @@ infer_board_example_from_invocation_dir() {
   chip_dir="${chip_dir%%/*}"
   local board_dir="${relative_invocation_dir#examples/${chip_dir}/}"
   board_dir="${board_dir%%/*}"
+  local in_talk1_dir=0
+  if [[ "$relative_invocation_dir" == examples/*/*/talk1 || "$relative_invocation_dir" == examples/*/*/talk1/* ]]; then
+    in_talk1_dir=1
+  fi
   local chip_feature=""
   local inferred_chip=""
   case "$chip_dir" in
@@ -155,7 +159,11 @@ infer_board_example_from_invocation_dir() {
     return
   fi
 
-  local inferred_example="${name}_${chip_feature}_${board_dir}"
+  local base_name="$name"
+  if [[ "$in_talk1_dir" -eq 1 && "$base_name" != talk1_* ]]; then
+    base_name="talk1_${base_name}"
+  fi
+  local inferred_example="${base_name}_${chip_feature}_${board_dir}"
   if grep -Eq "^[[:space:]]*name[[:space:]]*=[[:space:]]*\"${inferred_example}\"[[:space:]]*$" Cargo.toml; then
     name="$inferred_example"
     if [[ -z "$chip" ]]; then
@@ -244,20 +252,8 @@ if [[ "$has_example" -eq 0 ]] && grep -Eq "^[[:space:]]*name[[:space:]]*=[[:spac
   has_example=1
 fi
 
-demo_candidates="$(find demos -maxdepth 2 -type f \( -name "${name}.rs" -o -name "${name}_*.rs" \) | sort)"
-demo_count="$(printf "%s\n" "$demo_candidates" | sed '/^$/d' | wc -l)"
-has_demo=0
-if [[ "$demo_count" -gt 0 ]]; then
-  has_demo=1
-fi
-
-if [[ "$has_example" -eq 1 && "$has_demo" -eq 1 ]]; then
-  echo "name '$name' is ambiguous (matches both example and demo)" >&2
-  exit 1
-fi
-
-if [[ "$has_example" -eq 0 && "$has_demo" -eq 0 ]]; then
-  echo "unknown name '$name' (no matching example or demo)" >&2
+if [[ "$has_example" -eq 0 ]]; then
+  echo "unknown example '$name' (no matching example)" >&2
   exit 1
 fi
 
@@ -317,46 +313,32 @@ if [[ "${#build_std_args[@]}" -gt 0 ]]; then
   source "$HOME/export-esp.sh"
 fi
 
-if [[ "$has_example" -eq 1 ]]; then
-  if [[ "$action" == "run" && -z "$port" ]]; then
-    mapfile -t detected_ports < <(list_serial_ports)
-    if [[ "${#detected_ports[@]}" -gt 1 ]]; then
-      echo "multiple serial devices detected; refusing to auto-select a flash port:" >&2
-      printf "  - %s\n" "${detected_ports[@]}" >&2
-      echo "pass a port explicitly, for example:" >&2
-      echo "  just run $name $chip ttyUSB1" >&2
-      echo "or" >&2
-      echo "  just run $name $chip /dev/ttyUSB1" >&2
-      exit 1
-    fi
-    if [[ "${#detected_ports[@]}" -eq 1 ]]; then
-      port="${detected_ports[0]}"
-    fi
+if [[ "$action" == "run" && -z "$port" ]]; then
+  mapfile -t detected_ports < <(list_serial_ports)
+  if [[ "${#detected_ports[@]}" -gt 1 ]]; then
+    echo "multiple serial devices detected; refusing to auto-select a flash port:" >&2
+    printf "  - %s\n" "${detected_ports[@]}" >&2
+    echo "pass a port explicitly, for example:" >&2
+    echo "  just run $name $chip ttyUSB1" >&2
+    echo "or" >&2
+    echo "  just run $name $chip /dev/ttyUSB1" >&2
+    exit 1
   fi
-
-  # When multiple ESP boards are connected, set an explicit serial port to avoid
-  # espflash interactive selection prompts.
-  if [[ "$action" == "run" && -n "$port" ]]; then
-    export ESPFLASH_PORT="$port"
+  if [[ "${#detected_ports[@]}" -eq 1 ]]; then
+    port="${detected_ports[0]}"
   fi
-
-  "${cargo_bin[@]}" "$action" \
-    --example "$name" \
-    --target "$target" \
-    "${release_args[@]}" \
-    --no-default-features \
-    --features "$feature" \
-    "${build_std_args[@]}"
-else
-  demo_path="$(printf "%s\n" "$demo_candidates" | sed '/^$/d' | head -n1)"
-  demo_stem="$(basename "$demo_path" .rs)"
-  demo_bin="demo_${demo_stem}"
-  "${cargo_bin[@]}" "$action" \
-    --package device-envoy-esp-demos \
-    --bin "$demo_bin" \
-    --target "$target" \
-    "${release_args[@]}" \
-    --no-default-features \
-    --features "$feature" \
-    "${build_std_args[@]}"
 fi
+
+# When multiple ESP boards are connected, set an explicit serial port to avoid
+# espflash interactive selection prompts.
+if [[ "$action" == "run" && -n "$port" ]]; then
+  export ESPFLASH_PORT="$port"
+fi
+
+"${cargo_bin[@]}" "$action" \
+  --example "$name" \
+  --target "$target" \
+  "${release_args[@]}" \
+  --no-default-features \
+  --features "$feature" \
+  "${build_std_args[@]}"

@@ -166,6 +166,38 @@ pub(crate) fn clock_example_name(board_profile: BoardProfile, base_name: &str) -
     )
 }
 
+pub(crate) fn talk1_example_name(board_profile: BoardProfile, base_name: &str) -> String {
+    format!(
+        "talk1_{}_{}_{}",
+        base_name,
+        board_profile.chip_feature(),
+        board_profile.board_dir()
+    )
+}
+
+pub(crate) fn talk1_strip8_pin_num(board_profile: BoardProfile) -> u8 {
+    match board_profile.chip_feature() {
+        "esp32" | "esp32h2" => 2,
+        _ => 10,
+    }
+}
+
+pub(crate) fn talk1_strip8_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", talk1_strip8_pin_num(board_profile))
+}
+
+pub(crate) fn talk1_panel12x8_pin_num(board_profile: BoardProfile) -> u8 {
+    if board_profile.chip_feature() == "esp32h2" {
+        2
+    } else {
+        18
+    }
+}
+
+pub(crate) fn talk1_panel12x8_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", talk1_panel12x8_pin_num(board_profile))
+}
+
 pub(crate) fn clock_force_portal_button_pin_num(board_profile: BoardProfile) -> u8 {
     match board_profile.chip_feature() {
         "esp32" | "esp32s2" => 0,

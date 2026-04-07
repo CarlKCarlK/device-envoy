@@ -10,7 +10,6 @@ members = [
     "crates/device-envoy-rp/tests-compile-only",
     "crates/device-envoy-rp/xtask",
     "crates/device-envoy-esp",
-    "crates/device-envoy-esp/demos",
     "crates/device-envoy-esp/xtask",
 ]
 

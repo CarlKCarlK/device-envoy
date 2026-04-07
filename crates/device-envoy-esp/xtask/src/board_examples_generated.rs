@@ -15,8 +15,10 @@ use crate::example_specs::{
     ir_rx_channel2_ident, ir_rx_channel2_num, ir_rx_channel_ident, ir_rx_channel_num,
     led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
     panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_clock_examples,
-    supports_conway_example, supports_ir_examples, supports_led16x16_examples, BlinkyKind,
-    AUDIO_EXAMPLE_BASE_NAMES, CLOCK_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
+    supports_conway_example, supports_ir_examples, supports_led16x16_examples, talk1_example_name,
+    talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident,
+    talk1_strip8_pin_num, BlinkyKind, AUDIO_EXAMPLE_BASE_NAMES, CLOCK_EXAMPLE_BASE_NAMES,
+    IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -56,13 +58,13 @@ const PASSTHROUGH_EXAMPLE_BASE_NAMES: &[&str] = &[
     "wifi_scan",
 ];
 
-const PASSTHROUGH_DEMO_RELATIVE_PATHS: &[&str] = &[
-    "a_strip/a1_strip_8_blue_gray.rs",
-    "a_strip/a3_strip_8_blue_white_blink_animate.rs",
-    "a_strip/a4_strip_96_blue_white_dot.rs",
-    "b_panel/b1_panel_12x8_rust_cursor.rs",
-    "b_panel/b2_panel_12x8_text_graphics.rs",
-    "f_wifi_auto/f1_dns.rs",
+const TALK1_BASE_NAMES: &[&str] = &[
+    "a1_strip_8_blue_gray",
+    "a3_strip_8_blue_white_blink_animate",
+    "a4_strip_96_blue_white_dot",
+    "b1_panel_12x8_rust_cursor",
+    "b2_panel_12x8_text_graphics",
+    "f1_dns",
 ];
 
 fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
@@ -79,8 +81,7 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
 
     let examples_dir = workspace_root.join("examples");
     let templates_dir = examples_dir.join("templates");
-    let demos_dir = workspace_root.join("demos");
-    let demo_templates_dir = demos_dir.join("templates");
+    let talk1_templates_dir = templates_dir.join("talk1");
 
     let blinky_plain_template = fs::read_to_string(templates_dir.join("blinky_plain.rs.j2"))?;
     let blinky_rmt_template = fs::read_to_string(templates_dir.join("blinky_rmt.rs.j2"))?;
@@ -114,6 +115,17 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     let clock_servos_template = fs::read_to_string(templates_dir.join("clock_servos.rs.j2"))?;
     let clock_sync_example1_trait_template =
         fs::read_to_string(templates_dir.join("clock_sync_example1_trait.rs.j2"))?;
+    let talk1_a1_strip_8_blue_gray_template =
+        fs::read_to_string(talk1_templates_dir.join("a1_strip_8_blue_gray.rs.j2"))?;
+    let talk1_a3_strip_8_blue_white_blink_animate_template =
+        fs::read_to_string(talk1_templates_dir.join("a3_strip_8_blue_white_blink_animate.rs.j2"))?;
+    let talk1_a4_strip_96_blue_white_dot_template =
+        fs::read_to_string(talk1_templates_dir.join("a4_strip_96_blue_white_dot.rs.j2"))?;
+    let talk1_b1_panel_12x8_rust_cursor_template =
+        fs::read_to_string(talk1_templates_dir.join("b1_panel_12x8_rust_cursor.rs.j2"))?;
+    let talk1_b2_panel_12x8_text_graphics_template =
+        fs::read_to_string(talk1_templates_dir.join("b2_panel_12x8_text_graphics.rs.j2"))?;
+    let talk1_f1_dns_template = fs::read_to_string(talk1_templates_dir.join("f1_dns.rs.j2"))?;
 
     let mut minijinja_environment = Environment::new();
     minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;
@@ -148,17 +160,32 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         "clock_sync_example1_trait",
         &clock_sync_example1_trait_template,
     )?;
+    minijinja_environment.add_template(
+        "talk1_a1_strip_8_blue_gray",
+        &talk1_a1_strip_8_blue_gray_template,
+    )?;
+    minijinja_environment.add_template(
+        "talk1_a3_strip_8_blue_white_blink_animate",
+        &talk1_a3_strip_8_blue_white_blink_animate_template,
+    )?;
+    minijinja_environment.add_template(
+        "talk1_a4_strip_96_blue_white_dot",
+        &talk1_a4_strip_96_blue_white_dot_template,
+    )?;
+    minijinja_environment.add_template(
+        "talk1_b1_panel_12x8_rust_cursor",
+        &talk1_b1_panel_12x8_rust_cursor_template,
+    )?;
+    minijinja_environment.add_template(
+        "talk1_b2_panel_12x8_text_graphics",
+        &talk1_b2_panel_12x8_text_graphics_template,
+    )?;
+    minijinja_environment.add_template("talk1_f1_dns", &talk1_f1_dns_template)?;
 
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
     let mut expected_generated_paths = Vec::new();
-    generate_passthrough_files(
-        &templates_dir,
-        &examples_dir,
-        &demo_templates_dir,
-        &demos_dir,
-        &mut expected_generated_paths,
-    )?;
+    generate_passthrough_files(&templates_dir, &examples_dir, &mut expected_generated_paths)?;
 
     for board_profile in BOARD_PROFILES {
         let output_path = examples_dir
@@ -380,6 +407,37 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         }
     }
 
+    for board_profile in BOARD_PROFILES {
+        for base_name in TALK1_BASE_NAMES {
+            let template_name = format!("talk1_{base_name}");
+            let output_path = examples_dir
+                .join(board_profile.chip_dir())
+                .join(board_profile.board_dir())
+                .join("talk1")
+                .join(format!("{base_name}.rs"));
+            if let Some(output_dir) = output_path.parent() {
+                fs::create_dir_all(output_dir)?;
+            }
+            let example_name = talk1_example_name(*board_profile, base_name);
+            let generated_source = minijinja_environment
+                .get_template(&template_name)?
+                .render(context! {
+                    example_name => example_name.as_str(),
+                    board_slug => board_profile.board_slug(),
+                    chip_name => board_profile.chip_name(),
+                    chip_feature => board_profile.chip_feature(),
+                    talk1_strip8_pin_num => talk1_strip8_pin_num(*board_profile),
+                    talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
+                    talk1_panel12x8_pin_num => talk1_panel12x8_pin_num(*board_profile),
+                    talk1_panel12x8_pin_ident => talk1_panel12x8_pin_ident(*board_profile),
+                    force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
+                    force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
+                })?;
+            write_if_changed(&output_path, &generated_source)?;
+            expected_generated_paths.push(output_path);
+        }
+    }
+
     rustfmt_generated_files(&expected_generated_paths)?;
     cleanup_stale_nested_generated_examples(&examples_dir, &expected_generated_paths)?;
 
@@ -389,8 +447,6 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
 fn generate_passthrough_files(
     example_templates_dir: &Path,
     examples_dir: &Path,
-    demo_templates_dir: &Path,
-    demos_dir: &Path,
     expected_generated_paths: &mut Vec<PathBuf>,
 ) -> Result<(), Box<dyn Error>> {
     for base_name in PASSTHROUGH_EXAMPLE_BASE_NAMES {
@@ -411,17 +467,6 @@ fn generate_passthrough_files(
         if legacy_top_level_output_path.exists() {
             fs::remove_file(&legacy_top_level_output_path)?;
         }
-    }
-
-    for demo_relative_path in PASSTHROUGH_DEMO_RELATIVE_PATHS {
-        let template_path = demo_templates_dir.join(format!("{demo_relative_path}.j2"));
-        let output_path = demos_dir.join(demo_relative_path);
-        if let Some(output_dir) = output_path.parent() {
-            fs::create_dir_all(output_dir)?;
-        }
-        let generated_source = fs::read_to_string(&template_path)?;
-        write_if_changed(&output_path, &generated_source)?;
-        expected_generated_paths.push(output_path);
     }
 
     Ok(())
@@ -461,6 +506,11 @@ pub fn generated_board_example_names() -> Vec<String> {
         }
         for base_name in CLOCK_EXAMPLE_BASE_NAMES {
             names.push(clock_example_name(*board_profile, base_name));
+        }
+    }
+    for board_profile in BOARD_PROFILES {
+        for base_name in TALK1_BASE_NAMES {
+            names.push(talk1_example_name(*board_profile, base_name));
         }
     }
     names.extend(
@@ -523,6 +573,13 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
         }
         for base_name in CLOCK_EXAMPLE_BASE_NAMES {
             if clock_example_name(*board_profile, base_name) == example_name {
+                return Some(board_profile.chip_feature());
+            }
+        }
+    }
+    for board_profile in BOARD_PROFILES {
+        for base_name in TALK1_BASE_NAMES {
+            if talk1_example_name(*board_profile, base_name) == example_name {
                 return Some(board_profile.chip_feature());
             }
         }
@@ -621,6 +678,12 @@ fn cleanup_stale_nested_generated_examples(
         "clock_led8x12.rs",
         "clock_servos.rs",
         "clock_sync_example1_trait.rs",
+        "talk1/a1_strip_8_blue_gray.rs",
+        "talk1/a3_strip_8_blue_white_blink_animate.rs",
+        "talk1/a4_strip_96_blue_white_dot.rs",
+        "talk1/b1_panel_12x8_rust_cursor.rs",
+        "talk1/b2_panel_12x8_text_graphics.rs",
+        "talk1/f1_dns.rs",
         "blinky.rs",
         "led16x16_plus_1.rs",
         "led16x16_plus_1_spi.rs",

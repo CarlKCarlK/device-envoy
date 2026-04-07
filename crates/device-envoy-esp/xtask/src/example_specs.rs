@@ -23,6 +23,14 @@ pub(crate) const IR_EXAMPLE_BASE_NAMES: [&str; 6] = [
     "ir_keplers",
     "ir_mapping_example1_trait",
 ];
+pub(crate) const CLOCK_EXAMPLE_BASE_NAMES: [&str; 6] = [
+    "clock_console_simple",
+    "clock_lcd",
+    "clock_led4",
+    "clock_led8x12",
+    "clock_servos",
+    "clock_sync_example1_trait",
+];
 
 pub(crate) struct AudioBoardConfig {
     pub(crate) data_pin_num: u8,
@@ -148,6 +156,99 @@ pub(crate) fn conway_example_name(board_profile: BoardProfile) -> String {
         board_profile.chip_feature(),
         board_profile.board_dir()
     )
+}
+
+pub(crate) fn supports_clock_examples(board_profile: BoardProfile) -> bool {
+    matches!(
+        board_profile.chip_feature(),
+        "esp32" | "esp32c6" | "esp32s2" | "esp32s3"
+    )
+}
+
+pub(crate) fn clock_example_name(board_profile: BoardProfile, base_name: &str) -> String {
+    format!(
+        "{}_{}_{}",
+        base_name,
+        board_profile.chip_feature(),
+        board_profile.board_dir()
+    )
+}
+
+pub(crate) fn clock_force_portal_button_pin_num(board_profile: BoardProfile) -> u8 {
+    match board_profile.chip_feature() {
+        "esp32" | "esp32s2" => 0,
+        _ => 6,
+    }
+}
+
+pub(crate) fn clock_force_portal_button_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", clock_force_portal_button_pin_num(board_profile))
+}
+
+pub(crate) fn clock_lcd_sda_pin_num(_board_profile: BoardProfile) -> u8 {
+    16
+}
+
+pub(crate) fn clock_lcd_sda_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", clock_lcd_sda_pin_num(board_profile))
+}
+
+pub(crate) fn clock_lcd_scl_pin_num(_board_profile: BoardProfile) -> u8 {
+    17
+}
+
+pub(crate) fn clock_lcd_scl_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", clock_lcd_scl_pin_num(board_profile))
+}
+
+pub(crate) fn clock_led8x12_panel_pin_num(_board_profile: BoardProfile) -> u8 {
+    18
+}
+
+pub(crate) fn clock_led8x12_panel_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", clock_led8x12_panel_pin_num(board_profile))
+}
+
+pub(crate) fn clock_servos_bottom_pin_num(board_profile: BoardProfile) -> u8 {
+    match board_profile.chip_feature() {
+        "esp32" | "esp32s2" => 4,
+        _ => 10,
+    }
+}
+
+pub(crate) fn clock_servos_bottom_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", clock_servos_bottom_pin_num(board_profile))
+}
+
+pub(crate) fn clock_servos_top_pin_num(_board_profile: BoardProfile) -> u8 {
+    18
+}
+
+pub(crate) fn clock_servos_top_pin_ident(board_profile: BoardProfile) -> String {
+    format!("GPIO{}", clock_servos_top_pin_num(board_profile))
+}
+
+pub(crate) fn clock_led4_cell_pin_nums(board_profile: BoardProfile) -> [u8; 4] {
+    match board_profile.chip_feature() {
+        "esp32" | "esp32s2" => [14, 13, 12, 15],
+        _ => [14, 13, 12, 11],
+    }
+}
+
+pub(crate) fn clock_led4_cell_pin_idents(board_profile: BoardProfile) -> [String; 4] {
+    clock_led4_cell_pin_nums(board_profile).map(|pin_num| format!("GPIO{pin_num}"))
+}
+
+pub(crate) fn clock_led4_segment_pin_nums(board_profile: BoardProfile) -> [u8; 8] {
+    match board_profile.chip_feature() {
+        "esp32" | "esp32s2" => [4, 16, 17, 18, 19, 21, 1, 2],
+        "esp32s3" => [10, 9, 46, 3, 8, 18, 17, 16],
+        _ => [10, 9, 4, 3, 8, 18, 17, 16],
+    }
+}
+
+pub(crate) fn clock_led4_segment_pin_idents(board_profile: BoardProfile) -> [String; 8] {
+    clock_led4_segment_pin_nums(board_profile).map(|pin_num| format!("GPIO{pin_num}"))
 }
 
 pub(crate) fn ir_pin_num(board_profile: BoardProfile) -> u8 {

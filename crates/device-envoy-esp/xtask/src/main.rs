@@ -244,13 +244,10 @@ fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Optio
     }
 
     if chip_feature == CHIP_FEATURE_ESP32S2 {
+        if example_name.starts_with("clock_") {
+            return Some("ESP32-S2 linker memory budget");
+        }
         let s2_stack_limited_examples = [
-            "clock_console_simple",
-            "clock_lcd",
-            "clock_led4",
-            "clock_led8x12",
-            "clock_servos",
-            "clock_sync_example1_trait",
             "wifi_auto_custom_checkbox",
             "wifi_auto_example1_trait",
             "wifi_auto_force_button",

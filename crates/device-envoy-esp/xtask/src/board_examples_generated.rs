@@ -4,13 +4,20 @@ use crate::example_specs::{
     audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
     audio_example_name, audio_word_select_pin_ident, audio_word_select_pin_num,
     blinky_built_in_led, blinky_example_name, blinky_kind, blinky_led_pin_ident,
-    blinky_led_pin_num, conway_example_name, ir_example_name, ir_kepler_receiver0_pin_ident,
+    blinky_led_pin_num, clock_example_name, clock_force_portal_button_pin_ident,
+    clock_force_portal_button_pin_num, clock_lcd_scl_pin_ident, clock_lcd_scl_pin_num,
+    clock_lcd_sda_pin_ident, clock_lcd_sda_pin_num, clock_led4_cell_pin_idents,
+    clock_led4_cell_pin_nums, clock_led4_segment_pin_idents, clock_led4_segment_pin_nums,
+    clock_led8x12_panel_pin_ident, clock_led8x12_panel_pin_num, clock_servos_bottom_pin_ident,
+    clock_servos_bottom_pin_num, clock_servos_top_pin_ident, clock_servos_top_pin_num,
+    conway_example_name, ir_example_name, ir_kepler_receiver0_pin_ident,
     ir_kepler_receiver0_pin_num, ir_kepler_receiver1_pin_ident, ir_kepler_receiver1_pin_num,
     ir_pin_ident, ir_pin_num, ir_rx_channel1_ident, ir_rx_channel1_num, ir_rx_channel_ident,
     ir_rx_channel_num, led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident,
     led_strip1_pin_num, panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples,
-    supports_conway_example, supports_ir_examples, supports_led16x16_examples, BlinkyKind,
-    AUDIO_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
+    supports_clock_examples, supports_conway_example, supports_ir_examples,
+    supports_led16x16_examples, BlinkyKind, AUDIO_EXAMPLE_BASE_NAMES,
+    CLOCK_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES, LED16X16_VARIANTS,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -48,6 +55,14 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     let ir_mapping_example1_trait_template =
         fs::read_to_string(templates_dir.join("ir_mapping_example1_trait.rs.j2"))?;
     let conway_template = fs::read_to_string(templates_dir.join("conway.rs.j2"))?;
+    let clock_console_simple_template =
+        fs::read_to_string(templates_dir.join("clock_console_simple.rs.j2"))?;
+    let clock_lcd_template = fs::read_to_string(templates_dir.join("clock_lcd.rs.j2"))?;
+    let clock_led4_template = fs::read_to_string(templates_dir.join("clock_led4.rs.j2"))?;
+    let clock_led8x12_template = fs::read_to_string(templates_dir.join("clock_led8x12.rs.j2"))?;
+    let clock_servos_template = fs::read_to_string(templates_dir.join("clock_servos.rs.j2"))?;
+    let clock_sync_example1_trait_template =
+        fs::read_to_string(templates_dir.join("clock_sync_example1_trait.rs.j2"))?;
 
     let mut minijinja_environment = Environment::new();
     minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;
@@ -73,6 +88,15 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         &ir_mapping_example1_trait_template,
     )?;
     minijinja_environment.add_template("conway", &conway_template)?;
+    minijinja_environment.add_template("clock_console_simple", &clock_console_simple_template)?;
+    minijinja_environment.add_template("clock_lcd", &clock_lcd_template)?;
+    minijinja_environment.add_template("clock_led4", &clock_led4_template)?;
+    minijinja_environment.add_template("clock_led8x12", &clock_led8x12_template)?;
+    minijinja_environment.add_template("clock_servos", &clock_servos_template)?;
+    minijinja_environment.add_template(
+        "clock_sync_example1_trait",
+        &clock_sync_example1_trait_template,
+    )?;
 
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
@@ -255,6 +279,48 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         expected_generated_paths.push(output_path);
     }
 
+    for board_profile in BOARD_PROFILES {
+        if !supports_clock_examples(*board_profile) {
+            continue;
+        }
+        for base_name in CLOCK_EXAMPLE_BASE_NAMES {
+            let output_path = examples_dir
+                .join(board_profile.chip_dir())
+                .join(board_profile.board_dir())
+                .join(format!("{base_name}.rs"));
+            if let Some(output_dir) = output_path.parent() {
+                fs::create_dir_all(output_dir)?;
+            }
+            let example_name = clock_example_name(*board_profile, base_name);
+            let generated_source = minijinja_environment
+                .get_template(base_name)?
+                .render(context! {
+                    example_name => example_name.as_str(),
+                    board_slug => board_profile.board_slug(),
+                    chip_name => board_profile.chip_name(),
+                    chip_feature => board_profile.chip_feature(),
+                    force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
+                    force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
+                    lcd_sda_pin_num => clock_lcd_sda_pin_num(*board_profile),
+                    lcd_sda_pin_ident => clock_lcd_sda_pin_ident(*board_profile),
+                    lcd_scl_pin_num => clock_lcd_scl_pin_num(*board_profile),
+                    lcd_scl_pin_ident => clock_lcd_scl_pin_ident(*board_profile),
+                    led8x12_panel_pin_num => clock_led8x12_panel_pin_num(*board_profile),
+                    led8x12_panel_pin_ident => clock_led8x12_panel_pin_ident(*board_profile),
+                    servo_bottom_pin_num => clock_servos_bottom_pin_num(*board_profile),
+                    servo_bottom_pin_ident => clock_servos_bottom_pin_ident(*board_profile),
+                    servo_top_pin_num => clock_servos_top_pin_num(*board_profile),
+                    servo_top_pin_ident => clock_servos_top_pin_ident(*board_profile),
+                    led4_cell_pin_nums => clock_led4_cell_pin_nums(*board_profile),
+                    led4_cell_pin_idents => clock_led4_cell_pin_idents(*board_profile),
+                    led4_segment_pin_nums => clock_led4_segment_pin_nums(*board_profile),
+                    led4_segment_pin_idents => clock_led4_segment_pin_idents(*board_profile),
+                })?;
+            write_if_changed(&output_path, &generated_source)?;
+            expected_generated_paths.push(output_path);
+        }
+    }
+
     rustfmt_generated_files(&expected_generated_paths)?;
     cleanup_stale_nested_generated_examples(&examples_dir, &expected_generated_paths)?;
 
@@ -282,6 +348,14 @@ pub fn generated_board_example_names() -> Vec<String> {
     for board_profile in BOARD_PROFILES {
         if supports_conway_example(*board_profile) {
             names.push(conway_example_name(*board_profile));
+        }
+    }
+    for board_profile in BOARD_PROFILES {
+        if !supports_clock_examples(*board_profile) {
+            continue;
+        }
+        for base_name in CLOCK_EXAMPLE_BASE_NAMES {
+            names.push(clock_example_name(*board_profile, base_name));
         }
     }
     names.extend(
@@ -328,6 +402,16 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
             && conway_example_name(*board_profile) == example_name
         {
             return Some(board_profile.chip_feature());
+        }
+    }
+    for board_profile in BOARD_PROFILES {
+        if !supports_clock_examples(*board_profile) {
+            continue;
+        }
+        for base_name in CLOCK_EXAMPLE_BASE_NAMES {
+            if clock_example_name(*board_profile, base_name) == example_name {
+                return Some(board_profile.chip_feature());
+            }
         }
     }
 
@@ -389,6 +473,12 @@ fn cleanup_stale_nested_generated_examples(
         "ir_keplers.rs",
         "ir_mapping_example1_trait.rs",
         "conway.rs",
+        "clock_console_simple.rs",
+        "clock_lcd.rs",
+        "clock_led4.rs",
+        "clock_led8x12.rs",
+        "clock_servos.rs",
+        "clock_sync_example1_trait.rs",
         "blinky.rs",
         "led16x16_plus_1.rs",
         "led16x16_plus_1_spi.rs",

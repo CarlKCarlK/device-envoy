@@ -3,24 +3,22 @@ use crate::example_specs::{
     audio_bit_clock_pin_ident, audio_bit_clock_pin_num, audio_button_pin_ident,
     audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
     audio_word_select_pin_ident, audio_word_select_pin_num,
-    blinky_built_in_led, blinky_example_name, blinky_kind, blinky_led_pin_ident,
-    blinky_led_pin_num, clock_force_portal_button_pin_ident,
+    blinky_built_in_led, blinky_kind, blinky_led_pin_ident, blinky_led_pin_num,
+    clock_force_portal_button_pin_ident,
     clock_force_portal_button_pin_num, clock_lcd_scl_pin_ident, clock_lcd_scl_pin_num,
     clock_lcd_sda_pin_ident, clock_lcd_sda_pin_num, clock_led4_cell_pin_idents,
     clock_led4_cell_pin_nums, clock_led4_segment_pin_idents, clock_led4_segment_pin_nums,
     clock_led8x12_panel_pin_ident, clock_led8x12_panel_pin_num, clock_servos_bottom_pin_ident,
     clock_servos_bottom_pin_num, clock_servos_top_pin_ident, clock_servos_top_pin_num,
-    conway_example_name, ir_kepler_receiver0_pin_ident,
-    ir_kepler_receiver0_pin_num, ir_pin2_ident, ir_pin2_num, ir_pin_ident, ir_pin_num,
-    ir_rx_channel2_ident, ir_rx_channel2_num, ir_rx_channel_ident, ir_rx_channel_num,
-    led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
+    ir_kepler_receiver0_pin_ident, ir_kepler_receiver0_pin_num, ir_pin2_ident, ir_pin2_num,
+    ir_pin_ident, ir_pin_num, ir_rx_channel2_ident, ir_rx_channel2_num, ir_rx_channel_ident,
+    ir_rx_channel_num, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
     panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_clock_examples,
     supports_conway_example, supports_ir_examples, supports_led16x16_examples,
-    talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident,
-    talk1_strip8_pin_num, BlinkyKind,
+    talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident, talk1_strip8_pin_num,
+    BlinkyKind,
 };
 use minijinja::{context, Environment};
-use minijinja::value::Value;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,10 +29,6 @@ const GENERATED_EXAMPLES_BEGIN_MARKER: &str = "# BEGIN GENERATED BOARD EXAMPLES"
 const GENERATED_EXAMPLES_END_MARKER: &str = "# END GENERATED BOARD EXAMPLES";
 const LEGACY_TALK1_BEGIN_MARKER: &str = "# BEGIN GENERATED TALK1 EXAMPLES";
 const LEGACY_TALK1_END_MARKER: &str = "# END GENERATED TALK1 EXAMPLES";
-
-const CONWAY_BASE_NAMES: &[&str] = &["conway"];
-const BLINKY_BASE_NAMES: &[&str] = &["blinky"];
-const LED16X16_BASE_NAMES: &[&str] = &["led16x16_plus_1", "led16x16_plus_1_spi"];
 
 static PASSTHROUGH_EXAMPLE_BASE_NAMES: OnceLock<Vec<String>> = OnceLock::new();
 
@@ -52,191 +46,6 @@ fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_nam
         board_profile.chip_feature(),
         board_profile.board_dir()
     )
-}
-
-fn conway_example_name_family(board_profile: crate::boards::BoardProfile, _base_name: &str) -> String {
-    conway_example_name(board_profile)
-}
-
-fn conway_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
-    context! {
-        board_slug => board_profile.board_slug(),
-        chip_name => board_profile.chip_name(),
-        chip_feature => board_profile.chip_feature(),
-        ir_pin_num => ir_pin_num(board_profile),
-        ir_pin_ident => ir_pin_ident(board_profile),
-        ir_rx_channel_num => ir_rx_channel_num(board_profile),
-        ir_rx_channel_ident => ir_rx_channel_ident(board_profile),
-    }
-}
-
-fn blinky_example_name_family(board_profile: crate::boards::BoardProfile, _base_name: &str) -> String {
-    blinky_example_name(board_profile)
-}
-
-fn blinky_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
-    let led_pin_ident = blinky_led_pin_ident(board_profile);
-    context! {
-        board_slug => board_profile.board_slug(),
-        chip_name => board_profile.chip_name(),
-        chip_feature => board_profile.chip_feature(),
-        led_pin_num => blinky_led_pin_num(board_profile),
-        led_pin_ident => led_pin_ident.as_str(),
-        built_in_led => blinky_built_in_led(board_profile),
-    }
-}
-
-fn led16x16_example_name_family(
-    board_profile: crate::boards::BoardProfile,
-    base_name: &str,
-) -> String {
-    let use_spi = base_name == "led16x16_plus_1_spi";
-    led16x16_example_name(board_profile, use_spi)
-}
-
-fn led16x16_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
-    let panel_pin_ident = panel16x16_pin_ident(board_profile);
-    let led_strip1_pin_ident_value = led_strip1_pin_ident(board_profile);
-    context! {
-        board_slug => board_profile.board_slug(),
-        chip_name => board_profile.chip_name(),
-        chip_feature => board_profile.chip_feature(),
-        panel_pin_num => panel16x16_pin_num(board_profile),
-        panel_pin_ident => panel_pin_ident.as_str(),
-        led_strip1_pin_num => led_strip1_pin_num(board_profile),
-        led_strip1_pin_ident => led_strip1_pin_ident_value.as_str(),
-        led_strip1_built_in => led_strip1_built_in(board_profile),
-    }
-}
-
-fn supports_all_boards(_board_profile: crate::boards::BoardProfile) -> bool {
-    true
-}
-
-fn default_template_name(_board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
-    base_name.to_string()
-}
-
-fn default_output_relative_path(
-    _board_profile: crate::boards::BoardProfile,
-    base_name: &str,
-) -> PathBuf {
-    PathBuf::from(format!("{base_name}.rs"))
-}
-
-fn blinky_template_name(board_profile: crate::boards::BoardProfile, _base_name: &str) -> String {
-    match blinky_kind(board_profile) {
-        BlinkyKind::Plain => "blinky_plain",
-        BlinkyKind::SmartRmt => "blinky_rmt",
-        BlinkyKind::SmartSpi => "blinky_spi",
-    }
-    .to_string()
-}
-
-fn blinky_output_relative_path(
-    _board_profile: crate::boards::BoardProfile,
-    _base_name: &str,
-) -> PathBuf {
-    PathBuf::from("blinky.rs")
-}
-
-fn generate_family_examples(
-    minijinja_environment: &Environment,
-    examples_dir: &Path,
-    expected_generated_paths: &mut Vec<PathBuf>,
-    base_names: &[&str],
-    supports_board: fn(crate::boards::BoardProfile) -> bool,
-    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
-    context_fn: fn(crate::boards::BoardProfile, &str) -> Value,
-    template_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
-    output_relative_path_fn: fn(crate::boards::BoardProfile, &str) -> PathBuf,
-) -> Result<(), Box<dyn Error>> {
-    for board_profile in BOARD_PROFILES {
-        if !supports_board(*board_profile) {
-            continue;
-        }
-        for base_name in base_names {
-            let output_path = examples_dir
-                .join(board_profile.chip_dir())
-                .join(board_profile.board_dir())
-                .join(output_relative_path_fn(*board_profile, base_name));
-            if let Some(output_dir) = output_path.parent() {
-                fs::create_dir_all(output_dir)?;
-            }
-            let example_name = example_name_fn(*board_profile, base_name);
-            let extra_context = context_fn(*board_profile, base_name);
-            let template_name = template_name_fn(*board_profile, base_name);
-            let generated_source = minijinja_environment
-                .get_template(&template_name)?
-                .render(context! {
-                    example_name => example_name.as_str(),
-                    ..extra_context
-                })?;
-            write_if_changed(&output_path, &generated_source)?;
-            expected_generated_paths.push(output_path);
-        }
-    }
-    Ok(())
-}
-
-fn add_family_generated_names(
-    names: &mut Vec<String>,
-    base_names: &[&str],
-    supports_board: fn(crate::boards::BoardProfile) -> bool,
-    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
-) {
-    for board_profile in BOARD_PROFILES {
-        if !supports_board(*board_profile) {
-            continue;
-        }
-        for base_name in base_names {
-            names.push(example_name_fn(*board_profile, base_name));
-        }
-    }
-}
-
-fn add_family_manifest_entries(
-    entries: &mut Vec<ExampleManifestEntry>,
-    base_names: &[&str],
-    supports_board: fn(crate::boards::BoardProfile) -> bool,
-    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
-    output_relative_path_fn: fn(crate::boards::BoardProfile, &str) -> PathBuf,
-) {
-    for board_profile in BOARD_PROFILES {
-        if !supports_board(*board_profile) {
-            continue;
-        }
-        for base_name in base_names {
-            entries.push(ExampleManifestEntry {
-                name: example_name_fn(*board_profile, base_name),
-                path: format!(
-                    "examples/{}/{}/{}",
-                    board_profile.chip_dir(),
-                    board_profile.board_dir(),
-                    output_relative_path_fn(*board_profile, base_name).display()
-                ),
-            });
-        }
-    }
-}
-
-fn find_family_required_chip(
-    example_name: &str,
-    base_names: &[&str],
-    supports_board: fn(crate::boards::BoardProfile) -> bool,
-    example_name_fn: fn(crate::boards::BoardProfile, &str) -> String,
-) -> Option<&'static str> {
-    for board_profile in BOARD_PROFILES {
-        if !supports_board(*board_profile) {
-            continue;
-        }
-        for base_name in base_names {
-            if example_name_fn(*board_profile, base_name) == example_name {
-                return Some(board_profile.chip_feature());
-            }
-        }
-    }
-    None
 }
 
 fn passthrough_example_base_names() -> &'static [String] {
@@ -297,15 +106,7 @@ fn discover_passthrough_example_base_names_in_dir(
 }
 
 fn is_passthrough_template(base_name: &str) -> bool {
-    if base_name == "conway"
-        || base_name == "blinky_plain"
-        || base_name == "blinky_rmt"
-        || base_name == "blinky_spi"
-        || base_name == "led16x16_plus_1"
-        || base_name == "led16x16_plus_1_spi"
-    {
-        return false;
-    }
+    let _ = base_name;
     true
 }
 
@@ -314,6 +115,8 @@ fn passthrough_template_supports_board(
     board_profile: crate::boards::BoardProfile,
 ) -> bool {
     match base_name {
+        "conway" => supports_conway_example(board_profile),
+        "led16x16_plus_1" | "led16x16_plus_1_spi" => supports_led16x16_examples(board_profile),
         "ir"
         | "ir_example1_trait"
         | "ir_kepler"
@@ -400,61 +203,10 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     let examples_dir = workspace_root.join("examples");
     let templates_dir = examples_dir.join("templates");
 
-    let blinky_plain_template = fs::read_to_string(templates_dir.join("blinky_plain.rs.j2"))?;
-    let blinky_rmt_template = fs::read_to_string(templates_dir.join("blinky_rmt.rs.j2"))?;
-    let blinky_spi_template = fs::read_to_string(templates_dir.join("blinky_spi.rs.j2"))?;
-    let led16x16_plus_1_template = fs::read_to_string(templates_dir.join("led16x16_plus_1.rs.j2"))?;
-    let led16x16_plus_1_spi_template =
-        fs::read_to_string(templates_dir.join("led16x16_plus_1_spi.rs.j2"))?;
-    let conway_template = fs::read_to_string(templates_dir.join("conway.rs.j2"))?;
-
-    let mut minijinja_environment = Environment::new();
-    minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;
-    minijinja_environment.add_template("blinky_rmt", &blinky_rmt_template)?;
-    minijinja_environment.add_template("blinky_spi", &blinky_spi_template)?;
-    minijinja_environment.add_template("led16x16_plus_1", &led16x16_plus_1_template)?;
-    minijinja_environment.add_template("led16x16_plus_1_spi", &led16x16_plus_1_spi_template)?;
-    minijinja_environment.add_template("conway", &conway_template)?;
-
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
     let mut expected_generated_paths = Vec::new();
     generate_passthrough_files(&templates_dir, &examples_dir, &mut expected_generated_paths)?;
-
-    generate_family_examples(
-        &minijinja_environment,
-        &examples_dir,
-        &mut expected_generated_paths,
-        &LED16X16_BASE_NAMES,
-        supports_led16x16_examples,
-        led16x16_example_name_family,
-        led16x16_example_context,
-        default_template_name,
-        default_output_relative_path,
-    )?;
-
-    generate_family_examples(
-        &minijinja_environment,
-        &examples_dir,
-        &mut expected_generated_paths,
-        &CONWAY_BASE_NAMES,
-        supports_conway_example,
-        conway_example_name_family,
-        conway_example_context,
-        default_template_name,
-        default_output_relative_path,
-    )?;
-    generate_family_examples(
-        &minijinja_environment,
-        &examples_dir,
-        &mut expected_generated_paths,
-        &BLINKY_BASE_NAMES,
-        supports_all_boards,
-        blinky_example_name_family,
-        blinky_example_context,
-        blinky_template_name,
-        blinky_output_relative_path,
-    )?;
 
     rustfmt_generated_files(&expected_generated_paths)?;
     cleanup_stale_nested_generated_examples(&examples_dir, &expected_generated_paths)?;
@@ -533,6 +285,19 @@ fn generate_passthrough_files(
                     board_slug => board_profile.board_slug(),
                     chip_name => board_profile.chip_name(),
                     chip_feature => board_profile.chip_feature(),
+                    blinky_kind => match blinky_kind(*board_profile) {
+                        BlinkyKind::Plain => "plain",
+                        BlinkyKind::SmartRmt => "smart_rmt",
+                        BlinkyKind::SmartSpi => "smart_spi",
+                    },
+                    led_pin_num => blinky_led_pin_num(*board_profile),
+                    led_pin_ident => blinky_led_pin_ident(*board_profile),
+                    built_in_led => blinky_built_in_led(*board_profile),
+                    panel_pin_num => panel16x16_pin_num(*board_profile),
+                    panel_pin_ident => panel16x16_pin_ident(*board_profile),
+                    led_strip1_pin_num => led_strip1_pin_num(*board_profile),
+                    led_strip1_pin_ident => led_strip1_pin_ident(*board_profile),
+                    led_strip1_built_in => led_strip1_built_in(*board_profile),
                     talk1_strip8_pin_num => talk1_strip8_pin_num(*board_profile),
                     talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
                     talk1_panel12x8_pin_num => talk1_panel12x8_pin_num(*board_profile),
@@ -598,24 +363,6 @@ pub fn generated_board_example_names() -> Vec<String> {
             names.push(passthrough_example_name(*board_profile, base_name));
         }
     }
-    add_family_generated_names(
-        &mut names,
-        &CONWAY_BASE_NAMES,
-        supports_conway_example,
-        conway_example_name_family,
-    );
-    add_family_generated_names(
-        &mut names,
-        &BLINKY_BASE_NAMES,
-        supports_all_boards,
-        blinky_example_name_family,
-    );
-    add_family_generated_names(
-        &mut names,
-        &LED16X16_BASE_NAMES,
-        supports_led16x16_examples,
-        led16x16_example_name_family,
-    );
     names
 }
 
@@ -641,28 +388,6 @@ fn generated_board_example_manifest_entries() -> Vec<ExampleManifestEntry> {
             });
         }
     }
-
-    add_family_manifest_entries(
-        &mut entries,
-        &CONWAY_BASE_NAMES,
-        supports_conway_example,
-        conway_example_name_family,
-        default_output_relative_path,
-    );
-    add_family_manifest_entries(
-        &mut entries,
-        &BLINKY_BASE_NAMES,
-        supports_all_boards,
-        blinky_example_name_family,
-        blinky_output_relative_path,
-    );
-    add_family_manifest_entries(
-        &mut entries,
-        &LED16X16_BASE_NAMES,
-        supports_led16x16_examples,
-        led16x16_example_name_family,
-        default_output_relative_path,
-    );
 
     entries
 }
@@ -763,31 +488,6 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
                 return Some(board_profile.chip_feature());
             }
         }
-    }
-
-    if let Some(required_chip_feature) = find_family_required_chip(
-        example_name,
-        &CONWAY_BASE_NAMES,
-        supports_conway_example,
-        conway_example_name_family,
-    ) {
-        return Some(required_chip_feature);
-    }
-    if let Some(required_chip_feature) = find_family_required_chip(
-        example_name,
-        &BLINKY_BASE_NAMES,
-        supports_all_boards,
-        blinky_example_name_family,
-    ) {
-        return Some(required_chip_feature);
-    }
-    if let Some(required_chip_feature) = find_family_required_chip(
-        example_name,
-        &LED16X16_BASE_NAMES,
-        supports_led16x16_examples,
-        led16x16_example_name_family,
-    ) {
-        return Some(required_chip_feature);
     }
 
     None

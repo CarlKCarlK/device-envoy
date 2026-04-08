@@ -41,14 +41,6 @@ pub(crate) fn blinky_built_in_led(board_profile: BoardProfile) -> bool {
     }
 }
 
-pub(crate) fn blinky_example_name(board_profile: BoardProfile) -> String {
-    format!(
-        "blinky_{}_{}",
-        board_profile.chip_feature(),
-        board_profile.board_dir()
-    )
-}
-
 pub(crate) fn supports_led16x16_examples(board_profile: BoardProfile) -> bool {
     board_profile.chip_feature() != "esp32c2"
 }
@@ -75,36 +67,12 @@ pub(crate) fn led_strip1_built_in(board_profile: BoardProfile) -> bool {
     board_profile.built_in_smart_led.is_some()
 }
 
-pub(crate) fn led16x16_example_name(board_profile: BoardProfile, use_spi: bool) -> String {
-    if use_spi {
-        format!(
-            "led16x16_plus_1_spi_{}_{}",
-            board_profile.chip_feature(),
-            board_profile.board_dir()
-        )
-    } else {
-        format!(
-            "led16x16_plus_1_{}_{}",
-            board_profile.chip_feature(),
-            board_profile.board_dir()
-        )
-    }
-}
-
 pub(crate) fn supports_ir_examples(board_profile: BoardProfile) -> bool {
     !matches!(board_profile.chip_feature(), "esp32c2" | "esp32h2")
 }
 
 pub(crate) fn supports_conway_example(board_profile: BoardProfile) -> bool {
     supports_ir_examples(board_profile)
-}
-
-pub(crate) fn conway_example_name(board_profile: BoardProfile) -> String {
-    format!(
-        "conway_{}_{}",
-        board_profile.chip_feature(),
-        board_profile.board_dir()
-    )
 }
 
 pub(crate) fn supports_clock_examples(board_profile: BoardProfile) -> bool {

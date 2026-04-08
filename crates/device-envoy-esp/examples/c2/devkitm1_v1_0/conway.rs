@@ -3,7 +3,7 @@
 //! conway: not supported on this board profile.
 //!
 //! Wiring:
-//! - This is a placeholder for an unsupported board profile.
+//! - our IR decoder needs an RMT resource, and ESP32-C2 does not offer that resource
 
 #![no_std]
 #![no_main]
@@ -31,8 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let _ = spawner;
     info!(
-        "{}: not supported on this board profile",
-        "conway_esp32c2_devkitm1_v1_0"
+        "conway_esp32c2_devkitm1_v1_0: our IR decoder needs an RMT resource, and ESP32-C2 does not offer that resource"
     );
     core::future::pending().await
 }

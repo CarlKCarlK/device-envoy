@@ -3,7 +3,7 @@
 //! led16x16_plus_1: not supported on this board profile.
 //!
 //! Wiring:
-//! - This is a placeholder for an unsupported board profile.
+//! - this example requires two RMT resources, and ESP32-C2 has none
 
 #![no_std]
 #![no_main]
@@ -31,8 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let _ = spawner;
     info!(
-        "{}: not supported on this board profile",
-        "led16x16_plus_1_esp32c2_generic"
+        "led16x16_plus_1_esp32c2_generic: this example requires two RMT resources, and ESP32-C2 has none"
     );
     core::future::pending().await
 }

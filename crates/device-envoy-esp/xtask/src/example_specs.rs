@@ -168,6 +168,7 @@ pub(crate) fn clock_servos_top_pin_ident(board_profile: BoardProfile) -> String 
 pub(crate) fn clock_led4_cell_pin_nums(board_profile: BoardProfile) -> [u8; 4] {
     match board_profile.chip_feature() {
         "esp32" | "esp32s2" => [14, 13, 12, 15],
+        "esp32c2" => [10, 9, 8, 7],
         _ => [14, 13, 12, 11],
     }
 }
@@ -179,6 +180,7 @@ pub(crate) fn clock_led4_cell_pin_idents(board_profile: BoardProfile) -> [String
 pub(crate) fn clock_led4_segment_pin_nums(board_profile: BoardProfile) -> [u8; 8] {
     match board_profile.chip_feature() {
         "esp32" | "esp32s2" => [4, 16, 17, 18, 19, 21, 1, 2],
+        "esp32c2" => [4, 3, 2, 1, 0, 5, 18, 19],
         "esp32s3" => [10, 9, 46, 3, 8, 18, 17, 16],
         _ => [10, 9, 4, 3, 8, 18, 17, 16],
     }

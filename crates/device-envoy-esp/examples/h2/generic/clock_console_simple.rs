@@ -3,7 +3,7 @@
 //! clock_console_simple: not supported on this board profile.
 //!
 //! Wiring:
-//! - This is a placeholder for an unsupported board profile.
+//! - this example requires Wi-Fi, and ESP32-H2 does not offer that resource
 
 #![no_std]
 #![no_main]
@@ -31,8 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let _ = spawner;
     info!(
-        "{}: not supported on this board profile",
-        "clock_console_simple_esp32h2_generic"
+        "clock_console_simple_esp32h2_generic: this example requires Wi-Fi, and ESP32-H2 does not offer that resource"
     );
     core::future::pending().await
 }

@@ -2,9 +2,8 @@ use crate::boards::{validate_board_profiles, BOARD_PROFILES};
 use crate::example_specs::{
     audio_bit_clock_pin_ident, audio_bit_clock_pin_num, audio_button_pin_ident,
     audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
-    audio_word_select_pin_ident, audio_word_select_pin_num,
-    blinky_built_in_led, blinky_kind, blinky_led_pin_ident, blinky_led_pin_num,
-    clock_force_portal_button_pin_ident,
+    audio_word_select_pin_ident, audio_word_select_pin_num, blinky_built_in_led, blinky_kind,
+    blinky_led_pin_ident, blinky_led_pin_num, clock_force_portal_button_pin_ident,
     clock_force_portal_button_pin_num, clock_lcd_scl_pin_ident, clock_lcd_scl_pin_num,
     clock_lcd_sda_pin_ident, clock_lcd_sda_pin_num, clock_led4_cell_pin_idents,
     clock_led4_cell_pin_nums, clock_led4_segment_pin_idents, clock_led4_segment_pin_nums,
@@ -15,8 +14,8 @@ use crate::example_specs::{
     ir_rx_channel_num, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
     panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_clock_examples,
     supports_conway_example, supports_ir_examples, supports_led16x16_examples,
-    talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident, talk1_strip8_pin_num,
-    BlinkyKind,
+    talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident,
+    talk1_strip8_pin_num, BlinkyKind,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -61,7 +60,9 @@ fn passthrough_example_base_names() -> &'static [String] {
         .as_slice()
 }
 
-fn discover_passthrough_example_base_names(templates_dir: &Path) -> Result<Vec<String>, Box<dyn Error>> {
+fn discover_passthrough_example_base_names(
+    templates_dir: &Path,
+) -> Result<Vec<String>, Box<dyn Error>> {
     let mut base_names = Vec::new();
     discover_passthrough_example_base_names_in_dir(templates_dir, templates_dir, &mut base_names)?;
     base_names.sort();
@@ -114,6 +115,7 @@ fn passthrough_template_supports_board(
     base_name: &str,
     board_profile: crate::boards::BoardProfile,
 ) -> bool {
+    let chip_feature = board_profile.chip_feature();
     match base_name {
         "conway" => supports_conway_example(board_profile),
         "led16x16_plus_1" | "led16x16_plus_1_spi" => supports_led16x16_examples(board_profile),
@@ -123,12 +125,20 @@ fn passthrough_template_supports_board(
         | "ir_kepler_example1_trait"
         | "ir_keplers"
         | "ir_mapping_example1_trait" => supports_ir_examples(board_profile),
-        "clock_console_simple"
-        | "clock_lcd"
-        | "clock_led4"
-        | "clock_led8x12"
-        | "clock_servos"
-        | "clock_sync_example1_trait" => supports_clock_examples(board_profile),
+        "clock_console_simple" => {
+            supports_clock_examples(board_profile) && chip_feature != "esp32h2"
+        }
+        "clock_sync_example1_trait" => {
+            supports_clock_examples(board_profile) && chip_feature != "esp32h2"
+        }
+        "clock_servos" => supports_clock_examples(board_profile) && chip_feature != "esp32h2",
+        "clock_lcd" => supports_clock_examples(board_profile) && chip_feature != "esp32h2",
+        "clock_led4" => {
+            supports_clock_examples(board_profile)
+                && chip_feature != "esp32h2"
+                && chip_feature != "esp32c2"
+        }
+        "clock_led8x12" => supports_clock_examples(board_profile) && chip_feature != "esp32h2",
         _ => true,
     }
 }
@@ -188,10 +198,10 @@ fn passthrough_template_mode(
         return match mode {
             "copy" => Ok(PassthroughTemplateMode::Copy),
             "render" => Ok(PassthroughTemplateMode::Render),
-            _ => Err(format!(
-                "invalid @board-example mode `{mode}` (expected `copy` or `render`)"
-            )
-            .into()),
+            _ => Err(
+                format!("invalid @board-example mode `{mode}` (expected `copy` or `render`)")
+                    .into(),
+            ),
         };
     }
     Ok(PassthroughTemplateMode::Copy)
@@ -233,13 +243,17 @@ fn generate_passthrough_files(
                 fs::create_dir_all(output_dir)?;
             }
             let example_name = passthrough_example_name(*board_profile, base_name);
-            let generated_source = if !passthrough_template_supports_board(base_name, *board_profile) {
+            let generated_source = if !passthrough_template_supports_board(
+                base_name,
+                *board_profile,
+            ) {
                 passthrough_placeholder_source(&example_name, base_name)
             } else if template_mode == PassthroughTemplateMode::Render {
                 let mut minijinja_environment = Environment::new();
                 minijinja_environment.add_template(base_name.as_str(), &template_source)?;
                 let board_supports_audio = supports_audio_examples(*board_profile);
-                let (audio_data_pin_num_value, audio_data_pin_ident_value) = if board_supports_audio {
+                let (audio_data_pin_num_value, audio_data_pin_ident_value) = if board_supports_audio
+                {
                     (
                         audio_data_pin_num(*board_profile),
                         audio_data_pin_ident(*board_profile),
@@ -265,14 +279,15 @@ fn generate_passthrough_files(
                     } else {
                         (0, "GPIO0".to_string())
                     };
-                let (audio_button_pin_num_value, audio_button_pin_ident_value) = if board_supports_audio {
-                    (
-                        audio_button_pin_num(*board_profile),
-                        audio_button_pin_ident(*board_profile),
-                    )
-                } else {
-                    (0, "GPIO0".to_string())
-                };
+                let (audio_button_pin_num_value, audio_button_pin_ident_value) =
+                    if board_supports_audio {
+                        (
+                            audio_button_pin_num(*board_profile),
+                            audio_button_pin_ident(*board_profile),
+                        )
+                    } else {
+                        (0, "GPIO0".to_string())
+                    };
                 let audio_dma_ident_value = if board_supports_audio {
                     audio_dma_ident(*board_profile)
                 } else {
@@ -415,16 +430,16 @@ fn remove_optional_marked_block(
     let end = source.find(end_marker);
     match (begin, end) {
         (None, None) => Ok(source),
-        (Some(_), None) | (None, Some(_)) => Err(format!(
-            "Cargo.toml marker mismatch: {begin_marker} / {end_marker}"
-        )
-        .into()),
+        (Some(_), None) | (None, Some(_)) => {
+            Err(format!("Cargo.toml marker mismatch: {begin_marker} / {end_marker}").into())
+        }
         (Some(begin_index), Some(end_index)) => {
             let end_of_marker = end_index + end_marker.len();
             let trailing_newline_len = source[end_of_marker..]
                 .chars()
                 .next()
-                .is_some_and(|character| character == '\n') as usize;
+                .is_some_and(|character| character == '\n')
+                as usize;
             let remove_end = end_of_marker + trailing_newline_len;
             let mut trimmed = String::with_capacity(source.len());
             trimmed.push_str(&source[..begin_index]);

@@ -690,7 +690,8 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
             DATA_LEN % block_align as usize == 0,
             "adpcm data length must be block aligned"
         );
-        let max_decoded_sample_count = (DATA_LEN / block_align as usize) * samples_per_block as usize;
+        let max_decoded_sample_count =
+            (DATA_LEN / block_align as usize) * samples_per_block as usize;
         assert!(
             pcm_sample_count <= max_decoded_sample_count,
             "pcm_sample_count must not exceed ADPCM block capacity"

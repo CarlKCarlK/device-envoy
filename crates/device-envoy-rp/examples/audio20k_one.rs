@@ -17,7 +17,7 @@ use core::{convert::Infallible, future::pending};
 use defmt::info;
 use device_envoy_rp::Result;
 use device_envoy_rp::audio_player::{
-    AtEnd, AudioPlayer as _, Volume, VOICE_22050_HZ, audio_player, pcm_clip,
+    AtEnd, AudioPlayer as _, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
@@ -51,7 +51,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
-    info!("phase: before_play sample_rate_hz={}", AudioPlayer8::SAMPLE_RATE_HZ);
+    info!(
+        "phase: before_play sample_rate_hz={}",
+        AudioPlayer8::SAMPLE_RATE_HZ
+    );
     audio_player8.play([CLIP], AtEnd::Stop);
     info!("phase: after_play_call");
     audio_player8.wait_until_stopped().await;

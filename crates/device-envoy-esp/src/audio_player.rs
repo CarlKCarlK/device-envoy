@@ -342,8 +342,6 @@ pub use device_envoy_core::audio_player::*;
 #[cfg(target_os = "none")]
 use embassy_futures::yield_now;
 #[cfg(target_os = "none")]
-use log::warn;
-#[cfg(target_os = "none")]
 use esp_hal::{
     dma::DmaChannelFor,
     gpio::interconnect::PeripheralOutput,
@@ -353,6 +351,8 @@ use esp_hal::{
     },
     time::Rate,
 };
+#[cfg(target_os = "none")]
+use log::warn;
 
 #[cfg(target_os = "none")]
 const SAMPLE_BUFFER_LEN: usize = 1024;
@@ -645,9 +645,7 @@ async fn write_words_to_i2s_with_recovery(
 }
 
 #[cfg(target_os = "none")]
-async fn fill_dma_ring_with_silence(
-    i2s_tx_transfer: &mut AudioI2sTxTransfer,
-) -> Result<(), ()> {
+async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) -> Result<(), ()> {
     let silence_bytes = [0_u8; DMA_TX_BYTES];
     let mut write_index = 0usize;
     let mut zero_push_streak = 0usize;

@@ -68,7 +68,7 @@ pub(crate) fn led_strip1_built_in(board_profile: BoardProfile) -> bool {
 }
 
 pub(crate) fn supports_ir_examples(board_profile: BoardProfile) -> bool {
-    !matches!(board_profile.chip_feature(), "esp32c2" | "esp32h2")
+    !matches!(board_profile.chip_feature(), "esp32c2")
 }
 
 pub(crate) fn supports_conway_example(board_profile: BoardProfile) -> bool {
@@ -78,7 +78,7 @@ pub(crate) fn supports_conway_example(board_profile: BoardProfile) -> bool {
 pub(crate) fn supports_clock_examples(board_profile: BoardProfile) -> bool {
     matches!(
         board_profile.chip_feature(),
-        "esp32" | "esp32c3" | "esp32c6" | "esp32s2" | "esp32s3"
+        "esp32" | "esp32c2" | "esp32c3" | "esp32c6" | "esp32s2" | "esp32s3"
     )
 }
 
@@ -116,16 +116,22 @@ pub(crate) fn clock_force_portal_button_pin_ident(board_profile: BoardProfile) -
     format!("GPIO{}", clock_force_portal_button_pin_num(board_profile))
 }
 
-pub(crate) fn clock_lcd_sda_pin_num(_board_profile: BoardProfile) -> u8 {
-    16
+pub(crate) fn clock_lcd_sda_pin_num(board_profile: BoardProfile) -> u8 {
+    match board_profile.chip_feature() {
+        "esp32c2" => 4,
+        _ => 16,
+    }
 }
 
 pub(crate) fn clock_lcd_sda_pin_ident(board_profile: BoardProfile) -> String {
     format!("GPIO{}", clock_lcd_sda_pin_num(board_profile))
 }
 
-pub(crate) fn clock_lcd_scl_pin_num(_board_profile: BoardProfile) -> u8 {
-    17
+pub(crate) fn clock_lcd_scl_pin_num(board_profile: BoardProfile) -> u8 {
+    match board_profile.chip_feature() {
+        "esp32c2" => 5,
+        _ => 17,
+    }
 }
 
 pub(crate) fn clock_lcd_scl_pin_ident(board_profile: BoardProfile) -> String {

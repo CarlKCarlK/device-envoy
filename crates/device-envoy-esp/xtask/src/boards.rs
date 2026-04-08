@@ -291,8 +291,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         default_external_plain_led: 8,
         default_external_smart_led: 8,
         panel16x16_pin: 2,
-        ir_pin: 7,
-        ir_pin2: 4,
+        ir_pin: 0,
+        ir_pin2: 1,
         ir_rx_channel: 2,
         ir_rx_channel2: 3,
         audio_wiring: Some(AudioWiring {

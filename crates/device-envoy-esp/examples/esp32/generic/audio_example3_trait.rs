@@ -9,14 +9,14 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
+use device_envoy_esp::{Result, init_and_start};
+
 use device_envoy_core::audio_player::{
     AtEnd, AudioPlayer, Gain, NARROWBAND_8000_HZ, Playable, VOICE_22050_HZ, Volume,
 };
 use device_envoy_esp::{
-    Result,
     audio_player::{audio_player, pcm_clip},
     button::{Button as _, ButtonEsp, PressedTo},
-    init_and_start,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -97,6 +97,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
+
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
     let audio_player_board =

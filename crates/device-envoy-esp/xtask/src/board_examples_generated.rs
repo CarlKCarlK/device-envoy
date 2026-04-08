@@ -2,7 +2,7 @@ use crate::boards::{validate_board_profiles, BOARD_PROFILES};
 use crate::example_specs::{
     audio_bit_clock_pin_ident, audio_bit_clock_pin_num, audio_button_pin_ident,
     audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
-    audio_example_name, audio_word_select_pin_ident, audio_word_select_pin_num,
+    audio_word_select_pin_ident, audio_word_select_pin_num,
     blinky_built_in_led, blinky_example_name, blinky_kind, blinky_led_pin_ident,
     blinky_led_pin_num, clock_example_name, clock_force_portal_button_pin_ident,
     clock_force_portal_button_pin_num, clock_lcd_scl_pin_ident, clock_lcd_scl_pin_num,
@@ -17,8 +17,7 @@ use crate::example_specs::{
     panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_clock_examples,
     supports_conway_example, supports_ir_examples, supports_led16x16_examples, talk1_example_name,
     talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident,
-    talk1_strip8_pin_num, BlinkyKind, AUDIO_EXAMPLE_BASE_NAMES, CLOCK_EXAMPLE_BASE_NAMES,
-    IR_EXAMPLE_BASE_NAMES,
+    talk1_strip8_pin_num, BlinkyKind, CLOCK_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES,
 };
 use minijinja::{context, Environment};
 use minijinja::value::Value;
@@ -60,23 +59,6 @@ fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_nam
         board_profile.chip_feature(),
         board_profile.board_dir()
     )
-}
-
-fn audio_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
-    context! {
-        board_slug => board_profile.board_slug(),
-        chip_name => board_profile.chip_name(),
-        chip_feature => board_profile.chip_feature(),
-        data_pin_num => audio_data_pin_num(board_profile),
-        data_pin_ident => audio_data_pin_ident(board_profile),
-        bit_clock_pin_num => audio_bit_clock_pin_num(board_profile),
-        bit_clock_pin_ident => audio_bit_clock_pin_ident(board_profile),
-        word_select_pin_num => audio_word_select_pin_num(board_profile),
-        word_select_pin_ident => audio_word_select_pin_ident(board_profile),
-        button_pin_num => audio_button_pin_num(board_profile),
-        button_pin_ident => audio_button_pin_ident(board_profile),
-        dma_ident => audio_dma_ident(board_profile),
-    }
 }
 
 fn ir_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
@@ -379,9 +361,6 @@ fn is_passthrough_template(base_name: &str) -> bool {
     {
         return false;
     }
-    if AUDIO_EXAMPLE_BASE_NAMES.iter().any(|name| name == &base_name) {
-        return false;
-    }
     if IR_EXAMPLE_BASE_NAMES.iter().any(|name| name == &base_name) {
         return false;
     }
@@ -525,18 +504,6 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
 
     let mut expected_generated_paths = Vec::new();
     generate_passthrough_files(&templates_dir, &examples_dir, &mut expected_generated_paths)?;
-
-    generate_family_examples(
-        &minijinja_environment,
-        &examples_dir,
-        &mut expected_generated_paths,
-        &AUDIO_EXAMPLE_BASE_NAMES,
-        supports_audio_examples,
-        audio_example_name,
-        audio_example_context,
-        default_template_name,
-        default_output_relative_path,
-    )?;
 
     generate_family_examples(
         &minijinja_environment,
@@ -719,12 +686,6 @@ pub fn generated_board_example_names() -> Vec<String> {
     }
     add_family_generated_names(
         &mut names,
-        &AUDIO_EXAMPLE_BASE_NAMES,
-        supports_audio_examples,
-        audio_example_name,
-    );
-    add_family_generated_names(
-        &mut names,
         &IR_EXAMPLE_BASE_NAMES,
         supports_ir_examples,
         ir_example_name,
@@ -784,14 +745,6 @@ fn generated_board_example_manifest_entries() -> Vec<ExampleManifestEntry> {
             });
         }
     }
-
-    add_family_manifest_entries(
-        &mut entries,
-        &AUDIO_EXAMPLE_BASE_NAMES,
-        supports_audio_examples,
-        audio_example_name,
-        default_output_relative_path,
-    );
 
     add_family_manifest_entries(
         &mut entries,
@@ -936,15 +889,6 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
                 return Some(board_profile.chip_feature());
             }
         }
-    }
-
-    if let Some(required_chip_feature) = find_family_required_chip(
-        example_name,
-        &AUDIO_EXAMPLE_BASE_NAMES,
-        supports_audio_examples,
-        audio_example_name,
-    ) {
-        return Some(required_chip_feature);
     }
 
     if let Some(required_chip_feature) = find_family_required_chip(

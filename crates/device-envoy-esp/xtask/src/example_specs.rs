@@ -7,13 +7,6 @@ pub(crate) enum BlinkyKind {
     SmartSpi,
 }
 
-pub(crate) const AUDIO_EXAMPLE_BASE_NAMES: [&str; 5] = [
-    "audio",
-    "audio_example1",
-    "audio_example1_trait",
-    "audio_example2_trait",
-    "audio_example3_trait",
-];
 pub(crate) const IR_EXAMPLE_BASE_NAMES: [&str; 6] = [
     "ir",
     "ir_example1_trait",
@@ -113,15 +106,6 @@ pub(crate) fn led16x16_example_name(board_profile: BoardProfile, use_spi: bool) 
             board_profile.board_dir()
         )
     }
-}
-
-pub(crate) fn audio_example_name(board_profile: BoardProfile, base_name: &str) -> String {
-    format!(
-        "{}_{}_{}",
-        base_name,
-        board_profile.chip_feature(),
-        board_profile.board_dir()
-    )
 }
 
 pub(crate) fn supports_ir_examples(board_profile: BoardProfile) -> bool {

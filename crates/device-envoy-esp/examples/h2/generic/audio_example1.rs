@@ -4,15 +4,18 @@
 #![no_main]
 
 use core::convert::Infallible;
+
 use core::time::Duration as StdDuration;
 
 use embassy_executor::Spawner;
 use esp_backtrace as _;
+use log::info;
+
+use device_envoy_esp::{Result, init_and_start};
 
 use device_envoy_esp::{
-    Result, audio_player::AtEnd, audio_player::AudioPlayer as _, audio_player::SilenceClip,
-    audio_player::VOICE_22050_HZ, audio_player::Volume, audio_player::audio_player, init_and_start,
-    tone,
+    audio_player::AtEnd, audio_player::AudioPlayer as _, audio_player::SilenceClip,
+    audio_player::VOICE_22050_HZ, audio_player::Volume, audio_player::audio_player, tone,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

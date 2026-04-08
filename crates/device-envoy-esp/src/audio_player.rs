@@ -342,6 +342,8 @@ pub use device_envoy_core::audio_player::*;
 #[cfg(target_os = "none")]
 use embassy_futures::yield_now;
 #[cfg(target_os = "none")]
+use log::warn;
+#[cfg(target_os = "none")]
 use esp_hal::{
     dma::DmaChannelFor,
     gpio::interconnect::PeripheralOutput,
@@ -355,6 +357,13 @@ use esp_hal::{
 #[cfg(target_os = "none")]
 const SAMPLE_BUFFER_LEN: usize = 1024;
 const DMA_TX_BYTES: usize = 16384;
+#[cfg(target_os = "none")]
+const MAX_ZERO_PUSH_STREAK: usize = 4096;
+#[cfg(target_os = "none")]
+// Keep I2S pushes bounded. Large push slices can fail on ESP at higher
+// sample rates, which can break idle/clear handling and leave stale audio
+// recirculating.
+const I2S_PUSH_CHUNK_BYTES: usize = 256;
 
 #[cfg(target_os = "none")]
 type AudioI2sTxTransfer = esp_hal::i2s::master::asynch::I2sWriteDmaTransferAsync<
@@ -520,9 +529,29 @@ pub async fn device_loop<
                         continue;
                     }
 
+                    // Ensure stale tail audio is overwritten before transitioning to idle.
+                    if clear_i2s_output_after_stop::<SAMPLE_RATE_HZ>(&mut i2s_tx_transfer)
+                        .await
+                        .is_err()
+                    {
+                        warn!(
+                            "audio_player: post-stop clear exhausted retries (sample_rate_hz={})",
+                            SAMPLE_RATE_HZ
+                        );
+                    }
                     audio_player_static.mark_stopped();
                 }
                 AudioCommand::Stop => {
+                    // Explicit stop should also clear any queued residual audio in the DMA ring.
+                    if clear_i2s_output_after_stop::<SAMPLE_RATE_HZ>(&mut i2s_tx_transfer)
+                        .await
+                        .is_err()
+                    {
+                        warn!(
+                            "audio_player: explicit-stop clear exhausted retries (sample_rate_hz={})",
+                            SAMPLE_RATE_HZ
+                        );
+                    }
                     audio_player_static.mark_stopped();
                 }
             }
@@ -538,31 +567,17 @@ async fn wait_for_audio_command_while_feeding_silence<
     const SAMPLE_RATE_HZ: u32,
 >(
     i2s_tx_transfer: &mut AudioI2sTxTransfer,
-    sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
+    _sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
 ) -> AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ> {
-    const IDLE_SILENCE_CHUNK_WORDS: usize = 256;
-    sample_buffer.fill(stereo_sample(0));
-
     loop {
         if let Some(audio_command) = audio_player_static.try_take_command() {
             return audio_command;
         }
 
-        if write_words_to_i2s_with_recovery(
-            i2s_tx_transfer,
-            sample_buffer,
-            IDLE_SILENCE_CHUNK_WORDS.min(SAMPLE_BUFFER_LEN),
-        )
-        .await
-        .is_err()
-        {
-            let _ = fill_dma_ring_with_silence(i2s_tx_transfer).await;
+        if fill_dma_ring_with_silence(i2s_tx_transfer).await.is_err() {
             yield_now().await;
-            continue;
         }
-
-        yield_now().await;
     }
 }
 
@@ -581,17 +596,26 @@ async fn write_words_to_i2s(
     }
 
     let mut write_index = 0usize;
+    let mut zero_push_streak = 0usize;
     while write_index < byte_count {
+        let remaining_byte_count = byte_count - write_index;
+        let push_byte_count = remaining_byte_count.min(I2S_PUSH_CHUNK_BYTES);
         let pushed_byte_count = match i2s_tx_transfer
-            .push(&sample_bytes[write_index..byte_count])
+            .push(&sample_bytes[write_index..write_index + push_byte_count])
             .await
         {
             Ok(pushed_byte_count) => pushed_byte_count,
             Err(_) => return Err(()),
         };
         if pushed_byte_count == 0 {
+            zero_push_streak += 1;
+            if zero_push_streak >= MAX_ZERO_PUSH_STREAK {
+                return Err(());
+            }
+            yield_now().await;
             continue;
         }
+        zero_push_streak = 0;
         write_index += pushed_byte_count;
     }
 
@@ -621,20 +645,80 @@ async fn write_words_to_i2s_with_recovery(
 }
 
 #[cfg(target_os = "none")]
-async fn fill_dma_ring_with_silence(i2s_tx_transfer: &mut AudioI2sTxTransfer) -> Result<(), ()> {
+async fn fill_dma_ring_with_silence(
+    i2s_tx_transfer: &mut AudioI2sTxTransfer,
+) -> Result<(), ()> {
     let silence_bytes = [0_u8; DMA_TX_BYTES];
     let mut write_index = 0usize;
+    let mut zero_push_streak = 0usize;
     while write_index < DMA_TX_BYTES {
-        let pushed_byte_count = match i2s_tx_transfer.push(&silence_bytes[write_index..]).await {
+        let remaining_byte_count = DMA_TX_BYTES - write_index;
+        let push_byte_count = remaining_byte_count.min(I2S_PUSH_CHUNK_BYTES);
+        let pushed_byte_count = match i2s_tx_transfer
+            .push(&silence_bytes[write_index..write_index + push_byte_count])
+            .await
+        {
             Ok(pushed_byte_count) => pushed_byte_count,
             Err(_) => return Err(()),
         };
         if pushed_byte_count == 0 {
+            zero_push_streak += 1;
+            if zero_push_streak >= MAX_ZERO_PUSH_STREAK {
+                return Err(());
+            }
+            yield_now().await;
             continue;
         }
+        zero_push_streak = 0;
         write_index += pushed_byte_count;
     }
     Ok(())
+}
+
+#[cfg(target_os = "none")]
+async fn flush_silence_after_stop<const SAMPLE_RATE_HZ: u32>(
+    i2s_tx_transfer: &mut AudioI2sTxTransfer,
+) -> Result<(), ()> {
+    const HIGH_RATE_FLUSH_ROUNDS: usize = 16;
+    const LOW_RATE_FLUSH_ROUNDS: usize = 4;
+    let silence_words = [stereo_sample(0); SAMPLE_BUFFER_LEN];
+    let silence_word_count = SAMPLE_BUFFER_LEN;
+    let flush_round_count = if SAMPLE_RATE_HZ >= 22_050 {
+        HIGH_RATE_FLUSH_ROUNDS
+    } else {
+        LOW_RATE_FLUSH_ROUNDS
+    };
+    let mut flush_round_index = 0usize;
+    while flush_round_index < flush_round_count {
+        write_words_to_i2s_with_recovery(i2s_tx_transfer, &silence_words, silence_word_count)
+            .await?;
+        yield_now().await;
+        flush_round_index += 1;
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "none")]
+async fn clear_i2s_output_after_stop<const SAMPLE_RATE_HZ: u32>(
+    i2s_tx_transfer: &mut AudioI2sTxTransfer,
+) -> Result<(), ()> {
+    const MAX_CLEAR_ATTEMPTS: usize = 32;
+    let mut clear_attempt_index = 0usize;
+    while clear_attempt_index < MAX_CLEAR_ATTEMPTS {
+        let fill_silence_result = fill_dma_ring_with_silence(i2s_tx_transfer).await;
+        let flush_silence_result = if fill_silence_result.is_ok() {
+            flush_silence_after_stop::<SAMPLE_RATE_HZ>(i2s_tx_transfer).await
+        } else {
+            Err(())
+        };
+
+        if fill_silence_result.is_ok() && flush_silence_result.is_ok() {
+            return Ok(());
+        }
+        yield_now().await;
+        clear_attempt_index += 1;
+    }
+    Err(())
 }
 
 /// Macro to generate an audio player struct type (includes syntax details).

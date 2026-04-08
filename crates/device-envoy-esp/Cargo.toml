@@ -146,6 +146,10 @@ esp-bootloader-esp-idf = { version = "0.4.0", default-features = false }
 
 # BEGIN GENERATED BOARD EXAMPLES
 [[example]]
+name = "audio20k_one_esp32_generic"
+path = "examples/esp32/generic/audio20k_one.rs"
+
+[[example]]
 name = "button_example1_trait_esp32_generic"
 path = "examples/esp32/generic/button_example1_trait.rs"
 
@@ -260,6 +264,10 @@ path = "examples/esp32/generic/wifi_dns_hex.rs"
 [[example]]
 name = "wifi_scan_esp32_generic"
 path = "examples/esp32/generic/wifi_scan.rs"
+
+[[example]]
+name = "audio20k_one_esp32c2_generic"
+path = "examples/c2/generic/audio20k_one.rs"
 
 [[example]]
 name = "button_example1_trait_esp32c2_generic"
@@ -378,6 +386,10 @@ name = "wifi_scan_esp32c2_generic"
 path = "examples/c2/generic/wifi_scan.rs"
 
 [[example]]
+name = "audio20k_one_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/audio20k_one.rs"
+
+[[example]]
 name = "button_example1_trait_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/button_example1_trait.rs"
 
@@ -492,6 +504,10 @@ path = "examples/c2/devkitm1_v1_0/wifi_dns_hex.rs"
 [[example]]
 name = "wifi_scan_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/wifi_scan.rs"
+
+[[example]]
+name = "audio20k_one_esp32c3_generic"
+path = "examples/c3/generic/audio20k_one.rs"
 
 [[example]]
 name = "button_example1_trait_esp32c3_generic"
@@ -610,6 +626,10 @@ name = "wifi_scan_esp32c3_generic"
 path = "examples/c3/generic/wifi_scan.rs"
 
 [[example]]
+name = "audio20k_one_esp32c3_luatos"
+path = "examples/c3/luatos/audio20k_one.rs"
+
+[[example]]
 name = "button_example1_trait_esp32c3_luatos"
 path = "examples/c3/luatos/button_example1_trait.rs"
 
@@ -724,6 +744,10 @@ path = "examples/c3/luatos/wifi_dns_hex.rs"
 [[example]]
 name = "wifi_scan_esp32c3_luatos"
 path = "examples/c3/luatos/wifi_scan.rs"
+
+[[example]]
+name = "audio20k_one_esp32c6_generic"
+path = "examples/c6/generic/audio20k_one.rs"
 
 [[example]]
 name = "button_example1_trait_esp32c6_generic"
@@ -842,6 +866,10 @@ name = "wifi_scan_esp32c6_generic"
 path = "examples/c6/generic/wifi_scan.rs"
 
 [[example]]
+name = "audio20k_one_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/audio20k_one.rs"
+
+[[example]]
 name = "button_example1_trait_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/button_example1_trait.rs"
 
@@ -956,6 +984,10 @@ path = "examples/c6/devkitc1_n8/wifi_dns_hex.rs"
 [[example]]
 name = "wifi_scan_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/wifi_scan.rs"
+
+[[example]]
+name = "audio20k_one_esp32h2_generic"
+path = "examples/h2/generic/audio20k_one.rs"
 
 [[example]]
 name = "button_example1_trait_esp32h2_generic"
@@ -1074,6 +1106,10 @@ name = "wifi_scan_esp32h2_generic"
 path = "examples/h2/generic/wifi_scan.rs"
 
 [[example]]
+name = "audio20k_one_esp32s2_generic"
+path = "examples/s2/generic/audio20k_one.rs"
+
+[[example]]
 name = "button_example1_trait_esp32s2_generic"
 path = "examples/s2/generic/button_example1_trait.rs"
 
@@ -1188,6 +1224,10 @@ path = "examples/s2/generic/wifi_dns_hex.rs"
 [[example]]
 name = "wifi_scan_esp32s2_generic"
 path = "examples/s2/generic/wifi_scan.rs"
+
+[[example]]
+name = "audio20k_one_esp32s3_generic"
+path = "examples/s3/generic/audio20k_one.rs"
 
 [[example]]
 name = "button_example1_trait_esp32s3_generic"
@@ -1306,6 +1346,10 @@ name = "wifi_scan_esp32s3_generic"
 path = "examples/s3/generic/wifi_scan.rs"
 
 [[example]]
+name = "audio20k_one_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/audio20k_one.rs"
+
+[[example]]
 name = "button_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/button_example1_trait.rs"
 
@@ -1420,6 +1464,10 @@ path = "examples/s3/devkitc1_v1_1_n16r8/wifi_dns_hex.rs"
 [[example]]
 name = "wifi_scan_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/wifi_scan.rs"
+
+[[example]]
+name = "audio20k_one_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/audio20k_one.rs"
 
 [[example]]
 name = "button_example1_trait_esp32s3_devkitc1_v1_0_n16r8"

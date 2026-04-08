@@ -459,9 +459,16 @@ async fn play_full_adpcm_clip_once<
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
 ) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
     let mut sample_buffer_len = 0usize;
+    let mut remaining_pcm_sample_count = adpcm_clip.pcm_sample_count();
+    if remaining_pcm_sample_count == 0 {
+        return ControlFlow::Continue(());
+    }
 
     let block_align = adpcm_clip.block_align() as usize;
     for adpcm_block in adpcm_clip.data().chunks_exact(block_align) {
+        if remaining_pcm_sample_count == 0 {
+            break;
+        }
         if adpcm_block.len() < 4 {
             return ControlFlow::Continue(());
         }
@@ -476,23 +483,26 @@ async fn play_full_adpcm_clip_once<
             return ControlFlow::Continue(());
         }
 
-        sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_volume(
-            predictor_i32 as i16,
-            runtime_volume,
-        ));
-        sample_buffer_len += 1;
-        if sample_buffer_len == SAMPLE_BUFFER_LEN {
-            if output
-                .write_stereo_words(sample_buffer, sample_buffer_len)
-                .await
-                .is_err()
-            {
-                return ControlFlow::Continue(());
-            }
-            output.after_write().await;
-            sample_buffer_len = 0;
-            if let Some(next_audio_command) = audio_player_static.try_take_command() {
-                return ControlFlow::Break(next_audio_command);
+        if remaining_pcm_sample_count > 0 {
+            sample_buffer[sample_buffer_len] = stereo_sample(scale_sample_with_volume(
+                predictor_i32 as i16,
+                runtime_volume,
+            ));
+            sample_buffer_len += 1;
+            remaining_pcm_sample_count -= 1;
+            if sample_buffer_len == SAMPLE_BUFFER_LEN {
+                if output
+                    .write_stereo_words(sample_buffer, sample_buffer_len)
+                    .await
+                    .is_err()
+                {
+                    return ControlFlow::Continue(());
+                }
+                output.after_write().await;
+                sample_buffer_len = 0;
+                if let Some(next_audio_command) = audio_player_static.try_take_command() {
+                    return ControlFlow::Break(next_audio_command);
+                }
             }
         }
 
@@ -501,7 +511,8 @@ async fn play_full_adpcm_clip_once<
 
         for adpcm_byte in &adpcm_block[4..] {
             for adpcm_nibble in [adpcm_byte & 0x0F, adpcm_byte >> 4] {
-                if samples_decoded_in_block >= samples_per_block {
+                if samples_decoded_in_block >= samples_per_block || remaining_pcm_sample_count == 0
+                {
                     break;
                 }
 
@@ -513,6 +524,7 @@ async fn play_full_adpcm_clip_once<
                 sample_buffer[sample_buffer_len] =
                     stereo_sample(scale_sample_with_volume(decoded_sample_i16, runtime_volume));
                 sample_buffer_len += 1;
+                remaining_pcm_sample_count -= 1;
                 samples_decoded_in_block += 1;
 
                 if sample_buffer_len == SAMPLE_BUFFER_LEN {
@@ -529,6 +541,9 @@ async fn play_full_adpcm_clip_once<
                         return ControlFlow::Break(next_audio_command);
                     }
                 }
+            }
+            if remaining_pcm_sample_count == 0 {
+                break;
             }
         }
 
@@ -620,6 +635,7 @@ pub enum AtEnd {
 pub struct AdpcmClip<const SAMPLE_RATE_HZ: u32, T: ?Sized = [u8]> {
     block_align: u16,
     samples_per_block: u16,
+    pcm_sample_count: u32,
     data: T,
 }
 
@@ -640,6 +656,12 @@ impl<const SAMPLE_RATE_HZ: u32, T: ?Sized> AdpcmClip<SAMPLE_RATE_HZ, T> {
         self.samples_per_block
     }
 
+    /// Returns the decoded PCM sample count represented by this ADPCM clip.
+    #[must_use]
+    pub fn pcm_sample_count(&self) -> usize {
+        self.pcm_sample_count as usize
+    }
+
     /// Returns a reference to the raw ADPCM byte data.
     #[must_use]
     pub fn data(&self) -> &T {
@@ -658,6 +680,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
     pub(crate) const fn new(
         block_align: u16,
         samples_per_block: u16,
+        pcm_sample_count: usize,
         data: [u8; DATA_LEN],
     ) -> Self {
         assert!(SAMPLE_RATE_HZ > 0, "sample_rate_hz must be > 0");
@@ -667,9 +690,19 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
             DATA_LEN % block_align as usize == 0,
             "adpcm data length must be block aligned"
         );
+        let max_decoded_sample_count = (DATA_LEN / block_align as usize) * samples_per_block as usize;
+        assert!(
+            pcm_sample_count <= max_decoded_sample_count,
+            "pcm_sample_count must not exceed ADPCM block capacity"
+        );
+        assert!(
+            pcm_sample_count <= u32::MAX as usize,
+            "pcm_sample_count must fit in u32"
+        );
         Self {
             block_align,
             samples_per_block,
+            pcm_sample_count: pcm_sample_count as u32,
             data,
         }
     }
@@ -692,7 +725,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
 
         let samples_per_block = self.samples_per_block as usize;
         assert!(samples_per_block > 0, "samples_per_block must be > 0");
-        let expected_sample_count = (DATA_LEN / block_align) * samples_per_block;
+        let expected_sample_count = self.pcm_sample_count as usize;
         assert!(
             SAMPLE_COUNT == expected_sample_count,
             "sample count must match decoded ADPCM length"
@@ -705,9 +738,10 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         }
 
         let mut sample_index = 0usize;
+        let mut remaining_sample_count = SAMPLE_COUNT;
         let mut block_start = 0usize;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
-        while block_start < DATA_LEN {
+        while block_start < DATA_LEN && remaining_sample_count > 0 {
             let mut predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
             let mut step_index_i32 = self.data[block_start + 2] as i32;
             assert!(step_index_i32 >= 0, "ADPCM step_index must be >= 0");
@@ -715,6 +749,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
 
             samples[sample_index] = predictor_i32 as i16;
             sample_index += 1;
+            remaining_sample_count -= 1;
             let mut decoded_in_block = 1usize;
 
             let mut adpcm_byte_offset = block_start + 4;
@@ -725,23 +760,28 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
                 let adpcm_nibble_low = adpcm_byte & 0x0F;
                 let adpcm_nibble_high = adpcm_byte >> 4;
 
-                if decoded_in_block < samples_per_block {
+                if decoded_in_block < samples_per_block && remaining_sample_count > 0 {
                     samples[sample_index] = decode_adpcm_nibble_const(
                         adpcm_nibble_low,
                         &mut predictor_i32,
                         &mut step_index_i32,
                     );
                     sample_index += 1;
+                    remaining_sample_count -= 1;
                     decoded_in_block += 1;
                 }
-                if decoded_in_block < samples_per_block {
+                if decoded_in_block < samples_per_block && remaining_sample_count > 0 {
                     samples[sample_index] = decode_adpcm_nibble_const(
                         adpcm_nibble_high,
                         &mut predictor_i32,
                         &mut step_index_i32,
                     );
                     sample_index += 1;
+                    remaining_sample_count -= 1;
                     decoded_in_block += 1;
+                }
+                if remaining_sample_count == 0 {
+                    break;
                 }
 
                 adpcm_byte_offset += 1;
@@ -843,7 +883,12 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
             block_start += block_align;
         }
 
-        Self::new(self.block_align, self.samples_per_block, gained_data)
+        Self::new(
+            self.block_align,
+            self.samples_per_block,
+            self.pcm_sample_count as usize,
+            gained_data,
+        )
     }
 }
 
@@ -1582,7 +1627,12 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
             "adpcm data length must match sample count and block_align"
         );
         if SAMPLE_COUNT == 0 {
-            return AdpcmClip::new(block_align as u16, samples_per_block as u16, [0; DATA_LEN]);
+            return AdpcmClip::new(
+                block_align as u16,
+                samples_per_block as u16,
+                SAMPLE_COUNT,
+                [0; DATA_LEN],
+            );
         }
 
         let mut adpcm_data = [0_u8; DATA_LEN];
@@ -1633,7 +1683,12 @@ impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>
             }
         }
 
-        AdpcmClip::new(block_align as u16, samples_per_block as u16, adpcm_data)
+        AdpcmClip::new(
+            block_align as u16,
+            samples_per_block as u16,
+            SAMPLE_COUNT,
+            adpcm_data,
+        )
     }
 }
 
@@ -1895,9 +1950,10 @@ pub const fn __pcm_clip_from_samples<const SAMPLE_RATE_HZ: u32, const SAMPLE_COU
 pub const fn __adpcm_clip_from_parts<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize>(
     block_align: u16,
     samples_per_block: u16,
+    pcm_sample_count: usize,
     data: [u8; DATA_LEN],
 ) -> AdpcmClipBuf<SAMPLE_RATE_HZ, DATA_LEN> {
-    AdpcmClip::new(block_align, samples_per_block, data)
+    AdpcmClip::new(block_align, samples_per_block, pcm_sample_count, data)
 }
 
 /// Const backend helper that encodes PCM into ADPCM with an explicit block size.
@@ -2382,6 +2438,7 @@ macro_rules! __adpcm_clip_parse {
                     $crate::audio_player::__adpcm_clip_from_parts(
                         parsed_wav.block_align as u16,
                         parsed_wav.samples_per_block as u16,
+                        parsed_wav.sample_count,
                         adpcm_data,
                     )
                 }
@@ -2418,6 +2475,7 @@ macro_rules! __adpcm_clip_parse {
                         $crate::audio_player::__adpcm_clip_from_parts(
                             parsed_wav.block_align as u16,
                             parsed_wav.samples_per_block as u16,
+                            parsed_wav.sample_count,
                             adpcm_data,
                         )
                     } else {

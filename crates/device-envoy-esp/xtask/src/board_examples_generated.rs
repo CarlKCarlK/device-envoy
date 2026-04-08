@@ -633,6 +633,46 @@ fn generate_passthrough_files(
             let generated_source = if template_mode == PassthroughTemplateMode::Render {
                 let mut minijinja_environment = Environment::new();
                 minijinja_environment.add_template(base_name.as_str(), &template_source)?;
+                let board_supports_audio = supports_audio_examples(*board_profile);
+                let (audio_data_pin_num_value, audio_data_pin_ident_value) = if board_supports_audio {
+                    (
+                        audio_data_pin_num(*board_profile),
+                        audio_data_pin_ident(*board_profile),
+                    )
+                } else {
+                    (0, "GPIO0".to_string())
+                };
+                let (audio_bit_clock_pin_num_value, audio_bit_clock_pin_ident_value) =
+                    if board_supports_audio {
+                        (
+                            audio_bit_clock_pin_num(*board_profile),
+                            audio_bit_clock_pin_ident(*board_profile),
+                        )
+                    } else {
+                        (0, "GPIO0".to_string())
+                    };
+                let (audio_word_select_pin_num_value, audio_word_select_pin_ident_value) =
+                    if board_supports_audio {
+                        (
+                            audio_word_select_pin_num(*board_profile),
+                            audio_word_select_pin_ident(*board_profile),
+                        )
+                    } else {
+                        (0, "GPIO0".to_string())
+                    };
+                let (audio_button_pin_num_value, audio_button_pin_ident_value) = if board_supports_audio {
+                    (
+                        audio_button_pin_num(*board_profile),
+                        audio_button_pin_ident(*board_profile),
+                    )
+                } else {
+                    (0, "GPIO0".to_string())
+                };
+                let audio_dma_ident_value = if board_supports_audio {
+                    audio_dma_ident(*board_profile)
+                } else {
+                    "DMA_CH0"
+                };
                 minijinja_environment
                     .get_template(base_name.as_str())?
                     .render(context! {
@@ -644,6 +684,16 @@ fn generate_passthrough_files(
                     talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
                     force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
                     force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
+                    audio_supported => board_supports_audio,
+                    data_pin_num => audio_data_pin_num_value,
+                    data_pin_ident => audio_data_pin_ident_value,
+                    bit_clock_pin_num => audio_bit_clock_pin_num_value,
+                    bit_clock_pin_ident => audio_bit_clock_pin_ident_value,
+                    word_select_pin_num => audio_word_select_pin_num_value,
+                    word_select_pin_ident => audio_word_select_pin_ident_value,
+                    button_pin_num => audio_button_pin_num_value,
+                    button_pin_ident => audio_button_pin_ident_value,
+                    dma_ident => audio_dma_ident_value,
                 })?
             } else {
                 template_source.clone()

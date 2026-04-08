@@ -3,7 +3,7 @@
 //! led16x16_plus_1_spi: not supported on this board profile.
 //!
 //! Wiring:
-//! - this example requires two SPI resources, and ESP32-C2 offers one SPI resource
+//! - this example requires two SPI resources, and ESP32-C2 offers 1 SPI resource
 
 #![no_std]
 #![no_main]
@@ -31,7 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let _ = spawner;
     info!(
-        "led16x16_plus_1_spi_esp32c2_generic: this example requires two SPI resources, and ESP32-C2 offers one SPI resource"
+        "led16x16_plus_1_spi_esp32c2_generic: this example requires two SPI resources, and ESP32-C2 offers 1 SPI resource"
     );
     core::future::pending().await
 }

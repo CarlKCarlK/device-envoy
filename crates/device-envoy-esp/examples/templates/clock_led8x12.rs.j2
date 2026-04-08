@@ -6,7 +6,7 @@
 //! The display shows hours on the top line and minutes on the bottom line.
 //!
 //! Wiring:
-//! - NeoPixel-style (WS2812) 8x12 panel data input -> {{ led8x12_panel_pin_ident }}
+//! - NeoPixel-style (WS2812) 8x12 panel data input -> GPIO{{ panel12x8_pin_num }}
 //! - Force-portal button -> {{ force_portal_button_pin_ident }} to GND
 //! - Panel power -> 5V (or per panel spec), shared GND with board
 {% if chip_feature == "esp32c2" %}
@@ -64,7 +64,7 @@ button_watch! {
 
 led2d! {
     Led8x12Clock {
-        pin: {{ led8x12_panel_pin_ident }},
+        pin: GPIO{{ panel12x8_pin_num }},
         len: 96,
         led_layout: LED_LAYOUT_8X12,
         max_current: Current::Milliamps(250),
@@ -94,7 +94,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("clock_led8x12 starting");
 
     let led8x12_clock = Led8x12Clock::new(
-        p.{{ led8x12_panel_pin_ident }},
+        p.GPIO{{ panel12x8_pin_num }},
 {% if chip_feature == "esp32c2" %}
         p.SPI2,
 {% else %}

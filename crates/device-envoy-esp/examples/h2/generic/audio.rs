@@ -6,7 +6,7 @@
 //! - Data pin (`DIN`) -> GPIO1
 //! - Bit clock pin (`BCLK`) -> GPIO3
 //! - Word select pin (`LRC` / `LRCLK`) -> GPIO4
-//! - Button -> GPIO0 to GND (starts playback)
+//! - Button -> GPIO6 to GND (starts playback)
 
 #![no_std]
 #![no_main]
@@ -73,7 +73,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const SILENCE_100MS: &AudioPlayerBoardPlayable =
         &SilenceClip::new(StdDuration::from_millis(100));
 
-    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
 
     let audio_player_board =
         AudioPlayerBoard::new(p.GPIO1, p.GPIO3, p.GPIO4, p.I2S0, p.DMA_CH0, spawner)?;
@@ -84,7 +84,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         Nasa::PCM_SAMPLE_COUNT,
         Nasa::PCM_SAMPLE_COUNT * 2
     );
-    info!("Button on GPIO0 starts playback");
+    info!("Button on GPIO6 starts playback");
 
     loop {
         button.wait_for_press().await;

@@ -1,21 +1,9 @@
 use crate::boards::{validate_board_profiles, BOARD_PROFILES};
 use crate::example_specs::{
-    audio_bit_clock_pin_ident, audio_bit_clock_pin_num, audio_button_pin_ident,
-    audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
-    audio_word_select_pin_ident, audio_word_select_pin_num, blinky_built_in_led, blinky_kind,
-    blinky_led_pin_ident, blinky_led_pin_num, clock_force_portal_button_pin_ident,
-    clock_force_portal_button_pin_num, clock_lcd_scl_pin_ident, clock_lcd_scl_pin_num,
-    clock_lcd_sda_pin_ident, clock_lcd_sda_pin_num, clock_led4_cell_pin_idents,
-    clock_led4_cell_pin_nums, clock_led4_segment_pin_idents, clock_led4_segment_pin_nums,
-    clock_led8x12_panel_pin_ident, clock_led8x12_panel_pin_num, clock_servos_bottom_pin_ident,
-    clock_servos_bottom_pin_num, clock_servos_top_pin_ident, clock_servos_top_pin_num,
-    ir_kepler_receiver0_pin_ident, ir_kepler_receiver0_pin_num, ir_pin2_ident, ir_pin2_num,
-    ir_pin_ident, ir_pin_num, ir_rx_channel2_ident, ir_rx_channel2_num, ir_rx_channel_ident,
-    ir_rx_channel_num, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
-    panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_clock_examples,
-    supports_conway_example, supports_ir_examples, supports_led16x16_examples,
-    talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident,
-    talk1_strip8_pin_num, BlinkyKind,
+    audio_bit_clock_pin_num, audio_data_pin_num, audio_dma_ident, audio_word_select_pin_num,
+    blinky_built_in_led, blinky_kind, blinky_led_pin_num, led_strip1_built_in, led_strip1_pin_num,
+    supports_audio_examples, supports_conway_example, supports_ir_examples,
+    supports_led16x16_plus_1_example, supports_led16x16_plus_1_spi_example, BlinkyKind,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -115,32 +103,28 @@ fn passthrough_template_supports_board(
     base_name: &str,
     board_profile: crate::boards::BoardProfile,
 ) -> bool {
-    let chip_feature = board_profile.chip_feature();
-    if chip_feature == "esp32c2" && base_name.starts_with("audio") {
+    if base_name.starts_with("audio") && !supports_audio_examples(board_profile) {
         return false;
     }
-    if chip_feature == "esp32h2" && base_name.starts_with("clock_") {
+    if base_name.starts_with("clock_") && !board_profile.wifi_supported {
         return false;
     }
     match base_name {
-        "conway" => supports_conway_example(board_profile) && chip_feature != "esp32c2",
-        "led16x16_plus_1" | "led16x16_plus_1_spi" => supports_led16x16_examples(board_profile),
+        "conway" => supports_conway_example(board_profile),
+        "led16x16_plus_1" => supports_led16x16_plus_1_example(board_profile),
+        "led16x16_plus_1_spi" => supports_led16x16_plus_1_spi_example(board_profile),
         "ir"
         | "ir_example1_trait"
         | "ir_kepler"
         | "ir_kepler_example1_trait"
         | "ir_keplers"
         | "ir_mapping_example1_trait" => supports_ir_examples(board_profile),
-        "clock_console_simple" => {
-            supports_clock_examples(board_profile) && chip_feature != "esp32h2"
-        }
-        "clock_sync_example1_trait" => {
-            supports_clock_examples(board_profile) && chip_feature != "esp32h2"
-        }
-        "clock_servos" => supports_clock_examples(board_profile) && chip_feature != "esp32h2",
-        "clock_lcd" => supports_clock_examples(board_profile) && chip_feature != "esp32h2",
-        "clock_led4" => supports_clock_examples(board_profile) && chip_feature != "esp32h2",
-        "clock_led8x12" => supports_clock_examples(board_profile) && chip_feature != "esp32h2",
+        "clock_console_simple"
+        | "clock_sync_example1_trait"
+        | "clock_servos"
+        | "clock_lcd"
+        | "clock_led4"
+        | "clock_led8x12" => board_profile.wifi_supported,
         _ => true,
     }
 }
@@ -149,40 +133,81 @@ fn passthrough_placeholder_reason(
     _example_name: &str,
     base_name: &str,
     board_profile: crate::boards::BoardProfile,
-) -> Option<&'static str> {
-    if board_profile.chip_feature() == "esp32h2" && base_name.starts_with("clock_") {
-        return Some("this example requires Wi-Fi, and ESP32-H2 does not offer that resource");
+) -> Option<String> {
+    if base_name.starts_with("clock_") && !board_profile.wifi_supported {
+        return Some(format!(
+            "this example requires Wi-Fi, and {} does not offer that resource",
+            board_profile.chip_name()
+        ));
     }
 
-    if board_profile.chip_feature() == "esp32c2" && base_name.contains("led16x16_plus_1_spi") {
-        return Some(
-            "this example requires two SPI resources, and ESP32-C2 offers one SPI resource",
-        );
-    }
-    if board_profile.chip_feature() == "esp32c2" && base_name.contains("led16x16_plus_1") {
-        return Some("this example requires two RMT resources, and ESP32-C2 has none");
-    }
-    if board_profile.chip_feature() == "esp32c2" && base_name.starts_with("audio") {
-        return Some(
-            "this example requires I2S resources, and ESP32-C2 does not offer that resource",
-        );
-    }
-
-    if board_profile.chip_feature() != "esp32c2" {
-        return None;
-    }
-    match base_name {
-        "conway"
-        | "ir"
-        | "ir_example1_trait"
-        | "ir_kepler"
-        | "ir_kepler_example1_trait"
-        | "ir_keplers"
-        | "ir_mapping_example1_trait" => {
-            Some("our IR decoder needs an RMT resource, and ESP32-C2 does not offer that resource")
+    if base_name == "led16x16_plus_1_spi" && !supports_led16x16_plus_1_spi_example(board_profile) {
+        if board_profile.spi_count < 2 {
+            let resource_word = if board_profile.spi_count == 1 {
+                "resource"
+            } else {
+                "resources"
+            };
+            return Some(format!(
+                "this example requires two SPI resources, and {} offers {} SPI {}",
+                board_profile.chip_name(),
+                board_profile.spi_count,
+                resource_word
+            ));
         }
-        _ => None,
+        if board_profile.rmt_count < 2 {
+            let resource_word = if board_profile.rmt_count == 1 {
+                "resource"
+            } else {
+                "resources"
+            };
+            return Some(format!(
+                "this example requires two RMT resources, and {} offers {} RMT {}",
+                board_profile.chip_name(),
+                board_profile.rmt_count,
+                resource_word
+            ));
+        }
     }
+
+    if base_name == "led16x16_plus_1" && !supports_led16x16_plus_1_example(board_profile) {
+        let resource_word = if board_profile.rmt_count == 1 {
+            "resource"
+        } else {
+            "resources"
+        };
+        return Some(format!(
+            "this example requires two RMT resources, and {} offers {} RMT {}",
+            board_profile.chip_name(),
+            board_profile.rmt_count,
+            resource_word
+        ));
+    }
+
+    if base_name.starts_with("audio") && !supports_audio_examples(board_profile) {
+        return Some(format!(
+            "this example requires I2S resources, and {} does not offer that resource",
+            board_profile.chip_name()
+        ));
+    }
+
+    if !supports_ir_examples(board_profile) {
+        return match base_name {
+            "conway"
+            | "ir"
+            | "ir_example1_trait"
+            | "ir_kepler"
+            | "ir_kepler_example1_trait"
+            | "ir_keplers"
+            | "ir_mapping_example1_trait" => Some(format!(
+                "our IR decoder needs an RMT resource, and {} does not offer that resource",
+                board_profile.chip_name()
+            )),
+            _ => None,
+        };
+    }
+
+    None
 }
 
 fn passthrough_placeholder_source(
@@ -191,12 +216,12 @@ fn passthrough_placeholder_source(
     board_profile: crate::boards::BoardProfile,
 ) -> String {
     let unsupported_reason = passthrough_placeholder_reason(example_name, base_name, board_profile);
-    let wiring_note = if let Some(reason) = unsupported_reason {
+    let wiring_note = if let Some(reason) = unsupported_reason.as_deref() {
         format!("//! - {reason}\n")
     } else {
         "//! - This is a placeholder for an unsupported board profile.\n".to_string()
     };
-    let info_message = if let Some(reason) = unsupported_reason {
+    let info_message = if let Some(reason) = unsupported_reason.as_deref() {
         format!("{example_name}: {reason}")
     } else {
         format!("{example_name}: not supported on this board profile")
@@ -313,7 +338,7 @@ fn generate_passthrough_files(
                 {
                     (
                         audio_data_pin_num(*board_profile),
-                        audio_data_pin_ident(*board_profile),
+                        format!("GPIO{}", audio_data_pin_num(*board_profile)),
                     )
                 } else {
                     (0, "GPIO0".to_string())
@@ -322,7 +347,7 @@ fn generate_passthrough_files(
                     if board_supports_audio {
                         (
                             audio_bit_clock_pin_num(*board_profile),
-                            audio_bit_clock_pin_ident(*board_profile),
+                            format!("GPIO{}", audio_bit_clock_pin_num(*board_profile)),
                         )
                     } else {
                         (0, "GPIO0".to_string())
@@ -331,7 +356,7 @@ fn generate_passthrough_files(
                     if board_supports_audio {
                         (
                             audio_word_select_pin_num(*board_profile),
-                            audio_word_select_pin_ident(*board_profile),
+                            format!("GPIO{}", audio_word_select_pin_num(*board_profile)),
                         )
                     } else {
                         (0, "GPIO0".to_string())
@@ -339,8 +364,8 @@ fn generate_passthrough_files(
                 let (audio_button_pin_num_value, audio_button_pin_ident_value) =
                     if board_supports_audio {
                         (
-                            audio_button_pin_num(*board_profile),
-                            audio_button_pin_ident(*board_profile),
+                            board_profile.button_pin,
+                            format!("GPIO{}", board_profile.button_pin),
                         )
                     } else {
                         (0, "GPIO0".to_string())
@@ -363,45 +388,44 @@ fn generate_passthrough_files(
                         BlinkyKind::SmartSpi => "smart_spi",
                     },
                     led_pin_num => blinky_led_pin_num(*board_profile),
-                    led_pin_ident => blinky_led_pin_ident(*board_profile),
+                    led_pin_ident => format!("GPIO{}", blinky_led_pin_num(*board_profile)),
                     built_in_led => blinky_built_in_led(*board_profile),
-                    panel_pin_num => panel16x16_pin_num(*board_profile),
-                    panel_pin_ident => panel16x16_pin_ident(*board_profile),
+                    panel_pin_num => board_profile.led_2d16x16_pin,
+                    panel_pin_ident => format!("GPIO{}", board_profile.led_2d16x16_pin),
                     led_strip1_pin_num => led_strip1_pin_num(*board_profile),
-                    led_strip1_pin_ident => led_strip1_pin_ident(*board_profile),
+                    led_strip1_pin_ident => format!("GPIO{}", led_strip1_pin_num(*board_profile)),
                     led_strip1_built_in => led_strip1_built_in(*board_profile),
-                    talk1_strip8_pin_num => talk1_strip8_pin_num(*board_profile),
-                    talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
-                    talk1_panel12x8_pin_num => talk1_panel12x8_pin_num(*board_profile),
-                    talk1_panel12x8_pin_ident => talk1_panel12x8_pin_ident(*board_profile),
+                    strip8_pin_num => board_profile.led_strip_len_8_pin,
+                    strip8_pin_ident => format!("GPIO{}", board_profile.led_strip_len_8_pin),
+                    panel12x8_pin_num => board_profile.led_2d12x8_pin,
                     ir_supported => supports_ir_examples(*board_profile),
-                    ir_pin_num => ir_pin_num(*board_profile),
-                    ir_pin_ident => ir_pin_ident(*board_profile),
-                    ir_receiver0_pin_num => ir_kepler_receiver0_pin_num(*board_profile),
-                    ir_receiver0_pin_ident => ir_kepler_receiver0_pin_ident(*board_profile),
-                    ir_receiver1_pin_num => ir_pin2_num(*board_profile),
-                    ir_receiver1_pin_ident => ir_pin2_ident(*board_profile),
-                    ir_rx_channel_num => ir_rx_channel_num(*board_profile),
-                    ir_rx_channel_ident => ir_rx_channel_ident(*board_profile),
-                    ir_rx_channel2_num => ir_rx_channel2_num(*board_profile),
-                    ir_rx_channel2_ident => ir_rx_channel2_ident(*board_profile),
-                    clock_supported => supports_clock_examples(*board_profile),
-                    force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
-                    force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
-                    lcd_sda_pin_num => clock_lcd_sda_pin_num(*board_profile),
-                    lcd_sda_pin_ident => clock_lcd_sda_pin_ident(*board_profile),
-                    lcd_scl_pin_num => clock_lcd_scl_pin_num(*board_profile),
-                    lcd_scl_pin_ident => clock_lcd_scl_pin_ident(*board_profile),
-                    led8x12_panel_pin_num => clock_led8x12_panel_pin_num(*board_profile),
-                    led8x12_panel_pin_ident => clock_led8x12_panel_pin_ident(*board_profile),
-                    servo_bottom_pin_num => clock_servos_bottom_pin_num(*board_profile),
-                    servo_bottom_pin_ident => clock_servos_bottom_pin_ident(*board_profile),
-                    servo_top_pin_num => clock_servos_top_pin_num(*board_profile),
-                    servo_top_pin_ident => clock_servos_top_pin_ident(*board_profile),
-                    led4_cell_pin_nums => clock_led4_cell_pin_nums(*board_profile),
-                    led4_cell_pin_idents => clock_led4_cell_pin_idents(*board_profile),
-                    led4_segment_pin_nums => clock_led4_segment_pin_nums(*board_profile),
-                    led4_segment_pin_idents => clock_led4_segment_pin_idents(*board_profile),
+                    ir_pin_num => board_profile.ir_pin_rx_channel.0,
+                    ir_pin_ident => format!("GPIO{}", board_profile.ir_pin_rx_channel.0),
+                    ir_receiver0_pin_num => board_profile.ir_pin_rx_channel.0,
+                    ir_receiver0_pin_ident => format!("GPIO{}", board_profile.ir_pin_rx_channel.0),
+                    ir_receiver1_pin_num => board_profile.ir_pin_rx_channel2.0,
+                    ir_receiver1_pin_ident => format!("GPIO{}", board_profile.ir_pin_rx_channel2.0),
+                    ir_rx_channel_num => board_profile.ir_pin_rx_channel.1,
+                    ir_rx_channel_ident => format!("channel{}", board_profile.ir_pin_rx_channel.1),
+                    ir_rx_channel2_num => board_profile.ir_pin_rx_channel2.1,
+                    ir_rx_channel2_ident => format!("channel{}", board_profile.ir_pin_rx_channel2.1),
+                    clock_supported => board_profile.wifi_supported,
+                    force_portal_button_pin_num => board_profile.button_pin,
+                    force_portal_button_pin_ident => format!("GPIO{}", board_profile.button_pin),
+                    lcd_sda_pin_num => board_profile.lcd_sda_pin,
+                    lcd_sda_pin_ident => format!("GPIO{}", board_profile.lcd_sda_pin),
+                    lcd_scl_pin_num => board_profile.lcd_scl_pin,
+                    lcd_scl_pin_ident => format!("GPIO{}", board_profile.lcd_scl_pin),
+                    servo_bottom_pin_num => board_profile.servo_pin,
+                    servo_bottom_pin_ident => format!("GPIO{}", board_profile.servo_pin),
+                    servo_top_pin_num => board_profile.servo2_pin,
+                    servo_top_pin_ident => format!("GPIO{}", board_profile.servo2_pin),
+                    led4_cell_pin_nums => board_profile.led4_cell_pins,
+                    led4_cell_pin_idents => board_profile.led4_cell_pins
+                        .map(|pin_num| format!("GPIO{pin_num}")),
+                    led4_segment_pin_nums => board_profile.led4_segment_pins,
+                    led4_segment_pin_idents => board_profile.led4_segment_pins
+                        .map(|pin_num| format!("GPIO{pin_num}")),
                     audio_supported => board_supports_audio,
                     data_pin_num => audio_data_pin_num_value,
                     data_pin_ident => audio_data_pin_ident_value,
@@ -566,16 +590,14 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
 }
 
 fn cleanup_legacy_flat_generated_examples(examples_dir: &Path) -> Result<(), Box<dyn Error>> {
-    let legacy_paths: [PathBuf; 7] = [
-        examples_dir.join("blinky_board_generic_esp32__esp32.rs"),
-        examples_dir.join("blinky_board_generic_esp32c2__esp32c2.rs"),
-        examples_dir.join("blinky_board_generic_esp32c3__esp32c3.rs"),
-        examples_dir.join("blinky_board_generic_esp32c6__esp32c6.rs"),
-        examples_dir.join("blinky_board_generic_esp32h2__esp32h2.rs"),
-        examples_dir.join("blinky_board_generic_esp32s2__esp32s2.rs"),
-        examples_dir.join("blinky_board_generic_esp32s3__esp32s3.rs"),
-    ];
-    for legacy_path in legacy_paths {
+    let chip_features: std::collections::BTreeSet<&str> = BOARD_PROFILES
+        .iter()
+        .map(|board_profile| board_profile.chip_feature())
+        .collect();
+    for chip_feature in chip_features {
+        let legacy_path = examples_dir.join(format!(
+            "blinky_board_generic_{chip_feature}__{chip_feature}.rs"
+        ));
         if legacy_path.exists() {
             fs::remove_file(legacy_path)?;
         }
@@ -589,7 +611,10 @@ fn cleanup_stale_nested_generated_examples(
 ) -> Result<(), Box<dyn Error>> {
     let expected_paths: std::collections::HashSet<PathBuf> =
         expected_paths.iter().cloned().collect();
-    let top_level_dirs = ["esp32", "c2", "c3", "c6", "h2", "s2", "s3"];
+    let top_level_dirs: std::collections::BTreeSet<&str> = BOARD_PROFILES
+        .iter()
+        .map(|board_profile| board_profile.chip_dir())
+        .collect();
     let mut generated_filenames: Vec<String> = passthrough_example_base_names()
         .iter()
         .map(|base_name| format!("{base_name}.rs"))
@@ -603,7 +628,7 @@ fn cleanup_stale_nested_generated_examples(
         "led16x16_and_builtin_spi.rs".to_string(),
     ]);
 
-    for top_level_dir in top_level_dirs {
+    for top_level_dir in &top_level_dirs {
         let chip_dir = examples_dir.join(top_level_dir);
         if !chip_dir.exists() {
             continue;

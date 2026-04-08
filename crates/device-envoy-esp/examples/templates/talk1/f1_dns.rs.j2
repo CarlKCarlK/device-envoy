@@ -4,7 +4,7 @@
 //! Talk 1 demo: Wi-Fi auto-provisioning + DNS display on a 12x8 panel.
 //!
 //! Wiring:
-//! - NeoPixel-style (WS2812) panel data input -> {{ talk1_panel12x8_pin_ident }}
+//! - NeoPixel-style (WS2812) panel data input -> GPIO{{ panel12x8_pin_num }}
 //! - Force-portal button -> {{ force_portal_button_pin_ident }} to GND
 //! - Panel power -> 5V (or per panel spec), shared GND with board
 
@@ -36,7 +36,7 @@ const COLORS: &[smart_leds::RGB8] = &[colors::YELLOW, colors::LIME, colors::CYAN
 
 led2d! {
     Led8x12 {
-        pin: {{ talk1_panel12x8_pin_ident }},
+        pin: GPIO{{ panel12x8_pin_num }},
         len: 96,
         led_layout: LED_LAYOUT_8X12,
         font: Led2dFont::Font4x6Trim,
@@ -54,7 +54,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    let led8x12 = Led8x12::new(p.{{ talk1_panel12x8_pin_ident }}, rmt80.channel0, spawner)?;
+    let led8x12 = Led8x12::new(p.GPIO{{ panel12x8_pin_num }}, rmt80.channel0, spawner)?;
 
     // Flash stores WiFi credentials after first setup
     let [wifi_credentials_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;

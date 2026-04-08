@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 //! Wi-Fi bring-up smoke test using `esp-radio` on ESP32-C6.
 //!
 //! This example initializes the Wi-Fi driver and performs one AP scan.

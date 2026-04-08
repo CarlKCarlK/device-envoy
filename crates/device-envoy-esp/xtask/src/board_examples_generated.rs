@@ -4,20 +4,20 @@ use crate::example_specs::{
     audio_button_pin_num, audio_data_pin_ident, audio_data_pin_num, audio_dma_ident,
     audio_word_select_pin_ident, audio_word_select_pin_num,
     blinky_built_in_led, blinky_example_name, blinky_kind, blinky_led_pin_ident,
-    blinky_led_pin_num, clock_example_name, clock_force_portal_button_pin_ident,
+    blinky_led_pin_num, clock_force_portal_button_pin_ident,
     clock_force_portal_button_pin_num, clock_lcd_scl_pin_ident, clock_lcd_scl_pin_num,
     clock_lcd_sda_pin_ident, clock_lcd_sda_pin_num, clock_led4_cell_pin_idents,
     clock_led4_cell_pin_nums, clock_led4_segment_pin_idents, clock_led4_segment_pin_nums,
     clock_led8x12_panel_pin_ident, clock_led8x12_panel_pin_num, clock_servos_bottom_pin_ident,
     clock_servos_bottom_pin_num, clock_servos_top_pin_ident, clock_servos_top_pin_num,
-    conway_example_name, ir_example_name, ir_kepler_receiver0_pin_ident,
+    conway_example_name, ir_kepler_receiver0_pin_ident,
     ir_kepler_receiver0_pin_num, ir_pin2_ident, ir_pin2_num, ir_pin_ident, ir_pin_num,
     ir_rx_channel2_ident, ir_rx_channel2_num, ir_rx_channel_ident, ir_rx_channel_num,
     led16x16_example_name, led_strip1_built_in, led_strip1_pin_ident, led_strip1_pin_num,
     panel16x16_pin_ident, panel16x16_pin_num, supports_audio_examples, supports_clock_examples,
-    supports_conway_example, supports_ir_examples, supports_led16x16_examples, talk1_example_name,
+    supports_conway_example, supports_ir_examples, supports_led16x16_examples,
     talk1_panel12x8_pin_ident, talk1_panel12x8_pin_num, talk1_strip8_pin_ident,
-    talk1_strip8_pin_num, BlinkyKind, CLOCK_EXAMPLE_BASE_NAMES, IR_EXAMPLE_BASE_NAMES,
+    talk1_strip8_pin_num, BlinkyKind,
 };
 use minijinja::{context, Environment};
 use minijinja::value::Value;
@@ -32,14 +32,6 @@ const GENERATED_EXAMPLES_END_MARKER: &str = "# END GENERATED BOARD EXAMPLES";
 const LEGACY_TALK1_BEGIN_MARKER: &str = "# BEGIN GENERATED TALK1 EXAMPLES";
 const LEGACY_TALK1_END_MARKER: &str = "# END GENERATED TALK1 EXAMPLES";
 
-const TALK1_BASE_NAMES: &[&str] = &[
-    "a1_strip_8_blue_gray",
-    "a3_strip_8_blue_white_blink_animate",
-    "a4_strip_96_blue_white_dot",
-    "b1_panel_12x8_rust_cursor",
-    "b2_panel_12x8_text_graphics",
-    "f1_dns",
-];
 const CONWAY_BASE_NAMES: &[&str] = &["conway"];
 const BLINKY_BASE_NAMES: &[&str] = &["blinky"];
 const LED16X16_BASE_NAMES: &[&str] = &["led16x16_plus_1", "led16x16_plus_1_spi"];
@@ -53,54 +45,13 @@ enum PassthroughTemplateMode {
 }
 
 fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
+    let base_name = base_name.replace('/', "_");
     format!(
         "{}_{}_{}",
         base_name,
         board_profile.chip_feature(),
         board_profile.board_dir()
     )
-}
-
-fn ir_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
-    context! {
-        board_slug => board_profile.board_slug(),
-        chip_name => board_profile.chip_name(),
-        chip_feature => board_profile.chip_feature(),
-        ir_pin_num => ir_pin_num(board_profile),
-        ir_pin_ident => ir_pin_ident(board_profile),
-        ir_receiver0_pin_num => ir_kepler_receiver0_pin_num(board_profile),
-        ir_receiver0_pin_ident => ir_kepler_receiver0_pin_ident(board_profile),
-        ir_receiver1_pin_num => ir_pin2_num(board_profile),
-        ir_receiver1_pin_ident => ir_pin2_ident(board_profile),
-        ir_rx_channel_num => ir_rx_channel_num(board_profile),
-        ir_rx_channel_ident => ir_rx_channel_ident(board_profile),
-        ir_rx_channel2_num => ir_rx_channel2_num(board_profile),
-        ir_rx_channel2_ident => ir_rx_channel2_ident(board_profile),
-    }
-}
-
-fn clock_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
-    context! {
-        board_slug => board_profile.board_slug(),
-        chip_name => board_profile.chip_name(),
-        chip_feature => board_profile.chip_feature(),
-        force_portal_button_pin_num => clock_force_portal_button_pin_num(board_profile),
-        force_portal_button_pin_ident => clock_force_portal_button_pin_ident(board_profile),
-        lcd_sda_pin_num => clock_lcd_sda_pin_num(board_profile),
-        lcd_sda_pin_ident => clock_lcd_sda_pin_ident(board_profile),
-        lcd_scl_pin_num => clock_lcd_scl_pin_num(board_profile),
-        lcd_scl_pin_ident => clock_lcd_scl_pin_ident(board_profile),
-        led8x12_panel_pin_num => clock_led8x12_panel_pin_num(board_profile),
-        led8x12_panel_pin_ident => clock_led8x12_panel_pin_ident(board_profile),
-        servo_bottom_pin_num => clock_servos_bottom_pin_num(board_profile),
-        servo_bottom_pin_ident => clock_servos_bottom_pin_ident(board_profile),
-        servo_top_pin_num => clock_servos_top_pin_num(board_profile),
-        servo_top_pin_ident => clock_servos_top_pin_ident(board_profile),
-        led4_cell_pin_nums => clock_led4_cell_pin_nums(board_profile),
-        led4_cell_pin_idents => clock_led4_cell_pin_idents(board_profile),
-        led4_segment_pin_nums => clock_led4_segment_pin_nums(board_profile),
-        led4_segment_pin_idents => clock_led4_segment_pin_idents(board_profile),
-    }
 }
 
 fn conway_example_name_family(board_profile: crate::boards::BoardProfile, _base_name: &str) -> String {
@@ -116,20 +67,6 @@ fn conway_example_context(board_profile: crate::boards::BoardProfile, _base_name
         ir_pin_ident => ir_pin_ident(board_profile),
         ir_rx_channel_num => ir_rx_channel_num(board_profile),
         ir_rx_channel_ident => ir_rx_channel_ident(board_profile),
-    }
-}
-
-fn talk1_example_context(board_profile: crate::boards::BoardProfile, _base_name: &str) -> Value {
-    context! {
-        board_slug => board_profile.board_slug(),
-        chip_name => board_profile.chip_name(),
-        chip_feature => board_profile.chip_feature(),
-        talk1_strip8_pin_num => talk1_strip8_pin_num(board_profile),
-        talk1_strip8_pin_ident => talk1_strip8_pin_ident(board_profile),
-        talk1_panel12x8_pin_num => talk1_panel12x8_pin_num(board_profile),
-        talk1_panel12x8_pin_ident => talk1_panel12x8_pin_ident(board_profile),
-        force_portal_button_pin_num => clock_force_portal_button_pin_num(board_profile),
-        force_portal_button_pin_ident => clock_force_portal_button_pin_ident(board_profile),
     }
 }
 
@@ -185,17 +122,6 @@ fn default_output_relative_path(
     base_name: &str,
 ) -> PathBuf {
     PathBuf::from(format!("{base_name}.rs"))
-}
-
-fn talk1_template_name(_board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
-    format!("talk1_{base_name}")
-}
-
-fn talk1_output_relative_path(
-    _board_profile: crate::boards::BoardProfile,
-    base_name: &str,
-) -> PathBuf {
-    PathBuf::from("talk1").join(format!("{base_name}.rs"))
 }
 
 fn blinky_template_name(board_profile: crate::boards::BoardProfile, _base_name: &str) -> String {
@@ -326,20 +252,40 @@ fn passthrough_example_base_names() -> &'static [String] {
         .as_slice()
 }
 
-fn discover_passthrough_example_base_names(
-    templates_dir: &Path,
-) -> Result<Vec<String>, Box<dyn Error>> {
+fn discover_passthrough_example_base_names(templates_dir: &Path) -> Result<Vec<String>, Box<dyn Error>> {
     let mut base_names = Vec::new();
-    for template_entry in fs::read_dir(templates_dir)? {
+    discover_passthrough_example_base_names_in_dir(templates_dir, templates_dir, &mut base_names)?;
+    base_names.sort();
+    Ok(base_names)
+}
+
+fn discover_passthrough_example_base_names_in_dir(
+    templates_root_dir: &Path,
+    templates_scan_dir: &Path,
+    base_names: &mut Vec<String>,
+) -> Result<(), Box<dyn Error>> {
+    for template_entry in fs::read_dir(templates_scan_dir)? {
         let template_entry = template_entry?;
         let template_path = template_entry.path();
+        if template_path.is_dir() {
+            discover_passthrough_example_base_names_in_dir(
+                templates_root_dir,
+                &template_path,
+                base_names,
+            )?;
+            continue;
+        }
         if !template_path.is_file() {
             continue;
         }
-        let Some(file_name) = template_path.file_name().and_then(|value| value.to_str()) else {
+        let Some(relative_path) = template_path
+            .strip_prefix(templates_root_dir)
+            .ok()
+            .and_then(|value| value.to_str())
+        else {
             continue;
         };
-        let Some(base_name) = file_name.strip_suffix(".rs.j2") else {
+        let Some(base_name) = relative_path.strip_suffix(".rs.j2") else {
             continue;
         };
         if !is_passthrough_template(base_name) {
@@ -347,8 +293,7 @@ fn discover_passthrough_example_base_names(
         }
         base_names.push(base_name.to_string());
     }
-    base_names.sort();
-    Ok(base_names)
+    Ok(())
 }
 
 fn is_passthrough_template(base_name: &str) -> bool {
@@ -361,13 +306,68 @@ fn is_passthrough_template(base_name: &str) -> bool {
     {
         return false;
     }
-    if IR_EXAMPLE_BASE_NAMES.iter().any(|name| name == &base_name) {
-        return false;
-    }
-    if CLOCK_EXAMPLE_BASE_NAMES.iter().any(|name| name == &base_name) {
-        return false;
-    }
     true
+}
+
+fn passthrough_template_supports_board(
+    base_name: &str,
+    board_profile: crate::boards::BoardProfile,
+) -> bool {
+    match base_name {
+        "ir"
+        | "ir_example1_trait"
+        | "ir_kepler"
+        | "ir_kepler_example1_trait"
+        | "ir_keplers"
+        | "ir_mapping_example1_trait" => supports_ir_examples(board_profile),
+        "clock_console_simple"
+        | "clock_lcd"
+        | "clock_led4"
+        | "clock_led8x12"
+        | "clock_servos"
+        | "clock_sync_example1_trait" => supports_clock_examples(board_profile),
+        _ => true,
+    }
+}
+
+fn passthrough_placeholder_source(example_name: &str, base_name: &str) -> String {
+    format!(
+        "// @generated by cargo xtask generate-board-examples.\n\
+#![allow(missing_docs)]\n\
+//! {base_name}: not supported on this board profile.\n\
+//!\n\
+//! Wiring:\n\
+//! - This is a placeholder for an unsupported board profile.\n\
+\n\
+#![no_std]\n\
+#![no_main]\n\
+\n\
+use core::convert::Infallible;\n\
+\n\
+use embassy_executor::Spawner;\n\
+\n\
+use esp_backtrace as _;\n\
+use log::info;\n\
+\n\
+use device_envoy_esp::{{Result, init_and_start}};\n\
+\n\
+esp_bootloader_esp_idf::esp_app_desc!();\n\
+\n\
+#[esp_rtos::main]\n\
+async fn main(spawner: Spawner) -> ! {{\n\
+    let err = inner_main(spawner).await.unwrap_err();\n\
+    panic!(\"{{err:?}}\");\n\
+}}\n\
+\n\
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {{\n\
+    init_and_start!(p);\n\
+    esp_println::logger::init_logger(log::LevelFilter::Info);\n\
+\n\
+    let _ = spawner;\n\
+    info!(\"{{}}: not supported on this board profile\", \"{example_name}\");\n\
+    core::future::pending().await\n\
+}}\n"
+    )
 }
 
 fn passthrough_template_mode(
@@ -399,7 +399,6 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
 
     let examples_dir = workspace_root.join("examples");
     let templates_dir = examples_dir.join("templates");
-    let talk1_templates_dir = templates_dir.join("talk1");
 
     let blinky_plain_template = fs::read_to_string(templates_dir.join("blinky_plain.rs.j2"))?;
     let blinky_rmt_template = fs::read_to_string(templates_dir.join("blinky_rmt.rs.j2"))?;
@@ -407,43 +406,7 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     let led16x16_plus_1_template = fs::read_to_string(templates_dir.join("led16x16_plus_1.rs.j2"))?;
     let led16x16_plus_1_spi_template =
         fs::read_to_string(templates_dir.join("led16x16_plus_1_spi.rs.j2"))?;
-    let audio_template = fs::read_to_string(templates_dir.join("audio.rs.j2"))?;
-    let audio_example1_template = fs::read_to_string(templates_dir.join("audio_example1.rs.j2"))?;
-    let audio_example1_trait_template =
-        fs::read_to_string(templates_dir.join("audio_example1_trait.rs.j2"))?;
-    let audio_example2_trait_template =
-        fs::read_to_string(templates_dir.join("audio_example2_trait.rs.j2"))?;
-    let audio_example3_trait_template =
-        fs::read_to_string(templates_dir.join("audio_example3_trait.rs.j2"))?;
-    let ir_template = fs::read_to_string(templates_dir.join("ir.rs.j2"))?;
-    let ir_example1_trait_template =
-        fs::read_to_string(templates_dir.join("ir_example1_trait.rs.j2"))?;
-    let ir_kepler_template = fs::read_to_string(templates_dir.join("ir_kepler.rs.j2"))?;
-    let ir_kepler_example1_trait_template =
-        fs::read_to_string(templates_dir.join("ir_kepler_example1_trait.rs.j2"))?;
-    let ir_keplers_template = fs::read_to_string(templates_dir.join("ir_keplers.rs.j2"))?;
-    let ir_mapping_example1_trait_template =
-        fs::read_to_string(templates_dir.join("ir_mapping_example1_trait.rs.j2"))?;
     let conway_template = fs::read_to_string(templates_dir.join("conway.rs.j2"))?;
-    let clock_console_simple_template =
-        fs::read_to_string(templates_dir.join("clock_console_simple.rs.j2"))?;
-    let clock_lcd_template = fs::read_to_string(templates_dir.join("clock_lcd.rs.j2"))?;
-    let clock_led4_template = fs::read_to_string(templates_dir.join("clock_led4.rs.j2"))?;
-    let clock_led8x12_template = fs::read_to_string(templates_dir.join("clock_led8x12.rs.j2"))?;
-    let clock_servos_template = fs::read_to_string(templates_dir.join("clock_servos.rs.j2"))?;
-    let clock_sync_example1_trait_template =
-        fs::read_to_string(templates_dir.join("clock_sync_example1_trait.rs.j2"))?;
-    let talk1_a1_strip_8_blue_gray_template =
-        fs::read_to_string(talk1_templates_dir.join("a1_strip_8_blue_gray.rs.j2"))?;
-    let talk1_a3_strip_8_blue_white_blink_animate_template =
-        fs::read_to_string(talk1_templates_dir.join("a3_strip_8_blue_white_blink_animate.rs.j2"))?;
-    let talk1_a4_strip_96_blue_white_dot_template =
-        fs::read_to_string(talk1_templates_dir.join("a4_strip_96_blue_white_dot.rs.j2"))?;
-    let talk1_b1_panel_12x8_rust_cursor_template =
-        fs::read_to_string(talk1_templates_dir.join("b1_panel_12x8_rust_cursor.rs.j2"))?;
-    let talk1_b2_panel_12x8_text_graphics_template =
-        fs::read_to_string(talk1_templates_dir.join("b2_panel_12x8_text_graphics.rs.j2"))?;
-    let talk1_f1_dns_template = fs::read_to_string(talk1_templates_dir.join("f1_dns.rs.j2"))?;
 
     let mut minijinja_environment = Environment::new();
     minijinja_environment.add_template("blinky_plain", &blinky_plain_template)?;
@@ -451,54 +414,7 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     minijinja_environment.add_template("blinky_spi", &blinky_spi_template)?;
     minijinja_environment.add_template("led16x16_plus_1", &led16x16_plus_1_template)?;
     minijinja_environment.add_template("led16x16_plus_1_spi", &led16x16_plus_1_spi_template)?;
-    minijinja_environment.add_template("audio", &audio_template)?;
-    minijinja_environment.add_template("audio_example1", &audio_example1_template)?;
-    minijinja_environment.add_template("audio_example1_trait", &audio_example1_trait_template)?;
-    minijinja_environment.add_template("audio_example2_trait", &audio_example2_trait_template)?;
-    minijinja_environment.add_template("audio_example3_trait", &audio_example3_trait_template)?;
-    minijinja_environment.add_template("ir", &ir_template)?;
-    minijinja_environment.add_template("ir_example1_trait", &ir_example1_trait_template)?;
-    minijinja_environment.add_template("ir_kepler", &ir_kepler_template)?;
-    minijinja_environment.add_template(
-        "ir_kepler_example1_trait",
-        &ir_kepler_example1_trait_template,
-    )?;
-    minijinja_environment.add_template("ir_keplers", &ir_keplers_template)?;
-    minijinja_environment.add_template(
-        "ir_mapping_example1_trait",
-        &ir_mapping_example1_trait_template,
-    )?;
     minijinja_environment.add_template("conway", &conway_template)?;
-    minijinja_environment.add_template("clock_console_simple", &clock_console_simple_template)?;
-    minijinja_environment.add_template("clock_lcd", &clock_lcd_template)?;
-    minijinja_environment.add_template("clock_led4", &clock_led4_template)?;
-    minijinja_environment.add_template("clock_led8x12", &clock_led8x12_template)?;
-    minijinja_environment.add_template("clock_servos", &clock_servos_template)?;
-    minijinja_environment.add_template(
-        "clock_sync_example1_trait",
-        &clock_sync_example1_trait_template,
-    )?;
-    minijinja_environment.add_template(
-        "talk1_a1_strip_8_blue_gray",
-        &talk1_a1_strip_8_blue_gray_template,
-    )?;
-    minijinja_environment.add_template(
-        "talk1_a3_strip_8_blue_white_blink_animate",
-        &talk1_a3_strip_8_blue_white_blink_animate_template,
-    )?;
-    minijinja_environment.add_template(
-        "talk1_a4_strip_96_blue_white_dot",
-        &talk1_a4_strip_96_blue_white_dot_template,
-    )?;
-    minijinja_environment.add_template(
-        "talk1_b1_panel_12x8_rust_cursor",
-        &talk1_b1_panel_12x8_rust_cursor_template,
-    )?;
-    minijinja_environment.add_template(
-        "talk1_b2_panel_12x8_text_graphics",
-        &talk1_b2_panel_12x8_text_graphics_template,
-    )?;
-    minijinja_environment.add_template("talk1_f1_dns", &talk1_f1_dns_template)?;
 
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
@@ -521,45 +437,12 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
         &minijinja_environment,
         &examples_dir,
         &mut expected_generated_paths,
-        &IR_EXAMPLE_BASE_NAMES,
-        supports_ir_examples,
-        ir_example_name,
-        ir_example_context,
-        default_template_name,
-        default_output_relative_path,
-    )?;
-    generate_family_examples(
-        &minijinja_environment,
-        &examples_dir,
-        &mut expected_generated_paths,
         &CONWAY_BASE_NAMES,
         supports_conway_example,
         conway_example_name_family,
         conway_example_context,
         default_template_name,
         default_output_relative_path,
-    )?;
-    generate_family_examples(
-        &minijinja_environment,
-        &examples_dir,
-        &mut expected_generated_paths,
-        &CLOCK_EXAMPLE_BASE_NAMES,
-        supports_clock_examples,
-        clock_example_name,
-        clock_example_context,
-        default_template_name,
-        default_output_relative_path,
-    )?;
-    generate_family_examples(
-        &minijinja_environment,
-        &examples_dir,
-        &mut expected_generated_paths,
-        &TALK1_BASE_NAMES,
-        supports_all_boards,
-        talk1_example_name,
-        talk1_example_context,
-        talk1_template_name,
-        talk1_output_relative_path,
     )?;
     generate_family_examples(
         &minijinja_environment,
@@ -597,7 +480,10 @@ fn generate_passthrough_files(
             if let Some(output_dir) = output_path.parent() {
                 fs::create_dir_all(output_dir)?;
             }
-            let generated_source = if template_mode == PassthroughTemplateMode::Render {
+            let example_name = passthrough_example_name(*board_profile, base_name);
+            let generated_source = if !passthrough_template_supports_board(base_name, *board_profile) {
+                passthrough_placeholder_source(&example_name, base_name)
+            } else if template_mode == PassthroughTemplateMode::Render {
                 let mut minijinja_environment = Environment::new();
                 minijinja_environment.add_template(base_name.as_str(), &template_source)?;
                 let board_supports_audio = supports_audio_examples(*board_profile);
@@ -643,14 +529,42 @@ fn generate_passthrough_files(
                 minijinja_environment
                     .get_template(base_name.as_str())?
                     .render(context! {
-                    example_name => passthrough_example_name(*board_profile, base_name),
+                    example_name => example_name.as_str(),
                     board_slug => board_profile.board_slug(),
                     chip_name => board_profile.chip_name(),
                     chip_feature => board_profile.chip_feature(),
                     talk1_strip8_pin_num => talk1_strip8_pin_num(*board_profile),
                     talk1_strip8_pin_ident => talk1_strip8_pin_ident(*board_profile),
+                    talk1_panel12x8_pin_num => talk1_panel12x8_pin_num(*board_profile),
+                    talk1_panel12x8_pin_ident => talk1_panel12x8_pin_ident(*board_profile),
+                    ir_supported => supports_ir_examples(*board_profile),
+                    ir_pin_num => ir_pin_num(*board_profile),
+                    ir_pin_ident => ir_pin_ident(*board_profile),
+                    ir_receiver0_pin_num => ir_kepler_receiver0_pin_num(*board_profile),
+                    ir_receiver0_pin_ident => ir_kepler_receiver0_pin_ident(*board_profile),
+                    ir_receiver1_pin_num => ir_pin2_num(*board_profile),
+                    ir_receiver1_pin_ident => ir_pin2_ident(*board_profile),
+                    ir_rx_channel_num => ir_rx_channel_num(*board_profile),
+                    ir_rx_channel_ident => ir_rx_channel_ident(*board_profile),
+                    ir_rx_channel2_num => ir_rx_channel2_num(*board_profile),
+                    ir_rx_channel2_ident => ir_rx_channel2_ident(*board_profile),
+                    clock_supported => supports_clock_examples(*board_profile),
                     force_portal_button_pin_num => clock_force_portal_button_pin_num(*board_profile),
                     force_portal_button_pin_ident => clock_force_portal_button_pin_ident(*board_profile),
+                    lcd_sda_pin_num => clock_lcd_sda_pin_num(*board_profile),
+                    lcd_sda_pin_ident => clock_lcd_sda_pin_ident(*board_profile),
+                    lcd_scl_pin_num => clock_lcd_scl_pin_num(*board_profile),
+                    lcd_scl_pin_ident => clock_lcd_scl_pin_ident(*board_profile),
+                    led8x12_panel_pin_num => clock_led8x12_panel_pin_num(*board_profile),
+                    led8x12_panel_pin_ident => clock_led8x12_panel_pin_ident(*board_profile),
+                    servo_bottom_pin_num => clock_servos_bottom_pin_num(*board_profile),
+                    servo_bottom_pin_ident => clock_servos_bottom_pin_ident(*board_profile),
+                    servo_top_pin_num => clock_servos_top_pin_num(*board_profile),
+                    servo_top_pin_ident => clock_servos_top_pin_ident(*board_profile),
+                    led4_cell_pin_nums => clock_led4_cell_pin_nums(*board_profile),
+                    led4_cell_pin_idents => clock_led4_cell_pin_idents(*board_profile),
+                    led4_segment_pin_nums => clock_led4_segment_pin_nums(*board_profile),
+                    led4_segment_pin_idents => clock_led4_segment_pin_idents(*board_profile),
                     audio_supported => board_supports_audio,
                     data_pin_num => audio_data_pin_num_value,
                     data_pin_ident => audio_data_pin_ident_value,
@@ -686,27 +600,9 @@ pub fn generated_board_example_names() -> Vec<String> {
     }
     add_family_generated_names(
         &mut names,
-        &IR_EXAMPLE_BASE_NAMES,
-        supports_ir_examples,
-        ir_example_name,
-    );
-    add_family_generated_names(
-        &mut names,
         &CONWAY_BASE_NAMES,
         supports_conway_example,
         conway_example_name_family,
-    );
-    add_family_generated_names(
-        &mut names,
-        &CLOCK_EXAMPLE_BASE_NAMES,
-        supports_clock_examples,
-        clock_example_name,
-    );
-    add_family_generated_names(
-        &mut names,
-        &TALK1_BASE_NAMES,
-        supports_all_boards,
-        talk1_example_name,
     );
     add_family_generated_names(
         &mut names,
@@ -748,32 +644,10 @@ fn generated_board_example_manifest_entries() -> Vec<ExampleManifestEntry> {
 
     add_family_manifest_entries(
         &mut entries,
-        &IR_EXAMPLE_BASE_NAMES,
-        supports_ir_examples,
-        ir_example_name,
-        default_output_relative_path,
-    );
-
-    add_family_manifest_entries(
-        &mut entries,
         &CONWAY_BASE_NAMES,
         supports_conway_example,
         conway_example_name_family,
         default_output_relative_path,
-    );
-    add_family_manifest_entries(
-        &mut entries,
-        &CLOCK_EXAMPLE_BASE_NAMES,
-        supports_clock_examples,
-        clock_example_name,
-        default_output_relative_path,
-    );
-    add_family_manifest_entries(
-        &mut entries,
-        &TALK1_BASE_NAMES,
-        supports_all_boards,
-        talk1_example_name,
-        talk1_output_relative_path,
     );
     add_family_manifest_entries(
         &mut entries,
@@ -893,34 +767,9 @@ pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
 
     if let Some(required_chip_feature) = find_family_required_chip(
         example_name,
-        &IR_EXAMPLE_BASE_NAMES,
-        supports_ir_examples,
-        ir_example_name,
-    ) {
-        return Some(required_chip_feature);
-    }
-
-    if let Some(required_chip_feature) = find_family_required_chip(
-        example_name,
         &CONWAY_BASE_NAMES,
         supports_conway_example,
         conway_example_name_family,
-    ) {
-        return Some(required_chip_feature);
-    }
-    if let Some(required_chip_feature) = find_family_required_chip(
-        example_name,
-        &CLOCK_EXAMPLE_BASE_NAMES,
-        supports_clock_examples,
-        clock_example_name,
-    ) {
-        return Some(required_chip_feature);
-    }
-    if let Some(required_chip_feature) = find_family_required_chip(
-        example_name,
-        &TALK1_BASE_NAMES,
-        supports_all_boards,
-        talk1_example_name,
     ) {
         return Some(required_chip_feature);
     }
@@ -974,30 +823,7 @@ fn cleanup_stale_nested_generated_examples(
         .map(|base_name| format!("{base_name}.rs"))
         .collect();
     generated_filenames.extend([
-        "audio.rs".to_string(),
-        "audio_example1.rs".to_string(),
-        "audio_example1_trait.rs".to_string(),
-        "audio_example2_trait.rs".to_string(),
-        "audio_example3_trait.rs".to_string(),
-        "ir.rs".to_string(),
-        "ir_example1_trait.rs".to_string(),
-        "ir_kepler.rs".to_string(),
-        "ir_kepler_example1_trait.rs".to_string(),
-        "ir_keplers.rs".to_string(),
-        "ir_mapping_example1_trait.rs".to_string(),
         "conway.rs".to_string(),
-        "clock_console_simple.rs".to_string(),
-        "clock_lcd.rs".to_string(),
-        "clock_led4.rs".to_string(),
-        "clock_led8x12.rs".to_string(),
-        "clock_servos.rs".to_string(),
-        "clock_sync_example1_trait.rs".to_string(),
-        "talk1/a1_strip_8_blue_gray.rs".to_string(),
-        "talk1/a3_strip_8_blue_white_blink_animate.rs".to_string(),
-        "talk1/a4_strip_96_blue_white_dot.rs".to_string(),
-        "talk1/b1_panel_12x8_rust_cursor.rs".to_string(),
-        "talk1/b2_panel_12x8_text_graphics.rs".to_string(),
-        "talk1/f1_dns.rs".to_string(),
         "blinky.rs".to_string(),
         "led16x16_plus_1.rs".to_string(),
         "led16x16_plus_1_spi.rs".to_string(),

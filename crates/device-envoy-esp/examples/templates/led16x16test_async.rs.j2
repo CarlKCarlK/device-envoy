@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 //! 16x16 panel mapping test using async RMT TX directly.
 //!
 //! This isolates async TX behavior from the higher-level led_strip device path.

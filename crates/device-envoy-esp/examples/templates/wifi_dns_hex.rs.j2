@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 //! Wi-Fi DNS demo: resolve `google.com` and display the last 4 hex digits.
 //!
 //! Display format is two lines (`AB\nCD`) on the 8x12 panel wired to GPIO18.

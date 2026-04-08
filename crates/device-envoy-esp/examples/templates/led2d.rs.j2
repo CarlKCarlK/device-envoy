@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 //! Animated text on a 12x8 panel (displayed as rotated 8x12) on GPIO18.
 //!
 //! Standard demo pin map in this repo:

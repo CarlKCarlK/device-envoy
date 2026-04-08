@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 #![allow(missing_docs)]
 #![no_std]
 #![no_main]

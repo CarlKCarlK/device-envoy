@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 //! Button-read example for an external button.
 //!
 //! Wiring (recommended):

@@ -7,23 +7,6 @@ pub(crate) enum BlinkyKind {
     SmartSpi,
 }
 
-pub(crate) const IR_EXAMPLE_BASE_NAMES: [&str; 6] = [
-    "ir",
-    "ir_example1_trait",
-    "ir_kepler",
-    "ir_kepler_example1_trait",
-    "ir_keplers",
-    "ir_mapping_example1_trait",
-];
-pub(crate) const CLOCK_EXAMPLE_BASE_NAMES: [&str; 6] = [
-    "clock_console_simple",
-    "clock_lcd",
-    "clock_led4",
-    "clock_led8x12",
-    "clock_servos",
-    "clock_sync_example1_trait",
-];
-
 pub(crate) fn blinky_kind(board_profile: BoardProfile) -> BlinkyKind {
     if board_profile.built_in_smart_led.is_some() {
         if board_profile.rmt_count > 0 {
@@ -116,15 +99,6 @@ pub(crate) fn supports_conway_example(board_profile: BoardProfile) -> bool {
     supports_ir_examples(board_profile)
 }
 
-pub(crate) fn ir_example_name(board_profile: BoardProfile, base_name: &str) -> String {
-    format!(
-        "{}_{}_{}",
-        base_name,
-        board_profile.chip_feature(),
-        board_profile.board_dir()
-    )
-}
-
 pub(crate) fn conway_example_name(board_profile: BoardProfile) -> String {
     format!(
         "conway_{}_{}",
@@ -136,25 +110,7 @@ pub(crate) fn conway_example_name(board_profile: BoardProfile) -> String {
 pub(crate) fn supports_clock_examples(board_profile: BoardProfile) -> bool {
     matches!(
         board_profile.chip_feature(),
-        "esp32" | "esp32c6" | "esp32s2" | "esp32s3"
-    )
-}
-
-pub(crate) fn clock_example_name(board_profile: BoardProfile, base_name: &str) -> String {
-    format!(
-        "{}_{}_{}",
-        base_name,
-        board_profile.chip_feature(),
-        board_profile.board_dir()
-    )
-}
-
-pub(crate) fn talk1_example_name(board_profile: BoardProfile, base_name: &str) -> String {
-    format!(
-        "talk1_{}_{}_{}",
-        base_name,
-        board_profile.chip_feature(),
-        board_profile.board_dir()
+        "esp32" | "esp32c3" | "esp32c6" | "esp32s2" | "esp32s3"
     )
 }
 

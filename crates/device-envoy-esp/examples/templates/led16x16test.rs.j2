@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 //! 16x16 panel mapping test: animate one foreground dot through every position.
 //!
 //! This is useful for verifying layout/wiring direction on a large panel.

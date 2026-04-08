@@ -1,3 +1,6 @@
+//! Wiring:
+//! - Follow the board-specific pin mapping shown in this file.
+//!
 //! RFID reader example using an MFRC522 module.
 //!
 //! Wiring (ESP32-C6 defaults shown):

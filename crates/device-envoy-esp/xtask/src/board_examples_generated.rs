@@ -1,9 +1,8 @@
-use crate::boards::{validate_board_profiles, BOARD_PROFILES};
+use crate::boards::{validate_board_profiles, AudioWiring, BOARD_PROFILES};
 use crate::example_specs::{
-    audio_bit_clock_pin_num, audio_data_pin_num, audio_dma_ident, audio_word_select_pin_num,
     blinky_built_in_led, blinky_kind, blinky_led_pin_num, led_strip1_built_in, led_strip1_pin_num,
-    supports_audio_examples, supports_conway_example, supports_ir_examples,
-    supports_led16x16_plus_1_example, supports_led16x16_plus_1_spi_example, BlinkyKind,
+    supports_conway_example, supports_ir_examples, supports_led16x16_plus_1_example,
+    supports_led16x16_plus_1_spi_example, BlinkyKind,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -17,15 +16,15 @@ const GENERATED_EXAMPLES_END_MARKER: &str = "# END GENERATED BOARD EXAMPLES";
 const LEGACY_TALK1_BEGIN_MARKER: &str = "# BEGIN GENERATED TALK1 EXAMPLES";
 const LEGACY_TALK1_END_MARKER: &str = "# END GENERATED TALK1 EXAMPLES";
 
-static PASSTHROUGH_EXAMPLE_BASE_NAMES: OnceLock<Vec<String>> = OnceLock::new();
+static BOARD_TEMPLATE_EXAMPLE_BASE_NAMES: OnceLock<Vec<String>> = OnceLock::new();
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum PassthroughTemplateMode {
+enum BoardTemplateMode {
     Copy,
     Render,
 }
 
-fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
+fn board_template_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
     let base_name = base_name.replace('/', "_");
     format!(
         "{}_{}_{}",
@@ -35,29 +34,29 @@ fn passthrough_example_name(board_profile: crate::boards::BoardProfile, base_nam
     )
 }
 
-fn passthrough_example_base_names() -> &'static [String] {
-    PASSTHROUGH_EXAMPLE_BASE_NAMES
+fn board_template_example_base_names() -> &'static [String] {
+    BOARD_TEMPLATE_EXAMPLE_BASE_NAMES
         .get_or_init(|| {
-            discover_passthrough_example_base_names(
+            discover_board_template_example_base_names(
                 &Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples/templates"),
             )
             .unwrap_or_else(|error| {
-                panic!("failed to discover passthrough templates: {error}");
+                panic!("failed to discover board templates: {error}");
             })
         })
         .as_slice()
 }
 
-fn discover_passthrough_example_base_names(
+fn discover_board_template_example_base_names(
     templates_dir: &Path,
 ) -> Result<Vec<String>, Box<dyn Error>> {
     let mut base_names = Vec::new();
-    discover_passthrough_example_base_names_in_dir(templates_dir, templates_dir, &mut base_names)?;
+    discover_board_template_example_base_names_in_dir(templates_dir, templates_dir, &mut base_names)?;
     base_names.sort();
     Ok(base_names)
 }
 
-fn discover_passthrough_example_base_names_in_dir(
+fn discover_board_template_example_base_names_in_dir(
     templates_root_dir: &Path,
     templates_scan_dir: &Path,
     base_names: &mut Vec<String>,
@@ -66,7 +65,7 @@ fn discover_passthrough_example_base_names_in_dir(
         let template_entry = template_entry?;
         let template_path = template_entry.path();
         if template_path.is_dir() {
-            discover_passthrough_example_base_names_in_dir(
+            discover_board_template_example_base_names_in_dir(
                 templates_root_dir,
                 &template_path,
                 base_names,
@@ -86,7 +85,7 @@ fn discover_passthrough_example_base_names_in_dir(
         let Some(base_name) = relative_path.strip_suffix(".rs.j2") else {
             continue;
         };
-        if !is_passthrough_template(base_name) {
+        if !is_board_template(base_name) {
             continue;
         }
         base_names.push(base_name.to_string());
@@ -94,16 +93,16 @@ fn discover_passthrough_example_base_names_in_dir(
     Ok(())
 }
 
-fn is_passthrough_template(base_name: &str) -> bool {
+fn is_board_template(base_name: &str) -> bool {
     let _ = base_name;
     true
 }
 
-fn passthrough_template_supports_board(
+fn board_template_supports_board(
     base_name: &str,
     board_profile: crate::boards::BoardProfile,
 ) -> bool {
-    if base_name.starts_with("audio") && !supports_audio_examples(board_profile) {
+    if base_name.starts_with("audio") && board_profile.audio_wiring.is_none() {
         return false;
     }
     if base_name.starts_with("clock_") && !board_profile.wifi_supported {
@@ -129,7 +128,7 @@ fn passthrough_template_supports_board(
     }
 }
 
-fn passthrough_placeholder_reason(
+fn board_template_placeholder_reason(
     _example_name: &str,
     base_name: &str,
     board_profile: crate::boards::BoardProfile,
@@ -184,7 +183,7 @@ fn passthrough_placeholder_reason(
         ));
     }
 
-    if base_name.starts_with("audio") && !supports_audio_examples(board_profile) {
+    if base_name.starts_with("audio") && board_profile.audio_wiring.is_none() {
         return Some(format!(
             "this example requires I2S resources, and {} does not offer that resource",
             board_profile.chip_name()
@@ -210,12 +209,12 @@ fn passthrough_placeholder_reason(
     None
 }
 
-fn passthrough_placeholder_source(
+fn board_template_placeholder_source(
     example_name: &str,
     base_name: &str,
     board_profile: crate::boards::BoardProfile,
 ) -> String {
-    let unsupported_reason = passthrough_placeholder_reason(example_name, base_name, board_profile);
+    let unsupported_reason = board_template_placeholder_reason(example_name, base_name, board_profile);
     let wiring_note = if let Some(reason) = unsupported_reason.as_deref() {
         format!("//! - {reason}\n")
     } else {
@@ -265,9 +264,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {{\n\
     )
 }
 
-fn passthrough_template_mode(
+fn board_template_mode(
     template_source: &str,
-) -> Result<PassthroughTemplateMode, Box<dyn Error>> {
+) -> Result<BoardTemplateMode, Box<dyn Error>> {
     for template_line in template_source.lines() {
         let Some(mode_fragment) = template_line.split("@board-example mode=").nth(1) else {
             continue;
@@ -278,15 +277,15 @@ fn passthrough_template_mode(
             .trim_end_matches("#}")
             .trim();
         return match mode {
-            "copy" => Ok(PassthroughTemplateMode::Copy),
-            "render" => Ok(PassthroughTemplateMode::Render),
+            "copy" => Ok(BoardTemplateMode::Copy),
+            "render" => Ok(BoardTemplateMode::Render),
             _ => Err(
                 format!("invalid @board-example mode `{mode}` (expected `copy` or `render`)")
                     .into(),
             ),
         };
     }
-    Ok(PassthroughTemplateMode::Copy)
+    Ok(BoardTemplateMode::Copy)
 }
 
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
@@ -298,7 +297,7 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     cleanup_legacy_flat_generated_examples(&examples_dir)?;
 
     let mut expected_generated_paths = Vec::new();
-    generate_passthrough_files(&templates_dir, &examples_dir, &mut expected_generated_paths)?;
+    generate_board_template_files(&templates_dir, &examples_dir, &mut expected_generated_paths)?;
 
     rustfmt_generated_files(&expected_generated_paths)?;
     cleanup_stale_nested_generated_examples(&examples_dir, &expected_generated_paths)?;
@@ -307,15 +306,15 @@ pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Erro
     Ok(())
 }
 
-fn generate_passthrough_files(
+fn generate_board_template_files(
     example_templates_dir: &Path,
     examples_dir: &Path,
     expected_generated_paths: &mut Vec<PathBuf>,
 ) -> Result<(), Box<dyn Error>> {
-    for base_name in passthrough_example_base_names() {
+    for base_name in board_template_example_base_names() {
         let template_path = example_templates_dir.join(format!("{base_name}.rs.j2"));
         let template_source = fs::read_to_string(&template_path)?;
-        let template_mode = passthrough_template_mode(&template_source)?;
+        let template_mode = board_template_mode(&template_source)?;
         for board_profile in BOARD_PROFILES {
             let output_path = examples_dir
                 .join(board_profile.chip_dir())
@@ -324,57 +323,22 @@ fn generate_passthrough_files(
             if let Some(output_dir) = output_path.parent() {
                 fs::create_dir_all(output_dir)?;
             }
-            let example_name = passthrough_example_name(*board_profile, base_name);
-            let generated_source = if !passthrough_template_supports_board(
+            let example_name = board_template_example_name(*board_profile, base_name);
+            let generated_source = if !board_template_supports_board(
                 base_name,
                 *board_profile,
             ) {
-                passthrough_placeholder_source(&example_name, base_name, *board_profile)
-            } else if template_mode == PassthroughTemplateMode::Render {
+                board_template_placeholder_source(&example_name, base_name, *board_profile)
+            } else if template_mode == BoardTemplateMode::Render {
                 let mut minijinja_environment = Environment::new();
                 minijinja_environment.add_template(base_name.as_str(), &template_source)?;
-                let board_supports_audio = supports_audio_examples(*board_profile);
-                let (audio_data_pin_num_value, audio_data_pin_ident_value) = if board_supports_audio
-                {
-                    (
-                        audio_data_pin_num(*board_profile),
-                        format!("GPIO{}", audio_data_pin_num(*board_profile)),
-                    )
-                } else {
-                    (0, "GPIO0".to_string())
-                };
-                let (audio_bit_clock_pin_num_value, audio_bit_clock_pin_ident_value) =
-                    if board_supports_audio {
-                        (
-                            audio_bit_clock_pin_num(*board_profile),
-                            format!("GPIO{}", audio_bit_clock_pin_num(*board_profile)),
-                        )
-                    } else {
-                        (0, "GPIO0".to_string())
-                    };
-                let (audio_word_select_pin_num_value, audio_word_select_pin_ident_value) =
-                    if board_supports_audio {
-                        (
-                            audio_word_select_pin_num(*board_profile),
-                            format!("GPIO{}", audio_word_select_pin_num(*board_profile)),
-                        )
-                    } else {
-                        (0, "GPIO0".to_string())
-                    };
-                let (audio_button_pin_num_value, audio_button_pin_ident_value) =
-                    if board_supports_audio {
-                        (
-                            board_profile.button_pin,
-                            format!("GPIO{}", board_profile.button_pin),
-                        )
-                    } else {
-                        (0, "GPIO0".to_string())
-                    };
-                let audio_dma_ident_value = if board_supports_audio {
-                    audio_dma_ident(*board_profile)
-                } else {
-                    "DMA_CH0"
-                };
+                let board_supports_audio = board_profile.audio_wiring.is_some();
+                let audio_wiring = board_profile.audio_wiring.unwrap_or(AudioWiring {
+                    data_pin_num: u8::MAX,
+                    bit_clock_pin_num: u8::MAX,
+                    word_select_pin_num: u8::MAX,
+                    dma_ident: "DMA_UNSUPPORTED_AUDIO",
+                });
                 minijinja_environment
                     .get_template(base_name.as_str())?
                     .render(context! {
@@ -427,15 +391,15 @@ fn generate_passthrough_files(
                     led4_segment_pin_idents => board_profile.led4_segment_pins
                         .map(|pin_num| format!("GPIO{pin_num}")),
                     audio_supported => board_supports_audio,
-                    data_pin_num => audio_data_pin_num_value,
-                    data_pin_ident => audio_data_pin_ident_value,
-                    bit_clock_pin_num => audio_bit_clock_pin_num_value,
-                    bit_clock_pin_ident => audio_bit_clock_pin_ident_value,
-                    word_select_pin_num => audio_word_select_pin_num_value,
-                    word_select_pin_ident => audio_word_select_pin_ident_value,
-                    button_pin_num => audio_button_pin_num_value,
-                    button_pin_ident => audio_button_pin_ident_value,
-                    dma_ident => audio_dma_ident_value,
+                    data_pin_num => audio_wiring.data_pin_num,
+                    data_pin_ident => if board_supports_audio { format!("GPIO{}", audio_wiring.data_pin_num) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
+                    bit_clock_pin_num => audio_wiring.bit_clock_pin_num,
+                    bit_clock_pin_ident => if board_supports_audio { format!("GPIO{}", audio_wiring.bit_clock_pin_num) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
+                    word_select_pin_num => audio_wiring.word_select_pin_num,
+                    word_select_pin_ident => if board_supports_audio { format!("GPIO{}", audio_wiring.word_select_pin_num) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
+                    button_pin_num => if board_supports_audio { board_profile.button_pin } else { u8::MAX },
+                    button_pin_ident => if board_supports_audio { format!("GPIO{}", board_profile.button_pin) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
+                    dma_ident => audio_wiring.dma_ident,
                 })?
             } else {
                 template_source.clone()
@@ -455,8 +419,8 @@ fn generate_passthrough_files(
 pub fn generated_board_example_names() -> Vec<String> {
     let mut names = Vec::new();
     for board_profile in BOARD_PROFILES {
-        for base_name in passthrough_example_base_names() {
-            names.push(passthrough_example_name(*board_profile, base_name));
+        for base_name in board_template_example_base_names() {
+            names.push(board_template_example_name(*board_profile, base_name));
         }
     }
     names
@@ -472,9 +436,9 @@ fn generated_board_example_manifest_entries() -> Vec<ExampleManifestEntry> {
     let mut entries = Vec::new();
 
     for board_profile in BOARD_PROFILES {
-        for base_name in passthrough_example_base_names() {
+        for base_name in board_template_example_base_names() {
             entries.push(ExampleManifestEntry {
-                name: passthrough_example_name(*board_profile, base_name),
+                name: board_template_example_name(*board_profile, base_name),
                 path: format!(
                     "examples/{}/{}/{}.rs",
                     board_profile.chip_dir(),
@@ -579,8 +543,8 @@ fn sync_generated_examples_in_cargo_toml(crate_root: &Path) -> Result<(), Box<dy
 
 pub fn board_example_required_chip(example_name: &str) -> Option<&'static str> {
     for board_profile in BOARD_PROFILES {
-        for base_name in passthrough_example_base_names() {
-            if passthrough_example_name(*board_profile, base_name) == example_name {
+        for base_name in board_template_example_base_names() {
+            if board_template_example_name(*board_profile, base_name) == example_name {
                 return Some(board_profile.chip_feature());
             }
         }
@@ -615,7 +579,7 @@ fn cleanup_stale_nested_generated_examples(
         .iter()
         .map(|board_profile| board_profile.chip_dir())
         .collect();
-    let mut generated_filenames: Vec<String> = passthrough_example_base_names()
+    let mut generated_filenames: Vec<String> = board_template_example_base_names()
         .iter()
         .map(|base_name| format!("{base_name}.rs"))
         .collect();

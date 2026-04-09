@@ -6,7 +6,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -52,5 +52,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
 
-    core::future::pending().await
+    pending().await
 }

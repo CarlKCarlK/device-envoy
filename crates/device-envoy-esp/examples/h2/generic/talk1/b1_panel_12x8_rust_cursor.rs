@@ -9,7 +9,7 @@
 #![no_std]
 #![no_main]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, future::pending, panic};
 
 use device_envoy_esp::{
     Result, init_and_start,
@@ -61,5 +61,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         ],
     );
 
-    future::pending().await // run forever
+    pending().await // run forever
 }

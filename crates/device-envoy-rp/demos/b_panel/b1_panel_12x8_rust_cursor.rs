@@ -3,7 +3,7 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, future::pending, panic};
 
 use device_envoy_rp::{
     Result, led_strip::colors, led2d, led2d::Led2d as _, led2d::Led2dFont, led2d::layout::LedLayout,
@@ -49,5 +49,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         ],
     );
 
-    future::pending().await // run forever
+    pending().await // run forever
 }

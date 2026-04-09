@@ -7,7 +7,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
@@ -53,5 +53,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         })
         .await?;
 
-    core::future::pending().await
+    pending().await
 }

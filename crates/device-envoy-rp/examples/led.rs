@@ -3,7 +3,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use defmt_rtt as _;
 use device_envoy_rp::{
@@ -45,5 +45,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     ]);
 
     // Run forever; animation loops continuously
-    core::future::pending().await
+    pending().await
 }

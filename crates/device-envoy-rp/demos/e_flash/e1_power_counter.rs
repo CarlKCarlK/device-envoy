@@ -3,7 +3,7 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, future::pending, panic};
 use device_envoy_rp::{
     Result,
     flash_block::{FlashBlock as _, FlashBlockRp},
@@ -62,5 +62,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const DIGITS: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     led12x8.write_text(DIGITS[boot_counter.0], &[colors::RED]);
 
-    future::pending().await // Keep running
+    pending().await // Keep running
 }

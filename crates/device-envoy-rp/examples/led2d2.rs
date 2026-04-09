@@ -3,7 +3,7 @@
 #![no_main]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::{convert::Infallible, future};
+use core::{convert::Infallible, future::pending};
 
 use defmt::info;
 use defmt_rtt as _;
@@ -63,5 +63,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let frame_duration = Duration::from_secs(1);
     led_12x8_animated.animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
 
-    future::pending().await // run forever
+    pending().await // run forever
 }

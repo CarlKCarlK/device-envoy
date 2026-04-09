@@ -9,7 +9,7 @@
 #![no_std]
 #![no_main]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, future::pending, panic};
 use device_envoy_esp::{
     Result, init_and_start, led_strip,
     led_strip::{Frame1d, LedStrip as _, colors},
@@ -46,5 +46,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Write the frame to the LED strip. Will stay until replaced.
     led_strip_len8.write_frame(frame1d);
-    future::pending().await // run forever
+    pending().await // run forever
 }

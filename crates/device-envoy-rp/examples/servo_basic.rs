@@ -30,5 +30,5 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position
     servo.relax(); // Let the servo relax. It will re-enable on next set_degrees()
 
-    core::future::pending().await
+    pending().await
 }

@@ -101,7 +101,7 @@ pub(crate) const SEGMENT_COUNT: usize = 8;
 ///
 ///     // Show "rUSt" solid forever.
 ///     display.write_text(['r', 'U', 'S', 't'], BlinkState::Solid);
-///     core::future::pending().await
+///     pending().await
 /// }
 /// ```
 ///

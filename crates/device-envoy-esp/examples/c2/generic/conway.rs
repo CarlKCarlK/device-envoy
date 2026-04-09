@@ -8,7 +8,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use embassy_executor::Spawner;
 
@@ -33,5 +33,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!(
         "conway_esp32c2_generic: this example requires 1 RMT resources, and ESP32-C2 offers 0 RMT resources"
     );
-    core::future::pending().await
+    pending().await
 }

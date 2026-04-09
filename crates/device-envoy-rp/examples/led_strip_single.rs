@@ -2,8 +2,8 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
-use core::future;
+use core::future::pending;
+use core::{convert::Infallible, future::pending};
 
 use defmt::info;
 use device_envoy_rp::Result;
@@ -56,5 +56,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         (black_frame, FRAME_DURATION),
     ]);
 
-    future::pending().await // run forever
+    pending().await // run forever
 }

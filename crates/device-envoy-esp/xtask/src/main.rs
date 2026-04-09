@@ -199,12 +199,12 @@ fn example_requirements(example: &str) -> CapabilitySet {
     let requires_high_gpio_pins = is_example_name(example, "conway")
         || example.starts_with("lcd_text")
         || example.starts_with("led2d")
-        || is_example_name(example, "led_strip_example2_trait")
+        || is_example_name(example, "led_strip_example2")
         || is_example_name(example, "rfid")
         || is_example_name(example, "servos")
-        || is_example_name(example, "servo_example1_trait")
-        || is_example_name(example, "servo_player_example1_trait")
-        || is_example_name(example, "servo_player_example2_trait");
+        || is_example_name(example, "servo_example1")
+        || is_example_name(example, "servo_player_example1")
+        || is_example_name(example, "servo_player_example2");
     if requires_high_gpio_pins {
         capability_set.insert(Capability::HighGpioPins);
     }
@@ -224,7 +224,7 @@ fn example_requirements(example: &str) -> CapabilitySet {
     }
     let requires_extended_gpio = example.starts_with("clock_")
         || example.starts_with("lcd_text")
-        || is_example_name(example, "led2d_example1_trait")
+        || is_example_name(example, "led2d_example1")
         || example.starts_with("talk1_f1_dns");
     if requires_extended_gpio {
         capability_set.insert(Capability::ExtendedGpio);
@@ -270,7 +270,7 @@ fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Optio
         }
         let s2_stack_limited_examples = [
             "wifi_auto_custom_checkbox",
-            "wifi_auto_example1_trait",
+            "wifi_auto_example1",
             "wifi_auto_force_button",
             "wifi_dns_hex",
         ];

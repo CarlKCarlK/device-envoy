@@ -8,7 +8,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use embassy_executor::Spawner;
 
@@ -33,5 +33,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!(
         "clock_led4_esp32h2_generic: this example requires Wi-Fi, and ESP32-H2 does not offer that resource"
     );
-    core::future::pending().await
+    pending().await
 }

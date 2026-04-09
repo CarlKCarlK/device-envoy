@@ -3,7 +3,7 @@
 #![no_main]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::{convert::Infallible, future};
+use core::{convert::Infallible, future::pending};
 
 use defmt::info;
 use defmt_rtt as _;
@@ -67,7 +67,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Write the frame to the LED panel.
     led12x8.write_frame(frame);
 
-    future::pending().await // Run forever
+    pending().await // Run forever
 }
 
 /// Calculate the top-left corner position to center a shape within a bounding box.

@@ -9,8 +9,7 @@
 extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
-use core::convert::Infallible;
-use core::future;
+use core::{convert::Infallible, future::pending};
 use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressedTo},
@@ -47,5 +46,5 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         .connect(&mut button, |_event| async move { Ok(()) })
         .await?;
 
-    future::pending().await // run forever
+    pending().await // run forever
 }

@@ -11,7 +11,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use esp_backtrace as _;
@@ -66,5 +66,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let frame_duration = Duration::from_secs(1);
     led12x8_animated.animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
 
-    core::future::pending().await
+    pending().await
 }

@@ -158,28 +158,20 @@ name = "audio_example1_esp32_generic"
 path = "examples/esp32/generic/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32_generic"
-path = "examples/esp32/generic/audio_example1_trait.rs"
+name = "audio_example2_esp32_generic"
+path = "examples/esp32/generic/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32_generic"
-path = "examples/esp32/generic/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32_generic"
-path = "examples/esp32/generic/audio_example3_trait.rs"
+name = "audio_example3_esp32_generic"
+path = "examples/esp32/generic/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32_generic"
 path = "examples/esp32/generic/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32_generic"
-path = "examples/esp32/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32_generic"
-path = "examples/esp32/generic/button_read.rs"
+name = "button_example1_esp32_generic"
+path = "examples/esp32/generic/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32_generic"
@@ -202,48 +194,48 @@ name = "clock_servos_esp32_generic"
 path = "examples/esp32/generic/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32_generic"
-path = "examples/esp32/generic/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32_generic"
+path = "examples/esp32/generic/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32_generic"
 path = "examples/esp32/generic/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32_generic"
-path = "examples/esp32/generic/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32_generic"
+path = "examples/esp32/generic/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32_generic"
 path = "examples/esp32/generic/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32_generic"
-path = "examples/esp32/generic/ir_example1_trait.rs"
+name = "ir_example1_esp32_generic"
+path = "examples/esp32/generic/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32_generic"
 path = "examples/esp32/generic/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32_generic"
-path = "examples/esp32/generic/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32_generic"
+path = "examples/esp32/generic/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32_generic"
 path = "examples/esp32/generic/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32_generic"
-path = "examples/esp32/generic/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32_generic"
+path = "examples/esp32/generic/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32_generic"
 path = "examples/esp32/generic/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32_generic"
-path = "examples/esp32/generic/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32_generic"
+path = "examples/esp32/generic/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32_generic"
@@ -270,16 +262,16 @@ name = "led2d_esp32_generic"
 path = "examples/esp32/generic/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32_generic"
-path = "examples/esp32/generic/led2d_example1_trait.rs"
+name = "led2d_example1_esp32_generic"
+path = "examples/esp32/generic/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32_generic"
-path = "examples/esp32/generic/led2d_example2_trait.rs"
+name = "led2d_example2_esp32_generic"
+path = "examples/esp32/generic/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32_generic"
-path = "examples/esp32/generic/led_example1_trait.rs"
+name = "led_example1_esp32_generic"
+path = "examples/esp32/generic/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32_generic"
@@ -294,12 +286,12 @@ name = "led_strip8_spi_esp32_generic"
 path = "examples/esp32/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32_generic"
-path = "examples/esp32/generic/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32_generic"
+path = "examples/esp32/generic/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32_generic"
-path = "examples/esp32/generic/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32_generic"
+path = "examples/esp32/generic/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32_generic"
@@ -314,16 +306,16 @@ name = "servo_basic_esp32_generic"
 path = "examples/esp32/generic/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32_generic"
-path = "examples/esp32/generic/servo_example1_trait.rs"
+name = "servo_example1_esp32_generic"
+path = "examples/esp32/generic/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32_generic"
-path = "examples/esp32/generic/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32_generic"
+path = "examples/esp32/generic/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32_generic"
-path = "examples/esp32/generic/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32_generic"
+path = "examples/esp32/generic/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32_generic"
@@ -358,8 +350,8 @@ name = "wifi_auto_custom_checkbox_esp32_generic"
 path = "examples/esp32/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32_generic"
-path = "examples/esp32/generic/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32_generic"
+path = "examples/esp32/generic/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32_generic"
@@ -386,28 +378,20 @@ name = "audio_example1_esp32c2_generic"
 path = "examples/c2/generic/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/audio_example1_trait.rs"
+name = "audio_example2_esp32c2_generic"
+path = "examples/c2/generic/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32c2_generic"
-path = "examples/c2/generic/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32c2_generic"
-path = "examples/c2/generic/audio_example3_trait.rs"
+name = "audio_example3_esp32c2_generic"
+path = "examples/c2/generic/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32c2_generic"
 path = "examples/c2/generic/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c2_generic"
-path = "examples/c2/generic/button_read.rs"
+name = "button_example1_esp32c2_generic"
+path = "examples/c2/generic/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32c2_generic"
@@ -430,48 +414,48 @@ name = "clock_servos_esp32c2_generic"
 path = "examples/c2/generic/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32c2_generic"
+path = "examples/c2/generic/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32c2_generic"
 path = "examples/c2/generic/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32c2_generic"
+path = "examples/c2/generic/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32c2_generic"
 path = "examples/c2/generic/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/ir_example1_trait.rs"
+name = "ir_example1_esp32c2_generic"
+path = "examples/c2/generic/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32c2_generic"
 path = "examples/c2/generic/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32c2_generic"
+path = "examples/c2/generic/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32c2_generic"
 path = "examples/c2/generic/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32c2_generic"
+path = "examples/c2/generic/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32c2_generic"
 path = "examples/c2/generic/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32c2_generic"
+path = "examples/c2/generic/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32c2_generic"
@@ -498,16 +482,16 @@ name = "led2d_esp32c2_generic"
 path = "examples/c2/generic/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/led2d_example1_trait.rs"
+name = "led2d_example1_esp32c2_generic"
+path = "examples/c2/generic/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32c2_generic"
-path = "examples/c2/generic/led2d_example2_trait.rs"
+name = "led2d_example2_esp32c2_generic"
+path = "examples/c2/generic/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/led_example1_trait.rs"
+name = "led_example1_esp32c2_generic"
+path = "examples/c2/generic/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32c2_generic"
@@ -522,12 +506,12 @@ name = "led_strip8_spi_esp32c2_generic"
 path = "examples/c2/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32c2_generic"
+path = "examples/c2/generic/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32c2_generic"
-path = "examples/c2/generic/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32c2_generic"
+path = "examples/c2/generic/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32c2_generic"
@@ -542,16 +526,16 @@ name = "servo_basic_esp32c2_generic"
 path = "examples/c2/generic/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/servo_example1_trait.rs"
+name = "servo_example1_esp32c2_generic"
+path = "examples/c2/generic/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32c2_generic"
+path = "examples/c2/generic/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32c2_generic"
-path = "examples/c2/generic/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32c2_generic"
+path = "examples/c2/generic/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32c2_generic"
@@ -586,8 +570,8 @@ name = "wifi_auto_custom_checkbox_esp32c2_generic"
 path = "examples/c2/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32c2_generic"
-path = "examples/c2/generic/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32c2_generic"
+path = "examples/c2/generic/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32c2_generic"
@@ -614,28 +598,20 @@ name = "audio_example1_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/audio_example1_trait.rs"
+name = "audio_example2_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/audio_example3_trait.rs"
+name = "audio_example3_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/button_read.rs"
+name = "button_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32c2_devkitm1_v1_0"
@@ -658,48 +634,48 @@ name = "clock_servos_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/ir_example1_trait.rs"
+name = "ir_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32c2_devkitm1_v1_0"
@@ -726,16 +702,16 @@ name = "led2d_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led2d_example1_trait.rs"
+name = "led2d_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led2d_example2_trait.rs"
+name = "led2d_example2_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_example1_trait.rs"
+name = "led_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32c2_devkitm1_v1_0"
@@ -750,12 +726,12 @@ name = "led_strip8_spi_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32c2_devkitm1_v1_0"
@@ -770,16 +746,16 @@ name = "servo_basic_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servo_example1_trait.rs"
+name = "servo_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32c2_devkitm1_v1_0"
@@ -814,8 +790,8 @@ name = "wifi_auto_custom_checkbox_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32c2_devkitm1_v1_0"
@@ -842,28 +818,20 @@ name = "audio_example1_esp32c3_generic"
 path = "examples/c3/generic/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/audio_example1_trait.rs"
+name = "audio_example2_esp32c3_generic"
+path = "examples/c3/generic/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32c3_generic"
-path = "examples/c3/generic/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32c3_generic"
-path = "examples/c3/generic/audio_example3_trait.rs"
+name = "audio_example3_esp32c3_generic"
+path = "examples/c3/generic/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32c3_generic"
 path = "examples/c3/generic/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c3_generic"
-path = "examples/c3/generic/button_read.rs"
+name = "button_example1_esp32c3_generic"
+path = "examples/c3/generic/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32c3_generic"
@@ -886,48 +854,48 @@ name = "clock_servos_esp32c3_generic"
 path = "examples/c3/generic/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32c3_generic"
+path = "examples/c3/generic/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32c3_generic"
 path = "examples/c3/generic/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32c3_generic"
+path = "examples/c3/generic/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32c3_generic"
 path = "examples/c3/generic/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/ir_example1_trait.rs"
+name = "ir_example1_esp32c3_generic"
+path = "examples/c3/generic/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32c3_generic"
 path = "examples/c3/generic/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32c3_generic"
+path = "examples/c3/generic/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32c3_generic"
 path = "examples/c3/generic/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32c3_generic"
+path = "examples/c3/generic/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32c3_generic"
 path = "examples/c3/generic/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32c3_generic"
+path = "examples/c3/generic/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32c3_generic"
@@ -954,16 +922,16 @@ name = "led2d_esp32c3_generic"
 path = "examples/c3/generic/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/led2d_example1_trait.rs"
+name = "led2d_example1_esp32c3_generic"
+path = "examples/c3/generic/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32c3_generic"
-path = "examples/c3/generic/led2d_example2_trait.rs"
+name = "led2d_example2_esp32c3_generic"
+path = "examples/c3/generic/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/led_example1_trait.rs"
+name = "led_example1_esp32c3_generic"
+path = "examples/c3/generic/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32c3_generic"
@@ -978,12 +946,12 @@ name = "led_strip8_spi_esp32c3_generic"
 path = "examples/c3/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32c3_generic"
+path = "examples/c3/generic/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32c3_generic"
-path = "examples/c3/generic/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32c3_generic"
+path = "examples/c3/generic/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32c3_generic"
@@ -998,16 +966,16 @@ name = "servo_basic_esp32c3_generic"
 path = "examples/c3/generic/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/servo_example1_trait.rs"
+name = "servo_example1_esp32c3_generic"
+path = "examples/c3/generic/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32c3_generic"
+path = "examples/c3/generic/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32c3_generic"
-path = "examples/c3/generic/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32c3_generic"
+path = "examples/c3/generic/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32c3_generic"
@@ -1042,8 +1010,8 @@ name = "wifi_auto_custom_checkbox_esp32c3_generic"
 path = "examples/c3/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32c3_generic"
-path = "examples/c3/generic/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32c3_generic"
+path = "examples/c3/generic/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32c3_generic"
@@ -1070,28 +1038,20 @@ name = "audio_example1_esp32c3_luatos"
 path = "examples/c3/luatos/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/audio_example1_trait.rs"
+name = "audio_example2_esp32c3_luatos"
+path = "examples/c3/luatos/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32c3_luatos"
-path = "examples/c3/luatos/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32c3_luatos"
-path = "examples/c3/luatos/audio_example3_trait.rs"
+name = "audio_example3_esp32c3_luatos"
+path = "examples/c3/luatos/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32c3_luatos"
 path = "examples/c3/luatos/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c3_luatos"
-path = "examples/c3/luatos/button_read.rs"
+name = "button_example1_esp32c3_luatos"
+path = "examples/c3/luatos/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32c3_luatos"
@@ -1114,48 +1074,48 @@ name = "clock_servos_esp32c3_luatos"
 path = "examples/c3/luatos/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32c3_luatos"
+path = "examples/c3/luatos/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32c3_luatos"
 path = "examples/c3/luatos/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32c3_luatos"
+path = "examples/c3/luatos/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32c3_luatos"
 path = "examples/c3/luatos/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/ir_example1_trait.rs"
+name = "ir_example1_esp32c3_luatos"
+path = "examples/c3/luatos/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32c3_luatos"
 path = "examples/c3/luatos/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32c3_luatos"
+path = "examples/c3/luatos/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32c3_luatos"
 path = "examples/c3/luatos/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32c3_luatos"
+path = "examples/c3/luatos/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32c3_luatos"
 path = "examples/c3/luatos/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32c3_luatos"
+path = "examples/c3/luatos/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32c3_luatos"
@@ -1182,16 +1142,16 @@ name = "led2d_esp32c3_luatos"
 path = "examples/c3/luatos/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led2d_example1_trait.rs"
+name = "led2d_example1_esp32c3_luatos"
+path = "examples/c3/luatos/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led2d_example2_trait.rs"
+name = "led2d_example2_esp32c3_luatos"
+path = "examples/c3/luatos/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led_example1_trait.rs"
+name = "led_example1_esp32c3_luatos"
+path = "examples/c3/luatos/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32c3_luatos"
@@ -1206,12 +1166,12 @@ name = "led_strip8_spi_esp32c3_luatos"
 path = "examples/c3/luatos/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32c3_luatos"
+path = "examples/c3/luatos/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32c3_luatos"
-path = "examples/c3/luatos/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32c3_luatos"
+path = "examples/c3/luatos/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32c3_luatos"
@@ -1226,16 +1186,16 @@ name = "servo_basic_esp32c3_luatos"
 path = "examples/c3/luatos/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/servo_example1_trait.rs"
+name = "servo_example1_esp32c3_luatos"
+path = "examples/c3/luatos/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32c3_luatos"
+path = "examples/c3/luatos/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32c3_luatos"
-path = "examples/c3/luatos/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32c3_luatos"
+path = "examples/c3/luatos/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32c3_luatos"
@@ -1270,8 +1230,8 @@ name = "wifi_auto_custom_checkbox_esp32c3_luatos"
 path = "examples/c3/luatos/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32c3_luatos"
-path = "examples/c3/luatos/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32c3_luatos"
+path = "examples/c3/luatos/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32c3_luatos"
@@ -1298,28 +1258,20 @@ name = "audio_example1_esp32c6_generic"
 path = "examples/c6/generic/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/audio_example1_trait.rs"
+name = "audio_example2_esp32c6_generic"
+path = "examples/c6/generic/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32c6_generic"
-path = "examples/c6/generic/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32c6_generic"
-path = "examples/c6/generic/audio_example3_trait.rs"
+name = "audio_example3_esp32c6_generic"
+path = "examples/c6/generic/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32c6_generic"
 path = "examples/c6/generic/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c6_generic"
-path = "examples/c6/generic/button_read.rs"
+name = "button_example1_esp32c6_generic"
+path = "examples/c6/generic/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32c6_generic"
@@ -1342,48 +1294,48 @@ name = "clock_servos_esp32c6_generic"
 path = "examples/c6/generic/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32c6_generic"
+path = "examples/c6/generic/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32c6_generic"
 path = "examples/c6/generic/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32c6_generic"
+path = "examples/c6/generic/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32c6_generic"
 path = "examples/c6/generic/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/ir_example1_trait.rs"
+name = "ir_example1_esp32c6_generic"
+path = "examples/c6/generic/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32c6_generic"
 path = "examples/c6/generic/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32c6_generic"
+path = "examples/c6/generic/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32c6_generic"
 path = "examples/c6/generic/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32c6_generic"
+path = "examples/c6/generic/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32c6_generic"
 path = "examples/c6/generic/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32c6_generic"
+path = "examples/c6/generic/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32c6_generic"
@@ -1410,16 +1362,16 @@ name = "led2d_esp32c6_generic"
 path = "examples/c6/generic/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/led2d_example1_trait.rs"
+name = "led2d_example1_esp32c6_generic"
+path = "examples/c6/generic/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32c6_generic"
-path = "examples/c6/generic/led2d_example2_trait.rs"
+name = "led2d_example2_esp32c6_generic"
+path = "examples/c6/generic/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/led_example1_trait.rs"
+name = "led_example1_esp32c6_generic"
+path = "examples/c6/generic/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32c6_generic"
@@ -1434,12 +1386,12 @@ name = "led_strip8_spi_esp32c6_generic"
 path = "examples/c6/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32c6_generic"
+path = "examples/c6/generic/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32c6_generic"
-path = "examples/c6/generic/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32c6_generic"
+path = "examples/c6/generic/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32c6_generic"
@@ -1454,16 +1406,16 @@ name = "servo_basic_esp32c6_generic"
 path = "examples/c6/generic/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/servo_example1_trait.rs"
+name = "servo_example1_esp32c6_generic"
+path = "examples/c6/generic/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32c6_generic"
+path = "examples/c6/generic/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32c6_generic"
-path = "examples/c6/generic/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32c6_generic"
+path = "examples/c6/generic/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32c6_generic"
@@ -1498,8 +1450,8 @@ name = "wifi_auto_custom_checkbox_esp32c6_generic"
 path = "examples/c6/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32c6_generic"
-path = "examples/c6/generic/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32c6_generic"
+path = "examples/c6/generic/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32c6_generic"
@@ -1526,28 +1478,20 @@ name = "audio_example1_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/audio_example1_trait.rs"
+name = "audio_example2_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/audio_example3_trait.rs"
+name = "audio_example3_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/button_read.rs"
+name = "button_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32c6_devkitc1_n8"
@@ -1570,48 +1514,48 @@ name = "clock_servos_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/ir_example1_trait.rs"
+name = "ir_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32c6_devkitc1_n8"
@@ -1638,16 +1582,16 @@ name = "led2d_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led2d_example1_trait.rs"
+name = "led2d_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led2d_example2_trait.rs"
+name = "led2d_example2_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_example1_trait.rs"
+name = "led_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32c6_devkitc1_n8"
@@ -1662,12 +1606,12 @@ name = "led_strip8_spi_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32c6_devkitc1_n8"
@@ -1682,16 +1626,16 @@ name = "servo_basic_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servo_example1_trait.rs"
+name = "servo_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32c6_devkitc1_n8"
@@ -1726,8 +1670,8 @@ name = "wifi_auto_custom_checkbox_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32c6_devkitc1_n8"
@@ -1754,28 +1698,20 @@ name = "audio_example1_esp32h2_generic"
 path = "examples/h2/generic/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/audio_example1_trait.rs"
+name = "audio_example2_esp32h2_generic"
+path = "examples/h2/generic/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32h2_generic"
-path = "examples/h2/generic/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32h2_generic"
-path = "examples/h2/generic/audio_example3_trait.rs"
+name = "audio_example3_esp32h2_generic"
+path = "examples/h2/generic/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32h2_generic"
 path = "examples/h2/generic/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32h2_generic"
-path = "examples/h2/generic/button_read.rs"
+name = "button_example1_esp32h2_generic"
+path = "examples/h2/generic/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32h2_generic"
@@ -1798,48 +1734,48 @@ name = "clock_servos_esp32h2_generic"
 path = "examples/h2/generic/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32h2_generic"
+path = "examples/h2/generic/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32h2_generic"
 path = "examples/h2/generic/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32h2_generic"
+path = "examples/h2/generic/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32h2_generic"
 path = "examples/h2/generic/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/ir_example1_trait.rs"
+name = "ir_example1_esp32h2_generic"
+path = "examples/h2/generic/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32h2_generic"
 path = "examples/h2/generic/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32h2_generic"
+path = "examples/h2/generic/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32h2_generic"
 path = "examples/h2/generic/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32h2_generic"
+path = "examples/h2/generic/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32h2_generic"
 path = "examples/h2/generic/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32h2_generic"
+path = "examples/h2/generic/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32h2_generic"
@@ -1866,16 +1802,16 @@ name = "led2d_esp32h2_generic"
 path = "examples/h2/generic/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/led2d_example1_trait.rs"
+name = "led2d_example1_esp32h2_generic"
+path = "examples/h2/generic/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32h2_generic"
-path = "examples/h2/generic/led2d_example2_trait.rs"
+name = "led2d_example2_esp32h2_generic"
+path = "examples/h2/generic/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/led_example1_trait.rs"
+name = "led_example1_esp32h2_generic"
+path = "examples/h2/generic/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32h2_generic"
@@ -1890,12 +1826,12 @@ name = "led_strip8_spi_esp32h2_generic"
 path = "examples/h2/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32h2_generic"
+path = "examples/h2/generic/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32h2_generic"
-path = "examples/h2/generic/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32h2_generic"
+path = "examples/h2/generic/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32h2_generic"
@@ -1910,16 +1846,16 @@ name = "servo_basic_esp32h2_generic"
 path = "examples/h2/generic/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/servo_example1_trait.rs"
+name = "servo_example1_esp32h2_generic"
+path = "examples/h2/generic/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32h2_generic"
+path = "examples/h2/generic/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32h2_generic"
-path = "examples/h2/generic/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32h2_generic"
+path = "examples/h2/generic/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32h2_generic"
@@ -1954,8 +1890,8 @@ name = "wifi_auto_custom_checkbox_esp32h2_generic"
 path = "examples/h2/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32h2_generic"
-path = "examples/h2/generic/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32h2_generic"
+path = "examples/h2/generic/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32h2_generic"
@@ -1982,28 +1918,20 @@ name = "audio_example1_esp32s2_generic"
 path = "examples/s2/generic/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/audio_example1_trait.rs"
+name = "audio_example2_esp32s2_generic"
+path = "examples/s2/generic/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32s2_generic"
-path = "examples/s2/generic/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32s2_generic"
-path = "examples/s2/generic/audio_example3_trait.rs"
+name = "audio_example3_esp32s2_generic"
+path = "examples/s2/generic/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32s2_generic"
 path = "examples/s2/generic/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s2_generic"
-path = "examples/s2/generic/button_read.rs"
+name = "button_example1_esp32s2_generic"
+path = "examples/s2/generic/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32s2_generic"
@@ -2026,48 +1954,48 @@ name = "clock_servos_esp32s2_generic"
 path = "examples/s2/generic/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32s2_generic"
+path = "examples/s2/generic/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32s2_generic"
 path = "examples/s2/generic/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32s2_generic"
+path = "examples/s2/generic/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32s2_generic"
 path = "examples/s2/generic/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/ir_example1_trait.rs"
+name = "ir_example1_esp32s2_generic"
+path = "examples/s2/generic/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32s2_generic"
 path = "examples/s2/generic/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32s2_generic"
+path = "examples/s2/generic/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32s2_generic"
 path = "examples/s2/generic/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32s2_generic"
+path = "examples/s2/generic/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32s2_generic"
 path = "examples/s2/generic/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32s2_generic"
+path = "examples/s2/generic/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32s2_generic"
@@ -2094,16 +2022,16 @@ name = "led2d_esp32s2_generic"
 path = "examples/s2/generic/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/led2d_example1_trait.rs"
+name = "led2d_example1_esp32s2_generic"
+path = "examples/s2/generic/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32s2_generic"
-path = "examples/s2/generic/led2d_example2_trait.rs"
+name = "led2d_example2_esp32s2_generic"
+path = "examples/s2/generic/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/led_example1_trait.rs"
+name = "led_example1_esp32s2_generic"
+path = "examples/s2/generic/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32s2_generic"
@@ -2118,12 +2046,12 @@ name = "led_strip8_spi_esp32s2_generic"
 path = "examples/s2/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32s2_generic"
+path = "examples/s2/generic/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32s2_generic"
-path = "examples/s2/generic/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32s2_generic"
+path = "examples/s2/generic/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32s2_generic"
@@ -2138,16 +2066,16 @@ name = "servo_basic_esp32s2_generic"
 path = "examples/s2/generic/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/servo_example1_trait.rs"
+name = "servo_example1_esp32s2_generic"
+path = "examples/s2/generic/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32s2_generic"
+path = "examples/s2/generic/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32s2_generic"
-path = "examples/s2/generic/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32s2_generic"
+path = "examples/s2/generic/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32s2_generic"
@@ -2182,8 +2110,8 @@ name = "wifi_auto_custom_checkbox_esp32s2_generic"
 path = "examples/s2/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32s2_generic"
-path = "examples/s2/generic/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32s2_generic"
+path = "examples/s2/generic/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32s2_generic"
@@ -2210,28 +2138,20 @@ name = "audio_example1_esp32s3_generic"
 path = "examples/s3/generic/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/audio_example1_trait.rs"
+name = "audio_example2_esp32s3_generic"
+path = "examples/s3/generic/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32s3_generic"
-path = "examples/s3/generic/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32s3_generic"
-path = "examples/s3/generic/audio_example3_trait.rs"
+name = "audio_example3_esp32s3_generic"
+path = "examples/s3/generic/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32s3_generic"
 path = "examples/s3/generic/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s3_generic"
-path = "examples/s3/generic/button_read.rs"
+name = "button_example1_esp32s3_generic"
+path = "examples/s3/generic/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32s3_generic"
@@ -2254,48 +2174,48 @@ name = "clock_servos_esp32s3_generic"
 path = "examples/s3/generic/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32s3_generic"
+path = "examples/s3/generic/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32s3_generic"
 path = "examples/s3/generic/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32s3_generic"
+path = "examples/s3/generic/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32s3_generic"
 path = "examples/s3/generic/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/ir_example1_trait.rs"
+name = "ir_example1_esp32s3_generic"
+path = "examples/s3/generic/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32s3_generic"
 path = "examples/s3/generic/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32s3_generic"
+path = "examples/s3/generic/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32s3_generic"
 path = "examples/s3/generic/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32s3_generic"
+path = "examples/s3/generic/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32s3_generic"
 path = "examples/s3/generic/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32s3_generic"
+path = "examples/s3/generic/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32s3_generic"
@@ -2322,16 +2242,16 @@ name = "led2d_esp32s3_generic"
 path = "examples/s3/generic/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/led2d_example1_trait.rs"
+name = "led2d_example1_esp32s3_generic"
+path = "examples/s3/generic/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32s3_generic"
-path = "examples/s3/generic/led2d_example2_trait.rs"
+name = "led2d_example2_esp32s3_generic"
+path = "examples/s3/generic/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/led_example1_trait.rs"
+name = "led_example1_esp32s3_generic"
+path = "examples/s3/generic/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32s3_generic"
@@ -2346,12 +2266,12 @@ name = "led_strip8_spi_esp32s3_generic"
 path = "examples/s3/generic/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32s3_generic"
+path = "examples/s3/generic/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32s3_generic"
-path = "examples/s3/generic/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32s3_generic"
+path = "examples/s3/generic/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32s3_generic"
@@ -2366,16 +2286,16 @@ name = "servo_basic_esp32s3_generic"
 path = "examples/s3/generic/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/servo_example1_trait.rs"
+name = "servo_example1_esp32s3_generic"
+path = "examples/s3/generic/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32s3_generic"
+path = "examples/s3/generic/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32s3_generic"
-path = "examples/s3/generic/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32s3_generic"
+path = "examples/s3/generic/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32s3_generic"
@@ -2410,8 +2330,8 @@ name = "wifi_auto_custom_checkbox_esp32s3_generic"
 path = "examples/s3/generic/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32s3_generic"
-path = "examples/s3/generic/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32s3_generic"
+path = "examples/s3/generic/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32s3_generic"
@@ -2438,28 +2358,20 @@ name = "audio_example1_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/audio_example1_trait.rs"
+name = "audio_example2_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/audio_example3_trait.rs"
+name = "audio_example3_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/button_read.rs"
+name = "button_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32s3_devkitc1_v1_1_n16r8"
@@ -2482,48 +2394,48 @@ name = "clock_servos_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/ir_example1_trait.rs"
+name = "ir_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32s3_devkitc1_v1_1_n16r8"
@@ -2550,16 +2462,16 @@ name = "led2d_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example1_trait.rs"
+name = "led2d_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example2_trait.rs"
+name = "led2d_example2_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_example1_trait.rs"
+name = "led_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32s3_devkitc1_v1_1_n16r8"
@@ -2574,12 +2486,12 @@ name = "led_strip8_spi_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32s3_devkitc1_v1_1_n16r8"
@@ -2594,16 +2506,16 @@ name = "servo_basic_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servo_example1_trait.rs"
+name = "servo_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32s3_devkitc1_v1_1_n16r8"
@@ -2638,8 +2550,8 @@ name = "wifi_auto_custom_checkbox_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32s3_devkitc1_v1_1_n16r8"
@@ -2666,28 +2578,20 @@ name = "audio_example1_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/audio_example1.rs"
 
 [[example]]
-name = "audio_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/audio_example1_trait.rs"
+name = "audio_example2_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/audio_example2.rs"
 
 [[example]]
-name = "audio_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/audio_example2_trait.rs"
-
-[[example]]
-name = "audio_example3_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/audio_example3_trait.rs"
+name = "audio_example3_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/audio_example3.rs"
 
 [[example]]
 name = "blinky_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/blinky.rs"
 
 [[example]]
-name = "button_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/button_example1_trait.rs"
-
-[[example]]
-name = "button_read_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/button_read.rs"
+name = "button_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/button_example1.rs"
 
 [[example]]
 name = "clock_console_simple_esp32s3_devkitc1_v1_0_n16r8"
@@ -2710,48 +2614,48 @@ name = "clock_servos_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/clock_servos.rs"
 
 [[example]]
-name = "clock_sync_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/clock_sync_example1_trait.rs"
+name = "clock_sync_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/clock_sync_example1.rs"
 
 [[example]]
 name = "conway_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/conway.rs"
 
 [[example]]
-name = "flash_block_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/flash_block_example1_trait.rs"
+name = "flash_block_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/flash_block_example1.rs"
 
 [[example]]
 name = "ir_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/ir.rs"
 
 [[example]]
-name = "ir_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/ir_example1_trait.rs"
+name = "ir_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/ir_example1.rs"
 
 [[example]]
 name = "ir_kepler_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/ir_kepler.rs"
 
 [[example]]
-name = "ir_kepler_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/ir_kepler_example1_trait.rs"
+name = "ir_kepler_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/ir_kepler_example1.rs"
 
 [[example]]
 name = "ir_keplers_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/ir_keplers.rs"
 
 [[example]]
-name = "ir_mapping_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/ir_mapping_example1_trait.rs"
+name = "ir_mapping_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/ir_mapping_example1.rs"
 
 [[example]]
 name = "lcd_text_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/lcd_text.rs"
 
 [[example]]
-name = "lcd_text_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/lcd_text_example1_trait.rs"
+name = "lcd_text_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/lcd_text_example1.rs"
 
 [[example]]
 name = "lcd_texts_esp32s3_devkitc1_v1_0_n16r8"
@@ -2778,16 +2682,16 @@ name = "led2d_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/led2d.rs"
 
 [[example]]
-name = "led2d_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example1_trait.rs"
+name = "led2d_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example1.rs"
 
 [[example]]
-name = "led2d_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example2_trait.rs"
+name = "led2d_example2_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led2d_example2.rs"
 
 [[example]]
-name = "led_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_example1_trait.rs"
+name = "led_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_example1.rs"
 
 [[example]]
 name = "led_probe_c3_d4_d6_esp32s3_devkitc1_v1_0_n16r8"
@@ -2802,12 +2706,12 @@ name = "led_strip8_spi_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/led_strip8_spi.rs"
 
 [[example]]
-name = "led_strip_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example1_trait.rs"
+name = "led_strip_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example1.rs"
 
 [[example]]
-name = "led_strip_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example2_trait.rs"
+name = "led_strip_example2_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/led_strip_example2.rs"
 
 [[example]]
 name = "led_strip_len8_esp32s3_devkitc1_v1_0_n16r8"
@@ -2822,16 +2726,16 @@ name = "servo_basic_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/servo_basic.rs"
 
 [[example]]
-name = "servo_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servo_example1_trait.rs"
+name = "servo_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servo_example1.rs"
 
 [[example]]
-name = "servo_player_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example1_trait.rs"
+name = "servo_player_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example1.rs"
 
 [[example]]
-name = "servo_player_example2_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example2_trait.rs"
+name = "servo_player_example2_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example2.rs"
 
 [[example]]
 name = "servos_esp32s3_devkitc1_v1_0_n16r8"
@@ -2866,8 +2770,8 @@ name = "wifi_auto_custom_checkbox_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_custom_checkbox.rs"
 
 [[example]]
-name = "wifi_auto_example1_trait_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_example1_trait.rs"
+name = "wifi_auto_example1_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/wifi_auto_example1.rs"
 
 [[example]]
 name = "wifi_auto_force_button_esp32s3_devkitc1_v1_0_n16r8"

@@ -63,5 +63,5 @@ pub async fn main(_spawner: Spawner) -> ! {
     servo11.relax();
     servo12.relax();
 
-    core::future::pending().await
+    pending().await
 }

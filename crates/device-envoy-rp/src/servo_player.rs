@@ -34,7 +34,7 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{Result, servo::{AtEnd, Servo as _, ServoPlayer as _, servo_player}};
@@ -73,7 +73,7 @@
 //!     // position; AtEnd::Loop repeats.
 //!     servo_player11.animate(STEPS, AtEnd::Relax);
 //!
-//!     core::future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 //!
@@ -87,7 +87,7 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{Result, servo::{AtEnd, Servo as _, ServoPlayer as _, combine, linear, servo_player}};
@@ -129,7 +129,7 @@
 //!     embassy_time::Timer::after(Duration::from_secs(10)).await;
 //!     servo_sweep.relax();
 //!
-//!     core::future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 

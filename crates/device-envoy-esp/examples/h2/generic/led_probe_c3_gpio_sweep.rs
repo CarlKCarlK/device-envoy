@@ -5,7 +5,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -71,5 +71,5 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     probe_pin!(gpio10, "GPIO10");
 
     info!("GPIO sweep complete. Leaving all probe pins LOW.");
-    core::future::pending().await
+    pending().await
 }

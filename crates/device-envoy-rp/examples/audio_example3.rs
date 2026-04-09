@@ -2,7 +2,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use device_envoy_rp::{
     Result,
@@ -81,5 +81,5 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 
     audio_player8.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);
-    core::future::pending().await
+    pending().await
 }

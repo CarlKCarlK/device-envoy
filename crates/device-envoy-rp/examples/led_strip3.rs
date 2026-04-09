@@ -2,7 +2,7 @@
 #![no_std]
 #![no_main]
 
-use core::{convert::Infallible, future};
+use core::{convert::Infallible, future::pending};
 
 use defmt::info;
 use defmt_rtt as _;

@@ -9,7 +9,7 @@
 #![no_std]
 #![no_main]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, future::pending, panic};
 
 use device_envoy_esp::{
     Result, init_and_start, led_strip,
@@ -54,5 +54,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Could do more things here. The animation runs in the background.
 
-    future::pending().await // run forever
+    pending().await // run forever
 }

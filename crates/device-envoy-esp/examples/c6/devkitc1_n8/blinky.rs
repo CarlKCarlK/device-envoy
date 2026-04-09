@@ -81,5 +81,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel0, spawner)?;
     sos_strip.animate(&SOS);
 
-    core::future::pending().await
+    pending().await
 }

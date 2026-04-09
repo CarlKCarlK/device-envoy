@@ -14,7 +14,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use defmt::info;
 use defmt_rtt as _;
@@ -82,5 +82,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     led_example.animate(SOS_PATTERN);
 
     // Animation loops continuously in background task
-    core::future::pending().await
+    pending().await
 }

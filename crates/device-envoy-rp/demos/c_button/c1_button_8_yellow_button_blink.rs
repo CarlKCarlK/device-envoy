@@ -3,7 +3,7 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::future;
+use core::future::pending;
 use core::{convert::Infallible, panic};
 use device_envoy_rp::{
     Result,
@@ -57,5 +57,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         // avoid tricky async programming issues like loop/select & select/loop.
         // Each device abstraction handles its own business internally.
     }
-    future::pending().await // Needed because compiler doesn't know "cycle" is infinite.
+    pending().await // Needed because compiler doesn't know "cycle" is infinite.
 }

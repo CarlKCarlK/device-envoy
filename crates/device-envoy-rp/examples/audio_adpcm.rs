@@ -10,9 +10,8 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
-use core::future::pending;
 use core::time::Duration as StdDuration;
+use core::{convert::Infallible, future::pending};
 
 use device_envoy_rp::Result;
 use device_envoy_rp::audio_player::{

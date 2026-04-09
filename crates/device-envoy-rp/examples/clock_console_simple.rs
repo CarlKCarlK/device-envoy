@@ -6,7 +6,7 @@
 #![cfg(feature = "wifi")]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use defmt::info;
 use defmt_rtt as _;

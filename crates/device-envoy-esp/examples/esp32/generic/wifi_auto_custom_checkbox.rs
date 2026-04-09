@@ -8,8 +8,8 @@
 #![no_main]
 
 use core::cell::RefCell;
-use core::convert::Infallible;
 use core::fmt::Write;
+use core::{convert::Infallible, future::pending};
 
 use esp_backtrace as _;
 
@@ -141,5 +141,5 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     log::info!("share_telemetry: {:?}", checkbox_field.checked()?);
 
-    core::future::pending().await
+    pending().await
 }

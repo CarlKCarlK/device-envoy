@@ -37,7 +37,7 @@
 //! # #![no_main]
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{Result, servo::{AtEnd, Servo as _, ServoPlayer as _, servo_player}};
@@ -76,7 +76,7 @@
 //!     // position; AtEnd::Loop repeats.
 //!     servo_player11.animate(STEPS, AtEnd::Relax);
 //!
-//!     core::future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 //!
@@ -91,7 +91,7 @@
 //! # #![no_main]
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{Result, servo::{AtEnd, Servo as _, ServoPlayer as _, combine, linear, servo_player}};
@@ -121,7 +121,7 @@
 //!     );
 //!
 //!     servo_sweep.animate(STEPS, AtEnd::Loop);
-//!     core::future::pending().await
+//!     pending().await
 //! }
 //! ```
 use core::cell::{Cell, RefCell};

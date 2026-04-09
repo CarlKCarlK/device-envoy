@@ -43,5 +43,5 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
 
-    core::future::pending().await
+    pending().await
 }

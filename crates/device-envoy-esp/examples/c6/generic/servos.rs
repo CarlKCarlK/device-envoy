@@ -9,7 +9,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Instant, Timer};
@@ -79,5 +79,5 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     servo_a.relax();
     servo_b.relax();
 
-    core::future::pending().await
+    pending().await
 }

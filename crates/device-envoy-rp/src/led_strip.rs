@@ -42,7 +42,7 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{Result, led_strip::{LedStrip as _, Frame1d, colors}};
@@ -77,7 +77,7 @@
 //!     // Display the frame on the LED strip (until replaced).
 //!     led_strip_simple.write_frame(frame);
 //!
-//!     core::future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 //!
@@ -92,7 +92,7 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{Result, led_strip::{LedStrip as _, Current, Frame1d, Gamma, colors}};
@@ -129,7 +129,7 @@
 //!         (Frame1d::filled(colors::BLUE), frame_duration),
 //!     ]);
 //!
-//!     core::future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 
@@ -398,8 +398,8 @@ where
 /// # #![no_std]
 /// # #![no_main]
 /// # use panic_probe as _;
-/// # use core::convert::Infallible;
-/// # use core::future;
+/// # use core::{convert::Infallible, future::pending};
+/// # use core::future::pending;
 /// # use defmt_rtt as _;
 /// # use embassy_executor::Spawner;
 /// # use defmt::info;

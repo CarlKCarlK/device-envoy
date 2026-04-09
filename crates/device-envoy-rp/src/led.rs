@@ -42,7 +42,7 @@
 //!         (LedLevel::On, Duration::from_millis(150)),
 //!     ]);
 //!
-//!     core::future::pending().await
+//!     pending().await
 //! }
 //! ```
 

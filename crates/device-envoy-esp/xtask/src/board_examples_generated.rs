@@ -333,7 +333,7 @@ fn board_template_placeholder_source(
 #![no_std]\n\
 #![no_main]\n\
 \n\
-use core::convert::Infallible;\n\
+use core::{{convert::Infallible, future::pending}};\n\
 \n\
 use embassy_executor::Spawner;\n\
 \n\
@@ -356,7 +356,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {{\n\
 \n\
     let _ = spawner;\n\
     info!(\"{info_message}\");\n\
-    core::future::pending().await\n\
+    pending().await\n\
 }}\n"
     )
 }

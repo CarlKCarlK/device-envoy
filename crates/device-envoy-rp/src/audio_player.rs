@@ -55,7 +55,7 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{
 //!     Result,
@@ -105,7 +105,7 @@
 //!
 //!     // Audio plays in the background while we can do other things here, like blink an LED or read a button.
 //!
-//!     core::future::pending().await // run forever
+//!     pending().await // run forever
 //!
 //! }
 //! ```
@@ -120,7 +120,7 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{
 //!     Result,
@@ -233,7 +233,7 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! # use core::result::Result::Ok;
 //! use device_envoy_rp::{
 //!     Result,
@@ -309,7 +309,7 @@
 //!     let audio_player8 = AudioPlayer8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;
 //!
 //!     audio_player8.play([DIGITS[2], DIGITS[1], DIGITS[0], NASA], AtEnd::Stop);
-//!     core::future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 // TODO Add a realtime tone Playable (sine + ASR envelope) that uses parameter-only storage and matches ADPCM playback performance.

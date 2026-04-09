@@ -28,8 +28,8 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
-//! # use core::future;
+//! # use core::{convert::Infallible, future::pending};
+//! # use core::future::pending;
 //! # use core::result::Result::Ok;
 //! # use embassy_executor::Spawner;
 //! # use embassy_rp::init;
@@ -65,7 +65,7 @@
 //!     // Each character takes the next color; when we run out, we start over.
 //!     led12x4.write_text("Rust", &colors);
 //!
-//!     future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 //!
@@ -79,8 +79,8 @@
 //! # #![no_std]
 //! # #![no_main]
 //! # use panic_probe as _;
-//! # use core::convert::Infallible;
-//! # use core::future;
+//! # use core::{convert::Infallible, future::pending};
+//! # use core::future::pending;
 //! # use embassy_executor::Spawner;
 //! # use embassy_rp::init;
 //! use device_envoy_rp::{Result, led2d, led2d::layout::LedLayout, led2d::Frame2d, led2d::Led2dFont, led_strip::{Current, Gamma, colors}, led2d::Led2d as _};
@@ -135,7 +135,7 @@
 //!     led_12x8_animated
 //!         .animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
 //!
-//!     future::pending().await // run forever
+//!     pending().await // run forever
 //! }
 //! ```
 

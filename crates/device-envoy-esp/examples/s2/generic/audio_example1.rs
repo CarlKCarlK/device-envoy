@@ -4,6 +4,7 @@
 //! - Audio data pin (`DIN`) -> GPIO21
 //! - Audio bit clock pin (`BCLK`) -> GPIO4
 //! - Audio word select pin (`LRC` / `LRCLK`) -> GPIO5
+//! - Button -> GPIO0 to GND
 #![allow(missing_docs)]
 #![no_std]
 #![no_main]
@@ -13,11 +14,15 @@ use core::time::Duration as StdDuration;
 
 use embassy_executor::Spawner;
 use esp_backtrace as _;
+use log::info;
 
 use device_envoy_esp::{Result, init_and_start};
 use device_envoy_esp::{
-    audio_player::AtEnd, audio_player::AudioPlayer as _, audio_player::SilenceClip,
-    audio_player::VOICE_22050_HZ, audio_player::Volume, audio_player::audio_player, tone,
+    audio_player::{
+        AtEnd, AudioPlayer, Playable, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
+    },
+    button::{Button as _, ButtonEsp, PressedTo},
+    tone,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -29,8 +34,28 @@ audio_player! {
         word_select_pin: GPIO5,
         sample_rate_hz: VOICE_22050_HZ,
         dma: DMA_I2S0,
-        max_volume: Volume::percent(25),
+        max_volume: Volume::percent(50),
     }
+}
+
+const SAMPLE_RATE_HZ: u32 = VOICE_22050_HZ;
+
+fn play_mary_phrase(audio_player: &impl AudioPlayer<SAMPLE_RATE_HZ>) {
+    type PlayableRef = &'static dyn Playable<SAMPLE_RATE_HZ>;
+
+    const REST: PlayableRef = &SilenceClip::new(StdDuration::from_millis(80));
+    const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
+    const NOTE_E4: PlayableRef = &tone!(330, SAMPLE_RATE_HZ, NOTE_DURATION);
+    const NOTE_D4: PlayableRef = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
+    const NOTE_C4: PlayableRef = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
+
+    audio_player.play(
+        [
+            NOTE_E4, REST, NOTE_D4, REST, NOTE_C4, REST, NOTE_D4, REST, NOTE_E4, REST, NOTE_E4,
+            REST, NOTE_E4,
+        ],
+        AtEnd::Stop,
+    );
 }
 
 #[esp_rtos::main]
@@ -41,23 +66,16 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    const REST: &AudioPlayerBoardPlayable = &SilenceClip::new(StdDuration::from_millis(80));
-    const SAMPLE_RATE_HZ: u32 = AudioPlayerBoard::SAMPLE_RATE_HZ;
-    const NOTE_DURATION: StdDuration = StdDuration::from_millis(220);
-    const NOTE_E4: &AudioPlayerBoardPlayable = &tone!(330, SAMPLE_RATE_HZ, NOTE_DURATION);
-    const NOTE_D4: &AudioPlayerBoardPlayable = &tone!(294, SAMPLE_RATE_HZ, NOTE_DURATION);
-    const NOTE_C4: &AudioPlayerBoardPlayable = &tone!(262, SAMPLE_RATE_HZ, NOTE_DURATION);
+    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
     let audio_player_board =
         AudioPlayerBoard::new(p.GPIO21, p.GPIO4, p.GPIO5, p.I2S0, p.DMA_I2S0, spawner)?;
-    audio_player_board.play(
-        [
-            NOTE_E4, REST, NOTE_D4, REST, NOTE_C4, REST, NOTE_D4, REST, NOTE_E4, REST, NOTE_E4,
-            REST, NOTE_E4,
-        ],
-        AtEnd::Stop,
-    );
 
-    core::future::pending().await
+    loop {
+        play_mary_phrase(audio_player_board);
+        info!("Press the button to play again.");
+        button.wait_for_press().await;
+    }
 }

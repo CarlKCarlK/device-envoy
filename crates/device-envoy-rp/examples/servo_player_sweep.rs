@@ -5,8 +5,8 @@
 use defmt_rtt as _;
 use panic_probe as _;
 
-use core::convert::Infallible;
 use core::default::Default;
+use core::{convert::Infallible, future::pending};
 use device_envoy_rp::{
     Result,
     servo::Servo as _,
@@ -52,5 +52,5 @@ async fn servo_sweep_example(spawner: Spawner) -> Result<Infallible> {
     embassy_time::Timer::after(Duration::from_secs(10)).await;
     servo_sweep.relax();
 
-    core::future::pending().await // run forever
+    pending().await // run forever
 }

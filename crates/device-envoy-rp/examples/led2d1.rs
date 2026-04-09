@@ -3,7 +3,7 @@
 #![no_main]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-use core::{convert::Infallible, future};
+use core::{convert::Infallible, future::pending};
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::{
@@ -38,5 +38,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let colors = [colors::CYAN, colors::RED, colors::YELLOW];
     led12x4.write_text("Rust", &colors);
 
-    future::pending().await // run forever
+    pending().await // run forever
 }

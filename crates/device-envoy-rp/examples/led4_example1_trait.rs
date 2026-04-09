@@ -2,7 +2,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use defmt_rtt as _;
 use device_envoy_core::led4::Led4;
@@ -26,7 +26,7 @@ async fn show_status(led4: &impl Led4) -> Infallible {
 
     // Show "rUSt" solid forever.
     led4.write_text(['r', 'U', 'S', 't'], BlinkState::Solid);
-    core::future::pending().await
+    pending().await
 }
 
 #[embassy_executor::main]

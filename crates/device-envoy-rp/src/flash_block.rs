@@ -148,7 +148,7 @@ impl FlashManager {
 /// # #![no_main]
 /// # use panic_probe as _;
 /// # use defmt_rtt as _;
-/// # use core::{convert::Infallible, future};
+/// # use core::{convert::Infallible, future::pending};
 /// use device_envoy_rp::flash_block::{FlashBlockRp, FlashBlock as _};
 /// # use defmt::info;
 ///
@@ -176,7 +176,7 @@ impl FlashManager {
 ///
 ///     boot_counter_flash_block.save(&boot_counter)?;
 ///     info!("Boot counter: {}", boot_counter.0);
-///     future::pending().await
+///     pending().await
 /// }
 /// ```
 ///

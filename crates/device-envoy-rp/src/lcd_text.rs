@@ -34,7 +34,7 @@
 //! # #![no_main]
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! use device_envoy_rp::{Result, lcd_text, lcd_text::LcdText as _};
 //!
 //! lcd_text! {
@@ -59,7 +59,7 @@
 //!
 //!     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
 //!
-//!     core::future::pending().await
+//!     pending().await
 //! }
 //! ```
 //!
@@ -72,7 +72,7 @@
 //! # #![no_main]
 //! # use panic_probe as _;
 //! # use defmt_rtt as _;
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! use device_envoy_rp::{Result, i2cs, lcd_text::LcdText as _};
 //!
 //! i2cs! {
@@ -97,7 +97,7 @@
 //!     lcd_text16x2.write_text("16x2\nready");
 //!     lcd_text20x4.write_text("20x4\nshared i2c\naddress 0x3F");
 //!
-//!     core::future::pending().await
+//!     pending().await
 //! }
 //! ```
 

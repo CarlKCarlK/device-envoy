@@ -10,7 +10,7 @@ This file contains both shared workspace rules and crate-specific rules for this
 - Avoid silent clamping; prefer asserts or typed ranges so out-of-range inputs fail fast.
 - Prefer `no_run` doctests; use `ignore` only when absolutely necessary (and call out why). Running doctests is best when possible, but rarely feasible for embedded code.
 - Always use `rust,no_run` in doctest fences, not just `no_run`.
-- For programs that should run forever, use `core::future::pending().await` instead of a timer loop.
+- For programs that should run forever, use `pending().await` instead of a timer loop.
 - **Hide boilerplate in doctests** using the `#` prefix (e.g., `# #![no_std]`). Hide lines that are noise to the reader but required for compilation: `#![no_std]`, `#![no_main]`, and standard imports like `use embassy_executor::Spawner;`. Keep only the essential code showing how to use the API. See the crate-specific sections below for platform-specific imports to hide or show.
 - When adding docs for modules or public items, link readers to the primary struct and keep the single compilable example on that struct; other items should point back to it rather than duplicating examples.
 - Prefer `const` values defined in the local context (inside the function/example) rather than at module scope when they're only used there.
@@ -398,7 +398,7 @@ These tips apply when moving platform-specific code into `device-envoy-core` or 
 ## Crate-Specific Policies (device-envoy-rp / Pico)
 
 - While the crate version remains `0.0.3-alpha`, we do not care about breaking changes. Optimize for the best API design.
-- For Pico programs that should run forever, use `core::future::pending().await` instead of a timer loop.
+- For Pico programs that should run forever, use `pending().await` instead of a timer loop.
 - **Hide boilerplate in doctests**: In addition to shared rules, hide `use panic_probe as _` and `use defmt_rtt as _`. **Important:** Do NOT hide imports from `device_envoy_rp`, `embassy_time::Duration`, `smart_leds`, or `embedded_graphics` because they are unusual and users need to see them to understand what to import.
 - Always run `cargo check-all` before handing work back; xtask keeps doctests and examples in sync.
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
@@ -558,7 +558,7 @@ The standard servo pins across examples are **PIN_11** and **PIN_12**.
 ## Crate-Specific Policies (device-envoy-esp / ESP32)
 
 - While the crate version remains `0.0.4-alpha.2`, we do not care about breaking changes. Optimize for the best API design.
-- For ESP32 programs that should run forever, use `core::future::pending().await` instead of a timer loop.
+- For ESP32 programs that should run forever, use `pending().await` instead of a timer loop.
 - **Hide boilerplate in doctests**: In addition to shared rules, hide `use esp_backtrace as _`. **Important:** Do NOT hide imports from `device_envoy_esp`, `embassy_time::Duration`, or `smart_leds` because they are unusual and users need to see them to understand what to import.
 - Always run `cargo check` before handing work back.
 - For `cargo` aliases that target `riscv32imac-unknown-none-elf`, include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
@@ -584,7 +584,7 @@ For this crate, generation is wired through `xtask` for: `audio_player_generated
 Use the `main`/`inner_main` split to allow the `?` operator in example and demo code:
 
 ```rust
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
@@ -595,7 +595,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
     // ... use ? freely here ...
-    core::future::pending().await
+    pending().await
 }
 ```
 

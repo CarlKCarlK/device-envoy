@@ -3,7 +3,7 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, future::pending, panic};
 
 use device_envoy_rp::{
     Result,
@@ -84,7 +84,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Write the frame to the LED panel. It stays until you replace it.
     led12x8.write_frame(frame2d);
 
-    future::pending().await // run forever
+    pending().await // run forever
 }
 
 // Not shown today:

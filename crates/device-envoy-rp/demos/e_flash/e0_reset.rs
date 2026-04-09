@@ -3,7 +3,7 @@
 #![no_main]
 #![cfg(not(feature = "host"))]
 
-use core::{convert::Infallible, future, panic};
+use core::{convert::Infallible, future::pending, panic};
 use device_envoy_rp::{
     Result,
     flash_block::{FlashBlock as _, FlashBlockRp},
@@ -52,5 +52,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let led12x8 = Led12x8::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
     led12x8.write_text("", &[]);
 
-    future::pending().await // Keep running
+    pending().await // Keep running
 }

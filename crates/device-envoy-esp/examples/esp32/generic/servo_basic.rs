@@ -6,7 +6,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
@@ -43,5 +43,5 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     basic_servo.relax(); // Let the servo relax. It will re-enable on next set_degrees()
 
-    core::future::pending().await
+    pending().await
 }

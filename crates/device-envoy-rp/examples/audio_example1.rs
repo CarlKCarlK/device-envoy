@@ -2,8 +2,8 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
 use core::time::Duration as StdDuration;
+use core::{convert::Infallible, future::pending};
 
 use device_envoy_rp::{
     Result,
@@ -53,5 +53,5 @@ async fn example(spawner: Spawner) -> Result<Infallible> {
     );
 
     // Audio plays in the background while we can do other things here, like blink an LED or read a button.
-    core::future::pending().await
+    pending().await
 }

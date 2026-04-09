@@ -1,0 +1,72 @@
+//! Wiring:
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO18
+//!
+#![allow(missing_docs)]
+#![no_std]
+#![no_main]
+
+use core::{convert::Infallible, future::pending};
+
+use embassy_executor::Spawner;
+use esp_backtrace as _;
+use log::info;
+
+use device_envoy_core::led2d::{Frame2d, Led2d};
+use device_envoy_esp::{
+    Result, init_and_start,
+    led_strip::{Current, Gamma},
+    led2d,
+    led2d::{Led2dFont, layout::LedLayout},
+};
+use smart_leds::colors;
+
+esp_bootloader_esp_idf::esp_app_desc!();
+
+const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
+const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4);
+const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
+
+led2d! {
+    Led12x8Animated {
+        pin: GPIO18,
+        len: 96,
+        led_layout: LED_LAYOUT_12X8_ROTATED,
+        max_current: Current::Milliamps(300),
+        font: Led2dFont::Font4x6Trim,
+        gamma: Gamma::Linear,
+        max_frames: 2,
+    }
+}
+
+fn animate_go_go<const W: usize, const H: usize>(led2d: &impl Led2d<W, H>) {
+    // First frame: "Go" with the default color behavior.
+    let mut frame_0 = Frame2d::new();
+    led2d.write_text_to_frame("Go", &[], &mut frame_0);
+
+    // Second frame: "\nGo" with explicit colors.
+    let mut frame_1 = Frame2d::new();
+    led2d.write_text_to_frame("\nGo", &[colors::HOT_PINK, colors::LIME], &mut frame_1);
+
+    // Animate the two frames.
+    let frame_duration = embassy_time::Duration::from_secs(1);
+    led2d.animate([(frame_0, frame_duration), (frame_1, frame_duration)]);
+}
+
+#[esp_rtos::main]
+async fn main(spawner: Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
+}
+
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
+
+    info!("LED 2D trait example 2: Animated text on a rotated 12x8 panel via GPIO18");
+
+    let led12x8_animated = Led12x8Animated::new(p.GPIO18, rmt80.channel0, spawner)?;
+
+    animate_go_go(&led12x8_animated);
+
+    pending().await
+}

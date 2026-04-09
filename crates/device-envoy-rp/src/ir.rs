@@ -21,7 +21,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! use device_envoy_rp::{Result, ir, ir::Ir as _, ir::IrEvent};
 //! # use panic_probe as _;
 //! # use defmt::info;
@@ -54,7 +54,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! use device_envoy_rp::{Result, ir::IrMapping as _, ir_mapping};
 //! # use panic_probe as _;
 //! #
@@ -108,7 +108,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
-//! # use core::convert::Infallible;
+//! # use core::{convert::Infallible, future::pending};
 //! use device_envoy_rp::{Result, ir::IrKepler as _, ir::KeplerKeys, ir_kepler};
 //! # use panic_probe as _;
 //! # use defmt::info;

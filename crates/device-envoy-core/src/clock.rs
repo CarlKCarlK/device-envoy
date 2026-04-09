@@ -417,8 +417,8 @@ fn scale_local_microseconds_to_real(local_micros: u64, speed_scaled_ppm: u64) ->
     let scaled =
         u128::from(local_micros) * u128::from(SPEED_SCALE_PPM) / u128::from(speed_scaled_ppm);
     let scaled = u64::try_from(scaled).expect("scaled duration fits in u64");
-    assert!(scaled > 0, "scaled duration must be positive");
-    scaled
+    // Clamp to at least 1 µs: at very high speeds integer division can truncate to 0.
+    scaled.max(1)
 }
 
 fn scaled_interval_microseconds(interval_ms: u64, speed_scaled_ppm: u64) -> u64 {
@@ -430,8 +430,8 @@ fn scaled_interval_microseconds(interval_ms: u64, speed_scaled_ppm: u64) -> u64 
     let scaled =
         u128::from(interval_micros) * u128::from(SPEED_SCALE_PPM) / u128::from(speed_scaled_ppm);
     let scaled = u64::try_from(scaled).expect("scaled interval fits in u64");
-    assert!(scaled > 0, "scaled interval must be positive");
-    scaled
+    // Clamp to at least 1 µs: at very high speeds integer division can truncate to 0.
+    scaled.max(1)
 }
 
 fn scale_elapsed_microseconds(elapsed_ticks: u64, speed_scaled_ppm: u64) -> i64 {

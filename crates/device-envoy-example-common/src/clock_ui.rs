@@ -84,9 +84,9 @@ where
     OnEventFuture: core::future::Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(speed);
+    clock_sync.set_tick_interval(Some(ONE_MINUTE));
     let (hours, minutes, _) = h12_m_s(&clock_sync.now_local());
     on_event(ClockUiEvent::RenderHoursMinutes { hours, minutes }).await?;
-    clock_sync.set_tick_interval(Some(ONE_MINUTE));
 
     loop {
         match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {
@@ -123,9 +123,9 @@ where
     OnEventFuture: core::future::Future<Output = Result<(), E>>,
 {
     clock_sync.set_speed(REAL_TIME_SPEED);
+    clock_sync.set_tick_interval(Some(ONE_SECOND));
     let (_, minutes, seconds) = h12_m_s(&clock_sync.now_local());
     on_event(ClockUiEvent::RenderMinutesSeconds { minutes, seconds }).await?;
-    clock_sync.set_tick_interval(Some(ONE_SECOND));
 
     loop {
         match select(button.wait_for_press_duration(), clock_sync.wait_for_tick()).await {

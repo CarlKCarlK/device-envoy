@@ -3,7 +3,7 @@
 //! Basic NEC IR receiver demo.
 //!
 //! Wiring:
-//! - IR receiver data output -> {{ ir_pin_ident }}
+//! - IR receiver data output -> GPIO{{ ir_pin }}
 //! - IR receiver VCC -> 3.3V
 //! - IR receiver GND -> GND
 
@@ -25,7 +25,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 ir! {
     IrBoard {
-        pin: {{ ir_pin_ident }}
+        pin: GPIO{{ ir_pin }}
     }
 }
 
@@ -40,8 +40,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("ir example started: listening for IR input");
 
-    let channel_creator = rmt80.{{ ir_rx_channel_ident }};
-    let ir_board = IrBoard::new(p.{{ ir_pin_ident }}, channel_creator, spawner)?;
+    let channel_creator = rmt80.channel{{ ir_rx_channel }};
+    let ir_board = IrBoard::new(p.GPIO{{ ir_pin }}, channel_creator, spawner)?;
 
     loop {
         let IrEvent::Press { addr, cmd } = ir_board.wait_for_press().await;

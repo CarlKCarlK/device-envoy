@@ -1,6 +1,6 @@
 {# @board-example min_rmt=1 #}
 //! Wiring:
-//! - 16x16 NeoPixel-style (WS2812) panel data input -> {{ panel_pin_ident }}
+//! - 16x16 NeoPixel-style (WS2812) panel data input -> GPIO{{ panel_pin }}
 //!
 //! 16x16 panel mapping test: animate one foreground dot through every position.
 //!
@@ -24,12 +24,12 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-const PANEL_16X16_PIN_NUM: u8 = {{ panel_pin_num }};
+const PANEL_16X16_PIN_NUM: u8 = {{ panel_pin }};
 const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_major();
 
 led2d! {
     Led16x16Test {
-        pin: {{ panel_pin_ident }},
+        pin: GPIO{{ panel_pin }},
         len: 256,
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
@@ -53,7 +53,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         PANEL_16X16_PIN_NUM
     );
 
-    let led16x16_test = Led16x16Test::new(p.{{ panel_pin_ident }}, rmt80.channel0, spawner)?;
+    let led16x16_test = Led16x16Test::new(p.GPIO{{ panel_pin }}, rmt80.channel0, spawner)?;
     const DOT_DELAY: Duration = Duration::from_millis(500);
     const WIDTH: usize = <&'static Led16x16Test as Led2d<16, 16>>::WIDTH;
     const HEIGHT: usize = <&'static Led16x16Test as Led2d<16, 16>>::HEIGHT;

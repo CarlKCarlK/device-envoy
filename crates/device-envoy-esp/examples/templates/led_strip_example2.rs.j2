@@ -1,6 +1,6 @@
 {# @board-example min_rmt=1 #}
 //! Wiring:
-//! - 12x8 NeoPixel-style (WS2812) panel data input -> {{ panel12x8_pin_ident }}
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO{{ panel12x8_pin }}
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -23,7 +23,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
     LedStripLen96 {
-        pin: {{ panel12x8_pin_ident }},
+        pin: GPIO{{ panel12x8_pin }},
         len: 96,
         max_current: Current::Milliamps(1000),
         gamma: Gamma::Linear,
@@ -51,9 +51,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    info!("LED strip trait example 2: RGB animation on {{ panel12x8_pin_ident }}");
+    info!("LED strip trait example 2: RGB animation on GPIO{{ panel12x8_pin }}");
 
-    let led_strip_len96 = LedStripLen96::new(p.{{ panel12x8_pin_ident }}, rmt80.channel0, spawner)?;
+    let led_strip_len96 = LedStripLen96::new(p.GPIO{{ panel12x8_pin }}, rmt80.channel0, spawner)?;
     animate_rgb_cycle(led_strip_len96);
 
     pending().await

@@ -3,8 +3,8 @@
 //! SunFounder Kepler IR remote demo with two receivers.
 //!
 //! Wiring:
-//! - IR receiver #0 data output -> {{ ir_receiver0_pin_ident }}
-//! - IR receiver #1 data output -> {{ ir_receiver1_pin_ident }}
+//! - IR receiver #0 data output -> GPIO{{ ir_receiver0_pin }}
+//! - IR receiver #1 data output -> GPIO{{ ir_receiver1_pin }}
 //! - Both receiver VCC pins -> 3.3V
 //! - Both receiver GND pins -> GND
 
@@ -23,8 +23,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_keplers! {
     IrKeplersBoard {
-        IrKeplerReceiver0: { pin: {{ ir_receiver0_pin_ident }} },
-        IrKeplerReceiver1: { pin: {{ ir_receiver1_pin_ident }} }
+        IrKeplerReceiver0: { pin: GPIO{{ ir_receiver0_pin }} },
+        IrKeplerReceiver1: { pin: GPIO{{ ir_receiver1_pin }} }
     }
 }
 
@@ -38,13 +38,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let channel_creator0 = rmt80.{{ ir_rx_channel_ident }};
-    let channel_creator1 = rmt80.{{ ir_rx_channel2_ident }};
+    let channel_creator0 = rmt80.channel{{ ir_rx_channel }};
+    let channel_creator1 = rmt80.channel{{ ir_rx_channel2 }};
 
     let (ir_kepler_receiver0, ir_kepler_receiver1) = IrKeplersBoard::new(
-        p.{{ ir_receiver0_pin_ident }},
+        p.GPIO{{ ir_receiver0_pin }},
         channel_creator0,
-        p.{{ ir_receiver1_pin_ident }},
+        p.GPIO{{ ir_receiver1_pin }},
         channel_creator1,
         spawner,
     )?;

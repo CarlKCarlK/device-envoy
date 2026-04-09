@@ -3,7 +3,7 @@
 //! SunFounder Kepler IR remote demo.
 //!
 //! Wiring:
-//! - IR receiver data output -> {{ ir_pin_ident }}
+//! - IR receiver data output -> GPIO{{ ir_pin }}
 //! - IR receiver VCC -> 3.3V
 //! - IR receiver GND -> GND
 
@@ -20,7 +20,7 @@ use device_envoy_esp::{init_and_start, ir::IrKepler as _, ir_kepler, Result};
 esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_kepler! {
-    IrKeplerBoard { pin: {{ ir_pin_ident }} }
+    IrKeplerBoard { pin: GPIO{{ ir_pin }} }
 }
 
 #[esp_rtos::main]
@@ -33,8 +33,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let channel_creator = rmt80.{{ ir_rx_channel_ident }};
-    let ir_kepler_board = IrKeplerBoard::new(p.{{ ir_pin_ident }}, channel_creator, spawner)?;
+    let channel_creator = rmt80.channel{{ ir_rx_channel }};
+    let ir_kepler_board = IrKeplerBoard::new(p.GPIO{{ ir_pin }}, channel_creator, spawner)?;
 
     loop {
         let button = ir_kepler_board.wait_for_press().await;

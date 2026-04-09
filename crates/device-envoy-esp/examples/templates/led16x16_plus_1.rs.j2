@@ -3,11 +3,11 @@
 //! Shared RMT blocking demo for `{{ board_slug }}` ({{ chip_name }}): drive a 16x16 panel and one NeoPixel-style (WS2812) LED independently.
 //!
 //! Wiring:
-//! - {{ panel_pin_ident }}: 16x16 NeoPixel-style (WS2812) panel data-in
+//! - GPIO{{ panel_pin }}: 16x16 NeoPixel-style (WS2812) panel data-in
 {%- if led_strip1_built_in %}
-//! - {{ led_strip1_pin_ident }}: built-in NeoPixel-style (WS2812) LED
+//! - GPIO{{ led_strip1_pin }}: built-in NeoPixel-style (WS2812) LED
 {%- else %}
-//! - {{ led_strip1_pin_ident }}: external NeoPixel-style (WS2812) LED data-in
+//! - GPIO{{ led_strip1_pin }}: external NeoPixel-style (WS2812) LED data-in
 {%- endif %}
 
 #![no_std]
@@ -33,7 +33,7 @@ const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_ma
 
 led2d! {
     Led16x16Dual {
-        pin: {{ panel_pin_ident }},
+        pin: GPIO{{ panel_pin }},
         len: 256,
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
@@ -44,7 +44,7 @@ led2d! {
 
 led_strip! {
     LedStrip1 {
-        pin: {{ led_strip1_pin_ident }},
+        pin: GPIO{{ led_strip1_pin }},
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 4,
@@ -61,11 +61,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
-        "led16x16_plus_1: panel on {{ panel_pin_ident }}, strip1 LED on {{ led_strip1_pin_ident }} ({{ board_slug }})"
+        "led16x16_plus_1: panel on GPIO{{ panel_pin }}, strip1 LED on GPIO{{ led_strip1_pin }} ({{ board_slug }})"
     );
 
-    let led16x16_dual = Led16x16Dual::new(p.{{ panel_pin_ident }}, rmt80.channel0, spawner)?;
-    let led_strip1 = LedStrip1::new(p.{{ led_strip1_pin_ident }}, rmt80.channel1, spawner)?;
+    let led16x16_dual = Led16x16Dual::new(p.GPIO{{ panel_pin }}, rmt80.channel0, spawner)?;
+    let led_strip1 = LedStrip1::new(p.GPIO{{ led_strip1_pin }}, rmt80.channel1, spawner)?;
 
     let mut panel_x_index = 0usize;
     let mut panel_y_index = 0usize;

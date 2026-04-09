@@ -4,10 +4,10 @@
 //! MAX98357A sample playback example using {{ chip_name }} I2S.
 //!
 //! Wiring:
-//! - Data pin (`DIN`) -> {{ data_pin_ident }}
-//! - Bit clock pin (`BCLK`) -> {{ bit_clock_pin_ident }}
-//! - Word select pin (`LRC` / `LRCLK`) -> {{ word_select_pin_ident }}
-//! - Button -> {{ button_pin_ident }} to GND (starts playback)
+//! - Data pin (`DIN`) -> GPIO{{ data_pin }}
+//! - Bit clock pin (`BCLK`) -> GPIO{{ bit_clock_pin }}
+//! - Word select pin (`LRC` / `LRCLK`) -> GPIO{{ word_select_pin }}
+//! - Button -> GPIO{{ button_pin }} to GND (starts playback)
 
 #![no_std]
 #![no_main]
@@ -33,11 +33,11 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 audio_player! {
     AudioPlayerBoard {
-        data_pin: {{ data_pin_ident }},
-        bit_clock_pin: {{ bit_clock_pin_ident }},
-        word_select_pin: {{ word_select_pin_ident }},
+        data_pin: GPIO{{ data_pin }},
+        bit_clock_pin: GPIO{{ bit_clock_pin }},
+        word_select_pin: GPIO{{ word_select_pin }},
         sample_rate_hz: VOICE_22050_HZ,
-        dma: {{ dma_ident }},
+        dma: {{ dma_identifier }},
         max_volume: Volume::percent(50),
         initial_volume: Volume::percent(100),
     }
@@ -70,27 +70,27 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     const SILENCE_100MS: &AudioPlayerBoardPlayable =
         &SilenceClip::new(StdDuration::from_millis(100));
 
-    let mut button = ButtonEsp::new(p.{{ button_pin_ident }}, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO{{ button_pin }}, PressedTo::Ground);
 
     let audio_player_board =
         AudioPlayerBoard::new(
-            p.{{ data_pin_ident }},
-            p.{{ bit_clock_pin_ident }},
-            p.{{ word_select_pin_ident }},
+            p.GPIO{{ data_pin }},
+            p.GPIO{{ bit_clock_pin }},
+            p.GPIO{{ word_select_pin }},
             p.I2S0,
-            p.{{ dma_ident }},
+            p.{{ dma_identifier }},
             spawner,
         )?;
 
     info!(
-        "I2S ready: {{ data_pin_ident }} DIN, {{ bit_clock_pin_ident }} BCLK, {{ word_select_pin_ident }} LRCLK"
+        "I2S ready: GPIO{{ data_pin }} DIN, GPIO{{ bit_clock_pin }} BCLK, GPIO{{ word_select_pin }} LRCLK"
     );
     info!(
         "Loaded sample: {} samples ({} bytes), 22.05kHz mono s16le",
         Nasa::PCM_SAMPLE_COUNT,
         Nasa::PCM_SAMPLE_COUNT * 2
     );
-    info!("Button on {{ button_pin_ident }} starts playback");
+    info!("Button on GPIO{{ button_pin }} starts playback");
 
     loop {
         button.wait_for_press().await;

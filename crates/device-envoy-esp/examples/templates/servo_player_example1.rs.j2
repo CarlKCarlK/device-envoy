@@ -1,7 +1,7 @@
 {# @board-example #}
 //! Wiring:
-//! - Servo signal -> {{ servo_bottom_pin_ident }}
-//! - Button -> {{ button_pin_ident }} to GND (`PressedTo::Ground`)
+//! - Servo signal -> GPIO{{ servo_bottom_pin }}
+//! - Button -> GPIO{{ button_pin }} to GND (`PressedTo::Ground`)
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -26,7 +26,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 servo_player! {
     ServoPlayer10 {
-        pin: {{ servo_bottom_pin_ident }},
+        pin: GPIO{{ servo_bottom_pin }},
         timer: Timer0,
         channel: Channel0,
     }
@@ -42,8 +42,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, ledc: ledc);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let mut button = ButtonEsp::new(p.{{ button_pin_ident }}, PressedTo::Ground);
-    let servo_player10 = ServoPlayer10::new(&ledc, p.{{ servo_bottom_pin_ident }}, spawner)?;
+    let mut button = ButtonEsp::new(p.GPIO{{ button_pin }}, PressedTo::Ground);
+    let servo_player10 = ServoPlayer10::new(&ledc, p.GPIO{{ servo_bottom_pin }}, spawner)?;
 
     loop {
         // Move to 90 degrees, wait 1 second, then relax.

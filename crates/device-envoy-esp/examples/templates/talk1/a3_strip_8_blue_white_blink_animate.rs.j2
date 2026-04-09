@@ -4,7 +4,7 @@
 //! Talk 1 demo: 8-pixel strip, alternating blink animation.
 //!
 //! Wiring:
-//! - NeoPixel-style (WS2812) strip data input -> {{ strip8_pin_ident }}
+//! - NeoPixel-style (WS2812) strip data input -> GPIO{{ strip8_pin }}
 //! - Strip power -> 5V (or per strip spec), shared GND with board
 
 #![no_std]
@@ -23,7 +23,7 @@ use esp_backtrace as _;
 
 led_strip! {
     LedStripLen8 {
-        pin: {{ strip8_pin_ident }},
+        pin: GPIO{{ strip8_pin }},
         len: 8,
     }
 }
@@ -39,7 +39,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    let led_strip_len8 = LedStripLen8::new(p.{{ strip8_pin_ident }}, rmt80.channel0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.GPIO{{ strip8_pin }}, rmt80.channel0, spawner)?;
 
     // Create two frames
     let palette = [colors::BLUE, colors::LIGHT_GRAY];

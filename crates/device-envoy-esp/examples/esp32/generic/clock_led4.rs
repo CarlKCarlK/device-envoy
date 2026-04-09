@@ -2,8 +2,10 @@
 //!
 //! Wiring:
 //! - Force-portal button -> GPIO0 to GND (`PressedTo::Ground`)
-//! - Digit select pins -> GPIO14, GPIO13, GPIO12, GPIO15
-//! - Segment pins (A..G, DP) -> GPIO4, GPIO16, GPIO17, GPIO18, GPIO19, GPIO21, GPIO1, GPIO2
+//! - Digit select pins ->
+//!   GPIO14,   GPIO13,   GPIO12,   GPIO15
+//! - Segment pins (A..G, DP) ->
+//!   GPIO4,   GPIO16,   GPIO17,   GPIO18,   GPIO19,   GPIO21,   GPIO1,   GPIO2
 //! Wi-Fi enabled 4-digit clock that provisions credentials through `WifiAuto`.
 
 #![no_std]

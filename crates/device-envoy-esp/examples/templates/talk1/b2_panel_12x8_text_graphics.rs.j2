@@ -4,7 +4,7 @@
 //! Talk 1 demo: 12x8 panel text + simple embedded-graphics primitives.
 //!
 //! Wiring:
-//! - NeoPixel-style (WS2812) panel data input -> GPIO{{ panel12x8_pin_num }}
+//! - NeoPixel-style (WS2812) panel data input -> GPIO{{ panel12x8_pin }}
 //! - Panel power -> 5V (or per panel spec), shared GND with board
 
 #![no_std]
@@ -32,7 +32,7 @@ const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> =
 
 led2d! {
     Led12x8 {
-        pin: GPIO{{ panel12x8_pin_num }},
+        pin: GPIO{{ panel12x8_pin }},
         len: 96,
         led_layout: LED_LAYOUT_12X8_ROTATED,
         font: Led2dFont::Font4x6Trim,
@@ -51,7 +51,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    let led12x8 = Led12x8::new(p.GPIO{{ panel12x8_pin_num }}, rmt80.channel0, spawner)?;
+    let led12x8 = Led12x8::new(p.GPIO{{ panel12x8_pin }}, rmt80.channel0, spawner)?;
 
     // A 2D array of pixels.
     let mut frame2d = Frame2d::new();

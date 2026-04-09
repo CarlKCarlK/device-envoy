@@ -2,7 +2,7 @@
 //! This example shows how to define a general checkbox field that can prompt the user for a boolean choice.
 //!
 //! Wiring:
-//! - {{ button_pin_ident }} <-> button <-> GND
+//! - GPIO{{ button_pin }} <-> button <-> GND
 //! - Use internal pull-up (`PressedTo::Ground`).
 
 #![no_std]
@@ -119,7 +119,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         "Share anonymous telemetry",
         false,
     );
-    let mut button = ButtonEsp::new(p.{{ button_pin_ident }}, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO{{ button_pin }}, PressedTo::Ground);
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,

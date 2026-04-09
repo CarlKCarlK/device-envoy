@@ -2,7 +2,7 @@
 //! Basic single-servo control example.
 //!
 //! Wiring:
-//! - Servo signal -> {{ servo_bottom_pin_ident }}
+//! - Servo signal -> GPIO{{ servo_bottom_pin }}
 
 #![no_std]
 #![no_main]
@@ -19,7 +19,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 servo! {
     BasicServo {
-        pin: {{ servo_bottom_pin_ident }},
+        pin: GPIO{{ servo_bottom_pin }},
         timer: Timer0,
         channel: Channel0,
     }
@@ -34,7 +34,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, ledc: ledc);
 
-    let basic_servo = BasicServo::new(&ledc, p.{{ servo_bottom_pin_ident }})?;
+    let basic_servo = BasicServo::new(&ledc, p.GPIO{{ servo_bottom_pin }})?;
 
     basic_servo.set_degrees(45); // Move to 45 degrees and hold.
     Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position

@@ -2,9 +2,9 @@
 // @generated examples/templates/audio20k_one.rs.j2 by cargo xtask generate-board-examples.
 //! 
 //! Wiring:
-//! - Audio data pin (`DIN`) -> {{ data_pin_ident }}
-//! - Audio bit clock pin (`BCLK`) -> {{ bit_clock_pin_ident }}
-//! - Audio word select pin (`LRC` / `LRCLK`) -> {{ word_select_pin_ident }}
+//! - Audio data pin (`DIN`) -> GPIO{{ data_pin }}
+//! - Audio bit clock pin (`BCLK`) -> GPIO{{ bit_clock_pin }}
+//! - Audio word select pin (`LRC` / `LRCLK`) -> GPIO{{ word_select_pin }}
 #![allow(missing_docs)]
 //! audio20k_one: one short 22.05 kHz clip, then stop.
 //!
@@ -29,11 +29,11 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 audio_player! {
     AudioPlayerBoard {
-        data_pin: {{ data_pin_ident }},
-        bit_clock_pin: {{ bit_clock_pin_ident }},
-        word_select_pin: {{ word_select_pin_ident }},
+        data_pin: GPIO{{ data_pin }},
+        bit_clock_pin: GPIO{{ bit_clock_pin }},
+        word_select_pin: GPIO{{ word_select_pin }},
         sample_rate_hz: VOICE_22050_HZ,
-        dma: {{ dma_ident }},
+        dma: {{ dma_identifier }},
         max_volume: Volume::percent(40),
     }
 }
@@ -61,11 +61,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let audio_player_board = AudioPlayerBoard::new(
-        p.{{ data_pin_ident }},
-        p.{{ bit_clock_pin_ident }},
-        p.{{ word_select_pin_ident }},
+        p.GPIO{{ data_pin }},
+        p.GPIO{{ bit_clock_pin }},
+        p.GPIO{{ word_select_pin }},
         p.I2S0,
-        p.{{ dma_ident }},
+        p.{{ dma_identifier }},
         spawner,
     )?;
 

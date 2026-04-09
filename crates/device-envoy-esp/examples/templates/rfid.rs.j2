@@ -3,11 +3,11 @@
 //!
 //! RFID reader example using an MFRC522 module.
 //!
-//! - SPI2 SCK  -> {{ rfid_sck_pin_ident }}
-//! - SPI2 MOSI -> {{ rfid_mosi_pin_ident }}
-//! - SPI2 MISO -> {{ rfid_miso_pin_ident }}
-//! - MFRC522 CS (SDA/SS) -> {{ rfid_cs_pin_ident }}
-//! - MFRC522 RST -> {{ rfid_rst_pin_ident }}
+//! - SPI2 SCK  -> GPIO{{ rfid_sck_pin }}
+//! - SPI2 MOSI -> GPIO{{ rfid_mosi_pin }}
+//! - SPI2 MISO -> GPIO{{ rfid_miso_pin }}
+//! - MFRC522 CS (SDA/SS) -> GPIO{{ rfid_cs_pin }}
+//! - MFRC522 RST -> GPIO{{ rfid_rst_pin }}
 //! - Plus 3.3V and GND
 
 #![no_std]
@@ -42,11 +42,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let rfid = RfidEsp::new(
         &RFID_STATIC,
         p.SPI2,
-        p.{{ rfid_sck_pin_ident }},
-        p.{{ rfid_mosi_pin_ident }},
-        p.{{ rfid_miso_pin_ident }},
-        p.{{ rfid_cs_pin_ident }},
-        p.{{ rfid_rst_pin_ident }},
+        p.GPIO{{ rfid_sck_pin }},
+        p.GPIO{{ rfid_mosi_pin }},
+        p.GPIO{{ rfid_miso_pin }},
+        p.GPIO{{ rfid_cs_pin }},
+        p.GPIO{{ rfid_rst_pin }},
         spawner,
     )
     .await?;

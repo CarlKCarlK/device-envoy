@@ -4,8 +4,8 @@
 //! Moves two servos in opposite directions for 2 seconds.
 //!
 //! Wiring:
-//! - Servo A signal -> {{ servo_bottom_pin_ident }}
-//! - Servo B signal -> {{ servo_top_pin_ident }}
+//! - Servo A signal -> GPIO{{ servo_bottom_pin }}
+//! - Servo B signal -> GPIO{{ servo_top_pin }}
 
 #![no_std]
 #![no_main]
@@ -23,7 +23,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 servo! {
     ServoA {
-        pin: {{ servo_bottom_pin_ident }},
+        pin: GPIO{{ servo_bottom_pin }},
         timer: Timer0,
         channel: Channel0,
     }
@@ -31,7 +31,7 @@ servo! {
 
 servo! {
     ServoB {
-        pin: {{ servo_top_pin_ident }},
+        pin: GPIO{{ servo_top_pin }},
         timer: Timer1,
         channel: Channel1,
     }
@@ -49,8 +49,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting dual servo example");
 
-    let servo_a = ServoA::new(&ledc, p.{{ servo_bottom_pin_ident }})?;
-    let servo_b = ServoB::new(&ledc, p.{{ servo_top_pin_ident }})?;
+    let servo_a = ServoA::new(&ledc, p.GPIO{{ servo_bottom_pin }})?;
+    let servo_b = ServoB::new(&ledc, p.GPIO{{ servo_top_pin }})?;
 
     info!("Moving servos in opposite directions for 2 seconds");
 

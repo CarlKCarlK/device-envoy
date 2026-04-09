@@ -1,6 +1,6 @@
 {# @board-example min_rmt=1 #}
 //! Wiring:
-//! - 8-pixel NeoPixel-style (WS2812) strip data input -> {{ strip8_pin_ident }}
+//! - 8-pixel NeoPixel-style (WS2812) strip data input -> GPIO{{ strip8_pin }}
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -22,7 +22,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
     LedStripLen8 {
-        pin: {{ strip8_pin_ident }},
+        pin: GPIO{{ strip8_pin }},
         len: 8,
         max_current: Current::Milliamps(250),
     }
@@ -40,7 +40,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("LED strip trait example 1: alternating blue/gray frame");
 
-    let led_strip_len8 = LedStripLen8::new(p.{{ strip8_pin_ident }}, rmt80.channel0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.GPIO{{ strip8_pin }}, rmt80.channel0, spawner)?;
 
     // Create and write a frame with alternating blue and gray pixels.
     let mut frame = Frame1d::new();

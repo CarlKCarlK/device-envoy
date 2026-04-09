@@ -8,8 +8,8 @@
 //! - 12x8 panel text demo: `led2d.rs`
 //!
 //! Wiring:
-//! - {{ strip8_pin_ident }}: data-in of an 8-pixel smart LED strip
-//! - {{ led_strip1_pin_ident }}: single smart LED used for SOS
+//! - GPIO{{ strip8_pin }}: data-in of an 8-pixel smart LED strip
+//! - GPIO{{ led_strip1_pin }}: single smart LED used for SOS
 //!
 //! Both strips share one RMT hub with explicit TX channel ownership.
 
@@ -69,7 +69,7 @@ const SOS: [(Frame1d<1>, Duration); 18] = [
 
 led_strip! {
     LedStripLen8 {
-        pin: {{ strip8_pin_ident }},
+        pin: GPIO{{ strip8_pin }},
         len: 8,
         max_current: Current::Milliamps(200),
         max_frames: 2,
@@ -77,7 +77,7 @@ led_strip! {
 }
 led_strip! {
     SosStrip {
-        pin: {{ led_strip1_pin_ident }},
+        pin: GPIO{{ led_strip1_pin }},
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 20,
@@ -96,8 +96,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     //info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");
 
-    let led_strip_len8 = LedStripLen8::new(p.{{ strip8_pin_ident }}, rmt80.channel0, spawner)?;
-    let sos_strip = SosStrip::new(p.{{ led_strip1_pin_ident }}, rmt80.channel1, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.GPIO{{ strip8_pin }}, rmt80.channel0, spawner)?;
+    let sos_strip = SosStrip::new(p.GPIO{{ led_strip1_pin }}, rmt80.channel1, spawner)?;
 
     let frame = Frame1d([
         colors::BLUE,

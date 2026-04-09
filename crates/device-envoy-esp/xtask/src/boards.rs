@@ -88,7 +88,7 @@ pub(crate) struct AudioWiring {
     pub(crate) data_pin_num: u8,
     pub(crate) bit_clock_pin_num: u8,
     pub(crate) word_select_pin_num: u8,
-    pub(crate) dma_ident: &'static str,
+    pub(crate) dma_identifier: &'static str,
 }
 
 #[derive(Clone, Copy)]
@@ -183,7 +183,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 4,
             word_select_pin_num: 5,
-            dma_ident: "DMA_I2S0",
+            dma_identifier: "DMA_I2S0",
         }),
     },
     BoardProfile {
@@ -287,7 +287,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
     BoardProfile {
@@ -323,7 +323,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 5,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
     BoardProfile {
@@ -359,7 +359,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
     BoardProfile {
@@ -395,7 +395,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
     BoardProfile {
@@ -431,7 +431,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 1,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
     BoardProfile {
@@ -467,7 +467,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 4,
             word_select_pin_num: 5,
-            dma_ident: "DMA_I2S0",
+            dma_identifier: "DMA_I2S0",
         }),
     },
     BoardProfile {
@@ -503,7 +503,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
     BoardProfile {
@@ -539,7 +539,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
     BoardProfile {
@@ -575,7 +575,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             data_pin_num: 21,
             bit_clock_pin_num: 3,
             word_select_pin_num: 4,
-            dma_ident: "DMA_CH0",
+            dma_identifier: "DMA_CH0",
         }),
     },
 ];

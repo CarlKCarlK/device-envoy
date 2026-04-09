@@ -8,8 +8,7 @@
 //! - NeoPixel-style (WS2812) 8x12 panel data input -> GPIO18
 //! - Force-portal button -> GPIO0 to GND
 //! - Panel power -> 5V (or per panel spec), shared GND with board
-
-//! - Uses RMT output engine on this chip profile (`RMT channel0`)
+//! - Uses RMT output engine on this board profile (`RMT channel0`)
 
 #![no_std]
 #![no_main]
@@ -66,7 +65,6 @@ led2d! {
         led_layout: LED_LAYOUT_8X12,
         max_current: Current::Milliamps(250),
         font: Led2dFont::Font4x6Trim,
-
         gamma: Gamma::Linear,
         max_frames: 16,
     }
@@ -80,7 +78,6 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!("clock_led8x12 starting");

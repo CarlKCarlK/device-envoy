@@ -1,8 +1,8 @@
+{# @board-example wifi #}
 //! This example shows how to define a general checkbox field that can prompt the user for a boolean choice.
 //!
 //! Wiring:
-//! - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6 <-> button <-> GND
-//! - `esp_pdma_family` (ESP32/S2): GPIO0 <-> button <-> GND
+//! - {{ button_pin_ident }} <-> button <-> GND
 //! - Use internal pull-up (`PressedTo::Ground`).
 
 #![no_std]
@@ -119,10 +119,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         "Share anonymous telemetry",
         false,
     );
-    #[cfg(esp_gdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    #[cfg(esp_pdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.{{ button_pin_ident }}, PressedTo::Ground);
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
@@ -133,7 +130,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     )?;
 
     let _stack = wifi_auto
-        .connect(&mut button6, |wifi_auto_event| async move {
+        .connect(&mut button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => log::info!("Captive portal ready"),
                 WifiAutoEvent::Connecting { .. } => log::info!("Connecting"),

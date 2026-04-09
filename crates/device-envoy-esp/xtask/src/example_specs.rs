@@ -37,14 +37,6 @@ pub(crate) fn blinky_built_in_led(board_profile: BoardProfile) -> bool {
     }
 }
 
-pub(crate) fn supports_led16x16_plus_1_example(board_profile: BoardProfile) -> bool {
-    board_profile.rmt_count >= 2
-}
-
-pub(crate) fn supports_led16x16_plus_1_spi_example(board_profile: BoardProfile) -> bool {
-    board_profile.rmt_count >= 2 && board_profile.spi_count >= 2
-}
-
 pub(crate) fn led_strip1_pin_num(board_profile: BoardProfile) -> u8 {
     board_profile
         .built_in_smart_led
@@ -53,12 +45,4 @@ pub(crate) fn led_strip1_pin_num(board_profile: BoardProfile) -> u8 {
 
 pub(crate) fn led_strip1_built_in(board_profile: BoardProfile) -> bool {
     board_profile.built_in_smart_led.is_some()
-}
-
-pub(crate) fn supports_ir_examples(board_profile: BoardProfile) -> bool {
-    board_profile.rmt_count > 0
-}
-
-pub(crate) fn supports_conway_example(board_profile: BoardProfile) -> bool {
-    supports_ir_examples(board_profile) && board_profile.spi_count > 0
 }

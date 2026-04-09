@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 8-pixel NeoPixel-style (WS2812) strip data input -> GPIO2
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -18,18 +18,9 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     LedStripLen8 {
-        pin: GPIO10,
-        len: 8,
-        max_current: Current::Milliamps(250),
-    }
-}
-#[cfg(esp_pdma_family)] // original ESP32 & s2
-led_strip! {
-    LedStripLen8 {
-        pin: GPIO4,
+        pin: GPIO2,
         len: 8,
         max_current: Current::Milliamps(250),
     }
@@ -58,10 +49,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("LED strip trait example 1: alternating blue/gray frame");
 
-    #[cfg(esp_gdma_family)]
-    let led_strip_len8 = LedStripLen8::new(p.GPIO10, rmt80.channel0, spawner)?;
-    #[cfg(esp_pdma_family)]
-    let led_strip_len8 = LedStripLen8::new(p.GPIO4, rmt80.channel0, spawner)?;
+    let led_strip_len8 = LedStripLen8::new(p.GPIO2, rmt80.channel0, spawner)?;
     write_alternating_blue_gray(led_strip_len8);
 
     core::future::pending().await

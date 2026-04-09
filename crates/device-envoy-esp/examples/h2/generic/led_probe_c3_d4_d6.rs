@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - Probe LED or scope on GPIO4 and GPIO6
 //!
 #![allow(missing_docs)]
 #![no_std]

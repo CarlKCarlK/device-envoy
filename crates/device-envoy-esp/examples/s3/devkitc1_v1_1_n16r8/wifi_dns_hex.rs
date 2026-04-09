@@ -1,14 +1,13 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO18
+//! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)
 //!
 //! Wi-Fi DNS demo: resolve `google.com` and display the last 4 hex digits.
 //!
 //! Display format is two lines (`AB\nCD`) on the 8x12 panel wired to GPIO18.
 //!
 //! Uses `WifiAuto` with flash-backed credentials and captive portal setup.
-//! Hold the force button low during boot to force setup mode:
-//! - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6
-//! - `esp_pdma_family` (ESP32/S2): GPIO0
+//! Hold the force-portal button low during boot to force setup mode.
 
 #![no_std]
 #![no_main]
@@ -70,10 +69,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led12x8_dns = Led12x8Dns::new(p.GPIO18, rmt80.channel0, spawner)?;
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    #[cfg(esp_gdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    #[cfg(esp_pdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
@@ -84,7 +80,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led12x8_dns_ref = &led12x8_dns;
     let stack = wifi_auto
-        .connect(&mut button6, |wifi_auto_event| async move {
+        .connect(&mut button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led12x8_dns_ref.write_text("JO\nIN", COLORS);

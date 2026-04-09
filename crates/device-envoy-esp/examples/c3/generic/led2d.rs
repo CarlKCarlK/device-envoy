@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO18
 //!
 //! Animated text on a 12x8 panel (displayed as rotated 8x12) on GPIO18.
 //!

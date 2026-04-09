@@ -1,8 +1,7 @@
 //! Demonstrates forcing WifiAuto captive-portal flow using a physical button.
 //!
 //! Wiring:
-//! - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6 <-> button <-> GND
-//! - `esp_pdma_family` (ESP32/S2): GPIO0 <-> button <-> GND
+//! - GPIO0 <-> button <-> GND
 //! - Use internal pull-up (`PressedTo::Ground`).
 
 #![no_std]
@@ -34,10 +33,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    #[cfg(esp_gdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    #[cfg(esp_pdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
@@ -47,7 +43,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let _stack = wifi_auto
-        .connect(&mut button6, |wifi_auto_event| async move {
+        .connect(&mut button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
                 WifiAutoEvent::Connecting { .. } => info!("Connecting"),

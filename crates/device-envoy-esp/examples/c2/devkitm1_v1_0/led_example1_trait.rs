@@ -1,5 +1,6 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - External LED anode -> resistor -> GPIO3
+//! - External LED cathode -> GND
 //!
 #![allow(missing_docs)]
 #![no_std]

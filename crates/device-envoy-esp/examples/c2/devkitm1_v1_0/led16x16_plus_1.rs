@@ -3,7 +3,7 @@
 //! led16x16_plus_1: not supported on this board profile.
 //!
 //! Wiring:
-//! - this example requires two RMT resources, and ESP32-C2 offers 0 RMT resources
+//! - this example requires 2 RMT resources, and ESP32-C2 offers 0 RMT resources
 
 #![no_std]
 #![no_main]
@@ -31,7 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let _ = spawner;
     info!(
-        "led16x16_plus_1_esp32c2_devkitm1_v1_0: this example requires two RMT resources, and ESP32-C2 offers 0 RMT resources"
+        "led16x16_plus_1_esp32c2_devkitm1_v1_0: this example requires 2 RMT resources, and ESP32-C2 offers 0 RMT resources"
     );
     core::future::pending().await
 }

@@ -1,14 +1,12 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
 //!
 //! RFID reader example using an MFRC522 module.
 //!
-//! Wiring (ESP32-C6 defaults shown):
 //! - SPI2 SCK  -> GPIO6
 //! - SPI2 MOSI -> GPIO7
 //! - SPI2 MISO -> GPIO2
 //! - MFRC522 CS (SDA/SS) -> GPIO10
-//! - MFRC522 RST          -> GPIO5
+//! - MFRC522 RST -> GPIO5
 //! - Plus 3.3V and GND
 
 #![no_std]
@@ -39,7 +37,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("rfid example started");
 
-    #[cfg(esp_gdma_family)]
     let rfid = RfidEsp::new(
         &RFID_STATIC,
         p.SPI2,
@@ -48,18 +45,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.GPIO2,
         p.GPIO10,
         p.GPIO5,
-        spawner,
-    )
-    .await?;
-    #[cfg(esp_pdma_family)]
-    let rfid = RfidEsp::new(
-        &RFID_STATIC,
-        p.SPI2,
-        p.GPIO18,
-        p.GPIO21,
-        p.GPIO19,
-        p.GPIO5,
-        p.GPIO4,
         spawner,
     )
     .await?;

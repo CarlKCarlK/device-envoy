@@ -3,7 +3,7 @@
 //! ir_keplers: not supported on this board profile.
 //!
 //! Wiring:
-//! - our IR decoder needs an RMT resource, and ESP32-C2 does not offer that resource
+//! - this example requires 1 RMT resources, and ESP32-C2 offers 0 RMT resources
 
 #![no_std]
 #![no_main]
@@ -31,7 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let _ = spawner;
     info!(
-        "ir_keplers_esp32c2_generic: our IR decoder needs an RMT resource, and ESP32-C2 does not offer that resource"
+        "ir_keplers_esp32c2_generic: this example requires 1 RMT resources, and ESP32-C2 offers 0 RMT resources"
     );
     core::future::pending().await
 }

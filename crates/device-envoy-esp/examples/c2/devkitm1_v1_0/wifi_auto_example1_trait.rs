@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -51,10 +51,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    #[cfg(esp_gdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    #[cfg(esp_pdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
@@ -63,7 +60,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         spawner,
     )?;
 
-    let _stack = connect_with_status(wifi_auto, &mut button6).await?;
+    let _stack = connect_with_status(wifi_auto, &mut button).await?;
 
     core::future::pending().await
 }

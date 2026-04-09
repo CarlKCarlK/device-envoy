@@ -12,18 +12,14 @@
 #![no_main]
 
 use core::convert::Infallible;
-
 use core::time::Duration as StdDuration;
 
 use embassy_executor::Spawner;
-
 use embassy_time::{Duration, Timer};
-
 use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{Result, init_and_start};
-
 use device_envoy_esp::{
     audio_player::{
         AtEnd, AudioPlayer, Gain, SilenceClip, VOICE_22050_HZ, Volume, audio_player, pcm_clip,

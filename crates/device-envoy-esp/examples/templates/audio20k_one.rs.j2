@@ -1,19 +1,16 @@
-{# @board-example mode=render #}
+{# @board-example audio #}
 // @generated examples/templates/audio20k_one.rs.j2 by cargo xtask generate-board-examples.
-//!
+//! 
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - Audio data pin (`DIN`) -> {{ data_pin_ident }}
+//! - Audio bit clock pin (`BCLK`) -> {{ bit_clock_pin_ident }}
+//! - Audio word select pin (`LRC` / `LRCLK`) -> {{ word_select_pin_ident }}
 #![allow(missing_docs)]
 //! audio20k_one: one short 22.05 kHz clip, then stop.
 //!
 //! Purpose:
 //! - Tail-repeat verification for `AtEnd::Stop`
 //!
-//! Wiring (audio-capable boards):
-//! - Audio data pin (`DIN`) -> {{ data_pin_ident }}
-//! - Audio bit clock pin (`BCLK`) -> {{ bit_clock_pin_ident }}
-//! - Audio word select pin (`LRC` / `LRCLK`) -> {{ word_select_pin_ident }}
-
 #![no_std]
 #![no_main]
 
@@ -24,15 +21,12 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{Result, init_and_start};
-{% if audio_supported %}
 use device_envoy_esp::audio_player::{
     AtEnd, AudioPlayer as _, Volume, VOICE_22050_HZ, audio_player, pcm_clip,
 };
-{% endif %}
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-{% if audio_supported %}
 audio_player! {
     AudioPlayerBoard {
         data_pin: {{ data_pin_ident }},
@@ -55,7 +49,6 @@ pcm_clip! {
 }
 
 const CLIP: &AudioPlayerBoardPlayable = &Digit0::pcm_clip();
-{% endif %}
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
@@ -67,7 +60,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    {% if audio_supported %}
     let audio_player_board = AudioPlayerBoard::new(
         p.{{ data_pin_ident }},
         p.{{ bit_clock_pin_ident }},
@@ -83,10 +75,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     audio_player_board.wait_until_stopped().await;
     info!("phase: wait_until_stopped_returned");
     info!("If audio stopped cleanly with no repeated tail, this board is good.");
-    {% else %}
-    let _ = spawner;
-    info!("audio20k_one: audio not supported on this board profile");
-    {% endif %}
 
     pending().await
 }

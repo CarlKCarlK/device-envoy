@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - No external wiring required; this example only uses the onboard Wi-Fi radio.
 //!
 //! Wi-Fi bring-up smoke test using `esp-radio` on ESP32-C6.
 //!

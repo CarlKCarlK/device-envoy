@@ -1,12 +1,12 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO2
 //!
-//! Animated text on a 12x8 panel (displayed as rotated 8x12) on GPIO18.
+//! Animated text on a 12x8 panel (displayed as rotated 8x12) on GPIO2.
 //!
 //! Standard demo pin map in this repo:
 //! - GPIO8 (default): built-in single smart-LED demo (`blinky_smart_led.rs`)
-//! - GPIO10: external 8-pixel strip demo (`led_strip_len8.rs`)
-//! - GPIO18: 12x8 panel `Go`/`\\nGo` demo (this file)
+//! - GPIO2: external 8-pixel strip demo (`led_strip_len8.rs`)
+//! - GPIO2: 12x8 panel `Go`/`\\nGo` demo (this file)
 
 #![no_std]
 #![no_main]
@@ -33,7 +33,7 @@ const LED_LAYOUT_8X12_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw(
 
 led2d! {
     Led12x8Animated {
-        pin: GPIO18,
+        pin: GPIO2,
         len: 96,
         led_layout: LED_LAYOUT_8X12_ROTATED,
         max_current: Current::Milliamps(300),
@@ -53,9 +53,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    info!("LED 2D Example: Animated text on rotated 12x8 panel via GPIO18");
+    info!("LED 2D Example: Animated text on rotated 12x8 panel via GPIO2");
 
-    let led12x8_animated = Led12x8Animated::new(p.GPIO18, rmt80.channel0, spawner)?;
+    let led12x8_animated = Led12x8Animated::new(p.GPIO2, rmt80.channel0, spawner)?;
 
     let mut frame_0 = Frame2d::new();
     led12x8_animated.write_text_to_frame("Go", &[], &mut frame_0);

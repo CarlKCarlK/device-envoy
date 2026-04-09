@@ -1,14 +1,14 @@
+{# @board-example wifi min_rmt=1 #}
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> {{ panel12x8_pin_ident }}
+//! - Force-portal button -> {{ button_pin_ident }} to GND (`PressedTo::Ground`)
 //!
 //! Wi-Fi DNS demo: resolve `google.com` and display the last 4 hex digits.
 //!
-//! Display format is two lines (`AB\nCD`) on the 8x12 panel wired to GPIO18.
+//! Display format is two lines (`AB\nCD`) on the 8x12 panel wired to {{ panel12x8_pin_ident }}.
 //!
 //! Uses `WifiAuto` with flash-backed credentials and captive portal setup.
-//! Hold the force button low during boot to force setup mode:
-//! - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO6
-//! - `esp_pdma_family` (ESP32/S2): GPIO0
+//! Hold the force-portal button low during boot to force setup mode.
 
 #![no_std]
 #![no_main]
@@ -47,7 +47,7 @@ const LED_LAYOUT_8X12_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw(
 
 led2d! {
     Led12x8Dns {
-        pin: GPIO18,
+        pin: {{ panel12x8_pin_ident }},
         len: 96,
         led_layout: LED_LAYOUT_8X12_ROTATED,
         max_current: Current::Milliamps(300),
@@ -67,12 +67,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let led12x8_dns = Led12x8Dns::new(p.GPIO18, rmt80.channel0, spawner)?;
+    let led12x8_dns = Led12x8Dns::new(p.{{ panel12x8_pin_ident }}, rmt80.channel0, spawner)?;
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    #[cfg(esp_gdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    #[cfg(esp_pdma_family)]
-    let mut button6 = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.{{ button_pin_ident }}, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
@@ -83,7 +80,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led12x8_dns_ref = &led12x8_dns;
     let stack = wifi_auto
-        .connect(&mut button6, |wifi_auto_event| async move {
+        .connect(&mut button, |wifi_auto_event| async move {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led12x8_dns_ref.write_text("JO\nIN", COLORS);

@@ -1,8 +1,7 @@
 use crate::boards::{validate_board_profiles, AudioWiring, BOARD_PROFILES};
 use crate::example_specs::{
     blinky_built_in_led, blinky_kind, blinky_led_pin_num, led_strip1_built_in, led_strip1_pin_num,
-    supports_conway_example, supports_ir_examples, supports_led16x16_plus_1_example,
-    supports_led16x16_plus_1_spi_example, BlinkyKind,
+    BlinkyKind,
 };
 use minijinja::{context, Environment};
 use std::error::Error;
@@ -19,12 +18,90 @@ const LEGACY_TALK1_END_MARKER: &str = "# END GENERATED TALK1 EXAMPLES";
 static BOARD_TEMPLATE_EXAMPLE_BASE_NAMES: OnceLock<Vec<String>> = OnceLock::new();
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum BoardTemplateMode {
-    Copy,
-    Render,
+enum BoardTemplateRequirement {
+    Wifi,
+    Audio,
+    MinRmt(u8),
+    MinSpi(u8),
 }
 
-fn board_template_example_name(board_profile: crate::boards::BoardProfile, base_name: &str) -> String {
+struct BoardTemplateSpec {
+    requirements: Vec<BoardTemplateRequirement>,
+}
+
+const BOARD_TEMPLATE_CONTEXT_KEYS: &[&str] = &[
+    "example_name",
+    "board_slug",
+    "chip_name",
+    "chip_feature",
+    "blinky_kind",
+    "led_pin_num",
+    "led_pin_ident",
+    "built_in_led",
+    "panel_pin_num",
+    "panel_pin_ident",
+    "led_strip1_pin_num",
+    "led_strip1_pin_ident",
+    "led_strip1_built_in",
+    "strip8_pin_num",
+    "strip8_pin_ident",
+    "panel12x8_pin_num",
+    "panel12x8_pin_ident",
+    "button_pin_num",
+    "button_pin_ident",
+    "led2d_output_engine_note",
+    "led2d_engine_clause",
+    "led2d_runtime_resource",
+    "init_and_start_statement",
+    "ir_supported",
+    "ir_pin_num",
+    "ir_pin_ident",
+    "ir_receiver0_pin_num",
+    "ir_receiver0_pin_ident",
+    "ir_receiver1_pin_num",
+    "ir_receiver1_pin_ident",
+    "ir_rx_channel_num",
+    "ir_rx_channel_ident",
+    "ir_rx_channel2_num",
+    "ir_rx_channel2_ident",
+    "clock_supported",
+    "force_portal_button_pin_num",
+    "force_portal_button_pin_ident",
+    "lcd_sda_pin_num",
+    "lcd_sda_pin_ident",
+    "lcd_scl_pin_num",
+    "lcd_scl_pin_ident",
+    "servo_bottom_pin_num",
+    "servo_bottom_pin_ident",
+    "servo_top_pin_num",
+    "servo_top_pin_ident",
+    "rfid_sck_pin_num",
+    "rfid_sck_pin_ident",
+    "rfid_mosi_pin_num",
+    "rfid_mosi_pin_ident",
+    "rfid_miso_pin_num",
+    "rfid_miso_pin_ident",
+    "rfid_cs_pin_num",
+    "rfid_cs_pin_ident",
+    "rfid_rst_pin_num",
+    "rfid_rst_pin_ident",
+    "led4_cell_pin_nums",
+    "led4_cell_pin_idents",
+    "led4_segment_pin_nums",
+    "led4_segment_pin_idents",
+    "data_pin_num",
+    "data_pin_ident",
+    "bit_clock_pin_num",
+    "bit_clock_pin_ident",
+    "word_select_pin_num",
+    "word_select_pin_ident",
+    "dma_ident",
+];
+
+fn board_template_example_name(
+    board_profile: crate::boards::BoardProfile,
+    base_name: &str,
+) -> String {
     let base_name = base_name.replace('/', "_");
     format!(
         "{}_{}_{}",
@@ -51,7 +128,11 @@ fn discover_board_template_example_base_names(
     templates_dir: &Path,
 ) -> Result<Vec<String>, Box<dyn Error>> {
     let mut base_names = Vec::new();
-    discover_board_template_example_base_names_in_dir(templates_dir, templates_dir, &mut base_names)?;
+    discover_board_template_example_base_names_in_dir(
+        templates_dir,
+        templates_dir,
+        &mut base_names,
+    )?;
     base_names.sort();
     Ok(base_names)
 }
@@ -98,123 +179,139 @@ fn is_board_template(base_name: &str) -> bool {
     true
 }
 
-fn board_template_supports_board(
-    base_name: &str,
-    board_profile: crate::boards::BoardProfile,
-) -> bool {
-    if base_name.starts_with("audio") && board_profile.audio_wiring.is_none() {
-        return false;
+fn parse_board_template_spec(template_source: &str) -> Result<BoardTemplateSpec, Box<dyn Error>> {
+    let Some(template_line) = template_source.lines().next() else {
+        return Err("missing @board-example template header".into());
+    };
+    let Some(spec_fragment) = template_line.split("@board-example").nth(1) else {
+        return Err("missing @board-example template header".into());
+    };
+    let spec_text = spec_fragment
+        .trim()
+        .trim_end_matches("*/")
+        .trim_end_matches("#}")
+        .trim();
+    let mut requirements = Vec::new();
+    for token in spec_text.split_whitespace() {
+        let requirement = if token == "wifi" {
+            BoardTemplateRequirement::Wifi
+        } else if token == "audio" {
+            BoardTemplateRequirement::Audio
+        } else if let Some(count) = token.strip_prefix("min_rmt=") {
+            BoardTemplateRequirement::MinRmt(count.parse()?)
+        } else if let Some(count) = token.strip_prefix("min_spi=") {
+            BoardTemplateRequirement::MinSpi(count.parse()?)
+        } else {
+            return Err(format!(
+                "invalid @board-example requirement `{token}` (expected `wifi`, `audio`, `min_rmt=<n>`, or `min_spi=<n>`)"
+            )
+            .into());
+        };
+        requirements.push(requirement);
     }
-    if base_name.starts_with("clock_") && !board_profile.wifi_supported {
-        return false;
-    }
-    match base_name {
-        "conway" => supports_conway_example(board_profile),
-        "led16x16_plus_1" => supports_led16x16_plus_1_example(board_profile),
-        "led16x16_plus_1_spi" => supports_led16x16_plus_1_spi_example(board_profile),
-        "ir"
-        | "ir_example1_trait"
-        | "ir_kepler"
-        | "ir_kepler_example1_trait"
-        | "ir_keplers"
-        | "ir_mapping_example1_trait" => supports_ir_examples(board_profile),
-        "clock_console_simple"
-        | "clock_sync_example1_trait"
-        | "clock_servos"
-        | "clock_lcd"
-        | "clock_led4"
-        | "clock_led8x12" => board_profile.wifi_supported,
-        _ => true,
+    Ok(BoardTemplateSpec { requirements })
+}
+
+fn strip_board_template_header(template_source: &str) -> String {
+    let mut lines = template_source.lines();
+    let _header = lines.next();
+    let remainder = lines.collect::<Vec<_>>().join("\n");
+    if template_source.ends_with('\n') {
+        format!("{remainder}\n")
+    } else {
+        remainder
     }
 }
 
+fn board_template_uses_jinja_context(template_source: &str) -> bool {
+    let template_body = strip_board_template_header(template_source);
+    template_body.contains("{%")
+        || BOARD_TEMPLATE_CONTEXT_KEYS.iter().any(|key| {
+            let marker_with_space = ["{{ ", key].concat();
+            let marker_without_space = ["{{", key].concat();
+            template_body.contains(&marker_with_space)
+                || template_body.contains(&marker_without_space)
+        })
+}
+
+fn board_requirement_supported(
+    requirement: BoardTemplateRequirement,
+    board_profile: crate::boards::BoardProfile,
+) -> bool {
+    match requirement {
+        BoardTemplateRequirement::Wifi => board_profile.wifi_supported,
+        BoardTemplateRequirement::Audio => board_profile.audio_wiring.is_some(),
+        BoardTemplateRequirement::MinRmt(count) => board_profile.rmt_count >= count,
+        BoardTemplateRequirement::MinSpi(count) => board_profile.spi_count >= count,
+    }
+}
+
+fn board_template_supports_board(
+    template_spec: &BoardTemplateSpec,
+    board_profile: crate::boards::BoardProfile,
+) -> bool {
+    template_spec
+        .requirements
+        .iter()
+        .copied()
+        .all(|requirement| board_requirement_supported(requirement, board_profile))
+}
+
 fn board_template_placeholder_reason(
-    _example_name: &str,
-    base_name: &str,
+    template_spec: &BoardTemplateSpec,
     board_profile: crate::boards::BoardProfile,
 ) -> Option<String> {
-    if base_name.starts_with("clock_") && !board_profile.wifi_supported {
-        return Some(format!(
-            "this example requires Wi-Fi, and {} does not offer that resource",
-            board_profile.chip_name()
-        ));
-    }
-
-    if base_name == "led16x16_plus_1_spi" && !supports_led16x16_plus_1_spi_example(board_profile) {
-        if board_profile.spi_count < 2 {
-            let resource_word = if board_profile.spi_count == 1 {
-                "resource"
-            } else {
-                "resources"
-            };
-            return Some(format!(
-                "this example requires two SPI resources, and {} offers {} SPI {}",
-                board_profile.chip_name(),
-                board_profile.spi_count,
-                resource_word
-            ));
+    for requirement in &template_spec.requirements {
+        if board_requirement_supported(*requirement, board_profile) {
+            continue;
         }
-        if board_profile.rmt_count < 2 {
-            let resource_word = if board_profile.rmt_count == 1 {
-                "resource"
-            } else {
-                "resources"
-            };
-            return Some(format!(
-                "this example requires two RMT resources, and {} offers {} RMT {}",
-                board_profile.chip_name(),
-                board_profile.rmt_count,
-                resource_word
-            ));
-        }
-    }
-
-    if base_name == "led16x16_plus_1" && !supports_led16x16_plus_1_example(board_profile) {
-        let resource_word = if board_profile.rmt_count == 1 {
-            "resource"
-        } else {
-            "resources"
-        };
-        return Some(format!(
-            "this example requires two RMT resources, and {} offers {} RMT {}",
-            board_profile.chip_name(),
-            board_profile.rmt_count,
-            resource_word
-        ));
-    }
-
-    if base_name.starts_with("audio") && board_profile.audio_wiring.is_none() {
-        return Some(format!(
-            "this example requires I2S resources, and {} does not offer that resource",
-            board_profile.chip_name()
-        ));
-    }
-
-    if !supports_ir_examples(board_profile) {
-        return match base_name {
-            "conway"
-            | "ir"
-            | "ir_example1_trait"
-            | "ir_kepler"
-            | "ir_kepler_example1_trait"
-            | "ir_keplers"
-            | "ir_mapping_example1_trait" => Some(format!(
-                "our IR decoder needs an RMT resource, and {} does not offer that resource",
+        return Some(match requirement {
+            BoardTemplateRequirement::Wifi => format!(
+                "this example requires Wi-Fi, and {} does not offer that resource",
                 board_profile.chip_name()
-            )),
-            _ => None,
-        };
+            ),
+            BoardTemplateRequirement::Audio => format!(
+                "this example requires I2S resources, and {} does not offer that resource",
+                board_profile.chip_name()
+            ),
+            BoardTemplateRequirement::MinRmt(count) => {
+                let resource_word = if board_profile.rmt_count == 1 {
+                    "resource"
+                } else {
+                    "resources"
+                };
+                format!(
+                    "this example requires {count} RMT resources, and {} offers {} RMT {}",
+                    board_profile.chip_name(),
+                    board_profile.rmt_count,
+                    resource_word
+                )
+            }
+            BoardTemplateRequirement::MinSpi(count) => {
+                let resource_word = if board_profile.spi_count == 1 {
+                    "resource"
+                } else {
+                    "resources"
+                };
+                format!(
+                    "this example requires {count} SPI resources, and {} offers {} SPI {}",
+                    board_profile.chip_name(),
+                    board_profile.spi_count,
+                    resource_word
+                )
+            }
+        });
     }
-
     None
 }
 
 fn board_template_placeholder_source(
     example_name: &str,
     base_name: &str,
+    template_spec: &BoardTemplateSpec,
     board_profile: crate::boards::BoardProfile,
 ) -> String {
-    let unsupported_reason = board_template_placeholder_reason(example_name, base_name, board_profile);
+    let unsupported_reason = board_template_placeholder_reason(template_spec, board_profile);
     let wiring_note = if let Some(reason) = unsupported_reason.as_deref() {
         format!("//! - {reason}\n")
     } else {
@@ -264,30 +361,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {{\n\
     )
 }
 
-fn board_template_mode(
-    template_source: &str,
-) -> Result<BoardTemplateMode, Box<dyn Error>> {
-    for template_line in template_source.lines() {
-        let Some(mode_fragment) = template_line.split("@board-example mode=").nth(1) else {
-            continue;
-        };
-        let mode = mode_fragment
-            .trim()
-            .trim_end_matches("*/")
-            .trim_end_matches("#}")
-            .trim();
-        return match mode {
-            "copy" => Ok(BoardTemplateMode::Copy),
-            "render" => Ok(BoardTemplateMode::Render),
-            _ => Err(
-                format!("invalid @board-example mode `{mode}` (expected `copy` or `render`)")
-                    .into(),
-            ),
-        };
-    }
-    Ok(BoardTemplateMode::Copy)
-}
-
 pub fn generate_board_examples(workspace_root: &Path) -> Result<(), Box<dyn Error>> {
     validate_board_profiles()?;
 
@@ -314,7 +387,8 @@ fn generate_board_template_files(
     for base_name in board_template_example_base_names() {
         let template_path = example_templates_dir.join(format!("{base_name}.rs.j2"));
         let template_source = fs::read_to_string(&template_path)?;
-        let template_mode = board_template_mode(&template_source)?;
+        let template_spec = parse_board_template_spec(&template_source)?;
+        let template_uses_jinja_context = board_template_uses_jinja_context(&template_source);
         for board_profile in BOARD_PROFILES {
             let output_path = examples_dir
                 .join(board_profile.chip_dir())
@@ -324,12 +398,16 @@ fn generate_board_template_files(
                 fs::create_dir_all(output_dir)?;
             }
             let example_name = board_template_example_name(*board_profile, base_name);
-            let generated_source = if !board_template_supports_board(
-                base_name,
-                *board_profile,
-            ) {
-                board_template_placeholder_source(&example_name, base_name, *board_profile)
-            } else if template_mode == BoardTemplateMode::Render {
+            let uses_rmt80 = board_profile.rmt_count > 0;
+            let generated_source = if !board_template_supports_board(&template_spec, *board_profile)
+            {
+                board_template_placeholder_source(
+                    &example_name,
+                    base_name,
+                    &template_spec,
+                    *board_profile,
+                )
+            } else if template_uses_jinja_context {
                 let mut minijinja_environment = Environment::new();
                 minijinja_environment.add_template(base_name.as_str(), &template_source)?;
                 let board_supports_audio = board_profile.audio_wiring.is_some();
@@ -362,7 +440,30 @@ fn generate_board_template_files(
                     strip8_pin_num => board_profile.led_strip_len_8_pin,
                     strip8_pin_ident => format!("GPIO{}", board_profile.led_strip_len_8_pin),
                     panel12x8_pin_num => board_profile.led_2d12x8_pin,
-                    ir_supported => supports_ir_examples(*board_profile),
+                    panel12x8_pin_ident => format!("GPIO{}", board_profile.led_2d12x8_pin),
+                    button_pin_num => board_profile.button_pin,
+                    button_pin_ident => format!("GPIO{}", board_profile.button_pin),
+                    led2d_output_engine_note => if uses_rmt80 {
+                        "RMT output engine on this board profile (`RMT channel0`)"
+                    } else {
+                        "SPI output engine on this board profile (`SPI2`)"
+                    },
+                    led2d_engine_clause => if uses_rmt80 {
+                        ""
+                    } else {
+                        "        engine: device_envoy_esp::led_strip::Engine::Spi,\n"
+                    },
+                    led2d_runtime_resource => if uses_rmt80 {
+                        "rmt80.channel0"
+                    } else {
+                        "p.SPI2"
+                    },
+                    init_and_start_statement => if uses_rmt80 {
+                        "init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);"
+                    } else {
+                        "init_and_start!(p);"
+                    },
+                    ir_supported => board_profile.rmt_count > 0,
                     ir_pin_num => board_profile.ir_pin_rx_channel.0,
                     ir_pin_ident => format!("GPIO{}", board_profile.ir_pin_rx_channel.0),
                     ir_receiver0_pin_num => board_profile.ir_pin_rx_channel.0,
@@ -384,25 +485,32 @@ fn generate_board_template_files(
                     servo_bottom_pin_ident => format!("GPIO{}", board_profile.servo_pin),
                     servo_top_pin_num => board_profile.servo2_pin,
                     servo_top_pin_ident => format!("GPIO{}", board_profile.servo2_pin),
+                    rfid_sck_pin_num => board_profile.rfid_wiring.sck_pin_num,
+                    rfid_sck_pin_ident => format!("GPIO{}", board_profile.rfid_wiring.sck_pin_num),
+                    rfid_mosi_pin_num => board_profile.rfid_wiring.mosi_pin_num,
+                    rfid_mosi_pin_ident => format!("GPIO{}", board_profile.rfid_wiring.mosi_pin_num),
+                    rfid_miso_pin_num => board_profile.rfid_wiring.miso_pin_num,
+                    rfid_miso_pin_ident => format!("GPIO{}", board_profile.rfid_wiring.miso_pin_num),
+                    rfid_cs_pin_num => board_profile.rfid_wiring.cs_pin_num,
+                    rfid_cs_pin_ident => format!("GPIO{}", board_profile.rfid_wiring.cs_pin_num),
+                    rfid_rst_pin_num => board_profile.rfid_wiring.rst_pin_num,
+                    rfid_rst_pin_ident => format!("GPIO{}", board_profile.rfid_wiring.rst_pin_num),
                     led4_cell_pin_nums => board_profile.led4_cell_pins,
                     led4_cell_pin_idents => board_profile.led4_cell_pins
                         .map(|pin_num| format!("GPIO{pin_num}")),
                     led4_segment_pin_nums => board_profile.led4_segment_pins,
                     led4_segment_pin_idents => board_profile.led4_segment_pins
                         .map(|pin_num| format!("GPIO{pin_num}")),
-                    audio_supported => board_supports_audio,
                     data_pin_num => audio_wiring.data_pin_num,
                     data_pin_ident => if board_supports_audio { format!("GPIO{}", audio_wiring.data_pin_num) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
                     bit_clock_pin_num => audio_wiring.bit_clock_pin_num,
                     bit_clock_pin_ident => if board_supports_audio { format!("GPIO{}", audio_wiring.bit_clock_pin_num) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
                     word_select_pin_num => audio_wiring.word_select_pin_num,
                     word_select_pin_ident => if board_supports_audio { format!("GPIO{}", audio_wiring.word_select_pin_num) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
-                    button_pin_num => if board_supports_audio { board_profile.button_pin } else { u8::MAX },
-                    button_pin_ident => if board_supports_audio { format!("GPIO{}", board_profile.button_pin) } else { "GPIO_UNSUPPORTED_AUDIO".to_string() },
                     dma_ident => audio_wiring.dma_ident,
                 })?
             } else {
-                template_source.clone()
+                strip_board_template_header(&template_source)
             };
             write_if_changed(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);

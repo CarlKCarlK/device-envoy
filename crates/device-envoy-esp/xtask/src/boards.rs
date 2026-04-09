@@ -92,6 +92,15 @@ pub(crate) struct AudioWiring {
 }
 
 #[derive(Clone, Copy)]
+pub(crate) struct RfidWiring {
+    pub(crate) sck_pin_num: u8,
+    pub(crate) mosi_pin_num: u8,
+    pub(crate) miso_pin_num: u8,
+    pub(crate) cs_pin_num: u8,
+    pub(crate) rst_pin_num: u8,
+}
+
+#[derive(Clone, Copy)]
 pub(crate) struct BoardProfile {
     pub(crate) chip_id: ChipId,
     pub(crate) board_id: BoardId,
@@ -114,6 +123,7 @@ pub(crate) struct BoardProfile {
     pub(crate) led4_segment_pins: [u8; 8],
     pub(crate) ir_pin_rx_channel: (u8, u8),
     pub(crate) ir_pin_rx_channel2: (u8, u8),
+    pub(crate) rfid_wiring: RfidWiring,
     pub(crate) audio_wiring: Option<AudioWiring>,
 }
 
@@ -162,6 +172,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [4, 16, 17, 18, 19, 21, 1, 2],
         ir_pin_rx_channel: (4, 2),
         ir_pin_rx_channel2: (5, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 18,
+            mosi_pin_num: 21,
+            miso_pin_num: 19,
+            cs_pin_num: 5,
+            rst_pin_num: 4,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 4,
@@ -191,6 +208,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [4, 3, 2, 1, 0, 5, 18, 19],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         // TODO0Audio ESP32-C2 audio examples are currently unsupported in
         // device-envoy-esp because the current esp-hal configuration for C2
         // does not expose the needed I2S support.
@@ -218,6 +242,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [4, 3, 2, 1, 0, 5, 18, 19],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         // TODO0Audio ESP32-C2 audio examples are currently unsupported in
         // device-envoy-esp because the current esp-hal configuration for C2
         // does not expose the needed I2S support.
@@ -245,6 +276,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 4, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 3,
@@ -274,6 +312,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 4, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 5,
             bit_clock_pin_num: 3,
@@ -303,6 +348,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 4, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 3,
@@ -332,6 +384,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 4, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 3,
@@ -361,6 +420,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 4, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (0, 2),
         ir_pin_rx_channel2: (1, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 1,
             bit_clock_pin_num: 3,
@@ -390,6 +456,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [4, 16, 17, 18, 19, 21, 1, 2],
         ir_pin_rx_channel: (4, 2),
         ir_pin_rx_channel2: (5, 3),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 18,
+            mosi_pin_num: 21,
+            miso_pin_num: 19,
+            cs_pin_num: 5,
+            rst_pin_num: 4,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 4,
@@ -419,6 +492,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 46, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (7, 4),
         ir_pin_rx_channel2: (4, 5),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 3,
@@ -448,6 +528,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 46, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (7, 4),
         ir_pin_rx_channel2: (4, 5),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 3,
@@ -477,6 +564,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         led4_segment_pins: [10, 9, 46, 3, 8, 18, 17, 16],
         ir_pin_rx_channel: (7, 4),
         ir_pin_rx_channel2: (4, 5),
+        rfid_wiring: RfidWiring {
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            rst_pin_num: 5,
+        },
         audio_wiring: Some(AudioWiring {
             data_pin_num: 21,
             bit_clock_pin_num: 3,

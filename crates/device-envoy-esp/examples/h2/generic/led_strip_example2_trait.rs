@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO2
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -21,7 +21,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 led_strip! {
     LedStripLen96 {
-        pin: GPIO18,
+        pin: GPIO2,
         len: 96,
         max_current: Current::Milliamps(1000),
         gamma: Gamma::Linear,
@@ -49,9 +49,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    info!("LED strip trait example 2: RGB animation on GPIO18");
+    info!("LED strip trait example 2: RGB animation on GPIO2");
 
-    let led_strip_len96 = LedStripLen96::new(p.GPIO18, rmt80.channel0, spawner)?;
+    let led_strip_len96 = LedStripLen96::new(p.GPIO2, rmt80.channel0, spawner)?;
     animate_rgb_cycle(led_strip_len96);
 
     core::future::pending().await

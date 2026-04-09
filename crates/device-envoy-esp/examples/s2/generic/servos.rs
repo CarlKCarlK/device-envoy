@@ -3,9 +3,7 @@
 //! Moves two servos in opposite directions for 2 seconds.
 //!
 //! Wiring:
-//! - Servo A signal:
-//!   - `esp_gdma_family` (ESP32-C3/C6/S3): GPIO10
-//!   - `esp_pdma_family` (ESP32/S2): GPIO4
+//! - Servo A signal -> GPIO4
 //! - Servo B signal -> GPIO18
 
 #![no_std]
@@ -22,15 +20,6 @@ use device_envoy_esp::{Result, init_and_start, servo, servo::Servo as _};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(esp_gdma_family)] // C6, S3, etc
-servo! {
-    ServoA {
-        pin: GPIO10,
-        timer: Timer0,
-        channel: Channel0,
-    }
-}
-#[cfg(esp_pdma_family)] // original ESP32 & s2
 servo! {
     ServoA {
         pin: GPIO4,
@@ -59,9 +48,6 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting dual servo example");
 
-    #[cfg(esp_gdma_family)]
-    let servo_a = ServoA::new(&ledc, p.GPIO10)?;
-    #[cfg(esp_pdma_family)]
     let servo_a = ServoA::new(&ledc, p.GPIO4)?;
     let servo_b = ServoB::new(&ledc, p.GPIO18)?;
 

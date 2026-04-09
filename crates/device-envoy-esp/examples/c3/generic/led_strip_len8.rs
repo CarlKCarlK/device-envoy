@@ -7,12 +7,8 @@
 //! - 12x8 panel text demo: `led2d.rs`
 //!
 //! Wiring:
-//! - `esp_gdma_family` (ESP32-C3/C6/S3):
-//!   - GPIO10: data-in of an 8-pixel smart LED strip
-//!   - GPIO8: on-board smart RGB LED
-//! - `esp_pdma_family` (ESP32/S2):
-//!   - GPIO4: data-in of an 8-pixel smart LED strip
-//!   - GPIO0: on-board smart RGB LED
+//! - GPIO10: data-in of an 8-pixel smart LED strip
+//! - GPIO7: single smart LED used for SOS
 //!
 //! Both strips share one RMT hub with explicit TX channel ownership.
 
@@ -69,7 +65,6 @@ const SOS: [(Frame1d<1>, Duration); 18] = [
     (OFF_COLOR, WORD_GAP),
 ];
 
-#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     LedStripLen8 {
         pin: GPIO10,
@@ -78,28 +73,9 @@ led_strip! {
         max_frames: 2,
     }
 }
-#[cfg(esp_pdma_family)] // original ESP32 & s2
-led_strip! {
-    LedStripLen8 {
-        pin: GPIO4,
-        len: 8,
-        max_current: Current::Milliamps(200),
-        max_frames: 2,
-    }
-}
-#[cfg(esp_gdma_family)] // C6, S3, etc
 led_strip! {
     SosStrip {
-        pin: GPIO8,
-        len: 1,
-        max_current: Current::Milliamps(10),
-        max_frames: 20,
-    }
-}
-#[cfg(esp_pdma_family)] // original ESP32 & s2
-led_strip! {
-    SosStrip {
-        pin: GPIO0,
+        pin: GPIO7,
         len: 1,
         max_current: Current::Milliamps(10),
         max_frames: 20,
@@ -118,14 +94,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     //info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");
 
-    #[cfg(esp_gdma_family)]
     let led_strip_len8 = LedStripLen8::new(p.GPIO10, rmt80.channel0, spawner)?;
-    #[cfg(esp_pdma_family)]
-    let led_strip_len8 = LedStripLen8::new(p.GPIO4, rmt80.channel0, spawner)?;
-    #[cfg(esp_gdma_family)]
-    let sos_strip = SosStrip::new(p.GPIO8, rmt80.channel1, spawner)?;
-    #[cfg(esp_pdma_family)]
-    let sos_strip = SosStrip::new(p.GPIO0, rmt80.channel1, spawner)?;
+    let sos_strip = SosStrip::new(p.GPIO7, rmt80.channel1, spawner)?;
 
     let frame = Frame1d([
         colors::BLUE,

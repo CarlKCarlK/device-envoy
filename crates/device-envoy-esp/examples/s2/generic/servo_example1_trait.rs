@@ -1,5 +1,6 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - Servo signal -> GPIO4
+//! - Button -> GPIO0 to GND (`PressedTo::Ground`)
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -21,15 +22,6 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(esp_gdma_family)] // C6, S3, etc
-servo! {
-    Servo10 {
-        pin: GPIO10,
-        timer: Timer0,
-        channel: Channel0,
-    }
-}
-#[cfg(esp_pdma_family)] // original ESP32 & s2
 servo! {
     Servo10 {
         pin: GPIO4,
@@ -56,13 +48,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, ledc: ledc);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    #[cfg(esp_gdma_family)]
-    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    #[cfg(esp_pdma_family)]
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
-    #[cfg(esp_gdma_family)]
-    let servo10 = Servo10::new(&ledc, p.GPIO10)?;
-    #[cfg(esp_pdma_family)]
     let servo10 = Servo10::new(&ledc, p.GPIO4)?;
 
     loop {

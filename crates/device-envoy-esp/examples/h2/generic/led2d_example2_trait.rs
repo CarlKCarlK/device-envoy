@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO2
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -28,7 +28,7 @@ const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw(
 
 led2d! {
     Led12x8Animated {
-        pin: GPIO18,
+        pin: GPIO2,
         len: 96,
         led_layout: LED_LAYOUT_12X8_ROTATED,
         max_current: Current::Milliamps(300),
@@ -62,9 +62,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    info!("LED 2D trait example 2: Animated text on a rotated 12x8 panel via GPIO18");
+    info!("LED 2D trait example 2: Animated text on a rotated 12x8 panel via GPIO2");
 
-    let led12x8_animated = Led12x8Animated::new(p.GPIO18, rmt80.channel0, spawner)?;
+    let led12x8_animated = Led12x8Animated::new(p.GPIO2, rmt80.channel0, spawner)?;
 
     animate_go_go(&led12x8_animated);
 

@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 16x16 NeoPixel-style (WS2812) panel data input -> GPIO2
 //!
 //! 16x16 panel mapping test: animate one foreground dot through every position.
 //!

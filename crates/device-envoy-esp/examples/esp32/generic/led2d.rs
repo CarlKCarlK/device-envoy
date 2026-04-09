@@ -1,11 +1,11 @@
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO18
 //!
 //! Animated text on a 12x8 panel (displayed as rotated 8x12) on GPIO18.
 //!
 //! Standard demo pin map in this repo:
 //! - GPIO8 (default): built-in single smart-LED demo (`blinky_smart_led.rs`)
-//! - GPIO10: external 8-pixel strip demo (`led_strip_len8.rs`)
+//! - GPIO2: external 8-pixel strip demo (`led_strip_len8.rs`)
 //! - GPIO18: 12x8 panel `Go`/`\\nGo` demo (this file)
 
 #![no_std]

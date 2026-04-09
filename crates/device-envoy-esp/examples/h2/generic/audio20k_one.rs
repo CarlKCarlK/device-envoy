@@ -1,18 +1,15 @@
 // @generated examples/templates/audio20k_one.rs.j2 by cargo xtask generate-board-examples.
 //!
 //! Wiring:
-//! - Follow the board-specific pin mapping shown in this file.
+//! - Audio data pin (`DIN`) -> GPIO1
+//! - Audio bit clock pin (`BCLK`) -> GPIO3
+//! - Audio word select pin (`LRC` / `LRCLK`) -> GPIO4
 #![allow(missing_docs)]
 //! audio20k_one: one short 22.05 kHz clip, then stop.
 //!
 //! Purpose:
 //! - Tail-repeat verification for `AtEnd::Stop`
 //!
-//! Wiring (audio-capable boards):
-//! - Audio data pin (`DIN`) -> GPIO1
-//! - Audio bit clock pin (`BCLK`) -> GPIO3
-//! - Audio word select pin (`LRC` / `LRCLK`) -> GPIO4
-
 #![no_std]
 #![no_main]
 
@@ -22,11 +19,10 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{Result, init_and_start};
-
 use device_envoy_esp::audio_player::{
     AtEnd, AudioPlayer as _, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
+use device_envoy_esp::{Result, init_and_start};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

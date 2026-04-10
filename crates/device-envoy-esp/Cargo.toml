@@ -254,10 +254,6 @@ name = "led16x16test_esp32_generic"
 path = "examples/esp32/generic/led16x16test.rs"
 
 [[example]]
-name = "led16x16test_async_esp32_generic"
-path = "examples/esp32/generic/led16x16test_async.rs"
-
-[[example]]
 name = "led2d_esp32_generic"
 path = "examples/esp32/generic/led2d.rs"
 
@@ -472,10 +468,6 @@ path = "examples/c2/generic/led16x16_plus_1_spi.rs"
 [[example]]
 name = "led16x16test_esp32c2_generic"
 path = "examples/c2/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c2_generic"
-path = "examples/c2/generic/led16x16test_async.rs"
 
 [[example]]
 name = "led2d_esp32c2_generic"
@@ -694,10 +686,6 @@ name = "led16x16test_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/led16x16test.rs"
 
 [[example]]
-name = "led16x16test_async_esp32c2_devkitm1_v1_0"
-path = "examples/c2/devkitm1_v1_0/led16x16test_async.rs"
-
-[[example]]
 name = "led2d_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/led2d.rs"
 
@@ -912,10 +900,6 @@ path = "examples/c3/generic/led16x16_plus_1_spi.rs"
 [[example]]
 name = "led16x16test_esp32c3_generic"
 path = "examples/c3/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c3_generic"
-path = "examples/c3/generic/led16x16test_async.rs"
 
 [[example]]
 name = "led2d_esp32c3_generic"
@@ -1134,10 +1118,6 @@ name = "led16x16test_esp32c3_luatos"
 path = "examples/c3/luatos/led16x16test.rs"
 
 [[example]]
-name = "led16x16test_async_esp32c3_luatos"
-path = "examples/c3/luatos/led16x16test_async.rs"
-
-[[example]]
 name = "led2d_esp32c3_luatos"
 path = "examples/c3/luatos/led2d.rs"
 
@@ -1352,10 +1332,6 @@ path = "examples/c6/generic/led16x16_plus_1_spi.rs"
 [[example]]
 name = "led16x16test_esp32c6_generic"
 path = "examples/c6/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32c6_generic"
-path = "examples/c6/generic/led16x16test_async.rs"
 
 [[example]]
 name = "led2d_esp32c6_generic"
@@ -1574,10 +1550,6 @@ name = "led16x16test_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/led16x16test.rs"
 
 [[example]]
-name = "led16x16test_async_esp32c6_devkitc1_n8"
-path = "examples/c6/devkitc1_n8/led16x16test_async.rs"
-
-[[example]]
 name = "led2d_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/led2d.rs"
 
@@ -1792,10 +1764,6 @@ path = "examples/h2/generic/led16x16_plus_1_spi.rs"
 [[example]]
 name = "led16x16test_esp32h2_generic"
 path = "examples/h2/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32h2_generic"
-path = "examples/h2/generic/led16x16test_async.rs"
 
 [[example]]
 name = "led2d_esp32h2_generic"
@@ -2014,10 +1982,6 @@ name = "led16x16test_esp32s2_generic"
 path = "examples/s2/generic/led16x16test.rs"
 
 [[example]]
-name = "led16x16test_async_esp32s2_generic"
-path = "examples/s2/generic/led16x16test_async.rs"
-
-[[example]]
 name = "led2d_esp32s2_generic"
 path = "examples/s2/generic/led2d.rs"
 
@@ -2232,10 +2196,6 @@ path = "examples/s3/generic/led16x16_plus_1_spi.rs"
 [[example]]
 name = "led16x16test_esp32s3_generic"
 path = "examples/s3/generic/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32s3_generic"
-path = "examples/s3/generic/led16x16test_async.rs"
 
 [[example]]
 name = "led2d_esp32s3_generic"
@@ -2454,10 +2414,6 @@ name = "led16x16test_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/led16x16test.rs"
 
 [[example]]
-name = "led16x16test_async_esp32s3_devkitc1_v1_1_n16r8"
-path = "examples/s3/devkitc1_v1_1_n16r8/led16x16test_async.rs"
-
-[[example]]
 name = "led2d_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/led2d.rs"
 
@@ -2672,10 +2628,6 @@ path = "examples/s3/devkitc1_v1_0_n16r8/led16x16_plus_1_spi.rs"
 [[example]]
 name = "led16x16test_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/led16x16test.rs"
-
-[[example]]
-name = "led16x16test_async_esp32s3_devkitc1_v1_0_n16r8"
-path = "examples/s3/devkitc1_v1_0_n16r8/led16x16test_async.rs"
 
 [[example]]
 name = "led2d_esp32s3_devkitc1_v1_0_n16r8"

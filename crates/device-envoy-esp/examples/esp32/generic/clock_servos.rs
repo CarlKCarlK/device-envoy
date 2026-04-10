@@ -4,6 +4,10 @@
 //! - Force-portal button -> GPIO0 to GND (`PressedTo::Ground`)
 //! - Bottom servo signal -> GPIO4
 //! - Top servo signal -> GPIO18
+//! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
+//! - Servo ground -> GND (shared with ESP32 GND)
+//! - Common red/brown/yellow wiring (each servo):
+//!   red -> 5V, brown -> GND, yellow -> signal (GPIO4 / GPIO18)
 //! Wi-Fi enabled clock that visualizes time with two hobby servos.
 
 #![no_std]

@@ -2,6 +2,10 @@
 //!
 //! Wiring:
 //! - Servo signal -> GPIO10
+//! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
+//! - Servo ground -> GND (shared with ESP32 GND)
+//! - Common red/brown/yellow wiring:
+//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10)
 
 #![no_std]
 #![no_main]

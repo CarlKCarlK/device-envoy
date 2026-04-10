@@ -1,5 +1,9 @@
 //! Wiring:
 //! - Servo signal -> GPIO10
+//! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
+//! - Servo ground -> GND (shared with ESP32 GND)
+//! - Common red/brown/yellow wiring:
+//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10)
 //! - Button -> GPIO6 to GND (`PressedTo::Ground`)
 //!
 #![allow(missing_docs)]
@@ -13,7 +17,7 @@ use embassy_time::Duration;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_core::servo::ServoPlayer;
+use device_envoy_core::servo::{Servo, ServoPlayer};
 use device_envoy_esp::{
     Result,
     button::{Button as _, ButtonEsp, PressedTo},

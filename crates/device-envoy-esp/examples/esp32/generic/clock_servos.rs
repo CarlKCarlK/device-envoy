@@ -6,6 +6,8 @@
 //! - Top servo signal -> GPIO18
 //! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
 //! - Servo ground -> GND (shared with ESP32 GND)
+//! - If using a separate 5V supply, connect supply GND to ESP32 GND (common ground required)
+//! - Do not power a servo directly from a GPIO pin
 //! - Common red/brown/yellow wiring (each servo):
 //!   red -> 5V, brown -> GND, yellow -> signal (GPIO4 / GPIO18)
 //! Wi-Fi enabled clock that visualizes time with two hobby servos.
@@ -146,14 +148,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             async move {
                 match clock_ui_event {
                     ClockUiEvent::RenderHoursMinutes { hours, minutes } => {
+                        info!("Clock mode: hours-minutes");
                         servo_clock_display_ref
                             .show_hours_minutes(hours, minutes)
                             .await;
                     }
                     ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
+                        info!("Clock mode: minutes-seconds");
                         servo_clock_display_ref.show_minutes_seconds(minutes, seconds);
                     }
                     ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
+                        info!("Clock mode: hours-minutes edit indicator");
                         servo_clock_display_ref
                             .show_hours_minutes_indicator(hours, minutes)
                             .await;
@@ -177,10 +182,12 @@ impl ServoClockDisplay {
     }
 
     fn show_portal_ready(&self) {
+        info!("ServoClockDisplay: portal-ready marker (bottom=90, top=90)");
         self.set_angles(90, 90);
     }
 
     fn show_connecting(&self) {
+        info!("ServoClockDisplay: connecting animation started (counter-rotating)");
         const FIVE_SECONDS: Duration = Duration::from_secs(5);
         const PHASE1: [(u16, Duration); 10] = linear(180 - 18, 0, FIVE_SECONDS);
         const PHASE2: [(u16, Duration); 2] = linear(0, 180, FIVE_SECONDS);
@@ -191,18 +198,31 @@ impl ServoClockDisplay {
     }
 
     fn show_connection_failed(&self) {
+        info!("ServoClockDisplay: connection-failed marker (bottom=0, top=180)");
         self.set_angles(0, 180);
     }
 
     async fn show_hours_minutes(&self, hours: u8, minutes: u8) {
+        info!(
+            "ServoClockDisplay: show_hours_minutes hours={} minutes={}",
+            hours, minutes
+        );
         self.show_values(hours, minutes).await;
     }
 
     fn show_minutes_seconds(&self, minutes: u8, seconds: u8) {
+        info!(
+            "ServoClockDisplay: show_minutes_seconds minutes={} seconds={}",
+            minutes, seconds
+        );
         self.set_angles(value_to_angle(minutes), value_to_angle(seconds));
     }
 
     async fn show_hours_minutes_indicator(&self, hours: u8, minutes: u8) {
+        info!(
+            "ServoClockDisplay: edit-indicator blink for hours={} minutes={}",
+            hours, minutes
+        );
         self.show_values(hours, minutes).await;
         for _ in 0..2 {
             self.set_angles(0, 0);
@@ -215,12 +235,21 @@ impl ServoClockDisplay {
     async fn show_values(&self, left: u8, right: u8) {
         let left_angle = value_to_angle(left);
         let right_angle = value_to_angle(right);
+        info!(
+            "ServoClockDisplay: mapped values left={} right={} -> left_angle={} right_angle={}",
+            left, right, left_angle, right_angle
+        );
         self.set_angles(left_angle, right_angle);
     }
 
     fn set_angles(&self, left: u16, right: u16) {
+        let top_command = 180 - right;
+        info!(
+            "ServoClockDisplay: set_angles bottom_command={} top_displayed={} top_command={} (inverted)",
+            left, right, top_command
+        );
         self.bottom.set_degrees(left);
-        self.top.set_degrees(180 - right);
+        self.top.set_degrees(top_command);
     }
 }
 

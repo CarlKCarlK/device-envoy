@@ -14,7 +14,9 @@
 //! - [`combine!`](macro@crate::servo::combine) & [`linear`] — Macro and function for creating
 //!   complex motion sequences.
 //! - [`Servo`] — Trait defining core methods and constants for direct servo control.
-//! - [`ServoPlayer`] — Trait defining core methods and constants for animatable servos.
+//! - [`ServoPlayer`] — Trait defining animation methods for servos and extending [`Servo`]
+//!   (`set_degrees`, `hold`, and `relax`). Depending on method-resolution context,
+//!   call sites may still need [`Servo`] in scope.
 //!
 #![doc = include_str!("../docs/how_servos_work.md")]
 //!

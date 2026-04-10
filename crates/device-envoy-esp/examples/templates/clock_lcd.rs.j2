@@ -4,6 +4,8 @@
 //! Wiring:
 //! - I2C LCD SDA -> GPIO{{ lcd_sda_pin }}
 //! - I2C LCD SCL -> GPIO{{ lcd_scl_pin }}
+//! - I2C LCD VCC -> 5V (most backpack modules; use 3.3V only if your module supports it)
+//! - I2C LCD GND -> GND (shared with ESP32 GND)
 //! - Force-portal button -> GPIO{{ force_portal_button_pin }} to GND (`PressedTo::Ground`)
 #![allow(missing_docs)]
 #![no_std]

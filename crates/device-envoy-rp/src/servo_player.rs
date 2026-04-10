@@ -3,6 +3,10 @@
 //! This page provides the primary documentation and examples for controlling servos that can
 //! animate motion sequences. The device abstraction supports moving to angles,
 //! holding/relaxing position, and sequenced animation.
+//! [`ServoPlayer`](crate::servo::ServoPlayer) extends [`Servo`](crate::servo::Servo), so
+//! servo player types support `set_degrees`, `hold`, and `relax` plus animation. Depending
+//! on method-resolution context, call sites may still need [`Servo`](crate::servo::Servo)
+//! in scope.
 //!
 //! **After reading the examples below, see also:**
 //!

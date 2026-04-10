@@ -7,6 +7,8 @@
 //! - Servo B signal -> GPIO18
 //! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
 //! - Servo ground -> GND (shared with ESP32 GND)
+//! - If using a separate 5V supply, connect supply GND to ESP32 GND (common ground required)
+//! - Do not power a servo directly from a GPIO pin
 //! - Common red/brown/yellow wiring (each servo):
 //!   red -> 5V, brown -> GND, yellow -> signal (GPIO4 or GPIO18)
 

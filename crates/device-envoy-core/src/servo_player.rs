@@ -168,9 +168,9 @@ impl<const MAX_STEPS: usize> ServoPlayerHandle<MAX_STEPS> {
 /// Platform crates implement this trait for generated servo player types so servo
 /// operations resolve through trait methods instead of inherent methods.
 ///
-/// This trait extends [`Servo`], so a servo player always supports the base
-/// servo control operations (`set_degrees`, `hold`, and `relax`) in addition to
-/// [`ServoPlayer::animate`].
+/// This trait extends [`Servo`], so a servo player supports all [`Servo`] methods
+/// (`set_degrees`, `hold`, and `relax`) in addition to [`ServoPlayer::animate`].
+/// Depending on method-resolution context, call sites may still need [`Servo`] in scope.
 ///
 /// # Example: Basic Servo Control
 ///

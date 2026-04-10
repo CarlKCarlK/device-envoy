@@ -94,5 +94,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         (frame_go_bottom, frame_duration),
     ]);
 
-    future::pending::<Result<Infallible>>().await // Run forever
+    pending::<Result<Infallible>>().await // Run forever
 }

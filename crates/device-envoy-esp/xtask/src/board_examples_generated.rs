@@ -393,67 +393,67 @@ fn generate_board_template_files(
                 minijinja_environment
                     .get_template(base_name.as_str())?
                     .render(context! {
-                    example_name => example_name.as_str(),
-                    board_slug => board_profile.board_slug(),
-                    chip_name => board_profile.chip_name(),
-                    chip_feature => board_profile.chip_feature(),
-                    blinky_kind => match blinky_kind(*board_profile) {
-                        BlinkyKind::Plain => "plain",
-                        BlinkyKind::SmartRmt => "smart_rmt",
-                        BlinkyKind::SmartSpi => "smart_spi",
-                    },
-                    led_pin => blinky_led_pin_num(*board_profile),
-                    built_in_led => blinky_built_in_led(*board_profile),
-                    panel_pin => board_profile.led_2d16x16_pin,
-                    led_strip1_pin => led_strip1_pin_num(*board_profile),
-                    led_strip1_built_in => led_strip1_built_in(*board_profile),
-                    strip8_pin => board_profile.led_strip_len_8_pin,
-                    panel12x8_pin => board_profile.led_2d12x8_pin,
-                    button_pin => board_profile.button_pin,
-                    led2d_output_engine_note => if uses_rmt80 {
-                        "RMT output engine on this board profile (`RMT channel0`)"
-                    } else {
-                        "SPI output engine on this board profile (`SPI2`)"
-                    },
-                    led2d_engine_clause => if uses_rmt80 {
-                        ""
-                    } else {
-                        "        engine: device_envoy_esp::led_strip::Engine::Spi,\n"
-                    },
-                    led2d_runtime_resource => if uses_rmt80 {
-                        "rmt80.channel0"
-                    } else {
-                        "p.SPI2"
-                    },
-                    init_and_start_statement => if uses_rmt80 {
-                        "init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);"
-                    } else {
-                        "init_and_start!(p);"
-                    },
-                    ir_supported => board_profile.rmt_count > 0,
-                    ir_pin => board_profile.ir_pin_rx_channel.0,
-                    ir_receiver0_pin => board_profile.ir_pin_rx_channel.0,
-                    ir_receiver1_pin => board_profile.ir_pin_rx_channel2.0,
-                    ir_rx_channel => board_profile.ir_pin_rx_channel.1,
-                    ir_rx_channel2 => board_profile.ir_pin_rx_channel2.1,
-                    clock_supported => board_profile.wifi_supported,
-                    force_portal_button_pin => board_profile.button_pin,
-                    lcd_sda_pin => board_profile.lcd_sda_pin,
-                    lcd_scl_pin => board_profile.lcd_scl_pin,
-                    servo_bottom_pin => board_profile.servo_pin,
-                    servo_top_pin => board_profile.servo2_pin,
-                    rfid_sck_pin => board_profile.rfid_wiring.sck_pin_num,
-                    rfid_mosi_pin => board_profile.rfid_wiring.mosi_pin_num,
-                    rfid_miso_pin => board_profile.rfid_wiring.miso_pin_num,
-                    rfid_cs_pin => board_profile.rfid_wiring.cs_pin_num,
-                    rfid_rst_pin => board_profile.rfid_wiring.rst_pin_num,
-                    led4_cell_pins => board_profile.led4_cell_pins,
-                    led4_segment_pins => board_profile.led4_segment_pins,
-                    data_pin => audio_wiring.data_pin_num,
-                    bit_clock_pin => audio_wiring.bit_clock_pin_num,
-                    word_select_pin => audio_wiring.word_select_pin_num,
-                    dma_identifier => audio_wiring.dma_identifier,
-                })?
+                        example_name => example_name.as_str(),
+                        board_slug => board_profile.board_slug(),
+                        chip_name => board_profile.chip_name(),
+                        chip_feature => board_profile.chip_feature(),
+                        blinky_kind => match blinky_kind(*board_profile) {
+                            BlinkyKind::Plain => "plain",
+                            BlinkyKind::SmartRmt => "smart_rmt",
+                            BlinkyKind::SmartSpi => "smart_spi",
+                        },
+                        led_pin => blinky_led_pin_num(*board_profile),
+                        built_in_led => blinky_built_in_led(*board_profile),
+                        panel_pin => board_profile.led_2d16x16_pin,
+                        led_strip1_pin => led_strip1_pin_num(*board_profile),
+                        led_strip1_built_in => led_strip1_built_in(*board_profile),
+                        strip8_pin => board_profile.led_strip_len_8_pin,
+                        panel12x8_pin => board_profile.led_2d12x8_pin,
+                        button_pin => board_profile.button_pin,
+                        led2d_output_engine_note => if uses_rmt80 {
+                            "RMT output engine on this board profile (`RMT channel0`)"
+                        } else {
+                            "SPI output engine on this board profile (`SPI2`)"
+                        },
+                        led2d_engine_clause => if uses_rmt80 {
+                            ""
+                        } else {
+                            "        engine: device_envoy_esp::led_strip::Engine::Spi,\n"
+                        },
+                        led2d_runtime_resource => if uses_rmt80 {
+                            "rmt80.channel0"
+                        } else {
+                            "p.SPI2"
+                        },
+                        init_and_start_statement => if uses_rmt80 {
+                            "init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);"
+                        } else {
+                            "init_and_start!(p);"
+                        },
+                        ir_supported => board_profile.rmt_count > 0,
+                        ir_pin => board_profile.ir_pin_rx_channel.0,
+                        ir_receiver0_pin => board_profile.ir_pin_rx_channel.0,
+                        ir_receiver1_pin => board_profile.ir_pin_rx_channel2.0,
+                        ir_rx_channel => board_profile.ir_pin_rx_channel.1,
+                        ir_rx_channel2 => board_profile.ir_pin_rx_channel2.1,
+                        clock_supported => board_profile.wifi_supported,
+                        force_portal_button_pin => board_profile.button_pin,
+                        lcd_sda_pin => board_profile.lcd_sda_pin,
+                        lcd_scl_pin => board_profile.lcd_scl_pin,
+                        servo_bottom_pin => board_profile.servo_pin,
+                        servo_top_pin => board_profile.servo2_pin,
+                        rfid_sck_pin => board_profile.rfid_wiring.sck_pin_num,
+                        rfid_mosi_pin => board_profile.rfid_wiring.mosi_pin_num,
+                        rfid_miso_pin => board_profile.rfid_wiring.miso_pin_num,
+                        rfid_cs_pin => board_profile.rfid_wiring.cs_pin_num,
+                        rfid_rst_pin => board_profile.rfid_wiring.rst_pin_num,
+                        led4_cell_pins => board_profile.led4_cell_pins,
+                        led4_segment_pins => board_profile.led4_segment_pins,
+                        data_pin => audio_wiring.data_pin_num,
+                        bit_clock_pin => audio_wiring.bit_clock_pin_num,
+                        word_select_pin => audio_wiring.word_select_pin_num,
+                        dma_identifier => audio_wiring.dma_identifier,
+                    })?
             } else {
                 strip_board_template_header(&template_source)
             };

@@ -9,7 +9,7 @@
 extern crate defmt_rtt as _;
 extern crate panic_probe as _;
 
-use core::{convert::Infallible, future::pending};
+use core::convert::Infallible;
 use device_envoy_rp::{
     Error, Result,
     button::{ButtonRp, PressedTo},

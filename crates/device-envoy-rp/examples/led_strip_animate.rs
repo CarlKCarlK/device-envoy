@@ -2,7 +2,6 @@
 #![no_std]
 #![no_main]
 
-use core::future::pending;
 use core::{convert::Infallible, future::pending};
 
 use defmt_rtt as _;
@@ -42,5 +41,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         (Frame1d::filled(colors::RED), frame_duration),
     ]);
 
-    future::pending::<Result<Infallible>>().await // Run forever
+    pending::<Result<Infallible>>().await // Run forever
 }

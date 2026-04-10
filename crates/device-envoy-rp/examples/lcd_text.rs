@@ -2,7 +2,7 @@
 #![no_std]
 #![no_main]
 
-use core::{convert::Infallible, panic};
+use core::{convert::Infallible, future::pending, panic};
 use device_envoy_rp::{Result, lcd_text::LcdText as _};
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};

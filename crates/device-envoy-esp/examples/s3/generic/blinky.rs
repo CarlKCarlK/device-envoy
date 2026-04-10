@@ -9,7 +9,7 @@
 #![no_std]
 #![no_main]
 
-use core::convert::Infallible;
+use core::{convert::Infallible, future::pending};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use esp_backtrace as _;

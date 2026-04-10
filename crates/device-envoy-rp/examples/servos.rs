@@ -5,6 +5,7 @@
 #![no_std]
 #![no_main]
 
+use core::future::pending;
 use defmt::info;
 use defmt_rtt as _;
 use device_envoy_rp::{servo, servo::Servo as _};

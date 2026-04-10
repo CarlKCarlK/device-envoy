@@ -43,11 +43,11 @@ where
     assert!(H > 0, "Conway height must be greater than zero");
 
     let mut board = Board::<H, W>::new();
-    let mut pattern_index = 0usize;
-    let mut speed_mode = SpeedMode::Slow;
+    let mut pattern_index = 1usize;
+    let mut speed_mode = SpeedMode::Medium;
     let mut paused = false;
     let mut display_power = DisplayPower::On;
-    let mut color_index = 0usize;
+    let mut color_index = 1usize;
     let mut alive_color = ALIVE_COLORS[color_index];
     board.add_pattern(PATTERNS[pattern_index]);
 

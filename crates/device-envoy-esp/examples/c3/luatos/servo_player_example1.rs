@@ -13,7 +13,7 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_core::servo::ServoPlayer;
+use device_envoy_core::servo::{Servo, ServoPlayer};
 use device_envoy_esp::{
     Result,
     button::{Button as _, ButtonEsp, PressedTo},

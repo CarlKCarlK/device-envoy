@@ -2,7 +2,7 @@
 #![no_std]
 #![no_main]
 
-use core::{convert::Infallible, panic};
+use core::{convert::Infallible, future::pending, panic};
 use device_envoy_rp::{Result, servo, servo::Servo as _};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};

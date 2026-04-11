@@ -265,13 +265,7 @@ fn scan_test_required_gpios(root: &Path, test_stem: &str) -> Vec<u8> {
     gpios
 }
 
-fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Option<&'static str> {
-    // led_probe_c3_* examples are generated for all boards but are C3-specific GPIO
-    // probe programs — they should only compile on C3.
-    if example_name.starts_with("led_probe_c3_") && chip_feature != CHIP_FEATURE_ESP32C3 {
-        return Some("C3-only GPIO probe example");
-    }
-
+fn explicit_example_skip_reason(_chip_feature: &str, _example_name: &str) -> Option<&'static str> {
     None
 }
 

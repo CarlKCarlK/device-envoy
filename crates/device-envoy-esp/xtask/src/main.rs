@@ -276,6 +276,61 @@ const ALL_PROCESSOR_TARGETS: &[BuildTarget] = &[
 ];
 const CHECK_ALL_TARGETS: &[BuildTarget] = ALL_PROCESSOR_TARGETS;
 
+// TODO000 listing tests seems dangerous (can get out of sync with actual tests); consider generating from test attributes or otherwise enforcing consistency
+// (may no longer apply) — tests are now discovered from tests/embedded/ at runtime; see discover_embedded_tests()
+
+const COMPILE_PASS_TESTS: &[&str] = &[
+    "ir_two_receivers_compile",
+    "led_five_compile",
+    "led_strip_two_strips_compile",
+    "led_strip_spi_two_strips_compile",
+    "led2d_two_panels_compile",
+    "led4_two_displays_compile",
+    "lcd_text_four_addresses_compile",
+    "clock_sync_two_compile",
+    "button_five_compile",
+    "button_watch_five_compile",
+    "rfid_one_compile",
+    "ir_four_receivers_compile",
+    "ir_mapping_four_receivers_compile",
+    "ir_kepler_four_receivers_compile",
+    "ir_visibility_compile",
+];
+
+const COMPILE_FAIL_TESTS: &[&str] = &[
+    "ir_duplicate_channel_compile_fail",
+    "ir_colon_form_compile_fail",
+    "lcd_text_duplicate_address_compile_fail",
+];
+
+/// Discovers embedded tests from `tests/embedded/` by filename convention:
+/// - `*_compile_fail.rs` → compile-fail tests
+/// - `*_compile.rs`      → compile-pass tests
+///
+/// This replaces the hardcoded `COMPILE_PASS_TESTS`/`COMPILE_FAIL_TESTS` lists and
+/// ensures new test files are picked up automatically.
+fn discover_embedded_tests(root: &Path) -> (Vec<String>, Vec<String>) {
+    let tests_dir = root.join("tests/embedded");
+    let mut compile_pass = Vec::new();
+    let mut compile_fail = Vec::new();
+    let entries = std::fs::read_dir(&tests_dir)
+        .unwrap_or_else(|e| panic!("failed to read {}: {e}", tests_dir.display()));
+    for entry in entries.flatten() {
+        let name = entry.file_name().into_string().ok().unwrap_or_default();
+        let Some(stem) = name.strip_suffix(".rs") else {
+            continue;
+        };
+        if stem.ends_with("_compile_fail") {
+            compile_fail.push(stem.to_owned());
+        } else if stem.ends_with("_compile") {
+            compile_pass.push(stem.to_owned());
+        }
+    }
+    compile_pass.sort();
+    compile_fail.sort();
+    (compile_pass, compile_fail)
+}
+
 /// Locates the requested Xtensa linker and returns its parent directory.
 fn find_xtensa_linker_dir(linker: &str) -> Option<PathBuf> {
     // Check PATH first.
@@ -408,6 +463,13 @@ enum Commands {
     /// Generate board-specific examples from templates
     #[command(alias = "generate-blinky-examples")]
     GenerateBoardExamples,
+    /// Run all checks for a single chip (fast developer iteration)
+    CheckChip {
+        /// Chip name: esp32, esp32c2, esp32c3, esp32c6, esp32h2, esp32s2, esp32s3
+        chip: String,
+    },
+    /// Run embedded compile tests across all chips
+    CheckEmbeddedTests,
 }
 
 fn main() -> ExitCode {
@@ -421,6 +483,8 @@ fn main() -> ExitCode {
         Commands::CheckDemos => check_demos(),
         Commands::CheckReadmeExample => check_readme_example(),
         Commands::GenerateBoardExamples => generate_board_examples(),
+        Commands::CheckChip { chip } => check_chip(&chip),
+        Commands::CheckEmbeddedTests => check_embedded_tests(),
     }
 }
 
@@ -537,6 +601,15 @@ fn check_all() -> ExitCode {
     }
     if check_readme_example() != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
+    }
+
+    // Pre-fetch all crate dependencies so the subsequent parallel builds do not contend
+    // on the package cache lock.  If fetch fails, proceed anyway — packages will be
+    // fetched on demand during the parallel builds (with some lock contention).
+    if !run(Command::new("cargo").current_dir(&root).args(["fetch"])) {
+        eprintln!(
+            "warning: cargo fetch failed; parallel builds may see package cache lock contention"
+        );
     }
 
     // Build the library itself for all supported chips.
@@ -745,38 +818,20 @@ fn check_demos() -> ExitCode {
 }
 
 fn check_embedded_tests() -> ExitCode {
+    check_embedded_tests_for_targets(CHECK_ALL_TARGETS)
+}
+
+fn check_embedded_tests_for_targets(targets: &[BuildTarget]) -> ExitCode {
     let root = workspace_root();
     println!(
         "{}",
         "--> embedded tests (compile-pass + expected compile-fail)".cyan()
     );
-
-    let compile_pass_tests = [
-        "ir_two_receivers_compile",
-        "led_five_compile",
-        "led_strip_two_strips_compile",
-        "led_strip_spi_two_strips_compile",
-        "led2d_two_panels_compile",
-        "led4_two_displays_compile",
-        "lcd_text_four_addresses_compile",
-        "clock_sync_two_compile",
-        "button_five_compile",
-        "button_watch_five_compile",
-        "rfid_one_compile",
-        "ir_four_receivers_compile",
-        "ir_mapping_four_receivers_compile",
-        "ir_kepler_four_receivers_compile",
-        "ir_visibility_compile",
-    ];
-    let compile_fail_tests = [
-        "ir_duplicate_channel_compile_fail",
-        "ir_colon_form_compile_fail",
-        "lcd_text_duplicate_address_compile_fail",
-    ];
-    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(CHECK_ALL_TARGETS) else {
+    let (compile_pass_tests, compile_fail_tests) = discover_embedded_tests(&root);
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
         return ExitCode::FAILURE;
     };
-    let embedded_results: Vec<bool> = CHECK_ALL_TARGETS
+    let embedded_results: Vec<bool> = targets
         .par_iter()
         .copied()
         .map(|build_target| {
@@ -784,8 +839,8 @@ fn check_embedded_tests() -> ExitCode {
                 &root,
                 &xtensa_linker_dir,
                 build_target,
-                &compile_pass_tests,
-                &compile_fail_tests,
+                &compile_pass_tests.iter().map(String::as_str).collect::<Vec<_>>(),
+                &compile_fail_tests.iter().map(String::as_str).collect::<Vec<_>>(),
             )
         })
         .collect();
@@ -793,6 +848,71 @@ fn check_embedded_tests() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    ExitCode::SUCCESS
+}
+
+fn check_chip(chip_label: &str) -> ExitCode {
+    let Some(build_target) = ALL_PROCESSOR_TARGETS
+        .iter()
+        .copied()
+        .find(|t| t.label == chip_label)
+    else {
+        let valid = ALL_PROCESSOR_TARGETS
+            .iter()
+            .map(|t| t.label)
+            .collect::<Vec<_>>();
+        eprintln!(
+            "{}",
+            format!(
+                "error: unknown chip '{chip_label}'; valid options are: {}",
+                valid.join(", ")
+            )
+            .red()
+            .bold()
+        );
+        return ExitCode::FAILURE;
+    };
+
+    let root = workspace_root();
+    println!(
+        "{}",
+        format!(
+            "==> cargo check-chip: {} (device-envoy-esp)",
+            build_target.label
+        )
+        .cyan()
+        .bold()
+    );
+
+    let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(&[build_target]) else {
+        return ExitCode::FAILURE;
+    };
+
+    if !build_lib_for_target(&root, &xtensa_linker_dir, build_target) {
+        return ExitCode::FAILURE;
+    }
+
+    if check_examples_for_targets(&[build_target], true) != ExitCode::SUCCESS {
+        return ExitCode::FAILURE;
+    }
+
+    let (compile_pass_tests, compile_fail_tests) = discover_embedded_tests(&root);
+    if !check_embedded_tests_for_target(
+        &root,
+        &xtensa_linker_dir,
+        build_target,
+        &compile_pass_tests.iter().map(String::as_str).collect::<Vec<_>>(),
+        &compile_fail_tests.iter().map(String::as_str).collect::<Vec<_>>(),
+    ) {
+        return ExitCode::FAILURE;
+    }
+
+    println!(
+        "\n{}",
+        format!("==> check-chip {} passed! 🎉", build_target.label)
+            .green()
+            .bold()
+    );
     ExitCode::SUCCESS
 }
 
@@ -840,7 +960,14 @@ fn check_examples_for_target(
         format!("--> check examples ({})", build_target.label)
     };
     println!("{}", target_message.cyan());
-    for example in examples {
+
+    // Build examples in parallel within a chip — there are no intra-chip dependencies
+    // between examples and each gets its own `Command`, so this is safe.
+    let failed = std::sync::atomic::AtomicBool::new(false);
+    examples.par_iter().for_each(|example| {
+        if failed.load(std::sync::atomic::Ordering::Relaxed) {
+            return;
+        }
         if let Some(required_chip_feature) =
             board_examples_generated::board_example_required_chip(example)
         {
@@ -849,7 +976,7 @@ fn check_examples_for_target(
                     "    skip example: {example} (board example targets {required_chip_feature}, not {})",
                     build_target.label
                 );
-                continue;
+                return;
             }
         }
         if let Some(skip_reason) = explicit_example_skip_reason(build_target.chip_feature, example)
@@ -858,17 +985,17 @@ fn check_examples_for_target(
                 "    skip example: {example} ({skip_reason} on {})",
                 build_target.label
             );
-            continue;
+            return;
         }
-        let missing_capabilities =
+        let missing =
             missing_capabilities(chip_capabilities, example_requirements(example));
-        if !missing_capabilities.is_empty() {
+        if !missing.is_empty() {
             println!(
                 "    skip example: {example} ({} unavailable on {})",
-                missing_capabilities.join(", "),
+                missing.join(", "),
                 build_target.label
             );
-            continue;
+            return;
         }
         if link_examples {
             println!("    build example: {example}");
@@ -899,10 +1026,10 @@ fn check_examples_for_target(
             cmd.arg("-Zbuild-std=core,alloc");
         }
         if !run(&mut cmd) {
-            return false;
+            failed.store(true, std::sync::atomic::Ordering::Relaxed);
         }
-    }
-    true
+    });
+    !failed.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 fn check_embedded_tests_for_target(

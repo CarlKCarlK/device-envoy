@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::thread;
+use std::time::Instant;
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
@@ -15,6 +16,7 @@ fn main() -> ExitCode {
 
 fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
+    let start = Instant::now();
 
     println!("==> Formatting workspace...");
     if !run_command(
@@ -123,10 +125,12 @@ fn check_all() -> ExitCode {
     }
 
     if failed {
-        eprintln!("check-all failed");
+        let elapsed = start.elapsed();
+        eprintln!("check-all failed in {:.1}s", elapsed.as_secs_f64());
         ExitCode::FAILURE
     } else {
-        println!("check-all passed");
+        let elapsed = start.elapsed();
+        println!("check-all passed in {:.1}s", elapsed.as_secs_f64());
         ExitCode::SUCCESS
     }
 }

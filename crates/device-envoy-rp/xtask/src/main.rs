@@ -86,6 +86,18 @@ enum Commands {
         #[arg(long)]
         wifi: bool,
     },
+    /// Run all checks for a single board (fast developer iteration)
+    CheckBoard {
+        /// Board to build and check
+        #[arg(long, default_value = "pico2")]
+        board: Board,
+        /// Architecture
+        #[arg(long, default_value = "arm")]
+        arch: Arch,
+        /// Include Wi-Fi examples
+        #[arg(long)]
+        wifi: bool,
+    },
 }
 
 #[derive(Clone, Copy, clap::ValueEnum)]
@@ -248,7 +260,111 @@ fn main() -> ExitCode {
             let capability_set = capability_set_from_wifi_enabled(wifi);
             build_uf2(&name, board, arch, capability_set)
         }
+        Commands::CheckBoard { board, arch, wifi } => {
+            let capability_set = capability_set_from_wifi_enabled(wifi);
+            check_board(board, arch, capability_set)
+        }
     }
+}
+
+fn check_board(board: Board, arch: Arch, caps: CapabilitySet) -> ExitCode {
+    let workspace_root = workspace_root();
+    let wifi = caps.contains(Capability::Wifi);
+    let target = arch.target(board);
+    let features = build_features(board, arch, caps);
+    let features_no_wifi = build_features(board, arch, CapabilitySet::empty());
+
+    println!(
+        "{}",
+        format!(
+            "==> cargo check-board: {board} ({arch}{})",
+            if wifi { ", wifi" } else { "" }
+        )
+        .cyan()
+        .bold()
+    );
+
+    if let Err(err) = regenerate_generated_sources(&workspace_root) {
+        eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
+
+    // Library build (no wifi — validates the non-wifi feature set)
+    if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+        "build",
+        "--lib",
+        "--target",
+        target,
+        "--features",
+        features_no_wifi.as_str(),
+        "--no-default-features",
+    ])) {
+        return ExitCode::FAILURE;
+    }
+
+    let examples = discover_examples(&workspace_root);
+    let failures = Mutex::new(Vec::new());
+
+    // No-wifi examples (parallel)
+    let no_wifi_examples: Vec<_> = examples
+        .iter()
+        .filter(|e| !e.required_capabilities.contains(Capability::Wifi))
+        .collect();
+    no_wifi_examples.par_iter().for_each(|example| {
+        if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+            "build",
+            "--example",
+            &example.name,
+            "--target",
+            target,
+            "--features",
+            features_no_wifi.as_str(),
+            "--no-default-features",
+        ])) {
+            failures
+                .lock()
+                .unwrap()
+                .push(format!("example {}", example.name));
+        }
+    });
+
+    // All examples with wifi (parallel, only when wifi flag is set)
+    if wifi {
+        examples.par_iter().for_each(|example| {
+            if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
+                "build",
+                "--example",
+                &example.name,
+                "--target",
+                target,
+                "--features",
+                features.as_str(),
+                "--no-default-features",
+            ])) {
+                failures
+                    .lock()
+                    .unwrap()
+                    .push(format!("example (wifi) {}", example.name));
+            }
+        });
+    }
+
+    let failures = failures.lock().unwrap();
+    if !failures.is_empty() {
+        eprintln!("\n{}", "Failed checks:".red().bold());
+        for failure in failures.iter() {
+            eprintln!("  - {}", failure.red());
+        }
+        return ExitCode::FAILURE;
+    }
+
+    println!(
+        "\n{}",
+        format!("==> check-board {board} passed! \u{1F389}")
+            .green()
+            .bold()
+    );
+    ExitCode::SUCCESS
 }
 
 fn check_quick() -> ExitCode {

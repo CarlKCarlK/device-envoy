@@ -1,7 +1,7 @@
 //! A device abstraction for hobby servos.
 //!
 //! This module provides both direct servo control ([`servo!`](macro@crate::servo::servo)) and
-//! servo animationl ([`servo_player!`](macro@crate::servo::servo_player)).
+//! servo animation ([`servo_player!`](macro@crate::servo::servo_player)).
 //!
 //! Use the [`servo!`] macro for a keyword-driven constructor with defaults.
 //!
@@ -1238,7 +1238,7 @@ impl<'d> ServoRp<'d> {
         max_us: u16,
         max_degrees: u16,
     ) -> Self {
-        // TODO: consider if these could/should be checked at compile time.
+        // TODO consider if these could/should be checked at compile time.
         assert!(min_us < max_us, "min_us must be less than max_us");
         assert!(max_degrees > 0, "max_degrees must be positive");
         let clk = clk_sys_freq() as u64; // Hz

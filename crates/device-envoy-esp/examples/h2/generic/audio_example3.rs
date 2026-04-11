@@ -4,7 +4,7 @@
 //! - Audio data pin (`DIN`) -> GPIO1
 //! - Audio bit clock pin (`BCLK`) -> GPIO3
 //! - Audio word select pin (`LRC` / `LRCLK`) -> GPIO4
-//! - Button -> GPIO6 to GND
+//! - Button -> GPIO0 to GND
 #![allow(missing_docs)]
 #![no_std]
 #![no_main]
@@ -103,7 +103,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
     let audio_player_board =
         AudioPlayerBoard::new(p.GPIO1, p.GPIO3, p.GPIO4, p.I2S0, p.DMA_CH0, spawner)?;

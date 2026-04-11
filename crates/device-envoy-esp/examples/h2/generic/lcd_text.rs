@@ -1,6 +1,6 @@
 //! Wiring:
-//! - I2C LCD SDA -> GPIO16
-//! - I2C LCD SCL -> GPIO17
+//! - I2C LCD SDA -> GPIO4
+//! - I2C LCD SCL -> GPIO5
 //!
 #![allow(missing_docs)]
 #![no_std]
@@ -18,8 +18,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 lcd_text! {
     i2c: I2C0,
-    sda_pin: GPIO16,
-    scl_pin: GPIO17,
+    sda_pin: GPIO4,
+    scl_pin: GPIO5,
     LcdTextSimple {
         width: 16,
         height: 2,
@@ -36,7 +36,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
-    let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
+    let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.GPIO4, p.GPIO5, spawner)?;
 
     lcd_text_simple.write_text("This line is definitely longer than sixteen\nAnd this one too");
     Timer::after(Duration::from_secs(1)).await;

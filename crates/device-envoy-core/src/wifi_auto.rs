@@ -238,8 +238,7 @@ impl Default for WifiAutoPersistedState {
 /// #             try_count: 1,
 /// #         })
 /// #         .await?;
-/// #         let _todo_result: Result<WifiStack, Self::Error> = todo!();
-/// #         _todo_result
+/// #         panic!("DemoWifiAuto::connect is not implemented in this doctest")
 /// #     }
 /// # }
 /// # fn main() {

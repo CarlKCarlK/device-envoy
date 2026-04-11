@@ -90,10 +90,10 @@ pub struct ClockSyncTick {
 /// # use time::OffsetDateTime;
 /// # impl ClockSync for ClockSyncMock {
 /// #     async fn wait_for_tick(&self) -> ClockSyncTick {
-/// #         todo!()
+/// #         panic!("ClockSyncMock::wait_for_tick is not implemented in this doctest")
 /// #     }
 /// #     fn now_local(&self) -> OffsetDateTime {
-/// #         todo!()
+/// #         panic!("ClockSyncMock::now_local is not implemented in this doctest")
 /// #     }
 /// #     fn set_offset_minutes(&self, _minutes: i32) {}
 /// #     fn offset_minutes(&self) -> i32 { 0 }

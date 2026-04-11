@@ -14,19 +14,10 @@ use device_envoy_esp::{init_and_start, ir_keplers};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(feature = "esp32")]
 ir_keplers! {
     IrKeplersDuplicateChannelCompileFail {
         IrKepler0: { pin: GPIO0 },
         IrKepler1: { pin: GPIO1 }
-    }
-}
-
-#[cfg(not(feature = "esp32"))]
-ir_keplers! {
-    IrKeplersDuplicateChannelCompileFail {
-        IrKepler7: { pin: GPIO7 },
-        IrKepler6: { pin: GPIO6 }
     }
 }
 
@@ -46,14 +37,8 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     #[cfg(not(target_arch = "xtensa"))]
     let channel_creator = rmt80.channel2;
 
-    #[cfg(feature = "esp32")]
     let _ir_kepler0 = IrKepler0::new(p.GPIO0, channel_creator, spawner)?;
-    #[cfg(feature = "esp32")]
     let _ir_kepler1 = IrKepler1::new(p.GPIO1, channel_creator, spawner)?;
-    #[cfg(not(feature = "esp32"))]
-    let _ir_kepler7 = IrKepler7::new(p.GPIO7, channel_creator, spawner)?;
-    #[cfg(not(feature = "esp32"))]
-    let _ir_kepler6 = IrKepler6::new(p.GPIO6, channel_creator, spawner)?;
 
     core::future::pending().await
 }

@@ -13,10 +13,10 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 irs! {
     IrsFourCompileTest {
-        Ir7: { pin: GPIO7 },
-        Ir6: { pin: GPIO6 },
-        Ir5: { pin: GPIO5 },
-        Ir4: { pin: GPIO4 }
+        Ir3: { pin: GPIO3 },
+        Ir2: { pin: GPIO2 },
+        Ir1: { pin: GPIO1 },
+        Ir0: { pin: GPIO0 }
     }
 }
 
@@ -31,14 +31,14 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 
     #[cfg(feature = "esp32s2")]
     {
-        let (_ir7, _ir6, _ir5, _ir4) = IrsFourCompileTest::new(
-            p.GPIO7,
+        let (_ir3, _ir2, _ir1, _ir0) = IrsFourCompileTest::new(
+            p.GPIO3,
             rmt80.channel0,
-            p.GPIO6,
+            p.GPIO2,
             rmt80.channel1,
-            p.GPIO5,
+            p.GPIO1,
             rmt80.channel2,
-            p.GPIO4,
+            p.GPIO0,
             rmt80.channel3,
             spawner,
         )?;
@@ -46,14 +46,14 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 
     #[cfg(all(target_arch = "xtensa", not(feature = "esp32s2")))]
     {
-        let (_ir7, _ir6, _ir5, _ir4) = IrsFourCompileTest::new(
-            p.GPIO7,
+        let (_ir3, _ir2, _ir1, _ir0) = IrsFourCompileTest::new(
+            p.GPIO3,
             rmt80.channel4,
-            p.GPIO6,
+            p.GPIO2,
             rmt80.channel5,
-            p.GPIO5,
+            p.GPIO1,
             rmt80.channel6,
-            p.GPIO4,
+            p.GPIO0,
             rmt80.channel7,
             spawner,
         )?;

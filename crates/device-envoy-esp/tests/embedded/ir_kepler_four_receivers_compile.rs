@@ -13,10 +13,10 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_keplers! {
     IrKeplersFourCompileTest {
-        IrKepler7: { pin: GPIO7 },
-        IrKepler6: { pin: GPIO6 },
-        IrKepler5: { pin: GPIO5 },
-        IrKepler4: { pin: GPIO4 }
+        IrKepler3: { pin: GPIO3 },
+        IrKepler2: { pin: GPIO2 },
+        IrKepler1: { pin: GPIO1 },
+        IrKepler0: { pin: GPIO0 }
     }
 }
 
@@ -31,14 +31,14 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 
     #[cfg(feature = "esp32s2")]
     {
-        let (_ir_kepler7, _ir_kepler6, _ir_kepler5, _ir_kepler4) = IrKeplersFourCompileTest::new(
-            p.GPIO7,
+        let (_ir_kepler3, _ir_kepler2, _ir_kepler1, _ir_kepler0) = IrKeplersFourCompileTest::new(
+            p.GPIO3,
             rmt80.channel0,
-            p.GPIO6,
+            p.GPIO2,
             rmt80.channel1,
-            p.GPIO5,
+            p.GPIO1,
             rmt80.channel2,
-            p.GPIO4,
+            p.GPIO0,
             rmt80.channel3,
             spawner,
         )?;
@@ -46,14 +46,14 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 
     #[cfg(all(target_arch = "xtensa", not(feature = "esp32s2")))]
     {
-        let (_ir_kepler7, _ir_kepler6, _ir_kepler5, _ir_kepler4) = IrKeplersFourCompileTest::new(
-            p.GPIO7,
+        let (_ir_kepler3, _ir_kepler2, _ir_kepler1, _ir_kepler0) = IrKeplersFourCompileTest::new(
+            p.GPIO3,
             rmt80.channel4,
-            p.GPIO6,
+            p.GPIO2,
             rmt80.channel5,
-            p.GPIO5,
+            p.GPIO1,
             rmt80.channel6,
-            p.GPIO4,
+            p.GPIO0,
             rmt80.channel7,
             spawner,
         )?;

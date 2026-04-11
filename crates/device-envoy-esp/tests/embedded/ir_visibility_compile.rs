@@ -17,11 +17,11 @@ enum AppButton {
 }
 
 ir! {
-    pub IrPublic { pin: GPIO7 }
+    pub IrPublic { pin: GPIO1 }
 }
 
 ir! {
-    IrPrivate { pin: GPIO6 }
+    IrPrivate { pin: GPIO0 }
 }
 
 ir_kepler! {

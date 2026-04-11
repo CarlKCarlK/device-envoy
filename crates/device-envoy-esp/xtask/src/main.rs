@@ -51,6 +51,10 @@ enum Capability {
     AudioGpio,
     ButtonGpio,
     Wifi,
+    /// Chip has sufficient linker memory budget for large WiFi/stack examples.
+    LargeStack,
+    /// Chip exposes at least two independent SPI peripherals.
+    DualSpi,
 }
 
 #[derive(Clone, Copy)]
@@ -58,12 +62,14 @@ struct CapabilitySet {
     bits: u16,
 }
 
-const ALL_CAPABILITIES: [Capability; 5] = [
+const ALL_CAPABILITIES: [Capability; 7] = [
     Capability::Rmt,
     Capability::I2s,
     Capability::AudioGpio,
     Capability::ButtonGpio,
     Capability::Wifi,
+    Capability::LargeStack,
+    Capability::DualSpi,
 ];
 
 impl Capability {
@@ -74,6 +80,8 @@ impl Capability {
             Capability::AudioGpio => 1 << 2,
             Capability::ButtonGpio => 1 << 3,
             Capability::Wifi => 1 << 4,
+            Capability::LargeStack => 1 << 5,
+            Capability::DualSpi => 1 << 6,
         }
     }
 
@@ -84,6 +92,8 @@ impl Capability {
             Capability::AudioGpio => "audio GPIO mapping",
             Capability::ButtonGpio => "button GPIO mapping",
             Capability::Wifi => "Wi-Fi",
+            Capability::LargeStack => "large stack/linker budget",
+            Capability::DualSpi => "dual SPI",
         }
     }
 }
@@ -102,15 +112,18 @@ impl CapabilitySet {
     }
 }
 
-fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
-    // Derive from the first board profile for this chip. Per-chip hardware facts
-    // (rmt_count, wifi_supported, audio_wiring) are the same across all boards
-    // for a given chip, so any profile for the chip is authoritative.
-    let profile = boards::BOARD_PROFILES
+/// Returns the first `BoardProfile` for `chip_feature`. Per-chip hardware facts
+/// (rmt_count, wifi_supported, spi_count, etc.) are identical across all boards for a
+/// given chip, so any profile for the chip is authoritative.
+fn chip_profile(chip_feature: &str) -> &'static boards::BoardProfile {
+    boards::BOARD_PROFILES
         .iter()
         .find(|p| p.chip_feature() == chip_feature)
-        .unwrap_or_else(|| panic!("unknown chip feature: {chip_feature}"));
+        .unwrap_or_else(|| panic!("unknown chip feature: {chip_feature}"))
+}
 
+fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
+    let profile = chip_profile(chip_feature);
     let mut caps = CapabilitySet::empty();
     // RMT and I2S are always enabled together in build.rs.
     if profile.rmt_count > 0 {
@@ -125,6 +138,12 @@ fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
     caps.insert(Capability::ButtonGpio);
     if profile.wifi_supported {
         caps.insert(Capability::Wifi);
+    }
+    if !profile.stack_constrained {
+        caps.insert(Capability::LargeStack);
+    }
+    if profile.spi_count >= 2 {
+        caps.insert(Capability::DualSpi);
     }
     caps
 }
@@ -170,6 +189,17 @@ fn example_requirements(example: &str) -> CapabilitySet {
         capability_set.insert(Capability::ButtonGpio);
     }
 
+    // Examples that exceed the ESP32-S2 linker memory budget.
+    let requires_large_stack = example.starts_with("talk1_f1_dns")
+        || example.starts_with("clock_")
+        || is_example_name(example, "wifi_auto_custom_checkbox")
+        || is_example_name(example, "wifi_auto_example1")
+        || is_example_name(example, "wifi_auto_force_button")
+        || is_example_name(example, "wifi_dns_hex");
+    if requires_large_stack {
+        capability_set.insert(Capability::LargeStack);
+    }
+
     capability_set
 }
 
@@ -186,30 +216,60 @@ fn missing_capabilities(
     missing_capabilities
 }
 
+/// Returns the capabilities required by an embedded compile test, derived from the
+/// test's name. GPIO requirements are handled separately via `scan_test_required_gpios`.
+fn test_capabilities_required(test: &str) -> CapabilitySet {
+    let mut caps = CapabilitySet::empty();
+    if test.starts_with("ir_")
+        || matches!(
+            test,
+            "led_strip_two_strips_compile" | "led2d_two_panels_compile"
+        )
+    {
+        caps.insert(Capability::Rmt);
+    }
+    if test == "clock_sync_two_compile" {
+        caps.insert(Capability::Wifi);
+    }
+    if test == "led_strip_spi_two_strips_compile" {
+        caps.insert(Capability::DualSpi);
+    }
+    caps
+}
+
+/// Scans an embedded test source file and returns the sorted, deduplicated set of GPIO
+/// pin numbers it references (e.g. `p.GPIO6` or `pin: GPIO7` → 6 and 7). Used to
+/// automatically derive which chips can compile a test based on `unavailable_gpios`.
+fn scan_test_required_gpios(root: &Path, test_stem: &str) -> Vec<u8> {
+    let path = root
+        .join("tests/embedded")
+        .join(format!("{test_stem}.rs"));
+    let src = std::fs::read_to_string(&path).unwrap_or_default();
+    let mut gpios = Vec::new();
+    let mut pos = 0;
+    while let Some(offset) = src[pos..].find("GPIO") {
+        let abs = pos + offset + 4; // skip past "GPIO"
+        let digits: String = src[abs..]
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
+        if !digits.is_empty() {
+            if let Ok(n) = digits.parse::<u8>() {
+                gpios.push(n);
+            }
+        }
+        pos = abs;
+    }
+    gpios.sort();
+    gpios.dedup();
+    gpios
+}
+
 fn explicit_example_skip_reason(chip_feature: &str, example_name: &str) -> Option<&'static str> {
+    // led_probe_c3_* examples are generated for all boards but are C3-specific GPIO
+    // probe programs — they should only compile on C3.
     if example_name.starts_with("led_probe_c3_") && chip_feature != CHIP_FEATURE_ESP32C3 {
         return Some("C3-only GPIO probe example");
-    }
-
-    if chip_feature == CHIP_FEATURE_ESP32S2 {
-        if example_name.starts_with("talk1_f1_dns") {
-            return Some("ESP32-S2 linker memory budget");
-        }
-        if example_name.starts_with("clock_") {
-            return Some("ESP32-S2 linker memory budget");
-        }
-        let s2_stack_limited_examples = [
-            "wifi_auto_custom_checkbox",
-            "wifi_auto_example1",
-            "wifi_auto_force_button",
-            "wifi_dns_hex",
-        ];
-        if s2_stack_limited_examples
-            .iter()
-            .any(|base_name| is_example_name(example_name, base_name))
-        {
-            return Some("ESP32-S2 linker memory budget");
-        }
     }
 
     None
@@ -275,33 +335,6 @@ const ALL_PROCESSOR_TARGETS: &[BuildTarget] = &[
     BUILD_TARGET_ESP32S3,
 ];
 const CHECK_ALL_TARGETS: &[BuildTarget] = ALL_PROCESSOR_TARGETS;
-
-// TODO000 listing tests seems dangerous (can get out of sync with actual tests); consider generating from test attributes or otherwise enforcing consistency
-// (may no longer apply) — tests are now discovered from tests/embedded/ at runtime; see discover_embedded_tests()
-
-const COMPILE_PASS_TESTS: &[&str] = &[
-    "ir_two_receivers_compile",
-    "led_five_compile",
-    "led_strip_two_strips_compile",
-    "led_strip_spi_two_strips_compile",
-    "led2d_two_panels_compile",
-    "led4_two_displays_compile",
-    "lcd_text_four_addresses_compile",
-    "clock_sync_two_compile",
-    "button_five_compile",
-    "button_watch_five_compile",
-    "rfid_one_compile",
-    "ir_four_receivers_compile",
-    "ir_mapping_four_receivers_compile",
-    "ir_kepler_four_receivers_compile",
-    "ir_visibility_compile",
-];
-
-const COMPILE_FAIL_TESTS: &[&str] = &[
-    "ir_duplicate_channel_compile_fail",
-    "ir_colon_form_compile_fail",
-    "lcd_text_duplicate_address_compile_fail",
-];
 
 /// Discovers embedded tests from `tests/embedded/` by filename convention:
 /// - `*_compile_fail.rs` → compile-fail tests
@@ -1044,7 +1077,7 @@ fn check_embedded_tests_for_target(
     let mut skipped_count = 0usize;
     for embedded_test in compile_pass_tests {
         if let Some(reason) =
-            explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
+            explicit_embedded_test_skip_reason(root, build_target.chip_feature, embedded_test)
         {
             println!(
                 "      skip compile-pass test: {embedded_test} ({reason} on {})",
@@ -1084,7 +1117,7 @@ fn check_embedded_tests_for_target(
 
     for embedded_test in compile_fail_tests {
         if let Some(reason) =
-            explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
+            explicit_embedded_test_skip_reason(root, build_target.chip_feature, embedded_test)
         {
             println!(
                 "      skip compile-fail test: {embedded_test} ({reason} on {})",
@@ -1158,72 +1191,37 @@ fn check_embedded_tests_for_target(
 }
 
 fn explicit_embedded_test_skip_reason(
+    root: &Path,
     chip_feature: &str,
     embedded_test: &str,
 ) -> Option<&'static str> {
-    // ESP32-C2 has no RMT peripheral, so ir/ir_kepler/ir_mapping macros are not
-    // exported (gated on esp_has_rmt in lib.rs) and RMT-dependent tests cannot run.
-    if chip_feature == CHIP_FEATURE_ESP32C2 {
-        let is_allowed = matches!(
-            embedded_test,
-            "button_five_compile"
-                | "button_watch_five_compile"
-                | "clock_sync_two_compile"
-                | "ir_colon_form_compile_fail"
-                | "lcd_text_duplicate_address_compile_fail"
-                | "lcd_text_four_addresses_compile"
-                | "led_five_compile"
-                | "rfid_one_compile"
-        );
-        if !is_allowed {
-            return Some(
-                "embedded compile-test mapping for this test is not validated yet on ESP32-C2",
-            );
+    // Capability-based skip: derive required capabilities from the test name and compare
+    // against what the chip provides.
+    let chip_caps = chip_capabilities(chip_feature);
+    let required_caps = test_capabilities_required(embedded_test);
+    if required_caps.contains(Capability::Rmt) && !chip_caps.contains(Capability::Rmt) {
+        return Some("chip has no RMT peripheral");
+    }
+    if required_caps.contains(Capability::Wifi) && !chip_caps.contains(Capability::Wifi) {
+        return Some("chip has no Wi-Fi");
+    }
+    if required_caps.contains(Capability::DualSpi) && !chip_caps.contains(Capability::DualSpi) {
+        return Some("chip has fewer than two SPI peripherals");
+    }
+
+    // GPIO availability: scan the test source for all GPIO pin numbers it references,
+    // then check whether any of those pins are absent on this chip.
+    let profile = chip_profile(chip_feature);
+    if !profile.unavailable_gpios.is_empty() {
+        let required_gpios = scan_test_required_gpios(root, embedded_test);
+        let blocked: Vec<u8> = required_gpios
+            .iter()
+            .copied()
+            .filter(|g| profile.unavailable_gpios.contains(g))
+            .collect();
+        if !blocked.is_empty() {
+            return Some("test references GPIO pins unavailable on this chip");
         }
-    }
-
-    // clock_sync_two_compile uses embassy_net::Stack and requires Wi-Fi.
-    if embedded_test == "clock_sync_two_compile" && chip_feature == CHIP_FEATURE_ESP32H2 {
-        return Some("ESP32-H2 has no Wi-Fi; clock sync requires embassy_net");
-    }
-
-    // ESP32-H2 does not expose GPIO6 or GPIO7. Original ESP32 also does not expose
-    // GPIO6 or GPIO7 (connected to internal flash). IR tests that reference those pins
-    // cannot compile on either chip.
-    if chip_feature == CHIP_FEATURE_ESP32H2 || chip_feature == CHIP_FEATURE_ESP32 {
-        let uses_gpio6_or_gpio7 = matches!(
-            embedded_test,
-            "ir_visibility_compile"
-                | "ir_two_receivers_compile"
-                | "ir_four_receivers_compile"
-                | "ir_kepler_four_receivers_compile"
-                | "ir_mapping_four_receivers_compile"
-        );
-        if uses_gpio6_or_gpio7 {
-            return Some(
-                "test uses GPIO6/GPIO7 which are not available on this chip (flash-connected or absent)",
-            );
-        }
-    }
-
-    // led4_two_displays_compile uses GPIO6-GPIO11 and GPIO20 for the second display,
-    // which are not available on ESP32 (flash-connected pins), and GPIO6/GPIO7 plus
-    // GPIO15-GPIO21 which are absent on ESP32-H2 and ESP32-C3 respectively.
-    if embedded_test == "led4_two_displays_compile"
-        && matches!(
-            chip_feature,
-            CHIP_FEATURE_ESP32 | CHIP_FEATURE_ESP32H2 | CHIP_FEATURE_ESP32C3
-        )
-    {
-        return Some("second Led4 display pin map requires GPIOs unavailable on this chip");
-    }
-
-    // led_strip_spi_two_strips_compile uses GPIO6 for the second SPI strip on RISC-V,
-    // which is not available on ESP32-H2.
-    if embedded_test == "led_strip_spi_two_strips_compile" && chip_feature == CHIP_FEATURE_ESP32H2 {
-        return Some(
-            "two-strip SPI compile test uses GPIO6 for second strip, unavailable on ESP32-H2",
-        );
     }
 
     None

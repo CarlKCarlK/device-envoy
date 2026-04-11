@@ -23,10 +23,10 @@ ir_mappings! {
     button: TestButton,
     capacity: 1,
     IrMappingsFourCompileTest {
-        IrMapping7: { pin: GPIO7 },
-        IrMapping6: { pin: GPIO6 },
-        IrMapping5: { pin: GPIO5 },
-        IrMapping4: { pin: GPIO4 }
+        IrMapping3: { pin: GPIO3 },
+        IrMapping2: { pin: GPIO2 },
+        IrMapping1: { pin: GPIO1 },
+        IrMapping0: { pin: GPIO0 }
     }
 }
 
@@ -41,15 +41,15 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 
     #[cfg(feature = "esp32s2")]
     {
-        let (_ir_mapping7, _ir_mapping6, _ir_mapping5, _ir_mapping4) =
+        let (_ir_mapping3, _ir_mapping2, _ir_mapping1, _ir_mapping0) =
             IrMappingsFourCompileTest::new(
-                p.GPIO7,
+                p.GPIO3,
                 rmt80.channel0,
-                p.GPIO6,
+                p.GPIO2,
                 rmt80.channel1,
-                p.GPIO5,
+                p.GPIO1,
                 rmt80.channel2,
-                p.GPIO4,
+                p.GPIO0,
                 rmt80.channel3,
                 &BUTTON_MAP,
                 &BUTTON_MAP,
@@ -61,15 +61,15 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 
     #[cfg(all(target_arch = "xtensa", not(feature = "esp32s2")))]
     {
-        let (_ir_mapping7, _ir_mapping6, _ir_mapping5, _ir_mapping4) =
+        let (_ir_mapping3, _ir_mapping2, _ir_mapping1, _ir_mapping0) =
             IrMappingsFourCompileTest::new(
-                p.GPIO7,
+                p.GPIO3,
                 rmt80.channel4,
-                p.GPIO6,
+                p.GPIO2,
                 rmt80.channel5,
-                p.GPIO5,
+                p.GPIO1,
                 rmt80.channel6,
-                p.GPIO4,
+                p.GPIO0,
                 rmt80.channel7,
                 &BUTTON_MAP,
                 &BUTTON_MAP,

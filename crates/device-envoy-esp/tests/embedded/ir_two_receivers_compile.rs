@@ -1,7 +1,7 @@
 //! Embedded compile-only test target for two IR receivers.
 //!
-//! This test target should build for both C6 and S3. On hardware, construction of
-//! both receivers must succeed with distinct channels.
+//! This test target should build for all RMT-capable chips. On hardware, construction
+//! of both receivers must succeed with distinct channels.
 
 #![no_std]
 #![no_main]
@@ -14,19 +14,10 @@ use device_envoy_esp::{init_and_start, ir_keplers};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-#[cfg(feature = "esp32")]
 ir_keplers! {
     IrKeplersCompileTest {
         IrKepler0: { pin: GPIO0 },
         IrKepler1: { pin: GPIO1 }
-    }
-}
-
-#[cfg(not(feature = "esp32"))]
-ir_keplers! {
-    IrKeplersCompileTest {
-        IrKepler7: { pin: GPIO7 },
-        IrKepler6: { pin: GPIO6 }
     }
 }
 
@@ -53,19 +44,10 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     #[cfg(not(target_arch = "xtensa"))]
     let channel_creator1 = rmt80.channel3;
 
-    #[cfg(feature = "esp32")]
     let (_ir_kepler0, _ir_kepler1) = IrKeplersCompileTest::new(
         p.GPIO0,
         channel_creator0,
         p.GPIO1,
-        channel_creator1,
-        spawner,
-    )?;
-    #[cfg(not(feature = "esp32"))]
-    let (_ir_kepler7, _ir_kepler6) = IrKeplersCompileTest::new(
-        p.GPIO7,
-        channel_creator0,
-        p.GPIO6,
         channel_creator1,
         spawner,
     )?;

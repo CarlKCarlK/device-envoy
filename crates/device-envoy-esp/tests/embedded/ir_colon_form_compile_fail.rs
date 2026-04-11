@@ -11,7 +11,7 @@ use device_envoy_esp::ir;
 esp_bootloader_esp_idf::esp_app_desc!();
 
 ir! {
-    IrOldStyle: { pin: GPIO7 }
+    IrOldStyle: { pin: GPIO0 }
 }
 
 #[esp_rtos::main]

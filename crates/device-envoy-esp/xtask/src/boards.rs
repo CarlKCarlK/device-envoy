@@ -125,6 +125,11 @@ pub(crate) struct BoardProfile {
     pub(crate) ir_pin_rx_channel2: (u8, u8),
     pub(crate) rfid_wiring: RfidWiring,
     pub(crate) audio_wiring: Option<AudioWiring>,
+    /// Whether this chip's linker budget is too constrained for large WiFi/stack examples.
+    pub(crate) stack_constrained: bool,
+    /// GPIO pin numbers that are absent from this chip's peripheral map and will cause a
+    /// compile error if referenced (e.g., GPIO6/7 on ESP32-H2, GPIO15–21 on ESP32-C3).
+    pub(crate) unavailable_gpios: &'static [u8],
 }
 
 impl BoardProfile {
@@ -185,6 +190,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 5,
             dma_identifier: "DMA_I2S0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[6, 7, 8, 9, 10, 11],
     },
     BoardProfile {
         chip_id: ChipId::C2,
@@ -219,6 +226,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         // device-envoy-esp because the current esp-hal configuration for C2
         // does not expose the needed I2S support.
         audio_wiring: None,
+        stack_constrained: false,
+        unavailable_gpios: &[11, 12, 13, 14, 15, 16, 17, 21, 22, 23],
     },
     BoardProfile {
         chip_id: ChipId::C2,
@@ -253,6 +262,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         // device-envoy-esp because the current esp-hal configuration for C2
         // does not expose the needed I2S support.
         audio_wiring: None,
+        stack_constrained: false,
+        unavailable_gpios: &[11, 12, 13, 14, 15, 16, 17, 21, 22, 23],
     },
     BoardProfile {
         chip_id: ChipId::C3,
@@ -289,6 +300,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[15, 16, 17, 18, 19, 20, 21],
     },
     BoardProfile {
         chip_id: ChipId::C3,
@@ -325,6 +338,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[15, 16, 17, 18, 19, 20, 21],
     },
     BoardProfile {
         chip_id: ChipId::C6,
@@ -361,6 +376,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[],
     },
     BoardProfile {
         chip_id: ChipId::C6,
@@ -397,6 +414,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[],
     },
     BoardProfile {
         chip_id: ChipId::H2,
@@ -433,6 +452,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[6, 7, 15, 16, 17, 18, 19, 20, 21],
     },
     BoardProfile {
         chip_id: ChipId::S2,
@@ -469,6 +490,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 5,
             dma_identifier: "DMA_I2S0",
         }),
+        stack_constrained: true,
+        unavailable_gpios: &[],
     },
     BoardProfile {
         chip_id: ChipId::S3,
@@ -505,6 +528,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[],
     },
     BoardProfile {
         chip_id: ChipId::S3,
@@ -541,6 +566,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[],
     },
     BoardProfile {
         chip_id: ChipId::S3,
@@ -577,6 +604,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             word_select_pin_num: 4,
             dma_identifier: "DMA_CH0",
         }),
+        stack_constrained: false,
+        unavailable_gpios: &[],
     },
 ];
 

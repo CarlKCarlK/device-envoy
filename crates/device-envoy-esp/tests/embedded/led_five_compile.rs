@@ -15,28 +15,28 @@ use device_envoy_esp::{
 
 device_envoy_esp::led! {
     LedOne {
-        pin: GPIO2
+        pin: GPIO0
     }
 }
 device_envoy_esp::led! {
     LedTwo {
-        pin: GPIO3,
+        pin: GPIO1,
         max_steps: 40
     }
 }
 device_envoy_esp::led! {
     LedThree {
-        pin: GPIO4
+        pin: GPIO2
     }
 }
 device_envoy_esp::led! {
     LedFour {
-        pin: GPIO5
+        pin: GPIO3
     }
 }
 device_envoy_esp::led! {
     LedFive {
-        pin: GPIO6
+        pin: GPIO4
     }
 }
 
@@ -51,11 +51,11 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
 
-    let led_one = LedOne::new(p.GPIO2, OnLevel::High, spawner)?;
-    let led_two = LedTwo::new(p.GPIO3, OnLevel::High, spawner)?;
-    let led_three = LedThree::new(p.GPIO4, OnLevel::High, spawner)?;
-    let led_four = LedFour::new(p.GPIO5, OnLevel::High, spawner)?;
-    let led_five = LedFive::new(p.GPIO6, OnLevel::High, spawner)?;
+    let led_one = LedOne::new(p.GPIO0, OnLevel::High, spawner)?;
+    let led_two = LedTwo::new(p.GPIO1, OnLevel::High, spawner)?;
+    let led_three = LedThree::new(p.GPIO2, OnLevel::High, spawner)?;
+    let led_four = LedFour::new(p.GPIO3, OnLevel::High, spawner)?;
+    let led_five = LedFive::new(p.GPIO4, OnLevel::High, spawner)?;
 
     led_one.set_level(LedLevel::On);
     led_two.set_level(LedLevel::Off);

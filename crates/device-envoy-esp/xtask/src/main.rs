@@ -93,14 +93,6 @@ impl CapabilitySet {
         Self { bits: 0 }
     }
 
-    fn from_capabilities(capabilities: &[Capability]) -> Self {
-        let mut capability_set = Self::empty();
-        for capability in capabilities {
-            capability_set.insert(*capability);
-        }
-        capability_set
-    }
-
     fn insert(&mut self, capability: Capability) {
         self.bits |= capability.bit();
     }
@@ -111,50 +103,30 @@ impl CapabilitySet {
 }
 
 fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
-    match chip_feature {
-        CHIP_FEATURE_ESP32 => CapabilitySet::from_capabilities(&[
-            Capability::Rmt,
-            Capability::I2s,
-            Capability::AudioGpio,
-            Capability::ButtonGpio,
-            Capability::Wifi,
-        ]),
-        CHIP_FEATURE_ESP32C2 => {
-            CapabilitySet::from_capabilities(&[Capability::ButtonGpio, Capability::Wifi])
-        }
-        CHIP_FEATURE_ESP32C3 => CapabilitySet::from_capabilities(&[
-            Capability::Rmt,
-            Capability::I2s,
-            Capability::AudioGpio,
-            Capability::ButtonGpio,
-            Capability::Wifi,
-        ]),
-        CHIP_FEATURE_ESP32C6 => CapabilitySet::from_capabilities(&[
-            Capability::Rmt,
-            Capability::I2s,
-            Capability::AudioGpio,
-            Capability::ButtonGpio,
-            Capability::Wifi,
-        ]),
-        CHIP_FEATURE_ESP32H2 => {
-            CapabilitySet::from_capabilities(&[Capability::Rmt, Capability::I2s])
-        }
-        CHIP_FEATURE_ESP32S2 => CapabilitySet::from_capabilities(&[
-            Capability::Rmt,
-            Capability::I2s,
-            Capability::AudioGpio,
-            Capability::ButtonGpio,
-            Capability::Wifi,
-        ]),
-        CHIP_FEATURE_ESP32S3 => CapabilitySet::from_capabilities(&[
-            Capability::Rmt,
-            Capability::I2s,
-            Capability::AudioGpio,
-            Capability::ButtonGpio,
-            Capability::Wifi,
-        ]),
-        _ => panic!("unknown chip feature: {chip_feature}"),
+    // Derive from the first board profile for this chip. Per-chip hardware facts
+    // (rmt_count, wifi_supported, audio_wiring) are the same across all boards
+    // for a given chip, so any profile for the chip is authoritative.
+    let profile = boards::BOARD_PROFILES
+        .iter()
+        .find(|p| p.chip_feature() == chip_feature)
+        .unwrap_or_else(|| panic!("unknown chip feature: {chip_feature}"));
+
+    let mut caps = CapabilitySet::empty();
+    // RMT and I2S are always enabled together in build.rs.
+    if profile.rmt_count > 0 {
+        caps.insert(Capability::Rmt);
+        caps.insert(Capability::I2s);
     }
+    // Audio GPIO mapping is available whenever the board has a wiring defined.
+    if profile.audio_wiring.is_some() {
+        caps.insert(Capability::AudioGpio);
+    }
+    // Any free GPIO can serve as a button pin.
+    caps.insert(Capability::ButtonGpio);
+    if profile.wifi_supported {
+        caps.insert(Capability::Wifi);
+    }
+    caps
 }
 
 fn is_example_name(example_name: &str, base_name: &str) -> bool {
@@ -940,19 +912,9 @@ fn check_embedded_tests_for_target(
     compile_pass_tests: &[&str],
     compile_fail_tests: &[&str],
 ) -> bool {
-    // TODO00 Expand embedded compile-test pin mappings so these tests also run on ESP32, ESP32-C2, and ESP32-H2.
-    if matches!(
-        build_target.chip_feature,
-        CHIP_FEATURE_ESP32 | CHIP_FEATURE_ESP32C2 | CHIP_FEATURE_ESP32H2
-    ) {
-        println!(
-            "    skip embedded tests on {} (compile-only embedded test pin maps are currently maintained for ESP32-C3/ESP32-C6/ESP32-S2/ESP32-S3)",
-            build_target.label
-        );
-        return true;
-    }
-
     println!("{}", format!("    target: {}", build_target.label).cyan());
+    let strict_embedded_skips = std::env::var("CHECK_EMBEDDED_STRICT").as_deref() == Ok("1");
+    let mut skipped_count = 0usize;
     for embedded_test in compile_pass_tests {
         if let Some(reason) =
             explicit_embedded_test_skip_reason(build_target.chip_feature, embedded_test)
@@ -961,6 +923,7 @@ fn check_embedded_tests_for_target(
                 "      skip compile-pass test: {embedded_test} ({reason} on {})",
                 build_target.label
             );
+            skipped_count += 1;
             continue;
         }
         println!("      compile-pass test: {embedded_test}");
@@ -1000,6 +963,7 @@ fn check_embedded_tests_for_target(
                 "      skip compile-fail test: {embedded_test} ({reason} on {})",
                 build_target.label
             );
+            skipped_count += 1;
             continue;
         }
         println!("      compile-fail test: {embedded_test}");
@@ -1044,6 +1008,25 @@ fn check_embedded_tests_for_target(
         }
     }
 
+    if skipped_count > 0 {
+        println!(
+            "      skipped embedded tests on {}: {skipped_count}",
+            build_target.label
+        );
+        if strict_embedded_skips {
+            eprintln!(
+                "{}",
+                format!(
+                    "error: CHECK_EMBEDDED_STRICT=1 and {skipped_count} embedded tests were skipped on {}",
+                    build_target.label
+                )
+                .red()
+                .bold()
+            );
+            return false;
+        }
+    }
+
     true
 }
 
@@ -1051,13 +1034,69 @@ fn explicit_embedded_test_skip_reason(
     chip_feature: &str,
     embedded_test: &str,
 ) -> Option<&'static str> {
-    // TODO00 Add ESP32-C3 coverage for two-strip SPI compile tests once a stable second SPI/pin mapping is defined for this test target.
-    if embedded_test == "led_strip_spi_two_strips_compile" && chip_feature == CHIP_FEATURE_ESP32C3 {
-        return Some("two-strip SPI compile test is only mapped for ESP32-C6/ESP32-S3");
+    // ESP32-C2 has no RMT peripheral, so ir/ir_kepler/ir_mapping macros are not
+    // exported (gated on esp_has_rmt in lib.rs) and RMT-dependent tests cannot run.
+    if chip_feature == CHIP_FEATURE_ESP32C2 {
+        let is_allowed = matches!(
+            embedded_test,
+            "button_five_compile"
+                | "button_watch_five_compile"
+                | "clock_sync_two_compile"
+                | "ir_colon_form_compile_fail"
+                | "lcd_text_duplicate_address_compile_fail"
+                | "lcd_text_four_addresses_compile"
+                | "led_five_compile"
+                | "rfid_one_compile"
+        );
+        if !is_allowed {
+            return Some(
+                "embedded compile-test mapping for this test is not validated yet on ESP32-C2",
+            );
+        }
     }
-    // TODO00 Add an ESP32-C3-specific two-display Led4 compile test variant with valid C3 GPIO ranges.
-    if embedded_test == "led4_two_displays_compile" && chip_feature == CHIP_FEATURE_ESP32C3 {
-        return Some("second Led4 display pin map requires GPIOs unavailable on ESP32-C3");
+
+    // clock_sync_two_compile uses embassy_net::Stack and requires Wi-Fi.
+    if embedded_test == "clock_sync_two_compile" && chip_feature == CHIP_FEATURE_ESP32H2 {
+        return Some("ESP32-H2 has no Wi-Fi; clock sync requires embassy_net");
+    }
+
+    // ESP32-H2 does not expose GPIO6 or GPIO7. Original ESP32 also does not expose
+    // GPIO6 or GPIO7 (connected to internal flash). IR tests that reference those pins
+    // cannot compile on either chip.
+    if chip_feature == CHIP_FEATURE_ESP32H2 || chip_feature == CHIP_FEATURE_ESP32 {
+        let uses_gpio6_or_gpio7 = matches!(
+            embedded_test,
+            "ir_visibility_compile"
+                | "ir_two_receivers_compile"
+                | "ir_four_receivers_compile"
+                | "ir_kepler_four_receivers_compile"
+                | "ir_mapping_four_receivers_compile"
+        );
+        if uses_gpio6_or_gpio7 {
+            return Some(
+                "test uses GPIO6/GPIO7 which are not available on this chip (flash-connected or absent)",
+            );
+        }
+    }
+
+    // led4_two_displays_compile uses GPIO6-GPIO11 and GPIO20 for the second display,
+    // which are not available on ESP32 (flash-connected pins), and GPIO6/GPIO7 plus
+    // GPIO15-GPIO21 which are absent on ESP32-H2 and ESP32-C3 respectively.
+    if embedded_test == "led4_two_displays_compile"
+        && matches!(
+            chip_feature,
+            CHIP_FEATURE_ESP32 | CHIP_FEATURE_ESP32H2 | CHIP_FEATURE_ESP32C3
+        )
+    {
+        return Some("second Led4 display pin map requires GPIOs unavailable on this chip");
+    }
+
+    // led_strip_spi_two_strips_compile uses GPIO6 for the second SPI strip on RISC-V,
+    // which is not available on ESP32-H2.
+    if embedded_test == "led_strip_spi_two_strips_compile" && chip_feature == CHIP_FEATURE_ESP32H2 {
+        return Some(
+            "two-strip SPI compile test uses GPIO6 for second strip, unavailable on ESP32-H2",
+        );
     }
 
     None

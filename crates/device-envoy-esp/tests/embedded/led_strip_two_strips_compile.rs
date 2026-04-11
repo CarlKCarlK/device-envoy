@@ -14,12 +14,32 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(feature = "esp32")]
+led_strip! {
+    LedStripA {
+        max_frames: 2,
+        len: 8,
+        pin: GPIO0,
+        max_current: Current::Milliamps(120),
+    }
+}
+
+#[cfg(not(feature = "esp32"))]
 led_strip! {
     LedStripA {
         max_frames: 2,
         len: 8,
         pin: GPIO10,
         max_current: Current::Milliamps(120),
+    }
+}
+
+#[cfg(feature = "esp32")]
+led_strip! {
+    LedStripB {
+        len: 1,
+        max_frames: 2,
+        pin: GPIO1,
     }
 }
 
@@ -32,7 +52,11 @@ led_strip! {
     }
 }
 
-#[cfg(all(target_arch = "xtensa", not(feature = "esp32s3")))]
+#[cfg(all(
+    target_arch = "xtensa",
+    not(feature = "esp32"),
+    not(feature = "esp32s3")
+))]
 led_strip! {
     LedStripB {
         len: 1,
@@ -59,10 +83,19 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 
+    #[cfg(feature = "esp32")]
+    let led_strip_a = LedStripA::new(p.GPIO0, rmt80.channel0, spawner)?;
+    #[cfg(not(feature = "esp32"))]
     let led_strip_a = LedStripA::new(p.GPIO10, rmt80.channel0, spawner)?;
+    #[cfg(feature = "esp32")]
+    let led_strip_b = LedStripB::new(p.GPIO1, rmt80.channel1, spawner)?;
     #[cfg(feature = "esp32s3")]
     let led_strip_b = LedStripB::new(p.GPIO48, rmt80.channel1, spawner)?;
-    #[cfg(all(target_arch = "xtensa", not(feature = "esp32s3")))]
+    #[cfg(all(
+        target_arch = "xtensa",
+        not(feature = "esp32"),
+        not(feature = "esp32s3")
+    ))]
     let led_strip_b = LedStripB::new(p.GPIO0, rmt80.channel1, spawner)?;
     #[cfg(not(target_arch = "xtensa"))]
     let led_strip_b = LedStripB::new(p.GPIO8, rmt80.channel1, spawner)?;

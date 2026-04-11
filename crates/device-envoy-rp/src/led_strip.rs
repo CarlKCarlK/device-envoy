@@ -399,7 +399,6 @@ where
 /// # #![no_main]
 /// # use panic_probe as _;
 /// # use core::{convert::Infallible, future::pending};
-/// # use core::future::pending;
 /// # use defmt_rtt as _;
 /// # use embassy_executor::Spawner;
 /// # use defmt::info;
@@ -488,7 +487,7 @@ where
 ///             (frame_go_bottom, frame_duration),
 ///         ]); // Loop animation (until replaced)
 ///
-///     future::pending::<Result<Infallible>>().await // Run forever
+///     pending().await // run forever
 /// }
 /// ```
 ///

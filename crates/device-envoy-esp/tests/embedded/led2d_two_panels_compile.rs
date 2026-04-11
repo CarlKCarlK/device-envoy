@@ -17,6 +17,19 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 const LED_LAYOUT_4X2: LedLayout<8, 4, 2> = LedLayout::serpentine_column_major();
 
+#[cfg(feature = "esp32")]
+led2d! {
+    Led2dPanelA {
+        font: Led2dFont::Font4x6,
+        led_layout: LED_LAYOUT_4X2,
+        pin: GPIO0,
+        max_frames: 2,
+        max_current: Current::Milliamps(120),
+        len: 8,
+    }
+}
+
+#[cfg(not(feature = "esp32"))]
 led2d! {
     Led2dPanelA {
         font: Led2dFont::Font4x6,
@@ -25,6 +38,17 @@ led2d! {
         max_frames: 2,
         max_current: Current::Milliamps(120),
         len: 8,
+    }
+}
+
+#[cfg(feature = "esp32")]
+led2d! {
+    Led2dPanelB {
+        led_layout: LED_LAYOUT_4X2,
+        max_frames: 2,
+        len: 8,
+        font: Led2dFont::Font4x6,
+        pin: GPIO1,
     }
 }
 
@@ -39,7 +63,11 @@ led2d! {
     }
 }
 
-#[cfg(all(target_arch = "xtensa", not(feature = "esp32s3")))]
+#[cfg(all(
+    target_arch = "xtensa",
+    not(feature = "esp32"),
+    not(feature = "esp32s3")
+))]
 led2d! {
     Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
@@ -70,10 +98,19 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 
+    #[cfg(feature = "esp32")]
+    let led2d_panel_a = Led2dPanelA::new(p.GPIO0, rmt80.channel0, spawner)?;
+    #[cfg(not(feature = "esp32"))]
     let led2d_panel_a = Led2dPanelA::new(p.GPIO10, rmt80.channel0, spawner)?;
+    #[cfg(feature = "esp32")]
+    let led2d_panel_b = Led2dPanelB::new(p.GPIO1, rmt80.channel1, spawner)?;
     #[cfg(feature = "esp32s3")]
     let led2d_panel_b = Led2dPanelB::new(p.GPIO48, rmt80.channel1, spawner)?;
-    #[cfg(all(target_arch = "xtensa", not(feature = "esp32s3")))]
+    #[cfg(all(
+        target_arch = "xtensa",
+        not(feature = "esp32"),
+        not(feature = "esp32s3")
+    ))]
     let led2d_panel_b = Led2dPanelB::new(p.GPIO0, rmt80.channel1, spawner)?;
     #[cfg(not(target_arch = "xtensa"))]
     let led2d_panel_b = Led2dPanelB::new(p.GPIO8, rmt80.channel1, spawner)?;

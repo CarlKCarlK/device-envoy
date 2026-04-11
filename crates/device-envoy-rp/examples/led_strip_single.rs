@@ -2,7 +2,6 @@
 #![no_std]
 #![no_main]
 
-use core::future::pending;
 use core::{convert::Infallible, future::pending};
 
 use defmt::info;

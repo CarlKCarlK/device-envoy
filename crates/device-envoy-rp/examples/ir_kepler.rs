@@ -2,7 +2,7 @@
 //! Example showing how to use the SunFounder Kepler Kit IR remote.
 #![no_std]
 #![no_main]
-use core::{convert::Infallible, future::pending};
+use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;

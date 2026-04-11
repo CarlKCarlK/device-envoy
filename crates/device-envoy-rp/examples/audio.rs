@@ -11,8 +11,8 @@
 #![no_std]
 #![no_main]
 
+use core::convert::Infallible;
 use core::time::Duration as StdDuration;
-use core::{convert::Infallible, future::pending};
 
 use defmt::info;
 use device_envoy_rp::Result;

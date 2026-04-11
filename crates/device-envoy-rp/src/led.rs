@@ -10,6 +10,7 @@
 //! ```rust,no_run
 //! # #![no_std]
 //! # #![no_main]
+//! # use core::future::pending;
 //! use device_envoy_rp::{
 //!     Result,
 //!     led,

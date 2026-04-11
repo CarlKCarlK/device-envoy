@@ -14,6 +14,15 @@ use device_envoy_esp::{init_and_start, ir_keplers};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(feature = "esp32")]
+ir_keplers! {
+    IrKeplersCompileTest {
+        IrKepler0: { pin: GPIO0 },
+        IrKepler1: { pin: GPIO1 }
+    }
+}
+
+#[cfg(not(feature = "esp32"))]
 ir_keplers! {
     IrKeplersCompileTest {
         IrKepler7: { pin: GPIO7 },
@@ -44,6 +53,15 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     #[cfg(not(target_arch = "xtensa"))]
     let channel_creator1 = rmt80.channel3;
 
+    #[cfg(feature = "esp32")]
+    let (_ir_kepler0, _ir_kepler1) = IrKeplersCompileTest::new(
+        p.GPIO0,
+        channel_creator0,
+        p.GPIO1,
+        channel_creator1,
+        spawner,
+    )?;
+    #[cfg(not(feature = "esp32"))]
     let (_ir_kepler7, _ir_kepler6) = IrKeplersCompileTest::new(
         p.GPIO7,
         channel_creator0,

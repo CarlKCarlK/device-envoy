@@ -2,7 +2,6 @@
 #![no_std]
 #![no_main]
 
-use core::future::pending;
 use core::{convert::Infallible, future::pending};
 use defmt::info;
 use defmt_rtt as _;
@@ -70,5 +69,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     led_strip_len160.animate(frames);
 
-    future::pending::<Result<Infallible>>().await // Run forever
+    pending().await // run forever
 }

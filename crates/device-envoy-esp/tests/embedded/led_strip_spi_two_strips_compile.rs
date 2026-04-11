@@ -18,6 +18,18 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+#[cfg(feature = "esp32")]
+led_strip! {
+    LedStripSpiA {
+        engine: device_envoy_esp::led_strip::Engine::Spi,
+        len: 8,
+        pin: GPIO0,
+        max_frames: 2,
+        max_current: Current::Milliamps(120),
+    }
+}
+
+#[cfg(not(feature = "esp32"))]
 led_strip! {
     LedStripSpiA {
         engine: device_envoy_esp::led_strip::Engine::Spi,
@@ -28,7 +40,7 @@ led_strip! {
     }
 }
 
-#[cfg(target_arch = "xtensa")]
+#[cfg(all(target_arch = "xtensa", not(feature = "esp32")))]
 led_strip! {
     LedStripSpiB {
         max_frames: 2,
@@ -57,6 +69,9 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
 
+    #[cfg(feature = "esp32")]
+    let led_strip_spi_a = LedStripSpiA::new(p.GPIO0, p.SPI2, spawner)?;
+    #[cfg(not(feature = "esp32"))]
     let led_strip_spi_a = LedStripSpiA::new(p.GPIO10, p.SPI2, spawner)?;
     led_strip_spi_a.write_frame(Frame1d([
         colors::BLUE,
@@ -69,7 +84,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
         colors::GRAY,
     ]));
 
-    #[cfg(target_arch = "xtensa")]
+    #[cfg(all(target_arch = "xtensa", not(feature = "esp32")))]
     {
         let led_strip_spi_b = LedStripSpiB::new(p.GPIO11, p.SPI3, spawner)?;
         led_strip_spi_b.write_frame(Frame1d([colors::RED]));

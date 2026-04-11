@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 #![no_std]
 #![no_main]
-use core::{convert::Infallible, future::pending};
+use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;

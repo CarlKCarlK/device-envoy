@@ -61,6 +61,7 @@ pub(crate) const SEGMENT_COUNT: usize = 8;
 /// ```rust,no_run
 /// # #![no_std]
 /// # #![no_main]
+/// # use core::future::pending;
 /// use embassy_time::{Duration, Timer};
 /// use device_envoy_rp::{Error, led4::{BlinkState, Led4 as _, Led4Rp, Led4RpStatic, OutputArray, circular_outline_animation}};
 /// # #[panic_handler]

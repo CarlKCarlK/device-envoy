@@ -148,59 +148,191 @@ fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
     caps
 }
 
-fn is_example_name(example_name: &str, base_name: &str) -> bool {
-    example_name == base_name
-        || example_name
-            .strip_prefix(base_name)
-            .is_some_and(|suffix| suffix.starts_with('_'))
+/// Strips the `_{chip_feature}_{board_dir}` suffix from a board-generated example name
+/// (e.g. `audio_example3_esp32c6_generic` → `audio_example3`), returning the base
+/// template name. Returns the full name unchanged for top-level examples that carry no
+/// board suffix.
+fn example_base_name(full_name: &str) -> &str {
+    const CHIP_NEEDLES: &[&str] = &[
+        "_esp32c2_",
+        "_esp32c3_",
+        "_esp32c6_",
+        "_esp32h2_",
+        "_esp32s2_",
+        "_esp32s3_",
+        "_esp32_",
+    ];
+    for needle in CHIP_NEEDLES {
+        if let Some(pos) = full_name.find(needle) {
+            return &full_name[..pos];
+        }
+    }
+    full_name
 }
 
-fn example_requirements(example: &str) -> CapabilitySet {
+/// Maps each example base name to the capabilities it requires.
+/// Base names must match exactly (no prefix matching).
+const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
+    ("audio", &[Capability::I2s, Capability::AudioGpio]),
+    ("audio20k_one", &[Capability::I2s, Capability::AudioGpio]),
+    ("audio_example1", &[Capability::I2s, Capability::AudioGpio]),
+    ("audio_example2", &[Capability::I2s, Capability::AudioGpio]),
+    ("audio_example3", &[Capability::I2s, Capability::AudioGpio]),
+    ("blinky", &[]),
+    ("button_example1", &[Capability::ButtonGpio]),
+    (
+        "clock_console_simple",
+        &[Capability::Wifi, Capability::LargeStack],
+    ),
+    ("clock_lcd", &[Capability::Wifi, Capability::LargeStack]),
+    ("clock_led4", &[Capability::Wifi, Capability::LargeStack]),
+    ("clock_led8x12", &[Capability::Wifi, Capability::LargeStack]),
+    ("clock_servos", &[Capability::Wifi, Capability::LargeStack]),
+    (
+        "clock_sync_example1",
+        &[Capability::Wifi, Capability::LargeStack],
+    ),
+    ("conway", &[Capability::Rmt]),
+    ("flash_block_example1", &[]),
+    ("ir", &[Capability::Rmt]),
+    ("ir_example1", &[Capability::Rmt]),
+    ("ir_kepler", &[Capability::Rmt]),
+    ("ir_kepler_example1", &[Capability::Rmt]),
+    ("ir_keplers", &[Capability::Rmt]),
+    ("ir_mapping_example1", &[Capability::Rmt]),
+    ("lcd_text", &[]),
+    ("lcd_text_example1", &[]),
+    ("lcd_texts", &[]),
+    ("led16x16_plus_1", &[Capability::Rmt]),
+    ("led16x16_plus_1_spi", &[Capability::Rmt]),
+    ("led16x16test", &[Capability::Rmt]),
+    ("led2d", &[Capability::Rmt]),
+    ("led2d_example1", &[Capability::Rmt]),
+    ("led2d_example2", &[Capability::Rmt]),
+    ("led_example1", &[]),
+    ("led_strip8_spi", &[Capability::Rmt]),
+    ("led_strip_example1", &[Capability::Rmt]),
+    ("led_strip_example2", &[Capability::Rmt]),
+    ("led_strip_len8", &[Capability::Rmt]),
+    ("rfid", &[]),
+    ("servo_basic", &[]),
+    ("servo_example1", &[]),
+    ("servo_player_example1", &[]),
+    ("servo_player_example2", &[]),
+    ("servos", &[]),
+    ("talk1_a1_strip_8_blue_gray", &[Capability::Rmt]),
+    (
+        "talk1_a3_strip_8_blue_white_blink_animate",
+        &[Capability::Rmt],
+    ),
+    ("talk1_a4_strip_96_blue_white_dot", &[Capability::Rmt]),
+    ("talk1_b1_panel_12x8_rust_cursor", &[Capability::Rmt]),
+    ("talk1_b2_panel_12x8_text_graphics", &[Capability::Rmt]),
+    (
+        "talk1_f1_dns",
+        &[
+            Capability::Rmt,
+            Capability::Wifi,
+            Capability::ButtonGpio,
+            Capability::LargeStack,
+        ],
+    ),
+    (
+        "wifi_auto_custom_checkbox",
+        &[Capability::Wifi, Capability::LargeStack],
+    ),
+    (
+        "wifi_auto_example1",
+        &[Capability::Wifi, Capability::LargeStack],
+    ),
+    (
+        "wifi_auto_force_button",
+        &[Capability::Wifi, Capability::LargeStack],
+    ),
+    (
+        "wifi_dns_hex",
+        &[Capability::Rmt, Capability::Wifi, Capability::LargeStack],
+    ),
+    ("wifi_scan", &[Capability::Wifi]),
+];
+
+fn example_requirements(example: &str) -> Result<CapabilitySet, String> {
+    let base = example_base_name(example);
+    let mut matches = EXAMPLE_REQUIREMENTS_TABLE
+        .iter()
+        .filter(|(name, _)| *name == base);
+    let Some((_, required_caps)) = matches.next() else {
+        return Err(format!(
+            "missing capability requirements mapping for example `{example}` (base `{base}`): \
+add an exact `{base}` entry to EXAMPLE_REQUIREMENTS_TABLE"
+        ));
+    };
+    if matches.next().is_some() {
+        return Err(format!(
+            "duplicate capability requirements mapping for example base `{base}` in EXAMPLE_REQUIREMENTS_TABLE"
+        ));
+    }
     let mut capability_set = CapabilitySet::empty();
+    for &cap in *required_caps {
+        capability_set.insert(cap);
+    }
+    Ok(capability_set)
+}
 
-    if example.starts_with("audio") {
-        capability_set.insert(Capability::I2s);
-        capability_set.insert(Capability::AudioGpio);
-    }
-    if example.starts_with("button_") {
-        capability_set.insert(Capability::ButtonGpio);
-    }
-    let requires_rmt = is_example_name(example, "blinky_smart_led")
-        || example.starts_with("conway")
-        || example.starts_with("ir")
-        || example.starts_with("led16x16")
-        || example.starts_with("led2d")
-        || example.starts_with("led_strip")
-        || is_example_name(example, "wifi_dns_hex");
-    if requires_rmt {
-        capability_set.insert(Capability::Rmt);
-    }
-    let requires_wifi = example.starts_with("wifi_") || example.starts_with("clock_");
-    if requires_wifi {
-        capability_set.insert(Capability::Wifi);
+fn validate_example_requirements_table(examples: &[String]) -> Result<(), String> {
+    let discovered_bases: std::collections::BTreeSet<String> = examples
+        .iter()
+        .map(|example| example_base_name(example).to_string())
+        .collect();
+
+    let mut table_counts: std::collections::BTreeMap<&str, usize> =
+        std::collections::BTreeMap::new();
+    for (name, _) in EXAMPLE_REQUIREMENTS_TABLE {
+        *table_counts.entry(*name).or_insert(0) += 1;
     }
 
-    if example.starts_with("talk1_a") || example.starts_with("talk1_b") {
-        capability_set.insert(Capability::Rmt);
-    }
-    if example.starts_with("talk1_f1_dns") {
-        capability_set.insert(Capability::Rmt);
-        capability_set.insert(Capability::Wifi);
-        capability_set.insert(Capability::ButtonGpio);
+    let missing: Vec<String> = discovered_bases
+        .iter()
+        .filter(|name| !table_counts.contains_key(name.as_str()))
+        .cloned()
+        .collect();
+    let extras: Vec<String> = table_counts
+        .keys()
+        .filter(|name| !discovered_bases.contains(**name))
+        .map(|name| (*name).to_string())
+        .collect();
+    let duplicates: Vec<String> = table_counts
+        .iter()
+        .filter(|(_, count)| **count > 1)
+        .map(|(name, count)| format!("{name} ({count} entries)"))
+        .collect();
+
+    if missing.is_empty() && extras.is_empty() && duplicates.is_empty() {
+        return Ok(());
     }
 
-    // Examples that exceed the ESP32-S2 linker memory budget.
-    let requires_large_stack = example.starts_with("talk1_f1_dns")
-        || example.starts_with("clock_")
-        || is_example_name(example, "wifi_auto_custom_checkbox")
-        || is_example_name(example, "wifi_auto_example1")
-        || is_example_name(example, "wifi_auto_force_button")
-        || is_example_name(example, "wifi_dns_hex");
-    if requires_large_stack {
-        capability_set.insert(Capability::LargeStack);
+    let mut message = String::from(
+        "example capability requirements table is out of sync with discovered examples.\n",
+    );
+    if !missing.is_empty() {
+        message.push_str("missing entries (add these exact base names):\n");
+        for name in &missing {
+            message.push_str(&format!("  - {name}\n"));
+        }
     }
-
-    capability_set
+    if !extras.is_empty() {
+        message.push_str("extra/stale entries (remove or rename these):\n");
+        for name in &extras {
+            message.push_str(&format!("  - {name}\n"));
+        }
+    }
+    if !duplicates.is_empty() {
+        message.push_str("duplicate entries (must be unique):\n");
+        for duplicate in &duplicates {
+            message.push_str(&format!("  - {duplicate}\n"));
+        }
+    }
+    Err(message)
 }
 
 fn missing_capabilities(
@@ -241,9 +373,7 @@ fn test_capabilities_required(test: &str) -> CapabilitySet {
 /// pin numbers it references (e.g. `p.GPIO6` or `pin: GPIO7` → 6 and 7). Used to
 /// automatically derive which chips can compile a test based on `unavailable_gpios`.
 fn scan_test_required_gpios(root: &Path, test_stem: &str) -> Vec<u8> {
-    let path = root
-        .join("tests/embedded")
-        .join(format!("{test_stem}.rs"));
+    let path = root.join("tests/embedded").join(format!("{test_stem}.rs"));
     let src = std::fs::read_to_string(&path).unwrap_or_default();
     let mut gpios = Vec::new();
     let mut pos = 0;
@@ -817,6 +947,11 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
     }
     examples.sort();
 
+    if let Err(error) = validate_example_requirements_table(&examples) {
+        eprintln!("{}", format!("error: {error}").red().bold());
+        return ExitCode::FAILURE;
+    }
+
     let Some(xtensa_linker_dir) = xtensa_linker_dir_if_needed(targets) else {
         return ExitCode::FAILURE;
     };
@@ -866,8 +1001,14 @@ fn check_embedded_tests_for_targets(targets: &[BuildTarget]) -> ExitCode {
                 &root,
                 &xtensa_linker_dir,
                 build_target,
-                &compile_pass_tests.iter().map(String::as_str).collect::<Vec<_>>(),
-                &compile_fail_tests.iter().map(String::as_str).collect::<Vec<_>>(),
+                &compile_pass_tests
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>(),
+                &compile_fail_tests
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>(),
             )
         })
         .collect();
@@ -928,8 +1069,14 @@ fn check_chip(chip_label: &str) -> ExitCode {
         &root,
         &xtensa_linker_dir,
         build_target,
-        &compile_pass_tests.iter().map(String::as_str).collect::<Vec<_>>(),
-        &compile_fail_tests.iter().map(String::as_str).collect::<Vec<_>>(),
+        &compile_pass_tests
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        &compile_fail_tests
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
     ) {
         return ExitCode::FAILURE;
     }
@@ -1014,8 +1161,15 @@ fn check_examples_for_target(
             );
             return;
         }
-        let missing =
-            missing_capabilities(chip_capabilities, example_requirements(example));
+        let required_capabilities = match example_requirements(example) {
+            Ok(required_capabilities) => required_capabilities,
+            Err(error) => {
+                eprintln!("{}", format!("error: {error}").red().bold());
+                failed.store(true, std::sync::atomic::Ordering::Relaxed);
+                return;
+            }
+        };
+        let missing = missing_capabilities(chip_capabilities, required_capabilities);
         if !missing.is_empty() {
             println!(
                 "    skip example: {example} ({} unavailable on {})",

@@ -8,7 +8,6 @@
 //!   red -> 5V, brown -> GND, yellow -> signal (GPIO4)
 //! - Button -> GPIO0 to GND (`PressedTo::Ground`)
 //!
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

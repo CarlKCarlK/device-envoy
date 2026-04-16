@@ -2,7 +2,6 @@
 //! - I2C LCD SDA -> GPIO16
 //! - I2C LCD SCL -> GPIO17
 //!
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

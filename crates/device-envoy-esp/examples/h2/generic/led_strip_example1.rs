@@ -1,7 +1,6 @@
 //! Wiring:
 //! - 8-pixel NeoPixel-style (WS2812) strip data input -> GPIO2
 //!
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

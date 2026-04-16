@@ -6,7 +6,6 @@
 //! - I2C LCD VCC -> 5V (most backpack modules; use 3.3V only if your module supports it)
 //! - I2C LCD GND -> GND (shared with ESP32 GND)
 //! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

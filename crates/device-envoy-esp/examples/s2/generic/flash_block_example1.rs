@@ -1,7 +1,6 @@
 //! Wiring:
 //! - No external wiring required; this example only uses onboard flash.
 //!
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

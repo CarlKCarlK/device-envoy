@@ -1,7 +1,6 @@
 //! Wiring:
 //! - Button -> GPIO6 to GND (`PressedTo::Ground`)
 //!
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

@@ -1,7 +1,6 @@
 //! Wiring:
 //! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO18
 //!
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

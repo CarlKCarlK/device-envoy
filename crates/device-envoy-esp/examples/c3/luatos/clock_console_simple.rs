@@ -2,7 +2,6 @@
 //!
 //! Wiring:
 //! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)
-#![allow(missing_docs)]
 //! Minimal Wi-Fi clock that logs the local time once per minute.
 
 #![no_std]

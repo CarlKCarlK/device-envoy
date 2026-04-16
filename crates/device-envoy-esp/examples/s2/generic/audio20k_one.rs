@@ -4,7 +4,6 @@
 //! - Audio data pin (`DIN`) -> GPIO21
 //! - Audio bit clock pin (`BCLK`) -> GPIO4
 //! - Audio word select pin (`LRC` / `LRCLK`) -> GPIO5
-#![allow(missing_docs)]
 //! audio20k_one: one short 22.05 kHz clip, then stop.
 //!
 //! Purpose:

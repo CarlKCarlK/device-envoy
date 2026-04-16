@@ -3,7 +3,6 @@
 //! Wiring:
 //! - 16x16 NeoPixel-style (WS2812) panel data input -> GPIO2 via `SPI2`
 //! - IR receiver data output -> GPIO7
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

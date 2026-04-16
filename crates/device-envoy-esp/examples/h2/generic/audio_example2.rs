@@ -5,7 +5,6 @@
 //! - Audio bit clock pin (`BCLK`) -> GPIO3
 //! - Audio word select pin (`LRC` / `LRCLK`) -> GPIO4
 //! - Button -> GPIO0 to GND
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

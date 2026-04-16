@@ -2,7 +2,6 @@
 //!
 //! Wiring:
 //! - IR receiver data output -> GPIO4
-#![allow(missing_docs)]
 #![no_std]
 #![no_main]
 

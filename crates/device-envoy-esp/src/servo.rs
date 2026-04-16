@@ -110,7 +110,7 @@ use core::cell::RefCell;
 pub use device_envoy_core::servo::Servo;
 use esp_hal::gpio::{interconnect::PeripheralOutput, DriveMode};
 use esp_hal::ledc::{channel, timer, LowSpeed};
-use esp_hal::ledc::{channel::ChannelIFace, timer::TimerIFace};
+use esp_hal::ledc::{channel::ChannelHW, channel::ChannelIFace, timer::TimerIFace};
 use esp_hal::time::Rate;
 use static_cell::StaticCell;
 
@@ -134,6 +134,7 @@ pub mod servo_player_generated {
 }
 
 const SERVO_PERIOD_US: u32 = 20_000;
+const SERVO_TIMER_DUTY_BITS: u32 = 14;
 
 /// Default minimum pulse width for hobby servos (microseconds).
 pub const SERVO_MIN_US_DEFAULT: u32 = 500;
@@ -231,11 +232,10 @@ impl ServoEsp {
                 / u32::from(self.max_degrees)
     }
 
-    fn degrees_to_duty_pct(&self, degrees: u16) -> u8 {
+    fn degrees_to_duty(&self, degrees: u16) -> u32 {
         let pulse_us = self.pulse_for_degrees(degrees);
-        let duty_pct = ((pulse_us * 100) + (SERVO_PERIOD_US / 2)) / SERVO_PERIOD_US;
-        assert!(duty_pct <= u8::MAX as u32);
-        duty_pct as u8
+        let duty_range = 1u32 << SERVO_TIMER_DUTY_BITS;
+        ((pulse_us * duty_range) + (SERVO_PERIOD_US / 2)) / SERVO_PERIOD_US
     }
 }
 
@@ -245,11 +245,8 @@ impl Servo for ServoEsp {
     /// Set position in degrees `0..=max_degrees`.
     fn set_degrees(&self, degrees: u16) {
         assert!(degrees <= self.max_degrees);
-        let duty_pct = self.degrees_to_duty_pct(degrees);
-        self.channel
-            .borrow_mut()
-            .set_duty(duty_pct)
-            .expect("LEDC set_duty failed in Servo::set_degrees");
+        let duty = self.degrees_to_duty(degrees);
+        self.channel.borrow_mut().set_duty_hw(duty);
     }
 
     /// Keep driving pulses at the last commanded angle.

@@ -159,7 +159,10 @@ const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
     ),
     ("clock_lcd", &[Capability::WIFI, Capability::LARGE_STACK]),
     ("clock_led4", &[Capability::WIFI, Capability::LARGE_STACK]),
-    ("clock_led8x12", &[Capability::WIFI, Capability::LARGE_STACK]),
+    (
+        "clock_led8x12",
+        &[Capability::WIFI, Capability::LARGE_STACK],
+    ),
     ("clock_servos", &[Capability::WIFI, Capability::LARGE_STACK]),
     (
         "clock_sync_example1",

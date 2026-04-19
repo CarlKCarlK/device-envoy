@@ -37,16 +37,16 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    // Must match the pin, pio, dma in LedStripLen96 above to avoid compilation error.
+    // Must match the pin in LedStripLen96 above to avoid compilation error.
     let led_strip_len96 = LedStripLen96::new(p.PIN_4, p.PIO1, p.DMA_CH5, spawner)?;
 
-    let mut frame1d = Frame1d::filled(colors::BLUE);
+    let mut frame1d = Frame1d::filled(colors::DARK_CYAN);
     loop {
         for dot_index in 0..LedStripLen96::LEN {
             frame1d[dot_index] = colors::LIGHT_GRAY;
             led_strip_len96.write_frame(frame1d);
             Timer::after(Duration::from_millis(50)).await;
-            frame1d[dot_index] = colors::BLUE;
+            frame1d[dot_index] = colors::DARK_CYAN;
         }
     }
 }

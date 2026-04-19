@@ -42,15 +42,16 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    // Must match the pin in LedStripLen96 above to avoid compilation error.
     let led_strip_len96 = LedStripLen96::new(p.GPIO18, rmt80.channel0, spawner)?;
 
-    let mut frame1d = Frame1d::filled(colors::BLUE);
+    let mut frame1d = Frame1d::filled(colors::DARK_CYAN);
     loop {
         for dot_index in 0..LedStripLen96::LEN {
             frame1d[dot_index] = colors::LIGHT_GRAY;
             led_strip_len96.write_frame(frame1d);
-            frame1d[dot_index] = colors::BLUE;
             Timer::after(Duration::from_millis(50)).await;
+            frame1d[dot_index] = colors::DARK_CYAN;
         }
     }
 }

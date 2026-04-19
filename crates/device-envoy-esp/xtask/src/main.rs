@@ -12,6 +12,7 @@ mod led_generated;
 mod led_strip_generated;
 mod servo_player_generated;
 
+use bitflags::bitflags;
 use clap::{Parser, Subcommand};
 use flate2::read::GzDecoder;
 use owo_colors::OwoColorize;
@@ -44,71 +45,43 @@ struct BuildTarget {
     build_std: bool,
 }
 
-#[derive(Clone, Copy)]
-enum Capability {
-    Rmt,
-    I2s,
-    AudioGpio,
-    ButtonGpio,
-    Wifi,
-    /// Chip has sufficient linker memory budget for large WiFi/stack examples.
-    LargeStack,
-    /// Chip exposes at least two independent SPI peripherals.
-    DualSpi,
-}
-
-#[derive(Clone, Copy)]
-struct CapabilitySet {
-    bits: u16,
+bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct Capability: u16 {
+        const RMT = 1 << 0;
+        const I2S = 1 << 1;
+        const AUDIO_GPIO = 1 << 2;
+        const BUTTON_GPIO = 1 << 3;
+        const WIFI = 1 << 4;
+        /// Chip has sufficient linker memory budget for large WiFi/stack examples.
+        const LARGE_STACK = 1 << 5;
+        /// Chip exposes at least two independent SPI peripherals.
+        const DUAL_SPI = 1 << 6;
+    }
 }
 
 const ALL_CAPABILITIES: [Capability; 7] = [
-    Capability::Rmt,
-    Capability::I2s,
-    Capability::AudioGpio,
-    Capability::ButtonGpio,
-    Capability::Wifi,
-    Capability::LargeStack,
-    Capability::DualSpi,
+    Capability::RMT,
+    Capability::I2S,
+    Capability::AUDIO_GPIO,
+    Capability::BUTTON_GPIO,
+    Capability::WIFI,
+    Capability::LARGE_STACK,
+    Capability::DUAL_SPI,
 ];
 
 impl Capability {
-    const fn bit(self) -> u16 {
-        match self {
-            Capability::Rmt => 1 << 0,
-            Capability::I2s => 1 << 1,
-            Capability::AudioGpio => 1 << 2,
-            Capability::ButtonGpio => 1 << 3,
-            Capability::Wifi => 1 << 4,
-            Capability::LargeStack => 1 << 5,
-            Capability::DualSpi => 1 << 6,
-        }
-    }
-
     const fn name(self) -> &'static str {
         match self {
-            Capability::Rmt => "RMT",
-            Capability::I2s => "I2S",
-            Capability::AudioGpio => "audio GPIO mapping",
-            Capability::ButtonGpio => "button GPIO mapping",
-            Capability::Wifi => "Wi-Fi",
-            Capability::LargeStack => "large stack/linker budget",
-            Capability::DualSpi => "dual SPI",
+            Capability::RMT => "RMT",
+            Capability::I2S => "I2S",
+            Capability::AUDIO_GPIO => "audio GPIO mapping",
+            Capability::BUTTON_GPIO => "button GPIO mapping",
+            Capability::WIFI => "Wi-Fi",
+            Capability::LARGE_STACK => "large stack/linker budget",
+            Capability::DUAL_SPI => "dual SPI",
+            _ => "unknown capability",
         }
-    }
-}
-
-impl CapabilitySet {
-    const fn empty() -> Self {
-        Self { bits: 0 }
-    }
-
-    fn insert(&mut self, capability: Capability) {
-        self.bits |= capability.bit();
-    }
-
-    const fn contains(self, capability: Capability) -> bool {
-        (self.bits & capability.bit()) != 0
     }
 }
 
@@ -122,28 +95,28 @@ fn chip_profile(chip_feature: &str) -> &'static boards::BoardProfile {
         .unwrap_or_else(|| panic!("unknown chip feature: {chip_feature}"))
 }
 
-fn chip_capabilities(chip_feature: &str) -> CapabilitySet {
+fn chip_capabilities(chip_feature: &str) -> Capability {
     let profile = chip_profile(chip_feature);
-    let mut caps = CapabilitySet::empty();
+    let mut caps = Capability::empty();
     // RMT and I2S are always enabled together in build.rs.
     if profile.rmt_count > 0 {
-        caps.insert(Capability::Rmt);
-        caps.insert(Capability::I2s);
+        caps.insert(Capability::RMT);
+        caps.insert(Capability::I2S);
     }
     // Audio GPIO mapping is available whenever the board has a wiring defined.
     if profile.audio_wiring.is_some() {
-        caps.insert(Capability::AudioGpio);
+        caps.insert(Capability::AUDIO_GPIO);
     }
     // Any free GPIO can serve as a button pin.
-    caps.insert(Capability::ButtonGpio);
+    caps.insert(Capability::BUTTON_GPIO);
     if profile.wifi_supported {
-        caps.insert(Capability::Wifi);
+        caps.insert(Capability::WIFI);
     }
     if !profile.stack_constrained {
-        caps.insert(Capability::LargeStack);
+        caps.insert(Capability::LARGE_STACK);
     }
     if profile.spi_count >= 2 {
-        caps.insert(Capability::DualSpi);
+        caps.insert(Capability::DUAL_SPI);
     }
     caps
 }
@@ -173,90 +146,90 @@ fn example_base_name(full_name: &str) -> &str {
 /// Maps each example base name to the capabilities it requires.
 /// Base names must match exactly (no prefix matching).
 const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
-    ("audio", &[Capability::I2s, Capability::AudioGpio]),
-    ("audio20k_one", &[Capability::I2s, Capability::AudioGpio]),
-    ("audio_example1", &[Capability::I2s, Capability::AudioGpio]),
-    ("audio_example2", &[Capability::I2s, Capability::AudioGpio]),
-    ("audio_example3", &[Capability::I2s, Capability::AudioGpio]),
+    ("audio", &[Capability::I2S, Capability::AUDIO_GPIO]),
+    ("audio20k_one", &[Capability::I2S, Capability::AUDIO_GPIO]),
+    ("audio_example1", &[Capability::I2S, Capability::AUDIO_GPIO]),
+    ("audio_example2", &[Capability::I2S, Capability::AUDIO_GPIO]),
+    ("audio_example3", &[Capability::I2S, Capability::AUDIO_GPIO]),
     ("blinky", &[]),
-    ("button_example1", &[Capability::ButtonGpio]),
+    ("button_example1", &[Capability::BUTTON_GPIO]),
     (
         "clock_console_simple",
-        &[Capability::Wifi, Capability::LargeStack],
+        &[Capability::WIFI, Capability::LARGE_STACK],
     ),
-    ("clock_lcd", &[Capability::Wifi, Capability::LargeStack]),
-    ("clock_led4", &[Capability::Wifi, Capability::LargeStack]),
-    ("clock_led8x12", &[Capability::Wifi, Capability::LargeStack]),
-    ("clock_servos", &[Capability::Wifi, Capability::LargeStack]),
+    ("clock_lcd", &[Capability::WIFI, Capability::LARGE_STACK]),
+    ("clock_led4", &[Capability::WIFI, Capability::LARGE_STACK]),
+    ("clock_led8x12", &[Capability::WIFI, Capability::LARGE_STACK]),
+    ("clock_servos", &[Capability::WIFI, Capability::LARGE_STACK]),
     (
         "clock_sync_example1",
-        &[Capability::Wifi, Capability::LargeStack],
+        &[Capability::WIFI, Capability::LARGE_STACK],
     ),
-    ("conway", &[Capability::Rmt]),
+    ("conway", &[Capability::RMT]),
     ("flash_block_example1", &[]),
-    ("ir", &[Capability::Rmt]),
-    ("ir_example1", &[Capability::Rmt]),
-    ("ir_kepler", &[Capability::Rmt]),
-    ("ir_kepler_example1", &[Capability::Rmt]),
-    ("ir_keplers", &[Capability::Rmt]),
-    ("ir_mapping_example1", &[Capability::Rmt]),
+    ("ir", &[Capability::RMT]),
+    ("ir_example1", &[Capability::RMT]),
+    ("ir_kepler", &[Capability::RMT]),
+    ("ir_kepler_example1", &[Capability::RMT]),
+    ("ir_keplers", &[Capability::RMT]),
+    ("ir_mapping_example1", &[Capability::RMT]),
     ("lcd_text", &[]),
     ("lcd_text_example1", &[]),
     ("lcd_texts", &[]),
-    ("led16x16_plus_1", &[Capability::Rmt]),
-    ("led16x16_plus_1_spi", &[Capability::Rmt]),
-    ("led16x16test", &[Capability::Rmt]),
-    ("led2d", &[Capability::Rmt]),
-    ("led2d_example1", &[Capability::Rmt]),
-    ("led2d_example2", &[Capability::Rmt]),
+    ("led16x16_plus_1", &[Capability::RMT]),
+    ("led16x16_plus_1_spi", &[Capability::RMT]),
+    ("led16x16test", &[Capability::RMT]),
+    ("led2d", &[Capability::RMT]),
+    ("led2d_example1", &[Capability::RMT]),
+    ("led2d_example2", &[Capability::RMT]),
     ("led_example1", &[]),
-    ("led_strip8_spi", &[Capability::Rmt]),
-    ("led_strip_example1", &[Capability::Rmt]),
-    ("led_strip_example2", &[Capability::Rmt]),
-    ("led_strip_len8", &[Capability::Rmt]),
+    ("led_strip8_spi", &[Capability::RMT]),
+    ("led_strip_example1", &[Capability::RMT]),
+    ("led_strip_example2", &[Capability::RMT]),
+    ("led_strip_len8", &[Capability::RMT]),
     ("rfid", &[]),
     ("servo_basic", &[]),
     ("servo_example1", &[]),
     ("servo_player_example1", &[]),
     ("servo_player_example2", &[]),
     ("servos", &[]),
-    ("talk1_a1_strip_8_blue_gray", &[Capability::Rmt]),
+    ("talk1_a1_strip_8_blue_gray", &[Capability::RMT]),
     (
         "talk1_a3_strip_8_blue_white_blink_animate",
-        &[Capability::Rmt],
+        &[Capability::RMT],
     ),
-    ("talk1_a4_strip_96_blue_white_dot", &[Capability::Rmt]),
-    ("talk1_b1_panel_12x8_rust_cursor", &[Capability::Rmt]),
-    ("talk1_b2_panel_12x8_text_graphics", &[Capability::Rmt]),
+    ("talk1_a4_strip_96_blue_white_dot", &[Capability::RMT]),
+    ("talk1_b1_panel_12x8_rust_cursor", &[Capability::RMT]),
+    ("talk1_b2_panel_12x8_text_graphics", &[Capability::RMT]),
     (
         "talk1_f1_dns",
         &[
-            Capability::Rmt,
-            Capability::Wifi,
-            Capability::ButtonGpio,
-            Capability::LargeStack,
+            Capability::RMT,
+            Capability::WIFI,
+            Capability::BUTTON_GPIO,
+            Capability::LARGE_STACK,
         ],
     ),
     (
         "wifi_auto_custom_checkbox",
-        &[Capability::Wifi, Capability::LargeStack],
+        &[Capability::WIFI, Capability::LARGE_STACK],
     ),
     (
         "wifi_auto_example1",
-        &[Capability::Wifi, Capability::LargeStack],
+        &[Capability::WIFI, Capability::LARGE_STACK],
     ),
     (
         "wifi_auto_force_button",
-        &[Capability::Wifi, Capability::LargeStack],
+        &[Capability::WIFI, Capability::LARGE_STACK],
     ),
     (
         "wifi_dns_hex",
-        &[Capability::Rmt, Capability::Wifi, Capability::LargeStack],
+        &[Capability::RMT, Capability::WIFI, Capability::LARGE_STACK],
     ),
-    ("wifi_scan", &[Capability::Wifi]),
+    ("wifi_scan", &[Capability::WIFI]),
 ];
 
-fn example_requirements(example: &str) -> Result<CapabilitySet, String> {
+fn example_requirements(example: &str) -> Result<Capability, String> {
     let base = example_base_name(example);
     let mut matches = EXAMPLE_REQUIREMENTS_TABLE
         .iter()
@@ -272,7 +245,7 @@ add an exact `{base}` entry to EXAMPLE_REQUIREMENTS_TABLE"
             "duplicate capability requirements mapping for example base `{base}` in EXAMPLE_REQUIREMENTS_TABLE"
         ));
     }
-    let mut capability_set = CapabilitySet::empty();
+    let mut capability_set = Capability::empty();
     for &cap in *required_caps {
         capability_set.insert(cap);
     }
@@ -336,8 +309,8 @@ fn validate_example_requirements_table(examples: &[String]) -> Result<(), String
 }
 
 fn missing_capabilities(
-    chip_capabilities: CapabilitySet,
-    required_capabilities: CapabilitySet,
+    chip_capabilities: Capability,
+    required_capabilities: Capability,
 ) -> Vec<&'static str> {
     let mut missing_capabilities = Vec::new();
     for capability in ALL_CAPABILITIES {
@@ -350,21 +323,21 @@ fn missing_capabilities(
 
 /// Returns the capabilities required by an embedded compile test, derived from the
 /// test's name. GPIO requirements are handled separately via `scan_test_required_gpios`.
-fn test_capabilities_required(test: &str) -> CapabilitySet {
-    let mut caps = CapabilitySet::empty();
+fn test_capabilities_required(test: &str) -> Capability {
+    let mut caps = Capability::empty();
     if test.starts_with("ir_")
         || matches!(
             test,
             "led_strip_two_strips_compile" | "led2d_two_panels_compile"
         )
     {
-        caps.insert(Capability::Rmt);
+        caps.insert(Capability::RMT);
     }
     if test == "clock_sync_two_compile" {
-        caps.insert(Capability::Wifi);
+        caps.insert(Capability::WIFI);
     }
     if test == "led_strip_spi_two_strips_compile" {
-        caps.insert(Capability::DualSpi);
+        caps.insert(Capability::DUAL_SPI);
     }
     caps
 }
@@ -1347,13 +1320,13 @@ fn explicit_embedded_test_skip_reason(
     // against what the chip provides.
     let chip_caps = chip_capabilities(chip_feature);
     let required_caps = test_capabilities_required(embedded_test);
-    if required_caps.contains(Capability::Rmt) && !chip_caps.contains(Capability::Rmt) {
+    if required_caps.contains(Capability::RMT) && !chip_caps.contains(Capability::RMT) {
         return Some("chip has no RMT peripheral");
     }
-    if required_caps.contains(Capability::Wifi) && !chip_caps.contains(Capability::Wifi) {
+    if required_caps.contains(Capability::WIFI) && !chip_caps.contains(Capability::WIFI) {
         return Some("chip has no Wi-Fi");
     }
-    if required_caps.contains(Capability::DualSpi) && !chip_caps.contains(Capability::DualSpi) {
+    if required_caps.contains(Capability::DUAL_SPI) && !chip_caps.contains(Capability::DUAL_SPI) {
         return Some("chip has fewer than two SPI peripherals");
     }
 

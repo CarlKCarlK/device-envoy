@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
+bitflags = "2.6"
 owo-colors = "4.1"
 flate2 = "1.1"
 tar = "0.4"

@@ -3,7 +3,7 @@
 //!
 //! This example combines the `WifiAutoRp` captive-portal workflow with a servo-based
 //! display. Because the servos are mounted reversed, the left servo shows minutes/seconds
-//! and the right servo shows hours/minutes with 180° reflections applied.
+//! and the right servo shows hours/minutes using per-servo `direction: reverse`.
 
 #![no_std]
 #![no_main]
@@ -21,7 +21,7 @@ use device_envoy_rp::{
     clock_sync::{ClockSyncRp, ClockSyncStaticRp, ONE_MINUTE},
     flash_block::FlashBlockRp,
     servo::Servo as _,
-    servo::{AtEnd, ServoPlayer as _, combine, linear, servo_player},
+    servo::{AtEnd, Direction, ServoPlayer as _, combine, linear, servo_player},
     wifi_auto::{
         WifiAutoEvent, WifiAutoRp,
         fields::{TimezoneField, TimezoneFieldStatic},
@@ -41,6 +41,7 @@ button_watch! {
 servo_player! {
     BottomServoPlayer {
         pin: PIN_11,
+        direction: Direction::Reverse,
         max_steps: 30,
     }
 }
@@ -48,6 +49,7 @@ servo_player! {
 servo_player! {
     TopServoPlayer {
         pin: PIN_12,
+        direction: Direction::Reverse,
         max_steps: 30,
     }
 }
@@ -172,7 +174,7 @@ impl ServoClockDisplay {
     async fn show_connecting(&self) {
         // Animate both servos in complementary two-phase sweeps.
         const FIVE_SECONDS: Duration = Duration::from_secs(5);
-        const PHASE1: [(u16, Duration); 10] = linear(180 - 18, 0, FIVE_SECONDS);
+        const PHASE1: [(u16, Duration); 10] = linear(18, 0, FIVE_SECONDS);
         const PHASE2: [(u16, Duration); 2] = linear(0, 180, FIVE_SECONDS);
         self.top.animate(combine!(PHASE1, PHASE2), AtEnd::Loop);
         self.bottom.animate(combine!(PHASE2, PHASE1), AtEnd::Loop);
@@ -203,13 +205,11 @@ impl ServoClockDisplay {
     }
 
     async fn set_angles(&self, left_degrees: i32, right_degrees: i32) {
-        // Swap servos and reflect angles for physical orientation.
-        let physical_left = reflect_degrees(right_degrees);
-        let physical_right = reflect_degrees(left_degrees);
+        // Swap logical sides to physical mounting orientation.
         let left_angle =
-            u16::try_from(physical_left).expect("servo angles must be between 0 and 180 degrees");
+            u16::try_from(right_degrees).expect("servo angles must be between 0 and 180 degrees");
         let right_angle =
-            u16::try_from(physical_right).expect("servo angles must be between 0 and 180 degrees");
+            u16::try_from(left_degrees).expect("servo angles must be between 0 and 180 degrees");
         self.bottom.set_degrees(left_angle);
         self.top.set_degrees(right_angle);
     }
@@ -226,10 +226,4 @@ fn hours_to_degrees(hours: u8) -> i32 {
 fn sixty_to_degrees(value: u8) -> i32 {
     assert!(value < 60);
     i32::from(value) * 180 / 60
-}
-
-#[inline]
-fn reflect_degrees(degrees: i32) -> i32 {
-    assert!((0..=180).contains(&degrees));
-    180 - degrees
 }

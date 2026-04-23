@@ -891,7 +891,7 @@ fn check_readme_example() -> ExitCode {
         extracted_example
     );
     let generated_example_path = crate_root.join("examples/__readme_example_generated.rs");
-    let _generated_example_cleanup = TemporaryFileCleanup::new(generated_example_path.clone());
+    let generated_example_cleanup = TemporaryFileCleanup::new(generated_example_path.clone());
     if let Err(write_error) = fs::write(&generated_example_path, generated_example_source) {
         eprintln!(
             "{}",
@@ -923,6 +923,8 @@ fn check_readme_example() -> ExitCode {
     ])) {
         return ExitCode::FAILURE;
     }
+
+    core::hint::black_box(&generated_example_cleanup);
 
     println!("{}", "README example compile check passed.".green());
     ExitCode::SUCCESS

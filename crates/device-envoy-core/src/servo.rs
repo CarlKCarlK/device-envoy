@@ -9,6 +9,15 @@ pub use crate::servo_player::{
     AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic, combine, linear,
 };
 
+/// Logical angle direction for servo mapping.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Direction {
+    /// `0` maps to the minimum pulse and increases toward maximum pulse.
+    Forward,
+    /// `0` maps to the maximum pulse and increases toward minimum pulse.
+    Reverse,
+}
+
 /// Platform-agnostic servo device contract.
 ///
 /// Platform crates implement this trait for their concrete servo types so direct

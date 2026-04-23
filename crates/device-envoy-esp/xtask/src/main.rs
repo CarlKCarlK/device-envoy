@@ -196,6 +196,7 @@ const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
     ("servo_player_example1", &[]),
     ("servo_player_example2", &[]),
     ("servos", &[]),
+    ("servos_calibrate", &[Capability::BUTTON_GPIO]),
     ("talk1_a1_strip_8_blue_gray", &[Capability::RMT]),
     (
         "talk1_a3_strip_8_blue_white_blink_animate",
@@ -1419,7 +1420,7 @@ fn check_readme_example() -> ExitCode {
         extracted_example
     );
     let generated_example_path = root.join("examples/__readme_example_generated.rs");
-    let _generated_example_cleanup = TemporaryFileCleanup::new(generated_example_path.clone());
+    let generated_example_cleanup = TemporaryFileCleanup::new(generated_example_path.clone());
     if let Err(write_error) = fs::write(&generated_example_path, generated_example_source) {
         eprintln!(
             "{}",
@@ -1468,6 +1469,8 @@ fn check_readme_example() -> ExitCode {
             return ExitCode::FAILURE;
         }
     }
+
+    core::hint::black_box(&generated_example_cleanup);
 
     ExitCode::SUCCESS
 }

@@ -321,8 +321,8 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         lcd_scl_pin: 5,
         servo_pin: 10,
         servo2_pin: 18,
-        led4_cell_pins: [10, 9, 8, 7],
-        led4_segment_pins: [4, 3, 2, 1, 0, 5, 18, 19],
+        led4_cell_pins: [9, 8, 4, 5],
+        led4_segment_pins: [7, 10, 3, 2, 19, 18, 1, 0],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
         rfid_wiring: RfidWiring {

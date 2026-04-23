@@ -94,7 +94,7 @@
 //! # use core::{convert::Infallible, future::pending};
 //! # use core::default::Default;
 //! # use core::result::Result::Ok;
-//! use device_envoy_rp::{Result, servo::{AtEnd, Servo as _, ServoPlayer as _, combine, linear, servo_player}};
+//! use device_envoy_rp::{Result, servo::{AtEnd, Direction, Servo as _, ServoPlayer as _, combine, linear, servo_player}};
 //! use embassy_time::Duration;
 //!
 //! // Define ServoSweep, a struct type for a servo on PIN_12.
@@ -107,6 +107,7 @@
 //!         min_us: 500,            // Minimum pulse width (µs) for 0° (default)
 //!         max_us: 2500,           // Maximum pulse width (µs) for max_degrees (default)
 //!         max_degrees: 180,       // Maximum servo angle (degrees) (default)
+//!         direction: Direction::Reverse, // Optional direction mapping (default: Direction::Forward)
 //!     }
 //! }
 //!
@@ -202,6 +203,7 @@ macro_rules! combine {
 ///         min_us: <u16_expr>,         // optional
 ///         max_us: <u16_expr>,         // optional
 ///         max_degrees: <u16_expr>,    // optional
+///         direction: <Direction_expr>,    // optional
 ///         max_steps: <usize_expr>,    // optional
 ///     }
 /// }
@@ -219,6 +221,7 @@ macro_rules! combine {
 /// - `max_us` — Maximum pulse width in microseconds for max_degrees
 ///   (default: 2500)
 /// - `max_degrees` — Maximum servo angle in degrees (default: 180)
+/// - `direction` — Logical direction mapping (`Direction::Forward` by default)
 /// - `max_steps` — Maximum number of animation steps (default: 16)
 ///
 /// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`,
@@ -254,6 +257,7 @@ macro_rules! __servo_player_impl {
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
             max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
             max_steps: 16,
+            direction: $crate::servo::Direction::Forward,
             fields: [ $($fields)* ]
         }
     };
@@ -275,6 +279,7 @@ macro_rules! __servo_player_impl {
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
             max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
             max_steps: 16,
+            direction: $crate::servo::Direction::Forward,
             fields: [ $($fields)* ]
         }
     };
@@ -290,6 +295,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ pin: $pin_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -303,6 +309,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -317,6 +324,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ pin: $pin_value:ident ]
     ) => {
         $crate::__servo_player_impl! {
@@ -330,6 +338,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -345,6 +354,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ slice: $slice_value:ident $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -358,6 +368,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -372,6 +383,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ slice: $slice_value:ident ]
     ) => {
         $crate::__servo_player_impl! {
@@ -385,6 +397,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -400,6 +413,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ min_us: $min_us_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -413,6 +427,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -427,6 +442,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ min_us: $min_us_value:expr ]
     ) => {
         $crate::__servo_player_impl! {
@@ -440,6 +456,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -455,6 +472,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ max_us: $max_us_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -468,6 +486,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us_value,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -482,6 +501,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ max_us: $max_us_value:expr ]
     ) => {
         $crate::__servo_player_impl! {
@@ -495,6 +515,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us_value,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -510,6 +531,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ max_degrees: $max_degrees_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -523,6 +545,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees_value,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -537,6 +560,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ max_degrees: $max_degrees_value:expr ]
     ) => {
         $crate::__servo_player_impl! {
@@ -550,6 +574,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees_value,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -565,6 +590,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ max_steps: $max_steps_value:expr $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -578,6 +604,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps_value,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -592,6 +619,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ max_steps: $max_steps_value:expr ]
     ) => {
         $crate::__servo_player_impl! {
@@ -605,6 +633,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps_value,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -620,6 +649,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ channel: A $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -633,6 +663,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -647,6 +678,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ channel: A ]
     ) => {
         $crate::__servo_player_impl! {
@@ -660,6 +692,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -674,6 +707,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ channel: B $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -687,6 +721,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -701,6 +736,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ channel: B ]
     ) => {
         $crate::__servo_player_impl! {
@@ -714,6 +750,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -728,6 +765,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ even $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -741,6 +779,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -755,6 +794,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ even ]
     ) => {
         $crate::__servo_player_impl! {
@@ -768,6 +808,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
         }
     };
@@ -782,6 +823,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ odd $(, $($rest:tt)* )? ]
     ) => {
         $crate::__servo_player_impl! {
@@ -795,6 +837,7 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ $($($rest)*)? ]
         }
     };
@@ -809,6 +852,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ odd ]
     ) => {
         $crate::__servo_player_impl! {
@@ -822,7 +866,38 @@ macro_rules! __servo_player_impl {
             max_us: $max_us,
             max_degrees: $max_degrees,
             max_steps: $max_steps,
+            direction: $direction,
             fields: [ ]
+        }
+    };
+
+    // Fill defaults: direction
+    (@__fill_defaults
+        vis: $vis:vis,
+        name: $name:ident,
+        pin: $pin:tt,
+        slice: $slice:tt,
+        channel: $channel:tt,
+        min_us: $min_us:expr,
+        max_us: $max_us:expr,
+        max_degrees: $max_degrees:expr,
+        max_steps: $max_steps:expr,
+        direction: $direction:expr,
+        fields: [ direction: $new_direction:expr $(, $($rest:tt)* )? ]
+    ) => {
+        $crate::__servo_player_impl! {
+            @__fill_defaults
+            vis: $vis,
+            name: $name,
+            pin: $pin,
+            slice: $slice,
+            channel: $channel,
+            min_us: $min_us,
+            max_us: $max_us,
+            max_degrees: $max_degrees,
+            max_steps: $max_steps,
+            direction: $new_direction,
+            fields: [ $($($rest)*)? ]
         }
     };
 
@@ -837,6 +912,7 @@ macro_rules! __servo_player_impl {
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
         max_steps: $max_steps:expr,
+        direction: $direction:expr,
         fields: [ ]
     ) => {
         $crate::__servo_player_impl! {
@@ -849,7 +925,8 @@ macro_rules! __servo_player_impl {
             min_us: $min_us,
             max_us: $max_us,
             max_degrees: $max_degrees,
-            max_steps: $max_steps
+            max_steps: $max_steps,
+            direction: $direction
         }
     };
 
@@ -863,7 +940,8 @@ macro_rules! __servo_player_impl {
         min_us: $min_us:expr,
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
-        max_steps: $max_steps:expr
+        max_steps: $max_steps:expr,
+        direction: $direction:expr
     ) => {
         compile_error!("servo_player! requires `pin: ...`");
     };
@@ -878,7 +956,8 @@ macro_rules! __servo_player_impl {
         min_us: $min_us:expr,
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
-        max_steps: $max_steps:expr
+        max_steps: $max_steps:expr,
+        direction: $direction:expr
     ) => {
         $crate::servo::paste::paste! {
             static [<$name:upper _SERVO_PLAYER_STATIC>]: $crate::servo::ServoPlayerStatic<$max_steps> =
@@ -929,7 +1008,8 @@ macro_rules! __servo_player_impl {
                         slice,
                         $min_us,
                         $max_us,
-                        $max_degrees
+                        $max_degrees,
+                        $direction
                     );
                     let token = [<$name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
                     spawner.spawn(token)?;
@@ -986,7 +1066,8 @@ macro_rules! __servo_player_impl {
         min_us: $min_us:expr,
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
-        max_steps: $max_steps:expr
+        max_steps: $max_steps:expr,
+        direction: $direction:expr
     ) => {
         $crate::servo::paste::paste! {
             static [<$name:upper _SERVO_PLAYER_STATIC>]: $crate::servo::ServoPlayerStatic<$max_steps> =
@@ -1032,7 +1113,9 @@ macro_rules! __servo_player_impl {
                         channel: $channel,
                         min_us: $min_us,
                         max_us: $max_us,
-                        max_degrees: $max_degrees
+                        max_degrees: $max_degrees,
+                        max_steps: $max_steps,
+                        direction: $direction
                     };
                     let token = [<$name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
                     spawner.spawn(token)?;
@@ -1087,9 +1170,17 @@ macro_rules! __servo_player_impl {
         min_us: $min_us:expr,
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
-        max_steps: $max_steps:expr
+        max_steps: $max_steps:expr,
+        direction: $direction:expr
     ) => {
-        $crate::servo::servo_from_pin_slice($pin, $slice, $min_us, $max_us, $max_degrees)
+        $crate::servo::servo_from_pin_slice(
+            $pin,
+            $slice,
+            $min_us,
+            $max_us,
+            $max_degrees,
+            $direction,
+        )
     };
 
     (@__build_servo
@@ -1099,7 +1190,8 @@ macro_rules! __servo_player_impl {
         min_us: $min_us:expr,
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
-        max_steps: $max_steps:expr
+        max_steps: $max_steps:expr,
+        direction: $direction:expr
     ) => {
         $crate::servo::ServoRp::new_output_a(
             embassy_rp::pwm::Pwm::new_output_a(
@@ -1110,6 +1202,7 @@ macro_rules! __servo_player_impl {
             $min_us,
             $max_us,
             $max_degrees,
+            $direction,
         )
     };
 
@@ -1120,7 +1213,8 @@ macro_rules! __servo_player_impl {
         min_us: $min_us:expr,
         max_us: $max_us:expr,
         max_degrees: $max_degrees:expr,
-        max_steps: $max_steps:expr
+        max_steps: $max_steps:expr,
+        direction: $direction:expr
     ) => {
         $crate::servo::ServoRp::new_output_b(
             embassy_rp::pwm::Pwm::new_output_b(
@@ -1131,6 +1225,7 @@ macro_rules! __servo_player_impl {
             $min_us,
             $max_us,
             $max_degrees,
+            $direction,
         )
     };
 
@@ -1148,6 +1243,7 @@ macro_rules! __servo_player_impl {
             max_us: $crate::servo::SERVO_MAX_US_DEFAULT,
             max_degrees: $crate::servo::ServoRp::DEFAULT_MAX_DEGREES,
             max_steps: 16,
+            direction: $crate::servo::Direction::Forward,
             fields: [ $($fields)* ]
         }
     };

@@ -75,6 +75,7 @@ macro_rules! combine {
 ///         min_us: <u32_expr>,         // optional
 ///         max_us: <u32_expr>,         // optional
 ///         max_degrees: <u16_expr>,    // optional
+///         direction: <Direction_expr>, // optional
 ///         max_steps: <usize_expr>,    // optional
 ///     }
 /// }
@@ -93,6 +94,7 @@ macro_rules! combine {
 /// - `min_us` - Minimum pulse width in microseconds for 0° (default: `500`)
 /// - `max_us` - Maximum pulse width in microseconds for `max_degrees` (default: `2500`)
 /// - `max_degrees` - Maximum servo angle in degrees (default: `180`)
+/// - `direction` - Logical direction mapping (`Direction::Forward` by default)
 /// - `max_steps` - Maximum number of animation steps (default: `16`)
 ///
 /// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`,
@@ -119,6 +121,7 @@ macro_rules! __servo_player_impl {
             $(min_us: $min_us:expr,)?
             $(max_us: $max_us:expr,)?
             $(max_degrees: $max_degrees:expr,)?
+            $(direction: $direction:expr,)?
             $(max_steps: $max_steps:expr $(,)?)?
         }
     ) => {
@@ -142,6 +145,7 @@ macro_rules! __servo_player_impl {
                     $crate::__servo_player_impl!(@min_us $($min_us)?),
                     $crate::__servo_player_impl!(@max_us $($max_us)?),
                     $crate::__servo_player_impl!(@max_degrees $($max_degrees)?),
+                    $crate::__servo_player_impl!(@direction $($direction)?),
                 );
 
             static [<$name:upper _SERVO_PLAYER_STATIC>]:
@@ -180,6 +184,7 @@ macro_rules! __servo_player_impl {
             $(min_us: $min_us:expr,)?
             $(max_us: $max_us:expr,)?
             $(max_degrees: $max_degrees:expr,)?
+            $(direction: $direction:expr,)?
             $(max_steps: $max_steps:expr $(,)?)?
         }
     ) => {
@@ -192,6 +197,7 @@ macro_rules! __servo_player_impl {
                     $(min_us: $min_us,)?
                     $(max_us: $max_us,)?
                     $(max_degrees: $max_degrees,)?
+                    $(direction: $direction,)?
                     $(max_steps: $max_steps,)?
                 }
             }
@@ -205,6 +211,8 @@ macro_rules! __servo_player_impl {
     (@max_us) => { $crate::servo::SERVO_MAX_US_DEFAULT };
     (@max_degrees $max_degrees:expr) => { $max_degrees };
     (@max_degrees) => { $crate::servo::ServoEsp::DEFAULT_MAX_DEGREES };
+    (@direction $direction:expr) => { $direction };
+    (@direction) => { $crate::servo::Direction::Forward };
     (@max_steps $max_steps:expr) => { $max_steps };
     (@max_steps) => { 16 };
 }

@@ -3,9 +3,9 @@
 //! Wiring:
 //! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)
 //! - Digit select pins ->
-//!   GPIO10,   GPIO9,   GPIO8,   GPIO7
+//!   GPIO9,   GPIO8,   GPIO4,   GPIO5
 //! - Segment pins (A..G, DP) ->
-//!   GPIO4,   GPIO3,   GPIO2,   GPIO1,   GPIO0,   GPIO5,   GPIO18,   GPIO19
+//!   GPIO7,   GPIO10,   GPIO3,   GPIO2,   GPIO19,   GPIO18,   GPIO1,   GPIO0
 //! Wi-Fi enabled 4-digit clock that provisions credentials through `WifiAuto`.
 
 #![no_std]
@@ -73,21 +73,21 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let cell_pins = OutputArray::new([
-        Output::new(p.GPIO10, Level::High, OutputConfig::default()),
         Output::new(p.GPIO9, Level::High, OutputConfig::default()),
         Output::new(p.GPIO8, Level::High, OutputConfig::default()),
-        Output::new(p.GPIO7, Level::High, OutputConfig::default()),
+        Output::new(p.GPIO4, Level::High, OutputConfig::default()),
+        Output::new(p.GPIO5, Level::High, OutputConfig::default()),
     ]);
 
     let segment_pins = OutputArray::new([
-        Output::new(p.GPIO4, Level::Low, OutputConfig::default()),
+        Output::new(p.GPIO7, Level::Low, OutputConfig::default()),
+        Output::new(p.GPIO10, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO3, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO2, Level::Low, OutputConfig::default()),
+        Output::new(p.GPIO19, Level::Low, OutputConfig::default()),
+        Output::new(p.GPIO18, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO1, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO0, Level::Low, OutputConfig::default()),
-        Output::new(p.GPIO5, Level::Low, OutputConfig::default()),
-        Output::new(p.GPIO18, Level::Low, OutputConfig::default()),
-        Output::new(p.GPIO19, Level::Low, OutputConfig::default()),
     ]);
 
     static LED4_STATIC: Led4EspStatic = Led4Esp::new_static();

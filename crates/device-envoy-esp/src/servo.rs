@@ -107,7 +107,7 @@
 
 use crate::Result;
 use core::cell::RefCell;
-pub use device_envoy_core::servo::Servo;
+pub use device_envoy_core::servo::{Direction, Servo};
 use esp_hal::gpio::{interconnect::PeripheralOutput, DriveMode};
 use esp_hal::ledc::{channel, timer, LowSpeed};
 use esp_hal::ledc::{channel::ChannelHW, channel::ChannelIFace, timer::TimerIFace};
@@ -151,6 +151,7 @@ pub struct ServoStatic {
     min_us: u32,
     max_us: u32,
     max_degrees: u16,
+    direction: Direction,
 }
 
 impl ServoStatic {
@@ -162,6 +163,7 @@ impl ServoStatic {
         min_us: u32,
         max_us: u32,
         max_degrees: u16,
+        direction: Direction,
     ) -> Self {
         assert!(min_us < max_us, "min_us must be less than max_us");
         assert!(max_degrees > 0, "max_degrees must be positive");
@@ -173,6 +175,7 @@ impl ServoStatic {
             min_us,
             max_us,
             max_degrees,
+            direction,
         }
     }
 }
@@ -187,6 +190,7 @@ pub struct ServoEsp {
     min_us: u32,
     max_us: u32,
     max_degrees: u16,
+    direction: Direction,
 }
 
 impl ServoEsp {
@@ -222,6 +226,7 @@ impl ServoEsp {
             min_us: servo_static.min_us,
             max_us: servo_static.max_us,
             max_degrees: servo_static.max_degrees,
+            direction: servo_static.direction,
         })
     }
 
@@ -245,7 +250,11 @@ impl Servo for ServoEsp {
     /// Set position in degrees `0..=max_degrees`.
     fn set_degrees(&self, degrees: u16) {
         assert!(degrees <= self.max_degrees);
-        let duty = self.degrees_to_duty(degrees);
+        let physical_degrees = match self.direction {
+            Direction::Forward => degrees,
+            Direction::Reverse => self.max_degrees - degrees,
+        };
+        let duty = self.degrees_to_duty(physical_degrees);
         self.channel.borrow_mut().set_duty_hw(duty);
     }
 
@@ -279,6 +288,7 @@ pub use paste;
 ///         min_us: <u32_expr>,         // optional
 ///         max_us: <u32_expr>,         // optional
 ///         max_degrees: <u16_expr>,    // optional
+///         direction: <Direction_expr>, // optional
 ///     }
 /// }
 /// ```
@@ -294,6 +304,7 @@ pub use paste;
 /// - `min_us` - Minimum pulse width in microseconds for 0° (default: `500`)
 /// - `max_us` - Maximum pulse width in microseconds for `max_degrees` (default: `2500`)
 /// - `max_degrees` - Maximum servo angle in degrees (default: `180`)
+/// - `direction` - Logical angle direction (`Direction::Forward` by default)
 ///
 /// See the [servo module documentation](mod@crate::servo) for details and examples.
 #[macro_export]
@@ -322,6 +333,7 @@ macro_rules! __servo_impl {
             min_us: [],
             max_us: [],
             max_degrees: [],
+            direction: [],
             fields: [ $($fields)* ]
         }
     };
@@ -334,6 +346,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
     ) => {
         $crate::__servo_impl! {
@@ -345,6 +358,7 @@ macro_rules! __servo_impl {
             min_us: [$($min_us)?],
             max_us: [$($max_us)?],
             max_degrees: [$($max_degrees)?],
+            direction: [$($direction)?],
             fields: [ $($($rest)*)? ]
         }
     };
@@ -356,6 +370,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
     ) => {
         compile_error!("servo! duplicate `pin` field");
@@ -369,6 +384,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ timer: $timer:ident $(, $($rest:tt)*)? ]
     ) => {
         $crate::__servo_impl! {
@@ -380,6 +396,7 @@ macro_rules! __servo_impl {
             min_us: [$($min_us)?],
             max_us: [$($max_us)?],
             max_degrees: [$($max_degrees)?],
+            direction: [$($direction)?],
             fields: [ $($($rest)*)? ]
         }
     };
@@ -391,6 +408,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ timer: $timer:ident $(, $($rest:tt)*)? ]
     ) => {
         compile_error!("servo! duplicate `timer` field");
@@ -404,6 +422,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ channel: $channel:ident $(, $($rest:tt)*)? ]
     ) => {
         $crate::__servo_impl! {
@@ -415,6 +434,7 @@ macro_rules! __servo_impl {
             min_us: [$($min_us)?],
             max_us: [$($max_us)?],
             max_degrees: [$($max_degrees)?],
+            direction: [$($direction)?],
             fields: [ $($($rest)*)? ]
         }
     };
@@ -426,6 +446,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ channel: $channel:ident $(, $($rest:tt)*)? ]
     ) => {
         compile_error!("servo! duplicate `channel` field");
@@ -439,6 +460,7 @@ macro_rules! __servo_impl {
         min_us: [],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
     ) => {
         $crate::__servo_impl! {
@@ -450,6 +472,7 @@ macro_rules! __servo_impl {
             min_us: [$min_us],
             max_us: [$($max_us)?],
             max_degrees: [$($max_degrees)?],
+            direction: [$($direction)?],
             fields: [ $($($rest)*)? ]
         }
     };
@@ -461,6 +484,7 @@ macro_rules! __servo_impl {
         min_us: [$_min_us_seen:expr],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
     ) => {
         compile_error!("servo! duplicate `min_us` field");
@@ -474,6 +498,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
     ) => {
         $crate::__servo_impl! {
@@ -485,6 +510,7 @@ macro_rules! __servo_impl {
             min_us: [$($min_us)?],
             max_us: [$max_us],
             max_degrees: [$($max_degrees)?],
+            direction: [$($direction)?],
             fields: [ $($($rest)*)? ]
         }
     };
@@ -496,6 +522,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$_max_us_seen:expr],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
     ) => {
         compile_error!("servo! duplicate `max_us` field");
@@ -509,6 +536,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [],
+        direction: [$($direction:expr)?],
         fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
     ) => {
         $crate::__servo_impl! {
@@ -520,6 +548,7 @@ macro_rules! __servo_impl {
             min_us: [$($min_us)?],
             max_us: [$($max_us)?],
             max_degrees: [$max_degrees],
+            direction: [$($direction)?],
             fields: [ $($($rest)*)? ]
         }
     };
@@ -531,6 +560,7 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$_max_degrees_seen:expr],
+        direction: [$($direction:expr)?],
         fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
     ) => {
         compile_error!("servo! duplicate `max_degrees` field");
@@ -544,6 +574,45 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
+        fields: [ direction: $new_direction:expr $(, $($rest:tt)*)? ]
+    ) => {
+        $crate::__servo_impl! {
+            @__parse
+            name: $name,
+            pin: [$($pin)?],
+            timer: [$($timer)?],
+            channel: [$($channel)?],
+            min_us: [$($min_us)?],
+            max_us: [$($max_us)?],
+            max_degrees: [$($max_degrees)?],
+            direction: [$new_direction],
+            fields: [ $($($rest)*)? ]
+        }
+    };
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        direction: [$_direction_seen:expr],
+        fields: [ direction: $direction:expr $(, $($rest:tt)*)? ]
+    ) => {
+        compile_error!("servo! duplicate `direction` field");
+    };
+
+    (@__parse
+        name: $name:ident,
+        pin: [$($pin:ident)?],
+        timer: [$($timer:ident)?],
+        channel: [$($channel:ident)?],
+        min_us: [$($min_us:expr)?],
+        max_us: [$($max_us:expr)?],
+        max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ ]
     ) => {
         $crate::__servo_impl! {
@@ -554,7 +623,8 @@ macro_rules! __servo_impl {
             channel: [$($channel)?],
             min_us: [$($min_us)?],
             max_us: [$($max_us)?],
-            max_degrees: [$($max_degrees)?]
+            max_degrees: [$($max_degrees)?],
+            direction: [$($direction)?]
         }
     };
 
@@ -566,10 +636,11 @@ macro_rules! __servo_impl {
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
         max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?],
         fields: [ $field:ident : $($value:tt)+ ]
     ) => {
         compile_error!(
-            "servo! unknown field; expected `pin`, `timer`, `channel`, `min_us`, `max_us`, or `max_degrees`"
+            "servo! unknown field; expected `pin`, `timer`, `channel`, `min_us`, `max_us`, `max_degrees`, or `direction`"
         );
     };
 
@@ -580,7 +651,8 @@ macro_rules! __servo_impl {
         channel: [$($channel:ident)?],
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?]
+        max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?]
     ) => {
         compile_error!("servo! missing required `pin` field");
     };
@@ -591,7 +663,8 @@ macro_rules! __servo_impl {
         channel: [$($channel:ident)?],
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?]
+        max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?]
     ) => {
         compile_error!("servo! missing required `timer` field");
     };
@@ -602,7 +675,8 @@ macro_rules! __servo_impl {
         channel: [],
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?]
+        max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?]
     ) => {
         compile_error!("servo! missing required `channel` field");
     };
@@ -613,7 +687,8 @@ macro_rules! __servo_impl {
         channel: [$channel:ident],
         min_us: [$($min_us:expr)?],
         max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?]
+        max_degrees: [$($max_degrees:expr)?],
+        direction: [$($direction:expr)?]
     ) => {
         $crate::servo::paste::paste! {
             pub struct $name;
@@ -644,6 +719,7 @@ macro_rules! __servo_impl {
                             $crate::__servo_impl!(@min_us $($min_us)?),
                             $crate::__servo_impl!(@max_us $($max_us)?),
                             $crate::__servo_impl!(@max_degrees $($max_degrees)?),
+                            $crate::__servo_impl!(@direction $($direction)?),
                         ),
                     }
                 }
@@ -664,4 +740,6 @@ macro_rules! __servo_impl {
     (@max_us) => { $crate::servo::SERVO_MAX_US_DEFAULT };
     (@max_degrees $max_degrees:expr) => { $max_degrees };
     (@max_degrees) => { $crate::servo::ServoEsp::DEFAULT_MAX_DEGREES };
+    (@direction $direction:expr) => { $direction };
+    (@direction) => { $crate::servo::Direction::Forward };
 }

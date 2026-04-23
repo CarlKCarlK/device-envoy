@@ -310,6 +310,10 @@ name = "servos_esp32_generic"
 path = "examples/esp32/generic/servos.rs"
 
 [[example]]
+name = "servos_calibrate_esp32_generic"
+path = "examples/esp32/generic/servos_calibrate.rs"
+
+[[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32_generic"
 path = "examples/esp32/generic/talk1/a1_strip_8_blue_gray.rs"
 
@@ -516,6 +520,10 @@ path = "examples/c2/generic/servo_player_example2.rs"
 [[example]]
 name = "servos_esp32c2_generic"
 path = "examples/c2/generic/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32c2_generic"
+path = "examples/c2/generic/servos_calibrate.rs"
 
 [[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32c2_generic"
@@ -726,6 +734,10 @@ name = "servos_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/servos.rs"
 
 [[example]]
+name = "servos_calibrate_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/servos_calibrate.rs"
+
+[[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/talk1/a1_strip_8_blue_gray.rs"
 
@@ -932,6 +944,10 @@ path = "examples/c3/generic/servo_player_example2.rs"
 [[example]]
 name = "servos_esp32c3_generic"
 path = "examples/c3/generic/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32c3_generic"
+path = "examples/c3/generic/servos_calibrate.rs"
 
 [[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32c3_generic"
@@ -1142,6 +1158,10 @@ name = "servos_esp32c3_luatos"
 path = "examples/c3/luatos/servos.rs"
 
 [[example]]
+name = "servos_calibrate_esp32c3_luatos"
+path = "examples/c3/luatos/servos_calibrate.rs"
+
+[[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32c3_luatos"
 path = "examples/c3/luatos/talk1/a1_strip_8_blue_gray.rs"
 
@@ -1348,6 +1368,10 @@ path = "examples/c6/generic/servo_player_example2.rs"
 [[example]]
 name = "servos_esp32c6_generic"
 path = "examples/c6/generic/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32c6_generic"
+path = "examples/c6/generic/servos_calibrate.rs"
 
 [[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32c6_generic"
@@ -1558,6 +1582,10 @@ name = "servos_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/servos.rs"
 
 [[example]]
+name = "servos_calibrate_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/servos_calibrate.rs"
+
+[[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/talk1/a1_strip_8_blue_gray.rs"
 
@@ -1764,6 +1792,10 @@ path = "examples/h2/generic/servo_player_example2.rs"
 [[example]]
 name = "servos_esp32h2_generic"
 path = "examples/h2/generic/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32h2_generic"
+path = "examples/h2/generic/servos_calibrate.rs"
 
 [[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32h2_generic"
@@ -1974,6 +2006,10 @@ name = "servos_esp32s2_generic"
 path = "examples/s2/generic/servos.rs"
 
 [[example]]
+name = "servos_calibrate_esp32s2_generic"
+path = "examples/s2/generic/servos_calibrate.rs"
+
+[[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32s2_generic"
 path = "examples/s2/generic/talk1/a1_strip_8_blue_gray.rs"
 
@@ -2180,6 +2216,10 @@ path = "examples/s3/generic/servo_player_example2.rs"
 [[example]]
 name = "servos_esp32s3_generic"
 path = "examples/s3/generic/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32s3_generic"
+path = "examples/s3/generic/servos_calibrate.rs"
 
 [[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32s3_generic"
@@ -2390,6 +2430,10 @@ name = "servos_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/servos.rs"
 
 [[example]]
+name = "servos_calibrate_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/servos_calibrate.rs"
+
+[[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/talk1/a1_strip_8_blue_gray.rs"
 
@@ -2596,6 +2640,10 @@ path = "examples/s3/devkitc1_v1_0_n16r8/servo_player_example2.rs"
 [[example]]
 name = "servos_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/servos_calibrate.rs"
 
 [[example]]
 name = "talk1_a1_strip_8_blue_gray_esp32s3_devkitc1_v1_0_n16r8"

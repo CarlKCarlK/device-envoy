@@ -32,7 +32,7 @@ use device_envoy_esp::{
     flash_block::FlashBlockEsp,
     init_and_start,
     servo::Servo as _,
-    servo::{combine, linear, servo_player, AtEnd, ServoPlayer as _, ServoPlayerHandle},
+    servo::{combine, linear, servo_player, AtEnd, Direction, ServoPlayer as _, ServoPlayerHandle},
     wifi_auto::{
         fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
@@ -56,6 +56,7 @@ servo_player! {
         pin: GPIO{{ servo_bottom_pin }},
         timer: Timer0,
         channel: Channel0,
+        direction: Direction::Reverse,
         max_steps: SERVO_MAX_STEPS,
     }
 }
@@ -65,6 +66,7 @@ servo_player! {
         pin: GPIO{{ servo_top_pin }},
         timer: Timer1,
         channel: Channel1,
+        direction: Direction::Reverse,
         max_steps: SERVO_MAX_STEPS,
     }
 }
@@ -110,15 +112,15 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 match wifi_auto_event {
                     WifiAutoEvent::CaptivePortalReady => {
                         info!("WifiAuto: setup mode ready");
-                        servo_clock_display_ref.show_portal_ready();
+                        servo_clock_display_ref.show_portal_ready().await;
                     }
                     WifiAutoEvent::Connecting { .. } => {
                         info!("WifiAuto: connecting");
-                        servo_clock_display_ref.show_connecting();
+                        servo_clock_display_ref.show_connecting().await;
                     }
                     WifiAutoEvent::ConnectionFailed => {
                         info!("WifiAuto: connection failed");
-                        servo_clock_display_ref.show_connection_failed();
+                        servo_clock_display_ref.show_connection_failed().await;
                     }
                 }
                 Ok(())
@@ -127,7 +129,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .await?;
 
     info!("WiFi connected");
-    servo_clock_display.show_portal_ready();
+    servo_clock_display.show_portal_ready().await;
 
     let offset_minutes = timezone_field
         .offset_minutes()?
@@ -158,7 +160,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     }
                     ClockUiEvent::RenderMinutesSeconds { minutes, seconds } => {
                         info!("Clock mode: minutes-seconds");
-                        servo_clock_display_ref.show_minutes_seconds(minutes, seconds);
+                        servo_clock_display_ref
+                            .show_minutes_seconds(minutes, seconds)
+                            .await;
                     }
                     ClockUiEvent::RenderHoursMinutesEdit { hours, minutes } => {
                         info!("Clock mode: hours-minutes edit indicator");
@@ -184,15 +188,15 @@ impl ServoClockDisplay {
         Self { bottom, top }
     }
 
-    fn show_portal_ready(&self) {
+    async fn show_portal_ready(&self) {
         info!("ServoClockDisplay: portal-ready marker (bottom=90, top=90)");
-        self.set_angles(90, 90);
+        self.set_angles(90, 90).await;
     }
 
-    fn show_connecting(&self) {
+    async fn show_connecting(&self) {
         info!("ServoClockDisplay: connecting animation started (counter-rotating)");
         const FIVE_SECONDS: Duration = Duration::from_secs(5);
-        const PHASE1: [(u16, Duration); 10] = linear(180 - 18, 0, FIVE_SECONDS);
+        const PHASE1: [(u16, Duration); 10] = linear(18, 0, FIVE_SECONDS);
         const PHASE2: [(u16, Duration); 2] = linear(0, 180, FIVE_SECONDS);
         self.top
             .animate(combine::<10, 2, 12>(PHASE1, PHASE2), AtEnd::Loop);
@@ -200,9 +204,9 @@ impl ServoClockDisplay {
             .animate(combine::<2, 10, 12>(PHASE2, PHASE1), AtEnd::Loop);
     }
 
-    fn show_connection_failed(&self) {
+    async fn show_connection_failed(&self) {
         info!("ServoClockDisplay: connection-failed marker (bottom=0, top=180)");
-        self.set_angles(0, 180);
+        self.set_angles(0, 180).await;
     }
 
     async fn show_hours_minutes(&self, hours: u8, minutes: u8) {
@@ -210,15 +214,22 @@ impl ServoClockDisplay {
             "ServoClockDisplay: show_hours_minutes hours={} minutes={}",
             hours, minutes
         );
-        self.show_values(hours, minutes).await;
+        let left_degrees = hours_to_degrees(hours);
+        let right_degrees = sixty_to_degrees(minutes);
+        self.set_angles(left_degrees, right_degrees).await;
+        Timer::after(Duration::from_millis(500)).await;
+        self.bottom.relax();
+        self.top.relax();
     }
 
-    fn show_minutes_seconds(&self, minutes: u8, seconds: u8) {
+    async fn show_minutes_seconds(&self, minutes: u8, seconds: u8) {
         info!(
             "ServoClockDisplay: show_minutes_seconds minutes={} seconds={}",
             minutes, seconds
         );
-        self.set_angles(value_to_angle(minutes), value_to_angle(seconds));
+        let left_degrees = sixty_to_degrees(minutes);
+        let right_degrees = sixty_to_degrees(seconds);
+        self.set_angles(left_degrees, right_degrees).await;
     }
 
     async fn show_hours_minutes_indicator(&self, hours: u8, minutes: u8) {
@@ -226,42 +237,47 @@ impl ServoClockDisplay {
             "ServoClockDisplay: edit-indicator blink for hours={} minutes={}",
             hours, minutes
         );
-        self.show_values(hours, minutes).await;
-        for _ in 0..2 {
-            self.set_angles(0, 0);
-            Timer::after(Duration::from_millis(180)).await;
-            self.show_values(hours, minutes).await;
-            Timer::after(Duration::from_millis(180)).await;
-        }
+        let left_degrees = hours_to_degrees(hours);
+        let right_degrees = sixty_to_degrees(minutes);
+        self.set_angles(left_degrees, right_degrees).await;
+        Timer::after(Duration::from_millis(500)).await;
+        self.bottom.relax();
+        self.top.relax();
     }
 
-    async fn show_values(&self, left: u8, right: u8) {
-        let left_angle = value_to_angle(left);
-        let right_angle = value_to_angle(right);
+    async fn set_angles(&self, left_degrees: i32, right_degrees: i32) {
+        let bottom_degrees = right_degrees;
+        let top_degrees = left_degrees;
+        let left_angle =
+            u16::try_from(bottom_degrees).expect("servo angles must be between 0 and 180 degrees");
+        let right_angle = u16::try_from(top_degrees)
+            .expect("servo angles must be between 0 and 180 degrees");
         info!(
-            "ServoClockDisplay: mapped values left={} right={} -> left_angle={} right_angle={}",
-            left, right, left_angle, right_angle
+            "ServoClockDisplay: set_angles logical_left={} logical_right={} bottom={} top={}",
+            left_degrees, right_degrees, bottom_degrees, top_degrees
         );
-        self.set_angles(left_angle, right_angle);
-    }
-
-    fn set_angles(&self, left: u16, right: u16) {
-        let top_command = 180 - right;
-        info!(
-            "ServoClockDisplay: set_angles bottom_command={} top_displayed={} top_command={} (inverted)",
-            left, right, top_command
-        );
-        self.bottom.set_degrees(left);
-        self.top.set_degrees(top_command);
+        self.bottom.set_degrees(left_angle);
+        self.top.set_degrees(right_angle);
     }
 }
 
 #[expect(
     clippy::arithmetic_side_effects,
-    reason = "clamped range and bounded conversion keep this safe"
+    clippy::integer_division_remainder_used,
+    reason = "Checked ranges ensure safe integer scaling."
 )]
-fn value_to_angle(value: u8) -> u16 {
-    let clamped = value.min(59);
-    let scaled = (u32::from(clamped) * 180) / 59;
-    u16::try_from(scaled).unwrap_or(180)
+fn hours_to_degrees(hours: u8) -> i32 {
+    assert!((1..=12).contains(&hours));
+    let normalized_hour = hours % 12;
+    i32::from(normalized_hour) * 180 / 12
+}
+
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::integer_division_remainder_used,
+    reason = "Checked ranges ensure safe integer scaling."
+)]
+fn sixty_to_degrees(value: u8) -> i32 {
+    assert!(value < 60);
+    i32::from(value) * 180 / 60
 }

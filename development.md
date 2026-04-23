@@ -82,6 +82,12 @@ just show-docs-esp
 
 Note: `show-docs-rp` and `show-docs-esp` are currently WSL/Windows-oriented scripts.
 
+## Release Process
+
+For release prep, publishing order, and tagging, use:
+
+- [`docs/release_checklist.md`](docs/release_checklist.md)
+
 ## Standard Pin Assignments
 
 These are the default pins used by examples in this repository.

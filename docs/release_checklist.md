@@ -21,11 +21,14 @@ Use this checklist when preparing a new workspace release.
   - `crates/device-envoy-esp/Cargo.toml`
   - `crates/device-envoy/Cargo.toml`
 - Verify dependency constraints between workspace crates still match the new version.
+- Update dependent/sample project dependencies to the new versions (for example `device-envoy-rp-blinky` and `device-envoy-esp-blinky`).
+- Refresh the workspace lockfile through Cargo after version bumps (for example `cargo update -w` or `cargo check-all`).
 
 ## 4. Update Changelog
 
 - Update top-level [CHANGELOG.md](../CHANGELOG.md) with a new section for the release.
 - Summarize API changes, behavior changes, and notable fixes.
+- Include a note that `device-envoy-rp-blinky` and `device-envoy-esp-blinky` were updated for this release.
 
 ## 5. Generate and Review Docs
 
@@ -50,7 +53,8 @@ just check-all
 
 ## 7. Validate Sample Projects
 
-- Run the sample/template projects that depend on this workspace (for example `device-envoy-rp-blinky` and `device-envoy-esp-blinky`).
+- Update `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to the new release version.
+- Run the sample/template projects that depend on this workspace (including `device-envoy-rp-blinky` and `device-envoy-esp-blinky`).
 - Confirm they build and run with the new versions.
 
 ## 8. Publish Dry Run

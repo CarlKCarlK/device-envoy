@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6-alpha.0
+
+- Bumped workspace crate versions to `0.0.6-alpha.0`.
+- Updated downstream sample projects `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to `0.0.6-alpha.0`.
+- Moved changelog/contributing docs to repo root and added a release checklist at `docs/release_checklist.md`.
+
 ## 0.0.4-alpha.2
 
 - Added article link to README: "device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions".

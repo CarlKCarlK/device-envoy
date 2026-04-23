@@ -100,14 +100,17 @@ When capturing variables in closures or creating references, append `_ref`:
 
 ## Comment Conventions
 
-Use `TODO0`/`TODO00` prefix for TODO items (`TODO` + priority):
+Use `TODO0*` for release-priority TODO items (`TODO` + one or more trailing `0`s):
 
 ```rust
 // TODO00 high priority task
 // TODO0 lower priority consideration
+// TODO0000 release-blocking task with explicit emphasis
 // TODO lowest standard todo for general items
 ```
 
+- `TODO0*` (for example `TODO0`, `TODO00`, `TODO0000`) means action is required before the next release.
+- Plain `TODO` means later/non-release work unless explicitly stated otherwise.
 - For code that uses a stable workaround where a clearly better nightly feature exists, add:
   `// TODO_NIGHTLY When nightly feature <feature_name> becomes stable, change this code by <specific change>.`
 - Preserving comments: When changing code, generally don't remove TODO's in comments. Just move the comments if needed. If you think they no longer apply, add `(may no longer apply)` to the comment rather than deleting it.

@@ -74,35 +74,10 @@ pub mod docs {
 
 // Re-export error types and result (used throughout)
 pub use crate::error::{Error, Result};
-pub use device_envoy_core::capabilities::{Capability, CapabilitySet, PlatformCapabilities};
 pub use device_envoy_core::tone;
 /// Used internally by other macros.
 #[doc(hidden)]
 pub use paste::paste as __paste;
-
-/// Compile-time capability marker for the active RP build feature set.
-pub struct RpCurrentCapabilities;
-
-const fn rp_current_capabilities() -> CapabilitySet {
-    #[cfg(feature = "wifi")]
-    {
-        return CapabilitySet::EMPTY.with(Capability::Wifi);
-    }
-    #[cfg(not(feature = "wifi"))]
-    {
-        CapabilitySet::EMPTY
-    }
-}
-
-impl PlatformCapabilities for RpCurrentCapabilities {
-    const CAPABILITIES: CapabilitySet = rp_current_capabilities();
-}
-
-/// Returns capabilities available in the current RP build.
-#[must_use]
-pub const fn capabilities() -> CapabilitySet {
-    RpCurrentCapabilities::CAPABILITIES
-}
 
 /// Public for macro expansion in downstream crates.
 #[doc(hidden)]

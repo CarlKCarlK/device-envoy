@@ -23,6 +23,7 @@ Install Rust targets:
 ```bash
 rustup target add thumbv6m-none-eabi
 rustup target add thumbv8m.main-none-eabihf
+rustup target add riscv32imc-unknown-none-elf
 rustup target add riscv32imac-unknown-none-elf
 ```
 
@@ -82,7 +83,8 @@ Board-specific ESP examples are generated files under `examples/<chip>/<board>/`
 
 Source of truth:
 
-- Board map and rendering logic: `xtask/src/board_examples_generated.rs`
+- Board profiles and pin mappings: `xtask/src/boards.rs` (`BOARD_PROFILES`)
+- Board example generation/rendering logic: `xtask/src/board_examples_generated.rs`
 - Templates: `examples/templates/blinky_plain.rs.j2`, `examples/templates/blinky_rmt.rs.j2`, `examples/templates/blinky_spi.rs.j2`, `examples/templates/led16x16_plus_1.rs.j2`, `examples/templates/led16x16_plus_1_spi.rs.j2`
 
 Regenerate after changing templates or board mappings:
@@ -142,14 +144,10 @@ RP defaults:
 - `PIN_11`, `PIN_12`: Servo signals
 - `PIN_13`: Button (active-low)
 
-ESP defaults:
+ESP defaults are chip- and board-dependent.
 
-- `GPIO2`: 16x16 panel examples and singular `led_example1_trait` external LED example
-- `GPIO6`: Button input (`PressedTo::Ground` in examples)
-- `GPIO7`: IR receiver data input
-- Built-in smart RGB LED: `GPIO8` on ESP32-C6-DevKitC-1, `GPIO48` on ESP32-S3-DevKitC-1
-- `GPIO10`: External 8-pixel smart LED strip
-- `GPIO11`: I2S bit clock (`BCLK`)
-- `GPIO12`: I2S word select (`WS` / `LRCLK`)
-- `GPIO18`: 12x8 panel examples
-- `GPIO21`: I2S serial data output (`DIN`)
+For current source-of-truth pin/capability mappings, see:
+
+- `crates/device-envoy-esp/xtask/src/boards.rs` (`BOARD_PROFILES`)
+- `crates/device-envoy-esp/xtask/src/main.rs` (capability-based example/test gating)
+- Generated board examples under `crates/device-envoy-esp/examples/<chip>/<board>/`

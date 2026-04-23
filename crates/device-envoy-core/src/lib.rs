@@ -3,7 +3,6 @@
 
 pub mod audio_player;
 pub mod button;
-pub mod capabilities;
 #[cfg(feature = "wifi")]
 pub(crate) mod clock;
 #[cfg(feature = "wifi")]

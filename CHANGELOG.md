@@ -2,9 +2,13 @@
 
 ## 0.0.6-alpha.0
 
+- Expanded ESP support and validation to cover all ESP architectures/chips currently targeted by `esp-hal` in this workspace flow (`esp32`, `esp32c2`, `esp32c3`, `esp32c6`, `esp32h2`, `esp32s2`, `esp32s3`) via capability-aware checks, examples, and board-generation tooling.
+- Reworked ESP example generation around board profiles and templates, including chip-capability-aware example selection and improved per-chip pin/peripheral mapping.
+- Improved ESP servo behavior by fixing coarse PWM quantization in `ServoEsp::set_degrees` (using raw LEDC duty counts for more accurate pulse widths).
+- Improved workspace check coverage and tooling around `check-all`/xtask flows for cross-chip validation.
 - Bumped workspace crate versions to `0.0.6-alpha.0`.
 - Updated downstream sample projects `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to `0.0.6-alpha.0`.
-- Moved changelog/contributing docs to repo root and added a release checklist at `docs/release_checklist.md`.
+- Moved `CHANGELOG.md` and `CONTRIBUTING.md` to the repository root and added `docs/release_checklist.md`.
 
 ## 0.0.4-alpha.2
 

@@ -39,7 +39,17 @@ just update-docs-rp
 just update-docs-esp
 ```
 
+- Optional local preview in a browser:
+
+```bash
+just show-docs-rp
+just show-docs-esp
+```
+
+Note: `show-docs-rp` and `show-docs-esp` run the corresponding `update-docs-*` step before opening.
+
 - Manually inspect docs output for both crates (`rp` and `esp`) for broken links, stale examples, and missing sections.
+- Optional: export rustdoc to a single DOCX for whole-site diff/review using `scripts/rustdoc_site_to_docx.py` (for example, export current output and a `main` baseline, then compare the two DOCX files in your diff tool).
 
 ## 6. Run Full Checks
 

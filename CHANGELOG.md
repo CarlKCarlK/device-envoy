@@ -2,7 +2,7 @@
 
 ## 0.0.6-alpha.0
 
-- Expanded ESP support and validation to cover all ESP architectures/chips currently targeted by `esp-hal` in this workspace flow (`esp32`, `esp32c2`, `esp32c3`, `esp32c6`, `esp32h2`, `esp32s2`, `esp32s3`) via capability-aware checks, examples, and board-generation tooling.
+- Expanded ESP support and validation to cover all ESP architectures/chips currently targeted by `esp-hal` in this workspace flow (`esp32`, `esp32c2`, `esp32c3`, `esp32c5`, `esp32c6`, `esp32c61`, `esp32h2`, `esp32s2`, `esp32s3`) via capability-aware checks, examples, and board-generation tooling.
 - Reworked ESP example generation around board profiles and templates, including chip-capability-aware example selection and improved per-chip pin/peripheral mapping.
 - Improved ESP servo behavior by fixing coarse PWM quantization in `ServoEsp::set_degrees` (using raw LEDC duty counts for more accurate pulse widths).
 - Improved workspace check coverage and tooling around `check-all`/xtask flows for cross-chip validation.

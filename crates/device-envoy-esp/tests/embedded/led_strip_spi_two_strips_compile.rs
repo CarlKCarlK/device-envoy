@@ -67,7 +67,10 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
+    #[cfg(esp_has_rmt)]
     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    #[cfg(not(esp_has_rmt))]
+    init_and_start!(p);
 
     #[cfg(feature = "esp32")]
     let led_strip_spi_a = LedStripSpiA::new(p.GPIO0, p.SPI2, spawner)?;
@@ -90,6 +93,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
         led_strip_spi_b.write_frame(Frame1d([colors::RED]));
     }
 
+    #[cfg(esp_has_rmt)]
     let _ = rmt80;
     core::future::pending().await
 }

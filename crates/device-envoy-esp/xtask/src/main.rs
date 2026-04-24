@@ -943,6 +943,10 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
         .flatten()
         .filter_map(|entry| {
             let name = entry.file_name().into_string().ok()?;
+            // Exclude internal/temporary files (e.g. __readme_example_generated.rs)
+            if name.starts_with("__") {
+                return None;
+            }
             name.ends_with(".rs")
                 .then(|| name.trim_end_matches(".rs").to_owned())
         })

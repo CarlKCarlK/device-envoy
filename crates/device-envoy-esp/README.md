@@ -10,9 +10,10 @@
 It organizes hardware around device abstractions so application code can use
 small, focused APIs instead of managing low-level coordination directly.
 
-`device-envoy-esp` supports and is compile-validated across ESP32, ESP32-C2, ESP32-C3, ESP32-C6,
+`device-envoy-esp` supports ESP32, ESP32-C2, ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61,
 ESP32-H2, ESP32-S2, and ESP32-S3 (with capability-aware checks for chip-specific
-peripherals).
+peripherals). C5/C61 are currently in bring-up: library compile checks pass, but
+full example link checks still hit upstream toolchain/runtime issues.
 
 ## Start From a Template
 

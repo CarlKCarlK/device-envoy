@@ -10,8 +10,9 @@
 
 use core::{convert::Infallible, future::pending, panic};
 use device_envoy_esp::{
-    Result, init_and_start, led_strip,
-    led_strip::{Frame1d, LedStrip as _, colors},
+    init_and_start, led_strip,
+    led_strip::{colors, Frame1d, LedStrip as _},
+    Result,
 };
 use embassy_executor::Spawner;
 use esp_backtrace as _;

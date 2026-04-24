@@ -31,7 +31,9 @@ const TARGET_XTENSA_ESP32S3: &str = "xtensa-esp32s3-none-elf";
 const CHIP_FEATURE_ESP32: &str = "esp32";
 const CHIP_FEATURE_ESP32C2: &str = "esp32c2";
 const CHIP_FEATURE_ESP32C3: &str = "esp32c3";
+const CHIP_FEATURE_ESP32C5: &str = "esp32c5";
 const CHIP_FEATURE_ESP32C6: &str = "esp32c6";
+const CHIP_FEATURE_ESP32C61: &str = "esp32c61";
 const CHIP_FEATURE_ESP32H2: &str = "esp32h2";
 const CHIP_FEATURE_ESP32S2: &str = "esp32s2";
 const CHIP_FEATURE_ESP32S3: &str = "esp32s3";
@@ -57,10 +59,12 @@ bitflags! {
         const LARGE_STACK = 1 << 5;
         /// Chip exposes at least two independent SPI peripherals.
         const DUAL_SPI = 1 << 6;
+        /// Chip exposes LEDC timers/channels.
+        const LEDC = 1 << 7;
     }
 }
 
-const ALL_CAPABILITIES: [Capability; 7] = [
+const ALL_CAPABILITIES: [Capability; 8] = [
     Capability::RMT,
     Capability::I2S,
     Capability::AUDIO_GPIO,
@@ -68,6 +72,7 @@ const ALL_CAPABILITIES: [Capability; 7] = [
     Capability::WIFI,
     Capability::LARGE_STACK,
     Capability::DUAL_SPI,
+    Capability::LEDC,
 ];
 
 impl Capability {
@@ -80,6 +85,7 @@ impl Capability {
             Capability::WIFI => "Wi-Fi",
             Capability::LARGE_STACK => "large stack/linker budget",
             Capability::DUAL_SPI => "dual SPI",
+            Capability::LEDC => "LEDC",
             _ => "unknown capability",
         }
     }
@@ -118,6 +124,9 @@ fn chip_capabilities(chip_feature: &str) -> Capability {
     if profile.spi_count >= 2 {
         caps.insert(Capability::DUAL_SPI);
     }
+    if !matches!(chip_feature, CHIP_FEATURE_ESP32C5 | CHIP_FEATURE_ESP32C61) {
+        caps.insert(Capability::LEDC);
+    }
     caps
 }
 
@@ -129,7 +138,9 @@ fn example_base_name(full_name: &str) -> &str {
     const CHIP_NEEDLES: &[&str] = &[
         "_esp32c2_",
         "_esp32c3_",
+        "_esp32c5_",
         "_esp32c6_",
+        "_esp32c61_",
         "_esp32h2_",
         "_esp32s2_",
         "_esp32s3_",
@@ -163,7 +174,10 @@ const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
         "clock_led8x12",
         &[Capability::WIFI, Capability::LARGE_STACK],
     ),
-    ("clock_servos", &[Capability::WIFI, Capability::LARGE_STACK]),
+    (
+        "clock_servos",
+        &[Capability::WIFI, Capability::LARGE_STACK, Capability::LEDC],
+    ),
     (
         "clock_sync_example1",
         &[Capability::WIFI, Capability::LARGE_STACK],
@@ -191,12 +205,15 @@ const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
     ("led_strip_example2", &[Capability::RMT]),
     ("led_strip_len8", &[Capability::RMT]),
     ("rfid", &[]),
-    ("servo_basic", &[]),
-    ("servo_example1", &[]),
-    ("servo_player_example1", &[]),
-    ("servo_player_example2", &[]),
-    ("servos", &[]),
-    ("servos_calibrate", &[Capability::BUTTON_GPIO]),
+    ("servo_basic", &[Capability::LEDC]),
+    ("servo_example1", &[Capability::LEDC]),
+    ("servo_player_example1", &[Capability::LEDC]),
+    ("servo_player_example2", &[Capability::LEDC]),
+    ("servos", &[Capability::LEDC]),
+    (
+        "servos_calibrate",
+        &[Capability::BUTTON_GPIO, Capability::LEDC],
+    ),
     ("talk1_a1_strip_8_blue_gray", &[Capability::RMT]),
     (
         "talk1_a3_strip_8_blue_white_blink_animate",
@@ -397,10 +414,24 @@ const BUILD_TARGET_ESP32C3: BuildTarget = BuildTarget {
     toolchain: None,
     build_std: false,
 };
+const BUILD_TARGET_ESP32C5: BuildTarget = BuildTarget {
+    label: "esp32c5",
+    target: TARGET_RISCV32IMAC,
+    chip_feature: CHIP_FEATURE_ESP32C5,
+    toolchain: None,
+    build_std: false,
+};
 const BUILD_TARGET_ESP32C6: BuildTarget = BuildTarget {
     label: "esp32c6",
     target: TARGET_RISCV32IMAC,
     chip_feature: CHIP_FEATURE_ESP32C6,
+    toolchain: None,
+    build_std: false,
+};
+const BUILD_TARGET_ESP32C61: BuildTarget = BuildTarget {
+    label: "esp32c61",
+    target: TARGET_RISCV32IMAC,
+    chip_feature: CHIP_FEATURE_ESP32C61,
     toolchain: None,
     build_std: false,
 };
@@ -430,7 +461,9 @@ const ALL_PROCESSOR_TARGETS: &[BuildTarget] = &[
     BUILD_TARGET_ESP32,
     BUILD_TARGET_ESP32C2,
     BUILD_TARGET_ESP32C3,
+    BUILD_TARGET_ESP32C5,
     BUILD_TARGET_ESP32C6,
+    BUILD_TARGET_ESP32C61,
     BUILD_TARGET_ESP32H2,
     BUILD_TARGET_ESP32S2,
     BUILD_TARGET_ESP32S3,
@@ -599,7 +632,7 @@ enum Commands {
     GenerateBoardExamples,
     /// Run all checks for a single chip (fast developer iteration)
     CheckChip {
-        /// Chip name: esp32, esp32c2, esp32c3, esp32c6, esp32h2, esp32s2, esp32s3
+        /// Chip name: esp32, esp32c2, esp32c3, esp32c5, esp32c6, esp32c61, esp32h2, esp32s2, esp32s3
         chip: String,
     },
     /// Run embedded compile tests across all chips
@@ -910,6 +943,10 @@ fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> E
         .flatten()
         .filter_map(|entry| {
             let name = entry.file_name().into_string().ok()?;
+            // Exclude internal/temporary files (e.g. __readme_example_generated.rs)
+            if name.starts_with("__") {
+                return None;
+            }
             name.ends_with(".rs")
                 .then(|| name.trim_end_matches(".rs").to_owned())
         })

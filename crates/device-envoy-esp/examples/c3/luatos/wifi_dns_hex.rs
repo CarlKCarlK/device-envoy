@@ -24,15 +24,14 @@ use esp_backtrace as _;
 use log::{info, warn};
 
 use device_envoy_esp::{
-    Result,
     button::{ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
-    init_and_start,
-    led_strip::{Current, Gamma, colors},
-    led2d,
+    init_and_start, led2d,
     led2d::Led2d as _,
-    led2d::{Led2dFont, layout::LedLayout},
+    led2d::{layout::LedLayout, Led2dFont},
+    led_strip::{colors, Current, Gamma},
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

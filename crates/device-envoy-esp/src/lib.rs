@@ -7,14 +7,16 @@
         feature = "esp32",
         feature = "esp32c2",
         feature = "esp32c3",
+        feature = "esp32c5",
         feature = "esp32c6",
+        feature = "esp32c61",
         feature = "esp32h2",
         feature = "esp32s2",
         feature = "esp32s3"
     ))
 ))]
 compile_error!(
-    "Select one chip feature for embedded builds: `esp32`, `esp32c2`, `esp32c3`, `esp32c6`, `esp32h2`, `esp32s2`, or `esp32s3` (with `--no-default-features --features <chip>`)."
+    "Select one chip feature for embedded builds: `esp32`, `esp32c2`, `esp32c3`, `esp32c5`, `esp32c6`, `esp32c61`, `esp32h2`, `esp32s2`, or `esp32s3` (with `--no-default-features --features <chip>`)."
 );
 
 #[cfg(all(
@@ -22,22 +24,37 @@ compile_error!(
     any(
         all(feature = "esp32", feature = "esp32c2"),
         all(feature = "esp32", feature = "esp32c3"),
+        all(feature = "esp32", feature = "esp32c5"),
         all(feature = "esp32", feature = "esp32c6"),
+        all(feature = "esp32", feature = "esp32c61"),
         all(feature = "esp32", feature = "esp32h2"),
         all(feature = "esp32", feature = "esp32s2"),
         all(feature = "esp32", feature = "esp32s3"),
         all(feature = "esp32c2", feature = "esp32c3"),
+        all(feature = "esp32c2", feature = "esp32c5"),
         all(feature = "esp32c2", feature = "esp32c6"),
+        all(feature = "esp32c2", feature = "esp32c61"),
         all(feature = "esp32c2", feature = "esp32h2"),
         all(feature = "esp32c2", feature = "esp32s2"),
         all(feature = "esp32c2", feature = "esp32s3"),
+        all(feature = "esp32c3", feature = "esp32c5"),
         all(feature = "esp32c3", feature = "esp32c6"),
+        all(feature = "esp32c3", feature = "esp32c61"),
         all(feature = "esp32c3", feature = "esp32h2"),
         all(feature = "esp32c3", feature = "esp32s2"),
         all(feature = "esp32c3", feature = "esp32s3"),
+        all(feature = "esp32c5", feature = "esp32c6"),
+        all(feature = "esp32c5", feature = "esp32c61"),
+        all(feature = "esp32c5", feature = "esp32h2"),
+        all(feature = "esp32c5", feature = "esp32s2"),
+        all(feature = "esp32c5", feature = "esp32s3"),
         all(feature = "esp32c6", feature = "esp32h2"),
+        all(feature = "esp32c6", feature = "esp32c61"),
         all(feature = "esp32c6", feature = "esp32s2"),
         all(feature = "esp32c6", feature = "esp32s3"),
+        all(feature = "esp32c61", feature = "esp32h2"),
+        all(feature = "esp32c61", feature = "esp32s2"),
+        all(feature = "esp32c61", feature = "esp32s3"),
         all(feature = "esp32h2", feature = "esp32s2"),
         all(feature = "esp32h2", feature = "esp32s3"),
         all(feature = "esp32s2", feature = "esp32s3"),
@@ -180,9 +197,9 @@ pub mod rfid;
 #[cfg(esp_has_rmt)]
 mod rmt;
 mod rmt_mode;
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_ledc))]
 pub mod servo;
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_ledc))]
 mod servo_player;
 #[cfg(any(feature = "host", esp_has_wifi))]
 pub mod wifi_auto;
@@ -287,9 +304,9 @@ pub enum Error {
     Mfrc522Version(esp_hal_mfrc522::consts::PCDErrorCode),
     #[cfg(target_os = "none")]
     I2cConfig(esp_hal::i2c::master::ConfigError),
-    #[cfg(target_os = "none")]
+    #[cfg(all(target_os = "none", esp_has_ledc))]
     LedcTimer(esp_hal::ledc::timer::Error),
-    #[cfg(target_os = "none")]
+    #[cfg(all(target_os = "none", esp_has_ledc))]
     LedcChannel(esp_hal::ledc::channel::Error),
     #[cfg(all(target_os = "none", esp_has_wifi))]
     Wifi(esp_radio::wifi::WifiError),
@@ -371,14 +388,14 @@ impl From<esp_hal::spi::Error> for Error {
     }
 }
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_ledc))]
 impl From<esp_hal::ledc::timer::Error> for Error {
     fn from(error: esp_hal::ledc::timer::Error) -> Self {
         Self::LedcTimer(error)
     }
 }
 
-#[cfg(target_os = "none")]
+#[cfg(all(target_os = "none", esp_has_ledc))]
 impl From<esp_hal::ledc::channel::Error> for Error {
     fn from(error: esp_hal::ledc::channel::Error) -> Self {
         Self::LedcChannel(error)

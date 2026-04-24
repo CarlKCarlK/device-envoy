@@ -63,13 +63,12 @@ jobs:
         shell: bash
         run: |
           cd ../device-envoy-rp-blinky
-          cargo blinky-check
-          cargo blinky-2-check
+          ./scripts/device-action.sh check 1
+          ./scripts/device-action.sh check 2
 
       - name: Check device-envoy-esp-blinky on ESP32-C6 and ESP32-S3
         shell: bash
         run: |
           cd ../device-envoy-esp-blinky
-          cargo blinky-check
-          source "$HOME/export-esp.sh"
-          cargo +esp blinky-s3-check
+          ./scripts/device-action.sh check c6
+          ./scripts/device-action.sh check s3

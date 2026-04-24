@@ -9,12 +9,14 @@ If you only want to use `device-envoy-rp` or `device-envoy-esp` in your own proj
 
 ## Toolchains and Targets
 
-You may need all four embedded targets, depending on what you build:
+You may need all embedded targets below, depending on what you build:
 
 - RP Pico 1 (ARM): `thumbv6m-none-eabi`
 - RP Pico 2 (ARM): `thumbv8m.main-none-eabihf`
-- ESP32-C6 (RISC-V): `riscv32imac-unknown-none-elf`
-- ESP32-S3 (Xtensa): `xtensa-esp32s3-none-elf`
+- ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-H2 (RISC-V): `riscv32imac-unknown-none-elf`
+- ESP32-C2 / ESP32-C3 (RISC-V): `riscv32imc-unknown-none-elf`
+- ESP32 / ESP32-S2 / ESP32-S3 (Xtensa):
+  `xtensa-esp32-none-elf`, `xtensa-esp32s2-none-elf`, `xtensa-esp32s3-none-elf`
 
 Install Rust targets:
 
@@ -25,7 +27,7 @@ rustup target add riscv32imc-unknown-none-elf
 rustup target add riscv32imac-unknown-none-elf
 ```
 
-ESP32-S3 requires the ESP Rust toolchain/runtime flow used by this repo:
+Xtensa ESP chips (ESP32 / ESP32-S2 / ESP32-S3) require the ESP Rust toolchain/runtime flow used by this repo:
 
 - Install/use the `+esp` toolchain as needed for Xtensa builds.
 - Load your ESP environment before S3 commands (for this repo that is usually `source "$HOME/export-esp.sh"`).
@@ -46,7 +48,7 @@ Defaults:
 
 Common target suffixes:
 
-- ESP: `c2`, `c3`, `c6`, `h2`, `esp32`, `s2`, `s3`
+- ESP: `c2`, `c3`, `c5`, `c6`, `c61`, `h2`, `esp32`, `s2`, `s3`
 - RP: `1`, `2`, `w`, `2w`
 
 Examples:

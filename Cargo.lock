@@ -1460,9 +1460,9 @@ dependencies = [
 
 [[package]]
 name = "esp-hal"
-version = "1.1.0-rc.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3599174af043c640b89d5950558bc40bd448f6e1d56ae43880a0d8530b4f82c"
+checksum = "6af8fa8216bc126941bd43b5a200a50eab16e43881ccd0dd0b6792f4a82805f0"
 dependencies = [
  "bitfield 0.19.4",
  "bitflags 2.11.0",
@@ -1495,7 +1495,9 @@ dependencies = [
  "esp32",
  "esp32c2",
  "esp32c3",
+ "esp32c5",
  "esp32c6",
+ "esp32c61",
  "esp32h2",
  "esp32s2",
  "esp32s3",
@@ -1565,14 +1567,18 @@ dependencies = [
  "esp-wifi-sys-esp32",
  "esp-wifi-sys-esp32c2",
  "esp-wifi-sys-esp32c3",
+ "esp-wifi-sys-esp32c5",
  "esp-wifi-sys-esp32c6",
+ "esp-wifi-sys-esp32c61",
  "esp-wifi-sys-esp32h2",
  "esp-wifi-sys-esp32s2",
  "esp-wifi-sys-esp32s3",
  "esp32",
  "esp32c2",
  "esp32c3",
+ "esp32c5",
  "esp32c6",
+ "esp32c61",
  "esp32h2",
  "esp32s2",
  "esp32s3",
@@ -1619,14 +1625,18 @@ dependencies = [
  "esp-wifi-sys-esp32",
  "esp-wifi-sys-esp32c2",
  "esp-wifi-sys-esp32c3",
+ "esp-wifi-sys-esp32c5",
  "esp-wifi-sys-esp32c6",
+ "esp-wifi-sys-esp32c61",
  "esp-wifi-sys-esp32h2",
  "esp-wifi-sys-esp32s2",
  "esp-wifi-sys-esp32s3",
  "esp32",
  "esp32c2",
  "esp32c3",
+ "esp32c5",
  "esp32c6",
+ "esp32c61",
  "esp32h2",
  "esp32s2",
  "esp32s3",
@@ -1674,7 +1684,9 @@ dependencies = [
  "esp32",
  "esp32c2",
  "esp32c3",
+ "esp32c5",
  "esp32c6",
+ "esp32c61",
  "esp32h2",
  "esp32s2",
  "esp32s3",
@@ -1778,6 +1790,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp-wifi-sys-esp32c5"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "039337bdc50a40335ed01598e83053164426fed82817492719513d922dcc3592"
+
+[[package]]
 name = "esp-wifi-sys-esp32c6"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1785,6 +1803,12 @@ checksum = "57649401fc2f906a16e2268de88693724a125adcd0eba89b594a157affcee2d5"
 dependencies = [
  "log",
 ]
+
+[[package]]
+name = "esp-wifi-sys-esp32c61"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac5e79401e84dc2715569271782fb4c34059e175e4835c2f3f92ff8df5e519c8"
 
 [[package]]
 name = "esp-wifi-sys-esp32h2"
@@ -1841,10 +1865,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp32c5"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6f8ba56195df10224263c60ceb93b4578450019ee838b7338039a281117cb02"
+dependencies = [
+ "vcell",
+]
+
+[[package]]
 name = "esp32c6"
 version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c58f34ff2633968c12125efc7f4f8f101078d5d34c7cb60eab82268db20986f9"
+dependencies = [
+ "vcell",
+]
+
+[[package]]
+name = "esp32c61"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a926616351b1edfdb50b7ea6451a8dff0c7515c6ceb687063af7d32b117ec0d"
 dependencies = [
  "vcell",
 ]

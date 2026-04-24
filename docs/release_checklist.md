@@ -76,7 +76,17 @@ just check-all
 cargo publish-core-dry-run
 cargo publish-rp-dry-run
 cargo publish-esp-dry-run
-cargo publish-device-envoy-dry-run
+# skip cargo publish-device-envoy-dry-run
+```
+
+- Dry-run both blinky repos after the above versions are published/available:
+
+```bash
+# in device-envoy-rp-blinky
+cargo publish --dry-run
+
+# in device-envoy-esp-blinky
+cargo publish --dry-run
 ```
 
 ## 9. Publish
@@ -87,10 +97,19 @@ cargo publish-device-envoy-dry-run
 cargo publish-core
 cargo publish-rp
 cargo publish-esp
-cargo publish-device-envoy
+# skip cargo publish-device-envoy
 ```
 
-- Wait for index propagation between publishes if needed.
+- Wait for crates.io index propagation after publishing `core`/`rp`/`esp`.
+- Publish blinky repos only after their `device-envoy-*` dependency versions resolve from crates.io:
+
+```bash
+# in device-envoy-rp-blinky
+cargo publish
+
+# in device-envoy-esp-blinky
+cargo publish
+```
 
 ## 10. Tag and GitHub Release
 

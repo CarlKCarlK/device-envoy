@@ -11,10 +11,10 @@
 use core::{convert::Infallible, future::pending, panic};
 
 use device_envoy_esp::{
-    Result, init_and_start,
-    led_strip::{ToRgb888, colors},
-    led2d,
-    led2d::{Frame2d, Led2d as _, Led2dFont, layout::LedLayout},
+    init_and_start, led2d,
+    led2d::{layout::LedLayout, Frame2d, Led2d as _, Led2dFont},
+    led_strip::{colors, ToRgb888},
+    Result,
 };
 use embassy_executor::Spawner;
 use embedded_graphics::{

@@ -12,15 +12,14 @@
 use core::{convert::Infallible, fmt::Write, panic};
 
 use device_envoy_esp::{
-    Result,
     button::{ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
-    init_and_start,
-    led_strip::colors,
-    led2d,
+    init_and_start, led2d,
     led2d::Led2d as _,
-    led2d::{Led2dFont, layout::LedLayout},
+    led2d::{layout::LedLayout, Led2dFont},
+    led_strip::colors,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+    Result,
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;

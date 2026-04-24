@@ -18,11 +18,11 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Result, init_and_start,
-    led_strip::{Current, Gamma, colors},
-    led2d,
+    init_and_start, led2d,
     led2d::Led2d as _,
-    led2d::{Frame2d, Led2dFont, layout::LedLayout},
+    led2d::{layout::LedLayout, Frame2d, Led2dFont},
+    led_strip::{colors, Current, Gamma},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

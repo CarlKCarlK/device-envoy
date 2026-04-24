@@ -1,11 +1,47 @@
 #![no_std]
 
 use device_envoy_core::{led_strip::RGB8, led2d::Frame2d};
+use smart_leds::colors;
 
 /// Maximum number of backtracking iterations before giving up on the predecessor search.
 pub const MAX_SEARCH_ITERATIONS: u32 = 500_000;
 /// Search only this many cells away from currently-live target cells.
 pub const DEFAULT_PREDECESSOR_SEARCH_RADIUS: usize = 1;
+/// How many generations without meaningful change trigger an automatic reset.
+pub const STASIS_RESET_GENERATIONS: u8 = 15;
+/// How many backtracking iterations to run per cooperative search step.
+pub const DEFAULT_SEARCH_ITERATIONS_PER_STEP: u32 = 256;
+
+/// Color used to visualize assigned live cells during predecessor search.
+pub const SEARCH_COLOR: RGB8 = colors::RED;
+/// Color used to show cells that were assigned as dead during search.
+pub const SEARCH_ASSIGNED_DEAD_COLOR: RGB8 = RGB8 { r: 0, g: 0, b: 12 };
+/// Color used to hint where the current target generation is alive.
+pub const SEARCH_TARGET_HINT_COLOR: RGB8 = RGB8 { r: 0, g: 10, b: 0 };
+
+/// Conway pattern order used by the hardware and web demos.
+pub const PATTERNS: [Pattern; 10] = [
+    Pattern::Glider,
+    Pattern::Random,
+    Pattern::Blinker,
+    Pattern::Toad,
+    Pattern::Beacon,
+    Pattern::Lwss,
+    Pattern::Block,
+    Pattern::Pentadecathlon,
+    Pattern::Cross,
+    Pattern::Custom9,
+];
+
+/// Alive-cell color order used by the hardware and web demos.
+pub const ALIVE_COLORS: [RGB8; 6] = [
+    colors::LIME,
+    colors::CYAN,
+    colors::MAGENTA,
+    colors::ORANGE,
+    colors::YELLOW,
+    colors::WHITE,
+];
 
 /// Conway pattern presets used by the hardware and web demos.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -331,6 +367,328 @@ pub enum SearchStep<const H: usize, const W: usize> {
     Outcome(SearchOutcome<H, W>),
 }
 
+/// User command understood by the shared Conway app state.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConwayCommand {
+    Noop,
+    Power,
+    PlayPause,
+    Next,
+    Previous,
+    Cancel,
+    Mode,
+    SpeedDown,
+    SpeedUp,
+    Pattern(usize),
+}
+
+/// User-visible Conway status.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConwayStatus {
+    Ok,
+    Paused,
+    Searching,
+    Found,
+    NotFound,
+    Cancelled,
+    Off,
+    Unknown,
+}
+
+impl ConwayStatus {
+    /// Stable lowercase status text for display adapters.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ok => "ok",
+            Self::Paused => "paused",
+            Self::Searching => "searching",
+            Self::Found => "found",
+            Self::NotFound => "not_found",
+            Self::Cancelled => "cancelled",
+            Self::Off => "off",
+            Self::Unknown => "unknown",
+        }
+    }
+}
+
+/// Conway animation speed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpeedMode {
+    Slow,
+    Medium,
+    Fast,
+}
+
+impl SpeedMode {
+    /// Move one step slower.
+    #[must_use]
+    pub const fn slower(self) -> Self {
+        match self {
+            Self::Slow => Self::Slow,
+            Self::Medium => Self::Slow,
+            Self::Fast => Self::Medium,
+        }
+    }
+
+    /// Move one step faster.
+    #[must_use]
+    pub const fn faster(self) -> Self {
+        match self {
+            Self::Slow => Self::Medium,
+            Self::Medium => Self::Fast,
+            Self::Fast => Self::Fast,
+        }
+    }
+
+    /// Current frame interval in milliseconds.
+    #[must_use]
+    pub const fn interval_ms(self) -> u32 {
+        match self {
+            Self::Slow => 500,
+            Self::Medium => 160,
+            Self::Fast => 50,
+        }
+    }
+}
+
+/// Shared Conway app state.
+pub struct Conway<const H: usize, const W: usize> {
+    board: Board<H, W>,
+    pattern_index: usize,
+    search: Option<PredecessorSearch<H, W>>,
+    paused: bool,
+    display_power_on: bool,
+    speed_mode: SpeedMode,
+    color_index: usize,
+    stasis_tracker: (u8, u16),
+    empty_tracker: u8,
+    random_seed: u32,
+}
+
+impl<const H: usize, const W: usize> Conway<H, W> {
+    /// Create a new Conway app state with the default pattern and color.
+    #[must_use]
+    pub fn new(random_seed: u32) -> Self {
+        let pattern_index = 1usize;
+        let color_index = 1usize;
+        let mut board = Board::new();
+        board.add_pattern_with_seed(PATTERNS[pattern_index], random_seed);
+        Self {
+            board,
+            pattern_index,
+            search: None,
+            paused: false,
+            display_power_on: true,
+            speed_mode: SpeedMode::Medium,
+            color_index,
+            stasis_tracker: (0, 0),
+            empty_tracker: 0,
+            random_seed,
+        }
+    }
+
+    /// Apply one user command.
+    pub fn command(&mut self, command: ConwayCommand) -> ConwayStatus {
+        if self.search.is_some() {
+            self.search = None;
+            if matches!(command, ConwayCommand::Previous | ConwayCommand::Cancel) {
+                return ConwayStatus::Cancelled;
+            }
+        }
+
+        match command {
+            ConwayCommand::Noop => ConwayStatus::Ok,
+            ConwayCommand::Power => {
+                self.display_power_on = !self.display_power_on;
+                if self.display_power_on {
+                    ConwayStatus::Ok
+                } else {
+                    ConwayStatus::Off
+                }
+            }
+            ConwayCommand::PlayPause => {
+                self.paused = !self.paused;
+                if self.paused {
+                    ConwayStatus::Paused
+                } else {
+                    ConwayStatus::Ok
+                }
+            }
+            ConwayCommand::Next => {
+                if self.display_power_on && self.paused {
+                    self.board.step();
+                    self.evaluate_auto_reset();
+                }
+                ConwayStatus::Ok
+            }
+            ConwayCommand::Previous => {
+                if self.display_power_on {
+                    self.search = Some(PredecessorSearch::new(self.board));
+                    ConwayStatus::Searching
+                } else {
+                    ConwayStatus::Off
+                }
+            }
+            ConwayCommand::Cancel => {
+                self.search = None;
+                ConwayStatus::Cancelled
+            }
+            ConwayCommand::Mode => {
+                self.color_index = (self.color_index + 1) % ALIVE_COLORS.len();
+                ConwayStatus::Ok
+            }
+            ConwayCommand::SpeedDown => {
+                self.speed_mode = self.speed_mode.slower();
+                ConwayStatus::Ok
+            }
+            ConwayCommand::SpeedUp => {
+                self.speed_mode = self.speed_mode.faster();
+                ConwayStatus::Ok
+            }
+            ConwayCommand::Pattern(pattern_index) => {
+                if pattern_index < PATTERNS.len() {
+                    self.pattern_index = pattern_index;
+                    self.reset_board_for_pattern();
+                    ConwayStatus::Ok
+                } else {
+                    ConwayStatus::Unknown
+                }
+            }
+        }
+    }
+
+    /// Advance animation state by one scheduled tick.
+    pub fn tick(&mut self) -> ConwayStatus {
+        if !self.display_power_on {
+            return ConwayStatus::Off;
+        }
+
+        if self.search.is_some() {
+            return self.advance_search(DEFAULT_SEARCH_ITERATIONS_PER_STEP);
+        }
+
+        if self.paused {
+            return ConwayStatus::Paused;
+        }
+
+        self.board.step();
+        self.evaluate_auto_reset();
+        ConwayStatus::Ok
+    }
+
+    /// Advance a predecessor search by `iteration_budget` iterations.
+    pub fn advance_search(&mut self, iteration_budget: u32) -> ConwayStatus {
+        let Some(search) = &mut self.search else {
+            return ConwayStatus::Ok;
+        };
+
+        match search.advance(iteration_budget) {
+            SearchStep::Progress { .. } => ConwayStatus::Searching,
+            SearchStep::Outcome(SearchOutcome::Found(predecessor)) => {
+                self.board = predecessor;
+                self.search = None;
+                self.stasis_tracker = (0, 0);
+                self.empty_tracker = 0;
+                ConwayStatus::Found
+            }
+            SearchStep::Outcome(SearchOutcome::NotFound) => {
+                self.search = None;
+                ConwayStatus::NotFound
+            }
+            SearchStep::Outcome(SearchOutcome::Cancelled) => {
+                self.search = None;
+                ConwayStatus::Cancelled
+            }
+        }
+    }
+
+    /// Current display frame.
+    #[must_use]
+    pub fn frame(&self) -> Frame2d<W, H> {
+        if !self.display_power_on {
+            return Frame2d::<W, H>::new();
+        }
+
+        if let Some(search) = &self.search {
+            let (candidate, assigned, target) = search.progress();
+            search_frame(&candidate, &assigned, &target)
+        } else {
+            self.board.to_frame(ALIVE_COLORS[self.color_index])
+        }
+    }
+
+    /// Current frame interval in milliseconds.
+    #[must_use]
+    pub const fn tick_interval_ms(&self) -> u32 {
+        self.speed_mode.interval_ms()
+    }
+
+    /// Whether a predecessor search is active.
+    #[must_use]
+    pub const fn is_searching(&self) -> bool {
+        self.search.is_some()
+    }
+
+    fn reset_board_for_pattern(&mut self) {
+        self.board = Board::new();
+        let random_seed = self.next_random_seed();
+        self.board
+            .add_pattern_with_seed(PATTERNS[self.pattern_index], random_seed);
+        self.stasis_tracker = (0, 0);
+        self.empty_tracker = 0;
+        self.search = None;
+    }
+
+    fn evaluate_auto_reset(&mut self) {
+        let live_cell_count = self.board.count_live_cells();
+        let current_pattern = PATTERNS[self.pattern_index];
+
+        if matches!(current_pattern, Pattern::Random | Pattern::Cross) {
+            let (unchanged_count, last_live_count) = self.stasis_tracker;
+            if live_cell_count == last_live_count {
+                let new_unchanged_count = unchanged_count + 1;
+                self.stasis_tracker = (new_unchanged_count, live_cell_count);
+
+                if new_unchanged_count >= STASIS_RESET_GENERATIONS {
+                    let random_seed = self.next_random_seed();
+                    self.board
+                        .add_pattern_with_seed(current_pattern, random_seed);
+                    self.stasis_tracker = (0, 0);
+                    self.empty_tracker = 0;
+                }
+            } else {
+                self.stasis_tracker = (1, live_cell_count);
+            }
+        } else if live_cell_count == 0 {
+            self.empty_tracker += 1;
+            if self.empty_tracker >= STASIS_RESET_GENERATIONS {
+                let random_seed = self.next_random_seed();
+                self.board
+                    .add_pattern_with_seed(current_pattern, random_seed);
+                self.stasis_tracker = (0, 0);
+                self.empty_tracker = 0;
+            }
+        } else {
+            self.empty_tracker = 0;
+        }
+    }
+
+    fn next_random_seed(&mut self) -> u32 {
+        self.random_seed = self
+            .random_seed
+            .wrapping_mul(1664525)
+            .wrapping_add(1013904223);
+        self.random_seed
+    }
+}
+
+impl<const H: usize, const W: usize> Default for Conway<H, W> {
+    fn default() -> Self {
+        Self::new(0x9e37_79b9)
+    }
+}
+
 /// Cooperative predecessor search state.
 pub struct PredecessorSearch<const H: usize, const W: usize> {
     target: Board<H, W>,
@@ -381,6 +739,12 @@ impl<const H: usize, const W: usize> PredecessorSearch<H, W> {
         let outcome = SearchOutcome::Cancelled;
         self.done = Some(outcome);
         SearchStep::Outcome(outcome)
+    }
+
+    /// Return the current progress snapshot.
+    #[must_use]
+    pub const fn progress(&self) -> (Board<H, W>, [[bool; W]; H], Board<H, W>) {
+        (self.candidate, self.assigned, self.target)
     }
 
     /// Advance the search by at most `iteration_budget` backtracking iterations.
@@ -460,6 +824,32 @@ impl<const H: usize, const W: usize> PredecessorSearch<H, W> {
 
         None
     }
+}
+
+/// Build a display frame showing current predecessor search progress.
+#[must_use]
+pub fn search_frame<const W: usize, const H: usize>(
+    candidate: &Board<H, W>,
+    assigned: &[[bool; W]; H],
+    target: &Board<H, W>,
+) -> Frame2d<W, H> {
+    let mut frame = Frame2d::<W, H>::new();
+    for row_index in 0..H {
+        for col_index in 0..W {
+            if target.cells[row_index][col_index] {
+                frame[(col_index, row_index)] = SEARCH_TARGET_HINT_COLOR;
+            }
+
+            if assigned[row_index][col_index] {
+                frame[(col_index, row_index)] = if candidate.cells[row_index][col_index] {
+                    SEARCH_COLOR
+                } else {
+                    SEARCH_ASSIGNED_DEAD_COLOR
+                };
+            }
+        }
+    }
+    frame
 }
 
 fn check_search_constraints<const W: usize, const H: usize>(

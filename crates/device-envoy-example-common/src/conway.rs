@@ -9,6 +9,12 @@ use smart_leds::colors;
 
 const STASIS_RESET_GENERATIONS: u8 = 15;
 
+/// Maximum number of backtracking iterations before giving up on the predecessor search.
+const MAX_SEARCH_ITERATIONS: u32 = 500_000;
+
+/// Color used to visualize the predecessor search in progress.
+const SEARCH_COLOR: RGB8 = colors::RED;
+
 const ALIVE_COLORS: [RGB8; 6] = [
     colors::LIME,
     colors::CYAN,
@@ -103,7 +109,15 @@ where
                                 board.step();
                             }
                         }
-                        KeplerKeys::Prev => {}
+                        KeplerKeys::Prev => {
+                            if let Some(predecessor) =
+                                find_predecessor(&board, &led2d).await
+                            {
+                                board = predecessor;
+                                stasis_tracker = (0, 0);
+                                empty_tracker = 0;
+                            }
+                        }
                         KeplerKeys::PlayPause => {
                             paused = !paused;
                         }
@@ -458,6 +472,147 @@ impl<const H: usize, const W: usize> Board<H, W> {
                     self.set_alive(row_index + row_offset, col_index + col_offset);
                 }
             }
+        }
+    }
+}
+
+/// Build a display frame showing only the assigned cells of a candidate predecessor board.
+/// Assigned alive cells appear in `search_color`; all other cells are black.
+fn search_frame<const W: usize, const H: usize>(
+    candidate: &Board<H, W>,
+    assigned: &[[bool; W]; H],
+    search_color: RGB8,
+) -> Frame2d<W, H> {
+    let mut frame = Frame2d::<W, H>::new();
+    for row_index in 0..H {
+        for col_index in 0..W {
+            if assigned[row_index][col_index] && candidate.cells[row_index][col_index] {
+                frame[(col_index, row_index)] = search_color;
+            }
+        }
+    }
+    frame
+}
+
+/// Check whether any newly-fully-constrained cells in the Moore neighborhood of
+/// `(changed_row, changed_col)` are inconsistent with `target`.
+///
+/// After assigning a cell, up to 9 neighboring cells may have their full 3×3
+/// neighborhood complete for the first time.  For each of those cells, verify
+/// that applying the Conway rule to `candidate` gives the value in `target`.
+/// Returns `true` if all constraints that can be checked are satisfied.
+fn check_search_constraints<const W: usize, const H: usize>(
+    candidate: &Board<H, W>,
+    assigned: &[[bool; W]; H],
+    target: &Board<H, W>,
+    changed_row: usize,
+    changed_col: usize,
+) -> bool {
+    for dr in [-1i32, 0, 1] {
+        for dc in [-1i32, 0, 1] {
+            let check_row = ((changed_row as i32 + dr).rem_euclid(H as i32)) as usize;
+            let check_col = ((changed_col as i32 + dc).rem_euclid(W as i32)) as usize;
+
+            // Is every cell in the 3x3 neighborhood of (check_row, check_col) assigned?
+            let mut neighborhood_complete = true;
+            'check_neighborhood: for nr_offset in [-1i32, 0, 1] {
+                for nc_offset in [-1i32, 0, 1] {
+                    let nr = ((check_row as i32 + nr_offset).rem_euclid(H as i32)) as usize;
+                    let nc = ((check_col as i32 + nc_offset).rem_euclid(W as i32)) as usize;
+                    if !assigned[nr][nc] {
+                        neighborhood_complete = false;
+                        break 'check_neighborhood;
+                    }
+                }
+            }
+
+            if neighborhood_complete {
+                // Apply the Conway rule to the candidate predecessor at this cell.
+                let live_neighbors = candidate.count_live_neighbors(check_row, check_col);
+                let is_alive_in_prev = candidate.cells[check_row][check_col];
+                let next_alive = matches!(
+                    (is_alive_in_prev, live_neighbors),
+                    (true, 2) | (true, 3) | (false, 3)
+                );
+                if next_alive != target.cells[check_row][check_col] {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+/// Try to find a predecessor board: a state that evolves into `target` after one step.
+///
+/// Uses iterative backtracking, assigning predecessor cells one by one in raster order
+/// and pruning branches as soon as a Conway-rule constraint is violated.  Displays the
+/// partial candidate board in [`SEARCH_COLOR`] while searching.
+///
+/// Returns `Some(predecessor)` if found, or `None` if no predecessor exists within
+/// [`MAX_SEARCH_ITERATIONS`] iterations.
+async fn find_predecessor<const W: usize, const H: usize, L>(
+    target: &Board<H, W>,
+    led2d: &L,
+) -> Option<Board<H, W>>
+where
+    L: Led2d<W, H>,
+{
+    let mut candidate = Board::<H, W>::new();
+    // choices[r][c]: 0 = try false next, 1 = try true next, 2 = both tried (backtrack).
+    let mut choices = [[0u8; W]; H];
+    let mut assigned = [[false; W]; H];
+    let mut depth = 0usize;
+    let total = H * W;
+    let mut iteration = 0u32;
+
+    loop {
+        if depth == total {
+            return Some(candidate);
+        }
+
+        let row = depth / W;
+        let col = depth % W;
+
+        let try_value = match choices[row][col] {
+            0 => Some(false),
+            1 => Some(true),
+            _ => None,
+        };
+
+        if let Some(value) = try_value {
+            choices[row][col] += 1;
+            candidate.cells[row][col] = value;
+            assigned[row][col] = true;
+
+            if check_search_constraints(&candidate, &assigned, target, row, col) {
+                depth += 1;
+            } else {
+                assigned[row][col] = false;
+                // choices[row][col] was already incremented; next iteration tries the other value.
+            }
+        } else {
+            // Both values exhausted — backtrack.
+            choices[row][col] = 0;
+            assigned[row][col] = false;
+            if depth == 0 {
+                return None;
+            }
+            depth -= 1;
+            let prev_row = depth / W;
+            let prev_col = depth % W;
+            assigned[prev_row][prev_col] = false;
+        }
+
+        iteration += 1;
+        if iteration >= MAX_SEARCH_ITERATIONS {
+            return None;
+        }
+
+        // Periodically update the display so the search is visible.
+        if iteration % 128 == 0 {
+            led2d.write_frame(search_frame(&candidate, &assigned, SEARCH_COLOR));
+            Timer::after(Duration::from_millis(1)).await;
         }
     }
 }

@@ -5,6 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
+device-envoy-conway-core = { path = "../device-envoy-conway-core" }
 device-envoy-core = { path = "../device-envoy-core", features = ["wifi"] }
 embassy-futures = "0.1.2"
 embassy-sync = "0.8.0"

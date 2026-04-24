@@ -1,0 +1,14 @@
+[package]
+name = "device-envoy-conway-wasm"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+device-envoy-conway-core = { path = "../device-envoy-conway-core" }
+device-envoy-core = { path = "../device-envoy-core", features = ["host"] }
+smart-leds = "0.4.0"
+wasm-bindgen = "0.2"

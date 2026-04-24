@@ -40,6 +40,20 @@ impl<const W: usize, const H: usize> Frame2d<W, H> {
         )
     }
 
+    /// Render this frame into PNG bytes sized to the requested maximum dimension.
+    pub fn to_png_bytes(&self, target_max_dimension: u32) -> Result<Vec<u8>, Box<dyn Error>> {
+        self.to_png_bytes_with_gamma(target_max_dimension, PREVIEW_INVERSE_GAMMA)
+    }
+
+    /// Render this frame into PNG bytes with a custom preview inverse gamma.
+    pub fn to_png_bytes_with_gamma(
+        &self,
+        target_max_dimension: u32,
+        preview_inverse_gamma: f32,
+    ) -> Result<Vec<u8>, Box<dyn Error>> {
+        frame_png_bytes(self, target_max_dimension, preview_inverse_gamma)
+    }
+
     /// Render multiple frames into a looping APNG file.
     pub fn write_apng(
         frames: &[Self],
@@ -105,6 +119,32 @@ fn write_frame_png_with_gamma<const W: usize, const H: usize>(
     )?;
     println!("wrote PNG to {}", output_path.display());
     Ok(())
+}
+
+fn frame_png_bytes<const W: usize, const H: usize>(
+    frame: &Frame2d<W, H>,
+    target_max_dimension: u32,
+    preview_inverse_gamma: f32,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    assert!(
+        preview_inverse_gamma > 0.0,
+        "preview_inverse_gamma must be positive"
+    );
+    let panel_width = W as u32;
+    let panel_height = H as u32;
+    let cell_size = select_cell_size(panel_width, panel_height, target_max_dimension);
+    let led_margin = (cell_size / 8).max(1);
+    let (width, height, pixels) = panel_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
+    let mut png_bytes = Vec::new();
+    let mut encoder = Encoder::new(&mut png_bytes, width, height);
+    encoder.set_color(ColorType::Rgb);
+    encoder.set_depth(BitDepth::Sixteen);
+    encoder.set_source_gamma(ScaledFloat::new(1.0));
+    {
+        let mut writer = encoder.write_header()?;
+        writer.write_image_data(&pixels)?;
+    }
+    Ok(png_bytes)
 }
 
 fn write_frames_apng<const W: usize, const H: usize>(

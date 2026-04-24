@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     "xtask",
     "crates/device-envoy",
+    "crates/device-envoy-conway-core",
+    "crates/device-envoy-conway-wasm",
     "crates/device-envoy-core",
     "crates/device-envoy-example-common",
     "crates/device-envoy-rp",

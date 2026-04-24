@@ -1,6 +1,6 @@
 [package]
 name = "device-envoy-esp"
-version = "0.0.6-alpha.0"
+version = "0.0.6-alpha.1"
 edition = "2021"
 description = "Build ESP32 applications with composable device abstractions"
 keywords = ["embedded", "esp32", "esp32c6", "esp32s3", "ws2812"]
@@ -127,7 +127,7 @@ embassy-time   = { version = "0.5.1" }
 embassy-sync   = { version = "0.8.0" }
 embassy-futures = { version = "0.1.2" }
 smart-leds     = { version = "0.4.0" }
-device-envoy-core = { version = "0.0.6-alpha.0", path = "../device-envoy-core", features = ["wifi"] }
+device-envoy-core = { version = "0.0.6-alpha.1", path = "../device-envoy-core", features = ["wifi"] }
 embedded-graphics = { version = "0.8", default-features = false }
 heapless       = { version = "0.9.2", features = ["serde"] }
 static_cell    = { version = "2.1.1" }

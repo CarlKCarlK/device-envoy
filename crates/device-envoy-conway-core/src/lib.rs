@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use device_envoy_core::{led_strip::RGB8, led2d::Frame2d};
 use smart_leds::colors;
@@ -618,6 +618,12 @@ impl<const H: usize, const W: usize> Conway<H, W> {
         }
     }
 
+    /// Current board state.
+    #[must_use]
+    pub const fn board(&self) -> Board<H, W> {
+        self.board
+    }
+
     /// Current frame interval in milliseconds.
     #[must_use]
     pub const fn tick_interval_ms(&self) -> u32 {
@@ -922,4 +928,48 @@ fn search_cell_at<const W: usize, const H: usize>(
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A horizontal blinker evolves to a vertical blinker and back.
+    #[test]
+    fn blinker_oscillates() {
+        let mut board = Board::<5, 5>::new();
+        // Horizontal blinker: row 2, cols 1-3
+        board.set_alive(2, 1);
+        board.set_alive(2, 2);
+        board.set_alive(2, 3);
+
+        board.step();
+
+        // After one step: vertical blinker at rows 1-3, col 2
+        let mut expected_vertical = Board::<5, 5>::new();
+        expected_vertical.set_alive(1, 2);
+        expected_vertical.set_alive(2, 2);
+        expected_vertical.set_alive(3, 2);
+        assert_eq!(board, expected_vertical);
+
+        board.step();
+
+        // After two steps: back to horizontal blinker
+        let mut expected_horizontal = Board::<5, 5>::new();
+        expected_horizontal.set_alive(2, 1);
+        expected_horizontal.set_alive(2, 2);
+        expected_horizontal.set_alive(2, 3);
+        assert_eq!(board, expected_horizontal);
+    }
+
+    /// Conway::board() returns the current board state.
+    #[test]
+    fn conway_board_accessor_returns_live_cells() {
+        let conway = Conway::<8, 8>::new(0x9e37_79b9);
+        let board = conway.board();
+        assert!(
+            board.count_live_cells() > 0,
+            "default random pattern should have live cells"
+        );
+    }
 }

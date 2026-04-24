@@ -60,6 +60,21 @@ fn check_all() -> ExitCode {
         )
     });
 
+    let wasm_workspace_root = workspace_root.clone();
+    let wasm_handle = thread::spawn(move || -> bool {
+        run_command(
+            Command::new("cargo")
+                .current_dir(&wasm_workspace_root)
+                .args([
+                    "check",
+                    "-p",
+                    "device-envoy-conway-wasm",
+                    "--target",
+                    "wasm32-unknown-unknown",
+                ]),
+        )
+    });
+
     let esp_workspace_root = workspace_root.clone();
     let esp_handle = thread::spawn(move || -> bool {
         run_command(
@@ -120,6 +135,17 @@ fn check_all() -> ExitCode {
         }
         Err(_) => {
             eprintln!("device-envoy check thread panicked");
+            failed = true;
+        }
+    }
+    match wasm_handle.join() {
+        Ok(wasm_ok) => {
+            if !wasm_ok {
+                failed = true;
+            }
+        }
+        Err(_) => {
+            eprintln!("wasm check thread panicked");
             failed = true;
         }
     }

@@ -1578,6 +1578,14 @@ fn generate_board_examples() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    println!("{}", "--> cargo fmt --all".cyan());
+    if !run(Command::new("cargo")
+        .current_dir(&root)
+        .args(["fmt", "--all"]))
+    {
+        return ExitCode::FAILURE;
+    }
+
     println!("{}", "==> Template-based examples generated".green().bold());
     ExitCode::SUCCESS
 }

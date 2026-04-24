@@ -17,6 +17,7 @@ You may need all embedded targets below, depending on what you build:
 - ESP32-C2 / ESP32-C3 (RISC-V): `riscv32imc-unknown-none-elf`
 - ESP32 / ESP32-S2 / ESP32-S3 (Xtensa):
   `xtensa-esp32-none-elf`, `xtensa-esp32s2-none-elf`, `xtensa-esp32s3-none-elf`
+- Conway web preview (WASM): `wasm32-unknown-unknown`
 
 Install Rust targets:
 
@@ -25,6 +26,7 @@ rustup target add thumbv6m-none-eabi
 rustup target add thumbv8m.main-none-eabihf
 rustup target add riscv32imc-unknown-none-elf
 rustup target add riscv32imac-unknown-none-elf
+rustup target add wasm32-unknown-unknown
 ```
 
 Xtensa ESP chips (ESP32 / ESP32-S2 / ESP32-S3) require the ESP Rust toolchain/runtime flow used by this repo:

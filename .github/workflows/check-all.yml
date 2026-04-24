@@ -26,7 +26,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf,riscv32imac-unknown-none-elf
+          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf,riscv32imac-unknown-none-elf,wasm32-unknown-unknown
 
       - name: Install ESP toolchain
         shell: bash

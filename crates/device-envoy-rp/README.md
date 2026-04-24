@@ -12,7 +12,7 @@ A device abstraction is a software encapsulation of hardware that manages timing
 
 Rather than replacing HALs or drivers, `device-envoy-rp` builds on them. It defines device abstractions that expose a small set of simple operations to the rest of the program.
 
-Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores) in [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/), and ESP32, ESP32-C2, ESP32-C3, ESP32-C6, ESP32-H2, ESP32-S2, and ESP32-S3 in [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/). RISC-V core support on RP is not currently supported.
+Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores) in [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/), and ESP32, ESP32-C2, ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2, ESP32-S2, and ESP32-S3 in [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/). RISC-V core support on RP is not currently supported.
 
 ## Start From a Template
 

@@ -67,9 +67,17 @@ infer_blinky_example_from_invocation_dir() {
       chip_feature="esp32c3"
       inferred_chip="c3"
       ;;
+    c5)
+      chip_feature="esp32c5"
+      inferred_chip="c5"
+      ;;
     c6)
       chip_feature="esp32c6"
       inferred_chip="c6"
+      ;;
+    c61)
+      chip_feature="esp32c61"
+      inferred_chip="c61"
       ;;
     h2)
       chip_feature="esp32h2"
@@ -134,9 +142,17 @@ infer_board_example_from_invocation_dir() {
       chip_feature="esp32c3"
       inferred_chip="c3"
       ;;
+    c5)
+      chip_feature="esp32c5"
+      inferred_chip="c5"
+      ;;
     c6)
       chip_feature="esp32c6"
       inferred_chip="c6"
+      ;;
+    c61)
+      chip_feature="esp32c61"
+      inferred_chip="c61"
       ;;
     h2)
       chip_feature="esp32h2"
@@ -278,9 +294,17 @@ case "$chip" in
     target="riscv32imc-unknown-none-elf"
     feature="esp32c3"
     ;;
+  c5)
+    target="riscv32imac-unknown-none-elf"
+    feature="esp32c5"
+    ;;
   h2)
     target="riscv32imac-unknown-none-elf"
     feature="esp32h2"
+    ;;
+  c61)
+    target="riscv32imac-unknown-none-elf"
+    feature="esp32c61"
     ;;
   esp32)
     target="xtensa-esp32-none-elf"
@@ -301,7 +325,7 @@ case "$chip" in
     build_std_args=(-Zbuild-std=core,alloc)
     ;;
   *)
-    echo "invalid chip '$chip' (expected one of: c6, c2, c3, h2, esp32, s2, s3)" >&2
+    echo "invalid chip '$chip' (expected one of: c6, c5, c61, c2, c3, h2, esp32, s2, s3)" >&2
     exit 1
     ;;
 esac

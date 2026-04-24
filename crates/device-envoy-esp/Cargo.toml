@@ -55,6 +55,17 @@ esp32c3 = [
     "esp-println/esp32c3",
     "esp-bootloader-esp-idf/esp32c3",
 ]
+esp32c5 = [
+    "esp-hal/esp32c5",
+    "esp-rtos/esp32c5",
+    "esp-storage/esp32c5",
+    "esp-alloc/esp32c5",
+    "esp-radio/esp32c5",
+    "esp-radio/wifi",
+    "esp-backtrace/esp32c5",
+    "esp-println/esp32c5",
+    "esp-bootloader-esp-idf/esp32c5",
+]
 esp32c6 = [
     "esp-hal/esp32c6",
     "esp-rtos/esp32c6",
@@ -65,6 +76,17 @@ esp32c6 = [
     "esp-backtrace/esp32c6",
     "esp-println/esp32c6",
     "esp-bootloader-esp-idf/esp32c6",
+]
+esp32c61 = [
+    "esp-hal/esp32c61",
+    "esp-rtos/esp32c61",
+    "esp-storage/esp32c61",
+    "esp-alloc/esp32c61",
+    "esp-radio/esp32c61",
+    "esp-radio/wifi",
+    "esp-backtrace/esp32c61",
+    "esp-println/esp32c61",
+    "esp-bootloader-esp-idf/esp32c61",
 ]
 esp32h2 = [
     "esp-hal/esp32h2",
@@ -117,7 +139,7 @@ time = { version = "0.3", default-features = false }
 portable-atomic = { version = "1.13.1" }
 
 [target.'cfg(target_os = "none")'.dependencies]
-esp-hal = { version = "1.1.0-rc.0", default-features = false, features = ["unstable"] }
+esp-hal = { version = "1.1.0", default-features = false, features = ["unstable"] }
 esp-rtos = { version = "0.3.0", default-features = false, features = ["embassy", "esp-radio", "esp-alloc"] }
 esp-storage = { version = "0.9.0", default-features = false }
 esp-alloc = { version = "0.10.0", default-features = false, features = ["compat", "global-allocator"] }
@@ -1206,6 +1228,218 @@ name = "wifi_scan_esp32c3_luatos"
 path = "examples/c3/luatos/wifi_scan.rs"
 
 [[example]]
+name = "audio_esp32c5_generic"
+path = "examples/c5/generic/audio.rs"
+
+[[example]]
+name = "audio20k_one_esp32c5_generic"
+path = "examples/c5/generic/audio20k_one.rs"
+
+[[example]]
+name = "audio_example1_esp32c5_generic"
+path = "examples/c5/generic/audio_example1.rs"
+
+[[example]]
+name = "audio_example2_esp32c5_generic"
+path = "examples/c5/generic/audio_example2.rs"
+
+[[example]]
+name = "audio_example3_esp32c5_generic"
+path = "examples/c5/generic/audio_example3.rs"
+
+[[example]]
+name = "blinky_esp32c5_generic"
+path = "examples/c5/generic/blinky.rs"
+
+[[example]]
+name = "button_example1_esp32c5_generic"
+path = "examples/c5/generic/button_example1.rs"
+
+[[example]]
+name = "clock_console_simple_esp32c5_generic"
+path = "examples/c5/generic/clock_console_simple.rs"
+
+[[example]]
+name = "clock_lcd_esp32c5_generic"
+path = "examples/c5/generic/clock_lcd.rs"
+
+[[example]]
+name = "clock_led4_esp32c5_generic"
+path = "examples/c5/generic/clock_led4.rs"
+
+[[example]]
+name = "clock_led8x12_esp32c5_generic"
+path = "examples/c5/generic/clock_led8x12.rs"
+
+[[example]]
+name = "clock_servos_esp32c5_generic"
+path = "examples/c5/generic/clock_servos.rs"
+
+[[example]]
+name = "clock_sync_example1_esp32c5_generic"
+path = "examples/c5/generic/clock_sync_example1.rs"
+
+[[example]]
+name = "conway_esp32c5_generic"
+path = "examples/c5/generic/conway.rs"
+
+[[example]]
+name = "flash_block_example1_esp32c5_generic"
+path = "examples/c5/generic/flash_block_example1.rs"
+
+[[example]]
+name = "ir_esp32c5_generic"
+path = "examples/c5/generic/ir.rs"
+
+[[example]]
+name = "ir_example1_esp32c5_generic"
+path = "examples/c5/generic/ir_example1.rs"
+
+[[example]]
+name = "ir_kepler_esp32c5_generic"
+path = "examples/c5/generic/ir_kepler.rs"
+
+[[example]]
+name = "ir_kepler_example1_esp32c5_generic"
+path = "examples/c5/generic/ir_kepler_example1.rs"
+
+[[example]]
+name = "ir_keplers_esp32c5_generic"
+path = "examples/c5/generic/ir_keplers.rs"
+
+[[example]]
+name = "ir_mapping_example1_esp32c5_generic"
+path = "examples/c5/generic/ir_mapping_example1.rs"
+
+[[example]]
+name = "lcd_text_esp32c5_generic"
+path = "examples/c5/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_esp32c5_generic"
+path = "examples/c5/generic/lcd_text_example1.rs"
+
+[[example]]
+name = "lcd_texts_esp32c5_generic"
+path = "examples/c5/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32c5_generic"
+path = "examples/c5/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32c5_generic"
+path = "examples/c5/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16test_esp32c5_generic"
+path = "examples/c5/generic/led16x16test.rs"
+
+[[example]]
+name = "led2d_esp32c5_generic"
+path = "examples/c5/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_esp32c5_generic"
+path = "examples/c5/generic/led2d_example1.rs"
+
+[[example]]
+name = "led2d_example2_esp32c5_generic"
+path = "examples/c5/generic/led2d_example2.rs"
+
+[[example]]
+name = "led_example1_esp32c5_generic"
+path = "examples/c5/generic/led_example1.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c5_generic"
+path = "examples/c5/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_esp32c5_generic"
+path = "examples/c5/generic/led_strip_example1.rs"
+
+[[example]]
+name = "led_strip_example2_esp32c5_generic"
+path = "examples/c5/generic/led_strip_example2.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c5_generic"
+path = "examples/c5/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c5_generic"
+path = "examples/c5/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c5_generic"
+path = "examples/c5/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_esp32c5_generic"
+path = "examples/c5/generic/servo_example1.rs"
+
+[[example]]
+name = "servo_player_example1_esp32c5_generic"
+path = "examples/c5/generic/servo_player_example1.rs"
+
+[[example]]
+name = "servo_player_example2_esp32c5_generic"
+path = "examples/c5/generic/servo_player_example2.rs"
+
+[[example]]
+name = "servos_esp32c5_generic"
+path = "examples/c5/generic/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32c5_generic"
+path = "examples/c5/generic/servos_calibrate.rs"
+
+[[example]]
+name = "talk1_a1_strip_8_blue_gray_esp32c5_generic"
+path = "examples/c5/generic/talk1/a1_strip_8_blue_gray.rs"
+
+[[example]]
+name = "talk1_a3_strip_8_blue_white_blink_animate_esp32c5_generic"
+path = "examples/c5/generic/talk1/a3_strip_8_blue_white_blink_animate.rs"
+
+[[example]]
+name = "talk1_a4_strip_96_blue_white_dot_esp32c5_generic"
+path = "examples/c5/generic/talk1/a4_strip_96_blue_white_dot.rs"
+
+[[example]]
+name = "talk1_b1_panel_12x8_rust_cursor_esp32c5_generic"
+path = "examples/c5/generic/talk1/b1_panel_12x8_rust_cursor.rs"
+
+[[example]]
+name = "talk1_b2_panel_12x8_text_graphics_esp32c5_generic"
+path = "examples/c5/generic/talk1/b2_panel_12x8_text_graphics.rs"
+
+[[example]]
+name = "talk1_f1_dns_esp32c5_generic"
+path = "examples/c5/generic/talk1/f1_dns.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c5_generic"
+path = "examples/c5/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_esp32c5_generic"
+path = "examples/c5/generic/wifi_auto_example1.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c5_generic"
+path = "examples/c5/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c5_generic"
+path = "examples/c5/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c5_generic"
+path = "examples/c5/generic/wifi_scan.rs"
+
+[[example]]
 name = "audio_esp32c6_generic"
 path = "examples/c6/generic/audio.rs"
 
@@ -1416,6 +1650,218 @@ path = "examples/c6/generic/wifi_dns_hex.rs"
 [[example]]
 name = "wifi_scan_esp32c6_generic"
 path = "examples/c6/generic/wifi_scan.rs"
+
+[[example]]
+name = "audio_esp32c61_generic"
+path = "examples/c61/generic/audio.rs"
+
+[[example]]
+name = "audio20k_one_esp32c61_generic"
+path = "examples/c61/generic/audio20k_one.rs"
+
+[[example]]
+name = "audio_example1_esp32c61_generic"
+path = "examples/c61/generic/audio_example1.rs"
+
+[[example]]
+name = "audio_example2_esp32c61_generic"
+path = "examples/c61/generic/audio_example2.rs"
+
+[[example]]
+name = "audio_example3_esp32c61_generic"
+path = "examples/c61/generic/audio_example3.rs"
+
+[[example]]
+name = "blinky_esp32c61_generic"
+path = "examples/c61/generic/blinky.rs"
+
+[[example]]
+name = "button_example1_esp32c61_generic"
+path = "examples/c61/generic/button_example1.rs"
+
+[[example]]
+name = "clock_console_simple_esp32c61_generic"
+path = "examples/c61/generic/clock_console_simple.rs"
+
+[[example]]
+name = "clock_lcd_esp32c61_generic"
+path = "examples/c61/generic/clock_lcd.rs"
+
+[[example]]
+name = "clock_led4_esp32c61_generic"
+path = "examples/c61/generic/clock_led4.rs"
+
+[[example]]
+name = "clock_led8x12_esp32c61_generic"
+path = "examples/c61/generic/clock_led8x12.rs"
+
+[[example]]
+name = "clock_servos_esp32c61_generic"
+path = "examples/c61/generic/clock_servos.rs"
+
+[[example]]
+name = "clock_sync_example1_esp32c61_generic"
+path = "examples/c61/generic/clock_sync_example1.rs"
+
+[[example]]
+name = "conway_esp32c61_generic"
+path = "examples/c61/generic/conway.rs"
+
+[[example]]
+name = "flash_block_example1_esp32c61_generic"
+path = "examples/c61/generic/flash_block_example1.rs"
+
+[[example]]
+name = "ir_esp32c61_generic"
+path = "examples/c61/generic/ir.rs"
+
+[[example]]
+name = "ir_example1_esp32c61_generic"
+path = "examples/c61/generic/ir_example1.rs"
+
+[[example]]
+name = "ir_kepler_esp32c61_generic"
+path = "examples/c61/generic/ir_kepler.rs"
+
+[[example]]
+name = "ir_kepler_example1_esp32c61_generic"
+path = "examples/c61/generic/ir_kepler_example1.rs"
+
+[[example]]
+name = "ir_keplers_esp32c61_generic"
+path = "examples/c61/generic/ir_keplers.rs"
+
+[[example]]
+name = "ir_mapping_example1_esp32c61_generic"
+path = "examples/c61/generic/ir_mapping_example1.rs"
+
+[[example]]
+name = "lcd_text_esp32c61_generic"
+path = "examples/c61/generic/lcd_text.rs"
+
+[[example]]
+name = "lcd_text_example1_esp32c61_generic"
+path = "examples/c61/generic/lcd_text_example1.rs"
+
+[[example]]
+name = "lcd_texts_esp32c61_generic"
+path = "examples/c61/generic/lcd_texts.rs"
+
+[[example]]
+name = "led16x16_plus_1_esp32c61_generic"
+path = "examples/c61/generic/led16x16_plus_1.rs"
+
+[[example]]
+name = "led16x16_plus_1_spi_esp32c61_generic"
+path = "examples/c61/generic/led16x16_plus_1_spi.rs"
+
+[[example]]
+name = "led16x16test_esp32c61_generic"
+path = "examples/c61/generic/led16x16test.rs"
+
+[[example]]
+name = "led2d_esp32c61_generic"
+path = "examples/c61/generic/led2d.rs"
+
+[[example]]
+name = "led2d_example1_esp32c61_generic"
+path = "examples/c61/generic/led2d_example1.rs"
+
+[[example]]
+name = "led2d_example2_esp32c61_generic"
+path = "examples/c61/generic/led2d_example2.rs"
+
+[[example]]
+name = "led_example1_esp32c61_generic"
+path = "examples/c61/generic/led_example1.rs"
+
+[[example]]
+name = "led_strip8_spi_esp32c61_generic"
+path = "examples/c61/generic/led_strip8_spi.rs"
+
+[[example]]
+name = "led_strip_example1_esp32c61_generic"
+path = "examples/c61/generic/led_strip_example1.rs"
+
+[[example]]
+name = "led_strip_example2_esp32c61_generic"
+path = "examples/c61/generic/led_strip_example2.rs"
+
+[[example]]
+name = "led_strip_len8_esp32c61_generic"
+path = "examples/c61/generic/led_strip_len8.rs"
+
+[[example]]
+name = "rfid_esp32c61_generic"
+path = "examples/c61/generic/rfid.rs"
+
+[[example]]
+name = "servo_basic_esp32c61_generic"
+path = "examples/c61/generic/servo_basic.rs"
+
+[[example]]
+name = "servo_example1_esp32c61_generic"
+path = "examples/c61/generic/servo_example1.rs"
+
+[[example]]
+name = "servo_player_example1_esp32c61_generic"
+path = "examples/c61/generic/servo_player_example1.rs"
+
+[[example]]
+name = "servo_player_example2_esp32c61_generic"
+path = "examples/c61/generic/servo_player_example2.rs"
+
+[[example]]
+name = "servos_esp32c61_generic"
+path = "examples/c61/generic/servos.rs"
+
+[[example]]
+name = "servos_calibrate_esp32c61_generic"
+path = "examples/c61/generic/servos_calibrate.rs"
+
+[[example]]
+name = "talk1_a1_strip_8_blue_gray_esp32c61_generic"
+path = "examples/c61/generic/talk1/a1_strip_8_blue_gray.rs"
+
+[[example]]
+name = "talk1_a3_strip_8_blue_white_blink_animate_esp32c61_generic"
+path = "examples/c61/generic/talk1/a3_strip_8_blue_white_blink_animate.rs"
+
+[[example]]
+name = "talk1_a4_strip_96_blue_white_dot_esp32c61_generic"
+path = "examples/c61/generic/talk1/a4_strip_96_blue_white_dot.rs"
+
+[[example]]
+name = "talk1_b1_panel_12x8_rust_cursor_esp32c61_generic"
+path = "examples/c61/generic/talk1/b1_panel_12x8_rust_cursor.rs"
+
+[[example]]
+name = "talk1_b2_panel_12x8_text_graphics_esp32c61_generic"
+path = "examples/c61/generic/talk1/b2_panel_12x8_text_graphics.rs"
+
+[[example]]
+name = "talk1_f1_dns_esp32c61_generic"
+path = "examples/c61/generic/talk1/f1_dns.rs"
+
+[[example]]
+name = "wifi_auto_custom_checkbox_esp32c61_generic"
+path = "examples/c61/generic/wifi_auto_custom_checkbox.rs"
+
+[[example]]
+name = "wifi_auto_example1_esp32c61_generic"
+path = "examples/c61/generic/wifi_auto_example1.rs"
+
+[[example]]
+name = "wifi_auto_force_button_esp32c61_generic"
+path = "examples/c61/generic/wifi_auto_force_button.rs"
+
+[[example]]
+name = "wifi_dns_hex_esp32c61_generic"
+path = "examples/c61/generic/wifi_dns_hex.rs"
+
+[[example]]
+name = "wifi_scan_esp32c61_generic"
+path = "examples/c61/generic/wifi_scan.rs"
 
 [[example]]
 name = "audio_esp32c6_devkitc1_n8"

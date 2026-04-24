@@ -1,0 +1,51 @@
+//! Wiring:
+//! - Button -> GPIO6 to GND (`PressedTo::Ground`)
+//!
+#![no_std]
+#![no_main]
+
+use core::convert::Infallible;
+
+use embassy_executor::Spawner;
+use esp_backtrace as _;
+use log::info;
+
+use device_envoy_core::button::{Button, PressDuration};
+use device_envoy_esp::{
+    Result,
+    button::{ButtonEsp, PressedTo},
+    init_and_start,
+};
+
+esp_bootloader_esp_idf::esp_app_desc!();
+
+#[esp_rtos::main]
+async fn main(spawner: Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
+}
+
+async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
+    init_and_start!(p);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
+
+    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    info!("button_example1: waiting for short/long presses");
+
+    // Wait for a press without measuring duration.
+    button.wait_for_press().await;
+
+    // Measure press durations in a loop.
+    loop {
+        match button.wait_for_press_duration().await {
+            PressDuration::Short => {
+                // Handle short press.
+                info!("short press");
+            }
+            PressDuration::Long => {
+                // Handle long press (fires before button is released).
+                info!("long press");
+            }
+        }
+    }
+}

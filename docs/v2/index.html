@@ -114,14 +114,14 @@
         <div class="remote-wrapper">
           <img id="remote" src="./remote.jpg" alt="IR remote control" />
           <!-- cols: L=21.5% M=47.6% R=73.7%  rows: 12.7 24.3 35.8 47.4 58.9 70.5 82.0 -->
-          <!-- Row 1: Power → cancel -->
+          <!-- Row 1: Power → cancel, Mode, (empty right) -->
           <button class="remote-btn" data-key="cancel"     data-tip="Esc — cancel search"          style="left:21.5%;top:12.7%" aria-label="Cancel"></button>
+          <button class="remote-btn" data-key="mode"       data-tip="M — cycle color"              style="left:47.6%;top:12.7%" aria-label="Mode"></button>
           <!-- Row 2: Play/Pause, Prev, Next -->
           <button class="remote-btn" data-key="play_pause" data-tip="Space — play / pause"          style="left:21.5%;top:24.3%" aria-label="Play/Pause"></button>
           <button class="remote-btn" data-key="prev"       data-tip="P — predecessor search"       style="left:47.6%;top:24.3%" aria-label="Predecessor Search"></button>
           <button class="remote-btn" data-key="next"       data-tip="N — next generation"          style="left:73.7%;top:24.3%" aria-label="Next"></button>
-          <!-- Row 3: Mode, −, + -->
-          <button class="remote-btn" data-key="mode"       data-tip="M — cycle color"              style="left:21.5%;top:35.8%" aria-label="Mode"></button>
+          <!-- Row 3: −, + -->
           <button class="remote-btn" data-key="speed_down" data-tip="[ — slower"                   style="left:47.6%;top:35.8%" aria-label="Speed Down"></button>
           <button class="remote-btn" data-key="speed_up"   data-tip="] — faster"                   style="left:73.7%;top:35.8%" aria-label="Speed Up"></button>
           <!-- Row 4: 0 -->
@@ -175,6 +175,6 @@
         }
       }
     </script>
-    <script type="module" src="./main.js?v=3"></script>
+    <script type="module" src="./main.js?v=4"></script>
   </body>
 </html>

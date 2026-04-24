@@ -147,10 +147,10 @@ pub mod clock_sync {
     pub use device_envoy_core::clock_sync::ClockSyncRuntime as ClockSyncEsp;
     /// Resources needed to construct [`ClockSyncEsp`].
     pub use device_envoy_core::clock_sync::ClockSyncStatic as ClockSyncStaticEsp;
-    pub use device_envoy_core::{Error as CoreError, Result as CoreResult};
     pub use device_envoy_core::clock_sync::{
         h12_m_s, ClockSync, ClockSyncTick, UnixSeconds, ONE_DAY, ONE_MINUTE, ONE_SECOND,
     };
+    pub use device_envoy_core::{Error as CoreError, Result as CoreResult};
 }
 #[cfg(all(target_os = "none", esp_has_wifi))]
 #[doc(hidden)]

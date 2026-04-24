@@ -17,8 +17,8 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use portable_atomic::{AtomicBool, Ordering};
 
-use crate::{Error, Result};
 use crate::clock::UnixSeconds;
+use crate::{Error, Result};
 
 // ============================================================================
 // Types
@@ -87,7 +87,9 @@ impl TimeSync {
             "TimeSync::new must be called at most once per TimeSyncStatic"
         );
 
-        spawner.spawn(time_sync_stack_loop(stack, &time_sync_static.events).map_err(Error::TaskSpawn)?);
+        spawner.spawn(
+            time_sync_stack_loop(stack, &time_sync_static.events).map_err(Error::TaskSpawn)?,
+        );
 
         Ok(Self {
             events: &time_sync_static.events,

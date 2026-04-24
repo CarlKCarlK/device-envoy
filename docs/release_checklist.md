@@ -4,6 +4,7 @@ Use this checklist when preparing a new workspace release.
 
 ## 1. Prep
 
+- format all code files
 - Pick the target version (for example `0.0.5-alpha.6`).
 - Create a release branch if needed.
 

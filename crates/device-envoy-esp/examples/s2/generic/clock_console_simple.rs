@@ -87,7 +87,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         timezone_offset_minutes,
         Some(ONE_MINUTE),
         spawner,
-    );
+    )?;
 
     info!("Wi-Fi connected; logging the time every minute");
 

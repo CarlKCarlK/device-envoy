@@ -19,9 +19,9 @@ use embassy_time::{Duration, Instant};
 use portable_atomic::{AtomicBool, AtomicU64, Ordering};
 use time::OffsetDateTime;
 
-use crate::{Error, Result};
 use crate::clock::{Clock, ClockStatic};
 use crate::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
+use crate::{Error, Result};
 
 // ============================================================================
 // Re-exports
@@ -211,14 +211,16 @@ impl ClockSyncRuntime {
             synced: &clock_sync_static.synced,
         };
 
-        spawner.spawn(clock_sync_loop(
-            &clock_sync_static.clock_static,
-            clock_sync.time_sync.events(),
-            clock_sync.sync_ready,
-            clock_sync.last_sync_ticks,
-            clock_sync.synced,
-        )
-        .map_err(Error::TaskSpawn)?);
+        spawner.spawn(
+            clock_sync_loop(
+                &clock_sync_static.clock_static,
+                clock_sync.time_sync.events(),
+                clock_sync.sync_ready,
+                clock_sync.last_sync_ticks,
+                clock_sync.synced,
+            )
+            .map_err(Error::TaskSpawn)?,
+        );
 
         Ok(clock_sync)
     }

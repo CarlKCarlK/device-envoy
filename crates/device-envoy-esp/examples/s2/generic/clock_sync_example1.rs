@@ -94,7 +94,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         offset_minutes,
         Some(ONE_SECOND),
         spawner,
-    );
+    )?;
 
     log_clock_ticks(&clock_sync).await
 }

@@ -125,7 +125,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         offset_minutes,
         Some(ONE_MINUTE),
         spawner,
-    );
+    )?;
 
     led4.animate_text(circular_outline_animation(true));
     info!("Waiting for first NTP sync");

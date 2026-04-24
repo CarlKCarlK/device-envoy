@@ -456,7 +456,11 @@ fn generate_board_template_files(
             } else {
                 strip_board_template_header(&template_source)
             };
-            write_if_changed(&output_path, &generated_source)?;
+            // Always write (not write_if_changed) so the file mtime is updated on every
+            // check-all run.  write_if_changed suppresses the write when content is
+            // unchanged, which leaves the mtime stale and allows Cargo to reuse a
+            // cached artifact compiled against an older version of the crate.
+            fs::write(&output_path, &generated_source)?;
             expected_generated_paths.push(output_path);
         }
         let legacy_top_level_output_path = examples_dir.join(format!("{base_name}.rs"));

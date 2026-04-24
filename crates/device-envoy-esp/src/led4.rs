@@ -8,9 +8,7 @@
 //! 4-digit 7-segment LED displays. Supports displaying text and numbers with
 //! optional blinking.
 
-pub use device_envoy_core::led4::{
-    AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES,
-};
+pub use device_envoy_core::led4::{AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES};
 /// Frame buffer type used by led4 text animations.
 pub type Animation = device_envoy_core::led4::Animation;
 

@@ -109,7 +109,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         timezone_offset_minutes,
         Some(ONE_SECOND),
         spawner,
-    );
+    )?;
 
     info!("Entering main event loop");
     lcd_text_clock.write_text("WiFi connected\nWaiting NTP");

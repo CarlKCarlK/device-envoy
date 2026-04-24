@@ -19,6 +19,8 @@ const STASIS_RESET_GENERATIONS: u8 = 15;
 
 /// Maximum number of backtracking iterations before giving up on the predecessor search.
 const MAX_SEARCH_ITERATIONS: u32 = 500_000;
+/// Search only this many cells away from currently-live target cells.
+const PREDECESSOR_SEARCH_RADIUS: usize = 1;
 
 /// Color used to visualize the predecessor search in progress.
 const SEARCH_COLOR: RGB8 = colors::RED;
@@ -55,17 +57,11 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
-type SearchCommandChannel<const H: usize, const W: usize> = Channel<
-    CriticalSectionRawMutex,
-    SearchCommand<H, W>,
-    SEARCH_COMMAND_CHANNEL_CAPACITY,
->;
+type SearchCommandChannel<const H: usize, const W: usize> =
+    Channel<CriticalSectionRawMutex, SearchCommand<H, W>, SEARCH_COMMAND_CHANNEL_CAPACITY>;
 
-type SearchEventChannel<const H: usize, const W: usize> = Channel<
-    CriticalSectionRawMutex,
-    SearchEvent<H, W>,
-    SEARCH_EVENT_CHANNEL_CAPACITY,
->;
+type SearchEventChannel<const H: usize, const W: usize> =
+    Channel<CriticalSectionRawMutex, SearchEvent<H, W>, SEARCH_EVENT_CHANNEL_CAPACITY>;
 
 #[derive(Clone, Copy)]
 enum SearchCommand<const H: usize, const W: usize> {
@@ -98,7 +94,12 @@ where
     let search_event_channel = SearchEventChannel::<H, W>::new();
 
     let _ = join(
-        conway_ui_loop(&led2d, &ir_kepler, &search_command_channel, &search_event_channel),
+        conway_ui_loop(
+            &led2d,
+            &ir_kepler,
+            &search_command_channel,
+            &search_event_channel,
+        ),
         conway_search_worker_loop(&search_command_channel, &search_event_channel),
     )
     .await;
@@ -216,8 +217,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
     ir_kepler: &I,
     search_command_channel: &SearchCommandChannel<H, W>,
     search_event_channel: &SearchEventChannel<H, W>,
-)
-where
+) where
     L: Led2d<W, H>,
     I: IrKepler,
 {
@@ -349,8 +349,7 @@ fn request_search_cancel<const H: usize, const W: usize>(
 async fn conway_search_worker_loop<const W: usize, const H: usize>(
     search_command_channel: &SearchCommandChannel<H, W>,
     search_event_channel: &SearchEventChannel<H, W>,
-) -> !
-{
+) -> ! {
     loop {
         let target = match search_command_channel.receive().await {
             SearchCommand::Start(target) => target,
@@ -359,7 +358,9 @@ async fn conway_search_worker_loop<const W: usize, const H: usize>(
 
         let outcome =
             find_predecessor_worker(&target, search_command_channel, search_event_channel).await;
-        search_event_channel.send(SearchEvent::Outcome(outcome)).await;
+        search_event_channel
+            .send(SearchEvent::Outcome(outcome))
+            .await;
     }
 }
 
@@ -685,6 +686,35 @@ impl<const H: usize, const W: usize> Board<H, W> {
         live_cell_count
     }
 
+    fn predecessor_search_mask(&self, radius: usize) -> [[bool; W]; H] {
+        let mut search_mask = [[false; W]; H];
+        let radius = radius as isize;
+
+        for row_index in 0..H {
+            for col_index in 0..W {
+                if self.cells[row_index][col_index] {
+                    for row_delta in -radius..=radius {
+                        for col_delta in -radius..=radius {
+                            let mask_row =
+                                ((row_index as isize + row_delta).rem_euclid(H as isize)) as usize;
+                            let mask_col =
+                                ((col_index as isize + col_delta).rem_euclid(W as isize)) as usize;
+                            search_mask[mask_row][mask_col] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        search_mask
+    }
+
+    fn evolves_to(&self, target: &Self) -> bool {
+        let mut next_board = *self;
+        next_board.step();
+        next_board.cells == target.cells
+    }
+
     fn add_pentadecathlon(&mut self) {
         self.draw_ascii_pattern(
             &[
@@ -842,23 +872,39 @@ async fn find_predecessor_worker<const W: usize, const H: usize>(
     target: &Board<H, W>,
     search_command_channel: &SearchCommandChannel<H, W>,
     search_event_channel: &SearchEventChannel<H, W>,
-) -> SearchOutcome<H, W>
-{
+) -> SearchOutcome<H, W> {
     let mut candidate = Board::<H, W>::new();
+    let search_mask = target.predecessor_search_mask(PREDECESSOR_SEARCH_RADIUS);
     // choices[r][c]: 0 = try false next, 1 = try true next, 2 = both tried (backtrack).
     let mut choices = [[0u8; W]; H];
-    let mut assigned = [[false; W]; H];
+    let mut assigned = [[true; W]; H];
+    let active_count = count_search_cells(&search_mask);
+    for row_index in 0..H {
+        for col_index in 0..W {
+            assigned[row_index][col_index] = !search_mask[row_index][col_index];
+        }
+    }
     let mut depth = 0usize;
-    let total = H * W;
     let mut iteration = 0u32;
 
     loop {
-        if depth == total {
-            return SearchOutcome::Found(candidate);
+        if depth == active_count {
+            if candidate.evolves_to(target) {
+                return SearchOutcome::Found(candidate);
+            }
+            if depth == 0 {
+                return SearchOutcome::NotFound;
+            }
+            depth -= 1;
+            if let Some((prev_row, prev_col)) = search_cell_at(&search_mask, depth) {
+                assigned[prev_row][prev_col] = false;
+            }
+            continue;
         }
 
-        let row = depth / W;
-        let col = depth % W;
+        let Some((row, col)) = search_cell_at(&search_mask, depth) else {
+            return SearchOutcome::NotFound;
+        };
 
         let try_value = match choices[row][col] {
             0 => Some(false),
@@ -885,9 +931,9 @@ async fn find_predecessor_worker<const W: usize, const H: usize>(
                 return SearchOutcome::NotFound;
             }
             depth -= 1;
-            let prev_row = depth / W;
-            let prev_col = depth % W;
-            assigned[prev_row][prev_col] = false;
+            if let Some((prev_row, prev_col)) = search_cell_at(&search_mask, depth) {
+                assigned[prev_row][prev_col] = false;
+            }
         }
 
         iteration += 1;
@@ -912,4 +958,34 @@ async fn find_predecessor_worker<const W: usize, const H: usize>(
             yield_now().await;
         }
     }
+}
+
+fn count_search_cells<const W: usize, const H: usize>(search_mask: &[[bool; W]; H]) -> usize {
+    let mut search_cell_count = 0usize;
+    for row in search_mask {
+        for &is_search_cell in row {
+            if is_search_cell {
+                search_cell_count += 1;
+            }
+        }
+    }
+    search_cell_count
+}
+
+fn search_cell_at<const W: usize, const H: usize>(
+    search_mask: &[[bool; W]; H],
+    target_index: usize,
+) -> Option<(usize, usize)> {
+    let mut search_cell_index = 0usize;
+    for (row_index, row) in search_mask.iter().enumerate() {
+        for (col_index, &is_search_cell) in row.iter().enumerate() {
+            if is_search_cell {
+                if search_cell_index == target_index {
+                    return Some((row_index, col_index));
+                }
+                search_cell_index += 1;
+            }
+        }
+    }
+    None
 }

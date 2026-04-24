@@ -77,6 +77,13 @@ export class ConwayWeb {
             wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
+    /**
+     * @returns {number}
+     */
+    tick_interval_ms() {
+        const ret = wasm.conwayweb_tick_interval_ms(this.__wbg_ptr);
+        return ret >>> 0;
+    }
 }
 if (Symbol.dispose) ConwayWeb.prototype[Symbol.dispose] = ConwayWeb.prototype.free;
 function __wbg_get_imports() {

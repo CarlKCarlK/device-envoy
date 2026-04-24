@@ -1,11 +1,21 @@
 use device_envoy_conway_core::{Board, Pattern, PredecessorSearch, SearchOutcome, SearchStep};
-use smart_leds::colors;
+use smart_leds::{colors, RGB8};
 use wasm_bindgen::prelude::*;
 
 const WIDTH: usize = 16;
 const HEIGHT: usize = 16;
 const DEFAULT_MAX_DIMENSION: u32 = 640;
 const SEARCH_ITERATIONS_PER_COMMAND: u32 = 256;
+
+const ALIVE_COLORS: [RGB8; 6] = [
+    colors::LIME,
+    colors::CYAN,
+    colors::MAGENTA,
+    colors::ORANGE,
+    colors::YELLOW,
+    colors::WHITE,
+];
+
 const PATTERNS: [Pattern; 10] = [
     Pattern::Glider,
     Pattern::Random,
@@ -19,27 +29,67 @@ const PATTERNS: [Pattern; 10] = [
     Pattern::Custom9,
 ];
 
+#[derive(Clone, Copy)]
+enum SpeedMode {
+    Slow,
+    Medium,
+    Fast,
+}
+
+impl SpeedMode {
+    const fn slower(self) -> Self {
+        match self {
+            Self::Slow => Self::Slow,
+            Self::Medium => Self::Slow,
+            Self::Fast => Self::Medium,
+        }
+    }
+    const fn faster(self) -> Self {
+        match self {
+            Self::Slow => Self::Medium,
+            Self::Medium => Self::Fast,
+            Self::Fast => Self::Fast,
+        }
+    }
+    const fn interval_ms(self) -> u32 {
+        match self {
+            Self::Slow => 500,
+            Self::Medium => 160,
+            Self::Fast => 50,
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub struct ConwayWeb {
     board: Board<HEIGHT, WIDTH>,
     pattern_index: usize,
     search: Option<PredecessorSearch<HEIGHT, WIDTH>>,
     paused: bool,
+    speed_mode: SpeedMode,
+    color_index: usize,
 }
 
 #[wasm_bindgen]
 impl ConwayWeb {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        let mut board = Board::new();
         let pattern_index = 1usize;
+        let color_index = 1usize; // CYAN, matching embedded default
+        let mut board = Board::new();
         board.add_pattern(PATTERNS[pattern_index]);
         Self {
             board,
             pattern_index,
             search: None,
             paused: false,
+            speed_mode: SpeedMode::Medium,
+            color_index,
         }
+    }
+
+    pub fn tick_interval_ms(&self) -> u32 {
+        self.speed_mode.interval_ms()
     }
 
     pub fn press_key(&mut self, key: &str) -> String {
@@ -61,6 +111,18 @@ impl ConwayWeb {
             "cancel" => {
                 self.search = None;
                 "cancelled".into()
+            }
+            "speed_up" => {
+                self.speed_mode = self.speed_mode.faster();
+                "ok".into()
+            }
+            "speed_down" => {
+                self.speed_mode = self.speed_mode.slower();
+                "ok".into()
+            }
+            "mode" => {
+                self.color_index = (self.color_index + 1) % ALIVE_COLORS.len();
+                "ok".into()
             }
             "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" => {
                 let pattern_index = key.as_bytes()[0] - b'0';
@@ -105,13 +167,14 @@ impl ConwayWeb {
         &mut self,
         max_dimension: u32,
     ) -> Result<Vec<u8>, JsValue> {
+        let alive_color = ALIVE_COLORS[self.color_index];
         let frame = if self.search.is_some() {
             match self.search_preview() {
                 Some(frame) => frame,
-                None => self.board.to_frame(colors::CYAN),
+                None => self.board.to_frame(alive_color),
             }
         } else {
-            self.board.to_frame(colors::CYAN)
+            self.board.to_frame(alive_color)
         };
         frame
             .to_png_bytes(max_dimension)

@@ -9,6 +9,7 @@ export class ConwayWeb {
     render_png(): Uint8Array;
     render_png_with_max_dimension(max_dimension: number): Uint8Array;
     tick(): string;
+    tick_interval_ms(): number;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -21,6 +22,7 @@ export interface InitOutput {
     readonly conwayweb_render_png: (a: number) => [number, number, number, number];
     readonly conwayweb_render_png_with_max_dimension: (a: number, b: number) => [number, number, number, number];
     readonly conwayweb_tick: (a: number) => [number, number];
+    readonly conwayweb_tick_interval_ms: (a: number) => number;
     readonly __embassy_time_queue_item_from_waker: (a: number) => number;
     readonly __try_embassy_time_queue_item_from_waker: (a: number) => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;

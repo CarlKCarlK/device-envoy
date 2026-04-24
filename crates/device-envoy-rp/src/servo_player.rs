@@ -1012,7 +1012,7 @@ macro_rules! __servo_player_impl {
                         $direction
                     );
                     let token = [<$name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
-                    spawner.spawn(token)?;
+                    spawner.spawn(token?);
                     let servo_player_handle =
                         $crate::servo::ServoPlayerHandle::new(&[<$name:upper _SERVO_PLAYER_STATIC>]);
                     Ok([<$name:upper _SERVO_PLAYER_CELL>].init(Self { servo_player_handle }))
@@ -1118,7 +1118,7 @@ macro_rules! __servo_player_impl {
                         direction: $direction
                     };
                     let token = [<$name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
-                    spawner.spawn(token)?;
+                    spawner.spawn(token?);
                     let servo_player_handle =
                         $crate::servo::ServoPlayerHandle::new(&[<$name:upper _SERVO_PLAYER_STATIC>]);
                     Ok([<$name:upper _SERVO_PLAYER_CELL>].init(Self { servo_player_handle }))

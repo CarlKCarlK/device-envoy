@@ -3,6 +3,7 @@
 
 pub mod audio_player;
 pub mod button;
+pub mod error;
 #[cfg(feature = "wifi")]
 pub(crate) mod clock;
 #[cfg(feature = "wifi")]
@@ -23,6 +24,8 @@ pub mod time_sync;
 #[cfg(feature = "host")]
 mod to_png;
 pub mod wifi_auto;
+
+pub use error::{Error, Result};
 
 /// Used internally by other macros.
 #[doc(hidden)]

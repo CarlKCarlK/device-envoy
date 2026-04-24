@@ -399,7 +399,7 @@ macro_rules! __i2cs_impl {
                     .with_scl(scl);
 
                     let token = [<__i2cs_task_ $group_name:snake>](i2c);
-                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
+                    spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
 
                     $(
                         static [<$lcd_name:upper _INSTANCE>]: $lcd_name = $lcd_name;

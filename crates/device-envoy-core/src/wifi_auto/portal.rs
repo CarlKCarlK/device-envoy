@@ -1,11 +1,47 @@
 use core::fmt::Write;
+use core::ops::{Deref, DerefMut};
 
-use heapless::{FnvIndexMap, String};
+use heapless::{String, index_map::FnvIndexMap};
 
 use super::WifiCredentials;
 
 /// Captive-portal page buffer type.
-pub type HtmlBuffer = String<16384>;
+#[repr(transparent)]
+pub struct HtmlBuffer(String<16384>);
+
+impl HtmlBuffer {
+    /// Create an empty HTML buffer.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self(String::new())
+    }
+
+    /// Borrow the rendered HTML as UTF-8 bytes.
+    #[must_use]
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+}
+
+impl Write for HtmlBuffer {
+    fn write_str(&mut self, text: &str) -> core::fmt::Result {
+        self.0.write_str(text)
+    }
+}
+
+impl Deref for HtmlBuffer {
+    type Target = String<16384>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for HtmlBuffer {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 /// Shared trait for custom setup fields rendered and parsed by the captive portal.
 ///

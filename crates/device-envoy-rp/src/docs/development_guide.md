@@ -47,7 +47,7 @@ Defaults:
 Common target suffixes:
 
 - ESP: `c2`, `c3`, `c6`, `h2`, `esp32`, `s2`, `s3`
-- RP: `1`, `2`, `w`, `2w`, `2r`
+- RP: `1`, `2`, `w`, `2w`
 
 Examples:
 

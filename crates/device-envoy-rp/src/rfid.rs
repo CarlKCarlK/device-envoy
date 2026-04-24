@@ -8,7 +8,7 @@ use defmt::info;
 pub use device_envoy_core::rfid::{Rfid, RfidEvent};
 use embassy_executor::Spawner;
 use embassy_rp::Peri;
-use embassy_rp::dma::Channel;
+use embassy_rp::dma::ChannelInstance;
 use embassy_rp::gpio::{Level, Output, Pin};
 use embassy_rp::peripherals::{SPI0, SPI1};
 use embassy_rp::spi::{
@@ -138,10 +138,18 @@ impl RfidRp<'_> {
         Sck: Pin + ClkPin<SPI0>,
         Mosi: Pin + MosiPin<SPI0>,
         Miso: Pin + MisoPin<SPI0>,
-        DmaTx: Channel,
-        DmaRx: Channel,
+        DmaTx: ChannelInstance,
+        DmaRx: ChannelInstance,
         Cs: Pin,
         Rst: Pin,
+        crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
+                DmaTx::Interrupt,
+                embassy_rp::dma::InterruptHandler<DmaTx>,
+            >,
+        crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
+                DmaRx::Interrupt,
+                embassy_rp::dma::InterruptHandler<DmaRx>,
+            >,
     {
         let mfrc522 = init_mfrc522_hardware(spi, sck, mosi, miso, dma_tx, dma_rx, cs, rst).await?;
         Self::new_with_device(rfid_static, Mfrc522Device::Spi0(mfrc522), spawner)
@@ -166,10 +174,18 @@ impl RfidRp<'_> {
         Sck: Pin + ClkPin<SPI1>,
         Mosi: Pin + MosiPin<SPI1>,
         Miso: Pin + MisoPin<SPI1>,
-        DmaTx: Channel,
-        DmaRx: Channel,
+        DmaTx: ChannelInstance,
+        DmaRx: ChannelInstance,
         Cs: Pin,
         Rst: Pin,
+        crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
+                DmaTx::Interrupt,
+                embassy_rp::dma::InterruptHandler<DmaTx>,
+            >,
+        crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
+                DmaRx::Interrupt,
+                embassy_rp::dma::InterruptHandler<DmaRx>,
+            >,
     {
         let mfrc522 = init_mfrc522_hardware(spi, sck, mosi, miso, dma_tx, dma_rx, cs, rst).await?;
         Self::new_with_device(rfid_static, Mfrc522Device::Spi1(mfrc522), spawner)
@@ -181,7 +197,7 @@ impl RfidRp<'_> {
         spawner: Spawner,
     ) -> Result<Self> {
         let token = rfid_polling_task(mfrc522, rfid_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
         Ok(Self { rfid_static })
     }
 }
@@ -244,18 +260,35 @@ where
     Sck: Pin + ClkPin<SPI>,
     Mosi: Pin + MosiPin<SPI>,
     Miso: Pin + MisoPin<SPI>,
-    DmaTx: Channel,
-    DmaRx: Channel,
+    DmaTx: ChannelInstance,
+    DmaRx: ChannelInstance,
     Cs: Pin,
     Rst: Pin,
+    crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
+            DmaTx::Interrupt,
+            embassy_rp::dma::InterruptHandler<DmaTx>,
+        >,
+    crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
+            DmaRx::Interrupt,
+            embassy_rp::dma::InterruptHandler<DmaRx>,
+        >,
 {
-    let spi = Spi::new(spi, sck, mosi, miso, dma_tx, dma_rx, {
-        let mut spi_config = SpiConfig::default();
-        spi_config.frequency = 1_000_000;
-        spi_config.polarity = Polarity::IdleLow;
-        spi_config.phase = Phase::CaptureOnFirstTransition;
-        spi_config
-    });
+    let spi = Spi::new(
+        spi,
+        sck,
+        mosi,
+        miso,
+        dma_tx,
+        dma_rx,
+        crate::pio_irqs::DmaAllIrqs,
+        {
+            let mut spi_config = SpiConfig::default();
+            spi_config.frequency = 1_000_000;
+            spi_config.polarity = Polarity::IdleLow;
+            spi_config.phase = Phase::CaptureOnFirstTransition;
+            spi_config
+        },
+    );
 
     let cs = Output::new(cs, Level::High);
 

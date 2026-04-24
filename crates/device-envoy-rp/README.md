@@ -1,6 +1,5 @@
 # device-envoy-rp
 
-
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
 [![crates.io](https://img.shields.io/crates/v/device-envoy-rp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-rp)
 [![docs.rs](https://img.shields.io/docsrs/device-envoy-rp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-rp)
@@ -13,7 +12,7 @@ A device abstraction is a software encapsulation of hardware that manages timing
 
 Rather than replacing HALs or drivers, `device-envoy-rp` builds on them. It defines device abstractions that expose a small set of simple operations to the rest of the program.
 
-Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores) in [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/), and ESP32-C6 and ESP32-S3 in [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/). RISC-V core support on RP exists but is not actively tested.
+Currently targeting Raspberry Pi Pico 1 and Pico 2 (ARM cores) in [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/), and ESP32, ESP32-C2, ESP32-C3, ESP32-C6, ESP32-H2, ESP32-S2, and ESP32-S3 in [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/). RISC-V core support on RP is not currently supported.
 
 ## Start From a Template
 

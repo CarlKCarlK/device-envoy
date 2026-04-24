@@ -186,7 +186,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         timezone_offset_minutes,
         Some(ONE_MINUTE),
         spawner,
-    );
+    )?;
 
     // First tick confirms successful time sync.
     let first_tick = clock_sync.wait_for_tick().await;

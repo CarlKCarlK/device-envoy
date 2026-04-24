@@ -155,7 +155,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         offset_minutes,
         Some(ONE_MINUTE),
         spawner,
-    );
+    )?;
 
     let led8x12_ref = &led8x12;
     run_clock_ui(

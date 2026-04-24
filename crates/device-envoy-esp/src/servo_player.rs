@@ -59,10 +59,8 @@ macro_rules! combine {
 /// users. If you need multiple servo players, generate separate types with separate
 /// timer/channel selections.
 ///
-/// Current [LEDC](crate#glossary) resource counts:
-///
-/// - ESP32-C6: 4 timers, 6 channels
-/// - ESP32-S3: 4 timers, 8 channels
+/// [LEDC](crate#glossary) timer/channel availability is chip and board dependent.
+/// Use the capability/board-profile configuration as source of truth for current limits.
 ///
 /// **Syntax:**
 ///
@@ -162,7 +160,7 @@ macro_rules! __servo_player_impl {
                 ) -> $crate::Result<$crate::servo::ServoPlayerHandle<{ $crate::__servo_player_impl!(@max_steps $($max_steps)?) }>> {
                     let servo = $crate::servo::ServoEsp::new(&[<$name:upper _SERVO_STATIC>], ledc, pin)?;
                     let token = [<__ $name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
-                    spawner.spawn(token)?;
+                    spawner.spawn(token?);
                     Ok($crate::servo::ServoPlayerHandle::new(&[<$name:upper _SERVO_PLAYER_STATIC>]))
                 }
             }

@@ -21,7 +21,7 @@ pub const RMT_RATE_MHZ: u32 = 80;
 #[cfg(target_os = "none")]
 pub fn new_rmt80(rmt: esp_hal::peripherals::RMT<'static>) -> Result<Rmt80<'static>> {
     let rmt80 = esp_hal::rmt::Rmt::new(rmt, esp_hal::time::Rate::from_mhz(RMT_RATE_MHZ))
-        .map_err(crate::Error::Rmt)?;
+        .map_err(crate::Error::RmtConfig)?;
     Ok(rmt80)
 }
 

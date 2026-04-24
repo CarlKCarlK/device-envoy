@@ -57,6 +57,9 @@ pub enum Error {
 
     #[display("Storage is invalid or corrupted")]
     StorageCorrupted,
+
+    #[display("{_0:?}")]
+    Core(#[error(not(source))] device_envoy_core::Error),
 }
 
 impl From<()> for Error {
@@ -75,6 +78,15 @@ impl From<Infallible> for Error {
 impl From<embassy_executor::SpawnError> for Error {
     fn from(err: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(err)
+    }
+}
+
+impl From<device_envoy_core::Error> for Error {
+    fn from(error: device_envoy_core::Error) -> Self {
+        match error {
+            device_envoy_core::Error::TaskSpawn(spawn_error) => Self::TaskSpawn(spawn_error),
+            core_error => Self::Core(core_error),
+        }
     }
 }
 

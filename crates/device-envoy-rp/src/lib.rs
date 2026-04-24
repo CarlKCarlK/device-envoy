@@ -21,16 +21,15 @@ compile_error!("Must enable exactly one board feature: 'pico1' or 'pico2'");
 #[cfg(all(target_os = "none", feature = "pico1", feature = "pico2"))]
 compile_error!("Cannot enable both 'pico1' and 'pico2' features simultaneously");
 
-// Compile-time checks: exactly one architecture must be selected (unless testing with host feature)
-#[cfg(all(target_os = "none", not(any(feature = "arm", feature = "riscv"))))]
-compile_error!("Must enable exactly one architecture feature: 'arm' or 'riscv'");
+// Compile-time checks: RP support is ARM-only.
+#[cfg(all(target_os = "none", not(feature = "arm")))]
+compile_error!("Must enable architecture feature: 'arm'");
 
-#[cfg(all(target_os = "none", feature = "arm", feature = "riscv"))]
-compile_error!("Cannot enable both 'arm' and 'riscv' features simultaneously");
-
-// Compile-time check: pico1 only supports ARM
-#[cfg(all(target_os = "none", feature = "pico1", feature = "riscv"))]
-compile_error!("Pico 1 (RP2040) only supports ARM architecture, not RISC-V");
+#[cfg(all(
+    target_os = "none",
+    any(target_arch = "riscv32", target_arch = "riscv64")
+))]
+compile_error!("RISC-V targets are not supported for device-envoy-rp");
 
 // PIO interrupt bindings - shared by led_strip::strip and led_strip
 #[cfg(target_os = "none")]

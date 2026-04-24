@@ -222,7 +222,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO0 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio0_sm0_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm1(
@@ -231,7 +232,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO0 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio0_sm1_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm2(
@@ -240,7 +242,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO0 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio0_sm2_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm3(
@@ -249,7 +252,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO0 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio0_sm3_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 }
 
@@ -260,7 +264,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO1 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio1_sm0_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm1(
@@ -269,7 +274,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO1 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio1_sm1_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm2(
@@ -278,7 +284,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO1 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio1_sm2_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm3(
@@ -287,7 +294,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO1 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio1_sm3_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 }
 
@@ -299,7 +307,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio2_sm0_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm1(
@@ -308,7 +317,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio2_sm1_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm2(
@@ -317,7 +327,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio2_sm2_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 
     fn spawn_task_sm3(
@@ -326,7 +337,8 @@ impl IrPioPeripheral for embassy_rp::peripherals::PIO2 {
         spawner: Spawner,
     ) -> Result<()> {
         let token = ir_pio2_sm3_task(receiver, ir_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
+        Ok(())
     }
 }
 

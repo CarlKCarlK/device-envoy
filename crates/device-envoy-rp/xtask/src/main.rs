@@ -118,14 +118,12 @@ impl std::fmt::Display for Board {
 #[derive(Clone, Copy, clap::ValueEnum)]
 enum Arch {
     Arm,
-    Riscv,
 }
 
 impl std::fmt::Display for Arch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Arch::Arm => write!(f, "arm"),
-            Arch::Riscv => write!(f, "riscv"),
         }
     }
 }
@@ -135,8 +133,6 @@ impl Arch {
         match (board, self) {
             (Board::Pico1, Arch::Arm) => "thumbv6m-none-eabi",
             (Board::Pico2, Arch::Arm) => "thumbv8m.main-none-eabihf",
-            (Board::Pico2, Arch::Riscv) => "riscv32imac-unknown-none-elf",
-            (Board::Pico1, Arch::Riscv) => panic!("Pico 1 does not support RISC-V"),
         }
     }
 }

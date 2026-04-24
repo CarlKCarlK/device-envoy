@@ -52,6 +52,9 @@ pub mod clock_sync {
     //!
     //! See [`ClockSyncEsp`] for constructors and [`ClockSync`] for clock operations.
     //!
+    //! Constructor methods on `ClockSyncEsp` come from `device-envoy-core` and return
+    //! [`CoreResult`] with [`CoreError`].
+    //!
     //! You can create up to two concurrent `ClockSyncEsp` instances per program; a third is expected to fail at runtime because the `clock_sync` task pool uses `pool_size = 2`.
     //!
     //! # Example: WiFi + ClockSync logging
@@ -125,7 +128,7 @@ pub mod clock_sync {
     //!         offset_minutes,
     //!         Some(ONE_SECOND),
     //!         spawner,
-    //!     );
+    //!     )?;
     //!
     //!     loop {
     //!         let tick = clock_sync.wait_for_tick().await;
@@ -144,6 +147,7 @@ pub mod clock_sync {
     pub use device_envoy_core::clock_sync::ClockSyncRuntime as ClockSyncEsp;
     /// Resources needed to construct [`ClockSyncEsp`].
     pub use device_envoy_core::clock_sync::ClockSyncStatic as ClockSyncStaticEsp;
+    pub use device_envoy_core::{Error as CoreError, Result as CoreResult};
     pub use device_envoy_core::clock_sync::{
         h12_m_s, ClockSync, ClockSyncTick, UnixSeconds, ONE_DAY, ONE_MINUTE, ONE_SECOND,
     };
@@ -258,6 +262,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 #[non_exhaustive]
 pub enum Error {
     TaskSpawn(embassy_executor::SpawnError),
+    Core(device_envoy_core::Error),
     #[cfg(target_os = "none")]
     FlashStorage(esp_storage::FlashStorageError),
     InvalidFlashRegion,
@@ -268,6 +273,8 @@ pub enum Error {
     Led4BitsToIndexesFull,
     MissingCustomWifiAutoField,
     Ntp(&'static str),
+    #[cfg(all(target_os = "none", esp_has_rmt))]
+    RmtConfig(esp_hal::rmt::ConfigError),
     #[cfg(all(target_os = "none", esp_has_rmt))]
     Rmt(esp_hal::rmt::Error),
     #[cfg(target_os = "none")]
@@ -285,14 +292,21 @@ pub enum Error {
     #[cfg(target_os = "none")]
     LedcChannel(esp_hal::ledc::channel::Error),
     #[cfg(all(target_os = "none", esp_has_wifi))]
-    WifiInit(esp_radio::InitializationError),
-    #[cfg(all(target_os = "none", esp_has_wifi))]
     Wifi(esp_radio::wifi::WifiError),
 }
 
 impl From<embassy_executor::SpawnError> for Error {
     fn from(e: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(e)
+    }
+}
+
+impl From<device_envoy_core::Error> for Error {
+    fn from(error: device_envoy_core::Error) -> Self {
+        match error {
+            device_envoy_core::Error::TaskSpawn(spawn_error) => Self::TaskSpawn(spawn_error),
+            core_error => Self::Core(core_error),
+        }
     }
 }
 
@@ -322,10 +336,10 @@ impl From<esp_storage::FlashStorageError> for Error {
     }
 }
 
-#[cfg(all(target_os = "none", esp_has_wifi))]
-impl From<esp_radio::InitializationError> for Error {
-    fn from(error: esp_radio::InitializationError) -> Self {
-        Self::WifiInit(error)
+#[cfg(all(target_os = "none", esp_has_rmt))]
+impl From<esp_hal::rmt::ConfigError> for Error {
+    fn from(error: esp_hal::rmt::ConfigError) -> Self {
+        Self::RmtConfig(error)
     }
 }
 

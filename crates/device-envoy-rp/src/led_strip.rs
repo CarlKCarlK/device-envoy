@@ -818,7 +818,7 @@ macro_rules! __led_strips_impl {
                         pin,
                         STRIP_STATIC.command_signal(),
                     );
-                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
+                    spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
                     let strip = $crate::led_strip::LedStripRp::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init(Self { strip });
                     Ok(instance)
@@ -867,7 +867,14 @@ macro_rules! __led_strips_impl {
                         $sm_index,
                         { $len },
                         _
-                    >::new(common, sm, dma, pin, program)
+                    >::new(
+                        common,
+                        sm,
+                        dma,
+                        <::embassy_rp::peripherals::$dma as $crate::pio_irqs::DmaIrqMap>::irqs(),
+                        pin,
+                        program,
+                    )
                 });
                 $crate::led_strip::led_strip_device_loop::<
                     ::embassy_rp::peripherals::$pio,
@@ -948,7 +955,7 @@ macro_rules! __led_strips_impl {
                         pin,
                         STRIP_STATIC.command_signal(),
                     );
-                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
+                    spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
                     let strip = $crate::led_strip::LedStripRp::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init(Self { strip });
                     Ok(instance)
@@ -997,7 +1004,14 @@ macro_rules! __led_strips_impl {
                         $sm_index,
                         { $len },
                         _
-                    >::new(common, sm, dma, pin, program)
+                    >::new(
+                        common,
+                        sm,
+                        dma,
+                        <::embassy_rp::peripherals::$dma as $crate::pio_irqs::DmaIrqMap>::irqs(),
+                        pin,
+                        program,
+                    )
                 });
                 $crate::led_strip::led_strip_device_loop::<
                     ::embassy_rp::peripherals::$pio,
@@ -2721,7 +2735,7 @@ macro_rules! __led_strip_impl {
                         pin,
                         STRIP_STATIC.command_signal(),
                     );
-                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
+                    spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
 
                     let strip = $crate::led_strip::LedStripRp::new(&STRIP_STATIC);
                     let instance = STRIP_CELL.init($name { strip });
@@ -2771,7 +2785,14 @@ macro_rules! __led_strip_impl {
                         0,
                         { $len },
                         _
-                    >::new(common, sm, dma, pin, program)
+                    >::new(
+                        common,
+                        sm,
+                        dma,
+                        <::embassy_rp::peripherals::$dma as $crate::pio_irqs::DmaIrqMap>::irqs(),
+                        pin,
+                        program,
+                    )
                 });
                 $crate::led_strip::led_strip_device_loop
                 ::<

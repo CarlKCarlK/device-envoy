@@ -13,7 +13,7 @@ use embassy_executor::Spawner;
 use embassy_net::Ipv4Address;
 use embassy_rp::{
     Peri,
-    dma::Channel,
+    dma::ChannelInstance,
     peripherals::{PIN_23, PIN_24, PIN_25, PIN_29},
 };
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
@@ -229,7 +229,7 @@ impl WifiAutoRp {
     ///
     /// See the [WifiAutoRp struct example](Self) for a complete example.
     #[allow(clippy::too_many_arguments)]
-    pub fn new<const N: usize, PIO: WifiPio, DMA: Channel, FlashBlockType>(
+    pub fn new<const N: usize, PIO: WifiPio, DMA: ChannelInstance, FlashBlockType>(
         pin_23: Peri<'static, PIN_23>,
         pin_24: Peri<'static, PIN_24>,
         pin_25: Peri<'static, PIN_25>,
@@ -243,6 +243,10 @@ impl WifiAutoRp {
     ) -> Result<Self>
     where
         FlashBlockType: crate::flash_block::FlashBlock<Error = Error> + Into<FlashBlockRp>,
+        crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
+                DMA::Interrupt,
+                embassy_rp::dma::InterruptHandler<DMA>,
+            >,
     {
         let mut wifi_credentials_flash_block = wifi_credentials_flash_block.into();
         static WIFI_AUTO_STATIC: WifiAutoStatic = WifiAutoInner::new_static();
@@ -705,11 +709,11 @@ impl WifiAutoInner {
         let stack = self.wifi.wait_for_stack().await;
 
         let captive_portal_ip = Ipv4Address::new(192, 168, 4, 1);
-        if let Err(err) = self
-            .spawner
-            .spawn(dns_server_task(stack, captive_portal_ip))
-        {
-            info!("WifiAutoRp: DNS server task spawn failed: {:?}", err);
+        match dns_server_task(stack, captive_portal_ip) {
+            Ok(dns_server_token) => self.spawner.spawn(dns_server_token),
+            Err(err) => {
+                info!("WifiAutoRp: DNS server task spawn failed: {:?}", err);
+            }
         }
 
         let defaults_owned = self

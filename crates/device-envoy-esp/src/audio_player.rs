@@ -1290,7 +1290,7 @@ macro_rules! __audio_player_impl {
                         bit_clock_pin,
                         word_select_pin,
                     );
-                    spawner.spawn(token)?;
+                    spawner.spawn(token?);
                     let player =
                         $crate::audio_player::AudioPlayerEsp::new(&[<$name:upper _AUDIO_PLAYER_STATIC>]);
                     Ok([<$name:upper _AUDIO_PLAYER_CELL>].init(Self { player }))

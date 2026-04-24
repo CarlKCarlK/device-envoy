@@ -1,6 +1,7 @@
 //! Generate Rust code for embedded video frames from PNG files or video files.
 
 use std::fs::{self, File};
+use std::io::BufReader;
 use std::path::Path;
 use std::process::Command;
 
@@ -119,7 +120,8 @@ fn generate_frames_from_directory(
             continue;
         }
 
-        let decoder = png::Decoder::new(File::open(&filename)?);
+        let file = File::open(&filename)?;
+        let decoder = png::Decoder::new(BufReader::new(file));
         let mut reader = decoder.read_info()?;
         let info = reader.info();
 
@@ -133,7 +135,10 @@ fn generate_frames_from_directory(
             continue;
         }
 
-        let mut buf = vec![0; reader.output_buffer_size()];
+        let output_buffer_size = reader
+            .output_buffer_size()
+            .expect("png output buffer size must be available after read_info");
+        let mut buf = vec![0; output_buffer_size];
         reader.next_frame(&mut buf)?;
 
         println!("    // Frame {}", frame_num);

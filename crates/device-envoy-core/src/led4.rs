@@ -29,6 +29,8 @@ pub const MULTIPLEX_SLEEP: Duration = Duration::from_millis(3);
 
 /// Maximum number of animation frames accepted by led4-style APIs.
 pub const ANIMATION_MAX_FRAMES: usize = 16;
+/// Frame buffer type used by led4 text animations.
+pub type Animation = Vec<AnimationFrame, ANIMATION_MAX_FRAMES>;
 
 const BLINK_OFF_DELAY: Duration = Duration::from_millis(50);
 const BLINK_ON_DELAY: Duration = Duration::from_millis(150);
@@ -66,7 +68,7 @@ impl AnimationFrame {
 
 /// Creates a circular outline animation that chases around display edges.
 #[must_use]
-pub fn circular_outline_animation(clockwise: bool) -> Vec<AnimationFrame, ANIMATION_MAX_FRAMES> {
+pub fn circular_outline_animation(clockwise: bool) -> Animation {
     const FRAME_DURATION: Duration = Duration::from_millis(120);
     const CLOCKWISE: [[char; 4]; 8] = [
         ['\'', '\'', '\'', '\''],
@@ -89,7 +91,7 @@ pub fn circular_outline_animation(clockwise: bool) -> Vec<AnimationFrame, ANIMAT
         ['\'', '\'', '\'', '\''],
     ];
 
-    let mut animation = Vec::new();
+    let mut animation = Animation::new();
     let frames = if clockwise { &CLOCKWISE } else { &COUNTER };
     for text in frames {
         animation
@@ -111,7 +113,7 @@ pub enum Led4Command {
         text: [char; CELL_COUNT],
     },
     /// Display a looping text animation.
-    Animation(Vec<AnimationFrame, ANIMATION_MAX_FRAMES>),
+    Animation(Animation),
 }
 
 /// Signal used to send [`Led4Command`] values.
@@ -135,7 +137,7 @@ where
     I: IntoIterator,
     I::Item: Borrow<AnimationFrame>,
 {
-    let mut frames: Vec<AnimationFrame, ANIMATION_MAX_FRAMES> = Vec::new();
+    let mut frames: Animation = Animation::new();
     for animation_frame in animation {
         let animation_frame = *animation_frame.borrow();
         frames
@@ -258,7 +260,7 @@ where
 }
 
 async fn run_animation_loop<F>(
-    animation: Vec<AnimationFrame, ANIMATION_MAX_FRAMES>,
+    animation: Animation,
     led4_command_signal: &'static Led4CommandSignal,
     write_text: &mut F,
 ) -> Led4Command

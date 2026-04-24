@@ -100,29 +100,29 @@ esp32s3 = [
 ]
 
 [dependencies]
-embassy-executor = { version = "0.9.0" }
-embassy-time   = { version = "0.5.0" }
-embassy-sync   = { version = "0.7.2" }
+embassy-executor = { version = "0.10.0" }
+embassy-time   = { version = "0.5.1" }
+embassy-sync   = { version = "0.8.0" }
 embassy-futures = { version = "0.1.2" }
 smart-leds     = { version = "0.4.0" }
 device-envoy-core = { version = "0.0.6-alpha.0", path = "../device-envoy-core", features = ["wifi"] }
 embedded-graphics = { version = "0.8", default-features = false }
-heapless       = { version = "0.8.0", features = ["serde"] }
-static_cell    = { version = "2.1.0" }
+heapless       = { version = "0.9.2", features = ["serde"] }
+static_cell    = { version = "2.1.1" }
 paste          = { version = "1.0" }
 embed-doc-image = { version = "0.1.4", optional = true }
 embedded-storage = "0.3.1"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 time = { version = "0.3", default-features = false }
-portable-atomic = { version = "1.11.1" }
+portable-atomic = { version = "1.13.1" }
 
 [target.'cfg(target_os = "none")'.dependencies]
-esp-hal = { version = "1.0.0", default-features = false, features = ["unstable"] }
-esp-rtos = { version = "0.2.0", default-features = false, features = ["embassy", "esp-radio", "esp-alloc"] }
-esp-storage = { version = "0.8.1", default-features = false }
-esp-alloc = { version = "0.9.0", default-features = false }
-esp-radio = { version = "0.17.0", default-features = false, features = ["esp-alloc", "log-04", "unstable"] }
-embassy-net = { version = "0.8.0", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
+esp-hal = { version = "1.1.0-rc.0", default-features = false, features = ["unstable"] }
+esp-rtos = { version = "0.3.0", default-features = false, features = ["embassy", "esp-radio", "esp-alloc"] }
+esp-storage = { version = "0.9.0", default-features = false }
+esp-alloc = { version = "0.10.0", default-features = false, features = ["compat", "global-allocator"] }
+esp-radio = { version = "0.18.0", default-features = false, features = ["esp-alloc", "log-04", "unstable"] }
+embassy-net = { version = "0.9.1", features = ["dhcpv4", "dns", "proto-ipv4", "udp", "tcp"] }
 log = { version = "0.4", default-features = false }
 embedded-hal-bus = { version = "0.3.0", features = ["async"] }
 esp-hal-mfrc522 = "0.3.3"
@@ -131,18 +131,18 @@ esp-hal-mfrc522 = "0.3.3"
 device-envoy-example-common = { path = "../device-envoy-example-common" }
 
 [target.'cfg(not(target_os = "none"))'.dev-dependencies]
-png = { version = "0.17" }
+png = { version = "0.18" }
 trybuild = { version = "1.0" }
 
 [target.'cfg(target_os = "none")'.dev-dependencies]
-esp-backtrace = { version = "0.18.1", default-features = false, features = [
+esp-backtrace = { version = "0.19.0", default-features = false, features = [
     "panic-handler",
     "halt-cores",
     "println",
 ] }
-esp-println = { version = "0.16.1", default-features = false, features = ["uart", "log-04"] }
+esp-println = { version = "0.17.0", default-features = false, features = ["uart", "log-04"] }
 log = { version = "0.4", default-features = false }
-esp-bootloader-esp-idf = { version = "0.4.0", default-features = false }
+esp-bootloader-esp-idf = { version = "0.5.0", default-features = false }
 
 # BEGIN GENERATED BOARD EXAMPLES
 [[example]]
@@ -2783,4 +2783,3 @@ name = "lcd_text_duplicate_address_compile_fail"
 path = "tests/embedded/lcd_text_duplicate_address_compile_fail.rs"
 harness = false
 required-features = ["compile-fail-tests"]
-

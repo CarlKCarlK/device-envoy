@@ -109,7 +109,7 @@ impl RfidEsp<'_> {
     ) -> Result<Self> {
         let mfrc522 = init_mfrc522_hardware(spi, sck, mosi, miso, cs, rst).await?;
         let token = rfid_polling_task(mfrc522, rfid_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
         Ok(Self { rfid_static })
     }
 }

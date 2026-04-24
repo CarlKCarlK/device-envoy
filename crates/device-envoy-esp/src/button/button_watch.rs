@@ -97,7 +97,7 @@ impl ButtonWatchEsp<'_> {
             &button_watch_static.is_pressed,
             &button_watch_static.initialized,
         );
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
         let button_watch = Self {
             signal: &button_watch_static.signal,
             state_signal: &button_watch_static.state_signal,

@@ -19,6 +19,7 @@ use embassy_time::{Duration, Instant};
 use portable_atomic::{AtomicBool, AtomicU64, Ordering};
 use time::OffsetDateTime;
 
+use crate::{Error, Result};
 use crate::clock::{Clock, ClockStatic};
 use crate::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
 
@@ -184,7 +185,7 @@ impl ClockSyncRuntime {
         offset_minutes: i32,
         tick_interval: Option<embassy_time::Duration>,
         spawner: Spawner,
-    ) -> Self {
+    ) -> Result<Self> {
         let clock_sync_uninitialized = clock_sync_static
             .initialized
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
@@ -199,8 +200,8 @@ impl ClockSyncRuntime {
             offset_minutes,
             tick_interval,
             spawner,
-        );
-        let time_sync = TimeSync::new(&clock_sync_static.time_sync_static, stack, spawner);
+        )?;
+        let time_sync = TimeSync::new(&clock_sync_static.time_sync_static, stack, spawner)?;
 
         let clock_sync = Self {
             clock,
@@ -210,17 +211,16 @@ impl ClockSyncRuntime {
             synced: &clock_sync_static.synced,
         };
 
-        spawner
-            .spawn(clock_sync_loop(
-                &clock_sync_static.clock_static,
-                clock_sync.time_sync.events(),
-                clock_sync.sync_ready,
-                clock_sync.last_sync_ticks,
-                clock_sync.synced,
-            ))
-            .expect("clock_sync task spawn should succeed");
+        spawner.spawn(clock_sync_loop(
+            &clock_sync_static.clock_static,
+            clock_sync.time_sync.events(),
+            clock_sync.sync_ready,
+            clock_sync.last_sync_ticks,
+            clock_sync.synced,
+        )
+        .map_err(Error::TaskSpawn)?);
 
-        clock_sync
+        Ok(clock_sync)
     }
 
     fn since_last_sync(&self) -> Duration {

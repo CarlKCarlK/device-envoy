@@ -5,7 +5,7 @@ use device_envoy_core::led2d::{Frame2d, Led2dFont, render_text_to_frame};
 use png::{BitDepth, ColorType, Decoder, Encoder};
 use smart_leds::{RGB8, colors};
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 
 const REFERENCE_DIR: &str = "tests/data/text_render";
@@ -144,9 +144,12 @@ fn write_png<const W: usize, const H: usize>(frame: &Frame2d<W, H>, path: &Path)
 fn read_png<const W: usize, const H: usize>(path: &Path) -> Vec<u8> {
     let file =
         File::open(path).unwrap_or_else(|_| panic!("missing reference PNG at {}", path.display()));
-    let decoder = Decoder::new(file);
+    let decoder = Decoder::new(BufReader::new(file));
     let mut reader = decoder.read_info().expect("failed to read PNG");
-    let mut buffer = vec![0; reader.output_buffer_size()];
+    let output_buffer_size = reader
+        .output_buffer_size()
+        .expect("PNG output buffer size should be known after read_info");
+    let mut buffer = vec![0; output_buffer_size];
     let info = reader
         .next_frame(&mut buffer)
         .expect("failed to decode PNG");

@@ -63,17 +63,10 @@ macro_rules! init_and_start {
         let $p = $crate::esp_hal::init($crate::esp_hal::Config::default());
         {
             let timg0 = $crate::esp_hal::timer::timg::TimerGroup::new($p.TIMG0);
-            #[cfg(target_arch = "riscv32")]
-            {
-                let sw = $crate::esp_hal::interrupt::software::SoftwareInterruptControl::new(
-                    $p.SW_INTERRUPT,
-                );
-                $crate::esp_rtos::start(timg0.timer0, sw.software_interrupt0);
-            }
-            #[cfg(target_arch = "xtensa")]
-            {
-                $crate::esp_rtos::start(timg0.timer0);
-            }
+            let sw = $crate::esp_hal::interrupt::software::SoftwareInterruptControl::new(
+                $p.SW_INTERRUPT,
+            );
+            $crate::esp_rtos::start(timg0.timer0, sw.software_interrupt0);
         }
     };
 }

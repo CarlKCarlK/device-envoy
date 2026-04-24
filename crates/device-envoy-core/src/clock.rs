@@ -18,6 +18,8 @@ use embassy_time::{Duration, Instant, Timer};
 use portable_atomic::{AtomicI64, AtomicU64};
 use time::{Duration as TimeDuration, OffsetDateTime, UtcOffset};
 
+use crate::{Error, Result};
+
 // ============================================================================
 // UnixSeconds
 // ============================================================================
@@ -155,13 +157,11 @@ impl Clock {
         offset_minutes: i32,
         tick_interval: Option<embassy_time::Duration>,
         spawner: Spawner,
-    ) -> Self {
+    ) -> Result<Self> {
         clock_static.set_offset_minutes(offset_minutes);
         clock_static.set_tick_interval_ms(tick_interval.map(|d| d.as_millis()));
-        spawner
-            .spawn(clock_device_loop(clock_static))
-            .expect("clock task spawn should succeed");
-        Self::from_static(clock_static)
+        spawner.spawn(clock_device_loop(clock_static).map_err(Error::TaskSpawn)?);
+        Ok(Self::from_static(clock_static))
     }
 
     /// Wait for and return the next clock tick event.

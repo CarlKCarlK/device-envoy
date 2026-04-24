@@ -1,9 +1,13 @@
 //! Wiring:
 //! - No external wiring required; this example only uses the onboard Wi-Fi radio.
 //!
-//! Wi-Fi bring-up smoke test using `esp-radio` on ESP32-C6.
+//! Wi-Fi bring-up smoke test using `esp-radio` on ESP32-C2.
+//! If this chip/board profile does not support Wi-Fi, use `wifi_auto_*` examples on a supported profile.
 //!
 //! This example initializes the Wi-Fi driver and performs one AP scan.
+//!
+//! Diagnostic note: this is a low-level `esp-radio` scan example.
+//! For application-level flows, prefer the `wifi_auto_*` examples.
 
 #![no_std]
 #![no_main]
@@ -31,34 +35,25 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     esp_alloc::heap_allocator!(size: WIFI_HEAP_BYTES);
 
-    let esp_radio_controller = esp_radio::init().expect("esp_radio::init failed");
-    let (mut wifi_controller, _interfaces) = esp_radio::wifi::new(
-        &esp_radio_controller,
-        p.WIFI,
-        esp_radio::wifi::Config::default(),
-    )
-    .expect("esp_radio::wifi::new failed");
+    let (mut wifi_controller, _interfaces) =
+        esp_radio::wifi::new(p.WIFI, Default::default()).expect("esp_radio::wifi::new failed");
 
     wifi_controller
-        .set_config(&esp_radio::wifi::ModeConfig::Client(
-            esp_radio::wifi::ClientConfig::default(),
+        .set_config(&esp_radio::wifi::Config::Station(
+            esp_radio::wifi::sta::StationConfig::default(),
         ))
         .expect("set Wi-Fi client mode failed");
 
-    wifi_controller
-        .start_async()
-        .await
-        .expect("starting Wi-Fi failed");
-
+    let scan_config = esp_radio::wifi::scan::ScanConfig::default();
     let scan_results = wifi_controller
-        .scan_with_config_async(esp_radio::wifi::ScanConfig::default())
+        .scan_async(&scan_config)
         .await
         .expect("Wi-Fi scan failed");
 
     info!("wifi_scan: found {} APs", scan_results.len());
     for access_point_info in scan_results.iter().take(10) {
         info!(
-            "ssid='{}' rssi={} channel={} auth={:?}",
+            "ssid='{:?}' rssi={} channel={} auth={:?}",
             access_point_info.ssid,
             access_point_info.signal_strength,
             access_point_info.channel,

@@ -47,7 +47,8 @@ pub async fn collect_credentials(
         *slot.borrow_mut() = fields;
     });
 
-    unwrap!(spawner.spawn(http_server_task(stack)));
+    let http_server_token = unwrap!(http_server_task(stack));
+    spawner.spawn(http_server_token);
 
     let submission = CREDENTIAL_CHANNEL.receive().await;
     Ok(submission)

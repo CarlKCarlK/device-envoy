@@ -333,11 +333,11 @@ pub use device_envoy_core::audio_player::pcm_clip;
 pub use device_envoy_core::audio_player::*;
 
 #[cfg(target_os = "none")]
-use crate::pio_irqs::PioIrqMap;
+use crate::pio_irqs::{DmaIrqMap, PioIrqMap};
 #[cfg(target_os = "none")]
 use embassy_rp::Peri;
 #[cfg(target_os = "none")]
-use embassy_rp::dma::Channel;
+use embassy_rp::dma::ChannelInstance;
 #[cfg(target_os = "none")]
 use embassy_rp::gpio::Pin;
 #[cfg(target_os = "none")]
@@ -423,7 +423,7 @@ pub async fn device_loop<
     const MAX_CLIPS: usize,
     const SAMPLE_RATE_HZ: u32,
     PIO: PioIrqMap,
-    DMA: Channel,
+    DMA: ChannelInstance + DmaIrqMap,
     DataPin: Pin + PioPin,
     BitClockPin: Pin + PioPin,
     WordSelectPin: Pin + PioPin,
@@ -441,6 +441,7 @@ pub async fn device_loop<
         &mut pio.common,
         pio.sm0,
         dma,
+        <DMA as DmaIrqMap>::irqs(),
         data_pin,
         bit_clock_pin,
         word_select_pin,
@@ -1061,7 +1062,7 @@ macro_rules! __audio_player_impl {
                         bit_clock_pin.into(),
                         word_select_pin.into(),
                     );
-                    spawner.spawn(token)?;
+                    spawner.spawn(token?);
                     let player =
                         $crate::audio_player::AudioPlayerRp::new(&[<$name:upper _AUDIO_PLAYER_STATIC>]);
                     Ok([<$name:upper _AUDIO_PLAYER_CELL>].init(Self { player }))

@@ -346,7 +346,7 @@ macro_rules! __led_impl {
                         pin_output,
                         on_level,
                     );
-                    spawner.spawn(token).map_err($crate::Error::TaskSpawn)?;
+                    spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
                     Ok(Self([<$name:upper _STATIC>].outer()))
                 }
             }

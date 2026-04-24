@@ -2,6 +2,9 @@
 //!
 //! See [`ClockSyncRp`] for constructors and [`ClockSync`] for clock operations.
 //!
+//! Constructor methods on `ClockSyncRp` come from `device-envoy-core` and return
+//! [`CoreResult`] with [`CoreError`].
+//!
 //! You can create up to two concurrent `ClockSyncRp` instances per program; a third is expected to fail at runtime because the `clock_sync` task pool uses `pool_size = 2`.
 //!
 //! # Example: WiFi + ClockSync logging
@@ -79,7 +82,7 @@
 //!         offset_minutes,
 //!         Some(ONE_SECOND),
 //!         spawner,
-//!     );
+//!     )?;
 //!
 //!     loop {
 //!         let tick = clock_sync.wait_for_tick().await;
@@ -104,3 +107,4 @@ pub use device_envoy_core::clock_sync::ClockSyncStatic as ClockSyncStaticRp;
 pub use device_envoy_core::clock_sync::{
     ClockSync, ClockSyncTick, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds, h12_m_s,
 };
+pub use device_envoy_core::{Error as CoreError, Result as CoreResult};

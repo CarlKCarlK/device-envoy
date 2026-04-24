@@ -59,12 +59,8 @@ case "$board" in
     target="thumbv8m.main-none-eabihf"
     features="pico2,arm,wifi"
     ;;
-  2r)
-    target="riscv32imac-unknown-none-elf"
-    features="pico2,riscv"
-    ;;
   *)
-    echo "invalid board '$board' (expected one of: 1, 2, w, 2w, 2r)" >&2
+    echo "invalid board '$board' (expected one of: 1, 2, w, 2w)" >&2
     exit 1
     ;;
 esac

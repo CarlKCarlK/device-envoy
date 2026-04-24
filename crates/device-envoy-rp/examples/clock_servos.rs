@@ -127,7 +127,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         offset_minutes,
         Some(ONE_MINUTE),
         spawner,
-    );
+    )?;
 
     let servo_display_ref = &servo_display;
     run_clock_ui(

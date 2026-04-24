@@ -80,7 +80,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         offset_minutes,
         Some(ONE_SECOND), // Tick at the top of every second
         spawner,
-    );
+    )?;
 
     // Main loop: wait for ticks and log the time and sync age.
     loop {

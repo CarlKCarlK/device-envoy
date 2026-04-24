@@ -1657,8 +1657,9 @@ macro_rules! __led_strip_impl {
                         COMBO.init(<$name>::COMBO_TABLE);
 
                     let channel = channel_creator
-                        .configure_tx(pin, $crate::init_and_start::rmt::ws2812_tx_config())
-                        .map_err($crate::Error::Rmt)?;
+                        .configure_tx(&$crate::init_and_start::rmt::ws2812_tx_config())
+                        .map_err($crate::Error::RmtConfig)?
+                        .with_pin(pin);
 
                     let driver =
                         $crate::led_strip::RmtWs2812::<
@@ -1669,8 +1670,7 @@ macro_rules! __led_strip_impl {
                     let strip_static: &'static _ = &[<$name:snake:upper _STATIC>];
 
                     spawner
-                        .spawn([<$name:snake _device_task>](driver, strip_static, combo_ref))
-                        .map_err($crate::Error::TaskSpawn)?;
+                        .spawn([<$name:snake _device_task>](driver, strip_static, combo_ref).map_err($crate::Error::TaskSpawn)?);
 
                     let instance = INSTANCE.init($name {
                         inner: $crate::led_strip::LedStripEsp::new(strip_static),

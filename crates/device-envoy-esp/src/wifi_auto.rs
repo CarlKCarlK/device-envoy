@@ -379,20 +379,14 @@ impl<'a> WifiAutoEsp<'a> {
             .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
         let spawner = self.spawner;
 
-        static ESP_RADIO_CONTROLLER: StaticCell<esp_radio::Controller<'static>> = StaticCell::new();
-        let esp_radio_controller = ESP_RADIO_CONTROLLER.init(esp_radio::init()?);
-        let (mut wifi_controller, interfaces) = esp_radio::wifi::new(
-            esp_radio_controller,
-            wifi,
-            esp_radio::wifi::Config::default(),
-        )?;
+        let (mut wifi_controller, interfaces) = esp_radio::wifi::new(wifi, Default::default())?;
 
         const TRY_COUNT: u8 = 10;
         struct EspWifiAutoBackend<'a, 'b> {
             wifi_auto: &'b WifiAutoEsp<'b>,
             wifi_controller: &'a mut esp_radio::wifi::WifiController<'static>,
-            access_point_device: Option<esp_radio::wifi::WifiDevice<'static>>,
-            station_device: Option<esp_radio::wifi::WifiDevice<'static>>,
+            access_point_device: Option<esp_radio::wifi::Interface<'static>>,
+            station_device: Option<esp_radio::wifi::Interface<'static>>,
             spawner: embassy_executor::Spawner,
             connected_stack: Option<&'static Stack<'static>>,
             force_captive_portal: bool,
@@ -449,7 +443,7 @@ impl<'a> WifiAutoEsp<'a> {
                 async move {
                     info!("wifi_auto connect attempt {}/{}", try_index + 1, TRY_COUNT);
                     match self.wifi_controller.connect_async().await {
-                        Ok(()) => {
+                        Ok(_connected_station_info) => {
                             info!("wifi_auto client connected on try {}", try_index + 1);
                             let station_device = self
                                 .station_device
@@ -465,7 +459,7 @@ impl<'a> WifiAutoEsp<'a> {
                             );
                             static STA_STACK: StaticCell<Stack<'static>> = StaticCell::new();
                             let stack = STA_STACK.init(stack);
-                            self.spawner.spawn(wifi_auto_net_task(runner))?;
+                            self.spawner.spawn(wifi_auto_net_task(runner)?);
                             self.connected_stack = Some(stack);
                             Ok(true)
                         }
@@ -491,17 +485,16 @@ impl<'a> WifiAutoEsp<'a> {
             ) -> impl Future<Output = crate::Result<()>> + '_ {
                 let wifi_credentials = wifi_credentials.clone();
                 async move {
-                    let wifi_client_config = esp_radio::wifi::ClientConfig::default()
+                    let wifi_client_config = esp_radio::wifi::sta::StationConfig::default()
                         .with_ssid(String::from(wifi_credentials.ssid.as_str()))
                         .with_password(String::from(wifi_credentials.password.as_str()));
                     self.wifi_controller
-                        .set_config(&esp_radio::wifi::ModeConfig::Client(wifi_client_config))?;
+                        .set_config(&esp_radio::wifi::Config::Station(wifi_client_config))?;
                     info!(
                         "wifi_auto client config set: ssid='{}' password_len={}",
                         wifi_credentials.ssid.as_str(),
                         wifi_credentials.password.len()
                     );
-                    self.wifi_controller.start_async().await?;
                     Ok(())
                 }
             }
@@ -510,8 +503,8 @@ impl<'a> WifiAutoEsp<'a> {
         let mut wifi_auto_backend = EspWifiAutoBackend {
             wifi_auto: self,
             wifi_controller: &mut wifi_controller,
-            access_point_device: Some(interfaces.ap),
-            station_device: Some(interfaces.sta),
+            access_point_device: Some(interfaces.access_point),
+            station_device: Some(interfaces.station),
             spawner,
             connected_stack: None,
             force_captive_portal,
@@ -528,7 +521,7 @@ impl<'a> WifiAutoEsp<'a> {
             );
             self.set_start_mode(WifiStartMode::CaptivePortal)?;
             info!("wifi_auto wrote startup mode CaptivePortal to storage");
-            let _ = wifi_auto_backend.wifi_controller.stop_async().await;
+            let _ = wifi_auto_backend.wifi_controller.disconnect_async().await;
             info!("wifi_auto resetting in 1 second");
             Timer::after(Duration::from_secs(1)).await;
             esp_hal::system::software_reset();
@@ -550,14 +543,11 @@ impl<'a> WifiAutoEsp<'a> {
     async fn run_captive_portal(
         &self,
         wifi_controller: &mut esp_radio::wifi::WifiController<'static>,
-        ap_device: esp_radio::wifi::WifiDevice<'static>,
+        ap_device: esp_radio::wifi::Interface<'static>,
     ) -> Result<WifiCredentials> {
-        let access_point_config = esp_radio::wifi::AccessPointConfig::default()
+        let access_point_config = esp_radio::wifi::ap::AccessPointConfig::default()
             .with_ssid(String::from(self.captive_portal_ssid()));
-        wifi_controller.set_config(&esp_radio::wifi::ModeConfig::AccessPoint(
-            access_point_config,
-        ))?;
-        wifi_controller.start_async().await?;
+        wifi_controller.set_config(&esp_radio::wifi::Config::AccessPoint(access_point_config))?;
 
         static AP_STACK_RESOURCES: StaticCell<StackResources<4>> = StaticCell::new();
         let mut dns_servers = heapless::Vec::new();
@@ -608,7 +598,7 @@ impl<'a> WifiAutoEsp<'a> {
             Either4::Fourth(never) => match never {},
         };
 
-        let _ = wifi_controller.stop_async().await;
+        let _ = wifi_controller.disconnect_async().await;
         Ok(portal_wifi_credentials)
     }
 
@@ -826,7 +816,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
 #[cfg(target_os = "none")]
 #[embassy_executor::task]
 async fn wifi_auto_net_task(
-    mut runner: embassy_net::Runner<'static, esp_radio::wifi::WifiDevice<'static>>,
+    mut runner: embassy_net::Runner<'static, esp_radio::wifi::Interface<'static>>,
 ) -> ! {
     runner.run().await
 }

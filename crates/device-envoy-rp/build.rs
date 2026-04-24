@@ -104,14 +104,8 @@ const SANTA_FRAMES: [([[RGB8; 12]; 8], Duration); SANTA_FRAME_COUNT] = [
         fs::write(&dest, memory_x).expect("Failed to write memory.x");
         println!("cargo:rustc-link-search={}", out_dir.display());
         println!("cargo:rerun-if-changed=memory-pico2.x");
-    } else if target.starts_with("riscv32imac") {
-        // Pico 2 RISC-V: copy our custom memory-pico2-riscv.x to OUT_DIR as memory.x
-        let memory_x = fs::read_to_string("memory-pico2-riscv.x")
-            .expect("Failed to read memory-pico2-riscv.x");
-        let dest = out_dir.join("memory.x");
-        fs::write(&dest, memory_x).expect("Failed to write memory.x");
-        println!("cargo:rustc-link-search={}", out_dir.display());
-        println!("cargo:rerun-if-changed=memory-pico2-riscv.x");
+    } else if target.starts_with("riscv32") {
+        panic!("RISC-V targets are not supported for device-envoy-rp");
     } else if target.starts_with("thumbv6m") {
         // Pico 1W: copy our custom memory-pico1w.x to OUT_DIR as memory.x
         let memory_x =

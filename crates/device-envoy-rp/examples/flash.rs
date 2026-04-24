@@ -16,8 +16,8 @@ use heapless::String;
 use panic_probe as _;
 use serde::{Deserialize, Serialize};
 
-use device_envoy_rp::Result;
 use device_envoy_rp::flash_block::{FlashBlock as _, FlashBlockRp};
+use device_envoy_rp::{Error, Result};
 
 // ============================================================================
 // Test Data Structures
@@ -47,9 +47,13 @@ async fn inner_main(_spawner: Spawner) -> Result<()> {
     let [_, _, _, mut string_block, mut config_block] = FlashBlockRp::new_array::<5>(p.FLASH)?;
 
     info!("Part 1: Storing data to flash");
-    string_block.save(&String::<64>::try_from("Hello, Flash Storage!")?)?;
+    let greeting =
+        String::<64>::try_from("Hello, Flash Storage!").map_err(|_| Error::FormatError)?;
+    string_block.save(&greeting)?;
+
+    let sensor_name = String::<32>::try_from("Temperature").map_err(|_| Error::FormatError)?;
     config_block.save(&SensorConfig {
-        name: String::<32>::try_from("Temperature")?,
+        name: sensor_name.clone(),
         sample_rate_hz: 1000,
         enabled: true,
     })?;
@@ -61,7 +65,7 @@ async fn inner_main(_spawner: Spawner) -> Result<()> {
     assert!(
         config
             == Some(SensorConfig {
-                name: String::<32>::try_from("Temperature")?,
+                name: sensor_name,
                 sample_rate_hz: 1000,
                 enabled: true,
             })
@@ -84,6 +88,6 @@ async fn inner_main(_spawner: Spawner) -> Result<()> {
 
     info!("Flash Storage Example Complete!");
     loop {
-        embassy_time::Timer::after_secs(1).await;
+        core::future::pending::<()>().await;
     }
 }

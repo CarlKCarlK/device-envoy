@@ -17,6 +17,7 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use portable_atomic::{AtomicBool, Ordering};
 
+use crate::{Error, Result};
 use crate::clock::UnixSeconds;
 
 // ============================================================================
@@ -76,7 +77,7 @@ impl TimeSync {
         time_sync_static: &'static TimeSyncStatic,
         stack: &'static Stack<'static>,
         spawner: Spawner,
-    ) -> Self {
+    ) -> Result<Self> {
         let time_sync_uninitialized = time_sync_static
             .initialized
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
@@ -86,13 +87,11 @@ impl TimeSync {
             "TimeSync::new must be called at most once per TimeSyncStatic"
         );
 
-        spawner
-            .spawn(time_sync_stack_loop(stack, &time_sync_static.events))
-            .expect("time_sync task spawn should succeed");
+        spawner.spawn(time_sync_stack_loop(stack, &time_sync_static.events).map_err(Error::TaskSpawn)?);
 
-        Self {
+        Ok(Self {
             events: &time_sync_static.events,
-        }
+        })
     }
 
     /// Wait for and return the next [`TimeSyncEvent`].

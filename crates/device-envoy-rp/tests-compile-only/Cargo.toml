@@ -10,8 +10,7 @@ defmt = ["device-envoy-rp/defmt"]
 embedded = ["device-envoy-rp/embedded"]
 pico1 = ["device-envoy-rp/pico1", "embassy-rp/rp2040"]
 pico2 = ["device-envoy-rp/pico2", "embassy-rp/rp235xb"]
-arm = ["device-envoy-rp/arm", "embassy-executor/arch-cortex-m"]
-riscv = ["device-envoy-rp/riscv", "embassy-executor/arch-riscv32", "riscv-rt"]
+arm = ["device-envoy-rp/arm", "embassy-executor/platform-cortex-m"]
 host = ["device-envoy-rp/host"]
 doc-images = ["device-envoy-rp/doc-images"]
 wifi = ["device-envoy-rp/wifi"]
@@ -19,18 +18,18 @@ display-trace = ["device-envoy-rp/display-trace"]
 
 [dependencies]
 device-envoy-rp = { path = "..", default-features = false }
-defmt = "0.3.10"
+defmt = "1.0.1"
 defmt-rtt = "1.1.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
-embassy-executor = { version = "0.9.1", default-features = false, features = [
+embassy-executor = { version = "0.10.0", default-features = false, features = [
     "executor-thread",
     "defmt",
 ] }
-embassy-time = { version = "0.5.0", features = [
+embassy-time = { version = "0.5.1", features = [
     "defmt",
     "defmt-timestamp-uptime",
 ] }
-embassy-rp = { version = "0.9.0", default-features = false, features = [
+embassy-rp = { version = "0.10.0", default-features = false, features = [
     "rt",
     "defmt",
     "time-driver",
@@ -39,12 +38,11 @@ embassy-rp = { version = "0.9.0", default-features = false, features = [
 embedded-graphics = { version = "0.8", default-features = false }
 smart-leds = "0.4.0"
 paste = "1.0"
-heapless = "0.8.0"
-static_cell = "2.1.0"
-embassy-sync = { version = "0.7.2", default-features = false }
-embassy-net = { version = "0.8.0", default-features = false }
+heapless = "0.9.2"
+static_cell = "2.1.1"
+embassy-sync = { version = "0.8.0", default-features = false }
+embassy-net = { version = "0.9.1", default-features = false }
 cortex-m-rt = "0.7.5"
-riscv-rt = { version = "0.16", optional = true }
 
 [[bin]]
 name = "led12x4"

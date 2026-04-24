@@ -28,10 +28,16 @@ use self::led4_simple::{Led4Simple, Led4SimpleStatic};
 // ============================================================================
 
 mod output_array;
-pub use device_envoy_core::led4::{
-    ANIMATION_MAX_FRAMES, AnimationFrame, BlinkState, Led4, circular_outline_animation,
-};
+pub use device_envoy_core::led4::{ANIMATION_MAX_FRAMES, AnimationFrame, BlinkState, Led4};
 pub use output_array::OutputArray;
+/// Frame buffer type used by led4 text animations.
+pub type Animation = device_envoy_core::led4::Animation;
+
+/// Creates a circular outline animation that chases around display edges.
+#[must_use]
+pub fn circular_outline_animation(clockwise: bool) -> Animation {
+    device_envoy_core::led4::circular_outline_animation(clockwise)
+}
 
 // ============================================================================
 // Constants
@@ -146,7 +152,7 @@ impl Led4Rp<'_> {
         let (outer_static, display_static) = led4_static.split();
         let display = Led4Simple::new(display_static, cell_pins, segment_pins, spawner)?;
         let token = device_loop(outer_static, display);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
         Ok(Self(outer_static))
     }
 

@@ -270,8 +270,7 @@ macro_rules! __led_strip_spi_impl {
                     let strip_static: &'static _ = &[<$name:snake:upper _STATIC>];
 
                     spawner
-                        .spawn([<$name:snake _device_task>](driver, strip_static, combo_ref))
-                        .map_err($crate::Error::TaskSpawn)?;
+                        .spawn([<$name:snake _device_task>](driver, strip_static, combo_ref).map_err($crate::Error::TaskSpawn)?);
 
                     let instance = INSTANCE.init($name {
                         inner: $crate::led_strip::LedStripEsp::new(strip_static),

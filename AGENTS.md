@@ -674,42 +674,33 @@ let sos_strip = SosStrip::new(&SOS_STRIP_STATIC, channel, spawner)?;
 
 ### LED Hardware Configuration (ESP-specific)
 
-Examples use the following standard pin assignments:
+Use the ESP capability/board-profile system to choose GPIOs; do not assume one fixed pin map across chips.
 
-- **GPIO10** — 8 LEDs in a line (for example, `a1_strip_8_blue_gray`, `a3_strip_8_blue_white_blink_animate`)
-- **GPIO18** — 96-pixel strip / 12x8 panel style layouts (for example, `a4_strip_96_blue_white_dot`, `led2d.rs`)
-- **GPIO8 (ESP32-C6) / GPIO48 (ESP32-S3)** — built-in single NeoPixel-style (WS2812) LED in strip demos
-
-When writing new examples or documentation, follow this convention for consistency.
+- For board-generated examples, treat `crates/device-envoy-esp/xtask/src/boards.rs` (`BOARD_PROFILES`) as source of truth.
+- For runtime chip/feature behavior, rely on the capability system (`Capability`, `EspCurrentCapabilities`, and capability checks) rather than hardcoded chip-name pin assumptions.
+- When writing new examples or docs, describe pins as board/chip dependent and point to board profiles/capability-driven configuration.
 
 #### Button Pin (ESP-specific)
 
-The standard button pin across examples is **GPIO6**:
+Button GPIO is board-profile/capability driven (do not assume one universal pin).
 
 ```rust
 let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
 ```
 
-Use this consistently when adding button input to examples.
+If you use a concrete pin in an example, make sure it matches the selected board profile.
 
 #### Servo Pins (ESP-specific)
 
-The standard servo pins across examples are **GPIO10** and **GPIO18**.
+Servo GPIO selection is board-profile/capability driven (do not assume one universal pair).
 
 #### LCD Text I2C Pins (ESP-specific)
 
-The standard LCD text I2C pins across examples are:
-
-- **SDA: GPIO16**
-- **SCL: GPIO17**
+LCD text I2C pin selection is board-profile/capability driven (SDA/SCL are board dependent).
 
 #### Audio Player I2S Pins (ESP-specific)
 
-The standard audio-player I2S pins across examples are:
-
-- **Data (`DIN`): GPIO21**
-- **Bit clock (`BCLK`): GPIO11**
-- **Word select (`LRC` / `LRCLK`): GPIO12**
+Audio player I2S pin selection is board-profile/capability driven (`DIN`/`BCLK`/`LRC` are board dependent).
 
 ### Documentation (ESP-specific)
 

@@ -439,7 +439,7 @@ macro_rules! __button_watch_impl {
                         BUTTON_WATCH_STATIC.is_pressed(),
                         BUTTON_WATCH_STATIC.initialized(),
                     );
-                    spawner.spawn(task_token).map_err($crate::Error::TaskSpawn)?;
+                    spawner.spawn(task_token.map_err($crate::Error::TaskSpawn)?);
 
                     let button_watch = $crate::button::ButtonWatchRp::new(
                         &BUTTON_WATCH_STATIC,

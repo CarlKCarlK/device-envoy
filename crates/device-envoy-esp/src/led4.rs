@@ -9,8 +9,16 @@
 //! optional blinking.
 
 pub use device_envoy_core::led4::{
-    circular_outline_animation, AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES,
+    AnimationFrame, BlinkState, Led4, ANIMATION_MAX_FRAMES,
 };
+/// Frame buffer type used by led4 text animations.
+pub type Animation = device_envoy_core::led4::Animation;
+
+/// Creates a circular outline animation that chases around display edges.
+#[must_use]
+pub fn circular_outline_animation(clockwise: bool) -> Animation {
+    device_envoy_core::led4::circular_outline_animation(clockwise)
+}
 
 #[cfg(target_os = "none")]
 const CELL_COUNT: usize = device_envoy_core::led4::CELL_COUNT;
@@ -69,7 +77,7 @@ impl Led4Simple<'_> {
         spawner: Spawner,
     ) -> Result<Self> {
         let token = led4_simple_device_loop(cell_pins, segment_pins, led4_simple_static);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
         Ok(Self(led4_simple_static))
     }
 
@@ -249,7 +257,7 @@ impl Led4Esp<'_> {
         let (outer_static, display_static) = led4_static.split();
         let display = Led4Simple::new(display_static, cell_pins, segment_pins, spawner)?;
         let token = led4_device_loop(outer_static, display);
-        spawner.spawn(token).map_err(Error::TaskSpawn)?;
+        spawner.spawn(token.map_err(Error::TaskSpawn)?);
         Ok(Self(outer_static))
     }
 

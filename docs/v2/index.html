@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Device Envoy Conway</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #101418;
+        color: #e7f0f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      main {
+        width: min(960px, 92vw);
+        display: grid;
+        gap: 1rem;
+      }
+
+      .visuals {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 1.5rem;
+      }
+
+      #panel {
+        width: min(560px, 80vw);
+        image-rendering: auto;
+        background: #050608;
+        border: 1px solid #2c3a42;
+        border-radius: 16px;
+      }
+
+      .remote-wrapper {
+        position: relative;
+        display: inline-block;
+        flex-shrink: 0;
+      }
+
+      #remote {
+        height: min(320px, 50vw);
+        width: auto;
+        display: block;
+        border-radius: 12px;
+        border: 1px solid #2c3a42;
+        object-fit: contain;
+      }
+
+      .remote-btn {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        width: 13%;
+        aspect-ratio: 1;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 50%;
+        padding: 0;
+        transition: background 0.15s, box-shadow 0.15s;
+      }
+
+      .remote-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+      }
+
+      .remote-btn:active {
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      button {
+        margin: 0.15rem;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #45606c;
+        border-radius: 999px;
+        background: #17232a;
+        color: #e7f0f7;
+      }
+
+      kbd {
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.35rem;
+        background: #22313a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Conway on a virtual LED panel</h1>
+      <div class="visuals">
+        <img id="panel" alt="Conway LED panel rendered as PNG" />
+        <div class="remote-wrapper">
+          <img id="remote" src="./remote.jpg" alt="IR remote control" />
+          <div id="remote-coords" style="position:absolute;top:0;left:0;background:rgba(0,0,0,0.7);color:#fff;font-size:11px;padding:2px 5px;pointer-events:none;border-radius:4px;display:none"></div>
+          <!-- cols: L=21.5% M=47.6% R=73.7%  rows: 12.7 24.3 35.8 47.4 58.9 70.5 82.0 -->
+          <!-- Row 1: Power → cancel -->
+          <button class="remote-btn" data-key="cancel"     style="left:21.5%;top:12.7%" aria-label="Cancel"></button>
+          <!-- Row 2: Play/Pause, Prev, Next -->
+          <button class="remote-btn" data-key="play_pause" style="left:21.5%;top:24.3%" aria-label="Play/Pause"></button>
+          <button class="remote-btn" data-key="prev"       style="left:47.6%;top:24.3%" aria-label="Predecessor Search"></button>
+          <button class="remote-btn" data-key="next"       style="left:73.7%;top:24.3%" aria-label="Next"></button>
+          <!-- Row 4: 0 -->
+          <button class="remote-btn" data-key="0"          style="left:21.5%;top:47.4%" aria-label="Pattern 0"></button>
+          <!-- Row 5: 1 2 3 -->
+          <button class="remote-btn" data-key="1"          style="left:21.5%;top:58.9%" aria-label="Pattern 1"></button>
+          <button class="remote-btn" data-key="2"          style="left:47.6%;top:58.9%" aria-label="Pattern 2"></button>
+          <button class="remote-btn" data-key="3"          style="left:73.7%;top:58.9%" aria-label="Pattern 3"></button>
+          <!-- Row 6: 4 5 6 -->
+          <button class="remote-btn" data-key="4"          style="left:21.5%;top:70.5%" aria-label="Pattern 4"></button>
+          <button class="remote-btn" data-key="5"          style="left:47.6%;top:70.5%" aria-label="Pattern 5"></button>
+          <button class="remote-btn" data-key="6"          style="left:73.7%;top:70.5%" aria-label="Pattern 6"></button>
+          <!-- Row 7: 7 8 9 -->
+          <button class="remote-btn" data-key="7"          style="left:21.5%;top:82.0%" aria-label="Pattern 7"></button>
+          <button class="remote-btn" data-key="8"          style="left:47.6%;top:82.0%" aria-label="Pattern 8"></button>
+          <button class="remote-btn" data-key="9"          style="left:73.7%;top:82.0%" aria-label="Pattern 9"></button>
+        </div>
+      </div>
+      <section>
+        <button data-key="play_pause">Play/Pause</button>
+        <button data-key="next">Next</button>
+        <button data-key="prev">Previous Search</button>
+        <button data-key="cancel">Cancel Search</button>
+      </section>
+      <section>
+        <button data-key="0">0</button>
+        <button data-key="1">1</button>
+        <button data-key="2">2</button>
+        <button data-key="3">3</button>
+        <button data-key="4">4</button>
+        <button data-key="5">5</button>
+        <button data-key="6">6</button>
+        <button data-key="7">7</button>
+        <button data-key="8">8</button>
+        <button data-key="9">9</button>
+      </section>
+      <p>
+        Keys match the hardware remote: <kbd>Space</kbd> play/pause,
+        <kbd>N</kbd> next, <kbd>P</kbd> predecessor search, <kbd>Esc</kbd>
+        cancel, and <kbd>0</kbd>-<kbd>9</kbd> select patterns.
+      </p>
+      <p id="status">loading</p>
+    </main>
+    <script type="importmap">
+      {
+        "imports": {
+          "env": "./env.js"
+        }
+      }
+    </script>
+    <script type="module" src="./main.js?v=3"></script>
+  </body>
+</html>

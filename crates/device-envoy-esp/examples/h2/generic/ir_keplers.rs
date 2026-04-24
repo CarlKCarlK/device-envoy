@@ -12,11 +12,11 @@
 
 use core::convert::Infallible;
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, select};
+use embassy_futures::select::{select, Either};
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{Result, init_and_start, ir::IrKepler as _, ir_keplers};
+use device_envoy_esp::{init_and_start, ir::IrKepler as _, ir_keplers, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

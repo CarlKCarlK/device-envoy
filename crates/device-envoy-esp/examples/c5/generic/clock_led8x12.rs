@@ -14,26 +14,25 @@
 #![no_main]
 
 use core::convert::Infallible;
-use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
+use device_envoy_example_common::clock_ui::{run_clock_ui, ClockUiEvent};
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Result,
     button::PressedTo,
     button_watch,
     clock_sync::{ClockSyncEsp, ClockSyncStaticEsp, ONE_MINUTE},
     flash_block::FlashBlockEsp,
-    init_and_start,
-    led_strip::{Current, Gamma, colors},
-    led2d,
+    init_and_start, led2d,
     led2d::Led2d as _,
-    led2d::{Led2dFont, layout::LedLayout},
+    led2d::{layout::LedLayout, Led2dFont},
+    led_strip::{colors, Current, Gamma},
     wifi_auto::{
-        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
         fields::{TimezoneField, TimezoneFieldStatic},
+        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
     },
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

@@ -14,15 +14,15 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Error, Result,
     button::{ButtonEsp, PressedTo},
     clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStaticEsp, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{
-        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
         fields::{TimezoneField, TimezoneFieldStatic},
+        WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
     },
+    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

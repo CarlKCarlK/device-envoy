@@ -15,8 +15,9 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Result, init_and_start, ir,
+    init_and_start, ir,
     ir::{Ir as _, IrEvent},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

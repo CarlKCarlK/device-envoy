@@ -15,8 +15,9 @@ use log::info;
 #[allow(unused_imports)]
 use device_envoy_esp::led_strip::Engine;
 use device_envoy_esp::{
-    Result, init_and_start, led_strip,
-    led_strip::{Current, Frame1d, LedStrip as _, colors},
+    init_and_start, led_strip,
+    led_strip::{colors, Current, Frame1d, LedStrip as _},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

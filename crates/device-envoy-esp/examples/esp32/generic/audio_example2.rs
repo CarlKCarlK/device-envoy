@@ -11,11 +11,11 @@
 use core::convert::Infallible;
 use core::time::Duration as StdDuration;
 
-use embassy_futures::select::{Either, select};
+use embassy_futures::select::{select, Either};
 use embassy_time::{Duration, Timer};
 
 use device_envoy_core::{
-    audio_player::{AtEnd, AudioPlayer, Gain, Playable, SilenceClip, VOICE_22050_HZ, Volume},
+    audio_player::{AtEnd, AudioPlayer, Gain, Playable, SilenceClip, Volume, VOICE_22050_HZ},
     button::Button,
 };
 use device_envoy_esp::{
@@ -28,7 +28,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{Result, init_and_start};
+use device_envoy_esp::{init_and_start, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

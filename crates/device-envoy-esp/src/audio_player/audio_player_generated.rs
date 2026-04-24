@@ -7,12 +7,7 @@
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none"))]
 use crate::audio_player;
 
-#[cfg(all(
-    not(doc),
-    not(feature = "host"),
-    target_os = "none",
-    esp_pdma_family
-))]
+#[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_pdma_family))]
 audio_player! {
     pub AudioPlayerGenerated {
         data_pin: GPIO2,
@@ -23,12 +18,7 @@ audio_player! {
     }
 }
 
-#[cfg(all(
-    not(doc),
-    not(feature = "host"),
-    target_os = "none",
-    esp_gdma_family
-))]
+#[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_gdma_family))]
 audio_player! {
     pub AudioPlayerGenerated {
         data_pin: GPIO2,

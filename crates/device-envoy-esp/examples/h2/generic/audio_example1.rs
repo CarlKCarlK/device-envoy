@@ -15,14 +15,14 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{Result, init_and_start};
 use device_envoy_esp::{
     audio_player::{
-        AtEnd, AudioPlayer, Playable, SilenceClip, VOICE_22050_HZ, Volume, audio_player,
+        audio_player, AtEnd, AudioPlayer, Playable, SilenceClip, Volume, VOICE_22050_HZ,
     },
     button::{Button as _, ButtonEsp, PressedTo},
     tone,
 };
+use device_envoy_esp::{init_and_start, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

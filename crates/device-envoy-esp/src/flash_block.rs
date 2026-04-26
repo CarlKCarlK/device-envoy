@@ -7,9 +7,9 @@
 #![cfg_attr(not(target_os = "none"), allow(dead_code))]
 
 #[cfg(target_os = "none")]
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-#[cfg(target_os = "none")]
 use embassy_sync::blocking_mutex::Mutex;
+#[cfg(target_os = "none")]
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 #[cfg(target_os = "none")]
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
 #[cfg(target_os = "none")]

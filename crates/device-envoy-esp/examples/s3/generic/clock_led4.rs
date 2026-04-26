@@ -14,26 +14,26 @@
 
 use core::convert::Infallible;
 
-use device_envoy_example_common::clock_ui::{run_clock_ui, ClockUiEvent};
+use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use embassy_executor::Spawner;
 use esp_backtrace as _;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use log::info;
 
 use device_envoy_esp::{
+    Error, Result,
     button::PressedTo,
     button_watch,
     clock_sync::{ClockSync as _, ClockSyncEsp, ClockSyncStaticEsp, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start,
     led4::{
-        circular_outline_animation, BlinkState, Led4 as _, Led4Esp, Led4EspStatic, OutputArray,
+        BlinkState, Led4 as _, Led4Esp, Led4EspStatic, OutputArray, circular_outline_animation,
     },
     wifi_auto::{
-        fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
+        fields::{TimezoneField, TimezoneFieldStatic},
     },
-    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -188,11 +188,7 @@ const fn tens_digit(value: u8) -> char {
 
 #[inline]
 const fn tens_hours(value: u8) -> char {
-    if value >= 10 {
-        '1'
-    } else {
-        ' '
-    }
+    if value >= 10 { '1' } else { ' ' }
 }
 
 #[inline]

@@ -76,9 +76,9 @@
     reason = "unsafe impl Sync is sound: single-threaded Embassy executor, no concurrent access"
 )]
 
+use crate::Error;
 #[cfg(target_os = "none")]
 use crate::flash_block::FlashBlockEsp;
-use crate::Error;
 use device_envoy_core::__impl_wifi_auto_fields;
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer, WifiAutoField};
 

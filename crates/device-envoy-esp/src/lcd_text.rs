@@ -205,11 +205,11 @@ pub mod lcd_text_generated {
 #[doc(hidden)]
 pub type __I2csSignal<T> = Signal<CriticalSectionRawMutex, T>;
 #[doc(hidden)]
-pub use device_envoy_core::lcd_text::render_lcd_text_frame as __render_lcd_text_frame;
-#[doc(hidden)]
 pub use device_envoy_core::lcd_text::LcdText as __LcdText;
 #[doc(hidden)]
 pub use device_envoy_core::lcd_text::LcdTextDriver as __LcdTextDriver;
+#[doc(hidden)]
+pub use device_envoy_core::lcd_text::render_lcd_text_frame as __render_lcd_text_frame;
 #[doc(hidden)]
 pub type __LcdTextFrame<const MAX_CHARS: usize> =
     device_envoy_core::lcd_text::LcdTextFrame<MAX_CHARS>;

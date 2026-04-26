@@ -15,10 +15,10 @@ use esp_backtrace as _;
 #[allow(unused_imports)]
 use device_envoy_esp::led_strip::Engine;
 use device_envoy_esp::{
-    init_and_start, ir_kepler, led2d,
-    led2d::{layout::LedLayout, Led2dFont},
+    Result, init_and_start, ir_kepler,
     led_strip::Current,
-    Result,
+    led2d,
+    led2d::{Led2dFont, layout::LedLayout},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

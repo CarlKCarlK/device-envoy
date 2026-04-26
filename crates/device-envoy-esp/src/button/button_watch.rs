@@ -5,7 +5,7 @@
 #[cfg(target_os = "none")]
 use core::sync::atomic::{AtomicBool, Ordering};
 #[cfg(target_os = "none")]
-use device_envoy_core::button::{Button, __ButtonMonitor};
+use device_envoy_core::button::{__ButtonMonitor, Button};
 #[cfg(target_os = "none")]
 use embassy_executor::Spawner;
 #[cfg(target_os = "none")]

@@ -15,11 +15,11 @@ use esp_backtrace as _;
 
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer, WifiAutoError};
 use device_envoy_esp::{
+    Error, Result,
     button::{ButtonEsp, PressedTo},
     flash_block::{FlashBlock as _, FlashBlockEsp},
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent, WifiAutoField},
-    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

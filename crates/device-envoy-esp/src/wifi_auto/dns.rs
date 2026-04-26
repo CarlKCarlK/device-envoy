@@ -5,8 +5,8 @@
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
 use embassy_net::{
-    udp::{self, UdpSocket},
     Ipv4Address, Stack,
+    udp::{self, UdpSocket},
 };
 use log::{error, warn};
 

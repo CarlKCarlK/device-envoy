@@ -30,7 +30,7 @@ adpcm_clip! {
 /// Auto-generated.
 pub mod AdpcmClipGenerated {
     use crate::audio_player::{
-        AdpcmClipBuf, PcmClipBuf, __adpcm_data_len_for_pcm_samples, VOICE_22050_HZ,
+        __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, PcmClipBuf, VOICE_22050_HZ,
     };
     // TODO_NIGHTLY When nightly feature inherent_associated_types becomes stable,
     // change generated clip items from a module to inherent associated items on a struct.

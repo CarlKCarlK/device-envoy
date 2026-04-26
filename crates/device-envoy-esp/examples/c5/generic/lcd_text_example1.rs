@@ -11,7 +11,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_core::lcd_text::LcdText as _;
-use device_envoy_esp::{init_and_start, lcd_text, Result};
+use device_envoy_esp::{Result, init_and_start, lcd_text};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

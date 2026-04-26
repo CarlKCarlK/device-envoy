@@ -10,9 +10,9 @@ use core::convert::Infallible;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    init_and_start,
+    Result, init_and_start,
     ir::{IrKepler, KeplerKeys},
-    ir_kepler, Result,
+    ir_kepler,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

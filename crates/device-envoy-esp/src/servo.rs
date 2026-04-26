@@ -108,8 +108,8 @@
 use crate::Result;
 use core::cell::RefCell;
 pub use device_envoy_core::servo::{Direction, Servo};
-use esp_hal::gpio::{interconnect::PeripheralOutput, DriveMode};
-use esp_hal::ledc::{channel, timer, LowSpeed};
+use esp_hal::gpio::{DriveMode, interconnect::PeripheralOutput};
+use esp_hal::ledc::{LowSpeed, channel, timer};
 use esp_hal::ledc::{channel::ChannelHW, channel::ChannelIFace, timer::TimerIFace};
 use esp_hal::time::Rate;
 use static_cell::StaticCell;
@@ -124,7 +124,7 @@ pub use device_envoy_core::servo::{
     device_loop,
 };
 pub use device_envoy_core::servo::{
-    combine, linear, AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic,
+    AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic, combine, linear,
 };
 
 /// Sample generated servo-player type documentation.

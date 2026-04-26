@@ -1,9 +1,9 @@
-use crate::boards::{validate_board_profiles, AudioWiring, BOARD_PROFILES};
+use crate::boards::{AudioWiring, BOARD_PROFILES, validate_board_profiles};
 use crate::example_specs::{
-    blinky_built_in_led, blinky_kind, blinky_led_pin_num, led_strip1_built_in, led_strip1_pin_num,
-    BlinkyKind,
+    BlinkyKind, blinky_built_in_led, blinky_kind, blinky_led_pin_num, led_strip1_built_in,
+    led_strip1_pin_num,
 };
-use minijinja::{context, Environment};
+use minijinja::{Environment, context};
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};

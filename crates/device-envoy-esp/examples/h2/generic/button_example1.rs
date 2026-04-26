@@ -12,8 +12,9 @@ use log::info;
 
 use device_envoy_core::button::{Button, PressDuration};
 use device_envoy_esp::{
+    Result,
     button::{ButtonEsp, PressedTo},
-    init_and_start, Result,
+    init_and_start,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

@@ -16,9 +16,9 @@ pub mod button_watch_generated;
 // they must remain public even though they are macro implementation details.
 #[doc(hidden)]
 pub use button_watch::{ButtonWatchEsp, ButtonWatchStaticEsp};
-pub use device_envoy_core::button::Button;
 #[doc(hidden)]
 pub use device_envoy_core::button::__ButtonMonitor;
+pub use device_envoy_core::button::Button;
 pub use device_envoy_core::button::{PressDuration, PressedTo};
 // Public for compatibility; hidden from end-user docs.
 #[doc(hidden)]

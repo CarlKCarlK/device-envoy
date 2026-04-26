@@ -141,8 +141,8 @@ pub mod layout {
 
 pub use device_envoy_core::led2d::Led2d;
 pub use device_envoy_core::led2d::{
-    bit_matrix3x4_font, render_text_to_frame, Frame2d, Led2dFont, Led2dStripAdapter,
-    Led2dStripBacked, LedLayout, Point, Size,
+    Frame2d, Led2dFont, Led2dStripAdapter, Led2dStripBacked, LedLayout, Point, Size,
+    bit_matrix3x4_font, render_text_to_frame,
 };
 pub mod led2d_generated;
 

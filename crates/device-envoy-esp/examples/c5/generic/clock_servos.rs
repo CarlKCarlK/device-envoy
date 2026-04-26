@@ -18,25 +18,25 @@
 
 use core::convert::{Infallible, TryFrom};
 
-use device_envoy_example_common::clock_ui::{run_clock_ui, ClockUiEvent};
+use device_envoy_example_common::clock_ui::{ClockUiEvent, run_clock_ui};
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
+    Error, Result,
     button::PressedTo,
     button_watch,
     clock_sync::{ClockSyncEsp, ClockSyncStaticEsp, ONE_MINUTE},
     flash_block::FlashBlockEsp,
     init_and_start,
     servo::Servo as _,
-    servo::{combine, linear, servo_player, AtEnd, Direction, ServoPlayer as _, ServoPlayerHandle},
+    servo::{AtEnd, Direction, ServoPlayer as _, ServoPlayerHandle, combine, linear, servo_player},
     wifi_auto::{
-        fields::{TimezoneField, TimezoneFieldStatic},
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
+        fields::{TimezoneField, TimezoneFieldStatic},
     },
-    Error, Result,
 };
 esp_bootloader_esp_idf::esp_app_desc!();
 

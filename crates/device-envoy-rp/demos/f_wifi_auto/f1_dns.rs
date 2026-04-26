@@ -66,7 +66,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     // Try to connect. Will launch setup web page as needed.
-    // Returns network stack and button.
+    // Returns network stack.
     //
     // A button is used to force reconfiguration via setup web page.
     let mut button15 = ButtonRp::new(p.PIN_15, PressedTo::Ground);

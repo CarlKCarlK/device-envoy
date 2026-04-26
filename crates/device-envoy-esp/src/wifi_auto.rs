@@ -15,11 +15,11 @@ use core::future::Future;
 #[cfg(target_os = "none")]
 use portable_atomic::{AtomicBool, Ordering};
 
+use crate::Result;
 #[cfg(target_os = "none")]
 use crate::button::Button;
 #[cfg(target_os = "none")]
 use crate::flash_block::{FlashBlock as _, FlashBlockEsp};
-use crate::Result;
 #[cfg(target_os = "none")]
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4};
 #[cfg(target_os = "none")]
@@ -35,7 +35,7 @@ extern crate alloc;
 #[cfg(target_os = "none")]
 use alloc::string::String;
 #[cfg(target_os = "none")]
-use embassy_futures::select::{select4, Either4};
+use embassy_futures::select::{Either4, select4};
 
 #[cfg(target_os = "none")]
 use device_envoy_core::wifi_auto::WifiAutoError;

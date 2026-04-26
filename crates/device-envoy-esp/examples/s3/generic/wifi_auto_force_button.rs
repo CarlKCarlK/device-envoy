@@ -13,11 +13,11 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
+    Result,
     button::{ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
-    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

@@ -2,10 +2,10 @@
 //!
 //! Used internally by `led_strip!` when `engine: Engine::Spi`.
 
-use embassy_futures::select::{select, Either};
+use embassy_futures::select::{Either, select};
 use embassy_time::Timer;
 
-use super::{apply_correction, Command, Frame1d, LedStripCommandSignal};
+use super::{Command, Frame1d, LedStripCommandSignal, apply_correction};
 
 /// WS2812-over-SPI bitrate in Hz.
 ///

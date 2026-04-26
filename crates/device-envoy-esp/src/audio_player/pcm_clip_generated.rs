@@ -32,7 +32,7 @@ pcm_clip! {
 /// Auto-generated.
 pub mod PcmClipGenerated {
     use crate::audio_player::{
-        AdpcmClipBuf, PcmClipBuf, __adpcm_data_len_for_pcm_samples, __pcm_clip_from_samples,
+        __adpcm_data_len_for_pcm_samples, __pcm_clip_from_samples, AdpcmClipBuf, PcmClipBuf,
         VOICE_22050_HZ,
     };
     // TODO_NIGHTLY When nightly feature inherent_associated_types becomes stable,

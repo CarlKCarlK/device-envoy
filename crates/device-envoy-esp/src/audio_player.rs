@@ -346,8 +346,8 @@ use esp_hal::{
     dma::DmaChannelFor,
     gpio::interconnect::PeripheralOutput,
     i2s::{
-        master::{Channels, Config, DataFormat, I2s},
         AnyI2s,
+        master::{Channels, Config, DataFormat, I2s},
     },
     time::Rate,
 };

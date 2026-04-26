@@ -15,13 +15,13 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_core::audio_player::{
-    AtEnd, AudioPlayer, Gain, Playable, Volume, NARROWBAND_8000_HZ, VOICE_22050_HZ,
+    AtEnd, AudioPlayer, Gain, NARROWBAND_8000_HZ, Playable, VOICE_22050_HZ, Volume,
 };
+use device_envoy_esp::{Result, init_and_start};
 use device_envoy_esp::{
     audio_player::{audio_player, pcm_clip},
     button::{Button as _, ButtonEsp, PressedTo},
 };
-use device_envoy_esp::{init_and_start, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

@@ -13,9 +13,9 @@ use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::gpio::interconnect::{PeripheralInput, PeripheralOutput};
 use esp_hal::gpio::{Level, Output, OutputConfig, OutputPin};
 use esp_hal::spi::master::{Config as SpiConfig, Instance, Spi};
+use esp_hal_mfrc522::MFRC522;
 use esp_hal_mfrc522::consts::UidSize;
 use esp_hal_mfrc522::drivers::SpiDriver;
-use esp_hal_mfrc522::MFRC522;
 
 use crate::{Error, Result};
 

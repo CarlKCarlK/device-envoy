@@ -1,7 +1,7 @@
-use device_envoy_core::wifi_auto::{generate_config_page, parse_post, WifiCredentials};
+use device_envoy_core::wifi_auto::{WifiCredentials, generate_config_page, parse_post};
 use device_envoy_esp::wifi_auto::{
-    fields::{TextField, TimezoneField},
     WifiAutoField,
+    fields::{TextField, TimezoneField},
 };
 
 #[test]
@@ -31,9 +31,11 @@ fn parse_post_applies_custom_field_parsing() {
             .expect("timezone offset should load"),
         Some(-300)
     );
-    assert!(timezone_field
-        .is_satisfied()
-        .expect("state query should succeed"));
+    assert!(
+        timezone_field
+            .is_satisfied()
+            .expect("state query should succeed")
+    );
 }
 
 #[test]
@@ -79,9 +81,11 @@ fn text_field_roundtrip_from_post() {
             .as_str(),
         "Panel01"
     );
-    assert!(text_field
-        .is_satisfied()
-        .expect("state query should succeed"));
+    assert!(
+        text_field
+            .is_satisfied()
+            .expect("state query should succeed")
+    );
 }
 
 #[test]

@@ -20,10 +20,10 @@ use log::info;
 
 use device_envoy_core::servo::{Servo, ServoPlayer};
 use device_envoy_esp::{
+    Result,
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start,
-    servo::{servo_player, AtEnd},
-    Result,
+    servo::{AtEnd, servo_player},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

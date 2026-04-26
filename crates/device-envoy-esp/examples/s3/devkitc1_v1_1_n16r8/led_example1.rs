@@ -13,9 +13,8 @@ use log::info;
 
 use device_envoy_core::led::Led as _;
 use device_envoy_esp::{
-    init_and_start, led,
+    Result, init_and_start, led,
     led::{LedLevel, OnLevel},
-    Result,
 };
 use embassy_time::{Duration, Timer};
 

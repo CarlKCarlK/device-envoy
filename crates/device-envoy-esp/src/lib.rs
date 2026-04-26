@@ -165,7 +165,7 @@ pub mod clock_sync {
     /// Resources needed to construct [`ClockSyncEsp`].
     pub use device_envoy_core::clock_sync::ClockSyncStatic as ClockSyncStaticEsp;
     pub use device_envoy_core::clock_sync::{
-        h12_m_s, ClockSync, ClockSyncTick, UnixSeconds, ONE_DAY, ONE_MINUTE, ONE_SECOND,
+        ClockSync, ClockSyncTick, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds, h12_m_s,
     };
     pub use device_envoy_core::{Error as CoreError, Result as CoreResult};
 }

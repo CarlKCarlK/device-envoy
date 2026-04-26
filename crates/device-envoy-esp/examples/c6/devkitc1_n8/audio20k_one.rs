@@ -19,9 +19,9 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::audio_player::{
-    audio_player, pcm_clip, AtEnd, AudioPlayer as _, Volume, VOICE_22050_HZ,
+    AtEnd, AudioPlayer as _, VOICE_22050_HZ, Volume, audio_player, pcm_clip,
 };
-use device_envoy_esp::{init_and_start, Result};
+use device_envoy_esp::{Result, init_and_start};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

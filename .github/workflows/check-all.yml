@@ -69,8 +69,8 @@ jobs:
         shell: bash
         run: |
           cd device-envoy-rp-blinky
-          ./scripts/device-action.sh check 1
-          ./scripts/device-action.sh check 2
+          cargo xtask check --board pico1
+          cargo xtask check --board pico2
 
   check-esp-blinky:
     runs-on: ubuntu-latest

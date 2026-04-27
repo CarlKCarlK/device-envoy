@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Device Envoy Conway</title>
-    <meta property="og:title" content="Device Envoy Conway" />
-    <meta property="og:description" content="Conway's Game of Life running on embedded Rust — live demo" />
+    <title>Device Envoy: Conway Demo on Virtual LED Panel</title>
+    <meta property="og:title" content="Device Envoy: Conway Demo on Virtual LED Panel" />
+    <meta property="og:description" content="The same Rust core runs on ESP32, Pico 1/2, and in your browser via WebAssembly — watch Conway's Game of Life on a virtual LED panel." />
     <meta property="og:image" content="https://carlkcarlk.github.io/device-envoy/conway/v1/preview.png" />
     <meta property="og:url" content="https://carlkcarlk.github.io/device-envoy/conway/" />
     <meta property="og:type" content="website" />
@@ -95,6 +95,11 @@
         z-index: 10;
       }
 
+      h1 { margin-bottom: 0.2rem; }
+      a { color: #7ec8e3; text-decoration: underline; }
+      a:hover { color: #aee4f5; }
+      h1 + p { margin-top: 0; }
+
       button {
         margin: 0.15rem;
         padding: 0.55rem 0.75rem;
@@ -113,7 +118,8 @@
   </head>
   <body>
     <main>
-      <h1>Conway on a virtual LED panel</h1>
+      <h1><a href="https://github.com/CarlKCarlK/device-envoy" target="_blank" rel="noopener">Device Envoy</a>: Conway Demo on Virtual LED Panel</h1>
+      <p>The same Rust core runs on ESP32, Pico 1/2, and in your browser via WebAssembly.</p>
       <div class="visuals">
         <img id="panel" alt="Conway LED panel rendered as PNG" />
         <div class="remote-wrapper">
@@ -172,6 +178,13 @@
         <kbd>0</kbd>–<kbd>9</kbd> select pattern.
       </p>
       <p id="status">loading</p>
+      <footer>
+        <p>Links:</p>
+        <ul>
+          <li><a href="https://github.com/CarlKCarlK/device-envoy" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://medium.com/@carlmkadie" target="_blank" rel="noopener">Medium</a></li>
+        </ul>
+      </footer>
     </main>
     <script type="importmap">
       {

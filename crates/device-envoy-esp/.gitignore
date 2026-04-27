@@ -1,2 +1,3 @@
 /target/
 xtask/target/
+examples/__readme_example_generated.rs

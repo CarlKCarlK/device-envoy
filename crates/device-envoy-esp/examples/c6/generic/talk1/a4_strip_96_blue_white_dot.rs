@@ -23,7 +23,7 @@ led_strip! {
         pin: GPIO18,
         len: 96,
         // Optionals
-        max_current: Current::Milliamps(500), // default is 250ma
+        max_current: Current::Milliamps(500), // default is 250 mA
         gamma: Gamma::SmartLeds, // compatibility curve (= 2.8)
         max_frames: 0, // Disable animation; write_frame() still works
     }

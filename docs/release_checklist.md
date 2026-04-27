@@ -103,14 +103,6 @@ cargo publish-esp
 - Wait for crates.io index propagation after publishing `core`/`rp`/`esp`.
 - Publish blinky repos only after their `device-envoy-*` dependency versions resolve from crates.io:
 
-```bash
-# in device-envoy-rp-blinky
-cargo publish
-
-# in device-envoy-esp-blinky
-cargo publish
-```
-
 ## 10. Tag and GitHub Release
 
 - Create an annotated git tag:

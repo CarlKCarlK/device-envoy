@@ -52,7 +52,7 @@ This workspace is also in active migration as shared functionality moves into `d
 
 ## Videos and Articles
 
-- [device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) -- versions: [article](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) or [video](https://www.youtube.com/watch?v=iUu6hvJLVOU)
+- [device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions](https://medium.com/@carlmkadie/device-envoy-esp-making-embedded-esp32-fun-872e251b88f3) -- versions: [Pico article](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b), [ESP32 article](https://medium.com/@carlmkadie/device-envoy-esp-making-embedded-esp32-fun-872e251b88f3) or [video](https://www.youtube.com/watch?v=iUu6hvJLVOU)
 - [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson
 - [More Rust articles](https://medium.com/@carlmkadie)
 

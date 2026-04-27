@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.6-alpha.1
+
+- Added Conway's Game of Life WebAssembly demo published to GitHub Pages at `carlkcarlk.github.io/device-envoy/conway/`.
+- Updated downstream sample projects `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to `0.0.6-alpha.1`.
+
 ## 0.0.6-alpha.0
 
 - Expanded ESP support and validation to cover all ESP architectures/chips currently targeted by `esp-hal` in this workspace flow (`esp32`, `esp32c2`, `esp32c3`, `esp32c5`, `esp32c6`, `esp32c61`, `esp32h2`, `esp32s2`, `esp32s3`) via capability-aware checks, examples, and board-generation tooling.

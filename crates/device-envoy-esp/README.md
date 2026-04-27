@@ -42,12 +42,11 @@ The API is actively evolving and may change without compatibility guarantees.
 ## Forum
 
 - **[Using Embassy to build applications](https://github.com/CarlKCarlK/device-envoy/discussions)**  
-  A place to talk about writing embedded applications with Embassy: sharing code, asking practical questions, and learning what works in practice.  
-  Not limited to Pico or ESP boards, or to `device-envoy`.
+  A place to talk about writing embedded applications with Embassy: sharing code, asking practical questions, and learning what works in practice. Not limited to Pico or ESP boards, or to `device-envoy`.
 
 ## Videos and Articles
 
-- [device-envoy: Making Embedded Fun with Rust, Embassy, and Composable Device Abstractions](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) -- versions: [article](https://medium.com/@carlmkadie/device-envoy-making-embedded-fun-31534917414b) or [video](https://www.youtube.com/watch?v=iUu6hvJLVOU)
+- [device-envoy: Making Embedded ESP32 Fun with Rust, Embassy, and Composable Device Abstractions](https://medium.com/@carlmkadie/device-envoy-esp-making-embedded-esp32-fun-872e251b88f3) -- versions: [article](https://medium.com/@carlmkadie/device-envoy-esp-making-embedded-esp32-fun-872e251b88f3) or [video (Pico)](https://www.youtube.com/watch?v=iUu6hvJLVOU)
 - [How Rust & Embassy Shine on Embedded Devices](https://medium.com/@carlmkadie/how-rust-embassy-shine-on-embedded-devices-part-1-9f4911c92007) by Carl M. Kadie and Brad Gibson.
 - [More Rust articles](https://medium.com/@carlmkadie)
 

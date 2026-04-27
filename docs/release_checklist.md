@@ -57,7 +57,7 @@ Note: `show-docs-rp` and `show-docs-esp` run the corresponding `update-docs-*` s
 - Run top-level checks:
 
 ```bash
-just check-all
+cargo check-all
 ```
 
 - Fix failures before publishing.

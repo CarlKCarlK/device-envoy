@@ -14,6 +14,8 @@ Rather than replacing HALs or drivers, `device-envoy-rp` builds on them. It defi
 
 `device-envoy-rp` supports the Raspberry Pi Pico and Pico 2 (ARM cores). RISC-V core support on the Pico 2 is not currently included. Its sibling package, [`device-envoy-esp`](https://docs.rs/device-envoy-esp), supports all ESP32 families currently supported by [esp-hal](https://github.com/esp-rs/esp-hal).
 
+**Feedback**: If you try this crate, I’d love to hear how it goes, whether it works well, fails to build, needs clearer docs, or does not fit your hardware. Please send feedback to carlk AT msn.com.
+
 ## Start From a Template
 
 Want a minimal starting project?

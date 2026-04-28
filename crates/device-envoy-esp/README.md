@@ -12,6 +12,8 @@ small, focused APIs instead of managing low-level coordination directly.
 
 `device-envoy-esp` supports all ESP32 families currently supported by [esp-hal](https://github.com/esp-rs/esp-hal), the Rust hardware abstraction layer for Espressif devices: C2, C3, C5, C6, C61, H2, S2, S3, and ESP32. Its sibling package, [`device-envoy-rp`](https://docs.rs/device-envoy-rp), supports the Raspberry Pi Pico and Pico 2.
 
+**Feedback**: If you try this crate, I’d love to hear how it goes, whether it works well, fails to build, needs clearer docs, or does not fit your hardware. Please send feedback to carlk AT msn.com.
+
 ## Start From a Template
 
 Want a minimal starting project?

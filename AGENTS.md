@@ -17,6 +17,12 @@ This file contains both shared workspace rules and crate-specific rules for this
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 - For `cargo` aliases that target embedded triples, include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
 
+## Dependency Upgrade Guardrails
+
+- Treat embedded HAL/driver dependency upgrades as behavior migrations, not just compile fixes. When an upgraded API adds a required parameter, trace the previous behavior/default before choosing a placeholder value.
+- Keep dependency-upgrade commits focused when possible. Avoid mixing broad docs/example churn with HAL, network, DMA, executor, or firmware-driver upgrades unless the extra changes are necessary for the migration.
+- After upgrading hardware-facing dependencies, run at least one hardware smoke test for each affected subsystem before considering the upgrade complete. For RP WiFi/CYW43 changes, `clock_console` or a minimal WiFi example must get past CYW43 initialization and reach WiFi join or captive portal readiness.
+
 ## Generated Files
 
 - Treat generated files under `src/**/_generated.rs` as build outputs, not source of truth.

@@ -449,6 +449,7 @@ pub async fn device_loop<
         BIT_DEPTH_BITS,
         &pio_i2s_out_program,
     );
+    pio_i2s_out.start();
 
     let _pio_i2s_out_program = pio_i2s_out_program;
     let mut sample_buffer = [0_u32; SAMPLE_BUFFER_LEN];

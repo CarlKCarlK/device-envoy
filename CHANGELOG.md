@@ -4,6 +4,9 @@
 
 - Bumped published workspace crate versions to `0.1.0`.
 - Updated downstream sample projects `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to `0.1.0`.
+- Fixed Pico W WiFi hang after `cyw43` 0.6→0.7 migration: `cyw43 0.7` requires the caller to supply the NVRAM blob; the empty slice previously passed is now replaced with the actual Pico W NVRAM constants.
+- Fixed silent I2S audio after `embassy-rp` 0.9→0.10 migration: `PioI2sOut::new()` no longer auto-starts the state machine; `.start()` is now called explicitly after construction.
+- Added `examples/rfid.rs` for the RP crate: a minimal runnable RFID example using the MFRC522 module over SPI0 (CS=PIN_1, SCK=PIN_2, MOSI=PIN_3, MISO=PIN_4, RST=PIN_5).
 
 ## 0.0.6-alpha.1
 

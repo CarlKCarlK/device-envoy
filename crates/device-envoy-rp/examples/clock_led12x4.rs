@@ -43,21 +43,16 @@ led2d! {
         pin: PIN_3,
         dma: DMA_CH1,
         led_layout: LED_LAYOUT_12X4,
-        max_current: Current::Milliamps(500),
+        max_current: Current::Milliamps(1000),
         gamma: Gamma::Linear,
         max_frames: 32,
         font: Led2dFont::Font3x4Trim,
     }
 }
 
-const CONNECTING_COLOR: RGB8 = colors::SADDLE_BROWN;
-const DIGIT_COLORS: [RGB8; 4] = [colors::NAVY, colors::GREEN, colors::TEAL, colors::MAROON];
-const EDIT_COLORS: [RGB8; 4] = [
-    colors::FIREBRICK,
-    colors::DARK_ORANGE,
-    colors::TEAL,
-    colors::MAROON,
-];
+const CONNECTING_COLOR: RGB8 = colors::WHITE;
+const DIGIT_COLORS: [RGB8; 4] = [colors::RED, colors::GREEN, colors::BLUE, colors::YELLOW];
+const EDIT_COLORS: [RGB8; 4] = [colors::MAGENTA, colors::ORANGE, colors::CYAN, colors::WHITE];
 
 button_watch! {
     ButtonWatch13 {
@@ -87,9 +82,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
-        p.PIN_24,  // CYW43 clock
+        p.PIN_24,  // CYW43 data
         p.PIN_25,  // CYW43 chip select
-        p.PIN_29,  // CYW43 data pin
+        p.PIN_29,  // CYW43 clock
         p.PIO1,    // CYW43 PIO interface (swapped to show PIO not hardcoded)
         p.DMA_CH0, // CYW43 DMA channel
         wifi_credentials_flash_block,
@@ -247,8 +242,11 @@ fn perimeter_chase_animation(
     let mut frames = heapless::Vec::new();
     for frame_index in 0..PERIMETER_LENGTH {
         let mut frame = Frame2d::new();
-        let (x_index, y_index) = coordinates[frame_index];
-        frame[(x_index, y_index)] = color;
+        for tail_offset in 0..3 {
+            let coordinate_index = (frame_index + tail_offset) % PERIMETER_LENGTH;
+            let (x_index, y_index) = coordinates[coordinate_index];
+            frame[(x_index, y_index)] = color;
+        }
         frames
             .push((frame, duration))
             .map_err(|_| Error::FormatError)?;

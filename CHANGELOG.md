@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0
+
+- Bumped published workspace crate versions to `0.1.0`.
+- Updated downstream sample projects `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to `0.1.0`.
+
 ## 0.0.6-alpha.1
 
 - Added Conway's Game of Life WebAssembly demo published to GitHub Pages at `carlkcarlk.github.io/device-envoy/conway/`.

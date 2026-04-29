@@ -121,9 +121,9 @@ pub(crate) struct WifiAutoStatic {
 ///     // Construct WifiAutoRp
 ///     let wifi_auto = WifiAutoRp::new(
 ///         p.PIN_23,          // CYW43 power
-///         p.PIN_24,          // CYW43 clock
+///         p.PIN_24,  // CYW43 data
 ///         p.PIN_25,          // CYW43 chip select
-///         p.PIN_29,          // CYW43 data
+///         p.PIN_29,  // CYW43 clock
 ///         p.PIO0,            // WiFi PIO
 ///         p.DMA_CH0,         // WiFi DMA
 ///         wifi_flash,
@@ -217,7 +217,7 @@ impl WifiAutoRp {
     ///
     /// # Parameters
     ///
-    /// - `pin_23`, `pin_24`, `pin_25`, `pin_29`: the internal GPIO pins for the CYW43 WiFi chip.
+    /// - `pin_23`, `pin_24`, `pin_25`, `pin_29`: CYW43 power, data, chip-select, and clock pins.
     /// - `pio`: PIO resource used for WiFi.
     /// - `dma`: DMA resource for WiFi.
     /// - `wifi_credentials_flash_block`: a flash block implementing

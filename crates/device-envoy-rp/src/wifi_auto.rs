@@ -337,7 +337,7 @@ impl WifiAutoRp {
         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
         OnEventFuture: Future<Output = Result<()>>,
     {
-        <Self as WifiAuto>::connect(self, button, on_event).await
+        WifiAuto::connect(self, button, on_event).await
     }
 }
 

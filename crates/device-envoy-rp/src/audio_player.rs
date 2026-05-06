@@ -435,13 +435,13 @@ pub async fn device_loop<
     bit_clock_pin: Peri<'static, BitClockPin>,
     word_select_pin: Peri<'static, WordSelectPin>,
 ) -> ! {
-    let mut pio = Pio::new(pio, <PIO as PioIrqMap>::irqs());
+    let mut pio = Pio::new(pio, PIO::irqs());
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
     let mut pio_i2s_out = PioI2sOut::new(
         &mut pio.common,
         pio.sm0,
         dma,
-        <DMA as DmaIrqMap>::irqs(),
+        DMA::irqs(),
         data_pin,
         bit_clock_pin,
         word_select_pin,

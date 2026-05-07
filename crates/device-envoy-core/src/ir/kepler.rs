@@ -83,15 +83,6 @@ pub trait IrKepler {
     async fn wait_for_press(&self) -> KeplerKeys;
 }
 
-impl<T> IrKepler for &T
-where
-    T: IrKepler + ?Sized,
-{
-    async fn wait_for_press(&self) -> KeplerKeys {
-        (*self).wait_for_press().await
-    }
-}
-
 /// Static resources for Kepler IR remote events.
 ///
 /// See the platform-specific crate for usage examples.

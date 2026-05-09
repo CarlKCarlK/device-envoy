@@ -76,20 +76,13 @@ impl crate::button::__ButtonMonitor for ButtonWatchGenerated {
     }
 
     async fn wait_until_pressed_state(&mut self, pressed: bool) {
-        super::ButtonWatchRp::wait_until_pressed_state(
-            &mut self.button_watch,
-            pressed,
-        )
-        .await
+        super::ButtonWatchRp::wait_until_pressed_state(&mut self.button_watch, pressed).await
     }
 }
 
 #[cfg(doc)]
 impl crate::button::Button for ButtonWatchGenerated {
     async fn wait_for_press_duration(&mut self) -> crate::button::PressDuration {
-        super::ButtonWatchRp::wait_for_press_duration(
-            &mut self.button_watch,
-        )
-        .await
+        super::ButtonWatchRp::wait_for_press_duration(&mut self.button_watch).await
     }
 }

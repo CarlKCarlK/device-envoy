@@ -214,11 +214,9 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
     initialized_signal.signal(());
 
     loop {
-        B::wait_until_pressed_state(button, false)
-            .await;
+        B::wait_until_pressed_state(button, false).await;
 
-        B::wait_until_pressed_state(button, true)
-            .await;
+        B::wait_until_pressed_state(button, true).await;
         is_pressed.store(true, Ordering::Relaxed);
         state_signal.signal(true);
         state_changed_signal.signal(());
@@ -232,9 +230,7 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
         }
 
         let press_duration = embassy_futures::select::select(
-            B::wait_until_pressed_state(
-                button, false,
-            ),
+            B::wait_until_pressed_state(button, false),
             Timer::after(device_envoy_core::button::LONG_PRESS_DURATION),
         )
         .await;
@@ -248,10 +244,7 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
             }
             embassy_futures::select::Either::Second(()) => {
                 signal.signal(PressDuration::Long);
-                B::wait_until_pressed_state(
-                    button, false,
-                )
-                .await;
+                B::wait_until_pressed_state(button, false).await;
                 is_pressed.store(false, Ordering::Relaxed);
                 state_signal.signal(false);
                 state_changed_signal.signal(());

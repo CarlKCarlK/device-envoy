@@ -119,7 +119,8 @@ where
     let mut display_power = DisplayPower::On;
     let mut color_index = 1usize;
     let mut alive_color = ALIVE_COLORS[color_index];
-    add_pattern(&mut board, PATTERNS[pattern_index]);
+    let mut random_symmetry_mode = RandomSymmetryMode::None;
+    add_pattern(&mut board, PATTERNS[pattern_index], random_symmetry_mode);
 
     let mut stasis_tracker = (0u8, 0u16);
     let mut empty_tracker = 0u8;
@@ -142,6 +143,7 @@ where
                         evaluate_auto_reset(
                             &mut board,
                             pattern_index,
+                            random_symmetry_mode,
                             &mut stasis_tracker,
                             &mut empty_tracker,
                         );
@@ -162,6 +164,7 @@ where
                             &mut display_power,
                             &mut color_index,
                             &mut alive_color,
+                            &mut random_symmetry_mode,
                             led2d,
                             ir_kepler,
                             search_command_channel,
@@ -181,6 +184,7 @@ where
                             &mut display_power,
                             &mut color_index,
                             &mut alive_color,
+                            &mut random_symmetry_mode,
                             led2d,
                         );
                     }
@@ -209,6 +213,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
     display_power: &mut DisplayPower,
     color_index: &mut usize,
     alive_color: &mut RGB8,
+    random_symmetry_mode: &mut RandomSymmetryMode,
     led2d: &L,
     ir_kepler: &I,
     search_command_channel: &SearchCommandChannel<H, W>,
@@ -246,6 +251,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
                         display_power,
                         color_index,
                         alive_color,
+                        random_symmetry_mode,
                         led2d,
                     );
                 }
@@ -266,6 +272,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
                         display_power,
                         color_index,
                         alive_color,
+                        random_symmetry_mode,
                         led2d,
                     );
                 }
@@ -285,6 +292,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
                     display_power,
                     color_index,
                     alive_color,
+                    random_symmetry_mode,
                     led2d,
                 );
                 return;
@@ -311,6 +319,7 @@ fn apply_cancel_button<const W: usize, const H: usize, L: Led2d<W, H>>(
     display_power: &mut DisplayPower,
     color_index: &mut usize,
     alive_color: &mut RGB8,
+    random_symmetry_mode: &mut RandomSymmetryMode,
     led2d: &L,
 ) {
     if let Some(key) = cancellation_key {
@@ -326,6 +335,7 @@ fn apply_cancel_button<const W: usize, const H: usize, L: Led2d<W, H>>(
                 display_power,
                 color_index,
                 alive_color,
+                random_symmetry_mode,
                 led2d,
             );
         }
@@ -404,6 +414,7 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
     display_power: &mut DisplayPower,
     color_index: &mut usize,
     alive_color: &mut RGB8,
+    random_symmetry_mode: &mut RandomSymmetryMode,
     led2d: &L,
 ) {
     match key {
@@ -414,7 +425,16 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
         KeplerKeys::Num(number) => {
             if number < PATTERNS.len() as u8 {
                 *pattern_index = number as usize;
-                reset_board_for_pattern(board, *pattern_index, stasis_tracker, empty_tracker);
+                if PATTERNS[*pattern_index] == Pattern::Random {
+                    *random_symmetry_mode = RandomSymmetryMode::None;
+                }
+                reset_board_for_pattern(
+                    board,
+                    *pattern_index,
+                    *random_symmetry_mode,
+                    stasis_tracker,
+                    empty_tracker,
+                );
             }
         }
         KeplerKeys::Minus => {
@@ -435,6 +455,18 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
             *color_index = (*color_index + 1) % ALIVE_COLORS.len();
             *alive_color = ALIVE_COLORS[*color_index];
         }
+        KeplerKeys::Repeat => {
+            if PATTERNS[*pattern_index] == Pattern::Random {
+                *random_symmetry_mode = random_symmetry_mode.next();
+                reset_board_for_pattern(
+                    board,
+                    *pattern_index,
+                    *random_symmetry_mode,
+                    stasis_tracker,
+                    empty_tracker,
+                );
+            }
+        }
         _ => {}
     }
 }
@@ -442,12 +474,13 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
 fn reset_board_for_pattern<const H: usize, const W: usize>(
     board: &mut Board<H, W>,
     pattern_index: usize,
+    random_symmetry_mode: RandomSymmetryMode,
     stasis_tracker: &mut (u8, u16),
     empty_tracker: &mut u8,
 ) {
     let pattern = PATTERNS[pattern_index];
     *board = Board::new();
-    add_pattern(board, pattern);
+    add_pattern(board, pattern, random_symmetry_mode);
     *stasis_tracker = (0, 0);
     *empty_tracker = 0;
 }
@@ -455,6 +488,7 @@ fn reset_board_for_pattern<const H: usize, const W: usize>(
 fn evaluate_auto_reset<const H: usize, const W: usize>(
     board: &mut Board<H, W>,
     pattern_index: usize,
+    random_symmetry_mode: RandomSymmetryMode,
     stasis_tracker: &mut (u8, u16),
     empty_tracker: &mut u8,
 ) {
@@ -468,7 +502,7 @@ fn evaluate_auto_reset<const H: usize, const W: usize>(
             *stasis_tracker = (new_unchanged_count, live_cell_count);
 
             if new_unchanged_count >= STASIS_RESET_GENERATIONS {
-                add_pattern(board, current_pattern);
+                add_pattern(board, current_pattern, random_symmetry_mode);
                 *stasis_tracker = (0, 0);
                 *empty_tracker = 0;
             }
@@ -478,7 +512,7 @@ fn evaluate_auto_reset<const H: usize, const W: usize>(
     } else if live_cell_count == 0 {
         *empty_tracker += 1;
         if *empty_tracker >= STASIS_RESET_GENERATIONS {
-            add_pattern(board, current_pattern);
+            add_pattern(board, current_pattern, random_symmetry_mode);
             *stasis_tracker = (0, 0);
             *empty_tracker = 0;
         }
@@ -487,9 +521,201 @@ fn evaluate_auto_reset<const H: usize, const W: usize>(
     }
 }
 
-fn add_pattern<const H: usize, const W: usize>(board: &mut Board<H, W>, pattern: Pattern) {
+fn add_pattern<const H: usize, const W: usize>(
+    board: &mut Board<H, W>,
+    pattern: Pattern,
+    random_symmetry_mode: RandomSymmetryMode,
+) {
     let random_seed = (Instant::now().as_millis() ^ 0x9e37_79b9) as u32;
-    board.add_pattern_with_seed(pattern, random_seed);
+    if pattern == Pattern::Random {
+        add_random_with_symmetry(board, random_seed, random_symmetry_mode);
+    } else {
+        board.add_pattern_with_seed(pattern, random_seed);
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RandomSymmetryMode {
+    None,
+    LeftRightNoCenter,
+    LeftRightCentered,
+    FourWayNoCenter,
+    FourWayCentered,
+    DiagonalNoCenter,
+    DiagonalCentered,
+    DiagonalFourWayNoCenter,
+    DiagonalFourWayCentered,
+}
+
+impl RandomSymmetryMode {
+    const fn next(self) -> Self {
+        match self {
+            Self::None => Self::LeftRightNoCenter,
+            Self::LeftRightNoCenter => Self::LeftRightCentered,
+            Self::LeftRightCentered => Self::FourWayNoCenter,
+            Self::FourWayNoCenter => Self::FourWayCentered,
+            Self::FourWayCentered => Self::DiagonalNoCenter,
+            Self::DiagonalNoCenter => Self::DiagonalCentered,
+            Self::DiagonalCentered => Self::DiagonalFourWayNoCenter,
+            Self::DiagonalFourWayNoCenter => Self::DiagonalFourWayCentered,
+            Self::DiagonalFourWayCentered => Self::None,
+        }
+    }
+}
+
+fn add_random_with_symmetry<const H: usize, const W: usize>(
+    board: &mut Board<H, W>,
+    random_seed: u32,
+    random_symmetry_mode: RandomSymmetryMode,
+) {
+    let mut random_seed = random_seed;
+    let mut next_random_cell = || {
+        random_seed = random_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        (random_seed & 0x100) != 0
+    };
+
+    let mut set_orbit = |positions: &[(usize, usize)]| {
+        let random_state = next_random_cell();
+        for (row_index, col_index) in positions {
+            board.cells[*row_index % H][*col_index % W] = random_state;
+        }
+    };
+
+    let fill_plain_random =
+        |board: &mut Board<H, W>, next_random_cell: &mut dyn FnMut() -> bool| {
+            for row_index in 0..H {
+                for col_index in 0..W {
+                    board.cells[row_index][col_index] = next_random_cell();
+                }
+            }
+        };
+
+    let center_col = W.saturating_sub(1) / 2;
+    let center_row = H.saturating_sub(1) / 2;
+    let col_center_mirror = |col_index: usize| (2 * center_col + W - col_index) % W;
+    let row_center_mirror = |row_index: usize| (2 * center_row + H - row_index) % H;
+
+    match random_symmetry_mode {
+        RandomSymmetryMode::None => fill_plain_random(board, &mut next_random_cell),
+        RandomSymmetryMode::LeftRightNoCenter => {
+            let half_width = W.div_ceil(2);
+            for row_index in 0..H {
+                for col_index in 0..half_width {
+                    let mirror_col = (W + W.saturating_sub(1) - col_index) % W;
+                    set_orbit(&[(row_index, col_index), (row_index, mirror_col)]);
+                }
+            }
+        }
+        RandomSymmetryMode::LeftRightCentered => {
+            for row_index in 0..H {
+                for col_index in 0..W {
+                    let mirror_col = col_center_mirror(col_index);
+                    if col_index <= mirror_col {
+                        set_orbit(&[(row_index, col_index), (row_index, mirror_col)]);
+                    }
+                }
+            }
+        }
+        RandomSymmetryMode::FourWayNoCenter => {
+            let half_width = W.div_ceil(2);
+            let half_height = H.div_ceil(2);
+            for row_index in 0..half_height {
+                for col_index in 0..half_width {
+                    let mirror_row = (H + H.saturating_sub(1) - row_index) % H;
+                    let mirror_col = (W + W.saturating_sub(1) - col_index) % W;
+                    set_orbit(&[
+                        (row_index, col_index),
+                        (row_index, mirror_col),
+                        (mirror_row, col_index),
+                        (mirror_row, mirror_col),
+                    ]);
+                }
+            }
+        }
+        RandomSymmetryMode::FourWayCentered => {
+            for row_index in 0..H {
+                for col_index in 0..W {
+                    let mirror_row = row_center_mirror(row_index);
+                    let mirror_col = col_center_mirror(col_index);
+                    if row_index <= mirror_row && col_index <= mirror_col {
+                        set_orbit(&[
+                            (row_index, col_index),
+                            (row_index, mirror_col),
+                            (mirror_row, col_index),
+                            (mirror_row, mirror_col),
+                        ]);
+                    }
+                }
+            }
+        }
+        RandomSymmetryMode::DiagonalNoCenter => {
+            if H != W {
+                fill_plain_random(board, &mut next_random_cell);
+                return;
+            }
+            for row_index in 0..H {
+                for col_index in 0..W {
+                    let mirror_row = H.saturating_sub(1).saturating_sub(col_index);
+                    let mirror_col = W.saturating_sub(1).saturating_sub(row_index);
+                    if row_index < mirror_row
+                        || (row_index == mirror_row && col_index <= mirror_col)
+                    {
+                        set_orbit(&[(row_index, col_index), (mirror_row, mirror_col)]);
+                    }
+                }
+            }
+        }
+        RandomSymmetryMode::DiagonalCentered => {
+            if H != W {
+                fill_plain_random(board, &mut next_random_cell);
+                return;
+            }
+            for row_index in 0..H {
+                for col_index in 0..W {
+                    if row_index <= col_index {
+                        set_orbit(&[(row_index, col_index), (col_index, row_index)]);
+                    }
+                }
+            }
+        }
+        RandomSymmetryMode::DiagonalFourWayNoCenter => {
+            if H != W {
+                fill_plain_random(board, &mut next_random_cell);
+                return;
+            }
+            for row_index in 0..H {
+                for col_index in 0..W {
+                    let point = (row_index, col_index);
+                    let point_t = (col_index, row_index);
+                    let point_a = (
+                        H.saturating_sub(1).saturating_sub(col_index),
+                        W.saturating_sub(1).saturating_sub(row_index),
+                    );
+                    let point_at = (point_a.1, point_a.0);
+                    if point <= point_t && point <= point_a && point <= point_at {
+                        set_orbit(&[point, point_t, point_a, point_at]);
+                    }
+                }
+            }
+        }
+        RandomSymmetryMode::DiagonalFourWayCentered => {
+            if H != W {
+                fill_plain_random(board, &mut next_random_cell);
+                return;
+            }
+            for row_index in 0..H {
+                for col_index in 0..W {
+                    let point = (row_index, col_index);
+                    let point_t = (col_index, row_index);
+                    let point_c = (row_center_mirror(row_index), col_center_mirror(col_index));
+                    let point_ct = (point_c.1, point_c.0);
+                    if point <= point_t && point <= point_c && point <= point_ct {
+                        set_orbit(&[point, point_t, point_c, point_ct]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

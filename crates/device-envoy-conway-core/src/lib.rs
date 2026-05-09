@@ -22,6 +22,42 @@ pub enum Pattern {
     Custom9,
 }
 
+/// Random generation symmetry modes for [`Pattern::Random`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RandomSymmetryMode {
+    None,
+    LeftRightNoCenter,
+    LeftRightCentered,
+    FourWayNoCenter,
+    FourWayCentered,
+    DiagonalNoCenter,
+    DiagonalCentered,
+    DiagonalFourWayNoCenter,
+    DiagonalFourWayCentered,
+}
+
+impl RandomSymmetryMode {
+    /// Return the next random symmetry mode in display-cycle order.
+    #[must_use]
+    pub const fn next(self) -> Self {
+        match self {
+            Self::None => Self::LeftRightNoCenter,
+            Self::LeftRightNoCenter => Self::LeftRightCentered,
+            Self::LeftRightCentered => Self::FourWayNoCenter,
+            Self::FourWayNoCenter => Self::FourWayCentered,
+            Self::FourWayCentered => Self::DiagonalNoCenter,
+            Self::DiagonalNoCenter => Self::DiagonalCentered,
+            Self::DiagonalCentered => Self::DiagonalFourWayNoCenter,
+            Self::DiagonalFourWayNoCenter => Self::DiagonalFourWayCentered,
+            Self::DiagonalFourWayCentered => Self::None,
+        }
+    }
+
+    const fn should_use_plain_random<const H: usize, const W: usize>(self) -> bool {
+        matches!(self, Self::None) || W == 0 || H == 0 || W % 2 != 0 || H % 2 != 0 || W != H
+    }
+}
+
 /// Conway's Game of Life board with toroidal wrapping.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Board<const H: usize, const W: usize> {
@@ -101,6 +137,20 @@ impl<const H: usize, const W: usize> Board<H, W> {
 
     /// Add a preset pattern to the board using `random_seed` for [`Pattern::Random`].
     pub fn add_pattern_with_seed(&mut self, pattern: Pattern, random_seed: u32) {
+        self.add_pattern_with_seed_and_random_symmetry(
+            pattern,
+            random_seed,
+            RandomSymmetryMode::None,
+        );
+    }
+
+    /// Add a preset pattern using `random_seed` and `random_symmetry_mode` for [`Pattern::Random`].
+    pub fn add_pattern_with_seed_and_random_symmetry(
+        &mut self,
+        pattern: Pattern,
+        random_seed: u32,
+        random_symmetry_mode: RandomSymmetryMode,
+    ) {
         match pattern {
             Pattern::Glider => self.add_glider(4, 2),
             Pattern::Blinker => self.add_blinker(5, 4),
@@ -109,7 +159,7 @@ impl<const H: usize, const W: usize> Board<H, W> {
             Pattern::Lwss => self.add_lwss(5, 6),
             Pattern::Block => self.add_block(5, 4),
             Pattern::Pentadecathlon => self.add_pentadecathlon(),
-            Pattern::Random => self.add_random(random_seed),
+            Pattern::Random => self.add_random_with_symmetry(random_seed, random_symmetry_mode),
             Pattern::Cross => self.add_cross(7, 7),
             Pattern::Custom9 => self.add_custom9(),
         }
@@ -241,6 +291,141 @@ impl<const H: usize, const W: usize> Board<H, W> {
             for col_index in 0..W {
                 random_seed = random_seed.wrapping_mul(1664525).wrapping_add(1013904223);
                 self.cells[row_index][col_index] = (random_seed & 0x100) != 0;
+            }
+        }
+    }
+
+    fn add_random_with_symmetry(
+        &mut self,
+        random_seed: u32,
+        random_symmetry_mode: RandomSymmetryMode,
+    ) {
+        if random_symmetry_mode.should_use_plain_random::<H, W>() {
+            self.add_random(random_seed);
+            return;
+        }
+
+        let mut random_seed = random_seed;
+        let mut next_random_cell = || {
+            random_seed = random_seed.wrapping_mul(1664525).wrapping_add(1013904223);
+            (random_seed & 0x100) != 0
+        };
+
+        let mut set_orbit = |positions: &[(usize, usize)]| {
+            let random_state = next_random_cell();
+            for (row_index, col_index) in positions {
+                self.cells[*row_index % H][*col_index % W] = random_state;
+            }
+        };
+
+        let center_col = W.saturating_sub(1) / 2;
+        let center_row = H.saturating_sub(1) / 2;
+        let col_center_mirror = |col_index: usize| (2 * center_col + W - col_index) % W;
+        let row_center_mirror = |row_index: usize| (2 * center_row + H - row_index) % H;
+
+        match random_symmetry_mode {
+            RandomSymmetryMode::None => unreachable!(),
+            RandomSymmetryMode::LeftRightNoCenter => {
+                let half_width = W.div_ceil(2);
+                for row_index in 0..H {
+                    for col_index in 0..half_width {
+                        let mirror_col = (W + W.saturating_sub(1) - col_index) % W;
+                        set_orbit(&[(row_index, col_index), (row_index, mirror_col)]);
+                    }
+                }
+            }
+            RandomSymmetryMode::LeftRightCentered => {
+                for row_index in 0..H {
+                    for col_index in 0..W {
+                        let mirror_col = col_center_mirror(col_index);
+                        if col_index <= mirror_col {
+                            set_orbit(&[(row_index, col_index), (row_index, mirror_col)]);
+                        }
+                    }
+                }
+            }
+            RandomSymmetryMode::FourWayNoCenter => {
+                let half_width = W.div_ceil(2);
+                let half_height = H.div_ceil(2);
+                for row_index in 0..half_height {
+                    for col_index in 0..half_width {
+                        let mirror_row = (H + H.saturating_sub(1) - row_index) % H;
+                        let mirror_col = (W + W.saturating_sub(1) - col_index) % W;
+                        set_orbit(&[
+                            (row_index, col_index),
+                            (row_index, mirror_col),
+                            (mirror_row, col_index),
+                            (mirror_row, mirror_col),
+                        ]);
+                    }
+                }
+            }
+            RandomSymmetryMode::FourWayCentered => {
+                for row_index in 0..H {
+                    for col_index in 0..W {
+                        let mirror_row = row_center_mirror(row_index);
+                        let mirror_col = col_center_mirror(col_index);
+                        if row_index <= mirror_row && col_index <= mirror_col {
+                            set_orbit(&[
+                                (row_index, col_index),
+                                (row_index, mirror_col),
+                                (mirror_row, col_index),
+                                (mirror_row, mirror_col),
+                            ]);
+                        }
+                    }
+                }
+            }
+            RandomSymmetryMode::DiagonalNoCenter => {
+                for row_index in 0..H {
+                    for col_index in 0..W {
+                        let mirror_row = H.saturating_sub(1).saturating_sub(col_index);
+                        let mirror_col = W.saturating_sub(1).saturating_sub(row_index);
+                        if row_index < mirror_row
+                            || (row_index == mirror_row && col_index <= mirror_col)
+                        {
+                            set_orbit(&[(row_index, col_index), (mirror_row, mirror_col)]);
+                        }
+                    }
+                }
+            }
+            RandomSymmetryMode::DiagonalCentered => {
+                for row_index in 0..H {
+                    for col_index in 0..W {
+                        if row_index <= col_index {
+                            set_orbit(&[(row_index, col_index), (col_index, row_index)]);
+                        }
+                    }
+                }
+            }
+            RandomSymmetryMode::DiagonalFourWayNoCenter => {
+                for row_index in 0..H {
+                    for col_index in 0..W {
+                        let point = (row_index, col_index);
+                        let point_t = (col_index, row_index);
+                        let point_a = (
+                            H.saturating_sub(1).saturating_sub(col_index),
+                            W.saturating_sub(1).saturating_sub(row_index),
+                        );
+                        let point_at = (point_a.1, point_a.0);
+                        if point <= point_t && point <= point_a && point <= point_at {
+                            set_orbit(&[point, point_t, point_a, point_at]);
+                        }
+                    }
+                }
+            }
+            RandomSymmetryMode::DiagonalFourWayCentered => {
+                for row_index in 0..H {
+                    for col_index in 0..W {
+                        let point = (row_index, col_index);
+                        let point_t = (col_index, row_index);
+                        let point_c = (row_center_mirror(row_index), col_center_mirror(col_index));
+                        let point_ct = (point_c.1, point_c.0);
+                        if point <= point_t && point <= point_c && point <= point_ct {
+                            set_orbit(&[point, point_t, point_c, point_ct]);
+                        }
+                    }
+                }
             }
         }
     }

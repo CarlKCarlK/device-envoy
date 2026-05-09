@@ -1,4 +1,6 @@
-use device_envoy_conway_core::{Board, Pattern, PredecessorSearch, SearchOutcome, SearchStep};
+use device_envoy_conway_core::{
+    Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome, SearchStep,
+};
 use smart_leds::colors;
 use wasm_bindgen::prelude::*;
 
@@ -43,11 +45,10 @@ impl ConwayWeb {
         let mut board = Board::new();
         let pattern_index = 1usize;
         let random_symmetry_mode = RandomSymmetryMode::None;
-        add_pattern(
-            &mut board,
+        board.add_pattern_with_seed_and_random_symmetry(
             PATTERNS[pattern_index],
-            random_symmetry_mode,
             0x9e37_79b9,
+            random_symmetry_mode,
         );
         let last_live_count = board.count_live_cells();
         Self {
@@ -204,11 +205,10 @@ impl ConwayWeb {
             .wrapping_mul(1664525)
             .wrapping_add(1013904223);
         self.board = Board::new();
-        add_pattern(
-            &mut self.board,
+        self.board.add_pattern_with_seed_and_random_symmetry(
             PATTERNS[self.pattern_index],
-            self.random_symmetry_mode,
             self.random_seed_state,
+            self.random_symmetry_mode,
         );
     }
 
@@ -235,13 +235,13 @@ impl ConwayWeb {
             if self.unchanged_live_count_generations >= STASIS_RESET_GENERATIONS
                 || self.unchanged_board_generations >= STASIS_RESET_GENERATIONS
             {
-                    self.board = Board::new();
-                    self.reseed_current_pattern();
-                    self.unchanged_live_count_generations = 0;
-                    self.unchanged_board_generations = 0;
-                    self.last_live_count = self.board.count_live_cells();
-                    self.previous_board = self.board;
-                    self.empty_tracker = 0;
+                self.board = Board::new();
+                self.reseed_current_pattern();
+                self.unchanged_live_count_generations = 0;
+                self.unchanged_board_generations = 0;
+                self.last_live_count = self.board.count_live_cells();
+                self.previous_board = self.board;
+                self.empty_tracker = 0;
             }
         } else if live_cell_count == 0 {
             self.empty_tracker += 1;
@@ -269,19 +269,6 @@ impl ConwayWeb {
             SearchStep::Outcome(_) => None,
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum RandomSymmetryMode {
-    None,
-    LeftRightNoCenter,
-    LeftRightCentered,
-    FourWayNoCenter,
-    FourWayCentered,
-    DiagonalNoCenter,
-    DiagonalCentered,
-    DiagonalFourWayNoCenter,
-    DiagonalFourWayCentered,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -313,173 +300,6 @@ impl SpeedMode {
             Self::Slow => 500,
             Self::Medium => 160,
             Self::Fast => 50,
-        }
-    }
-}
-
-impl RandomSymmetryMode {
-    const fn next(self) -> Self {
-        match self {
-            Self::None => Self::LeftRightNoCenter,
-            Self::LeftRightNoCenter => Self::LeftRightCentered,
-            Self::LeftRightCentered => Self::FourWayNoCenter,
-            Self::FourWayNoCenter => Self::FourWayCentered,
-            Self::FourWayCentered => Self::DiagonalNoCenter,
-            Self::DiagonalNoCenter => Self::DiagonalCentered,
-            Self::DiagonalCentered => Self::DiagonalFourWayNoCenter,
-            Self::DiagonalFourWayNoCenter => Self::DiagonalFourWayCentered,
-            Self::DiagonalFourWayCentered => Self::None,
-        }
-    }
-}
-
-fn add_pattern(
-    board: &mut Board<HEIGHT, WIDTH>,
-    pattern: Pattern,
-    random_symmetry_mode: RandomSymmetryMode,
-    random_seed: u32,
-) {
-    if pattern == Pattern::Random {
-        add_random_with_symmetry(board, random_seed, random_symmetry_mode);
-    } else {
-        board.add_pattern_with_seed(pattern, random_seed);
-    }
-}
-
-fn add_random_with_symmetry(
-    board: &mut Board<HEIGHT, WIDTH>,
-    random_seed: u32,
-    random_symmetry_mode: RandomSymmetryMode,
-) {
-    let mut random_seed = random_seed;
-    let mut next_random_cell = || {
-        random_seed = random_seed.wrapping_mul(1664525).wrapping_add(1013904223);
-        (random_seed & 0x100) != 0
-    };
-
-    let mut set_orbit = |positions: &[(usize, usize)]| {
-        let random_state = next_random_cell();
-        for (row_index, col_index) in positions {
-            board.cells[*row_index % HEIGHT][*col_index % WIDTH] = random_state;
-        }
-    };
-
-    let fill_plain_random =
-        |board: &mut Board<HEIGHT, WIDTH>, next_random_cell: &mut dyn FnMut() -> bool| {
-            for row_index in 0..HEIGHT {
-                for col_index in 0..WIDTH {
-                    board.cells[row_index][col_index] = next_random_cell();
-                }
-            }
-        };
-
-    let center_col = WIDTH.saturating_sub(1) / 2;
-    let center_row = HEIGHT.saturating_sub(1) / 2;
-    let col_center_mirror = |col_index: usize| (2 * center_col + WIDTH - col_index) % WIDTH;
-    let row_center_mirror = |row_index: usize| (2 * center_row + HEIGHT - row_index) % HEIGHT;
-
-    match random_symmetry_mode {
-        RandomSymmetryMode::None => fill_plain_random(board, &mut next_random_cell),
-        RandomSymmetryMode::LeftRightNoCenter => {
-            let half_width = WIDTH.div_ceil(2);
-            for row_index in 0..HEIGHT {
-                for col_index in 0..half_width {
-                    let mirror_col = (WIDTH + WIDTH.saturating_sub(1) - col_index) % WIDTH;
-                    set_orbit(&[(row_index, col_index), (row_index, mirror_col)]);
-                }
-            }
-        }
-        RandomSymmetryMode::LeftRightCentered => {
-            for row_index in 0..HEIGHT {
-                for col_index in 0..WIDTH {
-                    let mirror_col = col_center_mirror(col_index);
-                    if col_index <= mirror_col {
-                        set_orbit(&[(row_index, col_index), (row_index, mirror_col)]);
-                    }
-                }
-            }
-        }
-        RandomSymmetryMode::FourWayNoCenter => {
-            let half_width = WIDTH.div_ceil(2);
-            let half_height = HEIGHT.div_ceil(2);
-            for row_index in 0..half_height {
-                for col_index in 0..half_width {
-                    let mirror_row = (HEIGHT + HEIGHT.saturating_sub(1) - row_index) % HEIGHT;
-                    let mirror_col = (WIDTH + WIDTH.saturating_sub(1) - col_index) % WIDTH;
-                    set_orbit(&[
-                        (row_index, col_index),
-                        (row_index, mirror_col),
-                        (mirror_row, col_index),
-                        (mirror_row, mirror_col),
-                    ]);
-                }
-            }
-        }
-        RandomSymmetryMode::FourWayCentered => {
-            for row_index in 0..HEIGHT {
-                for col_index in 0..WIDTH {
-                    let mirror_row = row_center_mirror(row_index);
-                    let mirror_col = col_center_mirror(col_index);
-                    if row_index <= mirror_row && col_index <= mirror_col {
-                        set_orbit(&[
-                            (row_index, col_index),
-                            (row_index, mirror_col),
-                            (mirror_row, col_index),
-                            (mirror_row, mirror_col),
-                        ]);
-                    }
-                }
-            }
-        }
-        RandomSymmetryMode::DiagonalNoCenter => {
-            for row_index in 0..HEIGHT {
-                for col_index in 0..WIDTH {
-                    let mirror_row = HEIGHT.saturating_sub(1).saturating_sub(col_index);
-                    let mirror_col = WIDTH.saturating_sub(1).saturating_sub(row_index);
-                    if row_index < mirror_row || (row_index == mirror_row && col_index <= mirror_col)
-                    {
-                        set_orbit(&[(row_index, col_index), (mirror_row, mirror_col)]);
-                    }
-                }
-            }
-        }
-        RandomSymmetryMode::DiagonalCentered => {
-            for row_index in 0..HEIGHT {
-                for col_index in 0..WIDTH {
-                    if row_index <= col_index {
-                        set_orbit(&[(row_index, col_index), (col_index, row_index)]);
-                    }
-                }
-            }
-        }
-        RandomSymmetryMode::DiagonalFourWayNoCenter => {
-            for row_index in 0..HEIGHT {
-                for col_index in 0..WIDTH {
-                    let point = (row_index, col_index);
-                    let point_t = (col_index, row_index);
-                    let point_a = (
-                        HEIGHT.saturating_sub(1).saturating_sub(col_index),
-                        WIDTH.saturating_sub(1).saturating_sub(row_index),
-                    );
-                    let point_at = (point_a.1, point_a.0);
-                    if point <= point_t && point <= point_a && point <= point_at {
-                        set_orbit(&[point, point_t, point_a, point_at]);
-                    }
-                }
-            }
-        }
-        RandomSymmetryMode::DiagonalFourWayCentered => {
-            for row_index in 0..HEIGHT {
-                for col_index in 0..WIDTH {
-                    let point = (row_index, col_index);
-                    let point_t = (col_index, row_index);
-                    let point_c = (row_center_mirror(row_index), col_center_mirror(col_index));
-                    let point_ct = (point_c.1, point_c.0);
-                    if point <= point_t && point <= point_c && point <= point_ct {
-                        set_orbit(&[point, point_t, point_c, point_ct]);
-                    }
-                }
-            }
         }
     }
 }

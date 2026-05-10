@@ -69,7 +69,6 @@ impl RandomSymmetryMode {
 pub struct AutoResetTracker {
     unchanged_live_count_generations: u8,
     alternating_live_count_generations: u8,
-    unchanged_board_generations: u8,
     previous_live_count: Option<u16>,
     last_live_count: u16,
     empty_generations: u8,
@@ -82,7 +81,6 @@ impl AutoResetTracker {
         Self {
             unchanged_live_count_generations: 0,
             alternating_live_count_generations: 0,
-            unchanged_board_generations: 0,
             previous_live_count: None,
             last_live_count: board.count_live_cells(),
             empty_generations: 0,
@@ -93,18 +91,16 @@ impl AutoResetTracker {
     pub fn reset<const H: usize, const W: usize>(&mut self, board: &Board<H, W>) {
         self.unchanged_live_count_generations = 0;
         self.alternating_live_count_generations = 0;
-        self.unchanged_board_generations = 0;
         self.previous_live_count = None;
         self.last_live_count = board.count_live_cells();
         self.empty_generations = 0;
     }
 
-    /// Update tracker state and return `true` when the current pattern should auto-reset.
+    /// Observe one generation and return `true` when the current pattern should auto-reset.
     #[must_use]
-    pub fn should_reset<const H: usize, const W: usize>(
+    pub fn observe_generation<const H: usize, const W: usize>(
         &mut self,
         board: &Board<H, W>,
-        previous_board: &Board<H, W>,
         pattern: Pattern,
     ) -> bool {
         let live_cell_count = board.count_live_cells();
@@ -119,9 +115,8 @@ impl AutoResetTracker {
             }
             if live_cell_count != last_live_count {
                 if self.previous_live_count == Some(live_cell_count) {
-                    self.alternating_live_count_generations = self
-                        .alternating_live_count_generations
-                        .saturating_add(1);
+                    self.alternating_live_count_generations =
+                        self.alternating_live_count_generations.saturating_add(1);
                 } else {
                     self.alternating_live_count_generations = 1;
                 }
@@ -131,24 +126,14 @@ impl AutoResetTracker {
             self.previous_live_count = Some(last_live_count);
             self.last_live_count = live_cell_count;
 
-            if board == previous_board {
-                self.unchanged_board_generations =
-                    self.unchanged_board_generations.saturating_add(1);
-            } else {
-                self.unchanged_board_generations = 0;
-            }
-
             if self.unchanged_live_count_generations >= STASIS_RESET_GENERATIONS
                 || self.alternating_live_count_generations >= ALTERNATING_STASIS_RESET_GENERATIONS
-                || self.unchanged_board_generations >= STASIS_RESET_GENERATIONS
             {
-                self.reset(board);
                 return true;
             }
         } else if live_cell_count == 0 {
             self.empty_generations = self.empty_generations.saturating_add(1);
             if self.empty_generations >= STASIS_RESET_GENERATIONS {
-                self.reset(board);
                 return true;
             }
         } else {
@@ -865,12 +850,10 @@ mod tests {
         board.set_alive(0, 0);
 
         let mut auto_reset_tracker = AutoResetTracker::new(&board);
-        let previous_board = board;
-
         for _ in 0..STASIS_RESET_GENERATIONS - 1 {
-            assert!(!auto_reset_tracker.should_reset(&board, &previous_board, Pattern::Random));
+            assert!(!auto_reset_tracker.observe_generation(&board, Pattern::Random));
         }
-        assert!(auto_reset_tracker.should_reset(&board, &previous_board, Pattern::Random));
+        assert!(auto_reset_tracker.observe_generation(&board, Pattern::Random));
     }
 
     #[test]
@@ -885,13 +868,13 @@ mod tests {
         let mut auto_reset_tracker = AutoResetTracker::new(&board_one_live);
 
         for generation in 0..ALTERNATING_STASIS_RESET_GENERATIONS {
-            let (board, previous_board) = if generation % 2 == 0 {
-                (&board_two_live, &board_one_live)
+            let board = if generation % 2 == 0 {
+                &board_two_live
             } else {
-                (&board_one_live, &board_two_live)
+                &board_one_live
             };
             assert_eq!(
-                auto_reset_tracker.should_reset(board, previous_board, Pattern::Random),
+                auto_reset_tracker.observe_generation(board, Pattern::Random),
                 generation + 1 == ALTERNATING_STASIS_RESET_GENERATIONS
             );
         }

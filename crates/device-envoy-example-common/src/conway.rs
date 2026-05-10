@@ -139,11 +139,9 @@ where
                             continue;
                         }
 
-                        let previous_board = board;
                         board.step();
                         evaluate_auto_reset(
                             &mut board,
-                            &previous_board,
                             pattern_index,
                             random_symmetry_mode,
                             &mut auto_reset_tracker,
@@ -487,15 +485,18 @@ fn reset_board_for_pattern<const H: usize, const W: usize>(
 
 fn evaluate_auto_reset<const H: usize, const W: usize>(
     board: &mut Board<H, W>,
-    previous_board: &Board<H, W>,
     pattern_index: usize,
     random_symmetry_mode: RandomSymmetryMode,
     auto_reset_tracker: &mut AutoResetTracker,
 ) {
     let current_pattern = PATTERNS[pattern_index];
-    if auto_reset_tracker.should_reset(board, previous_board, current_pattern) {
-        add_pattern(board, current_pattern, random_symmetry_mode);
-        auto_reset_tracker.reset(board);
+    if auto_reset_tracker.observe_generation(board, current_pattern) {
+        reset_board_for_pattern(
+            board,
+            pattern_index,
+            random_symmetry_mode,
+            auto_reset_tracker,
+        );
     }
 }
 

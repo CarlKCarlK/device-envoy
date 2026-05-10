@@ -69,7 +69,7 @@ for (const button of document.querySelectorAll("button[data-key]")) {
 
 try {
   status.textContent = "loading WASM module";
-  const wasmModule = await import("./pkg/device_envoy_conway_wasm.js?v=17");
+  const wasmModule = await import("./pkg/device_envoy_conway_wasm.js?v=18");
   await wasmModule.default();
   conway = new wasmModule.ConwayWeb();
   status.textContent = "ready";

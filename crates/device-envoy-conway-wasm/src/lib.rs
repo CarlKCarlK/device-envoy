@@ -31,7 +31,6 @@ pub struct ConwayWeb {
     paused: bool,
     speed_mode: SpeedMode,
     auto_reset_tracker: AutoResetTracker,
-    previous_board: Board<HEIGHT, WIDTH>,
     random_seed_state: u32,
 }
 
@@ -56,7 +55,6 @@ impl ConwayWeb {
             paused: false,
             speed_mode: SpeedMode::Medium,
             auto_reset_tracker,
-            previous_board: board,
             random_seed_state: 0x9e37_79b9,
         }
     }
@@ -100,7 +98,6 @@ impl ConwayWeb {
                     self.reseed_current_pattern();
                     self.search = None;
                     self.auto_reset_tracker.reset(&self.board);
-                    self.previous_board = self.board;
                 }
                 "ok".into()
             }
@@ -112,7 +109,6 @@ impl ConwayWeb {
                     self.reseed_current_pattern();
                     self.search = None;
                     self.auto_reset_tracker.reset(&self.board);
-                    self.previous_board = self.board;
                 }
                 "ok".into()
             }
@@ -128,7 +124,6 @@ impl ConwayWeb {
                     self.board = predecessor;
                     self.search = None;
                     self.auto_reset_tracker.reset(&self.board);
-                    self.previous_board = self.board;
                     "found".into()
                 }
                 SearchStep::Outcome(SearchOutcome::NotFound) => {
@@ -143,7 +138,6 @@ impl ConwayWeb {
         } else if self.paused {
             "paused".into()
         } else {
-            self.previous_board = self.board;
             self.board.step();
             self.evaluate_auto_reset();
             "ok".into()
@@ -192,7 +186,6 @@ impl ConwayWeb {
             self.reseed_current_pattern();
             self.search = None;
             self.auto_reset_tracker.reset(&self.board);
-            self.previous_board = self.board;
         }
     }
 
@@ -213,12 +206,10 @@ impl ConwayWeb {
         let current_pattern = PATTERNS[self.pattern_index];
         if self
             .auto_reset_tracker
-            .should_reset(&self.board, &self.previous_board, current_pattern)
+            .observe_generation(&self.board, current_pattern)
         {
-            self.board = Board::new();
             self.reseed_current_pattern();
             self.auto_reset_tracker.reset(&self.board);
-            self.previous_board = self.board;
         }
     }
     fn search_preview(&mut self) -> Option<device_envoy_core::led2d::Frame2d<WIDTH, HEIGHT>> {

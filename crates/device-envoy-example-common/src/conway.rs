@@ -1,5 +1,6 @@
 use device_envoy_conway_core::{
-    Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome, SearchStep,
+    AutoResetTracker, Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome,
+    SearchStep,
 };
 use device_envoy_core::{
     ir::kepler::{IrKepler, KeplerKeys},
@@ -17,8 +18,6 @@ use embassy_sync::{
 };
 use embassy_time::{Duration, Instant, Timer};
 use smart_leds::colors;
-
-const STASIS_RESET_GENERATIONS: u8 = 15;
 
 /// Color used to visualize the predecessor search in progress.
 const SEARCH_COLOR: RGB8 = colors::RED;
@@ -124,8 +123,7 @@ where
     let mut random_symmetry_mode = RandomSymmetryMode::None;
     add_pattern(&mut board, PATTERNS[pattern_index], random_symmetry_mode);
 
-    let mut stasis_tracker = (0u8, 0u16);
-    let mut empty_tracker = 0u8;
+    let mut auto_reset_tracker = AutoResetTracker::new(&board);
 
     loop {
         match display_power {
@@ -141,13 +139,14 @@ where
                             continue;
                         }
 
+                        let previous_board = board;
                         board.step();
                         evaluate_auto_reset(
                             &mut board,
+                            &previous_board,
                             pattern_index,
                             random_symmetry_mode,
-                            &mut stasis_tracker,
-                            &mut empty_tracker,
+                            &mut auto_reset_tracker,
                         );
                     }
                     Either::Second(KeplerKeys::Prev) => {
@@ -159,8 +158,7 @@ where
                             &mut board,
                             original_board,
                             &mut pattern_index,
-                            &mut stasis_tracker,
-                            &mut empty_tracker,
+                            &mut auto_reset_tracker,
                             &mut speed_mode,
                             &mut paused,
                             &mut display_power,
@@ -179,8 +177,7 @@ where
                             button,
                             &mut board,
                             &mut pattern_index,
-                            &mut stasis_tracker,
-                            &mut empty_tracker,
+                            &mut auto_reset_tracker,
                             &mut speed_mode,
                             &mut paused,
                             &mut display_power,
@@ -208,8 +205,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
     board: &mut Board<H, W>,
     original_board: Board<H, W>,
     pattern_index: &mut usize,
-    stasis_tracker: &mut (u8, u16),
-    empty_tracker: &mut u8,
+    auto_reset_tracker: &mut AutoResetTracker,
     speed_mode: &mut SpeedMode,
     paused: &mut bool,
     display_power: &mut DisplayPower,
@@ -237,8 +233,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
             Either::First(SearchEvent::Outcome(SearchOutcome::Found(predecessor))) => {
                 if cancellation_key.is_none() {
                     *board = predecessor;
-                    *stasis_tracker = (0, 0);
-                    *empty_tracker = 0;
+                    auto_reset_tracker.reset(board);
                 } else {
                     *board = original_board;
                     led2d.write_frame(board.to_frame(*alive_color));
@@ -246,8 +241,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
                         cancellation_key,
                         board,
                         pattern_index,
-                        stasis_tracker,
-                        empty_tracker,
+                        auto_reset_tracker,
                         speed_mode,
                         paused,
                         display_power,
@@ -267,8 +261,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
                         cancellation_key,
                         board,
                         pattern_index,
-                        stasis_tracker,
-                        empty_tracker,
+                        auto_reset_tracker,
                         speed_mode,
                         paused,
                         display_power,
@@ -287,8 +280,7 @@ async fn run_search_session<const W: usize, const H: usize, L, I>(
                     cancellation_key,
                     board,
                     pattern_index,
-                    stasis_tracker,
-                    empty_tracker,
+                    auto_reset_tracker,
                     speed_mode,
                     paused,
                     display_power,
@@ -314,8 +306,7 @@ fn apply_cancel_button<const W: usize, const H: usize, L: Led2d<W, H>>(
     cancellation_key: Option<KeplerKeys>,
     board: &mut Board<H, W>,
     pattern_index: &mut usize,
-    stasis_tracker: &mut (u8, u16),
-    empty_tracker: &mut u8,
+    auto_reset_tracker: &mut AutoResetTracker,
     speed_mode: &mut SpeedMode,
     paused: &mut bool,
     display_power: &mut DisplayPower,
@@ -330,8 +321,7 @@ fn apply_cancel_button<const W: usize, const H: usize, L: Led2d<W, H>>(
                 key,
                 board,
                 pattern_index,
-                stasis_tracker,
-                empty_tracker,
+                auto_reset_tracker,
                 speed_mode,
                 paused,
                 display_power,
@@ -409,8 +399,7 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
     key: KeplerKeys,
     board: &mut Board<H, W>,
     pattern_index: &mut usize,
-    stasis_tracker: &mut (u8, u16),
-    empty_tracker: &mut u8,
+    auto_reset_tracker: &mut AutoResetTracker,
     speed_mode: &mut SpeedMode,
     paused: &mut bool,
     display_power: &mut DisplayPower,
@@ -434,8 +423,7 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
                     board,
                     *pattern_index,
                     *random_symmetry_mode,
-                    stasis_tracker,
-                    empty_tracker,
+                    auto_reset_tracker,
                 );
             }
         }
@@ -464,8 +452,7 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
                     board,
                     *pattern_index,
                     *random_symmetry_mode,
-                    stasis_tracker,
-                    empty_tracker,
+                    auto_reset_tracker,
                 );
             }
         }
@@ -478,8 +465,7 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
                     board,
                     *pattern_index,
                     *random_symmetry_mode,
-                    stasis_tracker,
-                    empty_tracker,
+                    auto_reset_tracker,
                 );
             }
         }
@@ -491,49 +477,25 @@ fn reset_board_for_pattern<const H: usize, const W: usize>(
     board: &mut Board<H, W>,
     pattern_index: usize,
     random_symmetry_mode: RandomSymmetryMode,
-    stasis_tracker: &mut (u8, u16),
-    empty_tracker: &mut u8,
+    auto_reset_tracker: &mut AutoResetTracker,
 ) {
     let pattern = PATTERNS[pattern_index];
     *board = Board::new();
     add_pattern(board, pattern, random_symmetry_mode);
-    *stasis_tracker = (0, 0);
-    *empty_tracker = 0;
+    auto_reset_tracker.reset(board);
 }
 
 fn evaluate_auto_reset<const H: usize, const W: usize>(
     board: &mut Board<H, W>,
+    previous_board: &Board<H, W>,
     pattern_index: usize,
     random_symmetry_mode: RandomSymmetryMode,
-    stasis_tracker: &mut (u8, u16),
-    empty_tracker: &mut u8,
+    auto_reset_tracker: &mut AutoResetTracker,
 ) {
-    let live_cell_count = board.count_live_cells();
     let current_pattern = PATTERNS[pattern_index];
-
-    if matches!(current_pattern, Pattern::Random | Pattern::Cross) {
-        let (unchanged_count, last_live_count) = *stasis_tracker;
-        if live_cell_count == last_live_count {
-            let new_unchanged_count = unchanged_count + 1;
-            *stasis_tracker = (new_unchanged_count, live_cell_count);
-
-            if new_unchanged_count >= STASIS_RESET_GENERATIONS {
-                add_pattern(board, current_pattern, random_symmetry_mode);
-                *stasis_tracker = (0, 0);
-                *empty_tracker = 0;
-            }
-        } else {
-            *stasis_tracker = (1, live_cell_count);
-        }
-    } else if live_cell_count == 0 {
-        *empty_tracker += 1;
-        if *empty_tracker >= STASIS_RESET_GENERATIONS {
-            add_pattern(board, current_pattern, random_symmetry_mode);
-            *stasis_tracker = (0, 0);
-            *empty_tracker = 0;
-        }
-    } else {
-        *empty_tracker = 0;
+    if auto_reset_tracker.should_reset(board, previous_board, current_pattern) {
+        add_pattern(board, current_pattern, random_symmetry_mode);
+        auto_reset_tracker.reset(board);
     }
 }
 

@@ -6,6 +6,10 @@ use device_envoy_core::{led_strip::RGB8, led2d::Frame2d};
 pub const MAX_SEARCH_ITERATIONS: u32 = 500_000;
 /// Search only this many cells away from currently-live target cells.
 pub const DEFAULT_PREDECESSOR_SEARCH_RADIUS: usize = 1;
+/// Number of generations before auto-reset when stasis is detected.
+pub const STASIS_RESET_GENERATIONS: u8 = 15;
+/// Number of generations before auto-reset when live-cell counts alternate perfectly.
+pub const ALTERNATING_STASIS_RESET_GENERATIONS: u8 = 30;
 
 /// Conway pattern presets used by the hardware and web demos.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,6 +61,104 @@ impl RandomSymmetryMode {
         // Symmetry modes are defined only for even square boards. Rectangles and any
         // odd dimension intentionally fall back to the same random generation as `None`.
         matches!(self, Self::None) || W == 0 || H == 0 || W % 2 != 0 || H % 2 != 0 || W != H
+    }
+}
+
+/// Tracks Conway stasis/empty-board conditions used to decide when to auto-reset a pattern.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AutoResetTracker {
+    unchanged_live_count_generations: u8,
+    alternating_live_count_generations: u8,
+    unchanged_board_generations: u8,
+    previous_live_count: Option<u16>,
+    last_live_count: u16,
+    empty_generations: u8,
+}
+
+impl AutoResetTracker {
+    /// Create tracker state initialized from `board`.
+    #[must_use]
+    pub fn new<const H: usize, const W: usize>(board: &Board<H, W>) -> Self {
+        Self {
+            unchanged_live_count_generations: 0,
+            alternating_live_count_generations: 0,
+            unchanged_board_generations: 0,
+            previous_live_count: None,
+            last_live_count: board.count_live_cells(),
+            empty_generations: 0,
+        }
+    }
+
+    /// Reset all tracking counters and reinitialize with the current board.
+    pub fn reset<const H: usize, const W: usize>(&mut self, board: &Board<H, W>) {
+        self.unchanged_live_count_generations = 0;
+        self.alternating_live_count_generations = 0;
+        self.unchanged_board_generations = 0;
+        self.previous_live_count = None;
+        self.last_live_count = board.count_live_cells();
+        self.empty_generations = 0;
+    }
+
+    /// Update tracker state and return `true` when the current pattern should auto-reset.
+    #[must_use]
+    pub fn should_reset<const H: usize, const W: usize>(
+        &mut self,
+        board: &Board<H, W>,
+        previous_board: &Board<H, W>,
+        pattern: Pattern,
+    ) -> bool {
+        let live_cell_count = board.count_live_cells();
+
+        if matches!(pattern, Pattern::Random | Pattern::Cross) {
+            let last_live_count = self.last_live_count;
+            if live_cell_count == self.last_live_count {
+                self.unchanged_live_count_generations =
+                    self.unchanged_live_count_generations.saturating_add(1);
+            } else {
+                self.unchanged_live_count_generations = 0;
+            }
+            if live_cell_count != last_live_count {
+                if self.previous_live_count == Some(live_cell_count) {
+                    self.alternating_live_count_generations = self
+                        .alternating_live_count_generations
+                        .saturating_add(1);
+                } else {
+                    self.alternating_live_count_generations = 1;
+                }
+            } else {
+                self.alternating_live_count_generations = 0;
+            }
+            self.previous_live_count = Some(last_live_count);
+            self.last_live_count = live_cell_count;
+
+            if board == previous_board {
+                self.unchanged_board_generations =
+                    self.unchanged_board_generations.saturating_add(1);
+            } else {
+                self.unchanged_board_generations = 0;
+            }
+
+            if self.unchanged_live_count_generations >= STASIS_RESET_GENERATIONS
+                || self.alternating_live_count_generations >= ALTERNATING_STASIS_RESET_GENERATIONS
+                || self.unchanged_board_generations >= STASIS_RESET_GENERATIONS
+            {
+                self.reset(board);
+                return true;
+            }
+        } else if live_cell_count == 0 {
+            self.empty_generations = self.empty_generations.saturating_add(1);
+            if self.empty_generations >= STASIS_RESET_GENERATIONS {
+                self.reset(board);
+                return true;
+            }
+        } else {
+            self.empty_generations = 0;
+            self.alternating_live_count_generations = 0;
+            self.previous_live_count = Some(live_cell_count);
+            self.last_live_count = live_cell_count;
+        }
+
+        false
     }
 }
 
@@ -723,7 +825,10 @@ fn search_cell_at<const W: usize, const H: usize>(
 
 #[cfg(test)]
 mod tests {
-    use super::RandomSymmetryMode;
+    use super::{
+        ALTERNATING_STASIS_RESET_GENERATIONS, AutoResetTracker, Board, Pattern, RandomSymmetryMode,
+        STASIS_RESET_GENERATIONS,
+    };
 
     const SYMMETRY_MODES: &[RandomSymmetryMode] = &[
         RandomSymmetryMode::LeftRightNoCenter,
@@ -752,5 +857,43 @@ mod tests {
         assert!(RandomSymmetryMode::None.should_use_plain_random::<16, 16>());
         assert!(RandomSymmetryMode::None.should_use_plain_random::<16, 8>());
         assert!(RandomSymmetryMode::None.should_use_plain_random::<15, 15>());
+    }
+
+    #[test]
+    fn auto_reset_triggers_after_stasis_threshold() {
+        let mut board = Board::<16, 16>::new();
+        board.set_alive(0, 0);
+
+        let mut auto_reset_tracker = AutoResetTracker::new(&board);
+        let previous_board = board;
+
+        for _ in 0..STASIS_RESET_GENERATIONS - 1 {
+            assert!(!auto_reset_tracker.should_reset(&board, &previous_board, Pattern::Random));
+        }
+        assert!(auto_reset_tracker.should_reset(&board, &previous_board, Pattern::Random));
+    }
+
+    #[test]
+    fn auto_reset_triggers_after_alternating_live_count_threshold() {
+        let mut board_one_live = Board::<16, 16>::new();
+        board_one_live.set_alive(0, 0);
+
+        let mut board_two_live = Board::<16, 16>::new();
+        board_two_live.set_alive(0, 0);
+        board_two_live.set_alive(0, 1);
+
+        let mut auto_reset_tracker = AutoResetTracker::new(&board_one_live);
+
+        for generation in 0..ALTERNATING_STASIS_RESET_GENERATIONS {
+            let (board, previous_board) = if generation % 2 == 0 {
+                (&board_two_live, &board_one_live)
+            } else {
+                (&board_one_live, &board_two_live)
+            };
+            assert_eq!(
+                auto_reset_tracker.should_reset(board, previous_board, Pattern::Random),
+                generation + 1 == ALTERNATING_STASIS_RESET_GENERATIONS
+            );
+        }
     }
 }

@@ -1,5 +1,6 @@
 use device_envoy_conway_core::{
-    Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome, SearchStep,
+    AutoResetTracker, Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome,
+    SearchStep,
 };
 use smart_leds::colors;
 use wasm_bindgen::prelude::*;
@@ -8,7 +9,6 @@ const WIDTH: usize = 16;
 const HEIGHT: usize = 16;
 const DEFAULT_MAX_DIMENSION: u32 = 640;
 const SEARCH_ITERATIONS_PER_COMMAND: u32 = 256;
-const STASIS_RESET_GENERATIONS: u8 = 15;
 const PATTERNS: [Pattern; 10] = [
     Pattern::Glider,
     Pattern::Random,
@@ -30,11 +30,8 @@ pub struct ConwayWeb {
     search: Option<PredecessorSearch<HEIGHT, WIDTH>>,
     paused: bool,
     speed_mode: SpeedMode,
-    unchanged_live_count_generations: u8,
-    unchanged_board_generations: u8,
-    last_live_count: u16,
+    auto_reset_tracker: AutoResetTracker,
     previous_board: Board<HEIGHT, WIDTH>,
-    empty_tracker: u8,
     random_seed_state: u32,
 }
 
@@ -50,7 +47,7 @@ impl ConwayWeb {
             0x9e37_79b9,
             random_symmetry_mode,
         );
-        let last_live_count = board.count_live_cells();
+        let auto_reset_tracker = AutoResetTracker::new(&board);
         Self {
             board,
             pattern_index,
@@ -58,11 +55,8 @@ impl ConwayWeb {
             search: None,
             paused: false,
             speed_mode: SpeedMode::Medium,
-            unchanged_live_count_generations: 0,
-            unchanged_board_generations: 0,
-            last_live_count,
+            auto_reset_tracker,
             previous_board: board,
-            empty_tracker: 0,
             random_seed_state: 0x9e37_79b9,
         }
     }
@@ -105,11 +99,8 @@ impl ConwayWeb {
                     self.random_symmetry_mode = self.random_symmetry_mode.next();
                     self.reseed_current_pattern();
                     self.search = None;
-                    self.unchanged_live_count_generations = 0;
-                    self.unchanged_board_generations = 0;
-                    self.last_live_count = self.board.count_live_cells();
+                    self.auto_reset_tracker.reset(&self.board);
                     self.previous_board = self.board;
-                    self.empty_tracker = 0;
                 }
                 "ok".into()
             }
@@ -120,11 +111,8 @@ impl ConwayWeb {
                     self.pattern_index = 1;
                     self.reseed_current_pattern();
                     self.search = None;
-                    self.unchanged_live_count_generations = 0;
-                    self.unchanged_board_generations = 0;
-                    self.last_live_count = self.board.count_live_cells();
+                    self.auto_reset_tracker.reset(&self.board);
                     self.previous_board = self.board;
-                    self.empty_tracker = 0;
                 }
                 "ok".into()
             }
@@ -139,11 +127,8 @@ impl ConwayWeb {
                 SearchStep::Outcome(SearchOutcome::Found(predecessor)) => {
                     self.board = predecessor;
                     self.search = None;
-                    self.unchanged_live_count_generations = 0;
-                    self.unchanged_board_generations = 0;
-                    self.last_live_count = self.board.count_live_cells();
+                    self.auto_reset_tracker.reset(&self.board);
                     self.previous_board = self.board;
-                    self.empty_tracker = 0;
                     "found".into()
                 }
                 SearchStep::Outcome(SearchOutcome::NotFound) => {
@@ -206,11 +191,8 @@ impl ConwayWeb {
             }
             self.reseed_current_pattern();
             self.search = None;
-            self.unchanged_live_count_generations = 0;
-            self.unchanged_board_generations = 0;
-            self.last_live_count = self.board.count_live_cells();
+            self.auto_reset_tracker.reset(&self.board);
             self.previous_board = self.board;
-            self.empty_tracker = 0;
         }
     }
 
@@ -228,49 +210,15 @@ impl ConwayWeb {
     }
 
     fn evaluate_auto_reset(&mut self) {
-        let live_cell_count = self.board.count_live_cells();
         let current_pattern = PATTERNS[self.pattern_index];
-
-        if matches!(current_pattern, Pattern::Random | Pattern::Cross) {
-            if live_cell_count == self.last_live_count {
-                self.unchanged_live_count_generations =
-                    self.unchanged_live_count_generations.saturating_add(1);
-            } else {
-                self.unchanged_live_count_generations = 0;
-            }
-            self.last_live_count = live_cell_count;
-
-            if self.board == self.previous_board {
-                self.unchanged_board_generations =
-                    self.unchanged_board_generations.saturating_add(1);
-            } else {
-                self.unchanged_board_generations = 0;
-            }
-
-            if self.unchanged_live_count_generations >= STASIS_RESET_GENERATIONS
-                || self.unchanged_board_generations >= STASIS_RESET_GENERATIONS
-            {
-                self.board = Board::new();
-                self.reseed_current_pattern();
-                self.unchanged_live_count_generations = 0;
-                self.unchanged_board_generations = 0;
-                self.last_live_count = self.board.count_live_cells();
-                self.previous_board = self.board;
-                self.empty_tracker = 0;
-            }
-        } else if live_cell_count == 0 {
-            self.empty_tracker += 1;
-            if self.empty_tracker >= STASIS_RESET_GENERATIONS {
-                self.board = Board::new();
-                self.reseed_current_pattern();
-                self.unchanged_live_count_generations = 0;
-                self.unchanged_board_generations = 0;
-                self.last_live_count = self.board.count_live_cells();
-                self.previous_board = self.board;
-                self.empty_tracker = 0;
-            }
-        } else {
-            self.empty_tracker = 0;
+        if self
+            .auto_reset_tracker
+            .should_reset(&self.board, &self.previous_board, current_pattern)
+        {
+            self.board = Board::new();
+            self.reseed_current_pattern();
+            self.auto_reset_tracker.reset(&self.board);
+            self.previous_board = self.board;
         }
     }
     fn search_preview(&mut self) -> Option<device_envoy_core::led2d::Frame2d<WIDTH, HEIGHT>> {

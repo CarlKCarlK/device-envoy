@@ -136,9 +136,10 @@
           <!-- Row 3: −, + -->
           <button class="remote-btn" data-key="speed_down" data-tip="[ — slower"                   style="left:47.6%;top:35.8%" aria-label="Speed Down"></button>
           <button class="remote-btn" data-key="speed_up"   data-tip="] — faster"                   style="left:73.7%;top:35.8%" aria-label="Speed Up"></button>
-          <!-- Row 4: 0, Symmetry -->
+          <!-- Row 4: 0, Symmetry, U/SD -->
           <button class="remote-btn" data-key="0"          data-tip="0 — pattern 0"                style="left:21.5%;top:47.4%" aria-label="Pattern 0"></button>
           <button class="remote-btn" data-key="repeat"     data-tip="R — random symmetry mode"     style="left:47.6%;top:47.4%" aria-label="Symmetry"></button>
+          <button class="remote-btn" data-key="usd"        data-tip="U — restart random (pattern 1)" style="left:73.7%;top:47.4%" aria-label="U/SD"></button>
           <!-- Row 5: 1 2 3 -->
           <button class="remote-btn" data-key="1"          data-tip="1 — pattern 1"                style="left:21.5%;top:58.9%" aria-label="Pattern 1"></button>
           <button class="remote-btn" data-key="2"          data-tip="2 — pattern 2"                style="left:47.6%;top:58.9%" aria-label="Pattern 2"></button>
@@ -160,6 +161,7 @@
         <button data-key="cancel">Cancel</button>
         <button data-key="mode">Color</button>
         <button data-key="repeat">Symmetry</button>
+        <button data-key="usd">Restart Random</button>
         <button data-key="speed_down">Slower</button>
         <button data-key="speed_up">Faster</button>
       </section>
@@ -177,7 +179,7 @@
       </section>
       <p>
         Keys: <kbd>Space</kbd> play/pause, <kbd>N</kbd> next, <kbd>P</kbd> predecessor search,
-        <kbd>Esc</kbd> cancel, <kbd>M</kbd> cycle color, <kbd>R</kbd> random symmetry mode, <kbd>[</kbd> slower, <kbd>]</kbd> faster,
+        <kbd>Esc</kbd> cancel, <kbd>M</kbd> cycle color, <kbd>R</kbd> random symmetry mode, <kbd>U</kbd> restart random, <kbd>[</kbd> slower, <kbd>]</kbd> faster,
         <kbd>0</kbd>–<kbd>9</kbd> select pattern.
       </p>
       <p id="status">loading</p>
@@ -197,6 +199,6 @@
         }
       }
     </script>
-    <script type="module" src="./main.js?v=16"></script>
+    <script type="module" src="./main.js?v=18"></script>
   </body>
 </html>

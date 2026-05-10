@@ -469,6 +469,20 @@ fn handle_sync_button<const W: usize, const H: usize, L: Led2d<W, H>>(
                 );
             }
         }
+        KeplerKeys::USd => {
+            if PATTERNS[*pattern_index] == Pattern::Random
+                && *random_symmetry_mode != RandomSymmetryMode::None
+            {
+                *pattern_index = 1;
+                reset_board_for_pattern(
+                    board,
+                    *pattern_index,
+                    *random_symmetry_mode,
+                    stasis_tracker,
+                    empty_tracker,
+                );
+            }
+        }
         _ => {}
     }
 }

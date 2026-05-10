@@ -113,6 +113,21 @@ impl ConwayWeb {
                 }
                 "ok".into()
             }
+            "usd" => {
+                if PATTERNS[self.pattern_index] == Pattern::Random
+                    && self.random_symmetry_mode != RandomSymmetryMode::None
+                {
+                    self.pattern_index = 1;
+                    self.reseed_current_pattern();
+                    self.search = None;
+                    self.unchanged_live_count_generations = 0;
+                    self.unchanged_board_generations = 0;
+                    self.last_live_count = self.board.count_live_cells();
+                    self.previous_board = self.board;
+                    self.empty_tracker = 0;
+                }
+                "ok".into()
+            }
             _ => "unknown".into(),
         }
     }

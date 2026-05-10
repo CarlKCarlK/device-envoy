@@ -54,6 +54,8 @@ impl RandomSymmetryMode {
     }
 
     const fn should_use_plain_random<const H: usize, const W: usize>(self) -> bool {
+        // Symmetry modes are defined only for even square boards. Rectangles and any
+        // odd dimension intentionally fall back to the same random generation as `None`.
         matches!(self, Self::None) || W == 0 || H == 0 || W % 2 != 0 || H % 2 != 0 || W != H
     }
 }
@@ -717,4 +719,38 @@ fn search_cell_at<const W: usize, const H: usize>(
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RandomSymmetryMode;
+
+    const SYMMETRY_MODES: &[RandomSymmetryMode] = &[
+        RandomSymmetryMode::LeftRightNoCenter,
+        RandomSymmetryMode::LeftRightCentered,
+        RandomSymmetryMode::FourWayNoCenter,
+        RandomSymmetryMode::FourWayCentered,
+        RandomSymmetryMode::DiagonalNoCenter,
+        RandomSymmetryMode::DiagonalCentered,
+        RandomSymmetryMode::DiagonalFourWayNoCenter,
+        RandomSymmetryMode::DiagonalFourWayCentered,
+    ];
+
+    #[test]
+    fn random_symmetry_is_only_enabled_for_even_square_boards() {
+        for random_symmetry_mode in SYMMETRY_MODES {
+            assert!(!random_symmetry_mode.should_use_plain_random::<16, 16>());
+            assert!(random_symmetry_mode.should_use_plain_random::<16, 8>());
+            assert!(random_symmetry_mode.should_use_plain_random::<15, 15>());
+            assert!(random_symmetry_mode.should_use_plain_random::<16, 15>());
+            assert!(random_symmetry_mode.should_use_plain_random::<15, 16>());
+        }
+    }
+
+    #[test]
+    fn random_symmetry_none_always_uses_plain_random() {
+        assert!(RandomSymmetryMode::None.should_use_plain_random::<16, 16>());
+        assert!(RandomSymmetryMode::None.should_use_plain_random::<16, 8>());
+        assert!(RandomSymmetryMode::None.should_use_plain_random::<15, 15>());
+    }
 }

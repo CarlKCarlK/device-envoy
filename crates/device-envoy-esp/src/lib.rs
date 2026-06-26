@@ -119,7 +119,7 @@ pub mod clock_sync {
     //!     )?;
     //!
     //!     let stack = wifi_auto
-    //!         .connect(&mut *button_watch6, |event| async move {
+    //!         .connect(&mut *button_watch6, async |event| -> Result<(), device_envoy_esp::Error> {
     //!             match event {
     //!                 WifiAutoEvent::CaptivePortalReady => {
     //!                     info!("WifiAutoEsp: setup mode ready");

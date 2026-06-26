@@ -70,27 +70,30 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Connect to WiFi
     let stack = wifi_auto
-        .connect(&mut *button_watch13, |event| async move {
-            match event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    info!("Captive portal ready - connect to WiFi network");
+        .connect(
+            &mut *button_watch13,
+            async |event| -> Result<(), device_envoy_rp::Error> {
+                match event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        info!("Captive portal ready - connect to WiFi network");
+                    }
+                    WifiAutoEvent::Connecting {
+                        try_index,
+                        try_count,
+                    } => {
+                        info!(
+                            "Connecting to WiFi (attempt {} of {})...",
+                            try_index + 1,
+                            try_count
+                        );
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        info!("WiFi connection failed!");
+                    }
                 }
-                WifiAutoEvent::Connecting {
-                    try_index,
-                    try_count,
-                } => {
-                    info!(
-                        "Connecting to WiFi (attempt {} of {})...",
-                        try_index + 1,
-                        try_count
-                    );
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    info!("WiFi connection failed!");
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await?;
 
     info!("WiFi connected successfully!");

@@ -141,32 +141,35 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let audio_player10_ref = audio_player8;
     let stack = wifi_auto
-        .connect(&mut *button_watch13, |event| async move {
-            match event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    info!("Captive portal ready");
-                    audio_player10_ref.play(
-                        [CAPTIVE_PORTAL_TONE, SILENCE_40MS, CAPTIVE_PORTAL_TONE],
-                        AtEnd::Stop,
-                    );
+        .connect(
+            &mut *button_watch13,
+            async |event| -> Result<(), device_envoy_rp::Error> {
+                match event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        info!("Captive portal ready");
+                        audio_player10_ref.play(
+                            [CAPTIVE_PORTAL_TONE, SILENCE_40MS, CAPTIVE_PORTAL_TONE],
+                            AtEnd::Stop,
+                        );
+                    }
+                    WifiAutoEvent::Connecting {
+                        try_index,
+                        try_count,
+                    } => {
+                        info!("Connecting (attempt {} of {})", try_index + 1, try_count);
+                        audio_player10_ref.play([CONNECTING_TONE], AtEnd::Stop);
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        info!("WiFi connection failed");
+                        audio_player10_ref.play(
+                            [CONNECTION_FAILED_TONE, SILENCE_40MS, CONNECTION_FAILED_TONE],
+                            AtEnd::Stop,
+                        );
+                    }
                 }
-                WifiAutoEvent::Connecting {
-                    try_index,
-                    try_count,
-                } => {
-                    info!("Connecting (attempt {} of {})", try_index + 1, try_count);
-                    audio_player10_ref.play([CONNECTING_TONE], AtEnd::Stop);
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    info!("WiFi connection failed");
-                    audio_player10_ref.play(
-                        [CONNECTION_FAILED_TONE, SILENCE_40MS, CONNECTION_FAILED_TONE],
-                        AtEnd::Stop,
-                    );
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await?;
 
     info!("WiFi connected");

@@ -106,25 +106,22 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let servo_clock_display_ref = &servo_clock_display;
 
     let stack = wifi_auto
-        .connect(&mut *button_watch6, |wifi_auto_event| {
-            let servo_clock_display_ref = servo_clock_display_ref;
-            async move {
-                match wifi_auto_event {
-                    WifiAutoEvent::CaptivePortalReady => {
-                        info!("WifiAuto: setup mode ready");
-                        servo_clock_display_ref.show_portal_ready().await;
-                    }
-                    WifiAutoEvent::Connecting { .. } => {
-                        info!("WifiAuto: connecting");
-                        servo_clock_display_ref.show_connecting().await;
-                    }
-                    WifiAutoEvent::ConnectionFailed => {
-                        info!("WifiAuto: connection failed");
-                        servo_clock_display_ref.show_connection_failed().await;
-                    }
+        .connect(&mut *button_watch6, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    info!("WifiAuto: setup mode ready");
+                    servo_clock_display_ref.show_portal_ready().await;
                 }
-                Ok(())
+                WifiAutoEvent::Connecting { .. } => {
+                    info!("WifiAuto: connecting");
+                    servo_clock_display_ref.show_connecting().await;
+                }
+                WifiAutoEvent::ConnectionFailed => {
+                    info!("WifiAuto: connection failed");
+                    servo_clock_display_ref.show_connection_failed().await;
+                }
             }
+            Ok(())
         })
         .await?;
 

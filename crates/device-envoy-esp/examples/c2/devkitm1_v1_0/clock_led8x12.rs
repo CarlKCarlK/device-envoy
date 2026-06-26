@@ -100,20 +100,23 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led8x12_clock_ref = &led8x12_clock;
     let stack = wifi_auto
-        .connect(&mut *button6, |wifi_auto_event| async move {
-            match wifi_auto_event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);
+        .connect(
+            &mut *button6,
+            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+                match wifi_auto_event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        led8x12_clock_ref.write_text("JO\nIN", &DIGIT_COLORS);
+                    }
+                    WifiAutoEvent::Connecting { .. } => {
+                        led8x12_clock_ref.write_text("CO\nNN", &DIGIT_COLORS);
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        led8x12_clock_ref.write_text("FA\nIL", &DIGIT_COLORS);
+                    }
                 }
-                WifiAutoEvent::Connecting { .. } => {
-                    led8x12_clock_ref.write_text("CO\nNN", &DIGIT_COLORS);
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    led8x12_clock_ref.write_text("FA\nIL", &DIGIT_COLORS);
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await?;
 
     led8x12_clock.write_text("IP\n..", &DIGIT_COLORS);

@@ -45,20 +45,23 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     )?;
 
     let stack = wifi_auto
-        .connect(&mut button, |event| async move {
-            match event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    defmt::info!("Captive portal ready");
+        .connect(
+            &mut button,
+            async |event| -> Result<(), device_envoy_rp::Error> {
+                match event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        defmt::info!("Captive portal ready");
+                    }
+                    WifiAutoEvent::Connecting { .. } => {
+                        defmt::info!("Connecting to WiFi");
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        defmt::info!("WiFi connection failed");
+                    }
                 }
-                WifiAutoEvent::Connecting { .. } => {
-                    defmt::info!("Connecting to WiFi");
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    defmt::info!("WiFi connection failed");
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await?;
 
     // The stack is ready for network operations (for example, NTP or HTTP).

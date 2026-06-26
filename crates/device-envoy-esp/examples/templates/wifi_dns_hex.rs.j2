@@ -80,7 +80,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led12x8_dns_ref = &led12x8_dns;
     let stack = wifi_auto
-        .connect(&mut button, |wifi_auto_event| async move {
+        .connect(&mut button, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led12x8_dns_ref.write_text("JO\nIN", COLORS);

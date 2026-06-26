@@ -26,16 +26,16 @@ pub type WifiStack = &'static embassy_net::Stack<'static>;
 macro_rules! __impl_wifi_auto_connect {
     (
         $(#[$meta:meta])*
-        fn $name:ident (&self as $self_ident:ident, $on_event:ident) -> $return_ty:ty $body:block
+        fn $name:ident (&self as $self_ident:ident, $on_event:ident) -> $ok_ty:ty $body:block
     ) => {
         $(#[$meta])*
-        pub async fn $name<OnEvent, OnEventFuture>(
+        pub async fn $name<OnEvent, OnError>(
             &self,
             mut $on_event: OnEvent,
-        ) -> $return_ty
+        ) -> core::result::Result<$ok_ty, OnError>
         where
-            OnEvent: FnMut($crate::wifi_auto::WifiAutoEvent) -> OnEventFuture,
-            OnEventFuture: core::future::Future<Output = crate::Result<()>>,
+            OnEvent: core::ops::AsyncFnMut($crate::wifi_auto::WifiAutoEvent) -> core::result::Result<(), OnError>,
+            OnError: core::convert::From<crate::Error>,
         {
             let $self_ident = self;
             $body
@@ -43,16 +43,16 @@ macro_rules! __impl_wifi_auto_connect {
     };
     (
         $(#[$meta:meta])*
-        fn $name:ident (self as $self_ident:ident, $on_event:ident) -> $return_ty:ty $body:block
+        fn $name:ident (self as $self_ident:ident, $on_event:ident) -> $ok_ty:ty $body:block
     ) => {
         $(#[$meta])*
-        pub async fn $name<OnEvent, OnEventFuture>(
+        pub async fn $name<OnEvent, OnError>(
             self,
             mut $on_event: OnEvent,
-        ) -> $return_ty
+        ) -> core::result::Result<$ok_ty, OnError>
         where
-            OnEvent: FnMut($crate::wifi_auto::WifiAutoEvent) -> OnEventFuture,
-            OnEventFuture: core::future::Future<Output = crate::Result<()>>,
+            OnEvent: core::ops::AsyncFnMut($crate::wifi_auto::WifiAutoEvent) -> core::result::Result<(), OnError>,
+            OnError: core::convert::From<crate::Error>,
         {
             let $self_ident = self;
             $body
@@ -187,7 +187,6 @@ impl Default for WifiAutoPersistedState {
 /// # Example
 ///
 /// ```rust,no_run
-/// use core::future::Future;
 /// use core::convert::Infallible;
 /// use device_envoy_core::{
 ///     button::Button,
@@ -198,7 +197,7 @@ impl Default for WifiAutoPersistedState {
 ///     wifi_auto: impl WifiAuto<Error = Infallible>,
 /// ) -> Result<WifiStack, Infallible> {
 ///     wifi_auto
-///         .connect(&mut ButtonMock, |wifi_auto_event| async move {
+///         .connect(&mut ButtonMock, async |wifi_auto_event| {
 ///             match wifi_auto_event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     // Captive portal is ready for Wi-Fi credential entry.
@@ -225,13 +224,13 @@ impl Default for WifiAutoPersistedState {
 /// # impl WifiAuto for DemoWifiAuto {
 /// #     type Error = Infallible;
 /// #     async fn connect<
-/// #         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-/// #         OnEventFuture: Future<Output = Result<(), Self::Error>>,
+/// #         OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+/// #         OnError: From<Self::Error>,
 /// #     >(
 /// #         self,
 /// #         button: &mut impl Button,
 /// #         mut on_event: OnEvent,
-/// #     ) -> Result<WifiStack, Self::Error>
+/// #     ) -> Result<WifiStack, OnError>
 /// #     {
 /// #         on_event(WifiAutoEvent::Connecting {
 /// #             try_index: 0,
@@ -254,14 +253,18 @@ pub trait WifiAuto {
     /// Connect to Wi-Fi, emitting progress events to `on_event`.
     ///
     /// See the [WifiAuto trait documentation](Self) for usage examples.
-    async fn connect<OnEvent, OnEventFuture>(
+    /// The callback chooses its own error type `OnError`; the platform error
+    /// converts into it (`OnError: From<Self::Error>`), so a handler can fail with
+    /// a richer error (e.g. a display error) and still use `?`. Returning the
+    /// platform error itself is the `OnError = Self::Error` case.
+    async fn connect<OnEvent, OnError>(
         self,
         button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<WifiStack, Self::Error>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<(), Self::Error>>;
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<Self::Error>;
 }
 
 /// Backend contract for platform-specific Wi-Fi auto-connect operations.
@@ -311,14 +314,14 @@ pub trait WifiAutoBackend {
 
 /// Run the shared Wi-Fi auto-connect flow through a platform backend.
 #[doc(hidden)] // Backend-plumbing helper used by platform crates.
-pub async fn connect_with_backend<Backend, OnEvent, OnEventFuture>(
+pub async fn connect_with_backend<Backend, OnEvent, OnError>(
     backend: &mut Backend,
     on_event: &mut OnEvent,
-) -> Result<bool, Backend::Error>
+) -> Result<bool, OnError>
 where
     Backend: WifiAutoBackend,
-    OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), Backend::Error>>,
+    OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+    OnError: From<Backend::Error>,
 {
     let wifi_start_mode = backend.load_start_mode()?;
     let custom_fields_satisfied = backend.custom_fields_satisfied()?;

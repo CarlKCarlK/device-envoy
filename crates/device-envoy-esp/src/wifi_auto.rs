@@ -112,7 +112,7 @@ enum WifiAutoStorage {
 ///
 ///     // Connect (logging status as we go).
 ///     let stack = wifi_auto
-///         .connect(&mut button6, |wifi_auto_event| async move {
+///         .connect(&mut button6, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
 ///             match wifi_auto_event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     info!("Captive portal ready");
@@ -362,14 +362,14 @@ impl<'a> WifiAutoEsp<'a> {
     }
 
     #[cfg(target_os = "none")]
-    async fn connect_inner<OnEvent, OnEventFuture>(
+    async fn connect_inner<OnEvent, OnError>(
         &self,
         force_captive_portal: bool,
         mut on_event: OnEvent,
-    ) -> Result<WifiStack>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<()>>,
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<crate::Error>,
     {
         Self::initialize_wifi_heap_once();
         let wifi = self
@@ -379,7 +379,10 @@ impl<'a> WifiAutoEsp<'a> {
             .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
         let spawner = self.spawner;
 
-        let (mut wifi_controller, interfaces) = esp_radio::wifi::new(wifi, Default::default())?;
+        // Foreign error: convert to the platform error explicitly so it reaches
+        // `OnError` via `OnError: From<crate::Error>` (the generic callback error).
+        let (mut wifi_controller, interfaces) =
+            esp_radio::wifi::new(wifi, Default::default()).map_err(crate::Error::from)?;
 
         const TRY_COUNT: u8 = 10;
         struct EspWifiAutoBackend<'a, 'b> {
@@ -736,7 +739,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     /// #     spawner,
     /// # )?;
     /// let _stack = wifi_auto
-    ///     .connect(&mut button6, |_event| async move { Ok(()) })
+    ///     .connect(&mut button6, async |_event| -> Result<(), device_envoy_esp::Error> { Ok(()) })
     ///     .await?;
     /// # Ok(())
     /// # }
@@ -777,7 +780,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     /// // Keep a reference so the handler can reuse the display across events.
     /// let led8x12_ref = &led8x12;
     /// let stack = wifi_auto
-    ///     .connect(&mut button6, |wifi_auto_event| async move {
+    ///     .connect(&mut button6, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
     ///         match wifi_auto_event {
     ///             WifiAutoEvent::CaptivePortalReady => {
     ///                 led8x12_ref.write_text("JO\nIN", COLORS).await?;
@@ -796,14 +799,14 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     /// # Ok(())
     /// # }
     /// ```
-    async fn connect<OnEvent, OnEventFuture>(
+    async fn connect<OnEvent, OnError>(
         self,
         button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<WifiStack>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<()>>,
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<crate::Error>,
     {
         let force_captive_portal = button.is_pressed();
         if self.force_captive_portal_if_pressed_state(force_captive_portal)? {

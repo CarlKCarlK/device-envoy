@@ -24,20 +24,23 @@ async fn connect_with_status(
     button: &mut impl Button,
 ) -> Result<WifiStack> {
     wifi_auto
-        .connect(button, |wifi_auto_event| async move {
-            match wifi_auto_event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    info!("wifi_auto_example1: captive portal ready");
+        .connect(
+            button,
+            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+                match wifi_auto_event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        info!("wifi_auto_example1: captive portal ready");
+                    }
+                    WifiAutoEvent::Connecting { .. } => {
+                        info!("wifi_auto_example1: connecting");
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        info!("wifi_auto_example1: connection failed");
+                    }
                 }
-                WifiAutoEvent::Connecting { .. } => {
-                    info!("wifi_auto_example1: connecting");
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    info!("wifi_auto_example1: connection failed");
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await
 }
 

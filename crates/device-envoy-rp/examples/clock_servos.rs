@@ -95,9 +95,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect Wi-Fi, using the servos for status indications.
     let servo_display_ref = &servo_display;
     let stack = wifi_auto
-        .connect(&mut *button_watch13, |event| {
-            let servo_display_ref = servo_display_ref;
-            async move {
+        .connect(
+            &mut *button_watch13,
+            async |event| -> Result<(), device_envoy_rp::Error> {
                 match event {
                     WifiAutoEvent::CaptivePortalReady => {
                         servo_display_ref.show_portal_ready().await;
@@ -108,8 +108,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     }
                 }
                 Ok(())
-            }
-        })
+            },
+        )
         .await?;
 
     info!("WiFi connected");

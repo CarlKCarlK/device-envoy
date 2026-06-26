@@ -73,7 +73,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
     let led8x12_ref = &led8x12;
     let stack = wifi_auto
-        .connect(&mut button15, |event| async move {
+        .connect(&mut button15, async |event| -> Result<(), device_envoy_rp::Error> {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     led8x12_ref.write_text("JO\nIN", COLORS); // Join setup network

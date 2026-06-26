@@ -52,7 +52,7 @@
 //!     )?;
 //!
 //!     let _stack = wifi_auto
-//!         .connect(&mut button6, |wifi_auto_event| async move {
+//!         .connect(&mut button6, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
 //!             match wifi_auto_event {
 //!                 WifiAutoEvent::CaptivePortalReady => {}
 //!                 WifiAutoEvent::Connecting { .. } => {}

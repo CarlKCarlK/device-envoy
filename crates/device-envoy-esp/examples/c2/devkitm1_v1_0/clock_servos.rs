@@ -103,9 +103,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let servo_clock_display_ref = &servo_clock_display;
 
     let stack = wifi_auto
-        .connect(&mut *button_watch6, |wifi_auto_event| {
-            let servo_clock_display_ref = servo_clock_display_ref;
-            async move {
+        .connect(
+            &mut *button_watch6,
+            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
                 match wifi_auto_event {
                     WifiAutoEvent::CaptivePortalReady => {
                         info!("WifiAuto: setup mode ready");
@@ -121,8 +121,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     }
                 }
                 Ok(())
-            }
-        })
+            },
+        )
         .await?;
 
     info!("WiFi connected");

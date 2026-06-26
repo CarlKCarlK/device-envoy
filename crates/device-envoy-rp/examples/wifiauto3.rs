@@ -57,27 +57,30 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     )?;
 
     let stack = wifi_auto
-        .connect(&mut button, |event| async move {
-            match event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    defmt::info!("Captive portal ready");
+        .connect(
+            &mut button,
+            async |event| -> Result<(), device_envoy_rp::Error> {
+                match event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        defmt::info!("Captive portal ready");
+                    }
+                    WifiAutoEvent::Connecting {
+                        try_index,
+                        try_count,
+                    } => {
+                        defmt::info!(
+                            "Connecting to WiFi (attempt {} of {})...",
+                            try_index + 1,
+                            try_count
+                        );
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        defmt::info!("WiFi connection failed");
+                    }
                 }
-                WifiAutoEvent::Connecting {
-                    try_index,
-                    try_count,
-                } => {
-                    defmt::info!(
-                        "Connecting to WiFi (attempt {} of {})...",
-                        try_index + 1,
-                        try_count
-                    );
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    defmt::info!("WiFi connection failed");
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await?;
 
     let website = website_field.text()?.unwrap_or_default();

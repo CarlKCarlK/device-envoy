@@ -54,7 +54,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let stack = wifi_auto
-        .connect(&mut button6, |wifi_auto_event| async move {
+        .connect(&mut button6, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("Captive portal ready; connect to DeviceEnvoyClock");

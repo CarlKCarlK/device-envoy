@@ -43,14 +43,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let _stack = wifi_auto
-        .connect(&mut button, |wifi_auto_event| async move {
-            match wifi_auto_event {
-                WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
-                WifiAutoEvent::Connecting { .. } => info!("Connecting"),
-                WifiAutoEvent::ConnectionFailed => info!("Connection failed"),
-            }
-            Ok(())
-        })
+        .connect(
+            &mut button,
+            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+                match wifi_auto_event {
+                    WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
+                    WifiAutoEvent::Connecting { .. } => info!("Connecting"),
+                    WifiAutoEvent::ConnectionFailed => info!("Connection failed"),
+                }
+                Ok(())
+            },
+        )
         .await?;
 
     pending().await

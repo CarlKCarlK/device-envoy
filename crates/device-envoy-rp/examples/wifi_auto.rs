@@ -104,22 +104,25 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led4_ref = &led4;
     let stack = wifi_auto
-        .connect(&mut button, |event| async move {
-            match event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    led4_ref.write_text(['C', 'O', 'N', 'N'], BlinkState::BlinkingAndOn);
-                }
+        .connect(
+            &mut button,
+            async |event| -> Result<(), device_envoy_rp::Error> {
+                match event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        led4_ref.write_text(['C', 'O', 'N', 'N'], BlinkState::BlinkingAndOn);
+                    }
 
-                WifiAutoEvent::Connecting { try_index, .. } => {
-                    led4_ref.animate_text(circular_outline_animation((try_index & 1) == 0));
-                }
+                    WifiAutoEvent::Connecting { try_index, .. } => {
+                        led4_ref.animate_text(circular_outline_animation((try_index & 1) == 0));
+                    }
 
-                WifiAutoEvent::ConnectionFailed => {
-                    led4_ref.write_text(['F', 'A', 'I', 'L'], BlinkState::BlinkingButOff);
+                    WifiAutoEvent::ConnectionFailed => {
+                        led4_ref.write_text(['F', 'A', 'I', 'L'], BlinkState::BlinkingButOff);
+                    }
                 }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await?;
 
     led4.write_text(['D', 'O', 'N', 'E'], BlinkState::Solid);

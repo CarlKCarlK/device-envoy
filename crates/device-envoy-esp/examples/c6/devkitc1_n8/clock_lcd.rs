@@ -80,9 +80,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let lcd_text_clock_ref = lcd_text_clock;
     let stack = wifi_auto
-        .connect(&mut *button_watch6, |wifi_auto_event| {
-            let lcd_text_clock_ref = lcd_text_clock_ref;
-            async move {
+        .connect(
+            &mut *button_watch6,
+            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
                 match wifi_auto_event {
                     WifiAutoEvent::CaptivePortalReady => {
                         lcd_text_clock_ref.write_text("Join WiFi:\nDeviceEnvoyClock");
@@ -95,8 +95,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     }
                 }
                 Ok(())
-            }
-        })
+            },
+        )
         .await?;
 
     let timezone_offset_minutes = timezone_field

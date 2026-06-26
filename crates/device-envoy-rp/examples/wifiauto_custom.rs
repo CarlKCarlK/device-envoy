@@ -96,20 +96,23 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect with status on display
     let led12x8_ref = &led12x8;
     let stack = wifi_auto
-        .connect(&mut button, |event| async move {
-            match event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    led12x8_ref.write_text("JOIN", COLORS);
+        .connect(
+            &mut button,
+            async |event| -> Result<(), device_envoy_rp::Error> {
+                match event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        led12x8_ref.write_text("JOIN", COLORS);
+                    }
+                    WifiAutoEvent::Connecting { .. } => {
+                        led12x8_ref.write_text("...", COLORS);
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        led12x8_ref.write_text("FAIL", COLORS);
+                    }
                 }
-                WifiAutoEvent::Connecting { .. } => {
-                    led12x8_ref.write_text("...", COLORS);
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    led12x8_ref.write_text("FAIL", COLORS);
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await?;
 
     led12x8.write_text("DONE", COLORS);

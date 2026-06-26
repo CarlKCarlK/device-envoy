@@ -129,14 +129,17 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     )?;
 
     let _stack = wifi_auto
-        .connect(&mut button, |wifi_auto_event| async move {
-            match wifi_auto_event {
-                WifiAutoEvent::CaptivePortalReady => log::info!("Captive portal ready"),
-                WifiAutoEvent::Connecting { .. } => log::info!("Connecting"),
-                WifiAutoEvent::ConnectionFailed => log::warn!("Connection failed"),
-            }
-            Ok(())
-        })
+        .connect(
+            &mut button,
+            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+                match wifi_auto_event {
+                    WifiAutoEvent::CaptivePortalReady => log::info!("Captive portal ready"),
+                    WifiAutoEvent::Connecting { .. } => log::info!("Connecting"),
+                    WifiAutoEvent::ConnectionFailed => log::warn!("Connection failed"),
+                }
+                Ok(())
+            },
+        )
         .await?;
 
     log::info!("share_telemetry: {:?}", checkbox_field.checked()?);

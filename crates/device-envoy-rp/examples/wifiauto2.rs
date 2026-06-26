@@ -43,7 +43,9 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     )?;
 
     let _stack = wifi_auto
-        .connect(&mut button, |_event| async move { Ok(()) })
+        .connect(&mut button, async |_event| {
+            Ok::<(), device_envoy_rp::Error>(())
+        })
         .await?;
 
     pending().await // run forever

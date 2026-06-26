@@ -114,9 +114,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect Wi-Fi, using the LED panel for status.
     let led8x12_ref = &led8x12;
     let stack = wifi_auto
-        .connect(&mut *button_watch13, |event| {
-            let led8x12_ref = led8x12_ref;
-            async move {
+        .connect(
+            &mut *button_watch13,
+            async |event| -> Result<(), device_envoy_rp::Error> {
                 match event {
                     WifiAutoEvent::CaptivePortalReady => {
                         info!("WiFi: captive portal ready, displaying JOIN");
@@ -135,8 +135,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     }
                 }
                 Ok(())
-            }
-        })
+            },
+        )
         .await?;
 
     info!("WiFi: connected successfully, displaying DONE");

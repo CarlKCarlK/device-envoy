@@ -51,7 +51,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let stack = wifi_auto
-        .connect(&mut button13, |event| async move {
+        .connect(&mut button13, async |event| -> Result<(), device_envoy_rp::Error> {
             match event {
                 WifiAutoEvent::CaptivePortalReady => {
                     info!("WifiAutoRp: setup mode ready");

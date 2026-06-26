@@ -88,9 +88,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Connect to WiFi
     let lcd_text_ref = lcd_text;
     let stack = wifi_auto
-        .connect(&mut *button_watch13, |wifi_auto_event| {
-            let lcd_text_ref = lcd_text_ref;
-            async move {
+        .connect(
+            &mut *button_watch13,
+            async |wifi_auto_event| -> Result<(), device_envoy_rp::Error> {
                 match wifi_auto_event {
                     device_envoy_rp::wifi_auto::WifiAutoEvent::CaptivePortalReady => {
                         lcd_text_ref.write_text("Join WiFi:\nDeviceEnvoyClock");
@@ -103,8 +103,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     }
                 }
                 Ok(())
-            }
-        })
+            },
+        )
         .await?;
 
     // Create ClockSync device with timezone from WiFi portal

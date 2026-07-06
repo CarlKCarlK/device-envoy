@@ -14,7 +14,7 @@
 
 pub mod calibration;
 mod contiguous_pixels;
-mod draw_item_2d;
+mod draw_item;
 #[cfg(feature = "host")]
 pub mod memory;
 mod orientation;
@@ -36,7 +36,7 @@ pub use calibration::{
     validate_calibration_points,
 };
 pub use contiguous_pixels::ContiguousPixels;
-pub use draw_item_2d::{DrawItem2d, Image565View};
+pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
 pub use tga::{Image565Fixed, Image565Mask};
 pub use touch_event::TouchEvent;
@@ -185,26 +185,26 @@ pub trait CydDisplay {
     }
 
     /// Draw projected draw items immediately inside `bounds`.
-    fn draw_items_2d<const PRIMITIVE_COUNT: usize>(
+    fn draw_items<const PRIMITIVE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,
         background: Rgb565,
-        items: &[DrawItem2d],
+        items: &[DrawItem],
     ) -> Result<(), Self::Error> {
         let primitive_pixels =
-            self.prepare_draw_items_2d::<PRIMITIVE_COUNT>(bounds, background, items);
+            self.prepare_draw_items::<PRIMITIVE_COUNT>(bounds, background, items);
         self.fill_contiguous(primitive_pixels.bounds(), primitive_pixels.iter())
     }
 
     /// Compile projected draw items for indexed pixel lookups inside `bounds`.
-    fn prepare_draw_items_2d<const PRIMITIVE_COUNT: usize>(
+    fn prepare_draw_items<const PRIMITIVE_COUNT: usize>(
         &self,
         bounds: Rectangle,
         background: Rgb565,
-        items: &[DrawItem2d],
+        items: &[DrawItem],
     ) -> ContiguousPixels<PRIMITIVE_COUNT> {
         let bounds = bounds.intersection(&Rectangle::new(Point::zero(), self.screen_size()));
-        ContiguousPixels::from_draw_items_2d(bounds, background, items.iter().copied())
+        ContiguousPixels::from_draw_items(bounds, background, items.iter().copied())
     }
 
     /// Clear the whole screen to the device default background color.

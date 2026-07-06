@@ -87,7 +87,7 @@ impl Image565View {
 /// and sizes are in pixels. The `color` stays [`Rgb888`]; the target performs
 /// any conversion (for example to `Rgb565`) at its pixel boundary.
 #[derive(Clone, Copy, Debug)]
-pub enum DrawItem2d {
+pub enum DrawItem {
     /// A line stroke from `start` to `end` with the given pixel width.
     Stroke {
         start: (f32, f32),
@@ -114,7 +114,7 @@ pub enum DrawItem2d {
     Bitmap { view: Image565View, top_left: Point },
 }
 
-impl DrawItem2d {
+impl DrawItem {
     /// Draw this item onto a [`PixelTarget`].
     ///
     /// Strokes use the embedded-graphics [`Line`] primitive and circles use
@@ -122,7 +122,7 @@ impl DrawItem2d {
     /// [`fill_ellipse_pixels`].
     pub fn draw<T: PixelTarget>(&self, target: &mut T) {
         match *self {
-            DrawItem2d::Stroke {
+            DrawItem::Stroke {
                 start,
                 end,
                 color,
@@ -137,7 +137,7 @@ impl DrawItem2d {
                 .draw(&mut PixelTargetAdapter(target))
                 .expect("drawing onto a PixelTargetAdapter is Infallible");
             }
-            DrawItem2d::Ellipse {
+            DrawItem::Ellipse {
                 center,
                 axis_a,
                 axis_b,
@@ -147,7 +147,7 @@ impl DrawItem2d {
                     pixel_put(target, position_x, position_y, color);
                 });
             }
-            DrawItem2d::Circle {
+            DrawItem::Circle {
                 center,
                 pixel_radius,
                 color,
@@ -161,7 +161,7 @@ impl DrawItem2d {
                 .draw(&mut PixelTargetAdapter(target))
                 .expect("drawing onto a PixelTargetAdapter is Infallible");
             }
-            DrawItem2d::Bitmap { view, top_left } => {
+            DrawItem::Bitmap { view, top_left } => {
                 let size = view.size();
                 for dy in 0..size.height as i32 {
                     for dx in 0..size.width as i32 {

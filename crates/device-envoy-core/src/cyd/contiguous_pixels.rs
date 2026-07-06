@@ -1,6 +1,6 @@
 use embedded_graphics::{pixelcolor::Rgb565, prelude::Point, primitives::Rectangle};
 
-use super::{DrawItem2d, Image565View};
+use super::{DrawItem, Image565View};
 
 #[derive(Clone, Copy, Debug)]
 struct PreparedBounds {
@@ -73,12 +73,12 @@ struct PreparedEllipse {
 
 impl PreparedPrimitive {
     // todo: review the color (Rgb888 -> Rgb565) and number (f32 -> i32/u16)
-    // conversions threaded through here and `DrawItem2d`. Some may be
+    // conversions threaded through here and `DrawItem`. Some may be
     // happening later (per primitive, per frame) than strictly needed — see if
     // any can move once, earlier, or be dropped entirely.
-    fn from_projected(item: &DrawItem2d) -> Option<PreparedPixelSource> {
+    fn from_projected(item: &DrawItem) -> Option<PreparedPixelSource> {
         match *item {
-            DrawItem2d::Stroke {
+            DrawItem::Stroke {
                 start,
                 end,
                 color,
@@ -130,7 +130,7 @@ impl PreparedPrimitive {
                     }),
                 })
             }
-            DrawItem2d::Ellipse {
+            DrawItem::Ellipse {
                 center,
                 axis_a,
                 axis_b,
@@ -142,7 +142,7 @@ impl PreparedPrimitive {
                 ellipse_bound_radius(axis_a, axis_b),
                 Rgb565::from(color),
             ),
-            DrawItem2d::Circle {
+            DrawItem::Circle {
                 center,
                 pixel_radius,
                 color,
@@ -153,7 +153,7 @@ impl PreparedPrimitive {
                 pixel_radius,
                 Rgb565::from(color),
             ),
-            DrawItem2d::Bitmap { view, top_left } => {
+            DrawItem::Bitmap { view, top_left } => {
                 let bounds = Rectangle::new(top_left, view.size());
                 if bounds.size.width == 0 || bounds.size.height == 0 {
                     return None;
@@ -227,14 +227,14 @@ pub struct ContiguousPixels<const PIXEL_SOURCE_COUNT: usize> {
 impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
     /// Compile already-projected draw items for indexed pixel lookups.
     #[must_use]
-    pub fn from_draw_items_2d(
+    pub fn from_draw_items(
         bounds: Rectangle,
         background: Rgb565,
-        draw_items_2d: impl IntoIterator<Item = DrawItem2d>,
+        draw_items: impl IntoIterator<Item = DrawItem>,
     ) -> Self {
         let mut pixel_sources = heapless::Vec::<PreparedPixelSource, PIXEL_SOURCE_COUNT>::new();
-        for draw_item_2d in draw_items_2d {
-            if let Some(prepared_pixel_source) = PreparedPrimitive::from_projected(&draw_item_2d) {
+        for draw_item in draw_items {
+            if let Some(prepared_pixel_source) = PreparedPrimitive::from_projected(&draw_item) {
                 pixel_sources
                     .push(prepared_pixel_source)
                     .expect("projected draw items fit the prepared pixel source capacity");
@@ -531,17 +531,17 @@ mod tests {
     #[test]
     fn bitmap_item_samples_as_background_under_later_items() {
         let bitmap = Image565View::new(&BITMAP_PIXELS, Size::new(2, 2));
-        let bitmap_item = DrawItem2d::Bitmap {
+        let bitmap_item = DrawItem::Bitmap {
             view: bitmap,
             top_left: Point::zero(),
         };
-        let circle = DrawItem2d::Circle {
+        let circle = DrawItem::Circle {
             center: (0.0, 0.0),
             pixel_radius: 0.1,
             color: Rgb888::CSS_BLUE,
         };
 
-        let contiguous_pixels = ContiguousPixels::<2>::from_draw_items_2d(
+        let contiguous_pixels = ContiguousPixels::<2>::from_draw_items(
             Rectangle::new(Point::zero(), Size::new(2, 2)),
             Rgb565::BLACK,
             [bitmap_item, circle],

@@ -19,8 +19,10 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    CalibrationConfig, Cyd, CydDisplay, CydFrame, CydInfallibleError, CydRawTouch, CydTouch,
-    Orientation, RawPoint, RawTouchEvent, TouchEvent, calibration::distort_demo_screen_to_raw,
+    Cyd, CydDisplay, CydFrame, CydInfallibleError, CydTouch, Orientation, TouchEvent,
+    calibration::{
+        CalibrationConfig, CydRawTouch, RawPoint, RawTouchEvent, distort_demo_screen_to_raw,
+    },
 };
 use crate::{
     button::{__ButtonMonitor, BUTTON_POLL_INTERVAL, Button},

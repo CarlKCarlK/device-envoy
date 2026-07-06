@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::RegionPixels;
+use device_envoy_core::cyd::RectanglePixels;
 use embedded_graphics::{
     draw_target::DrawTarget,
     mono_font::MonoFont,
@@ -150,7 +150,7 @@ impl CydDisplayEsp {
 
     pub(crate) fn flush_buffer(
         &mut self,
-        buffer: &impl RegionPixels,
+        buffer: &impl RectanglePixels,
         top_left: Point,
     ) -> Result<(), CydDisplayEspFlushError> {
         let rectangle = Rectangle::new(

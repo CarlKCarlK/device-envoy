@@ -6,7 +6,7 @@
 //! See [`Cyd`] for the primary trait and usage example.
 //!
 
-pub(crate) mod calibration;
+pub mod calibration;
 mod contiguous_pixels;
 mod draw_item;
 mod orientation;
@@ -18,21 +18,18 @@ pub use crate::{
     __cyd_tga565 as tga565, __cyd_tga565_magenta_mask as tga565_magenta_mask,
     __cyd_tga565_mask as tga565_mask, __cyd_tga565_white_mask as tga565_white_mask,
 };
-pub use calibration::{
-    CalibrationConfig, EnsureCalibrationError, EnsureCalibrationOutcome, EnsureCalibrationSettings,
-    RawPoint, RawTouchEvent, ensure_calibration, ensure_calibration_with_settings,
-};
+pub use calibration::{EnsureCalibrationError, EnsureCalibrationOutcome, ensure_calibration};
 pub use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
 pub use tga::{Image565Fixed, Image565Mask};
 pub use touch_event::TouchEvent;
 
-/// Native panel width in pixels (landscape). The CYD panel is fixed hardware.
+/// Native panel width in pixels (landscape): 320. The CYD panel is fixed hardware.
 pub const SCREEN_WIDTH: usize = 320;
-/// Native panel height in pixels (landscape). The CYD panel is fixed hardware.
+/// Native panel height in pixels (landscape): 240. The CYD panel is fixed hardware.
 pub const SCREEN_HEIGHT: usize = 240;
-/// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT`).
+/// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 76,800).
 pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
 use core::{convert::Infallible, future::Future};
@@ -45,8 +42,8 @@ use embedded_graphics::{
 };
 use tiling::TileGrid;
 
-/// A borrowed or owned rectangular RGB565 pixel region.
-pub trait RegionPixels {
+/// A borrowed or owned rectangular RGB565 pixel buffer.
+pub trait RectanglePixels {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
     fn raw_pixels(&self) -> &[u16];
@@ -275,7 +272,11 @@ pub trait CydDisplay {
         I: IntoIterator<Item = Rgb565>;
 
     /// Present a native-color rectangle buffer at `top_left`.
-    fn flush_at(&mut self, buffer: &impl RegionPixels, top_left: Point) -> Result<(), Self::Error> {
+    fn flush_at(
+        &mut self,
+        buffer: &impl RectanglePixels,
+        top_left: Point,
+    ) -> Result<(), Self::Error> {
         let rectangle = Rectangle::new(
             top_left,
             Size::new(buffer.width() as u32, buffer.height() as u32),
@@ -374,18 +375,6 @@ pub trait CydTouch {
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
 }
 
-/// A CYD raw-touch source implemented by devices so [`ensure_calibration`] can run.
-pub trait CydRawTouch {
-    /// Error returned when reading raw touch fails.
-    type Error: CydFlushError;
-
-    /// Read the next raw touch event, if any.
-    ///
-    /// This bypasses any active [`TouchEvent`] calibration mapping and exists
-    /// specifically for the shared calibration driver.
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error>;
-}
-
 /// A lending/streaming iterator over a [`TileGrid`]'s tiles.
 ///
 /// Created by [`CydDisplay::tiles`]. This deliberately does *not* implement
@@ -449,7 +438,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
         Point::zero()
     }
 
-    // TODO0x Arg! "region" (may no longer apply)
+    // TODO0x Arg! "region" (may no longer apply, RegionPixels renamed to RectanglePixels)
     /// This frame's rectangle (top-left and size) in physical-screen coordinates.
     fn rectangle(&self) -> Rectangle;
 

@@ -4,10 +4,10 @@ use crate::button::Button;
 use crate::flash_block::FlashBlock;
 use heapless::String;
 
-use super::super::{Cyd, CydDisplay, CydFrame, CydRawTouch};
+use super::super::{Cyd, CydDisplay, CydFrame};
 
 use super::{
-    CalibrationConfig, CalibrationCorner, CalibrationFlow, CalibrationSolveError,
+    CalibrationConfig, CalibrationCorner, CalibrationFlow, CalibrationSolveError, CydRawTouch,
     draw_calibration_ack_dot, draw_calibration_cross, draw_calibration_instruction,
     draw_calibration_rejected_cross, draw_calibration_verify_target,
     flow::CalibrationFlowEvent,
@@ -111,8 +111,9 @@ enum CalibrationDriverState {
 /// # use device_envoy_core::{
 /// #     button::{Button, __ButtonMonitor},
 /// #     cyd::{
-/// #         CalibrationConfig, Cyd, CydDisplay, CydFrame, CydInfallibleError, CydRawTouch,
-/// #         CydTouch, RawTouchEvent, TouchEvent, ensure_calibration,
+/// #         Cyd, CydDisplay, CydFrame, CydInfallibleError, CydTouch, TouchEvent,
+/// #         calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
+/// #         ensure_calibration,
 /// #     },
 /// #     flash_block::FlashBlock,
 /// #     pixel_target::PixelTarget,

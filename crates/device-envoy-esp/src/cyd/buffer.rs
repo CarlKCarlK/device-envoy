@@ -1,6 +1,6 @@
 use core::convert::Infallible;
 
-use device_envoy_core::cyd::RegionPixels;
+use device_envoy_core::cyd::RectanglePixels;
 use embedded_graphics::{
     Pixel,
     pixelcolor::{IntoStorage, Rgb565},
@@ -70,7 +70,7 @@ impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> Default
     }
 }
 
-impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> RegionPixels
+impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> RectanglePixels
     for RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT>
 {
     fn width(&self) -> usize {
@@ -179,7 +179,7 @@ impl RegionView<'_> {
     }
 }
 
-impl RegionPixels for RegionView<'_> {
+impl RectanglePixels for RegionView<'_> {
     fn width(&self) -> usize {
         self.width
     }

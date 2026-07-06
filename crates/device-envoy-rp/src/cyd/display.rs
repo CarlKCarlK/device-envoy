@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::RegionPixels;
+use device_envoy_core::cyd::RectanglePixels;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Level, Output, Pin};
 use embassy_rp::peripherals::SPI0;
@@ -155,7 +155,7 @@ impl CydDisplayRp {
 
     pub(crate) fn flush_buffer(
         &mut self,
-        buffer: &impl RegionPixels,
+        buffer: &impl RectanglePixels,
         top_left: Point,
     ) -> Result<(), CydDisplayRpFlushError> {
         let rectangle = Rectangle::new(

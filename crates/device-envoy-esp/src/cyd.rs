@@ -24,15 +24,15 @@ use static_cell::StaticCell;
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 use device_envoy_core::cyd::{
-    CopySizeError, CydFlushError, CydRawTouch, RegionPixels, SCREEN_PIXELS,
+    CopySizeError, CydFlushError, RectanglePixels, SCREEN_PIXELS,
+    calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
 };
 use device_envoy_core::pixel_target::PixelTarget;
 pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    CalibrationConfig, Cyd, CydDisplay, CydFrame, CydTouch, Orientation, RawTouchEvent, TouchEvent,
-    tiling,
+    Cyd, CydDisplay, CydFrame, CydTouch, Orientation, TouchEvent, tiling,
 };
 pub use text::DEFAULT_FONT;
 pub use touch::{CydTouchEspInitError, TOUCH_SPI_HZ};
@@ -599,7 +599,7 @@ impl CydDisplay for CydDisplayEspPart<'_> {
     }
 
     #[inline]
-    fn flush_at(&mut self, buffer: &impl RegionPixels, top_left: Point) -> Result<(), CydError> {
+    fn flush_at(&mut self, buffer: &impl RectanglePixels, top_left: Point) -> Result<(), CydError> {
         Ok(self.display.flush_buffer(buffer, top_left)?)
     }
 }

@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::RawTouchEvent;
+use device_envoy_core::cyd::calibration::RawTouchEvent;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::SPI1;

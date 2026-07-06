@@ -38,14 +38,18 @@ type CydDisplayDevice = mipidsi::Display<CydDisplayInterface, ILI9341Rgb565, Out
 /// Error initializing the display over SPI.
 #[derive(Clone, Copy, Debug)]
 pub enum CydDisplayEspInitError {
+    /// Configuring the display SPI peripheral failed.
     ConfigureDisplaySpi,
+    /// Wrapping the display SPI bus with its CS pin failed.
     CreateDisplaySpiDevice,
+    /// The mipidsi display driver failed to initialize the panel.
     InitDisplay,
 }
 
 /// Error flushing pixels to the display.
 #[derive(Clone, Copy, Debug)]
 pub enum CydDisplayEspFlushError {
+    /// Writing the frame buffer to the panel over SPI failed.
     FlushFrameBuffer,
 }
 

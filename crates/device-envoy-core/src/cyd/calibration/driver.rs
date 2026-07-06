@@ -105,6 +105,155 @@ enum CalibrationDriverState {
 /// overwrites the block with a fresh solve after the candidate is validated and
 /// the user confirms it by hitting the center verify target, then returns so
 /// the caller can proceed immediately.
+///
+/// ```rust,no_run
+/// # use core::{convert::Infallible, future::ready};
+/// # use device_envoy_core::{
+/// #     button::Button,
+/// #     cyd::{
+/// #         CalibrationConfig, Cyd, CydDisplay, CydFrame, CydInfallibleError, CydRawTouch,
+/// #         CydTouch, RawTouchEvent, TouchEvent, ensure_calibration,
+/// #     },
+/// #     flash_block::FlashBlock,
+/// #     pixel_target::PixelTarget,
+/// # };
+/// # use embedded_graphics::{
+/// #     pixelcolor::{Rgb565, Rgb888},
+/// #     prelude::{DrawTarget, OriginDimensions, Point, RgbColor, Size},
+/// #     primitives::Rectangle,
+/// # };
+/// # use serde::{Deserialize, Serialize};
+/// # struct DemoCyd;
+/// # struct DemoDisplay;
+/// # struct DemoTouch;
+/// # struct DemoFrame;
+/// # struct DemoFlashBlock {
+/// #     calibration_config: Option<CalibrationConfig>,
+/// # }
+/// # struct DemoButton;
+/// # impl Cyd for DemoCyd {
+/// #     type Error = CydInfallibleError;
+/// #     type Display<'a> = DemoDisplay;
+/// #     type Touch<'a> = DemoTouch;
+/// #     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) {
+/// #         (DemoDisplay, DemoTouch)
+/// #     }
+/// # }
+/// # impl CydDisplay for DemoDisplay {
+/// #     type Error = CydInfallibleError;
+/// #     type Frame<'a> = DemoFrame;
+/// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
+/// #     fn background(&self) -> Rgb888 { Rgb888::BLACK }
+/// #     fn foreground(&self) -> Rgb888 { Rgb888::WHITE }
+/// #     fn background_565(&self) -> Rgb565 { Rgb565::BLACK }
+/// #     fn foreground_565(&self) -> Rgb565 { Rgb565::WHITE }
+/// #     fn frame_mut_with_tile_top_left(
+/// #         &mut self,
+/// #         _rectangle: Rectangle,
+/// #         _tile_top_left: Point,
+/// #     ) -> Self::Frame<'_> {
+/// #         DemoFrame
+/// #     }
+/// #     fn fill_rectangle(
+/// #         &mut self,
+/// #         _rectangle: Rectangle,
+/// #         _color: Rgb565,
+/// #     ) -> Result<(), Self::Error> {
+/// #         Ok(())
+/// #     }
+/// #     fn fill_contiguous<I>(
+/// #         &mut self,
+/// #         _rectangle: Rectangle,
+/// #         _pixels: I,
+/// #     ) -> Result<(), Self::Error>
+/// #     where
+/// #         I: IntoIterator<Item = Rgb565>,
+/// #     {
+/// #         Ok(())
+/// #     }
+/// # }
+/// # impl DrawTarget for DemoFrame {
+/// #     type Color = Rgb565;
+/// #     type Error = Infallible;
+/// #     fn draw_iter<I>(&mut self, _pixels: I) -> Result<(), Self::Error>
+/// #     where
+/// #         I: IntoIterator<Item = embedded_graphics::Pixel<Self::Color>>,
+/// #     {
+/// #         Ok(())
+/// #     }
+/// # }
+/// # impl OriginDimensions for DemoFrame {
+/// #     fn size(&self) -> Size { Size::new(320, 240) }
+/// # }
+/// # impl PixelTarget for DemoFrame {
+/// #     fn width(&self) -> usize { 320 }
+/// #     fn height(&self) -> usize { 240 }
+/// #     fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
+/// # }
+/// # impl CydFrame for DemoFrame {
+/// #     type Error = CydInfallibleError;
+/// #     fn rectangle(&self) -> Rectangle {
+/// #         Rectangle::new(Point::zero(), Size::new(320, 240))
+/// #     }
+/// #     fn fill(&mut self, _color: Rgb565) -> &mut Self { self }
+/// #     fn write_text(&mut self, _text: &str) -> &mut Self { self }
+/// #     fn copy_from_565(
+/// #         &mut self,
+/// #         _src: &[u16],
+/// #     ) -> Result<(), device_envoy_core::cyd::CopySizeError> {
+/// #         Ok(())
+/// #     }
+/// #     fn flush(
+/// #         &mut self,
+/// #     ) -> impl core::future::Future<Output = Result<(), <Self as CydFrame>::Error>> {
+/// #         ready(Ok(()))
+/// #     }
+/// # }
+/// # impl CydTouch for DemoTouch {
+/// #     type Error = CydInfallibleError;
+/// #     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> { Ok(None) }
+/// # }
+/// # impl CydRawTouch for DemoCyd {
+/// #     type Error = CydInfallibleError;
+/// #     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
+/// #         Ok(None)
+/// #     }
+/// # }
+/// # impl FlashBlock for DemoFlashBlock {
+/// #     type Error = Infallible;
+/// #     fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
+/// #     where
+/// #         T: Serialize + for<'de> Deserialize<'de>,
+/// #     {
+/// #         Ok(None)
+/// #     }
+/// #     fn save<T>(&mut self, _value: &T) -> Result<(), Self::Error>
+/// #     where
+/// #         T: Serialize + for<'de> Deserialize<'de>,
+/// #     {
+/// #         Ok(())
+/// #     }
+/// #     fn clear(&mut self) -> Result<(), Self::Error> { Ok(()) }
+/// # }
+/// # impl Button for DemoButton {
+/// #     fn is_pressed(&mut self) -> bool { false }
+/// #     async fn wait_until_pressed(&mut self) {}
+/// # }
+/// # async fn demo() -> Result<(), device_envoy_core::cyd::EnsureCalibrationError<CydInfallibleError, Infallible>> {
+/// let mut cyd = DemoCyd;
+/// let mut calibration_flash_block = DemoFlashBlock {
+///     calibration_config: None,
+/// };
+/// let mut recalibration_button = DemoButton;
+/// let _outcome = ensure_calibration(
+///     &mut cyd,
+///     &mut calibration_flash_block,
+///     &mut recalibration_button,
+///     Some("Touch calibrated"),
+/// ).await?;
+/// # Ok(())
+/// # }
+/// ```
 pub async fn ensure_calibration<C, F, R, E>(
     cyd: &mut C,
     calibration_flash_block: &mut F,

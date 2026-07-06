@@ -31,6 +31,7 @@ pub struct RegionView<'a> {
 impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize>
     RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT>
 {
+    /// Create a zeroed buffer. Panics if `PIXEL_COUNT != WIDTH * HEIGHT`.
     #[must_use]
     pub fn new() -> Self {
         assert!(
@@ -42,16 +43,19 @@ impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize>
         }
     }
 
+    /// Initialize this buffer into `'static` storage.
     pub fn init_static(
         storage: &'static StaticCell<Self>,
     ) -> &'static mut RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT> {
         storage.init_with(Self::new)
     }
 
+    /// Fill every pixel with `color`.
     pub fn fill(&mut self, color: Rgb565) {
         self.pixels.fill(color.into_storage());
     }
 
+    /// Borrow the raw RGB565 pixels, row-major.
     #[must_use]
     pub fn raw_pixels(&self) -> &[u16; PIXEL_COUNT] {
         &self.pixels
@@ -113,6 +117,7 @@ impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> DrawTarg
 }
 
 impl<const PIXEL_COUNT: usize> PixelBuffer<PIXEL_COUNT> {
+    /// Create a zeroed, `PIXEL_COUNT`-sized pixel workspace.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -120,12 +125,14 @@ impl<const PIXEL_COUNT: usize> PixelBuffer<PIXEL_COUNT> {
         }
     }
 
+    /// Initialize this workspace into `'static` storage.
     pub fn init_static(
         storage: &'static StaticCell<Self>,
     ) -> &'static mut PixelBuffer<PIXEL_COUNT> {
         storage.init_with(Self::new)
     }
 
+    /// Borrow a `width`x`height` view out of the workspace (must fit the capacity).
     pub fn view_mut(&mut self, width: usize, height: usize) -> RegionView<'_> {
         let pixel_count = width * height;
         assert!(pixel_count <= PIXEL_COUNT, "view must fit in workspace");
@@ -161,10 +168,12 @@ impl<const PIXEL_COUNT: usize> DynPixelBuffer for PixelBuffer<PIXEL_COUNT> {
 }
 
 impl RegionView<'_> {
+    /// Fill every pixel with `color`.
     pub fn fill(&mut self, color: Rgb565) {
         self.pixels.fill(color.into_storage());
     }
 
+    /// Borrow the raw RGB565 pixels, row-major.
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.pixels
     }

@@ -17,7 +17,9 @@ type CydTouchSpiDevice = ExclusiveDevice<CydTouchSpiBus, Output<'static>, NoDela
 /// Error initializing the touch controller over SPI.
 #[derive(Clone, Copy, Debug)]
 pub enum CydTouchEspInitError {
+    /// Configuring the touch SPI peripheral failed.
     ConfigureTouchSpi,
+    /// Wrapping the touch SPI bus with its CS pin failed.
     CreateTouchSpiDevice,
 }
 
@@ -63,6 +65,8 @@ impl CydTouchEsp {
     }
 }
 
+/// Reads XPT2046 touch samples over an SPI device, using `TouchIrq` (the
+/// controller's active-low interrupt pin) to detect press/release.
 pub struct Xpt2046TouchInput<TouchIrq> {
     touch_irq: TouchIrq,
     was_pressed: bool,
@@ -72,6 +76,7 @@ impl<TouchIrq> Xpt2046TouchInput<TouchIrq>
 where
     TouchIrq: embedded_hal::digital::InputPin,
 {
+    /// Create a new touch reader watching `touch_irq`.
     pub fn new(touch_irq: TouchIrq) -> Self {
         Self {
             touch_irq,
@@ -135,6 +140,7 @@ where
         }
     }
 
+    /// Poll for the next raw touch event, if any, over `touch_spi_device`.
     pub fn read_raw_touch_event(
         &mut self,
         touch_spi_device: &mut impl embedded_hal::spi::SpiDevice<u8>,

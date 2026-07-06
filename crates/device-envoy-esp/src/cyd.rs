@@ -124,6 +124,7 @@ pub struct CydFrameEsp<'a> {
 }
 
 impl<'a> CydFrameEsp<'a> {
+    /// Borrow the frame's underlying pixel view.
     pub fn view_mut(&mut self) -> &mut RegionView<'a> {
         &mut self.view
     }
@@ -134,16 +135,19 @@ impl<'a> CydFrameEsp<'a> {
         self
     }
 
+    /// The frame's width in pixels.
     #[must_use]
     pub fn width(&self) -> usize {
         self.view.width()
     }
 
+    /// The frame's height in pixels.
     #[must_use]
     pub fn height(&self) -> usize {
         self.view.height()
     }
 
+    /// Borrow the frame's raw RGB565 pixels, row-major.
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
@@ -249,11 +253,17 @@ impl PixelTarget for CydFrameEsp<'_> {
 /// Error from a [`CydEsp`] device, frame, or touch operation.
 #[derive(Debug, derive_more::From)]
 pub enum CydError {
+    /// Reading or saving calibration to flash failed.
     Flash(crate::Error),
+    /// Initializing the display over SPI failed.
     DisplayInit(CydDisplayEspInitError),
+    /// Initializing the touch controller over SPI failed.
     TouchInit(CydTouchEspInitError),
+    /// Flushing a frame to the display failed.
     DisplayFlush(CydDisplayEspFlushError),
+    /// No touch controller is attached to this device.
     TouchUnavailable,
+    /// No calibration has been set on this device.
     CalibrationUnavailable,
 }
 
@@ -417,19 +427,23 @@ impl CydEsp {
         })
     }
 
+    /// The device's current touch calibration, if any.
     #[must_use]
     pub fn calibration_config(&self) -> Option<CalibrationConfig> {
         self.calibration_config
     }
 
+    /// Clear the device's touch calibration.
     pub fn clear_calibration(&mut self) {
         self.calibration_config = None;
     }
 
+    /// Set the device's touch calibration.
     pub fn set_calibration(&mut self, calibration_config: CalibrationConfig) {
         self.calibration_config = Some(calibration_config);
     }
 
+    /// Borrow this device as calibrated, or fail if no calibration is set.
     pub fn ensure_calibration(&mut self) -> Result<CalibratedCydEsp<'_>, CydError> {
         let calibration_config = self
             .calibration_config
@@ -441,6 +455,7 @@ impl CydEsp {
         })
     }
 
+    /// Read the next raw (uncalibrated) touch event, if any.
     pub fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, CydError> {
         let touch = self.touch.as_mut().ok_or(CydError::TouchUnavailable)?;
         Ok(touch.read_raw_touch_event())
@@ -448,10 +463,12 @@ impl CydEsp {
 }
 
 impl CalibratedCydEsp<'_> {
+    /// Clear the device's touch calibration.
     pub fn clear_calibration(&mut self) {
         self.cyd.clear_calibration();
     }
 
+    /// Read the next calibrated touch event, if any.
     pub fn read(&mut self) -> Result<Option<TouchEvent>, CydError> {
         let raw_touch_event = self
             .cyd

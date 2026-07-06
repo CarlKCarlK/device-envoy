@@ -1,10 +1,10 @@
-//! A device abstraction for the "Cheap Yellow Display" (CYD): tiled RGB565
-//! drawing plus calibrated touch. See [`Cyd`] for the primary trait and usage
-//! example; [`CydTouch`] reads calibrated [`TouchEvent`] values and
-//! [`CydRawTouch`] feeds [`ensure_calibration`].
+//! A device abstraction for the "Cheap Yellow Display" (CYD) with touch.
 //!
-//! A [`CydDisplay`] hands out per-rectangle [frames](CydFrame) that start
-//! cleared to the device background and flush in screen coordinates.
+//! CYD boards pair an ILI9341 display with an XPT2046 resistive
+//! touch controller.
+//!
+//! See [`Cyd`] for the primary trait and usage example.
+//!
 
 mod calibration;
 mod contiguous_pixels;
@@ -190,6 +190,14 @@ pub trait Cyd {
 }
 
 /// A CYD display: hands out cleared, rectangle-sized 2D frames.
+///
+/// The screen is a fixed 320x240 RGB565 panel. `CydDisplay` offers three
+/// ways to draw, trading memory for flexibility: [`CydFrame`]s that can be
+/// drawn into and flushed to any rectangle on screen; tiled frames (see
+/// [`CydDisplay::tiles`]) that cover the screen in smaller pieces when memory
+/// is tight; and contiguous-pixel methods (see
+/// [`CydDisplay::fill_contiguous`]) that stream pixels straight to the screen
+/// with virtually no buffering.
 pub trait CydDisplay {
     /// Error returned when flushing a frame fails.
     type Error: CydFlushError;
@@ -348,6 +356,9 @@ pub trait CydDisplay {
 }
 
 /// A CYD touch source for calibrated, screen-space events that apps read.
+///
+/// [`CydTouch::read`] returns a [`TouchEvent`] carrying an x-y point in the
+/// same screen coordinates as the display, or `None` when there is no touch.
 pub trait CydTouch {
     /// Error returned when reading touch fails.
     type Error: CydFlushError;

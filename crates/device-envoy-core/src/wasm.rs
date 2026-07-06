@@ -1,4 +1,4 @@
-//! A browser-simulated CYD device.
+//! Browser-simulated [`Cyd`], [`Button`], and [`FlashBlock`] implementations.
 //!
 //! Requires the `wasm` feature. [`CydWasm`] offers the device-agnostic
 //! [`Cyd`] display/touch parts against an HTML
@@ -18,7 +18,7 @@ use core::{
 };
 use std::{collections::VecDeque, rc::Rc};
 
-use super::{
+use crate::cyd::{
     CalibrationConfig, Cyd, CydDisplay, CydFrame, CydInfallibleError, CydRawTouch, CydTouch,
     Orientation, RawPoint, RawTouchEvent, TouchEvent, calibration::distort_demo_screen_to_raw,
 };
@@ -782,9 +782,9 @@ impl CydFrame for CydFrameWasm<'_> {
         CydFrameWasm::fill(self, color)
     }
 
-    fn copy_from_565(&mut self, src: &[u16]) -> Result<(), super::CopySizeError> {
+    fn copy_from_565(&mut self, src: &[u16]) -> Result<(), crate::cyd::CopySizeError> {
         if self.pixels.len() != src.len() {
-            return Err(super::CopySizeError {
+            return Err(crate::cyd::CopySizeError {
                 src_len: src.len(),
                 frame_len: self.pixels.len(),
             });

@@ -1,4 +1,4 @@
-//! An in-memory [`Cyd`] mock for host-side tests.
+//! In-memory [`Cyd`] and [`Button`] mocks for host-side tests.
 //!
 //! Requires the `host` feature. Script touch and button input into
 //! [`MemoryCyd`]/[`MemoryButton`], then assert on drawn pixels, flush counts,
@@ -6,7 +6,7 @@
 //! [`assert_framebuffer_matches_expected_png`].
 //!
 //! ```rust
-//! use device_envoy_core::cyd::memory::MemoryCyd;
+//! use device_envoy_core::memory::MemoryCyd;
 //! use device_envoy_core::cyd::{Cyd as _, CydDisplay, CydFrame};
 //! use embedded_graphics::{
 //!     mono_font::ascii::FONT_9X15_BOLD,
@@ -26,7 +26,7 @@
 //! frame.fill(Rgb565::RED);
 //! block_on(frame.flush())?;
 //! assert_eq!(memory_cyd.pixel(0, 0), Rgb565::RED);
-//! # Ok::<(), device_envoy_core::cyd::memory::MemoryCydError>(())
+//! # Ok::<(), device_envoy_core::memory::MemoryCydError>(())
 //! ```
 
 #[cfg(test)]
@@ -47,8 +47,8 @@ use std::{
 };
 
 #[cfg(test)]
-use super::calibration::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
-use super::{
+use crate::cyd::calibration::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
+use crate::cyd::{
     CopySizeError, Cyd, CydDisplay, CydFlushError, CydFrame, CydRawTouch, CydTouch, RawTouchEvent,
     RegionPixels, TouchEvent,
 };
@@ -281,7 +281,7 @@ impl MemoryCyd {
     }
 
     #[cfg(test)]
-    pub(crate) fn script_tap(&mut self, raw_point: super::RawPoint) {
+    pub(crate) fn script_tap(&mut self, raw_point: crate::cyd::RawPoint) {
         for raw_touch_event in tap_events(raw_point) {
             self.push_raw_touch_event(raw_touch_event);
         }
@@ -1079,15 +1079,15 @@ fn blit_frame_to_screen(
 
 #[cfg(test)]
 mod tests {
-    use super::super::calibration::driver::{
+    use crate::cyd::calibration::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
     };
-    use super::super::calibration::{
+    use crate::cyd::calibration::{
         CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
         calibration_verify_target_center, distort_demo_screen_to_raw,
     };
-    use super::super::{
+    use crate::cyd::{
         CalibrationConfig, Cyd, CydDisplay, CydFrame, CydRawTouch, EnsureCalibrationError,
         EnsureCalibrationOutcome, RawPoint, RawTouchEvent, RegionPixels, ensure_calibration,
     };
@@ -1819,7 +1819,7 @@ mod tests {
 }
 
 #[cfg(test)]
-fn tap_events(raw_point: super::RawPoint) -> Vec<RawTouchEvent> {
+fn tap_events(raw_point: crate::cyd::RawPoint) -> Vec<RawTouchEvent> {
     let mut raw_touch_events = Vec::new();
     raw_touch_events.push(RawTouchEvent::Down {
         raw_x: raw_point.x,

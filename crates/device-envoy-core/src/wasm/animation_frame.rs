@@ -3,7 +3,7 @@
 //! Awaiting [`next_animation_frame`] suspends until the browser is about to
 //! repaint, then resolves with the frame's `DOMHighResTimeStamp` (milliseconds).
 //! This is the WASM frame boundary that
-//! [`CydFrameWasm::flush`](crate::CydFrameWasm) awaits.
+//! [`CydFrameWasm::flush`](crate::wasm::CydFrameWasm) awaits.
 
 use std::{
     cell::{Cell, RefCell},

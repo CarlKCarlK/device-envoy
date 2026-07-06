@@ -6,17 +6,13 @@
 //! See [`Cyd`] for the primary trait and usage example.
 //!
 
-mod calibration;
+pub(crate) mod calibration;
 mod contiguous_pixels;
 mod draw_item;
-#[cfg(feature = "host")]
-pub mod memory;
 mod orientation;
 mod tga;
 pub mod tiling;
 mod touch_event;
-#[cfg(feature = "wasm")]
-pub mod wasm;
 
 pub use crate::{
     __cyd_tga565 as tga565, __cyd_tga565_magenta_mask as tga565_magenta_mask,
@@ -171,6 +167,14 @@ impl CydFlushError for CydInfallibleError {}
 /// # Ok(())
 /// # }
 /// ```
+#[cfg_attr(
+    feature = "host",
+    doc = "\nHost-side test double: [`crate::memory::MemoryCyd`]."
+)]
+#[cfg_attr(
+    feature = "wasm",
+    doc = "\nBrowser-simulated device: [`crate::wasm::CydWasm`]."
+)]
 pub trait Cyd {
     /// Error returned when flushing a frame or reading touch fails.
     type Error: CydFlushError;

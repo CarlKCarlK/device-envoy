@@ -112,6 +112,10 @@ pub enum FlashBlockError<E> {
 /// #     );
 /// # }
 /// ```
+#[cfg_attr(
+    feature = "wasm",
+    doc = "\nBrowser-simulated device: [`crate::wasm::FlashBlockWasm`]."
+)]
 pub trait FlashBlock {
     /// Error returned by block operations.
     type Error;

@@ -4,7 +4,7 @@
 //! default style (background, foreground, font) and [`CydFrameRp::write_text`]
 //! drops a line of text into a frame using that default, without repeating the
 //! [`Text`] / [`MonoTextStyle`] / [`Baseline`] boilerplate each time. Combined
-//! with per-rectangle frames (see [`super::CydDisplayTrait::frame_mut`]), this lets each status or time
+//! with per-rectangle frames (see [`super::CydDisplay::frame_mut`]), this lets each status or time
 //! message own its own area and be drawn in one call.
 //!
 //! There is intentionally exactly one convenience method. For a different font,

@@ -46,12 +46,14 @@ const DEMO_RAW_OFFSET_X: f32 = 186.0;
 const DEMO_RAW_OFFSET_Y: f32 = 149.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// A raw XPT2046 touch sample in controller coordinates.
 pub struct RawPoint {
     pub x: u16,
     pub y: u16,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// A raw XPT2046 touch event used by shared calibration flows.
 pub enum RawTouchEvent {
     Down { raw_x: u16, raw_y: u16 },
     Move { raw_x: u16, raw_y: u16 },
@@ -529,6 +531,6 @@ mod tests {
 
         let validation =
             validate_calibration_points(raw_points).expect("clean demo points should validate");
-        assert!(validation.worst_residual_pixels() <= super::MAX_RESIDUAL_PIXELS);
+        assert!(validation.worst_residual_pixels() <= MAX_RESIDUAL_PIXELS);
     }
 }

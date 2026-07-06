@@ -1,3 +1,5 @@
+//! Host-only in-memory CYD implementation for tests, screenshots, and previews.
+
 use core::{
     cell::{Cell, RefCell},
     convert::Infallible,
@@ -20,10 +22,9 @@ use super::{
     calibration::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN},
 };
 use crate::{
-    PixelTarget,
     button::{__ButtonMonitor, Button},
     flash_block::{FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block},
-    rgb888_from_rgb565,
+    pixel_target::{PixelTarget, rgb888_from_rgb565},
 };
 use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
 use embedded_graphics::{
@@ -1003,11 +1004,13 @@ mod tests {
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
     };
+    use super::super::calibration::{
+        CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
+        calibration_verify_target_center, distort_demo_screen_to_raw,
+    };
     use super::super::{
-        CalibrationConfig, CalibrationCorner, Cyd, CydDisplay, CydFrame, CydRawTouch,
-        EnsureCalibrationError, EnsureCalibrationOutcome, RawPoint, RawTouchEvent, RegionPixels,
-        VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center, calibration_verify_target_center,
-        distort_demo_screen_to_raw, ensure_calibration,
+        CalibrationConfig, Cyd, CydDisplay, CydFrame, CydRawTouch, EnsureCalibrationError,
+        EnsureCalibrationOutcome, RawPoint, RawTouchEvent, RegionPixels, ensure_calibration,
     };
     use super::{MemoryCyd, MemoryCydError, MemoryFlashBlock};
     use crate::flash_block::FlashBlock;

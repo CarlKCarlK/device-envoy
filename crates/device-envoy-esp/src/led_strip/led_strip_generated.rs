@@ -27,9 +27,9 @@ led_strip! {
 pub struct LedStripGenerated;
 
 #[cfg(doc)]
-use crate::led_strip::{Frame1d, LedStrip};
-#[cfg(doc)]
 use crate::Result;
+#[cfg(doc)]
+use crate::led_strip::{Frame1d, LedStrip};
 
 #[cfg(doc)]
 impl LedStripGenerated {

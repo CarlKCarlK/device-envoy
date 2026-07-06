@@ -1,3 +1,5 @@
+//! Generic RGB pixel-buffer helpers shared by display-style device modules.
+
 use core::convert::Infallible;
 
 use embedded_graphics::{

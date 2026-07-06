@@ -12,7 +12,6 @@ mod touch;
 
 use core::{convert::Infallible, fmt};
 
-use device_envoy_core::PixelTarget;
 use embedded_graphics::{
     Pixel,
     mono_font::MonoFont,
@@ -24,16 +23,15 @@ use static_cell::StaticCell;
 
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
-pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 use device_envoy_core::cyd::{
-    CopySizeError, Cyd, CydDisplay, CydFlushError, CydFrame, CydRawTouch, CydTouch,
+    CopySizeError, CydFlushError, CydRawTouch, PixelTarget, RegionPixels,
 };
+pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    CalibrationConfig, Cyd as CydDevice, CydDisplay as CydDisplayTrait, CydFrame as CydFrameTrait,
-    CydTouch as CydTouchTrait, Orientation, RawPoint, RawTouchEvent, RegionPixels, SCREEN_HEIGHT,
-    SCREEN_PIXELS, SCREEN_WIDTH, TouchEvent, tiling,
+    CalibrationConfig, Cyd, CydDisplay, CydFrame, CydTouch, Orientation, RawTouchEvent, TouchEvent,
+    tiling,
 };
 pub use text::DEFAULT_FONT;
 pub use touch::{CydTouchEspInitError, TOUCH_SPI_HZ};
@@ -41,6 +39,7 @@ pub use touch::{CydTouchEspInitError, TOUCH_SPI_HZ};
 use display::CydDisplayEsp;
 use touch::CydTouchEsp;
 
+/// A CYD-family ESP32 device with an ILI9341 display and optional XPT2046 touch.
 pub struct CydEsp {
     display: CydDisplayEsp,
     touch: Option<CydTouchEsp>,
@@ -84,11 +83,13 @@ impl<const PIXEL_COUNT: usize> CydStaticEsp<PIXEL_COUNT> {
     }
 }
 
+/// A [`CydEsp`] whose touch calibration is confirmed present.
 pub struct CalibratedCydEsp<'a> {
     cyd: &'a mut CydEsp,
     calibration_config: CalibrationConfig,
 }
 
+/// The display half of a [`CydEsp`], borrowed from [`Cyd::parts`].
 pub struct CydDisplayEspPart<'a> {
     display: &'a mut CydDisplayEsp,
     pixel_buffer: &'a mut dyn DynPixelBuffer,
@@ -99,11 +100,13 @@ pub struct CydDisplayEspPart<'a> {
     font: &'static MonoFont<'static>,
 }
 
+/// The touch half of a [`CydEsp`], borrowed from [`Cyd::parts`].
 pub struct CydTouchEspPart<'a> {
     touch: Option<&'a mut CydTouchEsp>,
     calibration_config: Option<CalibrationConfig>,
 }
 
+/// A single in-progress frame backed by an `Rgb565` pixel buffer.
 pub struct CydFrameEsp<'a> {
     display: &'a mut CydDisplayEsp,
     view: RegionView<'a>,
@@ -145,7 +148,7 @@ impl<'a> CydFrameEsp<'a> {
     }
 
     /// Present this frame's pixels at its rectangle's top-left (set by
-    /// [`CydDisplayTrait::frame_mut`]).
+    /// [`CydDisplay::frame_mut`]).
     pub fn flush(&mut self) -> Result<(), CydError> {
         Ok(self
             .display
@@ -242,6 +245,7 @@ impl PixelTarget for CydFrameEsp<'_> {
     }
 }
 
+/// Error from a [`CydEsp`] device, frame, or touch operation.
 #[derive(Debug, derive_more::From)]
 pub enum CydError {
     Flash(crate::Error),
@@ -282,7 +286,7 @@ impl CydEsp {
     /// initializing the buffer from app-provided [`CydStaticEsp`] storage.
     ///
     /// The app picks the size via `PIXEL_COUNT`; `CydEsp` owns the init protocol. Use
-    /// [`CydDisplayTrait::frame_mut`] or [`CydDisplayTrait::full_frame_mut`] to render into and flush the owned buffer.
+    /// [`CydDisplay::frame_mut`] or [`CydDisplay::full_frame_mut`] to render into and flush the owned buffer.
     pub fn new_display_only<const PIXEL_COUNT: usize>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
         display_spi: impl esp_hal::spi::master::Instance + 'static,

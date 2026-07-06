@@ -33,8 +33,7 @@ use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressedTo},
     cyd::{
-        CydDevice as _, CydDisplayTrait as _, CydRp, CydStaticRp, CydTouchTrait as _, DEFAULT_FONT,
-        Orientation,
+        Cyd as _, CydDisplay as _, CydRp, CydStaticRp, CydTouch as _, DEFAULT_FONT, Orientation,
     },
     flash_block::FlashBlockRp,
 };

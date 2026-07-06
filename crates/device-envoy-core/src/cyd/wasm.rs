@@ -20,13 +20,12 @@ use std::{collections::VecDeque, rc::Rc};
 
 use super::{
     CalibrationConfig, Cyd, CydDisplay, CydFrame, CydInfallibleError, CydRawTouch, CydTouch,
-    Orientation, RawPoint, RawTouchEvent, TouchEvent, distort_demo_screen_to_raw,
+    Orientation, RawPoint, RawTouchEvent, TouchEvent, calibration::distort_demo_screen_to_raw,
 };
 use crate::{
-    PixelTarget,
     button::{__ButtonMonitor, BUTTON_POLL_INTERVAL, Button},
     flash_block::{FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block},
-    rgb888_from_rgb565,
+    pixel_target::{PixelTarget, rgb888_from_rgb565},
 };
 use embassy_time::Timer;
 use embedded_graphics::pixelcolor::RgbColor;

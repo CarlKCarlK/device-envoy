@@ -1,3 +1,4 @@
+use device_envoy_core::cyd::RawTouchEvent;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
     gpio::{
@@ -6,13 +7,14 @@ use esp_hal::{
     },
     spi,
 };
-use device_envoy_core::cyd::RawTouchEvent;
 
+/// SPI clock frequency for the touch bus.
 pub const TOUCH_SPI_HZ: u32 = 2_500_000;
 
 type CydTouchSpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
 type CydTouchSpiDevice = ExclusiveDevice<CydTouchSpiBus, Output<'static>, NoDelay>;
 
+/// Error initializing the touch controller over SPI.
 #[derive(Clone, Copy, Debug)]
 pub enum CydTouchEspInitError {
     ConfigureTouchSpi,

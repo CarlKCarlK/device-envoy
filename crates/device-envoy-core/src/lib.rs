@@ -16,7 +16,7 @@ pub mod led;
 pub mod led2d;
 pub mod led4;
 pub mod led_strip;
-mod pixel_target;
+pub mod pixel_target;
 pub mod rfid;
 pub mod servo;
 #[doc(hidden)]
@@ -28,12 +28,6 @@ mod to_png;
 pub mod wifi_auto;
 
 pub use error::{Error, Result};
-pub use pixel_target::{
-    PixelTarget, PixelTargetAdapter, fill_ellipse_pixels, pixel_put, pixel_put_565,
-    rgb565_from_rgb888, rgb565_from_rgb888_components, rgb565_raw_from_rgb888_components,
-    rgb888_from_rgb565,
-};
-
 /// Used internally by other macros.
 #[doc(hidden)]
 pub use paste::paste as __paste;

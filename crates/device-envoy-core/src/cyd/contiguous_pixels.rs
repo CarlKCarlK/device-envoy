@@ -214,6 +214,7 @@ impl PreparedPrimitive {
     }
 }
 
+/// A compiled row-major RGB565 view of projected draw items inside one rectangle.
 pub struct ContiguousPixels<const PIXEL_SOURCE_COUNT: usize> {
     bounds: Rectangle,
     left: i32,

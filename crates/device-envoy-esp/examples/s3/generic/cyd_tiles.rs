@@ -27,7 +27,7 @@ use log::info;
 use device_envoy_esp::{
     Result,
     cyd::{
-        CydDevice as _, CydDisplayTrait as _, CydEsp, CydStaticEsp, DEFAULT_FONT, Orientation,
+        Cyd as _, CydDisplay as _, CydEsp, CydStaticEsp, DEFAULT_FONT, Orientation,
         tiling::TileGrid,
     },
     init_and_start,

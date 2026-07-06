@@ -1,21 +1,27 @@
 use core::convert::Infallible;
 
+use device_envoy_core::cyd::RegionPixels;
 use embedded_graphics::{
     Pixel,
     pixelcolor::{IntoStorage, Rgb565},
     prelude::{DrawTarget, OriginDimensions, Size},
 };
-use device_envoy_core::cyd::RegionPixels;
 use static_cell::StaticCell;
 
+/// A fixed `WIDTH`x`HEIGHT` RGB565 pixel buffer, usable directly as an
+/// [`embedded_graphics::draw_target::DrawTarget`].
 pub struct RegionBuffer<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> {
     pixels: [u16; PIXEL_COUNT],
 }
 
+/// A `PIXEL_COUNT`-sized RGB565 pixel workspace a [`super::CydEsp`] can own and
+/// hand out [`RegionView`]s from, sized smaller than the full screen for
+/// tiled drawing.
 pub struct PixelBuffer<const PIXEL_COUNT: usize> {
     pixels: [u16; PIXEL_COUNT],
 }
 
+/// A borrowed `width`x`height` view into a [`PixelBuffer`].
 pub struct RegionView<'a> {
     width: usize,
     height: usize,

@@ -3,8 +3,8 @@
 //! [`Image565Fixed`] (opaque) and [`Image565Mask`] (with a binary transparency mask)
 //! are decoded from an embedded `.tga` byte slice entirely in `const fn`, so the
 //! pixels live in read-only flash with no runtime allocation or parsing. Use the
-//! [`tga565!`](crate::tga565) and [`tga565_mask!`](crate::tga565_mask) macros to
-//! avoid spelling the `N`/`MASK_N` const arguments by hand.
+//! [`tga565!`](crate::cyd::tga565) and [`tga565_mask!`](crate::cyd::tga565_mask)
+//! macros to avoid spelling the `N`/`MASK_N` const arguments by hand.
 //!
 //! # Accepted subset (TGA565 v1)
 //!
@@ -20,7 +20,7 @@
 //! Anything outside this subset triggers a `const` panic, so an unsupported file
 //! fails the build rather than at runtime.
 
-use crate::rgb565_raw_from_rgb888_components;
+use crate::pixel_target::rgb565_raw_from_rgb888_components;
 use embedded_graphics::{
     Drawable, Pixel,
     pixelcolor::{Rgb565, raw::RawU16},
@@ -30,7 +30,7 @@ use embedded_graphics::{
 
 /// An opaque RGB565 image decoded from a TGA at compile time.
 ///
-/// `N` must equal `W * H`; the [`tga565!`](crate::tga565) macro computes it for
+/// `N` must equal `W * H`; the [`tga565!`](crate::cyd::tga565) macro computes it for
 /// you. 32-bit (BGRA) sources are accepted but their alpha is ignored — use
 /// [`Image565Mask`] when transparency matters.
 pub struct Image565Fixed<const W: usize, const H: usize, const N: usize> {
@@ -48,7 +48,7 @@ pub struct PlacedImage565<'a, const W: usize, const H: usize, const N: usize> {
 /// 32-bit TGA at compile time.
 ///
 /// `N` must equal `W * H` and `MASK_N` must equal `(W * H + 7) / 8`; the
-/// [`tga565_mask!`](crate::tga565_mask) macro computes both. For 24-bit sources
+/// [`tga565_mask!`](crate::cyd::tga565_mask) macro computes both. For 24-bit sources
 /// every pixel is opaque; for 32-bit sources a pixel is transparent exactly when
 /// its alpha byte is `0`.
 pub struct Image565Mask<const W: usize, const H: usize, const N: usize, const MASK_N: usize> {
@@ -156,7 +156,7 @@ impl<const W: usize, const H: usize, const N: usize> Image565Fixed<W, H, N> {
     /// Decodes `bytes` (an embedded `.tga`) into an opaque RGB565 image.
     ///
     /// Panics at compile time if `N != W * H` or if the file falls outside the
-    /// accepted subset. Prefer [`tga565!`](crate::tga565) at call sites.
+    /// accepted subset. Prefer [`tga565!`](crate::cyd::tga565) at call sites.
     pub const fn from_tga(bytes: &[u8]) -> Self {
         assert!(N == W * H, "Image565: N must equal W * H");
         let (pixel_start, bytes_per_pixel, top_origin) = parse_header(bytes, W, H);
@@ -293,7 +293,7 @@ impl<const W: usize, const H: usize, const N: usize, const MASK_N: usize>
     ///
     /// Panics at compile time if `N != W * H`, if `MASK_N != (W * H + 7) / 8`,
     /// or if the file falls outside the accepted subset. Prefer
-    /// [`tga565_mask!`](crate::tga565_mask) at call sites.
+    /// [`tga565_mask!`](crate::cyd::tga565_mask) at call sites.
     pub const fn from_tga(bytes: &[u8]) -> Self {
         assert!(N == W * H, "Image565Mask: N must equal W * H");
         assert!(
@@ -494,12 +494,15 @@ impl<const W: usize, const H: usize, const N: usize, const MASK_N: usize> Iterat
 /// ```rust,ignore
 /// // `ignore`: `include_bytes!` resolves at compile time even under `no_run`,
 /// // so this needs a real `dial.tga` on disk to build.
-/// # use device_envoy_core::{cyd::Image565Fixed, tga565};
+/// # use device_envoy_core::cyd::{Image565Fixed, tga565};
 /// const DIAL: Image565Fixed<240, 276, { 240 * 276 }> =
 ///     tga565!("../assets/dial.tga", 240, 276);
 /// ```
+// Public macro helpers must originate at crate root for downstream expansion,
+// but the user-facing names are re-exported only from `crate::cyd`.
+#[doc(hidden)]
 #[macro_export]
-macro_rules! tga565 {
+macro_rules! __cyd_tga565 {
     ($path:expr, $width:expr, $height:expr) => {
         $crate::cyd::Image565Fixed::<$width, $height, { $width * $height }>::from_tga(
             include_bytes!($path),
@@ -513,12 +516,13 @@ macro_rules! tga565 {
 /// ```rust,ignore
 /// // `ignore`: `include_bytes!` resolves at compile time even under `no_run`,
 /// // so this needs a real `hour_sign.tga` on disk to build.
-/// # use device_envoy_core::{cyd::Image565Mask, tga565_mask};
+/// # use device_envoy_core::cyd::{Image565Mask, tga565_mask};
 /// const HOUR_SIGN: Image565Mask<48, 32, { 48 * 32 }, { (48 * 32 + 7) / 8 }> =
 ///     tga565_mask!("../assets/hour_sign.tga", 48, 32);
 /// ```
+#[doc(hidden)]
 #[macro_export]
-macro_rules! tga565_mask {
+macro_rules! __cyd_tga565_mask {
     ($path:expr, $width:expr, $height:expr) => {{
         type Image = $crate::cyd::Image565Mask<
             $width,
@@ -535,12 +539,13 @@ macro_rules! tga565_mask {
 /// `N = W * H` and `MASK_N = (W * H + 7) / 8` const arguments for you.
 ///
 /// ```rust,ignore
-/// # use device_envoy_core::{cyd::Image565Mask, tga565_magenta_mask};
+/// # use device_envoy_core::cyd::{Image565Mask, tga565_magenta_mask};
 /// const HOUR_SIGN: Image565Mask<34, 46, { 34 * 46 }, { (34 * 46 + 7) / 8 }> =
 ///     tga565_magenta_mask!("../assets/hours.small.tga", 34, 46);
 /// ```
+#[doc(hidden)]
 #[macro_export]
-macro_rules! tga565_magenta_mask {
+macro_rules! __cyd_tga565_magenta_mask {
     ($path:expr, $width:expr, $height:expr) => {{
         type Image = $crate::cyd::Image565Mask<
             $width,
@@ -557,12 +562,13 @@ macro_rules! tga565_magenta_mask {
 /// `N = W * H` and `MASK_N = (W * H + 7) / 8` const arguments for you.
 ///
 /// ```rust,ignore
-/// # use device_envoy_core::{cyd::Image565Mask, tga565_white_mask};
+/// # use device_envoy_core::cyd::{Image565Mask, tga565_white_mask};
 /// const HOUR_SIGN: Image565Mask<45, 73, { 45 * 73 }, { (45 * 73 + 7) / 8 }> =
 ///     tga565_white_mask!("../assets/hours.small.tga", 45, 73);
 /// ```
+#[doc(hidden)]
 #[macro_export]
-macro_rules! tga565_white_mask {
+macro_rules! __cyd_tga565_white_mask {
     ($path:expr, $width:expr, $height:expr) => {{
         type Image = $crate::cyd::Image565Mask<
             $width,

@@ -1,4 +1,5 @@
-//! The opinionated CYD device traits.
+//! An opinionated device abstraction for the "Cheap Yellow Display" (CYD):
+//! tiled RGB565 drawing plus calibrated touch.
 //!
 //! Modeled on device-envoy's opinionated device abstractions (for example
 //! `WifiAuto`, which exposes the useful 95% path rather than raw wifi): [`Cyd`]
@@ -12,7 +13,7 @@
 //! calibrated, screen-space [`TouchEvent`]s (or `None` when there is no
 //! touch).
 
-pub mod calibration;
+mod calibration;
 mod contiguous_pixels;
 mod draw_item;
 #[cfg(feature = "host")]
@@ -24,16 +25,13 @@ mod touch_event;
 #[cfg(feature = "wasm")]
 pub mod wasm;
 
+pub use crate::{
+    __cyd_tga565 as tga565, __cyd_tga565_magenta_mask as tga565_magenta_mask,
+    __cyd_tga565_mask as tga565_mask, __cyd_tga565_white_mask as tga565_white_mask,
+};
 pub use calibration::{
-    CALIBRATION_CENTER_DOT_RADIUS, CALIBRATION_CROSS_HALF_SIZE, CALIBRATION_CROSS_MARGIN,
-    CALIBRATION_POINT_COUNT, CalibrationConfig, CalibrationCorner, CalibrationFlow,
-    CalibrationSolveError, CalibrationValidation, EnsureCalibrationError, EnsureCalibrationOutcome,
-    EnsureCalibrationSettings, MAX_RESIDUAL_PIXELS, RawPoint, RawTouchEvent,
-    VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center, calibration_corner_for_index,
-    calibration_verify_target_center, distort_demo_screen_to_raw, draw_calibration_ack_dot,
-    draw_calibration_cross, draw_calibration_instruction, draw_calibration_rejected_cross,
-    draw_calibration_verify_target, ensure_calibration, ensure_calibration_with_settings,
-    validate_calibration_points,
+    CalibrationConfig, EnsureCalibrationError, EnsureCalibrationOutcome, EnsureCalibrationSettings,
+    RawPoint, RawTouchEvent, ensure_calibration, ensure_calibration_with_settings,
 };
 pub use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
@@ -50,7 +48,7 @@ pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
 use core::{convert::Infallible, future::Future};
 
-use crate::{PixelTarget, rgb565_from_rgb888};
+use crate::pixel_target::{PixelTarget, rgb565_from_rgb888};
 use embedded_graphics::{
     pixelcolor::{Rgb565, Rgb888, raw::RawU16},
     prelude::{DrawTarget, Point, Size},
@@ -58,6 +56,7 @@ use embedded_graphics::{
 };
 use tiling::TileGrid;
 
+/// A borrowed or owned rectangular RGB565 pixel region.
 pub trait RegionPixels {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
@@ -77,6 +76,108 @@ pub enum CydInfallibleError {}
 impl CydFlushError for CydInfallibleError {}
 
 /// A complete CYD device that offers display and touch parts.
+///
+/// ```rust,no_run
+/// # use core::{convert::Infallible, future::ready};
+/// # use device_envoy_core::cyd::{
+/// #     Cyd, CydDisplay, CydFrame, CydInfallibleError, CydTouch, TouchEvent,
+/// # };
+/// # use device_envoy_core::pixel_target::PixelTarget;
+/// # use embedded_graphics::{
+/// #     pixelcolor::{Rgb565, Rgb888},
+/// #     prelude::{DrawTarget, OriginDimensions, Point, RgbColor, Size},
+/// #     primitives::Rectangle,
+/// # };
+/// # struct DemoCyd;
+/// # struct DemoDisplay;
+/// # struct DemoTouch;
+/// # struct DemoFrame;
+/// # impl Cyd for DemoCyd {
+/// #     type Error = CydInfallibleError;
+/// #     type Display<'a> = DemoDisplay;
+/// #     type Touch<'a> = DemoTouch;
+/// #     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) {
+/// #         (DemoDisplay, DemoTouch)
+/// #     }
+/// # }
+/// # impl CydDisplay for DemoDisplay {
+/// #     type Error = CydInfallibleError;
+/// #     type Frame<'a> = DemoFrame;
+/// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
+/// #     fn background(&self) -> Rgb888 { Rgb888::BLACK }
+/// #     fn foreground(&self) -> Rgb888 { Rgb888::WHITE }
+/// #     fn background_565(&self) -> Rgb565 { Rgb565::BLACK }
+/// #     fn foreground_565(&self) -> Rgb565 { Rgb565::WHITE }
+/// #     fn frame_mut_with_tile_top_left(
+/// #         &mut self,
+/// #         rectangle: Rectangle,
+/// #         _tile_top_left: Point,
+/// #     ) -> Self::Frame<'_> {
+/// #         let _ = rectangle;
+/// #         DemoFrame
+/// #     }
+/// #     fn fill_rectangle(
+/// #         &mut self,
+/// #         _rectangle: Rectangle,
+/// #         _color: Rgb565,
+/// #     ) -> Result<(), Self::Error> {
+/// #         Ok(())
+/// #     }
+/// #     fn fill_contiguous<I>(
+/// #         &mut self,
+/// #         _rectangle: Rectangle,
+/// #         _pixels: I,
+/// #     ) -> Result<(), Self::Error>
+/// #     where
+/// #         I: IntoIterator<Item = Rgb565>,
+/// #     {
+/// #         Ok(())
+/// #     }
+/// # }
+/// # impl DrawTarget for DemoFrame {
+/// #     type Color = Rgb565;
+/// #     type Error = Infallible;
+/// #     fn draw_iter<I>(&mut self, _pixels: I) -> Result<(), Self::Error>
+/// #     where
+/// #         I: IntoIterator<Item = embedded_graphics::Pixel<Self::Color>>,
+/// #     {
+/// #         Ok(())
+/// #     }
+/// # }
+/// # impl OriginDimensions for DemoFrame {
+/// #     fn size(&self) -> Size { Size::new(320, 240) }
+/// # }
+/// # impl PixelTarget for DemoFrame {
+/// #     fn width(&self) -> usize { 320 }
+/// #     fn height(&self) -> usize { 240 }
+/// #     fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
+/// # }
+/// # impl CydFrame for DemoFrame {
+/// #     type Error = CydInfallibleError;
+/// #     fn rectangle(&self) -> Rectangle {
+/// #         Rectangle::new(Point::zero(), Size::new(320, 240))
+/// #     }
+/// #     fn fill(&mut self, _color: Rgb565) -> &mut Self { self }
+/// #     fn write_text(&mut self, _text: &str) -> &mut Self { self }
+/// #     fn copy_from_565(&mut self, _src: &[u16]) -> Result<(), device_envoy_core::cyd::CopySizeError> {
+/// #         Ok(())
+/// #     }
+/// #     fn flush(&mut self) -> impl core::future::Future<Output = Result<(), <Self as CydFrame>::Error>> {
+/// #         ready(Ok(()))
+/// #     }
+/// # }
+/// # impl CydTouch for DemoTouch {
+/// #     type Error = CydInfallibleError;
+/// #     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> { Ok(None) }
+/// # }
+/// # async fn draw(cyd: &mut impl Cyd<Error = CydInfallibleError>) -> Result<(), CydInfallibleError> {
+/// let (mut display, mut touch) = cyd.parts();
+/// let mut frame = display.full_frame_mut();
+/// frame.write_text("Hello CYD").flush().await?;
+/// let _touch_event = touch.read()?;
+/// # Ok(())
+/// # }
+/// ```
 pub trait Cyd {
     /// Error returned when flushing a frame or reading touch fails.
     type Error: CydFlushError;

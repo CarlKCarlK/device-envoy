@@ -1,3 +1,4 @@
+use device_envoy_core::cyd::RegionPixels;
 use embedded_graphics::{
     draw_target::DrawTarget,
     mono_font::MonoFont,
@@ -14,7 +15,6 @@ use esp_hal::{
     },
     spi,
 };
-use device_envoy_core::cyd::RegionPixels;
 use mipidsi::{
     Builder,
     interface::SpiInterface,
@@ -26,6 +26,7 @@ use static_cell::StaticCell;
 use super::{CydFrameEsp, Orientation, buffer::DynPixelBuffer};
 
 // 80 MHz measured 10.9 draw+flush fps but produced visible display corruption.
+/// SPI clock frequency for the display bus.
 pub const DISPLAY_SPI_HZ: u32 = 60_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
@@ -34,6 +35,7 @@ type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'static>, No
 type CydDisplayInterface = SpiInterface<'static, CydDisplaySpiDevice, Output<'static>>;
 type CydDisplayDevice = mipidsi::Display<CydDisplayInterface, ILI9341Rgb565, Output<'static>>;
 
+/// Error initializing the display over SPI.
 #[derive(Clone, Copy, Debug)]
 pub enum CydDisplayEspInitError {
     ConfigureDisplaySpi,
@@ -41,6 +43,7 @@ pub enum CydDisplayEspInitError {
     InitDisplay,
 }
 
+/// Error flushing pixels to the display.
 #[derive(Clone, Copy, Debug)]
 pub enum CydDisplayEspFlushError {
     FlushFrameBuffer,

@@ -43,8 +43,7 @@ use device_envoy_esp::{
     Result,
     button::{ButtonEsp, PressedTo},
     cyd::{
-        CydDevice as _, CydDisplayTrait as _, CydEsp, CydStaticEsp, CydTouchTrait as _,
-        DEFAULT_FONT, Orientation,
+        Cyd as _, CydDisplay as _, CydEsp, CydStaticEsp, CydTouch as _, DEFAULT_FONT, Orientation,
     },
     flash_block::FlashBlockEsp,
     init_and_start,

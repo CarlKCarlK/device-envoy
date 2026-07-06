@@ -12,16 +12,14 @@ mod touch;
 
 use core::{convert::Infallible, fmt};
 
-use device_envoy_core::PixelTarget;
 use device_envoy_core::cyd::{
-    CopySizeError, Cyd, CydDisplay, CydFlushError, CydFrame, CydRawTouch, CydTouch,
+    CopySizeError, CydFlushError, CydRawTouch, PixelTarget, RegionPixels,
 };
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    CalibrationConfig, Cyd as CydDevice, CydDisplay as CydDisplayTrait, CydFrame as CydFrameTrait,
-    CydTouch as CydTouchTrait, Orientation, RawPoint, RawTouchEvent, RegionPixels, SCREEN_HEIGHT,
-    SCREEN_PIXELS, SCREEN_WIDTH, TouchEvent, tiling,
+    CalibrationConfig, Cyd, CydDisplay, CydFrame, CydTouch, Orientation, RawTouchEvent, TouchEvent,
+    tiling,
 };
 use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;
@@ -158,7 +156,7 @@ impl<'a> CydFrameRp<'a> {
     }
 
     /// Present this frame's pixels at its rectangle's top-left (set by
-    /// [`CydDisplayTrait::frame_mut`]).
+    /// [`CydDisplay::frame_mut`]).
     pub fn flush(&mut self) -> Result<(), CydError> {
         Ok(self
             .display
@@ -301,7 +299,7 @@ impl CydRp {
     /// initializing the buffer from app-provided [`CydStaticRp`] storage.
     ///
     /// The app picks the size via `PIXEL_COUNT`; `CydRp` owns the init protocol. Use
-    /// [`CydDisplayTrait::frame_mut`] or [`CydDisplayTrait::full_frame_mut`] to render into and flush the owned buffer.
+    /// [`CydDisplay::frame_mut`] or [`CydDisplay::full_frame_mut`] to render into and flush the owned buffer.
     #[expect(
         clippy::too_many_arguments,
         reason = "mirrors CydEsp's constructor shape"

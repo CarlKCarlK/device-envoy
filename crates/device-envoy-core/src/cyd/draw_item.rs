@@ -1,4 +1,6 @@
-use crate::{PixelTarget, PixelTargetAdapter, fill_ellipse_pixels, pixel_put, pixel_put_565};
+use crate::pixel_target::{
+    PixelTarget, PixelTargetAdapter, fill_ellipse_pixels, pixel_put, pixel_put_565,
+};
 use embedded_graphics::{
     Drawable,
     pixelcolor::{Rgb565, Rgb888, raw::RawU16},

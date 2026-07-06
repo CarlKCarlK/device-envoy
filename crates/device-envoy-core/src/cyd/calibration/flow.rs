@@ -220,10 +220,9 @@ fn average_samples(sum_x: u64, sum_y: u64, usable_sample_count: usize) -> RawPoi
 mod tests {
     use std::vec::Vec;
 
-    use super::super::CalibrationCorner;
     use super::{
-        CalibrationFlow, CalibrationFlowEvent, MIN_SAMPLES_PER_POINT, RawPoint, RawTouchEvent,
-        SAMPLES_DISCARDED_AFTER_DOWN,
+        CalibrationCorner, CalibrationFlow, CalibrationFlowEvent, MIN_SAMPLES_PER_POINT, RawPoint,
+        RawTouchEvent, SAMPLES_DISCARDED_AFTER_DOWN,
     };
 
     #[test]

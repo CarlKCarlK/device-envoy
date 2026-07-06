@@ -3,7 +3,7 @@
 //! Calibration lives in the CYD device layer as the single source of truth
 //! for affine solve math, corner geometry, drawing helpers, and the sans-io
 //! four-tap flow that platform binaries drive with their own touch, logging,
-//! persistence, and reset wiring. Start at [`super::ensure_calibration`].
+//! persistence, and reset wiring. Start at [`ensure_calibration`].
 
 use embedded_graphics::{
     draw_target::DrawTarget,
@@ -16,8 +16,14 @@ use embedded_graphics::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::{CalibrationFlow, RawPoint, RawTouchEvent};
+use super::RawPoint;
 use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
+
+pub use super::driver::{
+    EnsureCalibrationError, EnsureCalibrationOutcome, EnsureCalibrationSettings,
+    ensure_calibration, ensure_calibration_with_settings,
+};
+pub use super::flow::CalibrationFlow;
 
 pub const CALIBRATION_POINT_COUNT: usize = 4;
 pub const CALIBRATION_CROSS_MARGIN: i32 = 28;

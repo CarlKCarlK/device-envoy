@@ -8,11 +8,13 @@ use super::super::{Cyd, CydDisplay};
 use super::calibration::{
     CalibrationConfig, CalibrationCorner, draw_calibration_ack_dot, draw_calibration_cross,
     draw_calibration_instruction, draw_calibration_rejected_cross,
-    draw_calibration_verify_target, validate_calibration_points,
+    draw_calibration_verify_target, calibration_verify_target_center,
+    validate_calibration_points, VERIFY_HIT_RADIUS_PIXELS,
 };
 use super::flow::CalibrationFlowEvent;
 use super::flow::{ReleaseTouchCapture, ReleaseTouchCaptureEvent};
-use super::{CalibrationFlow, CydRawTouch};
+use super::flow::CalibrationFlow;
+use super::CydRawTouch;
 use crate::cyd::display::CydFrame;
 
 pub const CAPTURE_ACK_FRAME_COUNT: usize = 8;
@@ -110,11 +112,7 @@ enum CalibrationDriverState {
 /// # use core::{convert::Infallible, future::ready};
 /// # use device_envoy_core::{
 /// #     button::{Button, __ButtonMonitor},
-/// #     cyd::{
-/// #         Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent,
-/// #         calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
-/// #         ensure_calibration,
-/// #     },
+/// #     cyd::{Cyd, CydDisplay, CydTouch, display::CydFrame, touch::{CydRawTouch, TouchEvent, calibration::{CalibrationConfig, RawTouchEvent, ensure_calibration}}},
 /// #     flash_block::FlashBlock,
 /// #     pixel_target::PixelTarget,
 /// # };
@@ -241,7 +239,7 @@ enum CalibrationDriverState {
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
 /// # impl Button for DemoButton {}
-/// # async fn demo() -> Result<(), device_envoy_core::cyd::EnsureCalibrationError<Infallible, Infallible>> {
+/// # async fn demo() -> Result<(), device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<Infallible, Infallible>> {
 /// let mut cyd = DemoCyd;
 /// let mut calibration_flash_block = DemoFlashBlock {
 ///     calibration_config: None,
@@ -574,9 +572,9 @@ where
 }
 
 fn hit_verify_target(mapped_x: f32, mapped_y: f32) -> bool {
-    let verify_target_center = super::calibration_verify_target_center();
+    let verify_target_center = calibration_verify_target_center();
     let delta_x = mapped_x - verify_target_center.x as f32;
     let delta_y = mapped_y - verify_target_center.y as f32;
     delta_x * delta_x + delta_y * delta_y
-        <= super::VERIFY_HIT_RADIUS_PIXELS * super::VERIFY_HIT_RADIUS_PIXELS
+        <= VERIFY_HIT_RADIUS_PIXELS * VERIFY_HIT_RADIUS_PIXELS
 }

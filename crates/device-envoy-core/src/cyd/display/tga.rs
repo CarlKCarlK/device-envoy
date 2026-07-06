@@ -22,6 +22,7 @@
 //! fails the build rather than at runtime.
 
 use crate::pixel_target::rgb565_raw_from_rgb888_components;
+use crate::cyd::display::CydFrame;
 use embedded_graphics::{
     Drawable, Pixel,
     pixelcolor::{Rgb565, raw::RawU16},
@@ -181,10 +182,10 @@ impl<const W: usize, const H: usize, const N: usize> Image565Fixed<W, H, N> {
     }
 
     /// Bulk-copy this full-frame image into `frame` via
-    /// [`CydFrame::copy_from_565`](super::super::CydFrame::copy_from_565) — the fast path for a full-screen
+    /// [`CydFrame::copy_from_565`](crate::cyd::display::CydFrame::copy_from_565) — the fast path for a full-screen
     /// background. Much cheaper than the per-pixel [`Drawable`] path; returns
     /// [`crate::Error::CopySize`] if the image's dimensions don't match the frame's.
-    pub fn copy_to<F: super::super::CydFrame>(&self, frame: &mut F) -> crate::Result<()> {
+    pub fn copy_to<F: CydFrame>(&self, frame: &mut F) -> crate::Result<()> {
         frame.copy_from_565(&self.pixels)
     }
 

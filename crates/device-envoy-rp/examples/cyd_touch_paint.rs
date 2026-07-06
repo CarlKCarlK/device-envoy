@@ -28,7 +28,7 @@ use core::convert::Infallible;
 
 use defmt::info;
 use defmt_rtt as _;
-use device_envoy_core::cyd::ensure_calibration;
+use device_envoy_core::cyd::touch::calibration::ensure_calibration;
 use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressedTo},
@@ -107,9 +107,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     loop {
         if let Some(touch_event) = touch.read()? {
             let point = match touch_event {
-                device_envoy_rp::cyd::TouchEvent::Down { point }
-                | device_envoy_rp::cyd::TouchEvent::Move { point } => Some(point),
-                device_envoy_rp::cyd::TouchEvent::Up => None,
+                device_envoy_rp::cyd::touch::TouchEvent::Down { point }
+                | device_envoy_rp::cyd::touch::TouchEvent::Move { point } => Some(point),
+                device_envoy_rp::cyd::touch::TouchEvent::Up => None,
             };
             if let Some(point) = point {
                 Circle::with_center(Point::new(point.x, point.y), TOUCH_DOT_RADIUS * 2)

@@ -22,10 +22,10 @@ pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
 use core::convert::Infallible;
 
-use crate::pixel_target::{PixelTarget, rgb565_from_rgb888};
+use crate::pixel_target::rgb565_from_rgb888;
 use embedded_graphics::{
     pixelcolor::{Rgb565, Rgb888, raw::RawU16},
-    prelude::{DrawTarget, Point, Size},
+    prelude::{Point, Size},
     primitives::Rectangle,
 };
 

@@ -22,8 +22,8 @@ use crate::cyd::{
     Cyd, CydDisplay, CydTouch,
     display::{CydFrame, Orientation},
     touch::{
-        CalibrationConfig, CydRawTouch, RawPoint, RawTouchEvent, distort_demo_screen_to_raw,
-        TouchEvent,
+        CydRawTouch, RawPoint, RawTouchEvent, TouchEvent,
+        calibration::{CalibrationConfig, distort_demo_screen_to_raw},
     },
 };
 use crate::{

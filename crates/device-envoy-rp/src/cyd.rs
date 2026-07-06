@@ -8,14 +8,15 @@
 mod buffer;
 mod display;
 mod text;
-mod touch;
+#[path = "cyd/touch.rs"]
+mod touch_driver;
 
 use core::{convert::Infallible, fmt};
 
 use device_envoy_core::cyd::{
     CydFlushError, SCREEN_PIXELS,
     display::{CydFrame, RectanglePixels},
-    touch::{CalibrationConfig, CydRawTouch, RawTouchEvent, TouchEvent},
+    touch::{CydRawTouch, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
 use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
@@ -42,10 +43,10 @@ use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 pub use display::{CydDisplayRpFlushError, CydDisplayRpInitError, DISPLAY_SPI_HZ};
 pub use text::DEFAULT_FONT;
-pub use touch::{CydTouchRpInitError, TOUCH_SPI_HZ};
+pub use touch_driver::{CydTouchRpInitError, TOUCH_SPI_HZ};
 
 use display::CydDisplayRp;
-use touch::CydTouchRp;
+use touch_driver::CydTouchRp;
 
 /// A standalone 320x240 ILI9341 + XPT2046 module wired over SPI to a Pico.
 pub struct CydRp {

@@ -5,26 +5,12 @@
 //! [`calibration`] can read raw controller samples.
 
 pub mod calibration;
-pub mod driver;
-pub mod flow;
+mod driver;
+mod flow;
 
 use embedded_graphics::geometry::Point;
 
 use super::CydFlushError;
-
-pub use calibration::{
-    CALIBRATION_CENTER_DOT_RADIUS, CALIBRATION_CROSS_HALF_SIZE, CALIBRATION_CROSS_MARGIN,
-    CALIBRATION_POINT_COUNT, CalibrationConfig, CalibrationCorner, CalibrationFlow,
-    CalibrationValidation, MAX_RESIDUAL_PIXELS, VERIFY_HIT_RADIUS_PIXELS,
-    calibration_corner_center, calibration_corner_for_index, calibration_verify_target_center,
-    distort_demo_screen_to_raw, draw_calibration_ack_dot, draw_calibration_cross,
-    draw_calibration_instruction, draw_calibration_rejected_cross,
-    draw_calibration_verify_target, validate_calibration_points,
-};
-pub use driver::{
-    EnsureCalibrationError, EnsureCalibrationOutcome, EnsureCalibrationSettings,
-    ensure_calibration, ensure_calibration_with_settings,
-};
 
 /// A touch event in screen coordinates (already calibrated and mapped).
 #[derive(Clone, Copy, Debug)]
@@ -49,7 +35,8 @@ pub enum RawTouchEvent {
     Up,
 }
 
-/// A CYD raw-touch source implemented by devices so [`ensure_calibration`] can run.
+/// A CYD raw-touch source implemented by devices so
+/// [`calibration::ensure_calibration`] can run.
 pub trait CydRawTouch {
     /// Error returned when reading raw touch fails.
     type Error: CydFlushError;

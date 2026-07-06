@@ -8,7 +8,8 @@
 mod buffer;
 mod display;
 mod text;
-mod touch;
+#[path = "cyd/touch.rs"]
+mod touch_driver;
 
 use core::{convert::Infallible, fmt};
 
@@ -26,7 +27,7 @@ pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 use device_envoy_core::cyd::{
     CydFlushError, SCREEN_PIXELS,
     display::{CydFrame, RectanglePixels},
-    touch::{CalibrationConfig, CydRawTouch, RawTouchEvent, TouchEvent},
+    touch::{CydRawTouch, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
 use device_envoy_core::pixel_target::PixelTarget;
 pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
@@ -38,10 +39,10 @@ pub use device_envoy_core::cyd::{
     touch,
 };
 pub use text::DEFAULT_FONT;
-pub use touch::{CydTouchEspInitError, TOUCH_SPI_HZ};
+pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
 
 use display::CydDisplayEsp;
-use touch::CydTouchEsp;
+use touch_driver::CydTouchEsp;
 
 /// A CYD-family ESP32 device with an ILI9341 display and optional XPT2046 touch.
 pub struct CydEsp {

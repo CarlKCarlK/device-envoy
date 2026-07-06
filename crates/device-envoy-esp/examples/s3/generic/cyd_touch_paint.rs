@@ -38,7 +38,7 @@ use embedded_graphics::{
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_core::cyd::ensure_calibration;
+use device_envoy_core::cyd::touch::calibration::ensure_calibration;
 use device_envoy_esp::{
     Result,
     button::{ButtonEsp, PressedTo},
@@ -112,9 +112,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     loop {
         if let Some(touch_event) = touch.read()? {
             let point = match touch_event {
-                device_envoy_esp::cyd::TouchEvent::Down { point }
-                | device_envoy_esp::cyd::TouchEvent::Move { point } => Some(point),
-                device_envoy_esp::cyd::TouchEvent::Up => None,
+                device_envoy_esp::cyd::touch::TouchEvent::Down { point }
+                | device_envoy_esp::cyd::touch::TouchEvent::Move { point } => Some(point),
+                device_envoy_esp::cyd::touch::TouchEvent::Up => None,
             };
             if let Some(point) = point {
                 Circle::with_center(Point::new(point.x, point.y), TOUCH_DOT_RADIUS * 2)

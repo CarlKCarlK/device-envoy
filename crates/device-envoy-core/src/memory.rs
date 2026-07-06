@@ -1086,15 +1086,15 @@ mod tests {
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
     };
-    use crate::cyd::touch::{
-        CalibrationConfig, CalibrationCorner, CydRawTouch, RawPoint, RawTouchEvent,
-        VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center, calibration_verify_target_center,
-        distort_demo_screen_to_raw,
-    };
+    use crate::cyd::touch::{CydRawTouch, RawPoint, RawTouchEvent};
     use crate::cyd::{
         Cyd, CydDisplay,
         display::{CydFrame, RectanglePixels},
-        touch::{EnsureCalibrationError, EnsureCalibrationOutcome, ensure_calibration},
+        touch::calibration::{
+            CalibrationConfig, CalibrationCorner, EnsureCalibrationError,
+            EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
+            calibration_verify_target_center, distort_demo_screen_to_raw, ensure_calibration,
+        },
     };
     use crate::flash_block::FlashBlock;
     use embedded_graphics::{

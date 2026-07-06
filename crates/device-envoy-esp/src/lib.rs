@@ -312,11 +312,45 @@ pub enum Error {
     LedcChannel(esp_hal::ledc::channel::Error),
     #[cfg(all(target_os = "none", esp_has_wifi))]
     Wifi(esp_radio::wifi::WifiError),
+    #[cfg(target_os = "none")]
+    CydDisplayInit(cyd::CydDisplayEspInitError),
+    #[cfg(target_os = "none")]
+    CydTouchInit(cyd::CydTouchEspInitError),
+    #[cfg(target_os = "none")]
+    CydDisplayFlush(cyd::CydDisplayEspFlushError),
+    #[cfg(target_os = "none")]
+    CydTouchUnavailable,
+    #[cfg(target_os = "none")]
+    CydCalibrationUnavailable,
 }
 
 impl From<embassy_executor::SpawnError> for Error {
     fn from(e: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(e)
+    }
+}
+
+#[cfg(target_os = "none")]
+impl From<cyd::CydError> for Error {
+    fn from(error: cyd::CydError) -> Self {
+        match error {
+            cyd::CydError::Flash(error) => error,
+            cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
+            cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
+            cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            cyd::CydError::TouchUnavailable => Self::CydTouchUnavailable,
+            cyd::CydError::CalibrationUnavailable => Self::CydCalibrationUnavailable,
+        }
+    }
+}
+
+#[cfg(target_os = "none")]
+impl From<device_envoy_core::cyd::EnsureCalibrationError<cyd::CydError, Error>> for Error {
+    fn from(error: device_envoy_core::cyd::EnsureCalibrationError<cyd::CydError, Error>) -> Self {
+        match error {
+            device_envoy_core::cyd::EnsureCalibrationError::Device(error) => Self::from(error),
+            device_envoy_core::cyd::EnsureCalibrationError::Flash(error) => error,
+        }
     }
 }
 

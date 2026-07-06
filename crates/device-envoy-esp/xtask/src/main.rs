@@ -183,6 +183,11 @@ const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
         &[Capability::WIFI, Capability::LARGE_STACK],
     ),
     ("conway", &[Capability::RMT]),
+    ("cyd_tiles", &[Capability::DUAL_SPI]),
+    (
+        "cyd_touch_paint",
+        &[Capability::DUAL_SPI, Capability::LARGE_STACK],
+    ),
     ("flash_block_example1", &[]),
     ("ir", &[Capability::RMT]),
     ("ir_example1", &[Capability::RMT]),

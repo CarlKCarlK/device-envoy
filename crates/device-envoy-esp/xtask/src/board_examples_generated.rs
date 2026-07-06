@@ -23,6 +23,7 @@ enum BoardTemplateRequirement {
     Audio,
     MinRmt(u8),
     MinSpi(u8),
+    LargeStack,
 }
 
 struct BoardTemplateSpec {
@@ -70,6 +71,18 @@ const BOARD_TEMPLATE_CONTEXT_KEYS: &[&str] = &[
     "bit_clock_pin",
     "word_select_pin",
     "dma_identifier",
+    "cyd_display_sck_pin",
+    "cyd_display_mosi_pin",
+    "cyd_display_miso_pin",
+    "cyd_display_cs_pin",
+    "cyd_display_dc_pin",
+    "cyd_display_rst_pin",
+    "cyd_display_backlight_pin",
+    "cyd_touch_sck_pin",
+    "cyd_touch_mosi_pin",
+    "cyd_touch_miso_pin",
+    "cyd_touch_cs_pin",
+    "cyd_touch_irq_pin",
 ];
 
 fn board_template_example_name(
@@ -175,9 +188,11 @@ fn parse_board_template_spec(template_source: &str) -> Result<BoardTemplateSpec,
             BoardTemplateRequirement::MinRmt(count.parse()?)
         } else if let Some(count) = token.strip_prefix("min_spi=") {
             BoardTemplateRequirement::MinSpi(count.parse()?)
+        } else if token == "large_stack" {
+            BoardTemplateRequirement::LargeStack
         } else {
             return Err(format!(
-                "invalid @board-example requirement `{token}` (expected `wifi`, `audio`, `min_rmt=<n>`, or `min_spi=<n>`)"
+                "invalid @board-example requirement `{token}` (expected `wifi`, `audio`, `min_rmt=<n>`, `min_spi=<n>`, or `large_stack`)"
             )
             .into());
         };
@@ -217,6 +232,7 @@ fn board_requirement_supported(
         BoardTemplateRequirement::Audio => board_profile.audio_wiring.is_some(),
         BoardTemplateRequirement::MinRmt(count) => board_profile.rmt_count >= count,
         BoardTemplateRequirement::MinSpi(count) => board_profile.spi_count >= count,
+        BoardTemplateRequirement::LargeStack => !board_profile.stack_constrained,
     }
 }
 
@@ -274,6 +290,10 @@ fn board_template_placeholder_reason(
                     resource_word
                 )
             }
+            BoardTemplateRequirement::LargeStack => format!(
+                "this example needs a large RAM/linker budget, and {} is stack-constrained",
+                board_profile.chip_name()
+            ),
         });
     }
     None
@@ -452,6 +472,18 @@ fn generate_board_template_files(
                         bit_clock_pin => audio_wiring.bit_clock_pin_num,
                         word_select_pin => audio_wiring.word_select_pin_num,
                         dma_identifier => audio_wiring.dma_identifier,
+                        cyd_display_sck_pin => board_profile.cyd_display_wiring.sck_pin_num,
+                        cyd_display_mosi_pin => board_profile.cyd_display_wiring.mosi_pin_num,
+                        cyd_display_miso_pin => board_profile.cyd_display_wiring.miso_pin_num,
+                        cyd_display_cs_pin => board_profile.cyd_display_wiring.cs_pin_num,
+                        cyd_display_dc_pin => board_profile.cyd_display_wiring.dc_pin_num,
+                        cyd_display_rst_pin => board_profile.cyd_display_wiring.rst_pin_num,
+                        cyd_display_backlight_pin => board_profile.cyd_display_wiring.backlight_pin_num,
+                        cyd_touch_sck_pin => board_profile.cyd_touch_wiring.sck_pin_num,
+                        cyd_touch_mosi_pin => board_profile.cyd_touch_wiring.mosi_pin_num,
+                        cyd_touch_miso_pin => board_profile.cyd_touch_wiring.miso_pin_num,
+                        cyd_touch_cs_pin => board_profile.cyd_touch_wiring.cs_pin_num,
+                        cyd_touch_irq_pin => board_profile.cyd_touch_wiring.irq_pin_num,
                     })?
             } else {
                 strip_board_template_header(&template_source)

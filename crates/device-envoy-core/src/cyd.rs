@@ -1,16 +1,6 @@
 //! A device abstraction for the "Cheap Yellow Display" (CYD) with touch.
 //!
-//! CYD boards pair an ILI9341 display with an XPT2046 resistive touch
-//! controller. The root keeps the device model itself:
-//!
-//! - [`Cyd`] is the whole device
-//! - [`CydDisplay`] is the display half borrowed from [`Cyd::parts`]
-//! - [`CydTouch`] is the touch half borrowed from [`Cyd::parts`]
-//! - [`display`] holds display-only support types
-//! - [`touch`] holds touch-only support types
-//!
-//! See [`Cyd`] for the primary trait and usage example.
-//!
+//! See the [`Cyd`] trait for the overview and a usage example.
 
 pub mod display;
 pub mod touch;
@@ -33,114 +23,56 @@ use embedded_graphics::{
 
 /// A complete CYD device that offers display and touch parts.
 ///
-/// ```rust,no_run
-/// # use core::{convert::Infallible, future::ready};
-/// # use device_envoy_core::cyd::{Cyd, CydDisplay, CydTouch};
-/// # use device_envoy_core::cyd::display::CydFrame;
-/// # use device_envoy_core::cyd::touch::TouchEvent;
-/// # use device_envoy_core::pixel_target::PixelTarget;
-/// # use embedded_graphics::{
-/// #     pixelcolor::{Rgb565, Rgb888},
-/// #     prelude::{DrawTarget, OriginDimensions, Point, RgbColor, Size},
-/// #     primitives::Rectangle,
-/// # };
-/// # struct DemoCyd;
-/// # struct DemoDisplay;
-/// # struct DemoTouch;
-/// # struct DemoFrame;
-/// # impl Cyd for DemoCyd {
-/// #     type Error = Infallible;
-/// #     type Display<'a> = DemoDisplay;
-/// #     type Touch<'a> = DemoTouch;
-/// #     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) {
-/// #         (DemoDisplay, DemoTouch)
-/// #     }
-/// # }
-/// # impl CydDisplay for DemoDisplay {
-/// #     type Error = Infallible;
-/// #     type Frame<'a> = DemoFrame;
-/// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
-/// #     fn background(&self) -> Rgb888 { Rgb888::BLACK }
-/// #     fn foreground(&self) -> Rgb888 { Rgb888::WHITE }
-/// #     fn background_565(&self) -> Rgb565 { Rgb565::BLACK }
-/// #     fn foreground_565(&self) -> Rgb565 { Rgb565::WHITE }
-/// #     fn frame_mut_with_tile_top_left(
-/// #         &mut self,
-/// #         rectangle: Rectangle,
-/// #         _tile_top_left: Point,
-/// #     ) -> Self::Frame<'_> {
-/// #         let _ = rectangle;
-/// #         DemoFrame
-/// #     }
-/// #     fn fill_rectangle(
-/// #         &mut self,
-/// #         _rectangle: Rectangle,
-/// #         _color: Rgb565,
-/// #     ) -> Result<(), Self::Error> {
-/// #         Ok(())
-/// #     }
-/// #     fn fill_contiguous<I>(
-/// #         &mut self,
-/// #         _rectangle: Rectangle,
-/// #         _pixels: I,
-/// #     ) -> Result<(), Self::Error>
-/// #     where
-/// #         I: IntoIterator<Item = Rgb565>,
-/// #     {
-/// #         Ok(())
-/// #     }
-/// # }
-/// # impl DrawTarget for DemoFrame {
-/// #     type Color = Rgb565;
-/// #     type Error = Infallible;
-/// #     fn draw_iter<I>(&mut self, _pixels: I) -> Result<(), Self::Error>
-/// #     where
-/// #         I: IntoIterator<Item = embedded_graphics::Pixel<Self::Color>>,
-/// #     {
-/// #         Ok(())
-/// #     }
-/// # }
-/// # impl OriginDimensions for DemoFrame {
-/// #     fn size(&self) -> Size { Size::new(320, 240) }
-/// # }
-/// # impl PixelTarget for DemoFrame {
-/// #     fn width(&self) -> usize { 320 }
-/// #     fn height(&self) -> usize { 240 }
-/// #     fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
-/// # }
-/// # impl CydFrame for DemoFrame {
-/// #     type Error = Infallible;
-/// #     fn rectangle(&self) -> Rectangle {
-/// #         Rectangle::new(Point::zero(), Size::new(320, 240))
-/// #     }
-/// #     fn fill(&mut self, _color: Rgb565) -> &mut Self { self }
-/// #     fn write_text(&mut self, _text: &str) -> &mut Self { self }
-/// #     fn copy_from_565(&mut self, _src: &[u16]) -> device_envoy_core::Result<()> {
-/// #         Ok(())
-/// #     }
-/// #     fn flush(&mut self) -> impl core::future::Future<Output = Result<(), <Self as CydFrame>::Error>> {
-/// #         ready(Ok(()))
-/// #     }
-/// # }
-/// # impl CydTouch for DemoTouch {
-/// #     type Error = Infallible;
-/// #     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> { Ok(None) }
-/// # }
-/// # async fn draw(cyd: &mut impl Cyd<Error = Infallible>) -> Result<(), Infallible> {
-/// let (mut display, mut touch) = cyd.parts();
-/// let mut frame = display.full_frame_mut();
-/// frame.write_text("Hello CYD").flush().await?;
-/// let _touch_event = touch.read()?;
-/// # Ok(())
-/// # }
-/// ```
+/// CYD boards pair an ILI9341 display with an XPT2046 resistive touch
+/// controller. [`Cyd`] is the whole device: [`Cyd::parts`] borrows a
+/// [`CydDisplay`] half for drawing and a [`CydTouch`] half for calibrated touch
+/// input.
+///
+/// The [`display`] and [`touch`] submodules hold support types used with those
+/// halves.
 #[cfg_attr(
     feature = "host",
-    doc = "\nHost-side test double: [`MemoryCyd`](crate::memory::MemoryCyd)."
-)]
-#[cfg_attr(
-    feature = "wasm",
-    doc = "\nBrowser-simulated device: [`CydWasm`](crate::wasm::CydWasm)."
+    doc = r#"
+
+Implementations include the in-memory mock [`CydMemory`](crate::memory::CydMemory), the browser-simulated [`CydWasm`](crate::wasm::CydWasm), and platform crates for ESP32 and Pico boards.
+
+```rust
+use device_envoy_core::cyd::{
+    Cyd as _, CydDisplay, CydTouch,
+    display::{CydFrame, DrawItem},
+    touch::TouchEvent,
+};
+use embedded_graphics::pixelcolor::Rgb888;
+# use device_envoy_core::memory::CydMemory;
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     pixelcolor::Rgb565,
+#     prelude::{Point, RgbColor, Size},
+# };
+# futures_executor::block_on(async {
+# let mut cyd = CydMemory::new(Size::new(320, 240), Rgb888::BLACK, Rgb888::WHITE, &FONT_9X15_BOLD);
+# cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
+let (mut display, mut touch) = cyd.parts();
+// Create a pixel-buffer covering the whole screen that starts filled with background color.
+let mut frame = display.full_frame_mut();
+
+frame.write_text("Hello CYD");
+// An app would usually run this in a loop: read touch, draw, flush, repeat.
+if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch.read()? {
+    DrawItem::Circle {
+        center: (point.x as f32, point.y as f32),
+        pixel_radius: 24.0,
+        color: Rgb888::RED,
+    }
+    .draw(&mut frame);
+}
+frame.flush().await?;
+# assert_eq!(cyd.pixel(160, 120), Rgb565::RED);
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# })?;
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
 )]
 pub trait Cyd {
     /// Error returned when flushing a frame or reading touch fails.
@@ -162,7 +94,7 @@ pub trait Cyd {
     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>);
 }
 
-/// A CYD display: hands out cleared, rectangle-sized 2D frames.
+/// A CYD display.
 ///
 /// The screen is a fixed 320x240 RGB565 panel. `CydDisplay` offers three
 /// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
@@ -382,7 +314,7 @@ mod tests {
 
     // TODO The shared `linkage-blaze-cyd-memory` fake cannot replace this unit-test
     // double directly because a cyd-core <-> cyd-memory dev-dependency cycle gives
-    // cyd-core's unit tests a second trait instance, so `MemoryCyd` no longer
+    // cyd-core's unit tests a second trait instance, so `CydMemory` no longer
     // implements *this* module's `Cyd`/`CydDisplay` traits. Keep this tiny local
     // test double until the trait crate/test layout is refactored to break that cycle.
     struct TestCyd;

@@ -112,7 +112,7 @@ enum CalibrationDriverState {
 /// # use core::{convert::Infallible, future::ready};
 /// # use device_envoy_core::{
 /// #     button::{Button, __ButtonMonitor},
-/// #     cyd::{Cyd, CydDisplay, CydTouch, display::CydFrame, touch::{CydRawTouch, TouchEvent, calibration::{CalibrationConfig, RawTouchEvent, ensure_calibration}}},
+/// #     cyd::{Cyd, CydDisplay, CydTouch, display::CydFrame, touch::{CydRawTouch, RawTouchEvent, TouchEvent, calibration::{CalibrationConfig, ensure_calibration}}},
 /// #     flash_block::FlashBlock,
 /// #     pixel_target::PixelTarget,
 /// # };

@@ -1,7 +1,29 @@
 //! Shared error and result types for `device-envoy-core`.
 
+use core::convert::Infallible;
+
 /// A specialized `Result` where the error is this crate's [`Error`] type.
 pub type Result<T, E = Error> = core::result::Result<T, E>;
+
+/// Extension for unwrapping a `Result` whose error type is uninhabited.
+pub trait UnwrapNever {
+    /// Success value produced by the result.
+    type Output;
+
+    /// Unwrap a `Result<T, Infallible>` without a possible panic path.
+    fn unwrap_never(self) -> Self::Output;
+}
+
+impl<T> UnwrapNever for core::result::Result<T, Infallible> {
+    type Output = T;
+
+    fn unwrap_never(self) -> T {
+        match self {
+            Ok(value) => value,
+            Err(never) => match never {},
+        }
+    }
+}
 
 /// Unified error type for `device-envoy-core`.
 #[derive(Debug)]

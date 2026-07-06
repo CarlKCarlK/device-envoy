@@ -1,12 +1,12 @@
 //! In-memory [`Cyd`] and [`Button`] mocks for host-side tests.
 //!
 //! Requires the `host` feature. Script touch and button input into
-//! [`MemoryCyd`]/[`MemoryButton`], then assert on drawn pixels, flush counts,
+//! [`CydMemory`]/[`ButtonMemory`], then assert on drawn pixels, flush counts,
 //! or compare against golden-image PNGs with
 //! [`assert_framebuffer_matches_expected_png`].
 //!
 //! ```rust
-//! use device_envoy_core::memory::MemoryCyd;
+//! use device_envoy_core::memory::CydMemory;
 //! use device_envoy_core::cyd::{Cyd as _, CydDisplay};
 //! use device_envoy_core::cyd::display::CydFrame;
 //! use embedded_graphics::{
@@ -16,18 +16,18 @@
 //! };
 //! use futures_executor::block_on;
 //!
-//! let mut memory_cyd = MemoryCyd::new(
+//! let mut cyd_memory = CydMemory::new(
 //!     Size::new(8, 8),
 //!     Rgb888::BLACK,
 //!     Rgb888::WHITE,
 //!     &FONT_9X15_BOLD,
 //! );
-//! let (mut display, _touch) = memory_cyd.parts();
+//! let (mut display, _touch) = cyd_memory.parts();
 //! let mut frame = display.full_frame_mut();
 //! frame.fill(Rgb565::RED);
 //! block_on(frame.flush())?;
-//! assert_eq!(memory_cyd.pixel(0, 0), Rgb565::RED);
-//! # Ok::<(), device_envoy_core::memory::MemoryCydError>(())
+//! assert_eq!(cyd_memory.pixel(0, 0), Rgb565::RED);
+//! # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 //! ```
 
 #[cfg(test)]
@@ -59,6 +59,7 @@ use crate::flash_block::{
     FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block,
 };
 use crate::{
+    UnwrapNever,
     button::{__ButtonMonitor, Button},
     pixel_target::{PixelTarget, rgb888_from_rgb565},
 };
@@ -87,11 +88,11 @@ const TGA_HEADER_SIZE: usize = 18;
 const TGA_PIXEL_BYTES: usize = 3;
 
 #[derive(Clone)]
-pub(crate) struct MemoryFrameClock {
+pub(crate) struct FrameClockMemory {
     frame_index: Rc<Cell<usize>>,
 }
 
-impl MemoryFrameClock {
+impl FrameClockMemory {
     #[must_use]
     pub fn frame_index(&self) -> usize {
         self.frame_index.get()
@@ -100,11 +101,11 @@ impl MemoryFrameClock {
 
 /// Error from the in-memory CYD test surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MemoryCydError {
+pub enum CydMemoryError {
     OutOfFrames,
 }
 /// In-memory CYD device for host-side tests and screenshots.
-pub struct MemoryCyd {
+pub struct CydMemory {
     size: Size,
     background: Rgb888,
     foreground: Rgb888,
@@ -117,11 +118,11 @@ pub struct MemoryCyd {
     frame_budget: usize,
     raw_touch_script: RefCell<FrameScript<RawTouchEvent>>,
     touch_script: RefCell<FrameScript<TouchEvent>>,
-    frame_clock: MemoryFrameClock,
+    frame_clock: FrameClockMemory,
 }
 
-/// Display half of [`MemoryCyd`], borrowed from [`Cyd::parts`].
-pub struct MemoryDisplayPart<'a> {
+/// Display half of [`CydMemory`], borrowed from [`Cyd::parts`].
+pub struct CydDisplayMemoryPart<'a> {
     size: Size,
     background: Rgb888,
     foreground: Rgb888,
@@ -134,23 +135,23 @@ pub struct MemoryDisplayPart<'a> {
     frame_budget: usize,
     raw_touch_script: &'a RefCell<FrameScript<RawTouchEvent>>,
     touch_script: &'a RefCell<FrameScript<TouchEvent>>,
-    frame_clock: MemoryFrameClock,
+    frame_clock: FrameClockMemory,
 }
 
-/// Touch half of [`MemoryCyd`], borrowed from [`Cyd::parts`].
-pub struct MemoryTouchPart<'a> {
+/// Touch half of [`CydMemory`], borrowed from [`Cyd::parts`].
+pub struct CydTouchMemoryPart<'a> {
     touch_script: &'a RefCell<FrameScript<TouchEvent>>,
 }
 
 /// In-progress in-memory frame that flushes into a host framebuffer.
-pub struct MemoryFrame<'a> {
+pub struct CydFrameMemory<'a> {
     framebuffer: &'a mut Vec<u16>,
     flush_count: &'a mut usize,
     last_flush_rectangle: &'a mut Option<Rectangle>,
     frame_budget: usize,
     raw_touch_script: &'a RefCell<FrameScript<RawTouchEvent>>,
     touch_script: &'a RefCell<FrameScript<TouchEvent>>,
-    frame_clock: MemoryFrameClock,
+    frame_clock: FrameClockMemory,
     screen_size: Size,
     rectangle: Rectangle,
     tile_top_left: Point,
@@ -166,24 +167,24 @@ struct FrameScript<Event> {
 }
 
 #[cfg(test)]
-pub(crate) struct MemoryFlashBlock {
-    memory_flash_device: MemoryFlashDevice,
+pub(crate) struct FlashBlockMemory {
+    flash_device_memory: FlashDeviceMemory,
     save_count: usize,
 }
 
 #[cfg(test)]
-struct MemoryFlashDevice {
+struct FlashDeviceMemory {
     bytes: [u8; FLASH_BLOCK_SIZE],
 }
 
-/// Host-side button test double returned by [`MemoryCyd::memory_button`].
-pub struct MemoryButton {
+/// Host-side button test double returned by [`CydMemory::button_memory`].
+pub struct ButtonMemory {
     pressed: bool,
     pressed_frames: Vec<(usize, bool)>,
-    frame_clock: Option<MemoryFrameClock>,
+    frame_clock: Option<FrameClockMemory>,
 }
 
-impl MemoryCyd {
+impl CydMemory {
     /// Construct an empty in-memory CYD surface with the given screen style.
     #[must_use]
     pub fn new(
@@ -207,26 +208,26 @@ impl MemoryCyd {
             frame_budget: DEFAULT_FRAME_BUDGET,
             raw_touch_script: RefCell::new(FrameScript::default()),
             touch_script: RefCell::new(FrameScript::default()),
-            frame_clock: MemoryFrameClock {
+            frame_clock: FrameClockMemory {
                 frame_index: Rc::new(Cell::new(0)),
             },
         }
     }
 
-    /// Limit how many frames may flush before [`MemoryCydError::OutOfFrames`].
+    /// Limit how many frames may flush before [`CydMemoryError::OutOfFrames`].
     pub fn set_frame_budget(&mut self, frame_budget: usize) {
         self.frame_budget = frame_budget;
     }
 
     #[must_use]
-    pub(crate) fn frame_clock(&self) -> MemoryFrameClock {
+    pub(crate) fn frame_clock(&self) -> FrameClockMemory {
         self.frame_clock.clone()
     }
 
     /// Create a host-side button tied to this device's frame clock.
     #[must_use]
-    pub fn memory_button(&self) -> MemoryButton {
-        MemoryButton::with_frame_clock(self.frame_clock())
+    pub fn button_memory(&self) -> ButtonMemory {
+        ButtonMemory::with_frame_clock(self.frame_clock())
     }
 
     #[cfg(test)]
@@ -375,7 +376,7 @@ impl MemoryCyd {
     }
 }
 
-/// Golden-image assertion for a rendered [`MemoryCyd`] framebuffer.
+/// Golden-image assertion for a rendered [`CydMemory`] framebuffer.
 ///
 /// `manifest_dir` is normally `env!("CARGO_MANIFEST_DIR")` from the calling
 /// crate, so the expected PNG lives at `<crate>/tests/assets/<relative_filename>`.
@@ -385,7 +386,7 @@ impl MemoryCyd {
 /// freshly rendered PNG to an arbitrary path while still performing the normal
 /// golden-image comparison.
 pub fn assert_framebuffer_matches_expected_png(
-    memory_cyd: &MemoryCyd,
+    cyd_memory: &CydMemory,
     manifest_dir: &str,
     relative_filename: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -396,7 +397,7 @@ pub fn assert_framebuffer_matches_expected_png(
     // path, on top of (not instead of) the normal golden-image comparison
     // below, so a preview build still catches a real rendering regression.
     if let Some(preview_output_path) = std::env::var_os("LINKAGE_BLAZE_PREVIEW_OUTPUT_PATH") {
-        memory_cyd.write_framebuffer_png(preview_output_path)?;
+        cyd_memory.write_framebuffer_png(preview_output_path)?;
     }
 
     let mut expected_path = PathBuf::from(manifest_dir);
@@ -405,7 +406,7 @@ pub fn assert_framebuffer_matches_expected_png(
     expected_path.push(relative_filename);
 
     if std::env::var_os("LINKAGE_BLAZE_UPDATE_CYD_PNGS").is_some() {
-        memory_cyd.write_framebuffer_png(&expected_path)?;
+        cyd_memory.write_framebuffer_png(&expected_path)?;
         std::println!("updated PNG at {}", expected_path.display());
         return Ok(());
     }
@@ -427,7 +428,7 @@ pub fn assert_framebuffer_matches_expected_png(
         relative_filename.replace('/', "_"),
         process::id()
     ));
-    memory_cyd.write_framebuffer_png(&temp_path)?;
+    cyd_memory.write_framebuffer_png(&temp_path)?;
 
     let expected_bytes = fs::read(&expected_path)?;
     let actual_bytes = fs::read(&temp_path)?;
@@ -447,7 +448,7 @@ pub fn assert_framebuffer_matches_expected_png(
     Ok(())
 }
 
-impl Default for MemoryCyd {
+impl Default for CydMemory {
     fn default() -> Self {
         Self::new(
             Size::new(320, 240),
@@ -458,15 +459,15 @@ impl Default for MemoryCyd {
     }
 }
 
-impl Cyd for MemoryCyd {
-    type Error = MemoryCydError;
-    type Display<'a> = MemoryDisplayPart<'a>;
-    type Touch<'a> = MemoryTouchPart<'a>;
+impl Cyd for CydMemory {
+    type Error = CydMemoryError;
+    type Display<'a> = CydDisplayMemoryPart<'a>;
+    type Touch<'a> = CydTouchMemoryPart<'a>;
 
     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) {
         let frame_clock = self.frame_clock();
         (
-            MemoryDisplayPart {
+            CydDisplayMemoryPart {
                 size: self.size,
                 background: self.background,
                 foreground: self.foreground,
@@ -481,25 +482,25 @@ impl Cyd for MemoryCyd {
                 touch_script: &self.touch_script,
                 frame_clock,
             },
-            MemoryTouchPart {
+            CydTouchMemoryPart {
                 touch_script: &self.touch_script,
             },
         )
     }
 }
 
-impl CydRawTouch for MemoryCyd {
-    type Error = MemoryCydError;
+impl CydRawTouch for CydMemory {
+    type Error = CydMemoryError;
 
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
         Ok(self.raw_touch_script.borrow_mut().pop_current_frame_event())
     }
 }
 
-impl CydDisplay for MemoryDisplayPart<'_> {
-    type Error = MemoryCydError;
+impl CydDisplay for CydDisplayMemoryPart<'_> {
+    type Error = CydMemoryError;
     type Frame<'a>
-        = MemoryFrame<'a>
+        = CydFrameMemory<'a>
     where
         Self: 'a;
 
@@ -529,7 +530,7 @@ impl CydDisplay for MemoryDisplayPart<'_> {
         tile_top_left: Point,
     ) -> Self::Frame<'_> {
         let pixel_count = rectangle.size.width as usize * rectangle.size.height as usize;
-        MemoryFrame {
+        CydFrameMemory {
             framebuffer: self.framebuffer,
             flush_count: self.flush_count,
             last_flush_rectangle: self.last_flush_rectangle,
@@ -565,15 +566,15 @@ impl CydDisplay for MemoryDisplayPart<'_> {
     }
 }
 
-impl CydTouch for MemoryTouchPart<'_> {
-    type Error = MemoryCydError;
+impl CydTouch for CydTouchMemoryPart<'_> {
+    type Error = CydMemoryError;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
         Ok(self.touch_script.borrow_mut().pop_current_frame_event())
     }
 }
 
-impl MemoryFrame<'_> {
+impl CydFrameMemory<'_> {
     fn width(&self) -> usize {
         self.rectangle.size.width as usize
     }
@@ -590,9 +591,9 @@ impl MemoryFrame<'_> {
         usize::try_from(position_y.checked_sub(self.tile_top_left.y)?).ok()
     }
 
-    fn flush_now(&mut self) -> Result<(), MemoryCydError> {
+    fn flush_now(&mut self) -> Result<(), CydMemoryError> {
         if *self.flush_count >= self.frame_budget {
-            return Err(MemoryCydError::OutOfFrames);
+            return Err(CydMemoryError::OutOfFrames);
         }
 
         blit_frame_to_screen(
@@ -612,7 +613,7 @@ impl MemoryFrame<'_> {
     }
 }
 
-impl DrawTarget for MemoryFrame<'_> {
+impl DrawTarget for CydFrameMemory<'_> {
     type Color = Rgb565;
     type Error = Infallible;
 
@@ -642,13 +643,13 @@ impl DrawTarget for MemoryFrame<'_> {
     }
 }
 
-impl Dimensions for MemoryFrame<'_> {
+impl Dimensions for CydFrameMemory<'_> {
     fn bounding_box(&self) -> Rectangle {
         Rectangle::new(self.tile_top_left, self.rectangle.size)
     }
 }
 
-impl PixelTarget for MemoryFrame<'_> {
+impl PixelTarget for CydFrameMemory<'_> {
     fn width(&self) -> usize {
         usize::try_from(self.tile_top_left.x)
             .expect("tile top-left x must be non-negative")
@@ -682,7 +683,7 @@ impl PixelTarget for MemoryFrame<'_> {
     }
 }
 
-impl RectanglePixels for MemoryFrame<'_> {
+impl RectanglePixels for CydFrameMemory<'_> {
     fn width(&self) -> usize {
         self.width()
     }
@@ -696,8 +697,8 @@ impl RectanglePixels for MemoryFrame<'_> {
     }
 }
 
-impl CydFrame for MemoryFrame<'_> {
-    type Error = MemoryCydError;
+impl CydFrame for CydFrameMemory<'_> {
+    type Error = CydMemoryError;
 
     fn tile_top_left(&self) -> Point {
         self.tile_top_left
@@ -720,7 +721,7 @@ impl CydFrame for MemoryFrame<'_> {
             Baseline::Top,
         )
         .draw(self)
-        .expect("drawing into an Infallible memory frame cannot fail");
+        .unwrap_never();
         self
     }
 
@@ -813,11 +814,11 @@ impl<Event: Clone> FrameScript<Event> {
 }
 
 #[cfg(test)]
-impl MemoryFlashBlock {
+impl FlashBlockMemory {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            memory_flash_device: MemoryFlashDevice::new(),
+            flash_device_memory: FlashDeviceMemory::new(),
             save_count: 0,
         }
     }
@@ -827,20 +828,20 @@ impl MemoryFlashBlock {
     where
         T: Serialize + for<'de> Deserialize<'de>,
     {
-        let mut memory_flash_block = Self::new();
-        memory_flash_block
+        let mut flash_block_memory = Self::new();
+        flash_block_memory
             .save(value)
             .expect("saving a small in-memory flash value should succeed");
-        memory_flash_block
+        flash_block_memory
     }
 
     #[must_use]
     pub fn with_raw_bytes(bytes: &[u8]) -> Self {
-        let mut memory_flash_block = Self::new();
-        memory_flash_block
-            .memory_flash_device
+        let mut flash_block_memory = Self::new();
+        flash_block_memory
+            .flash_device_memory
             .write_raw_bytes(bytes);
-        memory_flash_block
+        flash_block_memory
     }
 
     #[must_use]
@@ -850,14 +851,14 @@ impl MemoryFlashBlock {
 }
 
 #[cfg(test)]
-impl Default for MemoryFlashBlock {
+impl Default for FlashBlockMemory {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[cfg(test)]
-impl FlashBlock for MemoryFlashBlock {
+impl FlashBlock for FlashBlockMemory {
     type Error = FlashBlockError<Infallible>;
 
     fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
@@ -865,7 +866,7 @@ impl FlashBlock for MemoryFlashBlock {
         T: Serialize + for<'de> Deserialize<'de>,
     {
         match load_block::<FLASH_BLOCK_SIZE, T, _>(
-            &mut self.memory_flash_device,
+            &mut self.flash_device_memory,
             FLASH_BLOCK_OFFSET,
         ) {
             Ok(value) => Ok(value),
@@ -879,7 +880,7 @@ impl FlashBlock for MemoryFlashBlock {
         T: Serialize + for<'de> Deserialize<'de>,
     {
         save_block::<FLASH_BLOCK_SIZE, _, _>(
-            &mut self.memory_flash_device,
+            &mut self.flash_device_memory,
             FLASH_BLOCK_OFFSET,
             value,
         )?;
@@ -888,14 +889,14 @@ impl FlashBlock for MemoryFlashBlock {
     }
 
     fn clear(&mut self) -> Result<(), Self::Error> {
-        clear_block::<FLASH_BLOCK_SIZE, _>(&mut self.memory_flash_device, FLASH_BLOCK_OFFSET)
+        clear_block::<FLASH_BLOCK_SIZE, _>(&mut self.flash_device_memory, FLASH_BLOCK_OFFSET)
     }
 }
 
 #[cfg(test)]
-impl MemoryFlashDevice {
+impl FlashDeviceMemory {
     // TODO Consider consolidating this host-side flash test double with the
-    // test-private `MemoryFlashDevice` in device-envoy-core's flash_block.rs tests.
+    // test-private `FlashDeviceMemory` in device-envoy-core's flash_block.rs tests.
     fn new() -> Self {
         Self {
             bytes: [FLASH_ERASED_BYTE; FLASH_BLOCK_SIZE],
@@ -922,7 +923,7 @@ impl MemoryFlashDevice {
 }
 
 #[cfg(test)]
-impl FlashDevice for MemoryFlashDevice {
+impl FlashDevice for FlashDeviceMemory {
     type Error = Infallible;
 
     fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), Self::Error> {
@@ -945,7 +946,7 @@ impl FlashDevice for MemoryFlashDevice {
     }
 }
 
-impl MemoryButton {
+impl ButtonMemory {
     /// Construct a button test double with no frame scheduling.
     #[must_use]
     pub fn new() -> Self {
@@ -957,7 +958,7 @@ impl MemoryButton {
     }
 
     #[must_use]
-    pub(crate) fn with_frame_clock(frame_clock: MemoryFrameClock) -> Self {
+    pub(crate) fn with_frame_clock(frame_clock: FrameClockMemory) -> Self {
         Self {
             pressed: false,
             pressed_frames: Vec::new(),
@@ -997,13 +998,13 @@ impl MemoryButton {
     }
 }
 
-impl Default for MemoryButton {
+impl Default for ButtonMemory {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl __ButtonMonitor for MemoryButton {
+impl __ButtonMonitor for ButtonMemory {
     fn is_pressed_raw(&self) -> bool {
         self.current_pressed_state()
     }
@@ -1011,7 +1012,7 @@ impl __ButtonMonitor for MemoryButton {
     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 }
 
-impl Button for MemoryButton {}
+impl Button for ButtonMemory {}
 
 fn fill_rectangle_in_framebuffer(
     framebuffer: &mut [u16],
@@ -1078,7 +1079,7 @@ fn blit_frame_to_screen(
 
 #[cfg(test)]
 mod tests {
-    use super::{MemoryCyd, MemoryCydError, MemoryFlashBlock};
+    use super::{CydMemory, CydMemoryError, FlashBlockMemory};
     use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
@@ -1109,8 +1110,8 @@ mod tests {
         count: u16,
     }
 
-    fn test_memory_cyd() -> MemoryCyd {
-        MemoryCyd::new(
+    fn test_cyd_memory() -> CydMemory {
+        CydMemory::new(
             Size::new(320, 240),
             Rgb888::CSS_BLACK,
             Rgb888::CSS_WHITE,
@@ -1120,7 +1121,7 @@ mod tests {
 
     #[test]
     fn fresh_frame_starts_cleared_to_background() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let (mut display, _touch) = memory_cyd.parts();
         let frame = display.frame_mut(Rectangle::new(Point::new(3, 4), Size::new(2, 2)));
         assert_eq!(frame.raw_pixels(), &[Rgb565::CSS_BLACK.into_storage(); 4]);
@@ -1128,7 +1129,7 @@ mod tests {
 
     #[test]
     fn draw_target_pixel_flushes_to_screen_coordinate() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         {
             let (mut display, _touch) = memory_cyd.parts();
             let mut frame = display.frame_mut_with_tile_top_left(
@@ -1149,7 +1150,7 @@ mod tests {
 
     #[test]
     fn fill_rectangle_clips_to_screen_edges() {
-        let mut memory_cyd = MemoryCyd::new(
+        let mut memory_cyd = CydMemory::new(
             Size::new(4, 4),
             Rgb888::CSS_BLACK,
             Rgb888::CSS_WHITE,
@@ -1177,7 +1178,7 @@ mod tests {
 
     #[test]
     fn raw_touch_frames_drain_then_advance_after_flush() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let first_frame = [
             RawTouchEvent::Down { raw_x: 1, raw_y: 2 },
             RawTouchEvent::Up,
@@ -1221,7 +1222,7 @@ mod tests {
 
     #[test]
     fn flush_budget_returns_out_of_frames() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         memory_cyd.set_frame_budget(1);
         {
             let (mut display, _touch) = memory_cyd.parts();
@@ -1232,14 +1233,14 @@ mod tests {
             let (mut display, _touch) = memory_cyd.parts();
             let mut frame = display.full_frame_mut();
             let error = block_on(frame.flush()).expect_err("second flush should hit frame budget");
-            assert_eq!(error, MemoryCydError::OutOfFrames);
+            assert_eq!(error, CydMemoryError::OutOfFrames);
         }
         assert_eq!(memory_cyd.flush_count(), 1);
     }
 
     #[test]
     fn memory_flash_block_round_trips_and_handles_corruption() {
-        let mut memory_flash_block = MemoryFlashBlock::new();
+        let mut memory_flash_block = FlashBlockMemory::new();
         memory_flash_block
             .save(&DemoValue { count: 7 })
             .expect("save should succeed");
@@ -1250,7 +1251,7 @@ mod tests {
             Some(DemoValue { count: 7 })
         );
 
-        let mut corrupt_flash_block = MemoryFlashBlock::with_raw_bytes(&[1, 2, 3, 4]);
+        let mut corrupt_flash_block = FlashBlockMemory::with_raw_bytes(&[1, 2, 3, 4]);
         assert_eq!(
             corrupt_flash_block
                 .load::<DemoValue>()
@@ -1269,9 +1270,9 @@ mod tests {
 
     #[test]
     fn ensure_calibration_happy_path_saves_predictable_config() {
-        let mut memory_cyd = test_memory_cyd();
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_cyd = test_cyd_memory();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
         let raw_points = script_happy_path(&mut memory_cyd);
 
         let outcome = block_on(ensure_calibration(
@@ -1321,11 +1322,11 @@ mod tests {
 
     #[test]
     fn ensure_calibration_uses_preloaded_flash_without_flushing() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let saved_config = CalibrationConfig::new(1.0, 0.0, 2.0, 0.0, 1.0, 3.0);
         memory_cyd.push_raw_touch_event(RawTouchEvent::Down { raw_x: 7, raw_y: 9 });
-        let mut memory_flash_block = MemoryFlashBlock::with_value(&saved_config);
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::with_value(&saved_config);
+        let mut memory_button = memory_cyd.button_memory();
 
         let outcome = block_on(ensure_calibration(
             &mut memory_cyd,
@@ -1350,9 +1351,9 @@ mod tests {
 
     #[test]
     fn ensure_calibration_corrupt_flash_reruns_and_overwrites() {
-        let mut memory_cyd = test_memory_cyd();
-        let mut memory_flash_block = MemoryFlashBlock::with_raw_bytes(&[1, 2, 3, 4]);
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_cyd = test_cyd_memory();
+        let mut memory_flash_block = FlashBlockMemory::with_raw_bytes(&[1, 2, 3, 4]);
+        let mut memory_button = memory_cyd.button_memory();
         script_happy_path(&mut memory_cyd);
 
         let outcome = block_on(ensure_calibration(
@@ -1375,10 +1376,10 @@ mod tests {
 
     #[test]
     fn ensure_calibration_paces_with_one_flush_per_iteration() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         memory_cyd.set_frame_budget(3);
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
 
         let error = block_on(ensure_calibration(
             &mut memory_cyd,
@@ -1390,19 +1391,19 @@ mod tests {
 
         assert!(matches!(
             error,
-            EnsureCalibrationError::Device(MemoryCydError::OutOfFrames)
+            EnsureCalibrationError::Device(CydMemoryError::OutOfFrames)
         ));
         assert_eq!(memory_cyd.flush_count(), 3);
     }
 
     #[test]
     fn ensure_calibration_drains_a_full_tap_in_one_frame() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         memory_cyd.set_frame_budget(1);
         let upper_left_raw_point = raw_point_for_corner(CalibrationCorner::UpperLeft);
         memory_cyd.script_raw_frames_owned(vec![tap_events(upper_left_raw_point)]);
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
 
         let error = block_on(ensure_calibration(
             &mut memory_cyd,
@@ -1414,7 +1415,7 @@ mod tests {
 
         assert!(matches!(
             error,
-            EnsureCalibrationError::Device(MemoryCydError::OutOfFrames)
+            EnsureCalibrationError::Device(CydMemoryError::OutOfFrames)
         ));
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);
@@ -1431,7 +1432,7 @@ mod tests {
 
     #[test]
     fn ensure_calibration_verify_timeout_restarts_and_then_succeeds() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let mut frames = happy_path_frames();
         frames.truncate(frames.len() - 1);
         frames.extend((0..verify_timeout_extra_idle_frames()).map(|_| Vec::new()));
@@ -1439,8 +1440,8 @@ mod tests {
         frames.extend(happy_path_frames());
         memory_cyd.script_raw_frames_owned(frames);
 
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
 
         let outcome = block_on(ensure_calibration(
             &mut memory_cyd,
@@ -1456,7 +1457,7 @@ mod tests {
 
     #[test]
     fn ensure_calibration_dropout_does_not_leak_corner_two_into_corner_three() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let upper_left_raw_point = raw_point_for_corner(CalibrationCorner::UpperLeft);
         let upper_right_raw_point = raw_point_for_corner(CalibrationCorner::UpperRight);
         let lower_right_raw_point = raw_point_for_corner(CalibrationCorner::LowerRight);
@@ -1472,8 +1473,8 @@ mod tests {
         frames.push(tap_events(verify_raw_point));
         memory_cyd.script_raw_frames_owned(frames);
 
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
         let outcome = block_on(ensure_calibration(
             &mut memory_cyd,
             &mut memory_flash_block,
@@ -1494,7 +1495,7 @@ mod tests {
 
     #[test]
     fn ensure_calibration_lift_off_drift_keeps_captured_point_near_stable_raw_point() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let upper_left_raw_point = raw_point_for_corner(CalibrationCorner::UpperLeft);
         let drifted_raw_point = RawPoint {
             x: upper_left_raw_point.x + 400,
@@ -1517,8 +1518,8 @@ mod tests {
         ]));
         memory_cyd.script_raw_frames_owned(frames);
 
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
         let outcome = block_on(ensure_calibration(
             &mut memory_cyd,
             &mut memory_flash_block,
@@ -1539,7 +1540,7 @@ mod tests {
 
     #[test]
     fn ensure_calibration_rejected_solve_restarts_and_then_saves_honest_script() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let upper_left_raw_point = raw_point_for_corner(CalibrationCorner::UpperLeft);
         let lower_right_raw_point = raw_point_for_corner(CalibrationCorner::LowerRight);
         let lower_left_raw_point = raw_point_for_corner(CalibrationCorner::LowerLeft);
@@ -1554,8 +1555,8 @@ mod tests {
         frames.extend(happy_path_frames());
         memory_cyd.script_raw_frames_owned(frames);
 
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
         let outcome = block_on(ensure_calibration(
             &mut memory_cyd,
             &mut memory_flash_block,
@@ -1577,7 +1578,7 @@ mod tests {
 
     #[test]
     fn ensure_calibration_verify_miss_restarts_without_saving_candidate() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let verify_target_center = calibration_verify_target_center();
         let verify_miss_screen_x =
             verify_target_center.x + VERIFY_HIT_RADIUS_PIXELS.ceil() as i32 + 10;
@@ -1594,8 +1595,8 @@ mod tests {
         frames.extend(happy_path_frames());
         memory_cyd.script_raw_frames_owned(frames);
 
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
         let outcome = block_on(ensure_calibration(
             &mut memory_cyd,
             &mut memory_flash_block,
@@ -1610,7 +1611,7 @@ mod tests {
 
     #[test]
     fn ensure_calibration_recalibration_button_restarts_mid_flow() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         let mut frames = vec![tap_events(raw_point_for_corner(
             CalibrationCorner::UpperLeft,
         ))];
@@ -1618,8 +1619,8 @@ mod tests {
         frames.extend(happy_path_frames());
         memory_cyd.script_raw_frames_owned(frames);
 
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
         memory_button.set_pressed_for_frame(2, true);
         let outcome = block_on(ensure_calibration(
             &mut memory_cyd,
@@ -1642,7 +1643,7 @@ mod tests {
 
     #[test]
     fn ensure_calibration_drain_cap_flushes_and_preserves_leftovers_during_hold() {
-        let mut memory_cyd = test_memory_cyd();
+        let mut memory_cyd = test_cyd_memory();
         memory_cyd.set_frame_budget(2);
         let upper_left_raw_point = raw_point_for_corner(CalibrationCorner::UpperLeft);
         let mut oversized_hold_frame = Vec::new();
@@ -1659,8 +1660,8 @@ mod tests {
         oversized_hold_frame.push(RawTouchEvent::Up);
         memory_cyd.script_raw_frames_owned(vec![oversized_hold_frame]);
 
-        let mut memory_flash_block = MemoryFlashBlock::new();
-        let mut memory_button = memory_cyd.memory_button();
+        let mut memory_flash_block = FlashBlockMemory::new();
+        let mut memory_button = memory_cyd.button_memory();
         let error = block_on(ensure_calibration(
             &mut memory_cyd,
             &mut memory_flash_block,
@@ -1671,7 +1672,7 @@ mod tests {
 
         assert!(matches!(
             error,
-            EnsureCalibrationError::Device(MemoryCydError::OutOfFrames)
+            EnsureCalibrationError::Device(CydMemoryError::OutOfFrames)
         ));
         assert_eq!(memory_cyd.flush_count(), 2);
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
@@ -1692,7 +1693,7 @@ mod tests {
         );
     }
 
-    fn script_happy_path(memory_cyd: &mut MemoryCyd) -> [RawPoint; 4] {
+    fn script_happy_path(memory_cyd: &mut CydMemory) -> [RawPoint; 4] {
         memory_cyd.script_raw_frames_owned(happy_path_frames());
         [
             raw_point_for_corner(CalibrationCorner::UpperLeft),

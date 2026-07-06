@@ -97,7 +97,7 @@ pub trait __ButtonMonitor {
 /// ```
 #[cfg_attr(
     feature = "host",
-    doc = "\nHost-side test double: [`crate::memory::MemoryButton`]."
+    doc = "\nHost-side test double: [`crate::memory::ButtonMemory`]."
 )]
 #[cfg_attr(
     feature = "wasm",

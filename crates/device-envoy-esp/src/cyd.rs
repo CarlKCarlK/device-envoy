@@ -25,15 +25,17 @@ use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 use device_envoy_core::cyd::{
     CydFlushError, SCREEN_PIXELS,
-    calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
-    display::RectanglePixels,
+    display::{CydFrame, RectanglePixels},
+    touch::{CalibrationConfig, CydRawTouch, RawTouchEvent, TouchEvent},
 };
 use device_envoy_core::pixel_target::PixelTarget;
 pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent, display::Orientation, tiling,
+    Cyd, CydDisplay, CydTouch,
+    display::{Orientation, tiling},
+    touch,
 };
 pub use text::DEFAULT_FONT;
 pub use touch::{CydTouchEspInitError, TOUCH_SPI_HZ};

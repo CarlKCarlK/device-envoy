@@ -1,13 +1,9 @@
-//! The touch-calibration driver, plus the raw-touch plumbing that device
-//! implementations provide so it can run.
+//! Shared touch-calibration math, geometry, and drawing helpers.
 //!
 //! Calibration lives in the CYD device layer as the single source of truth
 //! for affine solve math, corner geometry, drawing helpers, and the sans-io
 //! four-tap flow that platform binaries drive with their own touch, logging,
-//! persistence, and reset wiring. Start at [`ensure_calibration`].
-
-pub mod driver;
-pub mod flow;
+//! persistence, and reset wiring. Start at [`super::ensure_calibration`].
 
 use embedded_graphics::{
     draw_target::DrawTarget,
@@ -20,13 +16,8 @@ use embedded_graphics::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::{CydFlushError, SCREEN_HEIGHT, SCREEN_WIDTH};
-
-pub use driver::{
-    EnsureCalibrationError, EnsureCalibrationOutcome, EnsureCalibrationSettings,
-    ensure_calibration, ensure_calibration_with_settings,
-};
-pub use flow::CalibrationFlow;
+use super::{CalibrationFlow, RawPoint, RawTouchEvent};
+use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub const CALIBRATION_POINT_COUNT: usize = 4;
 pub const CALIBRATION_CROSS_MARGIN: i32 = 28;
@@ -51,33 +42,6 @@ const DEMO_RAW_SKEW_Y_FROM_X: f32 = -0.027;
 const DEMO_RAW_OFFSET_X: f32 = 186.0;
 #[cfg(any(feature = "wasm", test))]
 const DEMO_RAW_OFFSET_Y: f32 = 149.0;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// A raw XPT2046 touch sample in controller coordinates.
-pub struct RawPoint {
-    pub x: u16,
-    pub y: u16,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-/// A raw XPT2046 touch event used by shared calibration flows.
-pub enum RawTouchEvent {
-    Down { raw_x: u16, raw_y: u16 },
-    Move { raw_x: u16, raw_y: u16 },
-    Up,
-}
-
-/// A CYD raw-touch source implemented by devices so [`ensure_calibration`] can run.
-pub trait CydRawTouch {
-    /// Error returned when reading raw touch fails.
-    type Error: CydFlushError;
-
-    /// Read the next raw touch event, if any.
-    ///
-    /// This bypasses any active [`super::TouchEvent`] calibration mapping and
-    /// exists specifically for the shared calibration driver.
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error>;
-}
 
 /// Affine mapping from raw controller samples into screen coordinates.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]

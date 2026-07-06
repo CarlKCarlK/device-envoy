@@ -1,28 +1,26 @@
 //! A device abstraction for the "Cheap Yellow Display" (CYD) with touch.
 //!
-//! CYD boards pair an ILI9341 display with an XPT2046 resistive
-//! touch controller.
+//! CYD boards pair an ILI9341 display with an XPT2046 resistive touch
+//! controller. The root keeps the device model itself: [`Cyd`] splits into
+//! [`CydDisplay`] and [`CydTouch`], with display-side support types in
+//! [`display`] and touch-side support types in [`touch`].
 //!
 //! See [`Cyd`] for the primary trait and usage example.
 //!
 
-pub mod calibration;
 pub mod display;
-pub mod tiling;
-mod touch_event;
+pub mod touch;
 
-pub use calibration::{EnsureCalibrationError, EnsureCalibrationOutcome, ensure_calibration};
 use display::ContiguousPixels;
-pub use touch_event::TouchEvent;
 
 /// Native panel width in pixels (landscape): 320. The CYD panel is fixed hardware.
-pub const SCREEN_WIDTH: usize = 320;
+pub(crate) const SCREEN_WIDTH: usize = 320;
 /// Native panel height in pixels (landscape): 240. The CYD panel is fixed hardware.
-pub const SCREEN_HEIGHT: usize = 240;
+pub(crate) const SCREEN_HEIGHT: usize = 240;
 /// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 76,800).
 pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
-use core::{convert::Infallible, future::Future};
+use core::convert::Infallible;
 
 use crate::pixel_target::{PixelTarget, rgb565_from_rgb888};
 use embedded_graphics::{
@@ -30,7 +28,6 @@ use embedded_graphics::{
     prelude::{DrawTarget, Point, Size},
     primitives::Rectangle,
 };
-use tiling::TileGrid;
 
 /// Error type used by a CYD device or frame.
 ///
@@ -45,7 +42,9 @@ impl CydFlushError for Infallible {}
 ///
 /// ```rust,no_run
 /// # use core::{convert::Infallible, future::ready};
-/// # use device_envoy_core::cyd::{Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent};
+/// # use device_envoy_core::cyd::{Cyd, CydDisplay, CydTouch};
+/// # use device_envoy_core::cyd::display::CydFrame;
+/// # use device_envoy_core::cyd::touch::TouchEvent;
 /// # use device_envoy_core::pixel_target::PixelTarget;
 /// # use embedded_graphics::{
 /// #     pixelcolor::{Rgb565, Rgb888},
@@ -171,7 +170,7 @@ pub trait Cyd {
 /// A CYD display: hands out cleared, rectangle-sized 2D frames.
 ///
 /// The screen is a fixed 320x240 RGB565 panel. `CydDisplay` offers three
-/// ways to draw, trading memory for flexibility: [`CydFrame`]s that can be
+/// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
 /// drawn into and flushed to any rectangle on screen; tiled frames (see
 /// [`CydDisplay::tiles`]) that cover the screen in smaller pieces when memory
 /// is tight; and contiguous-pixel methods (see
@@ -183,10 +182,10 @@ pub trait CydDisplay {
 
     /// The per-rectangle frame type this device produces.
     ///
-    /// Its [`CydFrame::Error`] is pinned to this display's [`CydDisplay::Error`], so
+    /// Its [`display::CydFrame::Error`] is pinned to this display's [`CydDisplay::Error`], so
     /// `frame.flush().await?` in generic code propagates a single
     /// `S::Error`.
-    type Frame<'a>: CydFrame<Error = Self::Error>
+    type Frame<'a>: display::CydFrame<Error = Self::Error>
     where
         Self: 'a;
 
@@ -224,7 +223,7 @@ pub trait CydDisplay {
 
     /// Borrow a frame covering `rectangle`, cleared to the device background color.
     ///
-    /// The frame remembers its `rectangle`, so [`CydFrame::flush`] presents it
+    /// The frame remembers its `rectangle`, so [`display::CydFrame::flush`] presents it
     /// at the rectangle's top-left with no separate position argument.
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
         self.frame_mut_with_tile_top_left(rectangle, Point::zero())
@@ -237,7 +236,7 @@ pub trait CydDisplay {
 
     /// Fill `rectangle` immediately in physical-screen coordinates.
     ///
-    /// Unlike [`CydFrame::fill`], this is a device-level operation rather than a
+    /// Unlike [`display::CydFrame::fill`], this is a device-level operation rather than a
     /// frame-local buffered draw. Implementations clip to the physical screen and
     /// treat an empty intersection as a no-op.
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Self::Error>;
@@ -298,14 +297,15 @@ pub trait CydDisplay {
 
     /// Drive `grid` as a sequence of low-memory tiles.
     ///
-    /// The returned [`Tiles`](tiling::Tiles) is a lending/streaming iterator (it does not
+    /// The returned [`Tiles`](display::tiling::Tiles) is a lending/streaming iterator (it does not
     /// implement [`Iterator`], because each yielded frame borrows the device's
     /// single reusable frame buffer). Each yielded frame draws in screen
-    /// coordinates via each frame's non-zero [`CydFrame::tile_top_left`], and is
-    /// presented with [`CydFrame::flush`]:
+    /// coordinates via each frame's non-zero [`display::CydFrame::tile_top_left`], and is
+    /// presented with [`display::CydFrame::flush`]:
     ///
     /// ```rust,no_run
-    /// # use device_envoy_core::cyd::{CydDisplay, CydFrame, tiling::TileGrid};
+    /// # use device_envoy_core::cyd::CydDisplay;
+    /// # use device_envoy_core::cyd::display::{CydFrame, tiling::TileGrid};
     /// # async fn draw<D: CydDisplay>(display: &mut D, grid: TileGrid) -> Result<(), D::Error> {
     /// let mut tiles = display.tiles(grid);
     /// while let Some(mut frame) = tiles.next() {
@@ -315,17 +315,17 @@ pub trait CydDisplay {
     /// # Ok(())
     /// # }
     /// ```
-    fn tiles(&mut self, grid: TileGrid) -> tiling::Tiles<'_, Self>
+    fn tiles(&mut self, grid: display::tiling::TileGrid) -> display::tiling::Tiles<'_, Self>
     where
         Self: Sized,
     {
-        tiling::Tiles::new(self, grid)
+        display::tiling::Tiles::new(self, grid)
     }
 }
 
 /// A CYD touch source for calibrated, screen-space events that apps read.
 ///
-/// [`CydTouch::read`] returns a [`TouchEvent`] carrying an x-y point in the
+/// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in the
 /// same screen coordinates as the display, or `None` when there is no touch.
 pub trait CydTouch {
     /// Error returned when reading touch fails.
@@ -335,64 +335,13 @@ pub trait CydTouch {
     ///
     /// Returns `Ok(None)` when there is no pending touch (including devices
     /// constructed without touch). Errors only on a hardware/read failure.
-    fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
-}
-
-/// A single in-progress frame: a `Rgb565` draw target that can be flushed.
-///
-/// Also a [`PixelTarget`] so projected linkage draw items can render into it.
-pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
-    /// Error returned when flushing this frame to the panel.
-    type Error;
-
-    /// This frame's tile top-left in screen coordinates.
-    ///
-    /// This point is subtracted from input drawing commands before pixels reach
-    /// this frame's local backing buffer. Regular, non-tiled frames use `(0, 0)`.
-    #[must_use]
-    fn tile_top_left(&self) -> Point {
-        Point::zero()
-    }
-
-    // TODO0x Arg! "region" (may no longer apply, RegionPixels renamed to RectanglePixels)
-    /// This frame's rectangle (top-left and size) in physical-screen coordinates.
-    fn rectangle(&self) -> Rectangle;
-
-    /// Fill this frame with an explicit color and return `self`.
-    fn fill(&mut self, color: Rgb565) -> &mut Self;
-
-    /// Draw `text` at the frame's top-left using the device default font and
-    /// foreground color. Returns `&mut Self` for chaining.
-    fn write_text(&mut self, text: &str) -> &mut Self;
-
-    /// Bulk-copy a full-frame, row-major RGB565 buffer into this frame.
-    ///
-    /// This is the fast path for a full-screen background: a single
-    /// `copy_from_slice` instead of the per-pixel [`DrawTarget`] path (on the
-    /// esp32 the per-pixel path makes the ballet loop ~1/3 slower). `src` must
-    /// hold exactly one entry per frame pixel — i.e. the source image's
-    /// dimensions must match the frame's. A mismatch returns
-    /// [`crate::Error::CopySize`] rather than panicking or silently corrupting
-    /// the buffer.
-    fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()>;
-
-    /// Present the frame's pixels at its rectangle's top-left (screen coordinates).
-    ///
-    /// The frame was created over a [`Rectangle`] by [`CydDisplay::frame_mut`],
-    /// so it already knows where it lives and needs no position argument.
-    ///
-    /// The returned future is the render loop's frame boundary. On the MCU it
-    /// flushes over SPI and resolves immediately; on WASM it awaits the next
-    /// browser animation frame, blits to the canvas, then resolves — so a
-    /// platform-neutral `loop { draw; flush().await?; }` paces itself to
-    /// each device's natural present point without inverting into a state
-    /// machine.
-    fn flush(&mut self) -> impl Future<Output = Result<(), <Self as CydFrame>::Error>>;
+    fn read(&mut self) -> Result<Option<touch::TouchEvent>, Self::Error>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cyd::display::CydFrame;
     use embedded_graphics::pixelcolor::WebColors;
     use embedded_graphics::{Pixel, prelude::OriginDimensions};
 
@@ -524,7 +473,7 @@ mod tests {
     #[test]
     fn tiled_frames_use_screen_tile_top_left() {
         let mut cyd = TestCyd;
-        let grid = TileGrid::new(Point::new(10, 20), Size::new(8, 6), 2, 2);
+        let grid = display::tiling::TileGrid::new(Point::new(10, 20), Size::new(8, 6), 2, 2);
         let mut tiles = cyd.tiles(grid);
 
         let first = tiles.next().expect("first tile exists");

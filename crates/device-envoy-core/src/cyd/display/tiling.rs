@@ -18,7 +18,7 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
-use super::CydDisplay;
+use super::super::CydDisplay;
 
 /// Pixel count for a rectangle.
 #[must_use]

@@ -7,7 +7,8 @@
 //!
 //! ```rust
 //! use device_envoy_core::memory::MemoryCyd;
-//! use device_envoy_core::cyd::{Cyd as _, CydDisplay, CydFrame};
+//! use device_envoy_core::cyd::{Cyd as _, CydDisplay};
+//! use device_envoy_core::cyd::display::CydFrame;
 //! use embedded_graphics::{
 //!     mono_font::ascii::FONT_9X15_BOLD,
 //!     pixelcolor::{Rgb565, Rgb888},
@@ -47,11 +48,11 @@ use std::{
 };
 
 #[cfg(test)]
-use crate::cyd::calibration::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
+use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Cyd, CydDisplay, CydFlushError, CydFrame, CydTouch, TouchEvent,
-    calibration::{CydRawTouch, RawTouchEvent},
-    display::RectanglePixels,
+    Cyd, CydDisplay, CydFlushError, CydTouch,
+    display::{CydFrame, RectanglePixels},
+    touch::{CydRawTouch, RawTouchEvent, TouchEvent},
 };
 #[cfg(test)]
 use crate::flash_block::{
@@ -282,7 +283,7 @@ impl MemoryCyd {
     }
 
     #[cfg(test)]
-    pub(crate) fn script_tap(&mut self, raw_point: crate::cyd::calibration::RawPoint) {
+    pub(crate) fn script_tap(&mut self, raw_point: crate::cyd::touch::RawPoint) {
         for raw_touch_event in tap_events(raw_point) {
             self.push_raw_touch_event(raw_touch_event);
         }
@@ -1081,18 +1082,19 @@ fn blit_frame_to_screen(
 #[cfg(test)]
 mod tests {
     use super::{MemoryCyd, MemoryCydError, MemoryFlashBlock};
-    use crate::cyd::calibration::driver::{
+    use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
     };
-    use crate::cyd::calibration::{
+    use crate::cyd::touch::{
         CalibrationConfig, CalibrationCorner, CydRawTouch, RawPoint, RawTouchEvent,
         VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center, calibration_verify_target_center,
         distort_demo_screen_to_raw,
     };
     use crate::cyd::{
-        Cyd, CydDisplay, CydFrame, EnsureCalibrationError, EnsureCalibrationOutcome,
-        display::RectanglePixels, ensure_calibration,
+        Cyd, CydDisplay,
+        display::{CydFrame, RectanglePixels},
+        touch::{EnsureCalibrationError, EnsureCalibrationOutcome, ensure_calibration},
     };
     use crate::flash_block::FlashBlock;
     use embedded_graphics::{
@@ -1821,7 +1823,7 @@ mod tests {
 }
 
 #[cfg(test)]
-fn tap_events(raw_point: crate::cyd::calibration::RawPoint) -> Vec<RawTouchEvent> {
+fn tap_events(raw_point: crate::cyd::touch::RawPoint) -> Vec<RawTouchEvent> {
     let mut raw_touch_events = Vec::new();
     raw_touch_events.push(RawTouchEvent::Down {
         raw_x: raw_point.x,

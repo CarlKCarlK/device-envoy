@@ -14,14 +14,16 @@ use core::{convert::Infallible, fmt};
 
 use device_envoy_core::cyd::{
     CydFlushError, SCREEN_PIXELS,
-    calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
-    display::RectanglePixels,
+    display::{CydFrame, RectanglePixels},
+    touch::{CalibrationConfig, CydRawTouch, RawTouchEvent, TouchEvent},
 };
 use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent, display::Orientation, tiling,
+    Cyd, CydDisplay, CydTouch,
+    display::{Orientation, tiling},
+    touch,
 };
 use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;

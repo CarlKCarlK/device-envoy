@@ -4,16 +4,16 @@ use crate::button::Button;
 use crate::flash_block::FlashBlock;
 use heapless::String;
 
-use super::super::{Cyd, CydDisplay, CydFrame};
-
-use super::{
-    CalibrationConfig, CalibrationCorner, CalibrationFlow, CydRawTouch, draw_calibration_ack_dot,
-    draw_calibration_cross, draw_calibration_instruction, draw_calibration_rejected_cross,
-    draw_calibration_verify_target,
-    flow::CalibrationFlowEvent,
-    flow::{ReleaseTouchCapture, ReleaseTouchCaptureEvent},
-    validate_calibration_points,
+use super::super::{Cyd, CydDisplay};
+use super::calibration::{
+    CalibrationConfig, CalibrationCorner, draw_calibration_ack_dot, draw_calibration_cross,
+    draw_calibration_instruction, draw_calibration_rejected_cross,
+    draw_calibration_verify_target, validate_calibration_points,
 };
+use super::flow::CalibrationFlowEvent;
+use super::flow::{ReleaseTouchCapture, ReleaseTouchCaptureEvent};
+use super::{CalibrationFlow, CydRawTouch};
+use crate::cyd::display::CydFrame;
 
 pub const CAPTURE_ACK_FRAME_COUNT: usize = 8;
 pub const REJECTED_FRAME_COUNT: usize = 30;

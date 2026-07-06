@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::calibration::RawTouchEvent;
+use device_envoy_core::cyd::touch::RawTouchEvent;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
     gpio::{

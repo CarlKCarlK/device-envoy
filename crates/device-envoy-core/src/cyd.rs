@@ -1,9 +1,13 @@
 //! A device abstraction for the "Cheap Yellow Display" (CYD) with touch.
 //!
 //! CYD boards pair an ILI9341 display with an XPT2046 resistive touch
-//! controller. The root keeps the device model itself: [`Cyd`] splits into
-//! [`CydDisplay`] and [`CydTouch`], with display-side support types in
-//! [`display`] and touch-side support types in [`touch`].
+//! controller. The root keeps the device model itself:
+//!
+//! - [`Cyd`] is the whole device
+//! - [`CydDisplay`] is the display half borrowed from [`Cyd::parts`]
+//! - [`CydTouch`] is the touch half borrowed from [`Cyd::parts`]
+//! - [`display`] holds display-only support types
+//! - [`touch`] holds touch-only support types
 //!
 //! See [`Cyd`] for the primary trait and usage example.
 //!
@@ -29,14 +33,18 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
-/// Error type used by a CYD device or frame.
+/// Marker trait for CYD I/O errors.
 ///
-/// This marker lets downstream generic examples distinguish device/flush errors
-/// from their own local errors when using `?`.
-pub trait CydFlushError {}
+/// CYD examples and helpers are generic over a device-provided error type that
+/// can come from display presentation, touch reads, or both. This marker keeps
+/// those bounds short without forcing the core crate to define one concrete
+/// shared error enum for every device implementation.
+///
+/// See the [`Cyd`] trait documentation for an end-to-end usage example.
+pub trait CydIoError {}
 
 /// Device/flush error for CYD implementations whose presentation path cannot fail.
-impl CydFlushError for Infallible {}
+impl CydIoError for Infallible {}
 
 /// A complete CYD device that offers display and touch parts.
 ///
@@ -143,15 +151,15 @@ impl CydFlushError for Infallible {}
 /// ```
 #[cfg_attr(
     feature = "host",
-    doc = "\nHost-side test double: [`crate::memory::MemoryCyd`]."
+    doc = "\nHost-side test double: [`MemoryCyd`](crate::memory::MemoryCyd)."
 )]
 #[cfg_attr(
     feature = "wasm",
-    doc = "\nBrowser-simulated device: [`crate::wasm::CydWasm`]."
+    doc = "\nBrowser-simulated device: [`CydWasm`](crate::wasm::CydWasm)."
 )]
 pub trait Cyd {
     /// Error returned when flushing a frame or reading touch fails.
-    type Error: CydFlushError;
+    type Error: CydIoError;
 
     /// Display part offered by this device.
     type Display<'a>: CydDisplay<Error = Self::Error>
@@ -164,6 +172,8 @@ pub trait Cyd {
         Self: 'a;
 
     /// Borrow display and touch as independent parts.
+    ///
+    /// See the [Cyd trait documentation](Self) for a usage example.
     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>);
 }
 
@@ -176,9 +186,12 @@ pub trait Cyd {
 /// is tight; and contiguous-pixel methods (see
 /// [`CydDisplay::fill_contiguous`]) that stream pixels straight to the screen
 /// with virtually no buffering.
+///
+/// See the [Cyd trait documentation](Cyd) for a simple end-to-end example that
+/// borrows a display part and presents a frame.
 pub trait CydDisplay {
     /// Error returned when flushing a frame fails.
-    type Error: CydFlushError;
+    type Error: CydIoError;
 
     /// The per-rectangle frame type this device produces.
     ///
@@ -190,21 +203,33 @@ pub trait CydDisplay {
         Self: 'a;
 
     /// Oriented screen size for the configured orientation.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn screen_size(&self) -> Size;
 
     /// The device default background color.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn background(&self) -> Rgb888;
 
     /// The device default foreground/text color.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn foreground(&self) -> Rgb888;
 
     /// The device default background color in the native `Rgb565` format.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn background_565(&self) -> Rgb565;
 
     /// The device default foreground/text color in the native `Rgb565` format.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn foreground_565(&self) -> Rgb565;
 
     /// Convert an `Rgb888` color to the device's native `Rgb565` format.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn to_rgb565(&self, color: Rgb888) -> Rgb565 {
         rgb565_from_rgb888(color)
     }
@@ -215,6 +240,8 @@ pub trait CydDisplay {
     /// `tile_top_left` is subtracted before pixels are written into the
     /// frame-local buffer. Regular, non-tiled frames use `(0, 0)` and therefore
     /// draw in frame-local coordinates.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn frame_mut_with_tile_top_left(
         &mut self,
         rectangle: Rectangle,
@@ -225,11 +252,15 @@ pub trait CydDisplay {
     ///
     /// The frame remembers its `rectangle`, so [`display::CydFrame::flush`] presents it
     /// at the rectangle's top-left with no separate position argument.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
         self.frame_mut_with_tile_top_left(rectangle, Point::zero())
     }
 
     /// Borrow a full-screen frame, cleared to the device background color.
+    ///
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn full_frame_mut(&mut self) -> Self::Frame<'_> {
         self.frame_mut(Rectangle::new(Point::zero(), self.screen_size()))
     }
@@ -239,16 +270,22 @@ pub trait CydDisplay {
     /// Unlike [`display::CydFrame::fill`], this is a device-level operation rather than a
     /// frame-local buffered draw. Implementations clip to the physical screen and
     /// treat an empty intersection as a no-op.
+    ///
+    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Self::Error>;
 
     /// Fill `rectangle` immediately from row-major native-color pixels.
     ///
     /// Empty rectangles are a no-op.
+    ///
+    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
     fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Rgb565>;
 
     /// Present a native-color rectangle buffer at `top_left`.
+    ///
+    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
     fn flush_at(
         &mut self,
         buffer: &impl display::RectanglePixels,
@@ -269,6 +306,9 @@ pub trait CydDisplay {
     }
 
     /// Draw projected draw items immediately inside `bounds`.
+    ///
+    /// See the [display module documentation](display) for the draw-item types
+    /// this consumes.
     fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,
@@ -286,11 +326,15 @@ pub trait CydDisplay {
     /// New frames already start cleared to this color. This is for immediately
     /// returning the physical screen to the default background between frame
     /// workflows.
+    ///
+    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
     fn clear(&mut self) -> Result<(), Self::Error> {
         self.fill(self.background_565())
     }
 
     /// Fill the whole screen with an explicit color.
+    ///
+    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
     fn fill(&mut self, color: Rgb565) -> Result<(), Self::Error> {
         self.fill_rectangle(Rectangle::new(Point::zero(), self.screen_size()), color)
     }
@@ -329,12 +373,13 @@ pub trait CydDisplay {
 /// same screen coordinates as the display, or `None` when there is no touch.
 pub trait CydTouch {
     /// Error returned when reading touch fails.
-    type Error: CydFlushError;
+    type Error: CydIoError;
 
     /// Read the next calibrated, screen-space touch event, if any.
     ///
     /// Returns `Ok(None)` when there is no pending touch (including devices
     /// constructed without touch). Errors only on a hardware/read failure.
+    /// See the [Cyd trait documentation](Cyd) for a usage example.
     fn read(&mut self) -> Result<Option<touch::TouchEvent>, Self::Error>;
 }
 

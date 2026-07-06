@@ -10,9 +10,11 @@ mod flow;
 
 use embedded_graphics::geometry::Point;
 
-use super::CydFlushError;
+use super::CydIoError;
 
 /// A touch event in screen coordinates (already calibrated and mapped).
+///
+/// See the [Cyd trait documentation](super::Cyd) for a usage example.
 #[derive(Clone, Copy, Debug)]
 pub enum TouchEvent {
     Down { point: Point },
@@ -21,6 +23,8 @@ pub enum TouchEvent {
 }
 
 /// A raw XPT2046 touch sample in controller coordinates.
+///
+/// See the [touch calibration module documentation](calibration) for usage.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RawPoint {
     pub x: u16,
@@ -28,6 +32,8 @@ pub struct RawPoint {
 }
 
 /// A raw XPT2046 touch event used by shared calibration flows.
+///
+/// See the [touch calibration module documentation](calibration) for usage.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RawTouchEvent {
     Down { raw_x: u16, raw_y: u16 },
@@ -39,11 +45,12 @@ pub enum RawTouchEvent {
 /// [`calibration::ensure_calibration`] can run.
 pub trait CydRawTouch {
     /// Error returned when reading raw touch fails.
-    type Error: CydFlushError;
+    type Error: CydIoError;
 
     /// Read the next raw touch event, if any.
     ///
     /// This bypasses any active [`TouchEvent`] calibration mapping and exists
     /// specifically for the shared calibration driver.
+    /// See the [touch calibration module documentation](calibration) for usage.
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error>;
 }

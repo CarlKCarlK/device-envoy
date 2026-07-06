@@ -30,15 +30,28 @@ pub use crate::{
 };
 
 /// A borrowed or owned rectangular RGB565 pixel buffer.
+///
+/// See [`super::CydDisplay::flush_at`] for the primary consumer.
 pub trait RectanglePixels {
+    /// Buffer width in pixels.
+    ///
+    /// See the [`RectanglePixels` trait documentation](Self) for usage.
     fn width(&self) -> usize;
+    /// Buffer height in pixels.
+    ///
+    /// See the [`RectanglePixels` trait documentation](Self) for usage.
     fn height(&self) -> usize;
+    /// Row-major RGB565 pixels.
+    ///
+    /// See the [`RectanglePixels` trait documentation](Self) for usage.
     fn raw_pixels(&self) -> &[u16];
 }
 
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
 ///
 /// Also a [`PixelTarget`] so projected linkage draw items can render into it.
+/// See the [Cyd trait documentation](super::Cyd) for an end-to-end example that
+/// creates, writes, and flushes a frame.
 pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
     /// Error returned when flushing this frame to the panel.
     type Error;
@@ -54,13 +67,19 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
 
     // TODO0x Arg! "region" (may no longer apply, RegionPixels renamed to RectanglePixels)
     /// This frame's rectangle (top-left and size) in physical-screen coordinates.
+    ///
+    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
     fn rectangle(&self) -> Rectangle;
 
     /// Fill this frame with an explicit color and return `self`.
+    ///
+    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
     fn fill(&mut self, color: Rgb565) -> &mut Self;
 
     /// Draw `text` at the frame's top-left using the device default font and
     /// foreground color. Returns `&mut Self` for chaining.
+    ///
+    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
     fn write_text(&mut self, text: &str) -> &mut Self;
 
     /// Bulk-copy a full-frame, row-major RGB565 buffer into this frame.
@@ -72,6 +91,8 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// dimensions must match the frame's. A mismatch returns
     /// [`crate::Error::CopySize`] rather than panicking or silently corrupting
     /// the buffer.
+    ///
+    /// See [`Image565Fixed::copy_to`] for the primary convenience wrapper.
     fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()>;
 
     /// Present the frame's pixels at its rectangle's top-left (screen coordinates).
@@ -85,5 +106,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// platform-neutral `loop { draw; flush().await?; }` paces itself to
     /// each device's natural present point without inverting into a state
     /// machine.
+    ///
+    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
     fn flush(&mut self) -> impl Future<Output = Result<(), <Self as CydFrame>::Error>>;
 }

@@ -25,7 +25,7 @@ use static_cell::StaticCell;
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 use device_envoy_core::cyd::{
-    CydFlushError, SCREEN_PIXELS,
+    CydIoError, SCREEN_PIXELS,
     display::{CydFrame, RectanglePixels},
     touch::{CydRawTouch, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
@@ -271,7 +271,7 @@ pub enum CydError {
     CalibrationUnavailable,
 }
 
-impl CydFlushError for CydError {}
+impl CydIoError for CydError {}
 
 impl CydEsp {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.

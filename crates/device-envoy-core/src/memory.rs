@@ -50,7 +50,7 @@ use std::{
 #[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Cyd, CydDisplay, CydFlushError, CydTouch,
+    Cyd, CydDisplay, CydIoError, CydTouch,
     display::{CydFrame, RectanglePixels},
     touch::{CydRawTouch, RawTouchEvent, TouchEvent},
 };
@@ -104,7 +104,7 @@ pub enum MemoryCydError {
     OutOfFrames,
 }
 
-impl CydFlushError for MemoryCydError {}
+impl CydIoError for MemoryCydError {}
 
 /// In-memory CYD device for host-side tests and screenshots.
 pub struct MemoryCyd {

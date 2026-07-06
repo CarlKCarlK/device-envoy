@@ -129,6 +129,7 @@ Use `TODO0*` for release-priority TODO items (`TODO` + one or more trailing `0`s
 - Start module docs with "A device abstraction ..." and have them point readers to the main struct docs.
 - Put a single compilable example on the primary struct; other public docs should link back to that example instead of duplicating snippets.
 - When linking to module documentation, name the module in the link text (for example, "led_strip module documentation").
+- When linking to items in rustdoc, prefer readable link text such as `MemoryCyd` with an explicit target (`[MemoryCyd](crate::memory::MemoryCyd)`) instead of exposing raw `crate::...` paths in the rendered text.
 - When referring to examples, never say "struct-level example" or "module-level example". Use the name, for example: "WifiAuto struct example" or "led_strip module example".
 
 **Markdown formatting**: When creating or editing markdown files, follow these rules to avoid linter warnings:

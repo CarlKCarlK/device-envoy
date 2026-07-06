@@ -8,9 +8,11 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 #[non_exhaustive]
 pub enum Error {
     /// Spawning an Embassy task failed.
+    #[cfg(feature = "wifi")]
     TaskSpawn(embassy_executor::SpawnError),
 }
 
+#[cfg(feature = "wifi")]
 impl From<embassy_executor::SpawnError> for Error {
     fn from(err: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(err)

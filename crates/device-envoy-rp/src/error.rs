@@ -83,10 +83,12 @@ impl From<embassy_executor::SpawnError> for Error {
 
 impl From<device_envoy_core::Error> for Error {
     fn from(error: device_envoy_core::Error) -> Self {
-        match error {
-            device_envoy_core::Error::TaskSpawn(spawn_error) => Self::TaskSpawn(spawn_error),
-            core_error => Self::Core(core_error),
+        #[cfg(feature = "wifi")]
+        if let device_envoy_core::Error::TaskSpawn(spawn_error) = error {
+            return Self::TaskSpawn(spawn_error);
         }
+
+        Self::Core(error)
     }
 }
 

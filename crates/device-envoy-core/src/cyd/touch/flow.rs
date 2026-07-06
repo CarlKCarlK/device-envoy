@@ -1,4 +1,6 @@
-use super::calibration::{CALIBRATION_POINT_COUNT, CalibrationCorner, calibration_corner_for_index};
+use super::calibration::{
+    CALIBRATION_POINT_COUNT, CalibrationCorner, calibration_corner_for_index,
+};
 use super::{RawPoint, RawTouchEvent};
 
 pub const SAMPLES_DISCARDED_AFTER_DOWN: usize = 4;

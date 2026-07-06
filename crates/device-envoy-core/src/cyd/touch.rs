@@ -5,12 +5,10 @@
 //! [`calibration`] can read raw controller samples.
 
 pub mod calibration;
-mod driver;
-mod flow;
+pub(crate) mod driver;
+pub(crate) mod flow;
 
 use embedded_graphics::geometry::Point;
-
-use super::CydIoError;
 
 /// A touch event in screen coordinates (already calibrated and mapped).
 ///
@@ -45,7 +43,7 @@ pub enum RawTouchEvent {
 /// [`calibration::ensure_calibration`] can run.
 pub trait CydRawTouch {
     /// Error returned when reading raw touch fails.
-    type Error: CydIoError;
+    type Error;
 
     /// Read the next raw touch event, if any.
     ///

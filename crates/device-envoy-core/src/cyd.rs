@@ -24,27 +24,12 @@ pub(crate) const SCREEN_HEIGHT: usize = 240;
 /// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 76,800).
 pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
-use core::convert::Infallible;
-
 use crate::pixel_target::rgb565_from_rgb888;
 use embedded_graphics::{
     pixelcolor::{Rgb565, Rgb888, raw::RawU16},
     prelude::{Point, Size},
     primitives::Rectangle,
 };
-
-/// Marker trait for CYD I/O errors.
-///
-/// CYD examples and helpers are generic over a device-provided error type that
-/// can come from display presentation, touch reads, or both. This marker keeps
-/// those bounds short without forcing the core crate to define one concrete
-/// shared error enum for every device implementation.
-///
-/// See the [`Cyd`] trait documentation for an end-to-end usage example.
-pub trait CydIoError {}
-
-/// Device/flush error for CYD implementations whose presentation path cannot fail.
-impl CydIoError for Infallible {}
 
 /// A complete CYD device that offers display and touch parts.
 ///
@@ -159,7 +144,7 @@ impl CydIoError for Infallible {}
 )]
 pub trait Cyd {
     /// Error returned when flushing a frame or reading touch fails.
-    type Error: CydIoError;
+    type Error;
 
     /// Display part offered by this device.
     type Display<'a>: CydDisplay<Error = Self::Error>
@@ -191,7 +176,7 @@ pub trait Cyd {
 /// borrows a display part and presents a frame.
 pub trait CydDisplay {
     /// Error returned when flushing a frame fails.
-    type Error: CydIoError;
+    type Error;
 
     /// The per-rectangle frame type this device produces.
     ///
@@ -373,7 +358,7 @@ pub trait CydDisplay {
 /// same screen coordinates as the display, or `None` when there is no touch.
 pub trait CydTouch {
     /// Error returned when reading touch fails.
-    type Error: CydIoError;
+    type Error;
 
     /// Read the next calibrated, screen-space touch event, if any.
     ///
@@ -387,8 +372,13 @@ pub trait CydTouch {
 mod tests {
     use super::*;
     use crate::cyd::display::CydFrame;
+    use crate::pixel_target::PixelTarget;
+    use core::convert::Infallible;
     use embedded_graphics::pixelcolor::WebColors;
-    use embedded_graphics::{Pixel, prelude::OriginDimensions};
+    use embedded_graphics::{
+        Pixel,
+        prelude::{DrawTarget, OriginDimensions},
+    };
 
     // TODO The shared `linkage-blaze-cyd-memory` fake cannot replace this unit-test
     // double directly because a cyd-core <-> cyd-memory dev-dependency cycle gives

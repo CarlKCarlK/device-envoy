@@ -14,7 +14,7 @@ mod touch_driver;
 use core::{convert::Infallible, fmt};
 
 use device_envoy_core::cyd::{
-    CydIoError, SCREEN_PIXELS,
+    SCREEN_PIXELS,
     display::{CydFrame, RectanglePixels},
     touch::{CydRawTouch, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
@@ -280,8 +280,6 @@ pub enum CydError {
     /// No calibration has been set on this device.
     CalibrationUnavailable,
 }
-
-impl CydIoError for CydError {}
 
 impl CydRp {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.

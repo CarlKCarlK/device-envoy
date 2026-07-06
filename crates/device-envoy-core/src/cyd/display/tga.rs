@@ -21,8 +21,8 @@
 //! Anything outside this subset triggers a `const` panic, so an unsupported file
 //! fails the build rather than at runtime.
 
-use crate::pixel_target::rgb565_raw_from_rgb888_components;
 use crate::cyd::display::CydFrame;
+use crate::pixel_target::rgb565_raw_from_rgb888_components;
 use embedded_graphics::{
     Drawable, Pixel,
     pixelcolor::{Rgb565, raw::RawU16},

@@ -92,15 +92,27 @@ impl From<crate::cyd::CydError> for Error {
 }
 
 #[cfg(target_os = "none")]
-impl From<device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<crate::cyd::CydError, Error>>
-    for Error
+impl
+    From<
+        device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+            crate::cyd::CydError,
+            Error,
+        >,
+    > for Error
 {
     fn from(
-        error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<crate::cyd::CydError, Error>,
+        error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+            crate::cyd::CydError,
+            Error,
+        >,
     ) -> Self {
         match error {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Device(error) => Self::from(error),
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Flash(error) => error,
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Device(error) => {
+                Self::from(error)
+            }
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Flash(error) => {
+                error
+            }
         }
     }
 }

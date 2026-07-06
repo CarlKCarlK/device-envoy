@@ -5,16 +5,16 @@ use crate::flash_block::FlashBlock;
 use heapless::String;
 
 use super::super::{Cyd, CydDisplay};
+use super::CydRawTouch;
 use super::calibration::{
-    CalibrationConfig, CalibrationCorner, draw_calibration_ack_dot, draw_calibration_cross,
-    draw_calibration_instruction, draw_calibration_rejected_cross,
-    draw_calibration_verify_target, calibration_verify_target_center,
-    validate_calibration_points, VERIFY_HIT_RADIUS_PIXELS,
+    CalibrationConfig, CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS,
+    calibration_verify_target_center, draw_calibration_ack_dot, draw_calibration_cross,
+    draw_calibration_instruction, draw_calibration_rejected_cross, draw_calibration_verify_target,
+    validate_calibration_points,
 };
+use super::flow::CalibrationFlow;
 use super::flow::CalibrationFlowEvent;
 use super::flow::{ReleaseTouchCapture, ReleaseTouchCaptureEvent};
-use super::flow::CalibrationFlow;
-use super::CydRawTouch;
 use crate::cyd::display::CydFrame;
 
 pub const CAPTURE_ACK_FRAME_COUNT: usize = 8;
@@ -575,6 +575,5 @@ fn hit_verify_target(mapped_x: f32, mapped_y: f32) -> bool {
     let verify_target_center = calibration_verify_target_center();
     let delta_x = mapped_x - verify_target_center.x as f32;
     let delta_y = mapped_y - verify_target_center.y as f32;
-    delta_x * delta_x + delta_y * delta_y
-        <= VERIFY_HIT_RADIUS_PIXELS * VERIFY_HIT_RADIUS_PIXELS
+    delta_x * delta_x + delta_y * delta_y <= VERIFY_HIT_RADIUS_PIXELS * VERIFY_HIT_RADIUS_PIXELS
 }

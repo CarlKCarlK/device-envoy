@@ -50,7 +50,7 @@ use std::{
 #[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Cyd, CydDisplay, CydIoError, CydTouch,
+    Cyd, CydDisplay, CydTouch,
     display::{CydFrame, RectanglePixels},
     touch::{CydRawTouch, RawTouchEvent, TouchEvent},
 };
@@ -103,9 +103,6 @@ impl MemoryFrameClock {
 pub enum MemoryCydError {
     OutOfFrames,
 }
-
-impl CydIoError for MemoryCydError {}
-
 /// In-memory CYD device for host-side tests and screenshots.
 pub struct MemoryCyd {
     size: Size,
@@ -1091,9 +1088,9 @@ mod tests {
         Cyd, CydDisplay,
         display::{CydFrame, RectanglePixels},
         touch::calibration::{
-            CalibrationConfig, CalibrationCorner, EnsureCalibrationError,
-            EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
-            calibration_verify_target_center, distort_demo_screen_to_raw, ensure_calibration,
+            CalibrationConfig, CalibrationCorner, EnsureCalibrationError, EnsureCalibrationOutcome,
+            VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center, calibration_verify_target_center,
+            distort_demo_screen_to_raw, ensure_calibration,
         },
     };
     use crate::flash_block::FlashBlock;

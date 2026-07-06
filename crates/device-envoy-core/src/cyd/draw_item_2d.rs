@@ -1,0 +1,181 @@
+use crate::{PixelTarget, PixelTargetAdapter, fill_ellipse_pixels, pixel_put, pixel_put_565};
+use embedded_graphics::{
+    Drawable,
+    pixelcolor::{Rgb565, Rgb888, raw::RawU16},
+    prelude::{IntoStorage, Point, Size},
+    primitives::Rectangle,
+    primitives::{Circle, Line, Primitive, PrimitiveStyle},
+};
+
+/// A view into a statically-stored RGB565 bitmap, optionally cropped to a
+/// sub-rectangle.
+///
+/// For a full-image view use [`Image565Fixed::view`](super::tga::Image565Fixed::view);
+/// for a cropped view use
+/// [`Image565Fixed::view_rect`](super::tga::Image565Fixed::view_rect). `stride`
+/// is the full image width (row step in pixels); `source` is the crop
+/// rectangle in image coordinates.
+#[derive(Clone, Copy, Debug)]
+pub struct Image565View {
+    pixels: &'static [u16],
+    stride: u32,
+    source: Rectangle,
+}
+
+impl Image565View {
+    /// Full-image view from a raw pixel slice.
+    ///
+    /// Panics if `pixels.len() != size.width * size.height`.
+    #[must_use]
+    pub const fn new(pixels: &'static [u16], size: Size) -> Self {
+        assert!(
+            pixels.len() == size.width as usize * size.height as usize,
+            "Image565View pixels must match width * height"
+        );
+        Self {
+            pixels,
+            stride: size.width,
+            source: Rectangle::new(Point::zero(), size),
+        }
+    }
+
+    /// Cropped view — `source` is in image coordinates, `stride` is the full
+    /// image row width. Prefer [`Image565Fixed::view_rect`] at call sites.
+    #[must_use]
+    pub(crate) const fn new_cropped(
+        pixels: &'static [u16],
+        stride: u32,
+        source: Rectangle,
+    ) -> Self {
+        Self {
+            pixels,
+            stride,
+            source,
+        }
+    }
+
+    #[must_use]
+    pub const fn size(&self) -> Size {
+        self.source.size
+    }
+
+    /// Returns the pixel at `point`, where `point` is in view-local coordinates
+    /// (i.e. `(0, 0)` is the top-left of this view, not of the underlying image).
+    #[must_use]
+    pub fn pixel_at(&self, point: Point) -> Rgb565 {
+        assert!(
+            point.x >= 0 && point.y >= 0,
+            "Image565View pixel coordinate must be non-negative"
+        );
+        let vx = point.x as usize;
+        let vy = point.y as usize;
+        assert!(
+            vx < self.source.size.width as usize && vy < self.source.size.height as usize,
+            "Image565View pixel coordinate must be inside the view"
+        );
+        let source_x = self.source.top_left.x as usize + vx;
+        let source_y = self.source.top_left.y as usize + vy;
+        let index = source_y * self.stride as usize + source_x;
+        Rgb565::from(RawU16::new(self.pixels[index]))
+    }
+}
+
+/// A pixel-space 2D draw item, ready to draw onto a [`PixelTarget`].
+///
+/// Construct one directly when you already have pixel-space geometry, or via
+/// linkage-blaze's CYD 3D adapters when projecting a 3D scene. All coordinates
+/// and sizes are in pixels. The `color` stays [`Rgb888`]; the target performs
+/// any conversion (for example to `Rgb565`) at its pixel boundary.
+#[derive(Clone, Copy, Debug)]
+pub enum DrawItem2d {
+    /// A line stroke from `start` to `end` with the given pixel width.
+    Stroke {
+        start: (f32, f32),
+        end: (f32, f32),
+        color: Rgb888,
+        pixel_width: f32,
+    },
+    /// A filled, possibly foreshortened, ellipse (a projected disk).
+    ///
+    /// The ellipse is the locus of `center + s·axis_a + t·axis_b` with `s²+t² ≤ 1`.
+    Ellipse {
+        center: (f32, f32),
+        axis_a: (f32, f32),
+        axis_b: (f32, f32),
+        color: Rgb888,
+    },
+    /// A filled circle (a projected sphere).
+    Circle {
+        center: (f32, f32),
+        pixel_radius: f32,
+        color: Rgb888,
+    },
+    /// A statically-stored RGB565 bitmap view placed at a screen position.
+    Bitmap { view: Image565View, top_left: Point },
+}
+
+impl DrawItem2d {
+    /// Draw this item onto a [`PixelTarget`].
+    ///
+    /// Strokes use the embedded-graphics [`Line`] primitive and circles use
+    /// [`Circle`]; the general projected ellipse is rasterized with
+    /// [`fill_ellipse_pixels`].
+    pub fn draw<T: PixelTarget>(&self, target: &mut T) {
+        match *self {
+            DrawItem2d::Stroke {
+                start,
+                end,
+                color,
+                pixel_width,
+            } => {
+                let width = ((pixel_width + 0.5) as u32).max(1);
+                Line::new(
+                    embedded_graphics::prelude::Point::new(start.0 as i32, start.1 as i32),
+                    embedded_graphics::prelude::Point::new(end.0 as i32, end.1 as i32),
+                )
+                .into_styled(PrimitiveStyle::with_stroke(color, width))
+                .draw(&mut PixelTargetAdapter(target))
+                .expect("drawing onto a PixelTargetAdapter is Infallible");
+            }
+            DrawItem2d::Ellipse {
+                center,
+                axis_a,
+                axis_b,
+                color,
+            } => {
+                fill_ellipse_pixels(center, axis_a, axis_b, |position_x, position_y| {
+                    pixel_put(target, position_x, position_y, color);
+                });
+            }
+            DrawItem2d::Circle {
+                center,
+                pixel_radius,
+                color,
+            } => {
+                let diameter = (((pixel_radius * 2.0) + 0.5) as u32).max(1);
+                Circle::with_center(
+                    embedded_graphics::prelude::Point::new(center.0 as i32, center.1 as i32),
+                    diameter,
+                )
+                .into_styled(PrimitiveStyle::with_fill(color))
+                .draw(&mut PixelTargetAdapter(target))
+                .expect("drawing onto a PixelTargetAdapter is Infallible");
+            }
+            DrawItem2d::Bitmap { view, top_left } => {
+                let size = view.size();
+                for dy in 0..size.height as i32 {
+                    for dx in 0..size.width as i32 {
+                        let view_point = Point::new(dx, dy);
+                        let target_point = top_left + view_point;
+                        pixel_put_565(
+                            target,
+                            target_point.x,
+                            target_point.y,
+                            view.pixel_at(view_point).into_storage(),
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

@@ -24,15 +24,16 @@ use static_cell::StaticCell;
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 use device_envoy_core::cyd::{
-    CopySizeError, CydFlushError, RectanglePixels, SCREEN_PIXELS,
+    CydFlushError, SCREEN_PIXELS,
     calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
+    display::RectanglePixels,
 };
 use device_envoy_core::pixel_target::PixelTarget;
 pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydFrame, CydTouch, Orientation, TouchEvent, tiling,
+    Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent, display::Orientation, tiling,
 };
 pub use text::DEFAULT_FONT;
 pub use touch::{CydTouchEspInitError, TOUCH_SPI_HZ};
@@ -685,10 +686,10 @@ impl CydFrame for CydFrameEsp<'_> {
         CydFrameEsp::write_text(self, text)
     }
 
-    fn copy_from_565(&mut self, src: &[u16]) -> Result<(), CopySizeError> {
+    fn copy_from_565(&mut self, src: &[u16]) -> device_envoy_core::Result<()> {
         let dst = self.raw_pixels_mut();
         if dst.len() != src.len() {
-            return Err(CopySizeError {
+            return Err(device_envoy_core::Error::CopySize {
                 src_len: src.len(),
                 frame_len: dst.len(),
             });

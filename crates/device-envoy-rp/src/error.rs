@@ -2,8 +2,6 @@
 use core::convert::Infallible;
 
 use derive_more::derive::{Display, Error};
-use device_envoy_core::lcd_text::LcdTextError;
-use device_envoy_core::wifi_auto::WifiAutoError;
 use esp_hal_mfrc522::consts::PCDErrorCode;
 
 /// A specialized `Result` where the error is this crate's `Error` type.
@@ -41,9 +39,6 @@ pub enum Error {
 
     #[display("Format error")]
     FormatError,
-
-    #[display("Character LCD operation failed: {_0:?}")]
-    LcdText(#[error(not(source))] LcdTextError),
 
     #[display("Custom WiFi Auto field missing")]
     MissingCustomWifiAutoField,
@@ -143,21 +138,5 @@ impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
         match error {
             device_envoy_core::led4::Led4BitsToIndexesError::Full => Self::BitsToIndexesFull,
         }
-    }
-}
-
-impl From<WifiAutoError> for Error {
-    fn from(error: WifiAutoError) -> Self {
-        match error {
-            WifiAutoError::FormatError => Self::FormatError,
-            WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
-            WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
-        }
-    }
-}
-
-impl From<LcdTextError> for Error {
-    fn from(error: LcdTextError) -> Self {
-        Self::LcdText(error)
     }
 }

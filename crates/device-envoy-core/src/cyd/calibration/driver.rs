@@ -7,9 +7,9 @@ use heapless::String;
 use super::super::{Cyd, CydDisplay, CydFrame};
 
 use super::{
-    CalibrationConfig, CalibrationCorner, CalibrationFlow, CalibrationSolveError, CydRawTouch,
-    draw_calibration_ack_dot, draw_calibration_cross, draw_calibration_instruction,
-    draw_calibration_rejected_cross, draw_calibration_verify_target,
+    CalibrationConfig, CalibrationCorner, CalibrationFlow, CydRawTouch, draw_calibration_ack_dot,
+    draw_calibration_cross, draw_calibration_instruction, draw_calibration_rejected_cross,
+    draw_calibration_verify_target,
     flow::CalibrationFlowEvent,
     flow::{ReleaseTouchCapture, ReleaseTouchCaptureEvent},
     validate_calibration_points,
@@ -111,7 +111,7 @@ enum CalibrationDriverState {
 /// # use device_envoy_core::{
 /// #     button::{Button, __ButtonMonitor},
 /// #     cyd::{
-/// #         Cyd, CydDisplay, CydFrame, CydInfallibleError, CydTouch, TouchEvent,
+/// #         Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent,
 /// #         calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
 /// #         ensure_calibration,
 /// #     },
@@ -133,7 +133,7 @@ enum CalibrationDriverState {
 /// # }
 /// # struct DemoButton;
 /// # impl Cyd for DemoCyd {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     type Display<'a> = DemoDisplay;
 /// #     type Touch<'a> = DemoTouch;
 /// #     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) {
@@ -141,7 +141,7 @@ enum CalibrationDriverState {
 /// #     }
 /// # }
 /// # impl CydDisplay for DemoDisplay {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     type Frame<'a> = DemoFrame;
 /// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
 /// #     fn background(&self) -> Rgb888 { Rgb888::BLACK }
@@ -192,7 +192,7 @@ enum CalibrationDriverState {
 /// #     fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
 /// # }
 /// # impl CydFrame for DemoFrame {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     fn rectangle(&self) -> Rectangle {
 /// #         Rectangle::new(Point::zero(), Size::new(320, 240))
 /// #     }
@@ -201,7 +201,7 @@ enum CalibrationDriverState {
 /// #     fn copy_from_565(
 /// #         &mut self,
 /// #         _src: &[u16],
-/// #     ) -> Result<(), device_envoy_core::cyd::CopySizeError> {
+/// #     ) -> device_envoy_core::Result<()> {
 /// #         Ok(())
 /// #     }
 /// #     fn flush(
@@ -211,11 +211,11 @@ enum CalibrationDriverState {
 /// #     }
 /// # }
 /// # impl CydTouch for DemoTouch {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> { Ok(None) }
 /// # }
 /// # impl CydRawTouch for DemoCyd {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
 /// #         Ok(None)
 /// #     }
@@ -241,7 +241,7 @@ enum CalibrationDriverState {
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
 /// # impl Button for DemoButton {}
-/// # async fn demo() -> Result<(), device_envoy_core::cyd::EnsureCalibrationError<CydInfallibleError, Infallible>> {
+/// # async fn demo() -> Result<(), device_envoy_core::cyd::EnsureCalibrationError<Infallible, Infallible>> {
 /// let mut cyd = DemoCyd;
 /// let mut calibration_flash_block = DemoFlashBlock {
 ///     calibration_config: None,
@@ -356,7 +356,7 @@ where
                                         .verify_timeout_frames(),
                                 };
                             }
-                            Err(CalibrationSolveError::ResidualTooLarge {
+                            Err(crate::Error::CalibrationResidualTooLarge {
                                 worst_residual_pixels,
                             }) => {
                                 calibration_flow.restart();
@@ -365,7 +365,14 @@ where
                                     frames_remaining: REJECTED_FRAME_COUNT,
                                 };
                             }
-                            Err(CalibrationSolveError::DegenerateGeometry) => {
+                            Err(crate::Error::CalibrationDegenerateGeometry) => {
+                                calibration_flow.restart();
+                                calibration_driver_state = CalibrationDriverState::ShowRejected {
+                                    worst_residual_pixels: None,
+                                    frames_remaining: REJECTED_FRAME_COUNT,
+                                };
+                            }
+                            Err(_) => {
                                 calibration_flow.restart();
                                 calibration_driver_state = CalibrationDriverState::ShowRejected {
                                     worst_residual_pixels: None,

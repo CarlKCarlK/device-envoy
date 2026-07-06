@@ -99,12 +99,6 @@ pub enum CalibrationCorner {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum CalibrationSolveError {
-    DegenerateGeometry,
-    ResidualTooLarge { worst_residual_pixels: f32 },
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CalibrationValidation {
     calibration_config: CalibrationConfig,
     worst_residual_pixels: f32,
@@ -138,7 +132,7 @@ impl CalibrationConfig {
 
     pub fn try_from_four_points(
         points: [RawPoint; CALIBRATION_POINT_COUNT],
-    ) -> Result<Self, CalibrationSolveError> {
+    ) -> crate::Result<Self> {
         let screen_targets = [
             calibration_corner_center(CalibrationCorner::UpperLeft),
             calibration_corner_center(CalibrationCorner::UpperRight),
@@ -179,11 +173,11 @@ impl CalibrationConfig {
 
 pub fn validate_calibration_points(
     points: [RawPoint; CALIBRATION_POINT_COUNT],
-) -> Result<CalibrationValidation, CalibrationSolveError> {
+) -> crate::Result<CalibrationValidation> {
     let calibration_config = CalibrationConfig::try_from_four_points(points)?;
     let worst_residual_pixels = worst_residual_pixels(points, calibration_config);
     if worst_residual_pixels > MAX_RESIDUAL_PIXELS {
-        return Err(CalibrationSolveError::ResidualTooLarge {
+        return Err(crate::Error::CalibrationResidualTooLarge {
             worst_residual_pixels,
         });
     }
@@ -348,10 +342,7 @@ pub fn distort_demo_screen_to_raw(screen_x: f32, screen_y: f32) -> RawPoint {
     }
 }
 
-fn solve_3x3(
-    system_matrix: [[f32; 3]; 3],
-    rhs_vector: [f32; 3],
-) -> Result<(f32, f32, f32), CalibrationSolveError> {
+fn solve_3x3(system_matrix: [[f32; 3]; 3], rhs_vector: [f32; 3]) -> crate::Result<(f32, f32, f32)> {
     let determinant = system_matrix[0][0]
         * (system_matrix[1][1] * system_matrix[2][2] - system_matrix[1][2] * system_matrix[2][1])
         - system_matrix[0][1]
@@ -362,7 +353,7 @@ fn solve_3x3(
                 - system_matrix[1][1] * system_matrix[2][0]);
 
     if determinant.abs() < AFFINE_DETERMINANT_EPSILON {
-        return Err(CalibrationSolveError::DegenerateGeometry);
+        return Err(crate::Error::CalibrationDegenerateGeometry);
     }
 
     let determinant_ax = rhs_vector[0]
@@ -399,7 +390,7 @@ fn solve_affine_axis(
     points: [RawPoint; CALIBRATION_POINT_COUNT],
     screen_targets: [Point; CALIBRATION_POINT_COUNT],
     map_x_axis: bool,
-) -> Result<(f32, f32, f32), CalibrationSolveError> {
+) -> crate::Result<(f32, f32, f32)> {
     let mut sum_xx = 0.0;
     let mut sum_xy = 0.0;
     let mut sum_x = 0.0;
@@ -467,9 +458,8 @@ fn worst_residual_pixels(
 #[cfg(test)]
 mod tests {
     use super::{
-        CALIBRATION_POINT_COUNT, CalibrationConfig, CalibrationCorner, CalibrationSolveError,
-        MAX_RESIDUAL_PIXELS, calibration_corner_center, distort_demo_screen_to_raw,
-        validate_calibration_points,
+        CALIBRATION_POINT_COUNT, CalibrationConfig, CalibrationCorner, MAX_RESIDUAL_PIXELS,
+        calibration_corner_center, distort_demo_screen_to_raw, validate_calibration_points,
     };
 
     const MAP_EPSILON: f32 = 0.75;
@@ -532,7 +522,7 @@ mod tests {
             .expect_err("duplicate-corner input should be rejected");
         assert!(matches!(
             error,
-            CalibrationSolveError::ResidualTooLarge { .. }
+            crate::Error::CalibrationResidualTooLarge { .. }
         ));
     }
 

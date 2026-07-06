@@ -19,10 +19,11 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    Cyd, CydDisplay, CydFrame, CydInfallibleError, CydTouch, Orientation, TouchEvent,
+    Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent,
     calibration::{
         CalibrationConfig, CydRawTouch, RawPoint, RawTouchEvent, distort_demo_screen_to_raw,
     },
+    display::Orientation,
 };
 use crate::{
     button::{__ButtonMonitor, BUTTON_POLL_INTERVAL, Button},
@@ -432,7 +433,7 @@ const fn decode_hex_nibble(byte: u8) -> Option<u8> {
 impl Cyd for CydWasm {
     // Presenting to a canvas cannot fail, so the device-agnostic render loop
     // never has a real error to propagate.
-    type Error = CydInfallibleError;
+    type Error = Infallible;
     type Display<'a> = CydDisplayWasmPart<'a>;
     type Touch<'a> = CydTouchWasmPart;
 
@@ -456,7 +457,7 @@ impl Cyd for CydWasm {
 }
 
 impl CydDisplay for CydDisplayWasmPart<'_> {
-    type Error = CydInfallibleError;
+    type Error = Infallible;
     type Frame<'a>
         = CydFrameWasm<'a>
     where
@@ -506,11 +507,7 @@ impl CydDisplay for CydDisplayWasmPart<'_> {
         }
     }
 
-    fn fill_rectangle(
-        &mut self,
-        rectangle: Rectangle,
-        color: Rgb565,
-    ) -> Result<(), CydInfallibleError> {
+    fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Infallible> {
         let screen_rectangle = Rectangle::new(Point::zero(), self.size);
         let rectangle = rectangle.intersection(&screen_rectangle);
         if rectangle.size.width == 0 || rectangle.size.height == 0 {
@@ -527,11 +524,7 @@ impl CydDisplay for CydDisplayWasmPart<'_> {
         Ok(())
     }
 
-    fn fill_contiguous<I>(
-        &mut self,
-        rectangle: Rectangle,
-        pixels: I,
-    ) -> Result<(), CydInfallibleError>
+    fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), Infallible>
     where
         I: IntoIterator<Item = Rgb565>,
     {
@@ -551,9 +544,9 @@ impl CydDisplay for CydDisplayWasmPart<'_> {
 }
 
 impl CydTouch for CydTouchWasmPart {
-    type Error = CydInfallibleError;
+    type Error = Infallible;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, CydInfallibleError> {
+    fn read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
         let Some(calibration_config) = self.calibration_config else {
             return Ok(None);
         };
@@ -580,9 +573,9 @@ impl CydTouch for CydTouchWasmPart {
 }
 
 impl CydRawTouch for CydWasm {
-    type Error = CydInfallibleError;
+    type Error = Infallible;
 
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, CydInfallibleError> {
+    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Infallible> {
         if let Some(raw_touch_event) = self.raw_touch_events.borrow_mut().pop_front() {
             return Ok(Some(raw_touch_event));
         }
@@ -770,7 +763,7 @@ impl PixelTarget for CydFrameWasm<'_> {
 }
 
 impl CydFrame for CydFrameWasm<'_> {
-    type Error = CydInfallibleError;
+    type Error = Infallible;
 
     fn tile_top_left(&self) -> Point {
         self.tile_top_left
@@ -784,9 +777,9 @@ impl CydFrame for CydFrameWasm<'_> {
         CydFrameWasm::fill(self, color)
     }
 
-    fn copy_from_565(&mut self, src: &[u16]) -> Result<(), crate::cyd::CopySizeError> {
+    fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()> {
         if self.pixels.len() != src.len() {
-            return Err(crate::cyd::CopySizeError {
+            return Err(crate::Error::CopySize {
                 src_len: src.len(),
                 frame_len: self.pixels.len(),
             });
@@ -803,7 +796,7 @@ impl CydFrame for CydFrameWasm<'_> {
         self
     }
 
-    async fn flush(&mut self) -> Result<(), CydInfallibleError> {
+    async fn flush(&mut self) -> Result<(), Infallible> {
         // Present immediately so the first drawn frame is visible without
         // waiting a browser tick, then yield to the next animation frame to
         // pace the loop.

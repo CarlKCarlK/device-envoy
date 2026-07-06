@@ -13,14 +13,15 @@ mod touch;
 use core::{convert::Infallible, fmt};
 
 use device_envoy_core::cyd::{
-    CopySizeError, CydFlushError, RectanglePixels, SCREEN_PIXELS,
+    CydFlushError, SCREEN_PIXELS,
     calibration::{CalibrationConfig, CydRawTouch, RawTouchEvent},
+    display::RectanglePixels,
 };
 use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydFrame, CydTouch, Orientation, TouchEvent, tiling,
+    Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent, display::Orientation, tiling,
 };
 use embassy_rp::Peri;
 use embassy_rp::gpio::Pin;
@@ -758,10 +759,10 @@ impl CydFrame for CydFrameRp<'_> {
         CydFrameRp::write_text(self, text)
     }
 
-    fn copy_from_565(&mut self, src: &[u16]) -> Result<(), CopySizeError> {
+    fn copy_from_565(&mut self, src: &[u16]) -> device_envoy_core::Result<()> {
         let dst = self.raw_pixels_mut();
         if dst.len() != src.len() {
-            return Err(CopySizeError {
+            return Err(device_envoy_core::Error::CopySize {
                 src_len: src.len(),
                 frame_len: dst.len(),
             });

@@ -4,15 +4,6 @@
 
 use embassy_time::Timer;
 
-/// Character LCD operation errors shared across platform crates.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum LcdTextError {
-    /// I2C write failed for the given 7-bit address.
-    I2cWrite { address: u8 },
-    /// Attempted to set cursor to an out-of-range row.
-    RowOutOfBounds { row: usize },
-}
-
 /// A packed text frame for an HD44780 display.
 #[derive(Clone, Copy, Debug)]
 // Public for cross-crate platform plumbing; hidden from end-user docs.
@@ -143,7 +134,7 @@ pub trait LcdText<const W: usize, const H: usize> {
 /// Character LCD write adapter for platform crates.
 pub trait LcdTextWrite {
     /// Write one byte to the configured LCD I2C expander.
-    fn write(&mut self, address: u8, data: u8) -> Result<(), LcdTextError>;
+    fn write(&mut self, address: u8, data: u8) -> crate::Result<()>;
 }
 
 // PCF8574 pin mapping: P0=RS, P1=RW, P2=E, P3=Backlight, P4-P7=Data.
@@ -171,10 +162,7 @@ impl LcdTextDriver {
     }
 
     /// Initialize the LCD in 4-bit mode and clear it.
-    pub async fn init(
-        &mut self,
-        lcd_text_write: &mut impl LcdTextWrite,
-    ) -> Result<(), LcdTextError> {
+    pub async fn init(&mut self, lcd_text_write: &mut impl LcdTextWrite) -> crate::Result<()> {
         Timer::after_millis(50).await;
 
         self.write_nibble(lcd_text_write, 0x03, false).await?;
@@ -201,7 +189,7 @@ impl LcdTextDriver {
         &mut self,
         lcd_text_write: &mut impl LcdTextWrite,
         lcd_text_frame: &LcdTextFrame<MAX_CHARS>,
-    ) -> Result<(), LcdTextError> {
+    ) -> crate::Result<()> {
         self.clear(lcd_text_write).await?;
 
         for row_index in 0..lcd_text_frame.height {
@@ -225,7 +213,7 @@ impl LcdTextDriver {
         lcd_text_write: &mut impl LcdTextWrite,
         nibble: u8,
         rs: bool,
-    ) -> Result<(), LcdTextError> {
+    ) -> crate::Result<()> {
         let rs_bit = if rs { LCD_RS } else { 0 };
         let data = (nibble << 4) | LCD_BACKLIGHT | rs_bit;
 
@@ -241,14 +229,14 @@ impl LcdTextDriver {
         lcd_text_write: &mut impl LcdTextWrite,
         byte: u8,
         rs: bool,
-    ) -> Result<(), LcdTextError> {
+    ) -> crate::Result<()> {
         self.write_nibble(lcd_text_write, (byte >> 4) & 0x0F, rs)
             .await?;
         self.write_nibble(lcd_text_write, byte & 0x0F, rs).await?;
         Ok(())
     }
 
-    async fn clear(&mut self, lcd_text_write: &mut impl LcdTextWrite) -> Result<(), LcdTextError> {
+    async fn clear(&mut self, lcd_text_write: &mut impl LcdTextWrite) -> crate::Result<()> {
         self.write_byte(lcd_text_write, 0x01, false).await?;
         Timer::after_millis(2).await;
         Ok(())
@@ -263,13 +251,13 @@ impl LcdTextDriver {
         lcd_text_write: &mut impl LcdTextWrite,
         row: usize,
         col: u8,
-    ) -> Result<(), LcdTextError> {
+    ) -> crate::Result<()> {
         let address = match row {
             0 => col,
             1 => 0x40_u8 + col,
             2 => 0x14_u8 + col,
             3 => 0x54_u8 + col,
-            _ => return Err(LcdTextError::RowOutOfBounds { row }),
+            _ => return Err(crate::Error::LcdRowOutOfBounds { row }),
         };
         self.write_byte(lcd_text_write, 0x80 | address, false)
             .await?;

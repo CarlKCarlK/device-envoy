@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::RectanglePixels;
+use device_envoy_core::cyd::display::RectanglePixels;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Level, Output, Pin};
 use embassy_rp::peripherals::SPI0;

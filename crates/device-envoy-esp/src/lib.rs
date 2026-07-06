@@ -215,8 +215,6 @@ pub mod docs {
 }
 
 pub use device_envoy_core::tone;
-#[cfg(any(feature = "host", esp_has_wifi))]
-use device_envoy_core::wifi_auto::WifiAutoError;
 /// Used internally by other macros.
 #[doc(hidden)]
 pub use paste::paste as __paste;
@@ -367,17 +365,6 @@ impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
     fn from(error: device_envoy_core::led4::Led4BitsToIndexesError) -> Self {
         match error {
             device_envoy_core::led4::Led4BitsToIndexesError::Full => Self::Led4BitsToIndexesFull,
-        }
-    }
-}
-
-#[cfg(any(feature = "host", esp_has_wifi))]
-impl From<WifiAutoError> for Error {
-    fn from(error: WifiAutoError) -> Self {
-        match error {
-            WifiAutoError::FormatError => Self::FormatError,
-            WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
-            WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
         }
     }
 }

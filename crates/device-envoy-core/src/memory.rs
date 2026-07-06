@@ -49,8 +49,9 @@ use std::{
 #[cfg(test)]
 use crate::cyd::calibration::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    CopySizeError, Cyd, CydDisplay, CydFlushError, CydFrame, CydTouch, RectanglePixels, TouchEvent,
+    Cyd, CydDisplay, CydFlushError, CydFrame, CydTouch, TouchEvent,
     calibration::{CydRawTouch, RawTouchEvent},
+    display::RectanglePixels,
 };
 #[cfg(test)]
 use crate::flash_block::{
@@ -725,9 +726,9 @@ impl CydFrame for MemoryFrame<'_> {
         self
     }
 
-    fn copy_from_565(&mut self, src: &[u16]) -> Result<(), CopySizeError> {
+    fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()> {
         if self.pixels.len() != src.len() {
-            return Err(CopySizeError {
+            return Err(crate::Error::CopySize {
                 src_len: src.len(),
                 frame_len: self.pixels.len(),
             });
@@ -1091,7 +1092,7 @@ mod tests {
     };
     use crate::cyd::{
         Cyd, CydDisplay, CydFrame, EnsureCalibrationError, EnsureCalibrationOutcome,
-        RectanglePixels, ensure_calibration,
+        display::RectanglePixels, ensure_calibration,
     };
     use crate::flash_block::FlashBlock;
     use embedded_graphics::{

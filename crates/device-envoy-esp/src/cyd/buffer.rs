@@ -1,6 +1,6 @@
 use core::convert::Infallible;
 
-use device_envoy_core::cyd::RectanglePixels;
+use device_envoy_core::cyd::display::RectanglePixels;
 use embedded_graphics::{
     Pixel,
     pixelcolor::{IntoStorage, Rgb565},

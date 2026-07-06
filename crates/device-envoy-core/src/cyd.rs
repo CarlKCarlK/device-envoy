@@ -7,22 +7,12 @@
 //!
 
 pub mod calibration;
-mod contiguous_pixels;
-mod draw_item;
-mod orientation;
-mod tga;
+pub mod display;
 pub mod tiling;
 mod touch_event;
 
-pub use crate::{
-    __cyd_tga565 as tga565, __cyd_tga565_magenta_mask as tga565_magenta_mask,
-    __cyd_tga565_mask as tga565_mask, __cyd_tga565_white_mask as tga565_white_mask,
-};
 pub use calibration::{EnsureCalibrationError, EnsureCalibrationOutcome, ensure_calibration};
-pub use contiguous_pixels::ContiguousPixels;
-pub use draw_item::{DrawItem, Image565View};
-pub use orientation::Orientation;
-pub use tga::{Image565Fixed, Image565Mask};
+use display::ContiguousPixels;
 pub use touch_event::TouchEvent;
 
 /// Native panel width in pixels (landscape): 320. The CYD panel is fixed hardware.
@@ -42,13 +32,6 @@ use embedded_graphics::{
 };
 use tiling::TileGrid;
 
-/// A borrowed or owned rectangular RGB565 pixel buffer.
-pub trait RectanglePixels {
-    fn width(&self) -> usize;
-    fn height(&self) -> usize;
-    fn raw_pixels(&self) -> &[u16];
-}
-
 /// Error type used by a CYD device or frame.
 ///
 /// This marker lets downstream generic examples distinguish device/flush errors
@@ -56,18 +39,13 @@ pub trait RectanglePixels {
 pub trait CydFlushError {}
 
 /// Device/flush error for CYD implementations whose presentation path cannot fail.
-#[derive(Debug)]
-pub enum CydInfallibleError {}
-
-impl CydFlushError for CydInfallibleError {}
+impl CydFlushError for Infallible {}
 
 /// A complete CYD device that offers display and touch parts.
 ///
 /// ```rust,no_run
 /// # use core::{convert::Infallible, future::ready};
-/// # use device_envoy_core::cyd::{
-/// #     Cyd, CydDisplay, CydFrame, CydInfallibleError, CydTouch, TouchEvent,
-/// # };
+/// # use device_envoy_core::cyd::{Cyd, CydDisplay, CydFrame, CydTouch, TouchEvent};
 /// # use device_envoy_core::pixel_target::PixelTarget;
 /// # use embedded_graphics::{
 /// #     pixelcolor::{Rgb565, Rgb888},
@@ -79,7 +57,7 @@ impl CydFlushError for CydInfallibleError {}
 /// # struct DemoTouch;
 /// # struct DemoFrame;
 /// # impl Cyd for DemoCyd {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     type Display<'a> = DemoDisplay;
 /// #     type Touch<'a> = DemoTouch;
 /// #     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) {
@@ -87,7 +65,7 @@ impl CydFlushError for CydInfallibleError {}
 /// #     }
 /// # }
 /// # impl CydDisplay for DemoDisplay {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     type Frame<'a> = DemoFrame;
 /// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
 /// #     fn background(&self) -> Rgb888 { Rgb888::BLACK }
@@ -139,13 +117,13 @@ impl CydFlushError for CydInfallibleError {}
 /// #     fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
 /// # }
 /// # impl CydFrame for DemoFrame {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     fn rectangle(&self) -> Rectangle {
 /// #         Rectangle::new(Point::zero(), Size::new(320, 240))
 /// #     }
 /// #     fn fill(&mut self, _color: Rgb565) -> &mut Self { self }
 /// #     fn write_text(&mut self, _text: &str) -> &mut Self { self }
-/// #     fn copy_from_565(&mut self, _src: &[u16]) -> Result<(), device_envoy_core::cyd::CopySizeError> {
+/// #     fn copy_from_565(&mut self, _src: &[u16]) -> device_envoy_core::Result<()> {
 /// #         Ok(())
 /// #     }
 /// #     fn flush(&mut self) -> impl core::future::Future<Output = Result<(), <Self as CydFrame>::Error>> {
@@ -153,10 +131,10 @@ impl CydFlushError for CydInfallibleError {}
 /// #     }
 /// # }
 /// # impl CydTouch for DemoTouch {
-/// #     type Error = CydInfallibleError;
+/// #     type Error = Infallible;
 /// #     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> { Ok(None) }
 /// # }
-/// # async fn draw(cyd: &mut impl Cyd<Error = CydInfallibleError>) -> Result<(), CydInfallibleError> {
+/// # async fn draw(cyd: &mut impl Cyd<Error = Infallible>) -> Result<(), Infallible> {
 /// let (mut display, mut touch) = cyd.parts();
 /// let mut frame = display.full_frame_mut();
 /// frame.write_text("Hello CYD").flush().await?;
@@ -274,7 +252,7 @@ pub trait CydDisplay {
     /// Present a native-color rectangle buffer at `top_left`.
     fn flush_at(
         &mut self,
-        buffer: &impl RectanglePixels,
+        buffer: &impl display::RectanglePixels,
         top_left: Point,
     ) -> Result<(), Self::Error> {
         let rectangle = Rectangle::new(
@@ -292,26 +270,16 @@ pub trait CydDisplay {
     }
 
     /// Draw projected draw items immediately inside `bounds`.
-    fn draw_items<const PRIMITIVE_COUNT: usize>(
+    fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,
         background: Rgb565,
-        items: &[DrawItem],
+        items: impl IntoIterator<Item = display::DrawItem>,
     ) -> Result<(), Self::Error> {
-        let primitive_pixels =
-            self.prepare_draw_items::<PRIMITIVE_COUNT>(bounds, background, items);
-        self.fill_contiguous(primitive_pixels.bounds(), primitive_pixels.iter())
-    }
-
-    /// Compile projected draw items for indexed pixel lookups inside `bounds`.
-    fn prepare_draw_items<const PRIMITIVE_COUNT: usize>(
-        &self,
-        bounds: Rectangle,
-        background: Rgb565,
-        items: &[DrawItem],
-    ) -> ContiguousPixels<PRIMITIVE_COUNT> {
         let bounds = bounds.intersection(&Rectangle::new(Point::zero(), self.screen_size()));
-        ContiguousPixels::from_draw_items(bounds, background, items.iter().copied())
+        let pixel_sources =
+            ContiguousPixels::<PIXEL_SOURCE_COUNT>::from_draw_items(bounds, background, items);
+        self.fill_contiguous(pixel_sources.bounds(), pixel_sources.iter())
     }
 
     /// Clear the whole screen to the device default background color.
@@ -330,7 +298,7 @@ pub trait CydDisplay {
 
     /// Drive `grid` as a sequence of low-memory tiles.
     ///
-    /// The returned [`Tiles`] is a lending/streaming iterator (it does not
+    /// The returned [`Tiles`](tiling::Tiles) is a lending/streaming iterator (it does not
     /// implement [`Iterator`], because each yielded frame borrows the device's
     /// single reusable frame buffer). Each yielded frame draws in screen
     /// coordinates via each frame's non-zero [`CydFrame::tile_top_left`], and is
@@ -347,16 +315,11 @@ pub trait CydDisplay {
     /// # Ok(())
     /// # }
     /// ```
-    fn tiles(&mut self, grid: TileGrid) -> Tiles<'_, Self>
+    fn tiles(&mut self, grid: TileGrid) -> tiling::Tiles<'_, Self>
     where
         Self: Sized,
     {
-        Tiles {
-            cyd: self,
-            grid,
-            column: 0,
-            row: 0,
-        }
+        tiling::Tiles::new(self, grid)
     }
 }
 
@@ -373,53 +336,6 @@ pub trait CydTouch {
     /// Returns `Ok(None)` when there is no pending touch (including devices
     /// constructed without touch). Errors only on a hardware/read failure.
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
-}
-
-/// A lending/streaming iterator over a [`TileGrid`]'s tiles.
-///
-/// Created by [`CydDisplay::tiles`]. This deliberately does *not* implement
-/// [`Iterator`]: each yielded frame borrows the device's single reusable frame
-/// buffer, so only one frame can be live at a time. Iterate with a
-/// `while let Some(mut frame) = tiles.next()` loop.
-pub struct Tiles<'a, C: CydDisplay> {
-    cyd: &'a mut C,
-    grid: TileGrid,
-    column: usize,
-    row: usize,
-}
-
-impl<C: CydDisplay> Tiles<'_, C> {
-    /// Borrow the next tile-backed frame, cleared to the device background
-    /// color, or `None` once every tile has been yielded.
-    ///
-    /// Tiles are visited in row-major order (each row left-to-right), skipping
-    /// any `(column, row)` that falls entirely outside the grid rectangle.
-    // This is a lending iterator: each yielded frame borrows the device's single
-    // reusable frame buffer, so it cannot implement `Iterator` (whose `next`
-    // returns an item that outlives the `&mut self` borrow). The `next` name is
-    // the intended call shape, so allow the trait-shape lint here.
-    #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Option<C::Frame<'_>> {
-        let (columns, rows) = (self.grid.columns(), self.grid.rows());
-        loop {
-            if self.row >= rows {
-                return None;
-            }
-            let rectangle = self.grid.tile(self.column, self.row);
-            self.column += 1;
-            if self.column >= columns {
-                self.column = 0;
-                self.row += 1;
-            }
-            if let Some(rectangle) = rectangle {
-                let tile_top_left = rectangle.top_left;
-                return Some(
-                    self.cyd
-                        .frame_mut_with_tile_top_left(rectangle, tile_top_left),
-                );
-            }
-        }
-    }
 }
 
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
@@ -456,9 +372,9 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// esp32 the per-pixel path makes the ballet loop ~1/3 slower). `src` must
     /// hold exactly one entry per frame pixel — i.e. the source image's
     /// dimensions must match the frame's. A mismatch returns
-    /// [`CopySizeError`] rather than panicking or silently corrupting the
-    /// buffer.
-    fn copy_from_565(&mut self, src: &[u16]) -> Result<(), CopySizeError>;
+    /// [`crate::Error::CopySize`] rather than panicking or silently corrupting
+    /// the buffer.
+    fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()>;
 
     /// Present the frame's pixels at its rectangle's top-left (screen coordinates).
     ///
@@ -472,17 +388,6 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// each device's natural present point without inverting into a state
     /// machine.
     fn flush(&mut self) -> impl Future<Output = Result<(), <Self as CydFrame>::Error>>;
-}
-
-/// Returned by [`CydFrame::copy_from_565`] when the source buffer's length
-/// does not equal the frame's pixel count — i.e. the image's dimensions differ
-/// from the frame's.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CopySizeError {
-    /// Number of pixels supplied by the source image.
-    pub src_len: usize,
-    /// Number of pixels the destination frame holds.
-    pub frame_len: usize,
 }
 
 #[cfg(test)]
@@ -504,7 +409,7 @@ mod tests {
     }
 
     impl CydDisplay for TestCyd {
-        type Error = CydInfallibleError;
+        type Error = Infallible;
         type Frame<'a> = TestFrame;
 
         fn screen_size(&self) -> Size {
@@ -542,7 +447,7 @@ mod tests {
             &mut self,
             _rectangle: Rectangle,
             _color: Rgb565,
-        ) -> Result<(), CydInfallibleError> {
+        ) -> Result<(), Infallible> {
             Ok(())
         }
 
@@ -550,7 +455,7 @@ mod tests {
             &mut self,
             _rectangle: Rectangle,
             _pixels: I,
-        ) -> Result<(), CydInfallibleError>
+        ) -> Result<(), Infallible>
         where
             I: IntoIterator<Item = Rgb565>,
         {
@@ -589,7 +494,7 @@ mod tests {
     }
 
     impl CydFrame for TestFrame {
-        type Error = CydInfallibleError;
+        type Error = Infallible;
 
         fn tile_top_left(&self) -> Point {
             self.tile_top_left
@@ -607,11 +512,11 @@ mod tests {
             self
         }
 
-        fn copy_from_565(&mut self, _src: &[u16]) -> Result<(), CopySizeError> {
+        fn copy_from_565(&mut self, _src: &[u16]) -> crate::Result<()> {
             Ok(())
         }
 
-        async fn flush(&mut self) -> Result<(), CydInfallibleError> {
+        async fn flush(&mut self) -> Result<(), Infallible> {
             Ok(())
         }
     }

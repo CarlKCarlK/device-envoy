@@ -13,7 +13,7 @@ use core::{convert::Infallible, future::pending};
 
 use esp_backtrace as _;
 
-use device_envoy_core::wifi_auto::{FormData, HtmlBuffer, WifiAutoError};
+use device_envoy_core::wifi_auto::{FormData, HtmlBuffer};
 use device_envoy_esp::{
     Error, Result,
     button::{ButtonEsp, PressedTo},
@@ -63,7 +63,7 @@ impl CheckboxField {
     }
 
     fn format_error() -> Error {
-        Error::from(WifiAutoError::FormatError)
+        Error::from(device_envoy_core::Error::WifiAutoFormat)
     }
 }
 

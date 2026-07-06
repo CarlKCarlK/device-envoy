@@ -37,8 +37,6 @@ use alloc::string::String;
 #[cfg(target_os = "none")]
 use embassy_futures::select::{Either4, select4};
 
-#[cfg(target_os = "none")]
-use device_envoy_core::wifi_auto::WifiAutoError;
 use device_envoy_core::wifi_auto::{
     HtmlBuffer, WifiAutoPersistedState, WifiCredentials, WifiStartMode,
 };
@@ -372,11 +370,9 @@ impl<'a> WifiAutoEsp<'a> {
         OnError: From<crate::Error>,
     {
         Self::initialize_wifi_heap_once();
-        let wifi = self
-            .wifi
-            .borrow_mut()
-            .take()
-            .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
+        let wifi = self.wifi.borrow_mut().take().ok_or_else(|| {
+            crate::Error::from(device_envoy_core::Error::WifiAutoStorageCorrupted)
+        })?;
         let spawner = self.spawner;
 
         // Foreign error: convert to the platform error explicitly so it reaches

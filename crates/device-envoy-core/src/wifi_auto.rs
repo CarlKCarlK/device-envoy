@@ -78,17 +78,6 @@ pub enum WifiAutoEvent {
     ConnectionFailed,
 }
 
-/// Shared Wi-Fi auto-provisioning error variants used across platform ports.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum WifiAutoError {
-    /// Captive-portal data or rendering format was invalid.
-    FormatError,
-    /// Stored Wi-Fi auto state is invalid for expected runtime flow.
-    StorageCorrupted,
-    /// A required custom field is missing from the Wi-Fi auto setup.
-    MissingCustomWifiAutoField,
-}
-
 /// Preferred Wi-Fi startup mode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[doc(hidden)] // Startup-policy plumbing used by platform wifi_auto state machines.

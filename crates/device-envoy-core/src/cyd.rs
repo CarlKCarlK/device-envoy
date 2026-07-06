@@ -1,17 +1,10 @@
-//! An opinionated device abstraction for the "Cheap Yellow Display" (CYD):
-//! tiled RGB565 drawing plus calibrated touch.
+//! A device abstraction for the "Cheap Yellow Display" (CYD): tiled RGB565
+//! drawing plus calibrated touch. See [`Cyd`] for the primary trait and usage
+//! example; [`CydTouch`] reads calibrated [`TouchEvent`] values and
+//! [`CydRawTouch`] feeds [`ensure_calibration`].
 //!
-//! Modeled on device-envoy's opinionated device abstractions (for example
-//! `WifiAuto`, which exposes the useful 95% path rather than raw wifi): [`Cyd`]
-//! offers the CYD's defining capabilities — tiled drawing and calibrated touch
-//! — as separate parts. Generic example logic can borrow those parts independently
-//! while still accepting one device value at the entry point.
-//!
-//! A [`CydDisplay`] hands out per-rectangle [frames](CydFrame); each frame starts
-//! cleared to the device background, can have a line of default-style text
-//! written into it, and is flushed to a screen position. [`CydTouch`] reads
-//! calibrated, screen-space [`TouchEvent`]s (or `None` when there is no
-//! touch).
+//! A [`CydDisplay`] hands out per-rectangle [frames](CydFrame) that start
+//! cleared to the device background and flush in screen coordinates.
 
 mod calibration;
 mod contiguous_pixels;
@@ -354,7 +347,7 @@ pub trait CydDisplay {
     }
 }
 
-/// A CYD touch source.
+/// A CYD touch source for calibrated, screen-space events that apps read.
 pub trait CydTouch {
     /// Error returned when reading touch fails.
     type Error: CydFlushError;
@@ -366,7 +359,7 @@ pub trait CydTouch {
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
 }
 
-/// A CYD raw-touch source for calibration flows.
+/// A CYD raw-touch source implemented by devices so [`ensure_calibration`] can run.
 pub trait CydRawTouch {
     /// Error returned when reading raw touch fails.
     type Error: CydFlushError;

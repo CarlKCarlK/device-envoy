@@ -1,10 +1,35 @@
 //! Host-only in-memory CYD implementation for tests, screenshots, and previews.
+//!
+//! ```rust
+//! use device_envoy_core::cyd::memory::MemoryCyd;
+//! use device_envoy_core::cyd::{Cyd as _, CydDisplay, CydFrame};
+//! use embedded_graphics::{
+//!     mono_font::ascii::FONT_9X15_BOLD,
+//!     pixelcolor::{Rgb565, Rgb888},
+//!     prelude::{RgbColor, Size},
+//! };
+//! use futures_executor::block_on;
+//!
+//! let mut memory_cyd = MemoryCyd::new(
+//!     Size::new(8, 8),
+//!     Rgb888::BLACK,
+//!     Rgb888::WHITE,
+//!     &FONT_9X15_BOLD,
+//! );
+//! let (mut display, _touch) = memory_cyd.parts();
+//! let mut frame = display.full_frame_mut();
+//! frame.fill(Rgb565::RED);
+//! block_on(frame.flush())?;
+//! assert_eq!(memory_cyd.pixel(0, 0), Rgb565::RED);
+//! # Ok::<(), device_envoy_core::cyd::memory::MemoryCydError>(())
+//! ```
 
+#[cfg(test)]
+use core::ops::Range;
 use core::{
     cell::{Cell, RefCell},
     convert::Infallible,
     future::{Future, ready},
-    ops::Range,
 };
 use std::{
     fs,
@@ -16,14 +41,18 @@ use std::{
     vec::Vec,
 };
 
+#[cfg(test)]
+use super::calibration::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use super::{
     CopySizeError, Cyd, CydDisplay, CydFlushError, CydFrame, CydRawTouch, CydTouch, RawTouchEvent,
     RegionPixels, TouchEvent,
-    calibration::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN},
+};
+#[cfg(test)]
+use crate::flash_block::{
+    FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block,
 };
 use crate::{
     button::{__ButtonMonitor, Button},
-    flash_block::{FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block},
     pixel_target::{PixelTarget, rgb888_from_rgb565},
 };
 use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
@@ -35,17 +64,23 @@ use embedded_graphics::{
     primitives::Rectangle,
     text::{Baseline, Text},
 };
+#[cfg(test)]
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_FRAME_BUDGET: usize = 1000;
+#[cfg(test)]
 const FLASH_BLOCK_SIZE: usize = 4096;
+#[cfg(test)]
 const FLASH_BLOCK_OFFSET: u32 = 0;
+#[cfg(test)]
 const FLASH_ERASED_BYTE: u8 = 0xFF;
+#[cfg(test)]
 const TGA_HEADER_SIZE: usize = 18;
+#[cfg(test)]
 const TGA_PIXEL_BYTES: usize = 3;
 
 #[derive(Clone)]
-pub struct MemoryFrameClock {
+pub(crate) struct MemoryFrameClock {
     frame_index: Rc<Cell<usize>>,
 }
 
@@ -56,6 +91,7 @@ impl MemoryFrameClock {
     }
 }
 
+/// Error from the in-memory CYD test surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MemoryCydError {
     OutOfFrames,
@@ -63,6 +99,7 @@ pub enum MemoryCydError {
 
 impl CydFlushError for MemoryCydError {}
 
+/// In-memory CYD device for host-side tests and screenshots.
 pub struct MemoryCyd {
     size: Size,
     background: Rgb888,
@@ -79,6 +116,7 @@ pub struct MemoryCyd {
     frame_clock: MemoryFrameClock,
 }
 
+/// Display half of [`MemoryCyd`], borrowed from [`Cyd::parts`].
 pub struct MemoryDisplayPart<'a> {
     size: Size,
     background: Rgb888,
@@ -95,10 +133,12 @@ pub struct MemoryDisplayPart<'a> {
     frame_clock: MemoryFrameClock,
 }
 
+/// Touch half of [`MemoryCyd`], borrowed from [`Cyd::parts`].
 pub struct MemoryTouchPart<'a> {
     touch_script: &'a RefCell<FrameScript<TouchEvent>>,
 }
 
+/// In-progress in-memory frame that flushes into a host framebuffer.
 pub struct MemoryFrame<'a> {
     framebuffer: &'a mut Vec<u16>,
     flush_count: &'a mut usize,
@@ -121,15 +161,18 @@ struct FrameScript<Event> {
     current_read_index: usize,
 }
 
-pub struct MemoryFlashBlock {
+#[cfg(test)]
+pub(crate) struct MemoryFlashBlock {
     memory_flash_device: MemoryFlashDevice,
     save_count: usize,
 }
 
+#[cfg(test)]
 struct MemoryFlashDevice {
     bytes: [u8; FLASH_BLOCK_SIZE],
 }
 
+/// Host-side button test double returned by [`MemoryCyd::memory_button`].
 pub struct MemoryButton {
     pressed: bool,
     pressed_frames: Vec<(usize, bool)>,
@@ -137,6 +180,7 @@ pub struct MemoryButton {
 }
 
 impl MemoryCyd {
+    /// Construct an empty in-memory CYD surface with the given screen style.
     #[must_use]
     pub fn new(
         size: Size,
@@ -165,43 +209,50 @@ impl MemoryCyd {
         }
     }
 
+    /// Limit how many frames may flush before [`MemoryCydError::OutOfFrames`].
     pub fn set_frame_budget(&mut self, frame_budget: usize) {
         self.frame_budget = frame_budget;
     }
 
     #[must_use]
-    pub fn frame_clock(&self) -> MemoryFrameClock {
+    pub(crate) fn frame_clock(&self) -> MemoryFrameClock {
         self.frame_clock.clone()
     }
 
+    /// Create a host-side button tied to this device's frame clock.
     #[must_use]
     pub fn memory_button(&self) -> MemoryButton {
         MemoryButton::with_frame_clock(self.frame_clock())
     }
 
-    pub fn script_raw_frames(&mut self, raw_touch_frames: &[&[RawTouchEvent]]) {
+    #[cfg(test)]
+    pub(crate) fn script_raw_frames(&mut self, raw_touch_frames: &[&[RawTouchEvent]]) {
         self.raw_touch_script
             .borrow_mut()
             .replace_frames(raw_touch_frames);
     }
 
-    pub fn script_raw_frames_owned(&mut self, raw_touch_frames: Vec<Vec<RawTouchEvent>>) {
+    #[cfg(test)]
+    pub(crate) fn script_raw_frames_owned(&mut self, raw_touch_frames: Vec<Vec<RawTouchEvent>>) {
         self.raw_touch_script
             .borrow_mut()
             .replace_owned_frames(raw_touch_frames);
     }
 
-    pub fn script_touch_frames(&mut self, touch_frames: &[&[TouchEvent]]) {
+    #[cfg(test)]
+    pub(crate) fn script_touch_frames(&mut self, touch_frames: &[&[TouchEvent]]) {
         self.touch_script.borrow_mut().replace_frames(touch_frames);
     }
 
-    pub fn script_touch_frames_owned(&mut self, touch_frames: Vec<Vec<TouchEvent>>) {
+    #[cfg(test)]
+    pub(crate) fn script_touch_frames_owned(&mut self, touch_frames: Vec<Vec<TouchEvent>>) {
         self.touch_script
             .borrow_mut()
             .replace_owned_frames(touch_frames);
     }
 
-    pub fn script_idle_frames(&mut self, idle_frame_count: usize) {
+    #[cfg(test)]
+    pub(crate) fn script_idle_frames(&mut self, idle_frame_count: usize) {
         self.raw_touch_script
             .borrow_mut()
             .push_idle_frames(idle_frame_count);
@@ -210,34 +261,40 @@ impl MemoryCyd {
             .push_idle_frames(idle_frame_count);
     }
 
-    pub fn push_raw_touch_event(&mut self, raw_touch_event: RawTouchEvent) {
+    #[cfg(test)]
+    pub(crate) fn push_raw_touch_event(&mut self, raw_touch_event: RawTouchEvent) {
         self.raw_touch_script
             .borrow_mut()
             .push_current_frame_event(raw_touch_event);
     }
 
+    /// Queue one calibrated touch event for the current frame.
     pub fn push_touch_event(&mut self, touch_event: TouchEvent) {
         self.touch_script
             .borrow_mut()
             .push_current_frame_event(touch_event);
     }
 
-    pub fn script_tap(&mut self, raw_point: super::RawPoint) {
+    #[cfg(test)]
+    pub(crate) fn script_tap(&mut self, raw_point: super::RawPoint) {
         for raw_touch_event in tap_events(raw_point) {
             self.push_raw_touch_event(raw_touch_event);
         }
     }
 
+    /// Return how many frames have flushed so far.
     #[must_use]
     pub fn flush_count(&self) -> usize {
         self.flush_count
     }
 
+    /// Return the rectangle flushed most recently, if any.
     #[must_use]
     pub fn last_flush_rectangle(&self) -> Option<Rectangle> {
         self.last_flush_rectangle
     }
 
+    /// Read one pixel from the host framebuffer.
     #[must_use]
     pub fn pixel(&self, position_x: usize, position_y: usize) -> Rgb565 {
         assert!(
@@ -255,11 +312,13 @@ impl MemoryCyd {
     }
 
     #[must_use]
-    pub fn framebuffer(&self) -> &[u16] {
+    #[cfg(test)]
+    pub(crate) fn framebuffer(&self) -> &[u16] {
         &self.framebuffer
     }
 
-    pub fn write_framebuffer_tga(&self, path: impl AsRef<Path>) -> std::io::Result<()> {
+    #[cfg(test)]
+    pub(crate) fn write_framebuffer_tga(&self, path: impl AsRef<Path>) -> std::io::Result<()> {
         let width = self.size.width as usize;
         let height = self.size.height as usize;
         let pixel_bytes = width
@@ -282,11 +341,8 @@ impl MemoryCyd {
         fs::write(path, bytes)
     }
 
-    /// Write the framebuffer as an RGB PNG. Used both for gallery preview
-    /// images (see the Pages xtask `build-pages` command) and golden-image tests (see
-    /// [`assert_framebuffer_matches_expected_png`]) — the same deterministic,
-    /// browser-free render feeds both.
-    pub fn write_framebuffer_png(
+    /// Write the framebuffer as an RGB PNG for host-side previews and assertions.
+    pub(crate) fn write_framebuffer_png(
         &self,
         path: impl AsRef<Path>,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -321,6 +377,9 @@ impl MemoryCyd {
 /// crate, so the expected PNG lives at `<crate>/tests/assets/<relative_filename>`.
 /// Set `LINKAGE_BLAZE_UPDATE_CYD_PNGS=1` to (re)write the expected file
 /// instead of comparing against it, e.g. after an intentional visual change.
+/// The helper also honors `LINKAGE_BLAZE_PREVIEW_OUTPUT_PATH` to copy the
+/// freshly rendered PNG to an arbitrary path while still performing the normal
+/// golden-image comparison.
 pub fn assert_framebuffer_matches_expected_png(
     memory_cyd: &MemoryCyd,
     manifest_dir: &str,
@@ -368,7 +427,11 @@ pub fn assert_framebuffer_matches_expected_png(
 
     let expected_bytes = fs::read(&expected_path)?;
     let actual_bytes = fs::read(&temp_path)?;
-    fs::remove_file(&temp_path).ok();
+    if let Err(error) = fs::remove_file(&temp_path) {
+        if error.kind() != std::io::ErrorKind::NotFound {
+            return Err(error.into());
+        }
+    }
 
     if expected_bytes != actual_bytes {
         return Err(std::format!(
@@ -684,6 +747,7 @@ impl<Event> Default for FrameScript<Event> {
 }
 
 impl<Event: Clone> FrameScript<Event> {
+    #[cfg(test)]
     fn replace_frames(&mut self, frames: &[&[Event]]) {
         self.current_frame.clear();
         self.future_frames.clear();
@@ -697,11 +761,13 @@ impl<Event: Clone> FrameScript<Event> {
         }
     }
 
+    #[cfg(test)]
     fn push_idle_frames(&mut self, idle_frame_count: usize) {
         self.future_frames
             .extend((0..idle_frame_count).map(|_| Vec::new()));
     }
 
+    #[cfg(test)]
     fn replace_owned_frames(&mut self, mut frames: Vec<Vec<Event>>) {
         self.current_frame.clear();
         self.future_frames.clear();
@@ -742,6 +808,7 @@ impl<Event: Clone> FrameScript<Event> {
     }
 }
 
+#[cfg(test)]
 impl MemoryFlashBlock {
     #[must_use]
     pub fn new() -> Self {
@@ -778,12 +845,14 @@ impl MemoryFlashBlock {
     }
 }
 
+#[cfg(test)]
 impl Default for MemoryFlashBlock {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[cfg(test)]
 impl FlashBlock for MemoryFlashBlock {
     type Error = FlashBlockError<Infallible>;
 
@@ -819,6 +888,7 @@ impl FlashBlock for MemoryFlashBlock {
     }
 }
 
+#[cfg(test)]
 impl MemoryFlashDevice {
     // TODO Consider consolidating this host-side flash test double with the
     // test-private `MemoryFlashDevice` in device-envoy-core's flash_block.rs tests.
@@ -847,6 +917,7 @@ impl MemoryFlashDevice {
     }
 }
 
+#[cfg(test)]
 impl FlashDevice for MemoryFlashDevice {
     type Error = Infallible;
 
@@ -871,6 +942,7 @@ impl FlashDevice for MemoryFlashDevice {
 }
 
 impl MemoryButton {
+    /// Construct a button test double with no frame scheduling.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -881,7 +953,7 @@ impl MemoryButton {
     }
 
     #[must_use]
-    pub fn with_frame_clock(frame_clock: MemoryFrameClock) -> Self {
+    pub(crate) fn with_frame_clock(frame_clock: MemoryFrameClock) -> Self {
         Self {
             pressed: false,
             pressed_frames: Vec::new(),
@@ -889,10 +961,12 @@ impl MemoryButton {
         }
     }
 
+    /// Set the button's default pressed state.
     pub fn set_pressed(&mut self, pressed: bool) {
         self.pressed = pressed;
     }
 
+    /// Override the pressed state for one specific flushed frame index.
     pub fn set_pressed_for_frame(&mut self, frame_index: usize, pressed: bool) {
         if let Some(existing_state) = self
             .pressed_frames
@@ -1739,6 +1813,7 @@ mod tests {
     }
 }
 
+#[cfg(test)]
 fn tap_events(raw_point: super::RawPoint) -> Vec<RawTouchEvent> {
     let mut raw_touch_events = Vec::new();
     raw_touch_events.push(RawTouchEvent::Down {

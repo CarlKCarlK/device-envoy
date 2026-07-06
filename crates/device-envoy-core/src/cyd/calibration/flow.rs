@@ -58,6 +58,7 @@ impl CalibrationFlow {
         calibration_corner_for_index(self.calibration_index)
     }
 
+    #[cfg(test)]
     #[must_use]
     pub fn calibration_index(&self) -> usize {
         self.calibration_index

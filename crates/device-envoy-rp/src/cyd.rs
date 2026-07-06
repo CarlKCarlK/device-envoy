@@ -13,8 +13,9 @@ mod touch;
 use core::{convert::Infallible, fmt};
 
 use device_envoy_core::cyd::{
-    CopySizeError, CydFlushError, CydRawTouch, PixelTarget, RegionPixels,
+    CopySizeError, CydFlushError, CydRawTouch, RegionPixels, SCREEN_PIXELS,
 };
+use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
@@ -67,7 +68,7 @@ pub struct CydRp {
 /// The app declares one at file scope and names the workspace pixel count it
 /// wants:
 ///
-/// ```ignore
+/// ```rust,no_run
 /// static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
 /// ```
 ///
@@ -281,7 +282,7 @@ impl CydRp {
     /// Equivalent to `CydStaticRp::<PIXEL_COUNT>::new()` but namespaced under `CydRp` so
     /// all construction calls share a common prefix.
     ///
-    /// ```ignore
+    /// ```rust,no_run
     /// static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
     /// ```
     #[must_use]

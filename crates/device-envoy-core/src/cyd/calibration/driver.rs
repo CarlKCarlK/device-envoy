@@ -56,6 +56,7 @@ pub enum EnsureCalibrationError<DeviceError, FlashError> {
 }
 
 #[derive(Clone, Copy, Debug)]
+/// Tunable frame-budget settings for the shared calibration flow.
 pub struct EnsureCalibrationSettings {
     verify_timeout_frames: usize,
 }
@@ -125,10 +126,11 @@ where
     .await
 }
 
-/// Like [`ensure_calibration`], but lets callers tune shared flow timings for
-/// their frame pacing. Browser builds redraw much faster than the classic CYD,
-/// so they need a larger verify-frame budget to preserve the intended real-time
-/// grace period before the center confirmation tap.
+/// Like [`ensure_calibration`], with tunable flow timings.
+///
+/// Browser builds redraw much faster than the classic CYD, so they need a
+/// larger verify-frame budget to preserve the intended real-time grace period
+/// before the center confirmation tap.
 pub async fn ensure_calibration_with_settings<C, F, R, E>(
     cyd: &mut C,
     calibration_flash_block: &mut F,
@@ -180,44 +182,46 @@ where
 
                     match calibration_flow_event {
                         CalibrationFlowEvent::PointCaptured {
-                            calibration_corner, ..
+                            calibration_corner,
+                            raw_point: _raw_point,
+                            next_corner: _next_corner,
+                            usable_sample_count: _usable_sample_count,
                         } => {
                             calibration_driver_state = CalibrationDriverState::ShowCaptured {
                                 calibration_corner,
                                 frames_remaining: CAPTURE_ACK_FRAME_COUNT,
                             };
                         }
-                        CalibrationFlowEvent::Completed { raw_points, .. } => {
-                            match validate_calibration_points(raw_points) {
-                                Ok(calibration_validation) => {
-                                    calibration_driver_state = CalibrationDriverState::Verifying {
-                                        candidate_config: calibration_validation
-                                            .calibration_config(),
-                                        release_touch_capture: ReleaseTouchCapture::new(),
-                                        polls_remaining: ensure_calibration_settings
-                                            .verify_timeout_frames(),
-                                    };
-                                }
-                                Err(CalibrationSolveError::ResidualTooLarge {
-                                    worst_residual_pixels,
-                                }) => {
-                                    calibration_flow.restart();
-                                    calibration_driver_state =
-                                        CalibrationDriverState::ShowRejected {
-                                            worst_residual_pixels: Some(worst_residual_pixels),
-                                            frames_remaining: REJECTED_FRAME_COUNT,
-                                        };
-                                }
-                                Err(CalibrationSolveError::DegenerateGeometry) => {
-                                    calibration_flow.restart();
-                                    calibration_driver_state =
-                                        CalibrationDriverState::ShowRejected {
-                                            worst_residual_pixels: None,
-                                            frames_remaining: REJECTED_FRAME_COUNT,
-                                        };
-                                }
+                        CalibrationFlowEvent::Completed {
+                            raw_points,
+                            calibration_corner: _calibration_corner,
+                            usable_sample_count: _usable_sample_count,
+                        } => match validate_calibration_points(raw_points) {
+                            Ok(calibration_validation) => {
+                                calibration_driver_state = CalibrationDriverState::Verifying {
+                                    candidate_config: calibration_validation.calibration_config(),
+                                    release_touch_capture: ReleaseTouchCapture::new(),
+                                    polls_remaining: ensure_calibration_settings
+                                        .verify_timeout_frames(),
+                                };
                             }
-                        }
+                            Err(CalibrationSolveError::ResidualTooLarge {
+                                worst_residual_pixels,
+                            }) => {
+                                calibration_flow.restart();
+                                calibration_driver_state = CalibrationDriverState::ShowRejected {
+                                    worst_residual_pixels: Some(worst_residual_pixels),
+                                    frames_remaining: REJECTED_FRAME_COUNT,
+                                };
+                            }
+                            Err(CalibrationSolveError::DegenerateGeometry) => {
+                                calibration_flow.restart();
+                                calibration_driver_state = CalibrationDriverState::ShowRejected {
+                                    worst_residual_pixels: None,
+                                    frames_remaining: REJECTED_FRAME_COUNT,
+                                };
+                            }
+                        },
                     }
                 }
                 CalibrationDriverState::Verifying {

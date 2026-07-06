@@ -38,11 +38,17 @@ const CALIBRATION_CROSS_COLOR: Rgb888 = Rgb888::CSS_YELLOW;
 const CALIBRATION_REJECTED_CROSS_COLOR: Rgb888 = Rgb888::CSS_RED;
 const CALIBRATION_DOT_COLOR: Rgb888 = Rgb888::CSS_WHITE;
 const AFFINE_DETERMINANT_EPSILON: f32 = 0.000_001;
+#[cfg(any(feature = "wasm", test))]
 const DEMO_RAW_SCALE_X: f32 = 1.12;
+#[cfg(any(feature = "wasm", test))]
 const DEMO_RAW_SCALE_Y: f32 = 0.93;
+#[cfg(any(feature = "wasm", test))]
 const DEMO_RAW_SKEW_X_FROM_Y: f32 = 0.041;
+#[cfg(any(feature = "wasm", test))]
 const DEMO_RAW_SKEW_Y_FROM_X: f32 = -0.027;
+#[cfg(any(feature = "wasm", test))]
 const DEMO_RAW_OFFSET_X: f32 = 186.0;
+#[cfg(any(feature = "wasm", test))]
 const DEMO_RAW_OFFSET_Y: f32 = 149.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -60,6 +66,7 @@ pub enum RawTouchEvent {
     Up,
 }
 
+/// Affine mapping from raw controller samples into screen coordinates.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CalibrationConfig {
     ax: f32,
@@ -96,6 +103,7 @@ impl CalibrationValidation {
         self.calibration_config
     }
 
+    #[cfg(test)]
     #[must_use]
     pub const fn worst_residual_pixels(self) -> f32 {
         self.worst_residual_pixels
@@ -310,6 +318,7 @@ fn draw_crosshair_at<E>(
     Ok(())
 }
 
+#[cfg(any(feature = "wasm", test))]
 #[must_use]
 pub fn distort_demo_screen_to_raw(screen_x: f32, screen_y: f32) -> RawPoint {
     let raw_x = DEMO_RAW_SCALE_X * screen_x + DEMO_RAW_SKEW_X_FROM_Y * screen_y + DEMO_RAW_OFFSET_X;
@@ -446,7 +455,8 @@ fn worst_residual_pixels(
 mod tests {
     use super::{
         CALIBRATION_POINT_COUNT, CalibrationConfig, CalibrationCorner, CalibrationSolveError,
-        calibration_corner_center, distort_demo_screen_to_raw, validate_calibration_points,
+        MAX_RESIDUAL_PIXELS, calibration_corner_center, distort_demo_screen_to_raw,
+        validate_calibration_points,
     };
 
     const MAP_EPSILON: f32 = 0.75;

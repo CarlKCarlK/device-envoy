@@ -7,10 +7,12 @@
 //!
 //! The primary type is [`TileGrid`]: callers give it a rectangular body area
 //! and the number of tile columns and rows; it derives the per-tile size with
-//! ceiling division and clips the final column/row to the rectangle edges.
-//! [`Rectangle`] describes a single rectangle (for example a full-width text
-//! band), and [`max_rectangle_pixel_count`] sizes a shared buffer as the max of
-//! two rectangles an app flushes.
+//! ceiling division and clips the final column/row to the rectangle edges. See
+//! [`CydDisplay::tiles`](super::CydDisplay::tiles) for the canonical tiled draw
+//! loop, and use
+//! [`embedded_graphics::primitives::Rectangle`] plus
+//! [`max_rectangle_pixel_count`] when sizing a shared buffer around fixed
+//! regions.
 
 use embedded_graphics::{
     prelude::{Point, Size},
@@ -26,26 +28,11 @@ pub const fn rectangle_pixel_count(rectangle: Rectangle) -> usize {
 /// Maximum pixel count of two rectangles.
 #[must_use]
 pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> usize {
-    max_pixel_count(rectangle_pixel_count(first), rectangle_pixel_count(second))
-}
-
-/// `const fn` maximum of two pixel counts.
-///
-/// Useful for sizing a shared `PixelBuffer<N>` as the largest of several frame
-/// pixel counts, e.g.
-/// `max_pixel_count(rectangle_pixel_count(text_band), grid.max_tile_pixel_count())`.
-#[must_use]
-pub const fn max_pixel_count(first: usize, second: usize) -> usize {
-    if first > second { first } else { second }
-}
-
-/// `const fn` max of two `u32` values.
-///
-/// Useful for sizing layout coordinates, which are `u32` (e.g. `Size` fields),
-/// without round-tripping through `usize`.
-#[must_use]
-pub const fn max_u32(first: u32, second: u32) -> u32 {
-    if first > second { first } else { second }
+    if rectangle_pixel_count(first) > rectangle_pixel_count(second) {
+        rectangle_pixel_count(first)
+    } else {
+        rectangle_pixel_count(second)
+    }
 }
 
 /// `const fn` ceiling division of two `usize` values.
@@ -53,7 +40,7 @@ pub const fn max_u32(first: u32, second: u32) -> u32 {
 /// Used to derive a per-tile size that covers a rectangle given a tile count:
 /// `tile_width = div_ceil_usize(rectangle_width, columns)`. Panics if `d == 0`.
 #[must_use]
-pub const fn div_ceil_usize(n: usize, d: usize) -> usize {
+const fn div_ceil_usize(n: usize, d: usize) -> usize {
     assert!(d > 0, "divisor must be non-zero");
     n / d + if n % d == 0 { 0 } else { 1 }
 }
@@ -77,7 +64,9 @@ impl TileGrid {
     /// Build a grid splitting `size` into `columns` × `rows` tiles.
     ///
     /// Const-asserts that the counts are positive and do not exceed the rectangle's
-    /// pixel dimensions, so an over-fine grid fails to compile.
+    /// pixel dimensions, so an over-fine grid fails to compile. See
+    /// [`CydDisplay::tiles`](super::CydDisplay::tiles) for the canonical draw
+    /// loop that consumes the grid.
     #[must_use]
     pub const fn new(top_left: Point, size: Size, columns: usize, rows: usize) -> Self {
         assert!(columns > 0, "columns must be greater than zero");

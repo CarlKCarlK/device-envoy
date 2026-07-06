@@ -24,8 +24,9 @@ use static_cell::StaticCell;
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 use device_envoy_core::cyd::{
-    CopySizeError, CydFlushError, CydRawTouch, PixelTarget, RegionPixels,
+    CopySizeError, CydFlushError, CydRawTouch, RegionPixels, SCREEN_PIXELS,
 };
+use device_envoy_core::pixel_target::PixelTarget;
 pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
@@ -63,7 +64,7 @@ pub struct CydEsp {
 /// The app declares one at file scope and names the workspace pixel count it
 /// wants:
 ///
-/// ```ignore
+/// ```rust,no_run
 /// static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
 /// ```
 ///
@@ -267,7 +268,7 @@ impl CydEsp {
     /// Equivalent to `CydStaticEsp::<PIXEL_COUNT>::new()` but namespaced under `CydEsp` so
     /// all construction calls share a common prefix.
     ///
-    /// ```ignore
+    /// ```rust,no_run
     /// static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
     /// ```
     #[must_use]

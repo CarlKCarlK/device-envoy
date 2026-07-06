@@ -1,4 +1,9 @@
-//! Host-only in-memory CYD implementation for tests, screenshots, and previews.
+//! An in-memory [`Cyd`] mock for host-side tests.
+//!
+//! Requires the `host` feature. Script touch and button input into
+//! [`MemoryCyd`]/[`MemoryButton`], then assert on drawn pixels, flush counts,
+//! or compare against golden-image PNGs with
+//! [`assert_framebuffer_matches_expected_png`].
 //!
 //! ```rust
 //! use device_envoy_core::cyd::memory::MemoryCyd;

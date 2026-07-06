@@ -1,4 +1,4 @@
-//! Generic, app-agnostic tiled layout machinery for the CYD panel.
+//! Splits the screen or a rectangle into a grid of tiles so drawing needs only one small buffer.
 //!
 //! The CYD draws into a single shared pixel buffer that is
 //! flushed in pieces. These types describe *where* those pieces live in screen

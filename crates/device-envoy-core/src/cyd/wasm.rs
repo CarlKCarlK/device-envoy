@@ -1,10 +1,10 @@
 //! A browser-simulated CYD device.
 //!
-//! [`CydWasm`] offers the device-agnostic
-//! [`Cyd`](super::Cyd) display/touch parts against an HTML
+//! Requires the `wasm` feature. [`CydWasm`] offers the device-agnostic
+//! [`Cyd`] display/touch parts against an HTML
 //! canvas, so the same generic example code that drives the real esp32 `CydEsp`
 //! also runs in a web page. Its [`CydFrameWasm::flush`] awaits the next browser animation
-//! frame (see [`animation_frame`]), blits the frame to the canvas, then
+//! frame (see [`next_animation_frame`]), blits the frame to the canvas, then
 //! resolves — turning a platform-neutral `loop { draw; flush().await?; }`
 //! into smooth, repaint-paced animation without inverting the loop into a state
 //! machine.

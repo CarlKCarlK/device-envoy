@@ -100,6 +100,12 @@ png = { version = "0.18", optional = true }
 tempfile = { version = "3.27", optional = true }
 pio = "0.3"
 fixed = "1.31"
+# Pinned below the latest 0.10.0: that version's embedded-graphics-core ^0.4.1
+# requires az ~1.2.0, which conflicts with `fixed`'s az ^1.3 requirement in
+# this same workspace lockfile. 0.9.0 depends on embedded-graphics-core ^0.4.0
+# (az ^1.1, compatible) and has an identical API for the Builder/SpiInterface/
+# ILI9341Rgb565 surface CydRp uses.
+mipidsi = "=0.9.0"
 
 [target.'cfg(target_os = "none")'.dependencies]
 embassy-rp = { version = "0.10.0", default-features = false, features = [

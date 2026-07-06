@@ -887,6 +887,7 @@ dependencies = [
  "hd44780-driver",
  "heapless 0.9.2",
  "itertools",
+ "mipidsi",
  "panic-probe",
  "paste",
  "pio",

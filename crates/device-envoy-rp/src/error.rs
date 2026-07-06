@@ -60,6 +60,52 @@ pub enum Error {
 
     #[display("{_0:?}")]
     Core(#[error(not(source))] device_envoy_core::Error),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD display init failed: {_0:?}")]
+    CydDisplayInit(#[error(not(source))] crate::cyd::CydDisplayRpInitError),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD touch init failed: {_0:?}")]
+    CydTouchInit(#[error(not(source))] crate::cyd::CydTouchRpInitError),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD display flush failed: {_0:?}")]
+    CydDisplayFlush(#[error(not(source))] crate::cyd::CydDisplayRpFlushError),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD touch unavailable")]
+    CydTouchUnavailable,
+
+    #[cfg(target_os = "none")]
+    #[display("CYD calibration unavailable")]
+    CydCalibrationUnavailable,
+}
+
+#[cfg(target_os = "none")]
+impl From<crate::cyd::CydError> for Error {
+    fn from(error: crate::cyd::CydError) -> Self {
+        match error {
+            crate::cyd::CydError::Flash(error) => error,
+            crate::cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
+            crate::cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
+            crate::cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            crate::cyd::CydError::TouchUnavailable => Self::CydTouchUnavailable,
+            crate::cyd::CydError::CalibrationUnavailable => Self::CydCalibrationUnavailable,
+        }
+    }
+}
+
+#[cfg(target_os = "none")]
+impl From<device_envoy_core::cyd::EnsureCalibrationError<crate::cyd::CydError, Error>> for Error {
+    fn from(
+        error: device_envoy_core::cyd::EnsureCalibrationError<crate::cyd::CydError, Error>,
+    ) -> Self {
+        match error {
+            device_envoy_core::cyd::EnsureCalibrationError::Device(error) => Self::from(error),
+            device_envoy_core::cyd::EnsureCalibrationError::Flash(error) => error,
+        }
+    }
 }
 
 impl From<()> for Error {

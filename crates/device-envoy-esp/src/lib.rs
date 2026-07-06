@@ -179,6 +179,8 @@ pub mod time_sync {
 }
 #[cfg(esp_has_i2s)]
 pub mod audio_player;
+#[cfg(target_os = "none")]
+pub mod cyd;
 pub mod flash_block;
 pub mod init_and_start;
 #[cfg(esp_has_rmt)]

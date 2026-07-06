@@ -69,6 +69,12 @@ pub struct CydRp {
 /// wants:
 ///
 /// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// use device_envoy_rp::cyd::{CydRp, CydStaticRp};
+/// # #[panic_handler]
+/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+///
 /// static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
 /// ```
 ///
@@ -283,6 +289,12 @@ impl CydRp {
     /// all construction calls share a common prefix.
     ///
     /// ```rust,no_run
+    /// # #![no_std]
+    /// # #![no_main]
+    /// use device_envoy_rp::cyd::{CydRp, CydStaticRp};
+    /// # #[panic_handler]
+    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+    ///
     /// static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
     /// ```
     #[must_use]

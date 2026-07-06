@@ -539,6 +539,8 @@ macro_rules! __cyd_tga565_mask {
 /// `N = W * H` and `MASK_N = (W * H + 7) / 8` const arguments for you.
 ///
 /// ```rust,ignore
+/// // `ignore`: `include_bytes!` resolves at compile time even under `no_run`,
+/// // so this needs a real `hours.small.tga` on disk to build.
 /// # use device_envoy_core::cyd::{Image565Mask, tga565_magenta_mask};
 /// const HOUR_SIGN: Image565Mask<34, 46, { 34 * 46 }, { (34 * 46 + 7) / 8 }> =
 ///     tga565_magenta_mask!("../assets/hours.small.tga", 34, 46);
@@ -562,6 +564,8 @@ macro_rules! __cyd_tga565_magenta_mask {
 /// `N = W * H` and `MASK_N = (W * H + 7) / 8` const arguments for you.
 ///
 /// ```rust,ignore
+/// // `ignore`: `include_bytes!` resolves at compile time even under `no_run`,
+/// // so this needs a real `hours.small.tga` on disk to build.
 /// # use device_envoy_core::cyd::{Image565Mask, tga565_white_mask};
 /// const HOUR_SIGN: Image565Mask<45, 73, { 45 * 73 }, { (45 * 73 + 7) / 8 }> =
 ///     tga565_white_mask!("../assets/hours.small.tga", 45, 73);

@@ -109,7 +109,7 @@ enum CalibrationDriverState {
 /// ```rust,no_run
 /// # use core::{convert::Infallible, future::ready};
 /// # use device_envoy_core::{
-/// #     button::Button,
+/// #     button::{Button, __ButtonMonitor},
 /// #     cyd::{
 /// #         CalibrationConfig, Cyd, CydDisplay, CydFrame, CydInfallibleError, CydRawTouch,
 /// #         CydTouch, RawTouchEvent, TouchEvent, ensure_calibration,
@@ -235,10 +235,11 @@ enum CalibrationDriverState {
 /// #     }
 /// #     fn clear(&mut self) -> Result<(), Self::Error> { Ok(()) }
 /// # }
-/// # impl Button for DemoButton {
-/// #     fn is_pressed(&mut self) -> bool { false }
-/// #     async fn wait_until_pressed(&mut self) {}
+/// # impl __ButtonMonitor for DemoButton {
+/// #     fn is_pressed_raw(&self) -> bool { false }
+/// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
+/// # impl Button for DemoButton {}
 /// # async fn demo() -> Result<(), device_envoy_core::cyd::EnsureCalibrationError<CydInfallibleError, Infallible>> {
 /// let mut cyd = DemoCyd;
 /// let mut calibration_flash_block = DemoFlashBlock {

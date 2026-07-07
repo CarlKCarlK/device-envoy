@@ -26,7 +26,9 @@ use embedded_graphics::{
 
 use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 
-/// A CYD device with display and calibrated touch
+/// A device abstraction for the “Cheap Yellow Display” (CYD) display and touch parts.
+///
+/// CYD boards pair an ILI9341 display with an XPT2046 resistive touch controller.
 ///
 /// `Cyd` lets generic runtime code take a single device value while still
 /// deconstructing it into the calibrated touch and display parts it needs.
@@ -60,9 +62,11 @@ use embedded_graphics::pixelcolor::Rgb888;
 # );
 # cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
 # let (mut display, mut touch) = Cyd::parts(&mut cyd);
+// Create a pixel-buffer covering the whole screen that starts filled with background color.
 let mut frame = display.full_frame_mut();
 
 frame.write_text("Hello CYD");
+// An app would usually run this in a loop: read touch, draw, flush, repeat.
 if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch.read()? {
     DrawItem::Circle {
         center: (point.x as f32, point.y as f32),
@@ -99,7 +103,49 @@ pub trait Cyd: Sized {
     /// This makes ownership-level touch transitions such as
     /// [`CydTouch::decalibrate`] reachable from a whole bundle.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    #[cfg_attr(
+        feature = "host",
+        doc = r#"
+
+```rust
+use device_envoy_core::cyd::{
+    Cyd, CydDisplay, CydTouch,
+    display::CydFrame,
+    touch::TouchEvent,
+};
+use embedded_graphics::pixelcolor::Rgb888;
+# use device_envoy_core::memory::CydMemory;
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     pixelcolor::Rgb565,
+#     prelude::{Point, RgbColor, Size},
+# };
+# futures_executor::block_on(async {
+# let mut cyd = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# cyd.push_touch_event(TouchEvent::Down { point: Point::new(12, 34) });
+let (mut display, mut touch) = cyd.into_parts();
+assert_eq!(display.screen_size(), Size::new(320, 240));
+assert!(matches!(
+    touch.read()?,
+    Some(TouchEvent::Down { point }) if point == Point::new(12, 34)
+));
+
+let mut cyd = CydMemory::from_parts(display, touch);
+let mut frame = Cyd::display(&mut cyd).full_frame_mut();
+frame.fill(Rgb565::RED);
+frame.flush().await?;
+assert_eq!(cyd.pixel(0, 0), Rgb565::RED);
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# })?;
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
+    )]
     fn into_parts(self) -> (Self::Display, Self::Touch);
 
     /// Reassemble a device from its owned calibrated halves.
@@ -108,19 +154,68 @@ pub trait Cyd: Sized {
     /// hardware bundles that is naturally enforced, but `Rc`-backed harnesses
     /// such as `CydMemory` and `CydWasm` cannot detect mismatched pairings.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    /// See [`Cyd::into_parts`] for a round-trip example.
     fn from_parts(display: Self::Display, touch: Self::Touch) -> Self;
 
     /// Borrow the display half.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    #[cfg_attr(
+        feature = "host",
+        doc = r#"
+
+```rust
+use device_envoy_core::cyd::{Cyd, CydDisplay};
+use embedded_graphics::pixelcolor::Rgb888;
+# use device_envoy_core::memory::CydMemory;
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     prelude::{RgbColor, Size},
+# };
+# let mut cyd = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+let display = Cyd::display(&mut cyd);
+assert_eq!(display.screen_size(), Size::new(320, 240));
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
+    )]
     fn display(&mut self) -> &mut Self::Display {
         self.parts().0
     }
 
     /// Borrow the calibrated touch half.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    #[cfg_attr(
+        feature = "host",
+        doc = r#"
+
+```rust
+use device_envoy_core::cyd::{Cyd, CydTouch, touch::TouchEvent};
+use embedded_graphics::pixelcolor::Rgb888;
+# use device_envoy_core::memory::CydMemory;
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     prelude::{Point, RgbColor, Size},
+# };
+# let mut cyd = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
+assert!(matches!(
+    Cyd::touch(&mut cyd).read()?,
+    Some(TouchEvent::Down { point }) if point == Point::new(160, 120)
+));
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
+    )]
     fn touch(&mut self) -> &mut Self::Touch {
         self.parts().1
     }
@@ -191,32 +286,57 @@ pub trait CydDisplay {
 
     /// Oriented screen size for the configured orientation.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    #[cfg_attr(
+        feature = "host",
+        doc = r#"
+
+```rust
+use device_envoy_core::cyd::CydDisplay;
+use device_envoy_core::memory::CydMemory;
+use embedded_graphics::pixelcolor::Rgb888;
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     prelude::{RgbColor, Size},
+# };
+let display = CydMemory::new(
+    Size::new(320, 240),
+    Rgb888::BLACK,
+    Rgb888::WHITE,
+    &FONT_9X15_BOLD,
+)
+.display();
+assert_eq!(display.screen_size(), Size::new(320, 240));
+assert_eq!(display.background_565(), display.to_rgb565(display.background()));
+assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground()));
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
+    )]
     fn screen_size(&self) -> Size;
 
     /// The device default background color.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
     fn background(&self) -> Rgb888;
 
     /// The device default foreground/text color.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
     fn foreground(&self) -> Rgb888;
 
     /// The device default background color in the native `Rgb565` format.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
     fn background_565(&self) -> Rgb565;
 
     /// The device default foreground/text color in the native `Rgb565` format.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
     fn foreground_565(&self) -> Rgb565;
 
     /// Convert an `Rgb888` color to the device's native `Rgb565` format.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
     fn to_rgb565(&self, color: Rgb888) -> Rgb565 {
         rgb565_from_rgb888(color)
     }
@@ -228,7 +348,44 @@ pub trait CydDisplay {
     /// frame-local buffer. Regular, non-tiled frames use `(0, 0)` and therefore
     /// draw in frame-local coordinates.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    #[cfg_attr(
+        feature = "host",
+        doc = r#"
+
+```rust
+use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
+use device_envoy_core::UnwrapInfallible;
+use device_envoy_core::memory::CydMemory;
+use embedded_graphics::{
+    Pixel,
+    pixelcolor::{Rgb565, Rgb888},
+    prelude::{DrawTarget, Point, RgbColor, Size},
+    primitives::Rectangle,
+};
+# use embedded_graphics::mono_font::ascii::FONT_9X15_BOLD;
+# futures_executor::block_on(async {
+# let memory_cyd = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# let mut display = memory_cyd.display();
+let mut frame = display.frame_mut_with_tile_top_left(
+    Rectangle::new(Point::new(10, 20), Size::new(4, 3)),
+    Point::new(10, 20),
+);
+frame
+    .draw_iter([Pixel(Point::new(11, 21), Rgb565::RED)])
+    .unwrap_infallible();
+frame.flush().await?;
+assert_eq!(memory_cyd.pixel(11, 21), Rgb565::RED);
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# })?;
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
+    )]
     fn frame_mut_with_tile_top_left(
         &mut self,
         rectangle: Rectangle,
@@ -240,7 +397,39 @@ pub trait CydDisplay {
     /// The frame remembers its `rectangle`, so [`display::CydFrame::flush`] presents it
     /// at the rectangle's top-left with no separate position argument.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    #[cfg_attr(
+        feature = "host",
+        doc = r#"
+
+```rust
+use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
+use device_envoy_core::memory::CydMemory;
+use embedded_graphics::{
+    pixelcolor::{Rgb565, Rgb888},
+    prelude::{RgbColor, Size},
+    primitives::Rectangle,
+};
+# use embedded_graphics::{mono_font::ascii::FONT_9X15_BOLD, prelude::Point};
+# futures_executor::block_on(async {
+# let memory_cyd = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# let mut display = memory_cyd.display();
+let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(50, 40)));
+frame.fill(Rgb565::RED);
+frame.flush().await?;
+assert_eq!(memory_cyd.pixel(10, 10), Rgb565::RED);
+assert_eq!(memory_cyd.pixel(59, 49), Rgb565::RED);
+assert_eq!(memory_cyd.pixel(9, 9), Rgb565::BLACK);
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# })?;
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
+    )]
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
         self.frame_mut_with_tile_top_left(rectangle, Point::zero())
     }
@@ -335,8 +524,7 @@ pub trait CydDisplay {
     /// presented with [`display::CydFrame::flush`]:
     ///
     /// ```rust,no_run
-    /// # use device_envoy_core::cyd::CydDisplay;
-    /// # use device_envoy_core::cyd::display::{CydFrame, tiling::TileGrid};
+    /// # use device_envoy_core::cyd::{CydDisplay, display::{CydFrame, tiling::TileGrid}};
     /// # async fn draw<D: CydDisplay>(display: &mut D, grid: TileGrid) -> Result<(), D::Error> {
     /// let mut tiles = display.tiles(grid);
     /// while let Some(mut frame) = tiles.next() {

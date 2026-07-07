@@ -46,7 +46,7 @@ pub use device_envoy_core::cyd::{
 };
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
-pub use one_spi::{CydEspOneSpi, CydEspOneSpiBundleUncalibrated, CydStaticEsp};
+pub use one_spi::CydEspOneSpi;
 
 use crate::flash_block::FlashBlockEsp;
 use display::CydDisplayEsp as CydDisplayEspDevice;

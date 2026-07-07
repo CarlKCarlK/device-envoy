@@ -43,7 +43,10 @@ fn check_all() -> ExitCode {
             Command::new("cargo")
                 .current_dir(core_workspace_root.join("crates/device-envoy-core"))
                 .env("RUSTDOCFLAGS", "-D warnings")
-                .args(["doc", "--no-deps", "--features", "host"]),
+                // `wasm` is added here (docs-only) so intra-doc links to
+                // `CydWasm` resolve; it must stay out of the test/check steps
+                // above and below, which mirror real firmware feature sets.
+                .args(["doc", "--no-deps", "--features", "host,wasm"]),
         ) && run_command(
             Command::new("cargo")
                 .current_dir(core_workspace_root.join("crates/device-envoy-core"))

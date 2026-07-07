@@ -20,8 +20,8 @@ use super::RawPoint;
 use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub use super::driver::{
-    EnsureCalibrationError, EnsureCalibrationOutcome, EnsureCalibrationSettings,
-    ensure_calibration, ensure_calibration_with_settings,
+    EnsureCalibrationError, EnsureCalibrationErrorKind, EnsureCalibrationOutcome,
+    EnsureCalibrationSettings, ensure_calibration, ensure_calibration_with_settings,
 };
 pub use super::flow::CalibrationFlow;
 

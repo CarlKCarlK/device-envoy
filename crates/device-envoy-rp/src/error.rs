@@ -71,10 +71,6 @@ pub enum Error {
     #[cfg(target_os = "none")]
     #[display("CYD touch unavailable")]
     CydTouchUnavailable,
-
-    #[cfg(target_os = "none")]
-    #[display("CYD calibration unavailable")]
-    CydCalibrationUnavailable,
 }
 
 #[cfg(target_os = "none")]
@@ -86,7 +82,6 @@ impl From<crate::cyd::CydError> for Error {
             crate::cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
             crate::cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
             crate::cyd::CydError::TouchUnavailable => Self::CydTouchUnavailable,
-            crate::cyd::CydError::CalibrationUnavailable => Self::CydCalibrationUnavailable,
         }
     }
 }
@@ -95,24 +90,24 @@ impl From<crate::cyd::CydError> for Error {
 impl
     From<
         device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            crate::cyd::CydError,
+            crate::cyd::CydRp<device_envoy_core::cyd::Uncalibrated>,
             Error,
         >,
     > for Error
 {
     fn from(
         error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            crate::cyd::CydError,
+            crate::cyd::CydRp<device_envoy_core::cyd::Uncalibrated>,
             Error,
         >,
     ) -> Self {
-        match error {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Device(error) => {
-                Self::from(error)
-            }
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Flash(error) => {
-                error
-            }
+        match error.kind {
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
+                error,
+            ) => Self::from(error),
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
+                error,
+            ) => error,
         }
     }
 }

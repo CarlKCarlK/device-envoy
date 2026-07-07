@@ -14,7 +14,7 @@ mod touch_driver;
 use core::{convert::Infallible, fmt};
 
 use device_envoy_core::cyd::{
-    SCREEN_PIXELS,
+    Calibrated, CydCalibrated, CydScreen, CydUncalibrated, SCREEN_PIXELS, Uncalibrated,
     display::{CydFrame, RectanglePixels},
     touch::{CydRawTouch, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
@@ -49,10 +49,9 @@ use display::CydDisplayRp;
 use touch_driver::CydTouchRp;
 
 /// A standalone 320x240 ILI9341 + XPT2046 module wired over SPI to a Pico.
-pub struct CydRp {
+pub struct CydRp<State = Uncalibrated> {
     display: CydDisplayRp,
     touch: Option<CydTouchRp>,
-    calibration_config: Option<CalibrationConfig>,
     // Every CydRp owns exactly one draw buffer. Apps that don't draw through it
     // pass a zero-sized buffer (e.g. `CydStaticRp<0>`).
     pixel_buffer: &'static mut dyn DynPixelBuffer,
@@ -65,6 +64,7 @@ pub struct CydRp {
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
+    state: State,
 }
 
 /// Static storage for a [`CydRp`]-owned pixel buffer.
@@ -98,12 +98,6 @@ impl<const PIXEL_COUNT: usize> CydStaticRp<PIXEL_COUNT> {
     }
 }
 
-/// A [`CydRp`] whose touch calibration is confirmed present.
-pub struct CalibratedCydRp<'a> {
-    cyd: &'a mut CydRp,
-    calibration_config: CalibrationConfig,
-}
-
 /// The display half of a [`CydRp`], borrowed from [`Cyd::parts`].
 pub struct CydDisplayRpPart<'a> {
     display: &'a mut CydDisplayRp,
@@ -118,7 +112,7 @@ pub struct CydDisplayRpPart<'a> {
 /// The touch half of a [`CydRp`], borrowed from [`Cyd::parts`].
 pub struct CydTouchRpPart<'a> {
     touch: Option<&'a mut CydTouchRp>,
-    calibration_config: Option<CalibrationConfig>,
+    calibration_config: CalibrationConfig,
 }
 
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
@@ -244,7 +238,7 @@ impl PixelTarget for CydFrameRp<'_> {
             return;
         }
         let stride = self.view.width();
-        self.raw_pixels_mut()[local_y * stride + local_x] = CydRp::rgb565(color).into_storage();
+        self.raw_pixels_mut()[local_y * stride + local_x] = Rgb565::from(color).into_storage();
     }
 
     /// The frame buffer already stores RGB565, so a decoded image pixel can be
@@ -277,39 +271,9 @@ pub enum CydError {
     DisplayFlush(CydDisplayRpFlushError),
     /// No touch controller is attached to this device.
     TouchUnavailable,
-    /// No calibration has been set on this device.
-    CalibrationUnavailable,
 }
 
-impl CydRp {
-    /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
-    pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
-
-    /// Create [`CydStaticRp`] storage for a `PIXEL_COUNT`-sized draw buffer.
-    ///
-    /// Equivalent to `CydStaticRp::<PIXEL_COUNT>::new()` but namespaced under `CydRp` so
-    /// all construction calls share a common prefix.
-    ///
-    /// ```rust,no_run
-    /// # #![no_std]
-    /// # #![no_main]
-    /// use device_envoy_rp::cyd::{CydRp, CydStaticRp};
-    /// # #[panic_handler]
-    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-    ///
-    /// static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
-    /// ```
-    #[must_use]
-    pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticRp<PIXEL_COUNT> {
-        CydStaticRp::new()
-    }
-
-    #[inline]
-    /// Convert an `Rgb888` color to the device's native `Rgb565` format.
-    pub fn rgb565(color: Rgb888) -> Rgb565 {
-        Rgb565::from(color)
-    }
-
+impl CydRp<Uncalibrated> {
     /// Construct a display-only `CydRp` (no touch) that owns its draw buffer,
     /// initializing the buffer from app-provided [`CydStaticRp`] storage.
     ///
@@ -492,42 +456,29 @@ impl CydRp {
         Ok(Self {
             display,
             touch,
-            calibration_config: None,
             pixel_buffer,
             background,
             foreground,
             background565,
             foreground565: Self::rgb565(foreground),
             font,
+            state: Uncalibrated,
         })
     }
 
-    /// The device's current touch calibration, if any.
-    #[must_use]
-    pub fn calibration_config(&self) -> Option<CalibrationConfig> {
-        self.calibration_config
-    }
-
-    /// Clear the device's touch calibration.
-    pub fn clear_calibration(&mut self) {
-        self.calibration_config = None;
-    }
-
-    /// Set the device's touch calibration.
-    pub fn set_calibration(&mut self, calibration_config: CalibrationConfig) {
-        self.calibration_config = Some(calibration_config);
-    }
-
-    /// Borrow this device as calibrated, or fail if no calibration is set.
-    pub fn ensure_calibration(&mut self) -> Result<CalibratedCydRp<'_>, CydError> {
-        let calibration_config = self
-            .calibration_config
-            .ok_or(CydError::CalibrationUnavailable)?;
-
-        Ok(CalibratedCydRp {
-            cyd: self,
-            calibration_config,
-        })
+    /// Apply `calibration_config`, transitioning this device to the calibrated state.
+    pub fn calibrate(self, calibration_config: CalibrationConfig) -> CydRp<Calibrated> {
+        CydRp {
+            display: self.display,
+            touch: self.touch,
+            pixel_buffer: self.pixel_buffer,
+            background: self.background,
+            foreground: self.foreground,
+            background565: self.background565,
+            foreground565: self.foreground565,
+            font: self.font,
+            state: Calibrated(calibration_config),
+        }
     }
 
     /// Read the next raw (uncalibrated) touch event, if any.
@@ -537,42 +488,47 @@ impl CydRp {
     }
 }
 
-impl CalibratedCydRp<'_> {
-    /// Clear the underlying device's touch calibration.
-    pub fn clear_calibration(&mut self) {
-        self.cyd.clear_calibration();
+impl CydRp<Calibrated> {
+    /// The device's current touch calibration.
+    #[must_use]
+    pub fn calibration_config(&self) -> CalibrationConfig {
+        self.state.0
     }
 
-    /// Read the next calibrated touch event, if any.
-    pub fn read(&mut self) -> Result<Option<TouchEvent>, CydError> {
-        let raw_touch_event = self
-            .cyd
-            .touch
-            .as_mut()
-            .ok_or(CydError::TouchUnavailable)?
-            .read_raw_touch_event();
-
-        Ok(
-            raw_touch_event.map(|raw_touch_event| match raw_touch_event {
-                RawTouchEvent::Down { raw_x, raw_y } => {
-                    let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
-                    TouchEvent::Down {
-                        point: Point::new(x as i32, y as i32),
-                    }
-                }
-                RawTouchEvent::Move { raw_x, raw_y } => {
-                    let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
-                    TouchEvent::Move {
-                        point: Point::new(x as i32, y as i32),
-                    }
-                }
-                RawTouchEvent::Up => TouchEvent::Up,
-            }),
-        )
+    /// Discard the current calibration, transitioning this device back to the uncalibrated state.
+    pub fn recalibrate(self) -> CydRp<Uncalibrated> {
+        CydRp {
+            display: self.display,
+            touch: self.touch,
+            pixel_buffer: self.pixel_buffer,
+            background: self.background,
+            foreground: self.foreground,
+            background565: self.background565,
+            foreground565: self.foreground565,
+            font: self.font,
+            state: Uncalibrated,
+        }
     }
 }
 
-impl CydRawTouch for CydRp {
+impl CydRp<Uncalibrated> {
+    /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
+    pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
+
+    /// Create [`CydStaticRp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    #[must_use]
+    pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticRp<PIXEL_COUNT> {
+        CydStaticRp::new()
+    }
+
+    #[inline]
+    /// Convert an `Rgb888` color to the device's native `Rgb565` format.
+    pub fn rgb565(color: Rgb888) -> Rgb565 {
+        Rgb565::from(color)
+    }
+}
+
+impl CydRawTouch for CydRp<Uncalibrated> {
     type Error = CydError;
 
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, CydError> {
@@ -580,7 +536,7 @@ impl CydRawTouch for CydRp {
     }
 }
 
-impl fmt::Debug for CydRp {
+impl<State> fmt::Debug for CydRp<State> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.debug_struct("CydRp").finish_non_exhaustive()
     }
@@ -592,13 +548,35 @@ impl fmt::Debug for CydRp {
 // the concrete rp `CydRp` through the `Cyd`/`CydFrame` traits without naming
 // any rp type.
 
-impl Cyd for CydRp {
+impl<State> CydScreen for CydRp<State> {
     type Error = CydError;
-    type Display<'a> = CydDisplayRpPart<'a>;
+    type Display<'a>
+        = CydDisplayRpPart<'a>
+    where
+        State: 'a;
+
+    #[inline]
+    fn display(&mut self) -> CydDisplayRpPart<'_> {
+        CydDisplayRpPart {
+            display: &mut self.display,
+            pixel_buffer: &mut *self.pixel_buffer,
+            background: self.background,
+            foreground: self.foreground,
+            background565: self.background565,
+            foreground565: self.foreground565,
+            font: self.font,
+        }
+    }
+}
+
+impl Cyd for CydRp<Calibrated> {
     type Touch<'a> = CydTouchRpPart<'a>;
 
     #[inline]
     fn parts(&mut self) -> (CydDisplayRpPart<'_>, CydTouchRpPart<'_>) {
+        // Built inline rather than via `CydScreen::display()`: a method call
+        // borrows all of `self` and would conflict with the touch borrow,
+        // while struct-literal field borrows are disjoint.
         (
             CydDisplayRpPart {
                 display: &mut self.display,
@@ -611,9 +589,29 @@ impl Cyd for CydRp {
             },
             CydTouchRpPart {
                 touch: self.touch.as_mut(),
-                calibration_config: self.calibration_config,
+                calibration_config: self.state.0,
             },
         )
+    }
+}
+
+impl CydUncalibrated for CydRp<Uncalibrated> {
+    type Calibrated = CydRp<Calibrated>;
+
+    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
+        CydRp::calibrate(self, calibration_config)
+    }
+}
+
+impl CydCalibrated for CydRp<Calibrated> {
+    type Uncalibrated = CydRp<Uncalibrated>;
+
+    fn recalibrate(self) -> Self::Uncalibrated {
+        CydRp::recalibrate(self)
+    }
+
+    fn calibration_config(&self) -> CalibrationConfig {
+        self.calibration_config()
     }
 }
 
@@ -679,59 +677,22 @@ impl CydDisplay for CydDisplayRpPart<'_> {
     }
 }
 
-impl Cyd for CalibratedCydRp<'_> {
-    type Error = CydError;
-    type Display<'a>
-        = CydDisplayRpPart<'a>
-    where
-        Self: 'a;
-    type Touch<'a>
-        = CydTouchRpPart<'a>
-    where
-        Self: 'a;
-
-    #[inline]
-    fn parts(&mut self) -> (CydDisplayRpPart<'_>, CydTouchRpPart<'_>) {
-        let cyd = &mut *self.cyd;
-        (
-            CydDisplayRpPart {
-                display: &mut cyd.display,
-                pixel_buffer: &mut *cyd.pixel_buffer,
-                background: cyd.background,
-                foreground: cyd.foreground,
-                background565: cyd.background565,
-                foreground565: cyd.foreground565,
-                font: cyd.font,
-            },
-            CydTouchRpPart {
-                touch: cyd.touch.as_mut(),
-                calibration_config: Some(self.calibration_config),
-            },
-        )
-    }
-}
-
 impl CydTouch for CydTouchRpPart<'_> {
     type Error = CydError;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, CydError> {
-        let Some(calibration_config) = self.calibration_config else {
-            return Ok(None);
-        };
-        let Some(touch) = self.touch.as_mut() else {
-            return Ok(None);
-        };
+        let touch = self.touch.as_mut().ok_or(CydError::TouchUnavailable)?;
         Ok(touch
             .read_raw_touch_event()
             .map(|raw_touch_event| match raw_touch_event {
                 RawTouchEvent::Down { raw_x, raw_y } => {
-                    let (x, y) = calibration_config.map_raw_to_screen(raw_x, raw_y);
+                    let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Down {
                         point: Point::new(x as i32, y as i32),
                     }
                 }
                 RawTouchEvent::Move { raw_x, raw_y } => {
-                    let (x, y) = calibration_config.map_raw_to_screen(raw_x, raw_y);
+                    let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Move {
                         point: Point::new(x as i32, y as i32),
                     }

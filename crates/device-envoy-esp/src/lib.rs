@@ -318,8 +318,6 @@ pub enum Error {
     CydDisplayFlush(cyd::CydDisplayEspFlushError),
     #[cfg(target_os = "none")]
     CydTouchUnavailable,
-    #[cfg(target_os = "none")]
-    CydCalibrationUnavailable,
 }
 
 impl From<embassy_executor::SpawnError> for Error {
@@ -337,28 +335,32 @@ impl From<cyd::CydError> for Error {
             cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
             cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
             cyd::CydError::TouchUnavailable => Self::CydTouchUnavailable,
-            cyd::CydError::CalibrationUnavailable => Self::CydCalibrationUnavailable,
         }
     }
 }
 
 #[cfg(target_os = "none")]
-impl From<device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<cyd::CydError, Error>>
-    for Error
+impl
+    From<
+        device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+            cyd::CydEsp<device_envoy_core::cyd::Uncalibrated>,
+            Error,
+        >,
+    > for Error
 {
     fn from(
         error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            cyd::CydError,
+            cyd::CydEsp<device_envoy_core::cyd::Uncalibrated>,
             Error,
         >,
     ) -> Self {
-        match error {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Device(error) => {
-                Self::from(error)
-            }
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationError::Flash(error) => {
-                error
-            }
+        match error.kind {
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
+                error,
+            ) => Self::from(error),
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
+                error,
+            ) => error,
         }
     }
 }

@@ -14,6 +14,8 @@ pub(crate) const SCREEN_HEIGHT: usize = 240;
 /// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 76,800).
 pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
+use crate::cyd::touch::CydRawTouch;
+use crate::cyd::touch::calibration::CalibrationConfig;
 use crate::pixel_target::rgb565_from_rgb888;
 use embedded_graphics::{
     pixelcolor::{Rgb565, Rgb888, raw::RawU16},
@@ -21,10 +23,30 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
-/// A complete CYD device that offers display and touch parts.
+/// Zero-sized marker for a CYD whose touch mapping has not been established yet.
+pub struct Uncalibrated;
+
+/// Marker for a CYD whose touch mapping is established and carried in the type.
+pub struct Calibrated(pub CalibrationConfig);
+
+/// A CYD screen capability offered by both calibrated and uncalibrated devices.
+pub trait CydScreen {
+    /// Error returned when flushing a frame fails.
+    type Error;
+
+    /// Display part offered by this device.
+    type Display<'a>: CydDisplay<Error = Self::Error>
+    where
+        Self: 'a;
+
+    /// Borrow the display part.
+    fn display(&mut self) -> Self::Display<'_>;
+}
+
+/// A complete calibrated CYD device that offers display and touch parts.
 ///
 /// CYD boards pair an ILI9341 display with an XPT2046 resistive touch
-/// controller. [`Cyd`] is the whole device: [`Cyd::parts`] borrows a
+/// controller. [`Cyd`] is the calibrated whole device: [`Cyd::parts`] borrows a
 /// [`CydDisplay`] half for drawing and a [`CydTouch`] half for calibrated touch
 /// input.
 ///
@@ -43,6 +65,7 @@ use device_envoy_core::cyd::{
     touch::TouchEvent,
 };
 use embedded_graphics::pixelcolor::Rgb888;
+# use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
 # use device_envoy_core::memory::CydMemory;
 # use embedded_graphics::{
 #     mono_font::ascii::FONT_9X15_BOLD,
@@ -50,7 +73,13 @@ use embedded_graphics::pixelcolor::Rgb888;
 #     prelude::{Point, RgbColor, Size},
 # };
 # futures_executor::block_on(async {
-# let mut cyd = CydMemory::new(Size::new(320, 240), Rgb888::BLACK, Rgb888::WHITE, &FONT_9X15_BOLD);
+# let mut cyd = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# )
+# .calibrate(CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0));
 # cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
 let (mut display, mut touch) = cyd.parts();
 // Create a pixel-buffer covering the whole screen that starts filled with background color.
@@ -59,7 +88,9 @@ let mut frame = display.full_frame_mut();
 frame.write_text("Hello CYD");
 // An app would usually run this in a loop: read touch, draw, flush, repeat.
 if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch.read()? {
+    // todo00 we have our own library of simple geometric shapes, but can use EB, too [give links]
     DrawItem::Circle {
+    // todo000 .into() for points?
         center: (point.x as f32, point.y as f32),
         pixel_radius: 24.0,
         color: Rgb888::RED,
@@ -74,15 +105,7 @@ frame.flush().await?;
 ```
 "#
 )]
-pub trait Cyd {
-    /// Error returned when flushing a frame or reading touch fails.
-    type Error;
-
-    /// Display part offered by this device.
-    type Display<'a>: CydDisplay<Error = Self::Error>
-    where
-        Self: 'a;
-
+pub trait Cyd: CydScreen {
     /// Touch part offered by this device.
     type Touch<'a>: CydTouch<Error = Self::Error>
     where
@@ -92,6 +115,24 @@ pub trait Cyd {
     ///
     /// See the [Cyd trait documentation](Self) for a usage example.
     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>);
+}
+
+/// An uncalibrated CYD device that can run the shared calibration flow.
+pub trait CydUncalibrated:
+    CydScreen + CydRawTouch<Error = <Self as CydScreen>::Error> + Sized
+{
+    type Calibrated: CydCalibrated<Uncalibrated = Self>;
+
+    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated;
+}
+
+/// A calibrated CYD device that can transition back to the raw state.
+pub trait CydCalibrated: Cyd + Sized {
+    type Uncalibrated: CydUncalibrated<Calibrated = Self>;
+
+    fn recalibrate(self) -> Self::Uncalibrated;
+
+    fn calibration_config(&self) -> CalibrationConfig;
 }
 
 /// A CYD display.

@@ -27,7 +27,7 @@ use log::info;
 use device_envoy_esp::{
     Result,
     cyd::{
-        Cyd as _, CydDisplay as _, CydEsp, CydStaticEsp, DEFAULT_FONT, Orientation,
+        CydDisplay as _, CydEsp, CydScreen as _, CydStaticEsp, DEFAULT_FONT, Orientation,
         tiling::TileGrid,
     },
     init_and_start,
@@ -83,7 +83,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     );
 
     loop {
-        let (mut display, _touch) = cyd.parts();
+        let mut display = cyd.display();
         let mut tiles = display.tiles(grid);
         let mut tile_index: usize = 0;
         while let Some(mut frame) = tiles.next() {

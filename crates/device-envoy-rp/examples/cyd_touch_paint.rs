@@ -63,7 +63,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let mut recalibration_button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
-    let mut cyd = CydRp::new(
+    let cyd = CydRp::new(
         &CYD_STATIC,
         p.SPI0,
         p.PIN_18,
@@ -86,14 +86,13 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     )?;
     info!("CYD display and touch initialized");
 
-    let calibration_outcome = ensure_calibration(
-        &mut cyd,
+    let (mut cyd, calibration_outcome) = ensure_calibration(
+        cyd,
         &mut calibration_flash_block,
         &mut recalibration_button,
         Some("recalibrating"),
     )
     .await?;
-    cyd.set_calibration(calibration_outcome.calibration_config());
     if calibration_outcome.was_saved() {
         info!("Calibration saved, restarting");
         cortex_m::peripheral::SCB::sys_reset();

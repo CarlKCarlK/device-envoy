@@ -68,7 +68,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
-    let mut cyd = CydEsp::new(
+    let cyd = CydEsp::new(
         &CYD_STATIC,
         p.SPI2,
         p.GPIO1,
@@ -91,14 +91,13 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     )?;
     info!("CYD display and touch initialized");
 
-    let calibration_outcome = ensure_calibration(
-        &mut cyd,
+    let (mut cyd, calibration_outcome) = ensure_calibration(
+        cyd,
         &mut calibration_flash_block,
         &mut recalibration_button,
         Some("recalibrating"),
     )
     .await?;
-    cyd.set_calibration(calibration_outcome.calibration_config());
     if calibration_outcome.was_saved() {
         info!("Calibration saved, restarting");
         device_envoy_esp::esp_hal::system::software_reset();

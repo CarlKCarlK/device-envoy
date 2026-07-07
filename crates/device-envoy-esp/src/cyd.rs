@@ -1,8 +1,9 @@
 //! A device abstraction for the "Cheap Yellow Display" (CYD) family of
 //! 320x240 ILI9341 + XPT2046 resistive-touch ESP32 boards.
 //!
-//! See [`CydEsp`] for the primary constructor and usage example; the
-//! device-agnostic `Cyd`/`CydDisplay`/`CydTouch` traits it implements live in
+//! See [`CydEsp`], [`CydEspUncalibrated`], and [`CydDisplayEsp`] for the
+//! primary constructors; the device-agnostic [`CydDisplay`],
+//! [`CydTouch`], and [`CydTouchUncalibrated`] traits live in
 //! [`device_envoy_core::cyd`].
 
 mod buffer;
@@ -25,29 +26,28 @@ use static_cell::StaticCell;
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 use device_envoy_core::cyd::{
-    Calibrated, CydCalibrated, CydUncalibrated, SCREEN_PIXELS, Uncalibrated,
+    SCREEN_PIXELS,
     display::{CydFrame, RectanglePixels},
-    touch::{CydRawTouch, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
+    touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
 use device_envoy_core::pixel_target::PixelTarget;
 pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydScreen, CydTouch,
+    CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
 
-use display::CydDisplayEsp;
-use touch_driver::CydTouchEsp;
+use display::CydDisplayEsp as CydDisplayEspDevice;
+use touch_driver::CydTouchEsp as CydTouchEspDevice;
 
-/// A CYD-family ESP32 device with an ILI9341 display and optional XPT2046 touch.
-pub struct CydEsp<State = Uncalibrated> {
-    display: CydDisplayEsp,
-    touch: Option<CydTouchEsp>,
+/// An owned CYD-family ESP32 display component.
+pub struct CydDisplayEsp {
+    display: CydDisplayEspDevice,
     // Every CydEsp owns exactly one draw buffer. Apps that don't draw through it
     // pass a zero-sized buffer (e.g. `CydStaticEsp<0>`).
     pixel_buffer: &'static mut dyn DynPixelBuffer,
@@ -60,7 +60,29 @@ pub struct CydEsp<State = Uncalibrated> {
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
-    state: State,
+}
+
+/// An owned uncalibrated CYD-family ESP32 touch component.
+pub struct CydTouchUncalibratedEsp {
+    touch: CydTouchEspDevice,
+}
+
+/// An owned calibrated CYD-family ESP32 touch component.
+pub struct CydTouchEsp {
+    raw: CydTouchUncalibratedEsp,
+    calibration_config: CalibrationConfig,
+}
+
+/// A calibrated CYD-family ESP32 bundle.
+pub struct CydEsp {
+    pub display: CydDisplayEsp,
+    pub touch: CydTouchEsp,
+}
+
+/// An uncalibrated CYD-family ESP32 bundle.
+pub struct CydEspUncalibrated {
+    pub display: CydDisplayEsp,
+    pub touch: CydTouchUncalibratedEsp,
 }
 
 /// Static storage for a [`CydEsp`]-owned pixel buffer.
@@ -72,7 +94,7 @@ pub struct CydEsp<State = Uncalibrated> {
 /// static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
 /// ```
 ///
-/// The app chooses the pixel count (policy); [`CydEsp::new_display_only`] owns the
+/// The app chooses the pixel count (policy); [`CydDisplayEsp::new`] owns the
 /// initialization protocol and the storage details.
 pub struct CydStaticEsp<const PIXEL_COUNT: usize> {
     pixel_buffer: StaticCell<PixelBuffer<PIXEL_COUNT>>,
@@ -88,26 +110,9 @@ impl<const PIXEL_COUNT: usize> CydStaticEsp<PIXEL_COUNT> {
     }
 }
 
-/// The display half of a [`CydEsp`], borrowed from [`Cyd::parts`].
-pub struct CydDisplayEspPart<'a> {
-    display: &'a mut CydDisplayEsp,
-    pixel_buffer: &'a mut dyn DynPixelBuffer,
-    background: Rgb888,
-    foreground: Rgb888,
-    background565: Rgb565,
-    foreground565: Rgb565,
-    font: &'static MonoFont<'static>,
-}
-
-/// The touch half of a [`CydEsp`], borrowed from [`Cyd::parts`].
-pub struct CydTouchEspPart<'a> {
-    touch: Option<&'a mut CydTouchEsp>,
-    calibration_config: CalibrationConfig,
-}
-
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
 pub struct CydFrameEsp<'a> {
-    display: &'a mut CydDisplayEsp,
+    display: &'a mut CydDisplayEspDevice,
     view: RegionView<'a>,
     // Where this frame presents and how large it is: set from the `Rectangle`
     // passed to `frame_mut`, so `flush` needs no separate position argument.
@@ -115,7 +120,7 @@ pub struct CydFrameEsp<'a> {
     // Tile top-left in screen coordinates. Drawing coordinates are translated
     // by this point before reaching the local frame buffer.
     tile_top_left: Point,
-    // Default foreground color and font, copied from the owning `CydEsp`, so
+    // Default foreground color and font, copied from the owning `CydDisplayEsp`, so
     // `write_text` can render with the device default style.
     pub(crate) foreground565: Rgb565,
     pub(crate) font: &'static MonoFont<'static>,
@@ -248,28 +253,20 @@ impl PixelTarget for CydFrameEsp<'_> {
     }
 }
 
-/// Error from a [`CydEsp`] device, frame, or touch operation.
+/// Error from a CYD ESP display or touch operation.
 #[derive(Debug, derive_more::From)]
 pub enum CydError {
-    /// Reading or saving calibration to flash failed.
-    Flash(crate::Error),
     /// Initializing the display over SPI failed.
     DisplayInit(CydDisplayEspInitError),
     /// Initializing the touch controller over SPI failed.
     TouchInit(CydTouchEspInitError),
     /// Flushing a frame to the display failed.
     DisplayFlush(CydDisplayEspFlushError),
-    /// No touch controller is attached to this device.
-    TouchUnavailable,
 }
 
-impl CydEsp<Uncalibrated> {
-    /// Construct a display-only `CydEsp` (no touch) that owns its draw buffer,
-    /// initializing the buffer from app-provided [`CydStaticEsp`] storage.
-    ///
-    /// The app picks the size via `PIXEL_COUNT`; `CydEsp` owns the init protocol. Use
-    /// [`CydDisplay::frame_mut`] or [`CydDisplay::full_frame_mut`] to render into and flush the owned buffer.
-    pub fn new_display_only<const PIXEL_COUNT: usize>(
+impl CydDisplayEsp {
+    /// Construct a display-only CYD display component that owns its draw buffer.
+    pub fn new<const PIXEL_COUNT: usize>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
         display_spi: impl esp_hal::spi::master::Instance + 'static,
         display_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
@@ -298,12 +295,134 @@ impl CydEsp<Uncalibrated> {
             background,
             foreground,
             font,
-            None,
             pixel_buffer,
         )
     }
 
-    /// Construct a full `CydEsp` with touch that owns its draw buffer.
+    fn new_inner(
+        display_spi: impl esp_hal::spi::master::Instance + 'static,
+        display_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        display_mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
+        display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
+        orientation: Orientation,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+        pixel_buffer: &'static mut dyn DynPixelBuffer,
+    ) -> Result<Self, CydError> {
+        let mut display = CydDisplayEspDevice::new(
+            display_spi,
+            display_sck_pin,
+            display_mosi_pin,
+            display_miso_pin,
+            display_cs_pin,
+            display_dc_pin,
+            display_rst_pin,
+            display_backlight_pin,
+            orientation,
+        )?;
+        let background565 = rgb565(background);
+        display.fill(background565)?;
+
+        Ok(Self {
+            display,
+            pixel_buffer,
+            background,
+            foreground,
+            background565,
+            foreground565: rgb565(foreground),
+            font,
+        })
+    }
+}
+
+impl CydTouchUncalibratedEsp {
+    pub fn new(
+        touch_spi: impl esp_hal::spi::master::Instance + 'static,
+        touch_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        touch_mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        touch_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
+        touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
+        touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
+    ) -> Result<Self, CydError> {
+        Ok(Self {
+            touch: CydTouchEspDevice::new(
+                touch_spi,
+                touch_sck_pin,
+                touch_mosi_pin,
+                touch_miso_pin,
+                touch_cs_pin,
+                touch_irq_pin,
+            )?,
+        })
+    }
+}
+
+impl CydEsp {
+    /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
+    pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
+
+    /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    #[must_use]
+    pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
+        CydStaticEsp::new()
+    }
+
+    pub fn new<const PIXEL_COUNT: usize>(
+        statics: &'static CydStaticEsp<PIXEL_COUNT>,
+        display_spi: impl esp_hal::spi::master::Instance + 'static,
+        display_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        display_mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
+        display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
+        orientation: Orientation,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+        touch_spi: impl esp_hal::spi::master::Instance + 'static,
+        touch_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        touch_mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        touch_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
+        touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
+        touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
+        calibration_config: CalibrationConfig,
+    ) -> Result<Self, CydError> {
+        let display = CydDisplayEsp::new(
+            statics,
+            display_spi,
+            display_sck_pin,
+            display_mosi_pin,
+            display_miso_pin,
+            display_cs_pin,
+            display_dc_pin,
+            display_rst_pin,
+            display_backlight_pin,
+            orientation,
+            background,
+            foreground,
+            font,
+        )?;
+        let touch = CydTouchUncalibratedEsp::new(
+            touch_spi,
+            touch_sck_pin,
+            touch_mosi_pin,
+            touch_miso_pin,
+            touch_cs_pin,
+            touch_irq_pin,
+        )?
+        .calibrate(calibration_config);
+        Ok(Self { display, touch })
+    }
+}
+
+impl CydEspUncalibrated {
     pub fn new<const PIXEL_COUNT: usize>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
         display_spi: impl esp_hal::spi::master::Instance + 'static,
@@ -325,227 +444,78 @@ impl CydEsp<Uncalibrated> {
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
     ) -> Result<Self, CydError> {
-        let touch = CydTouchEsp::new(
-            touch_spi,
-            touch_sck_pin,
-            touch_mosi_pin,
-            touch_miso_pin,
-            touch_cs_pin,
-            touch_irq_pin,
-        )?;
-        let pixel_buffer = PixelBuffer::init_static(&statics.pixel_buffer);
-
-        Self::new_inner(
-            display_spi,
-            display_sck_pin,
-            display_mosi_pin,
-            display_miso_pin,
-            display_cs_pin,
-            display_dc_pin,
-            display_rst_pin,
-            display_backlight_pin,
-            orientation,
-            background,
-            foreground,
-            font,
-            Some(touch),
-            pixel_buffer,
-        )
-    }
-
-    fn new_inner(
-        display_spi: impl esp_hal::spi::master::Instance + 'static,
-        display_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
-        display_mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
-        display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
-        display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
-        orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
-        font: &'static MonoFont<'static>,
-        touch: Option<CydTouchEsp>,
-        pixel_buffer: &'static mut dyn DynPixelBuffer,
-    ) -> Result<Self, CydError> {
-        let mut display = CydDisplayEsp::new(
-            display_spi,
-            display_sck_pin,
-            display_mosi_pin,
-            display_miso_pin,
-            display_cs_pin,
-            display_dc_pin,
-            display_rst_pin,
-            display_backlight_pin,
-            orientation,
-        )?;
-        // Start every device on a clean background so apps never see boot-time
-        // garbage before their first draw.
-        let background565 = Self::rgb565(background);
-        display.fill(background565)?;
-
         Ok(Self {
-            display,
-            touch,
-            pixel_buffer,
-            background,
-            foreground,
-            background565,
-            foreground565: Self::rgb565(foreground),
-            font,
-            state: Uncalibrated,
+            display: CydDisplayEsp::new(
+                statics,
+                display_spi,
+                display_sck_pin,
+                display_mosi_pin,
+                display_miso_pin,
+                display_cs_pin,
+                display_dc_pin,
+                display_rst_pin,
+                display_backlight_pin,
+                orientation,
+                background,
+                foreground,
+                font,
+            )?,
+            touch: CydTouchUncalibratedEsp::new(
+                touch_spi,
+                touch_sck_pin,
+                touch_mosi_pin,
+                touch_miso_pin,
+                touch_cs_pin,
+                touch_irq_pin,
+            )?,
         })
     }
+}
 
-    pub fn calibrate(self, calibration_config: CalibrationConfig) -> CydEsp<Calibrated> {
-        CydEsp {
-            display: self.display,
-            touch: self.touch,
-            pixel_buffer: self.pixel_buffer,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            state: Calibrated(calibration_config),
-        }
-    }
+fn rgb565(color: Rgb888) -> Rgb565 {
+    Rgb565::from(color)
+}
 
-    /// Read the next raw (uncalibrated) touch event, if any.
-    pub fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, CydError> {
-        let touch = self.touch.as_mut().ok_or(CydError::TouchUnavailable)?;
-        Ok(touch.read_raw_touch_event())
+impl fmt::Debug for CydDisplayEsp {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CydDisplayEsp")
+            .finish_non_exhaustive()
     }
 }
 
-impl CydEsp<Calibrated> {
-    #[must_use]
-    pub fn calibration_config(&self) -> CalibrationConfig {
-        self.state.0
-    }
-
-    pub fn recalibrate(self) -> CydEsp<Uncalibrated> {
-        CydEsp {
-            display: self.display,
-            touch: self.touch,
-            pixel_buffer: self.pixel_buffer,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            state: Uncalibrated,
-        }
+impl fmt::Debug for CydTouchUncalibratedEsp {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CydTouchUncalibratedEsp")
+            .finish_non_exhaustive()
     }
 }
 
-impl CydEsp<Uncalibrated> {
-    /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
-    pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
-
-    /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
-    #[must_use]
-    pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
-        CydStaticEsp::new()
-    }
-
-    // TODO00 Review whether this helper should remain on `CydEsp`, and whether it
-    // can be `const` or otherwise moved to a more appropriate abstraction.
-    #[inline]
-    pub fn rgb565(color: Rgb888) -> Rgb565 {
-        Rgb565::from(color)
+impl fmt::Debug for CydTouchEsp {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CydTouchEsp")
+            .field("calibration_config", &self.calibration_config)
+            .finish_non_exhaustive()
     }
 }
 
-impl CydRawTouch for CydEsp<Uncalibrated> {
-    type Error = CydError;
-
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, CydError> {
-        CydEsp::read_raw_touch_event(self)
-    }
-}
-
-impl<State> fmt::Debug for CydEsp<State> {
+impl fmt::Debug for CydEsp {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.debug_struct("CydEsp").finish_non_exhaustive()
     }
 }
 
-// ── Device-agnostic `Cyd` trait impls ─────────────────────────────────────────
-//
-// These let platform-neutral code (`device-envoy-core::cyd` consumers) drive
-// the concrete esp `CydEsp` through the `Cyd`/`CydFrame` traits without naming
-// any esp type.
-
-impl<State> CydScreen for CydEsp<State> {
-    type Error = CydError;
-    type Display<'a>
-        = CydDisplayEspPart<'a>
-    where
-        State: 'a;
-
-    #[inline]
-    fn display(&mut self) -> CydDisplayEspPart<'_> {
-        CydDisplayEspPart {
-            display: &mut self.display,
-            pixel_buffer: &mut *self.pixel_buffer,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-        }
+impl fmt::Debug for CydEspUncalibrated {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CydEspUncalibrated")
+            .finish_non_exhaustive()
     }
 }
 
-impl Cyd for CydEsp<Calibrated> {
-    type Touch<'a> = CydTouchEspPart<'a>;
-
-    #[inline]
-    fn parts(&mut self) -> (CydDisplayEspPart<'_>, CydTouchEspPart<'_>) {
-        // Built inline rather than via `CydScreen::display()`: a method call
-        // borrows all of `self` and would conflict with the touch borrow,
-        // while struct-literal field borrows are disjoint.
-        (
-            CydDisplayEspPart {
-                display: &mut self.display,
-                pixel_buffer: &mut *self.pixel_buffer,
-                background: self.background,
-                foreground: self.foreground,
-                background565: self.background565,
-                foreground565: self.foreground565,
-                font: self.font,
-            },
-            CydTouchEspPart {
-                touch: self.touch.as_mut(),
-                calibration_config: self.state.0,
-            },
-        )
-    }
-}
-
-impl CydUncalibrated for CydEsp<Uncalibrated> {
-    type Calibrated = CydEsp<Calibrated>;
-
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
-        CydEsp::calibrate(self, calibration_config)
-    }
-}
-
-impl CydCalibrated for CydEsp<Calibrated> {
-    type Uncalibrated = CydEsp<Uncalibrated>;
-
-    fn recalibrate(self) -> Self::Uncalibrated {
-        CydEsp::recalibrate(self)
-    }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config()
-    }
-}
-
-impl CydDisplay for CydDisplayEspPart<'_> {
+impl CydDisplay for CydDisplayEsp {
     type Error = CydError;
     type Frame<'a>
         = CydFrameEsp<'a>
@@ -607,12 +577,30 @@ impl CydDisplay for CydDisplayEspPart<'_> {
     }
 }
 
-impl CydTouch for CydTouchEspPart<'_> {
+impl CydTouchUncalibrated for CydTouchUncalibratedEsp {
     type Error = CydError;
+    type Calibrated = CydTouchEsp;
+
+    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
+        Ok(self.touch.read_raw_touch_event())
+    }
+
+    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
+        CydTouchEsp {
+            raw: self,
+            calibration_config,
+        }
+    }
+}
+
+impl CydTouch for CydTouchEsp {
+    type Error = CydError;
+    type Uncalibrated = CydTouchUncalibratedEsp;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, CydError> {
-        let touch = self.touch.as_mut().ok_or(CydError::TouchUnavailable)?;
-        Ok(touch
+        Ok(self
+            .raw
+            .touch
             .read_raw_touch_event()
             .map(|raw_touch_event| match raw_touch_event {
                 RawTouchEvent::Down { raw_x, raw_y } => {
@@ -629,6 +617,14 @@ impl CydTouch for CydTouchEspPart<'_> {
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
+    }
+
+    fn calibration_config(&self) -> CalibrationConfig {
+        self.calibration_config
+    }
+
+    fn decalibrate(self) -> Self::Uncalibrated {
+        self.raw
     }
 }
 

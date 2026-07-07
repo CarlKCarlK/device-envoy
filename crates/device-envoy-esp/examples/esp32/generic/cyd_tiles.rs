@@ -26,7 +26,7 @@ use log::info;
 use device_envoy_esp::{
     Result,
     cyd::{
-        CydDisplay as _, CydEsp, CydScreen as _, CydStaticEsp, DEFAULT_FONT, Orientation,
+        CydDisplay as _, CydDisplayEsp, CydEsp, CydStaticEsp, DEFAULT_FONT, Orientation,
         tiling::TileGrid,
     },
     init_and_start,
@@ -52,7 +52,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     info!("Starting CYD tiles demo");
 
     static CYD_STATIC: CydStaticEsp<TILE_PIXEL_COUNT> = CydEsp::new_static();
-    let mut cyd = CydEsp::new_display_only(
+    let mut display = CydDisplayEsp::new(
         &CYD_STATIC,
         p.SPI2,
         p.GPIO14,
@@ -82,13 +82,15 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     );
 
     loop {
-        let mut display = cyd.display();
         let mut tiles = display.tiles(grid);
         let mut tile_index: usize = 0;
         while let Some(mut frame) = tiles.next() {
             frame.fill(palette[tile_index % palette.len()]);
             let mut label = heapless::String::<8>::new();
-            let _ = write!(label, "{tile_index}");
+            assert!(
+                write!(label, "{tile_index}").is_ok(),
+                "tile index label exceeds buffer"
+            );
             frame.write_text(label.as_str());
             frame.flush()?;
             tile_index += 1;

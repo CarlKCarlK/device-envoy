@@ -330,11 +330,9 @@ impl From<embassy_executor::SpawnError> for Error {
 impl From<cyd::CydError> for Error {
     fn from(error: cyd::CydError) -> Self {
         match error {
-            cyd::CydError::Flash(error) => error,
             cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
             cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
             cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
-            cyd::CydError::TouchUnavailable => Self::CydTouchUnavailable,
         }
     }
 }
@@ -343,14 +341,14 @@ impl From<cyd::CydError> for Error {
 impl
     From<
         device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            cyd::CydEsp<device_envoy_core::cyd::Uncalibrated>,
+            cyd::CydTouchUncalibratedEsp,
             Error,
         >,
     > for Error
 {
     fn from(
         error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            cyd::CydEsp<device_envoy_core::cyd::Uncalibrated>,
+            cyd::CydTouchUncalibratedEsp,
             Error,
         >,
     ) -> Self {

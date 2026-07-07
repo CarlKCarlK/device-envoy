@@ -33,7 +33,8 @@ use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressedTo},
     cyd::{
-        Cyd as _, CydDisplay as _, CydRp, CydStaticRp, CydTouch as _, DEFAULT_FONT, Orientation,
+        CydDisplay as _, CydRp, CydRpUncalibrated, CydStaticRp, CydTouch as _, DEFAULT_FONT,
+        Orientation,
     },
     flash_block::FlashBlockRp,
 };
@@ -63,7 +64,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let mut recalibration_button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
-    let cyd = CydRp::new(
+    let CydRpUncalibrated { mut display, touch } = CydRpUncalibrated::new(
         &CYD_STATIC,
         p.SPI0,
         p.PIN_18,
@@ -86,8 +87,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     )?;
     info!("CYD display and touch initialized");
 
-    let (mut cyd, calibration_outcome) = ensure_calibration(
-        cyd,
+    let (mut touch, calibration_outcome) = ensure_calibration(
+        &mut display,
+        touch,
         &mut calibration_flash_block,
         &mut recalibration_button,
         Some("recalibrating"),
@@ -99,7 +101,6 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     }
     info!("Touch calibrated; tap the panel to paint");
 
-    let (mut display, mut touch) = cyd.parts();
     let mut frame = display.full_frame_mut();
     frame.flush()?;
 

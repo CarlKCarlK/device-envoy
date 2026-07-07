@@ -1,4 +1,4 @@
-//! In-memory [`Cyd`] and [`Button`] mocks for host-side tests.
+//! In-memory [`Button`] mocks and a CYD test harness for host-side tests.
 //!
 //! Requires the `host` feature. Script touch and button input into
 //! [`CydMemory`]/[`ButtonMemory`], then assert on drawn pixels, flush counts,
@@ -7,7 +7,7 @@
 //!
 //! ```rust
 //! use device_envoy_core::memory::CydMemory;
-//! use device_envoy_core::cyd::{Cyd as _, CydDisplay, touch::calibration::CalibrationConfig};
+//! use device_envoy_core::cyd::CydDisplay;
 //! use device_envoy_core::cyd::display::CydFrame;
 //! use embedded_graphics::{
 //!     mono_font::ascii::FONT_9X15_BOLD,
@@ -21,8 +21,7 @@
 //!     Rgb888::BLACK,
 //!     Rgb888::WHITE,
 //!     &FONT_9X15_BOLD,
-//! )
-//! .calibrate(CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0));
+//! );
 //! let (mut display, _touch) = cyd_memory.parts();
 //! let mut frame = display.full_frame_mut();
 //! frame.fill(Rgb565::RED);
@@ -51,9 +50,11 @@ use std::{
 #[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Calibrated, Cyd, CydCalibrated, CydDisplay, CydScreen, CydTouch, CydUncalibrated, Uncalibrated,
+    CydDisplay,
     display::{CydFrame, RectanglePixels},
-    touch::{CydRawTouch, RawTouchEvent, TouchEvent},
+    touch::{
+        CydTouch, CydTouchUncalibrated, RawTouchEvent, TouchEvent, calibration::CalibrationConfig,
+    },
 };
 #[cfg(test)]
 use crate::flash_block::{
@@ -83,10 +84,10 @@ const FLASH_BLOCK_SIZE: usize = 4096;
 const FLASH_BLOCK_OFFSET: u32 = 0;
 #[cfg(test)]
 const FLASH_ERASED_BYTE: u8 = 0xFF;
-#[cfg(test)]
-const TGA_HEADER_SIZE: usize = 18;
-#[cfg(test)]
-const TGA_PIXEL_BYTES: usize = 3;
+
+const fn identity_calibration_config() -> CalibrationConfig {
+    CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+}
 
 #[derive(Clone)]
 pub(crate) struct FrameClockMemory {
@@ -106,54 +107,52 @@ pub enum CydMemoryError {
     OutOfFrames,
 }
 /// In-memory CYD device for host-side tests and screenshots.
-pub struct CydMemory<State = Uncalibrated> {
+pub struct CydMemory {
     size: Size,
     background: Rgb888,
     foreground: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
+    shared: Rc<RefCell<CydMemoryShared>>,
+}
+
+struct CydMemoryShared {
     framebuffer: Vec<u16>,
     flush_count: usize,
     last_flush_rectangle: Option<Rectangle>,
     frame_budget: usize,
-    raw_touch_script: RefCell<FrameScript<RawTouchEvent>>,
-    touch_script: RefCell<FrameScript<TouchEvent>>,
+    raw_touch_script: FrameScript<RawTouchEvent>,
+    touch_script: FrameScript<TouchEvent>,
     frame_clock: FrameClockMemory,
-    state: State,
 }
 
-/// Display half of [`CydMemory`], borrowed from [`Cyd::parts`].
-pub struct CydDisplayMemoryPart<'a> {
+/// Owned display half of [`CydMemory`].
+#[derive(Clone)]
+pub struct CydDisplayMemory {
     size: Size,
     background: Rgb888,
     foreground: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
-    framebuffer: &'a mut Vec<u16>,
-    flush_count: &'a mut usize,
-    last_flush_rectangle: &'a mut Option<Rectangle>,
-    frame_budget: usize,
-    raw_touch_script: &'a RefCell<FrameScript<RawTouchEvent>>,
-    touch_script: &'a RefCell<FrameScript<TouchEvent>>,
-    frame_clock: FrameClockMemory,
+    shared: Rc<RefCell<CydMemoryShared>>,
 }
 
-/// Touch half of [`CydMemory`], borrowed from [`Cyd::parts`].
-pub struct CydTouchMemoryPart<'a> {
-    touch_script: &'a RefCell<FrameScript<TouchEvent>>,
+/// Owned calibrated touch half of [`CydMemory`].
+pub struct CydTouchMemory {
+    shared: Rc<RefCell<CydMemoryShared>>,
+    calibration_config: CalibrationConfig,
+}
+
+/// Owned uncalibrated touch half of [`CydMemory`].
+pub struct CydTouchUncalibratedMemory {
+    shared: Rc<RefCell<CydMemoryShared>>,
 }
 
 /// In-progress in-memory frame that flushes into a host framebuffer.
-pub struct CydFrameMemory<'a> {
-    framebuffer: &'a mut Vec<u16>,
-    flush_count: &'a mut usize,
-    last_flush_rectangle: &'a mut Option<Rectangle>,
-    frame_budget: usize,
-    raw_touch_script: &'a RefCell<FrameScript<RawTouchEvent>>,
-    touch_script: &'a RefCell<FrameScript<TouchEvent>>,
-    frame_clock: FrameClockMemory,
+pub struct CydFrameMemory {
+    shared: Rc<RefCell<CydMemoryShared>>,
     screen_size: Size,
     rectangle: Rectangle,
     tile_top_left: Point,
@@ -186,7 +185,7 @@ pub struct ButtonMemory {
     frame_clock: Option<FrameClockMemory>,
 }
 
-impl CydMemory<Uncalibrated> {
+impl CydMemory {
     /// Construct an empty in-memory CYD surface with the given screen style.
     #[must_use]
     pub fn new(
@@ -204,77 +203,64 @@ impl CydMemory<Uncalibrated> {
             background565,
             foreground565: Rgb565::from(foreground),
             font,
-            framebuffer: vec![background565.into_storage(); pixel_count],
-            flush_count: 0,
-            last_flush_rectangle: None,
-            frame_budget: DEFAULT_FRAME_BUDGET,
-            raw_touch_script: RefCell::new(FrameScript::default()),
-            touch_script: RefCell::new(FrameScript::default()),
-            frame_clock: FrameClockMemory {
-                frame_index: Rc::new(Cell::new(0)),
-            },
-            state: Uncalibrated,
+            shared: Rc::new(RefCell::new(CydMemoryShared {
+                framebuffer: vec![background565.into_storage(); pixel_count],
+                flush_count: 0,
+                last_flush_rectangle: None,
+                frame_budget: DEFAULT_FRAME_BUDGET,
+                raw_touch_script: FrameScript::default(),
+                touch_script: FrameScript::default(),
+                frame_clock: FrameClockMemory {
+                    frame_index: Rc::new(Cell::new(0)),
+                },
+            })),
         }
     }
 
-    pub fn calibrate(
-        self,
-        calibration_config: crate::cyd::touch::calibration::CalibrationConfig,
-    ) -> CydMemory<Calibrated> {
-        CydMemory {
-            size: self.size,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            framebuffer: self.framebuffer,
-            flush_count: self.flush_count,
-            last_flush_rectangle: self.last_flush_rectangle,
-            frame_budget: self.frame_budget,
-            raw_touch_script: self.raw_touch_script,
-            touch_script: self.touch_script,
-            frame_clock: self.frame_clock,
-            state: Calibrated(calibration_config),
-        }
-    }
-}
-
-impl CydMemory<Calibrated> {
     #[must_use]
-    pub fn calibration_config(&self) -> crate::cyd::touch::calibration::CalibrationConfig {
-        self.state.0
-    }
-
-    pub fn recalibrate(self) -> CydMemory<Uncalibrated> {
-        CydMemory {
+    pub fn display(&self) -> CydDisplayMemory {
+        CydDisplayMemory {
             size: self.size,
             background: self.background,
             foreground: self.foreground,
             background565: self.background565,
             foreground565: self.foreground565,
             font: self.font,
-            framebuffer: self.framebuffer,
-            flush_count: self.flush_count,
-            last_flush_rectangle: self.last_flush_rectangle,
-            frame_budget: self.frame_budget,
-            raw_touch_script: self.raw_touch_script,
-            touch_script: self.touch_script,
-            frame_clock: self.frame_clock,
-            state: Uncalibrated,
+            shared: self.shared.clone(),
         }
+    }
+
+    #[must_use]
+    pub fn parts(&self) -> (CydDisplayMemory, CydTouchMemory) {
+        (
+            self.display(),
+            CydTouchMemory {
+                shared: self.shared.clone(),
+                calibration_config: identity_calibration_config(),
+            },
+        )
+    }
+
+    #[must_use]
+    pub fn parts_uncalibrated(&self) -> (CydDisplayMemory, CydTouchUncalibratedMemory) {
+        (
+            self.display(),
+            CydTouchUncalibratedMemory {
+                shared: self.shared.clone(),
+            },
+        )
     }
 }
 
-impl<State> CydMemory<State> {
+impl CydMemory {
     /// Limit how many frames may flush before [`CydMemoryError::OutOfFrames`].
     pub fn set_frame_budget(&mut self, frame_budget: usize) {
-        self.frame_budget = frame_budget;
+        self.shared.borrow_mut().frame_budget = frame_budget;
     }
 
     #[must_use]
     pub(crate) fn frame_clock(&self) -> FrameClockMemory {
-        self.frame_clock.clone()
+        self.shared.borrow().frame_clock.clone()
     }
 
     /// Create a host-side button tied to this device's frame clock.
@@ -285,71 +271,46 @@ impl<State> CydMemory<State> {
 
     #[cfg(test)]
     pub(crate) fn script_raw_frames(&mut self, raw_touch_frames: &[&[RawTouchEvent]]) {
-        self.raw_touch_script
+        self.shared
             .borrow_mut()
+            .raw_touch_script
             .replace_frames(raw_touch_frames);
     }
 
     #[cfg(test)]
     pub(crate) fn script_raw_frames_owned(&mut self, raw_touch_frames: Vec<Vec<RawTouchEvent>>) {
-        self.raw_touch_script
+        self.shared
             .borrow_mut()
+            .raw_touch_script
             .replace_owned_frames(raw_touch_frames);
     }
 
     #[cfg(test)]
-    pub(crate) fn script_touch_frames(&mut self, touch_frames: &[&[TouchEvent]]) {
-        self.touch_script.borrow_mut().replace_frames(touch_frames);
-    }
-
-    #[cfg(test)]
-    pub(crate) fn script_touch_frames_owned(&mut self, touch_frames: Vec<Vec<TouchEvent>>) {
-        self.touch_script
-            .borrow_mut()
-            .replace_owned_frames(touch_frames);
-    }
-
-    #[cfg(test)]
-    pub(crate) fn script_idle_frames(&mut self, idle_frame_count: usize) {
-        self.raw_touch_script
-            .borrow_mut()
-            .push_idle_frames(idle_frame_count);
-        self.touch_script
-            .borrow_mut()
-            .push_idle_frames(idle_frame_count);
-    }
-
-    #[cfg(test)]
     pub(crate) fn push_raw_touch_event(&mut self, raw_touch_event: RawTouchEvent) {
-        self.raw_touch_script
+        self.shared
             .borrow_mut()
+            .raw_touch_script
             .push_current_frame_event(raw_touch_event);
     }
 
     /// Queue one calibrated touch event for the current frame.
     pub fn push_touch_event(&mut self, touch_event: TouchEvent) {
-        self.touch_script
+        self.shared
             .borrow_mut()
+            .touch_script
             .push_current_frame_event(touch_event);
-    }
-
-    #[cfg(test)]
-    pub(crate) fn script_tap(&mut self, raw_point: crate::cyd::touch::RawPoint) {
-        for raw_touch_event in tap_events(raw_point) {
-            self.push_raw_touch_event(raw_touch_event);
-        }
     }
 
     /// Return how many frames have flushed so far.
     #[must_use]
     pub fn flush_count(&self) -> usize {
-        self.flush_count
+        self.shared.borrow().flush_count
     }
 
     /// Return the rectangle flushed most recently, if any.
     #[must_use]
     pub fn last_flush_rectangle(&self) -> Option<Rectangle> {
-        self.last_flush_rectangle
+        self.shared.borrow().last_flush_rectangle
     }
 
     /// Read one pixel from the host framebuffer.
@@ -364,39 +325,10 @@ impl<State> CydMemory<State> {
             "position_y must stay within the screen"
         );
         let stride = self.size.width as usize;
+        let shared = self.shared.borrow();
         Rgb565::from(RawU16::new(
-            self.framebuffer[position_y * stride + position_x],
+            shared.framebuffer[position_y * stride + position_x],
         ))
-    }
-
-    #[must_use]
-    #[cfg(test)]
-    pub(crate) fn framebuffer(&self) -> &[u16] {
-        &self.framebuffer
-    }
-
-    #[cfg(test)]
-    pub(crate) fn write_framebuffer_tga(&self, path: impl AsRef<Path>) -> std::io::Result<()> {
-        let width = self.size.width as usize;
-        let height = self.size.height as usize;
-        let pixel_bytes = width
-            .checked_mul(height)
-            .and_then(|pixel_count| pixel_count.checked_mul(TGA_PIXEL_BYTES))
-            .expect("TGA buffer length must fit in usize");
-        let mut bytes = Vec::with_capacity(TGA_HEADER_SIZE + pixel_bytes);
-        bytes.resize(TGA_HEADER_SIZE, 0);
-        bytes[2] = 2;
-        bytes[12..14].copy_from_slice(&(self.size.width as u16).to_le_bytes());
-        bytes[14..16].copy_from_slice(&(self.size.height as u16).to_le_bytes());
-        bytes[16] = 24;
-        bytes[17] = 0x20;
-        for pixel in &self.framebuffer {
-            let color = rgb888_from_rgb565(*pixel);
-            bytes.push(color.b());
-            bytes.push(color.g());
-            bytes.push(color.r());
-        }
-        fs::write(path, bytes)
     }
 
     /// Write the framebuffer as an RGB PNG for host-side previews and assertions.
@@ -407,7 +339,8 @@ impl<State> CydMemory<State> {
         let width = self.size.width;
         let height = self.size.height;
         let mut rgb_bytes = Vec::with_capacity(width as usize * height as usize * 3);
-        for pixel in &self.framebuffer {
+        let shared = self.shared.borrow();
+        for pixel in &shared.framebuffer {
             let color = rgb888_from_rgb565(*pixel);
             rgb_bytes.push(color.r());
             rgb_bytes.push(color.g());
@@ -501,7 +434,7 @@ pub fn assert_framebuffer_matches_expected_png(
     Ok(())
 }
 
-impl Default for CydMemory<Uncalibrated> {
+impl Default for CydMemory {
     fn default() -> Self {
         Self::new(
             Size::new(320, 240),
@@ -512,102 +445,53 @@ impl Default for CydMemory<Uncalibrated> {
     }
 }
 
-impl<State> core::fmt::Debug for CydMemory<State> {
+impl core::fmt::Debug for CydMemory {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         formatter.debug_struct("CydMemory").finish_non_exhaustive()
     }
 }
 
-impl<State> CydScreen for CydMemory<State> {
-    type Error = CydMemoryError;
-    type Display<'a>
-        = CydDisplayMemoryPart<'a>
-    where
-        State: 'a;
+impl core::fmt::Debug for CydTouchMemory {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("CydTouchMemory")
+            .field("calibration_config", &self.calibration_config)
+            .finish_non_exhaustive()
+    }
+}
 
-    fn display(&mut self) -> Self::Display<'_> {
-        let frame_clock = self.frame_clock();
-        CydDisplayMemoryPart {
-            size: self.size,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            framebuffer: &mut self.framebuffer,
-            flush_count: &mut self.flush_count,
-            last_flush_rectangle: &mut self.last_flush_rectangle,
-            frame_budget: self.frame_budget,
-            raw_touch_script: &self.raw_touch_script,
-            touch_script: &self.touch_script,
-            frame_clock,
+impl core::fmt::Debug for CydTouchUncalibratedMemory {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("CydTouchUncalibratedMemory")
+            .finish_non_exhaustive()
+    }
+}
+
+impl CydTouchUncalibrated for CydTouchUncalibratedMemory {
+    type Error = CydMemoryError;
+    type Calibrated = CydTouchMemory;
+
+    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
+        Ok(self
+            .shared
+            .borrow_mut()
+            .raw_touch_script
+            .pop_current_frame_event())
+    }
+
+    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
+        CydTouchMemory {
+            shared: self.shared,
+            calibration_config,
         }
     }
 }
 
-impl Cyd for CydMemory<Calibrated> {
-    type Touch<'a> = CydTouchMemoryPart<'a>;
-
-    fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) {
-        let frame_clock = self.frame_clock();
-        (
-            CydDisplayMemoryPart {
-                size: self.size,
-                background: self.background,
-                foreground: self.foreground,
-                background565: self.background565,
-                foreground565: self.foreground565,
-                font: self.font,
-                framebuffer: &mut self.framebuffer,
-                flush_count: &mut self.flush_count,
-                last_flush_rectangle: &mut self.last_flush_rectangle,
-                frame_budget: self.frame_budget,
-                raw_touch_script: &self.raw_touch_script,
-                touch_script: &self.touch_script,
-                frame_clock,
-            },
-            CydTouchMemoryPart {
-                touch_script: &self.touch_script,
-            },
-        )
-    }
-}
-
-impl CydUncalibrated for CydMemory<Uncalibrated> {
-    type Calibrated = CydMemory<Calibrated>;
-
-    fn calibrate(
-        self,
-        calibration_config: crate::cyd::touch::calibration::CalibrationConfig,
-    ) -> Self::Calibrated {
-        CydMemory::calibrate(self, calibration_config)
-    }
-}
-
-impl CydCalibrated for CydMemory<Calibrated> {
-    type Uncalibrated = CydMemory<Uncalibrated>;
-
-    fn recalibrate(self) -> Self::Uncalibrated {
-        CydMemory::recalibrate(self)
-    }
-
-    fn calibration_config(&self) -> crate::cyd::touch::calibration::CalibrationConfig {
-        self.calibration_config()
-    }
-}
-
-impl CydRawTouch for CydMemory<Uncalibrated> {
-    type Error = CydMemoryError;
-
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
-        Ok(self.raw_touch_script.borrow_mut().pop_current_frame_event())
-    }
-}
-
-impl CydDisplay for CydDisplayMemoryPart<'_> {
+impl CydDisplay for CydDisplayMemory {
     type Error = CydMemoryError;
     type Frame<'a>
-        = CydFrameMemory<'a>
+        = CydFrameMemory
     where
         Self: 'a;
 
@@ -638,13 +522,7 @@ impl CydDisplay for CydDisplayMemoryPart<'_> {
     ) -> Self::Frame<'_> {
         let pixel_count = rectangle.size.width as usize * rectangle.size.height as usize;
         CydFrameMemory {
-            framebuffer: self.framebuffer,
-            flush_count: self.flush_count,
-            last_flush_rectangle: self.last_flush_rectangle,
-            frame_budget: self.frame_budget,
-            raw_touch_script: self.raw_touch_script,
-            touch_script: self.touch_script,
-            frame_clock: self.frame_clock.clone(),
+            shared: self.shared.clone(),
             screen_size: self.size,
             rectangle,
             tile_top_left,
@@ -655,7 +533,12 @@ impl CydDisplay for CydDisplayMemoryPart<'_> {
     }
 
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Self::Error> {
-        fill_rectangle_in_framebuffer(self.framebuffer, self.size, rectangle, color.into_storage());
+        fill_rectangle_in_framebuffer(
+            &mut self.shared.borrow_mut().framebuffer,
+            self.size,
+            rectangle,
+            color.into_storage(),
+        );
         Ok(())
     }
 
@@ -664,7 +547,7 @@ impl CydDisplay for CydDisplayMemoryPart<'_> {
         I: IntoIterator<Item = Rgb565>,
     {
         fill_contiguous_in_framebuffer(
-            self.framebuffer,
+            &mut self.shared.borrow_mut().framebuffer,
             self.size,
             rectangle,
             pixels.into_iter().map(IntoStorage::into_storage),
@@ -673,15 +556,30 @@ impl CydDisplay for CydDisplayMemoryPart<'_> {
     }
 }
 
-impl CydTouch for CydTouchMemoryPart<'_> {
+impl CydTouch for CydTouchMemory {
     type Error = CydMemoryError;
+    type Uncalibrated = CydTouchUncalibratedMemory;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
-        Ok(self.touch_script.borrow_mut().pop_current_frame_event())
+        Ok(self
+            .shared
+            .borrow_mut()
+            .touch_script
+            .pop_current_frame_event())
+    }
+
+    fn calibration_config(&self) -> CalibrationConfig {
+        self.calibration_config
+    }
+
+    fn decalibrate(self) -> Self::Uncalibrated {
+        CydTouchUncalibratedMemory {
+            shared: self.shared,
+        }
     }
 }
 
-impl CydFrameMemory<'_> {
+impl CydFrameMemory {
     fn width(&self) -> usize {
         self.rectangle.size.width as usize
     }
@@ -699,28 +597,30 @@ impl CydFrameMemory<'_> {
     }
 
     fn flush_now(&mut self) -> Result<(), CydMemoryError> {
-        if *self.flush_count >= self.frame_budget {
+        let mut shared = self.shared.borrow_mut();
+        if shared.flush_count >= shared.frame_budget {
             return Err(CydMemoryError::OutOfFrames);
         }
 
         blit_frame_to_screen(
-            self.framebuffer,
+            &mut shared.framebuffer,
             self.screen_size,
             self.rectangle,
             &self.pixels,
         );
-        *self.last_flush_rectangle = Some(self.rectangle);
-        *self.flush_count += 1;
-        self.raw_touch_script.borrow_mut().advance_frame();
-        self.touch_script.borrow_mut().advance_frame();
-        self.frame_clock
+        shared.last_flush_rectangle = Some(self.rectangle);
+        shared.flush_count += 1;
+        shared.raw_touch_script.advance_frame();
+        shared.touch_script.advance_frame();
+        shared
+            .frame_clock
             .frame_index
-            .set(self.frame_clock.frame_index.get() + 1);
+            .set(shared.frame_clock.frame_index.get() + 1);
         Ok(())
     }
 }
 
-impl DrawTarget for CydFrameMemory<'_> {
+impl DrawTarget for CydFrameMemory {
     type Color = Rgb565;
     type Error = Infallible;
 
@@ -750,13 +650,13 @@ impl DrawTarget for CydFrameMemory<'_> {
     }
 }
 
-impl Dimensions for CydFrameMemory<'_> {
+impl Dimensions for CydFrameMemory {
     fn bounding_box(&self) -> Rectangle {
         Rectangle::new(self.tile_top_left, self.rectangle.size)
     }
 }
 
-impl PixelTarget for CydFrameMemory<'_> {
+impl PixelTarget for CydFrameMemory {
     fn width(&self) -> usize {
         usize::try_from(self.tile_top_left.x)
             .expect("tile top-left x must be non-negative")
@@ -790,7 +690,7 @@ impl PixelTarget for CydFrameMemory<'_> {
     }
 }
 
-impl RectanglePixels for CydFrameMemory<'_> {
+impl RectanglePixels for CydFrameMemory {
     fn width(&self) -> usize {
         self.width()
     }
@@ -804,7 +704,7 @@ impl RectanglePixels for CydFrameMemory<'_> {
     }
 }
 
-impl CydFrame for CydFrameMemory<'_> {
+impl CydFrame for CydFrameMemory {
     type Error = CydMemoryError;
 
     fn tile_top_left(&self) -> Point {
@@ -871,12 +771,6 @@ impl<Event: Clone> FrameScript<Event> {
                 .map(|frame| frame.to_vec())
                 .collect();
         }
-    }
-
-    #[cfg(test)]
-    fn push_idle_frames(&mut self, idle_frame_count: usize) {
-        self.future_frames
-            .extend((0..idle_frame_count).map(|_| Vec::new()));
     }
 
     #[cfg(test)]
@@ -1186,14 +1080,17 @@ fn blit_frame_to_screen(
 
 #[cfg(test)]
 mod tests {
-    use super::{CydMemory, CydMemoryError, FlashBlockMemory};
+    use super::{
+        ButtonMemory, CydMemory, CydMemoryError, CydTouchMemory, CydTouchUncalibratedMemory,
+        FlashBlockMemory,
+    };
     use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
     };
-    use crate::cyd::touch::{CydRawTouch, RawPoint, RawTouchEvent};
+    use crate::cyd::touch::{CydTouch, CydTouchUncalibrated, RawPoint, RawTouchEvent};
     use crate::cyd::{
-        CydDisplay, CydScreen,
+        CydDisplay,
         display::{CydFrame, RectanglePixels},
         touch::calibration::{
             CalibrationConfig, CalibrationCorner, EnsureCalibrationErrorKind,
@@ -1226,9 +1123,38 @@ mod tests {
         )
     }
 
+    fn read_next_raw_touch_event(
+        memory_cyd: &CydMemory,
+    ) -> Result<Option<RawTouchEvent>, CydMemoryError> {
+        let (_display, mut touch) = memory_cyd.parts_uncalibrated();
+        touch.read_raw_touch_event()
+    }
+
+    fn run_ensure_calibration(
+        memory_cyd: &CydMemory,
+        memory_flash_block: &mut FlashBlockMemory,
+        memory_button: &mut ButtonMemory,
+        confirmed_message: Option<&str>,
+    ) -> Result<
+        (CydTouchMemory, EnsureCalibrationOutcome),
+        crate::cyd::touch::calibration::EnsureCalibrationError<
+            CydTouchUncalibratedMemory,
+            <FlashBlockMemory as FlashBlock>::Error,
+        >,
+    > {
+        let (mut display, touch) = memory_cyd.parts_uncalibrated();
+        block_on(ensure_calibration(
+            &mut display,
+            touch,
+            memory_flash_block,
+            memory_button,
+            confirmed_message,
+        ))
+    }
+
     #[test]
     fn fresh_frame_starts_cleared_to_background() {
-        let mut memory_cyd = test_cyd_memory();
+        let memory_cyd = test_cyd_memory();
         let mut display = memory_cyd.display();
         let frame = display.frame_mut(Rectangle::new(Point::new(3, 4), Size::new(2, 2)));
         assert_eq!(frame.raw_pixels(), &[Rgb565::CSS_BLACK.into_storage(); 4]);
@@ -1236,7 +1162,7 @@ mod tests {
 
     #[test]
     fn draw_target_pixel_flushes_to_screen_coordinate() {
-        let mut memory_cyd = test_cyd_memory();
+        let memory_cyd = test_cyd_memory();
         {
             let mut display = memory_cyd.display();
             let mut frame = display.frame_mut_with_tile_top_left(
@@ -1257,7 +1183,7 @@ mod tests {
 
     #[test]
     fn fill_rectangle_clips_to_screen_edges() {
-        let mut memory_cyd = CydMemory::new(
+        let memory_cyd = CydMemory::new(
             Size::new(4, 4),
             Rgb888::CSS_BLACK,
             Rgb888::CSS_WHITE,
@@ -1294,21 +1220,15 @@ mod tests {
         memory_cyd.script_raw_frames(&[&first_frame, &second_frame]);
 
         assert_eq!(
-            memory_cyd
-                .read_raw_touch_event()
-                .expect("read should succeed"),
+            read_next_raw_touch_event(&memory_cyd).expect("read should succeed"),
             Some(RawTouchEvent::Down { raw_x: 1, raw_y: 2 })
         );
         assert_eq!(
-            memory_cyd
-                .read_raw_touch_event()
-                .expect("read should succeed"),
+            read_next_raw_touch_event(&memory_cyd).expect("read should succeed"),
             Some(RawTouchEvent::Up)
         );
         assert_eq!(
-            memory_cyd
-                .read_raw_touch_event()
-                .expect("read should succeed"),
+            read_next_raw_touch_event(&memory_cyd).expect("read should succeed"),
             None
         );
 
@@ -1320,9 +1240,7 @@ mod tests {
 
         assert_eq!(memory_cyd.flush_count(), 1);
         assert_eq!(
-            memory_cyd
-                .read_raw_touch_event()
-                .expect("read should succeed"),
+            read_next_raw_touch_event(&memory_cyd).expect("read should succeed"),
             Some(RawTouchEvent::Down { raw_x: 3, raw_y: 4 })
         );
     }
@@ -1382,14 +1300,13 @@ mod tests {
         let mut memory_button = memory_cyd.button_memory();
         let raw_points = script_happy_path(&mut memory_cyd);
 
-        let (memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             Some("saved"),
-        ))
+        )
         .expect("happy-path calibration should succeed");
-        let memory_cyd = memory_cyd.recalibrate();
 
         let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
             panic!("happy-path calibration should save a new config");
@@ -1436,12 +1353,12 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::with_value(&saved_config);
         let mut memory_button = memory_cyd.button_memory();
 
-        let (memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("preloaded calibration should load");
 
         let EnsureCalibrationOutcome::Loaded(loaded_config) = outcome else {
@@ -1449,10 +1366,9 @@ mod tests {
         };
         assert_eq!(loaded_config, saved_config);
         assert_eq!(memory_cyd.flush_count(), 0);
-        // Raw touch is only offered uncalibrated, so step back down to read it.
-        let mut memory_cyd = memory_cyd.recalibrate();
+        let mut touch = touch.decalibrate();
         assert_eq!(
-            memory_cyd
+            touch
                 .read_raw_touch_event()
                 .expect("touch read should succeed"),
             Some(RawTouchEvent::Down { raw_x: 7, raw_y: 9 })
@@ -1466,12 +1382,12 @@ mod tests {
         let mut memory_button = memory_cyd.button_memory();
         script_happy_path(&mut memory_cyd);
 
-        let (_memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("corrupt flash should fall back to calibration");
 
         assert!(matches!(outcome, EnsureCalibrationOutcome::Saved(_)));
@@ -1491,14 +1407,13 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
 
-        let error = block_on(ensure_calibration(
-            memory_cyd,
+        let error = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect_err("empty input should stop at the frame budget");
-        let memory_cyd = error.cyd;
 
         assert!(matches!(
             error.kind,
@@ -1516,14 +1431,13 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
 
-        let error = block_on(ensure_calibration(
-            memory_cyd,
+        let error = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect_err("single-frame budget should stop after the first drawn frame");
-        let memory_cyd = error.cyd;
 
         assert!(matches!(
             error.kind,
@@ -1555,12 +1469,12 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
 
-        let (_memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("flow should restart after verify timeout and then save");
 
         assert!(matches!(outcome, EnsureCalibrationOutcome::Saved(_)));
@@ -1587,12 +1501,12 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("dropout sequence should still save a calibration");
 
         let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
@@ -1632,12 +1546,12 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("lift-off drift sequence should still save a calibration");
 
         let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
@@ -1669,12 +1583,12 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("rejected solve should restart and then save");
 
         let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
@@ -1709,12 +1623,12 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("verify miss should restart and then save");
 
         assert!(matches!(outcome, EnsureCalibrationOutcome::Saved(_)));
@@ -1734,12 +1648,12 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
         memory_button.set_pressed_for_frame(2, true);
-        let (_memory_cyd, outcome) = block_on(ensure_calibration(
-            memory_cyd,
+        let (_touch, outcome) = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect("button-triggered recalibration should restart and then save");
 
         let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
@@ -1774,14 +1688,13 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let error = block_on(ensure_calibration(
-            memory_cyd,
+        let error = run_ensure_calibration(
+            &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
             None,
-        ))
+        )
         .expect_err("oversized hold should stop at the frame budget");
-        let mut memory_cyd = error.cyd;
 
         assert!(matches!(
             error.kind,
@@ -1799,8 +1712,7 @@ mod tests {
             Rgb565::CSS_WHITE
         );
         assert_eq!(
-            memory_cyd
-                .read_raw_touch_event()
+            read_next_raw_touch_event(&memory_cyd)
                 .expect("the oversized frame should be fully drained by the second iteration"),
             None
         );

@@ -1,6 +1,9 @@
-//! A device abstraction for the "Cheap Yellow Display" (CYD) with touch.
+//! A device abstraction for the "Cheap Yellow Display" (CYD) display and touch parts.
 //!
-//! See the [`Cyd`] trait for the overview and a usage example.
+//! CYD boards pair an ILI9341 display with an XPT2046 resistive touch
+//! controller. Apps take the owned parts they need directly: a [`CydDisplay`]
+//! for drawing, and optionally a [`touch::CydTouch`] for calibrated screen-space
+//! input or a [`touch::CydTouchUncalibrated`] for the shared calibration flow.
 
 pub mod display;
 pub mod touch;
@@ -14,8 +17,6 @@ pub(crate) const SCREEN_HEIGHT: usize = 240;
 /// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 76,800).
 pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
-use crate::cyd::touch::CydRawTouch;
-use crate::cyd::touch::calibration::CalibrationConfig;
 use crate::pixel_target::rgb565_from_rgb888;
 use embedded_graphics::{
     pixelcolor::{Rgb565, Rgb888, raw::RawU16},
@@ -23,35 +24,20 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
-/// Zero-sized marker for a CYD whose touch mapping has not been established yet.
-pub struct Uncalibrated;
+pub use touch::{CydTouch, CydTouchUncalibrated};
 
-/// Marker for a CYD whose touch mapping is established and carried in the type.
-pub struct Calibrated(pub CalibrationConfig);
-
-/// A CYD screen capability offered by both calibrated and uncalibrated devices.
-pub trait CydScreen {
-    /// Error returned when flushing a frame fails.
-    type Error;
-
-    /// Display part offered by this device.
-    type Display<'a>: CydDisplay<Error = Self::Error>
-    where
-        Self: 'a;
-
-    /// Borrow the display part.
-    fn display(&mut self) -> Self::Display<'_>;
-}
-
-/// A complete calibrated CYD device that offers display and touch parts.
+/// A CYD display.
 ///
-/// CYD boards pair an ILI9341 display with an XPT2046 resistive touch
-/// controller. [`Cyd`] is the calibrated whole device: [`Cyd::parts`] borrows a
-/// [`CydDisplay`] half for drawing and a [`CydTouch`] half for calibrated touch
-/// input.
+/// The screen is a fixed 320x240 RGB565 panel. `CydDisplay` offers three
+/// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
+/// drawn into and flushed to any rectangle on screen; tiled frames (see
+/// [`CydDisplay::tiles`]) that cover the screen in smaller pieces when memory
+/// is tight; and contiguous-pixel methods (see
+/// [`CydDisplay::fill_contiguous`]) that stream pixels straight to the screen
+/// with virtually no buffering.
 ///
-/// The [`display`] and [`touch`] submodules hold support types used with those
-/// halves.
+/// See the [module documentation](self) for a simple end-to-end example that
+/// draws a frame and reads touch.
 #[cfg_attr(
     feature = "host",
     doc = r#"
@@ -60,12 +46,11 @@ Implementations include the in-memory mock [`CydMemory`](crate::memory::CydMemor
 
 ```rust
 use device_envoy_core::cyd::{
-    Cyd as _, CydDisplay, CydTouch,
+    CydDisplay, CydTouch,
     display::{CydFrame, DrawItem},
     touch::TouchEvent,
 };
 use embedded_graphics::pixelcolor::Rgb888;
-# use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
 # use device_envoy_core::memory::CydMemory;
 # use embedded_graphics::{
 #     mono_font::ascii::FONT_9X15_BOLD,
@@ -78,19 +63,14 @@ use embedded_graphics::pixelcolor::Rgb888;
 #     Rgb888::BLACK,
 #     Rgb888::WHITE,
 #     &FONT_9X15_BOLD,
-# )
-# .calibrate(CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0));
+# );
+# let (mut display, mut touch) = cyd.parts();
 # cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
-let (mut display, mut touch) = cyd.parts();
-// Create a pixel-buffer covering the whole screen that starts filled with background color.
 let mut frame = display.full_frame_mut();
 
 frame.write_text("Hello CYD");
-// An app would usually run this in a loop: read touch, draw, flush, repeat.
 if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch.read()? {
-    // todo00 we have our own library of simple geometric shapes, but can use EB, too [give links]
     DrawItem::Circle {
-    // todo000 .into() for points?
         center: (point.x as f32, point.y as f32),
         pixel_radius: 24.0,
         color: Rgb888::RED,
@@ -105,48 +85,6 @@ frame.flush().await?;
 ```
 "#
 )]
-pub trait Cyd: CydScreen {
-    /// Touch part offered by this device.
-    type Touch<'a>: CydTouch<Error = Self::Error>
-    where
-        Self: 'a;
-
-    /// Borrow display and touch as independent parts.
-    ///
-    /// See the [Cyd trait documentation](Self) for a usage example.
-    fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>);
-}
-
-/// An uncalibrated CYD device that can run the shared calibration flow.
-pub trait CydUncalibrated:
-    CydScreen + CydRawTouch<Error = <Self as CydScreen>::Error> + Sized
-{
-    type Calibrated: CydCalibrated<Uncalibrated = Self>;
-
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated;
-}
-
-/// A calibrated CYD device that can transition back to the raw state.
-pub trait CydCalibrated: Cyd + Sized {
-    type Uncalibrated: CydUncalibrated<Calibrated = Self>;
-
-    fn recalibrate(self) -> Self::Uncalibrated;
-
-    fn calibration_config(&self) -> CalibrationConfig;
-}
-
-/// A CYD display.
-///
-/// The screen is a fixed 320x240 RGB565 panel. `CydDisplay` offers three
-/// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
-/// drawn into and flushed to any rectangle on screen; tiled frames (see
-/// [`CydDisplay::tiles`]) that cover the screen in smaller pieces when memory
-/// is tight; and contiguous-pixel methods (see
-/// [`CydDisplay::fill_contiguous`]) that stream pixels straight to the screen
-/// with virtually no buffering.
-///
-/// See the [Cyd trait documentation](Cyd) for a simple end-to-end example that
-/// borrows a display part and presents a frame.
 pub trait CydDisplay {
     /// Error returned when flushing a frame fails.
     type Error;
@@ -162,32 +100,32 @@ pub trait CydDisplay {
 
     /// Oriented screen size for the configured orientation.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn screen_size(&self) -> Size;
 
     /// The device default background color.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn background(&self) -> Rgb888;
 
     /// The device default foreground/text color.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn foreground(&self) -> Rgb888;
 
     /// The device default background color in the native `Rgb565` format.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn background_565(&self) -> Rgb565;
 
     /// The device default foreground/text color in the native `Rgb565` format.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn foreground_565(&self) -> Rgb565;
 
     /// Convert an `Rgb888` color to the device's native `Rgb565` format.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn to_rgb565(&self, color: Rgb888) -> Rgb565 {
         rgb565_from_rgb888(color)
     }
@@ -199,7 +137,7 @@ pub trait CydDisplay {
     /// frame-local buffer. Regular, non-tiled frames use `(0, 0)` and therefore
     /// draw in frame-local coordinates.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn frame_mut_with_tile_top_left(
         &mut self,
         rectangle: Rectangle,
@@ -211,14 +149,14 @@ pub trait CydDisplay {
     /// The frame remembers its `rectangle`, so [`display::CydFrame::flush`] presents it
     /// at the rectangle's top-left with no separate position argument.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
         self.frame_mut_with_tile_top_left(rectangle, Point::zero())
     }
 
     /// Borrow a full-screen frame, cleared to the device background color.
     ///
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
+    /// See the [CydDisplay trait documentation](Self) for a usage example.
     fn full_frame_mut(&mut self) -> Self::Frame<'_> {
         self.frame_mut(Rectangle::new(Point::zero(), self.screen_size()))
     }
@@ -325,22 +263,6 @@ pub trait CydDisplay {
     }
 }
 
-/// A CYD touch source for calibrated, screen-space events that apps read.
-///
-/// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in the
-/// same screen coordinates as the display, or `None` when there is no touch.
-pub trait CydTouch {
-    /// Error returned when reading touch fails.
-    type Error;
-
-    /// Read the next calibrated, screen-space touch event, if any.
-    ///
-    /// Returns `Ok(None)` when there is no pending touch (including devices
-    /// constructed without touch). Errors only on a hardware/read failure.
-    /// See the [Cyd trait documentation](Cyd) for a usage example.
-    fn read(&mut self) -> Result<Option<touch::TouchEvent>, Self::Error>;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,7 +278,7 @@ mod tests {
     // TODO The shared `linkage-blaze-cyd-memory` fake cannot replace this unit-test
     // double directly because a cyd-core <-> cyd-memory dev-dependency cycle gives
     // cyd-core's unit tests a second trait instance, so `CydMemory` no longer
-    // implements *this* module's `Cyd`/`CydDisplay` traits. Keep this tiny local
+    // implements *this* module's `CydDisplay` trait. Keep this tiny local
     // test double until the trait crate/test layout is refactored to break that cycle.
     struct TestCyd;
 

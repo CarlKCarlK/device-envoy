@@ -1,13 +1,10 @@
-//! Browser-simulated [`Cyd`], [`Button`], and [`FlashBlock`] implementations.
+//! Browser-simulated CYD parts plus [`Button`] and [`FlashBlock`] implementations.
 //!
-//! Requires the `wasm` feature. [`CydWasm`] offers the device-agnostic
-//! [`Cyd`] display/touch parts against an HTML
-//! canvas, so the same generic example code that drives the real esp32 `CydEsp`
-//! also runs in a web page. Its [`CydFrameWasm::flush`] awaits the next browser animation
-//! frame (see [`next_animation_frame`]), blits the frame to the canvas, then
-//! resolves — turning a platform-neutral `loop { draw; flush().await?; }`
-//! into smooth, repaint-paced animation without inverting the loop into a state
-//! machine.
+//! Requires the `wasm` feature. [`CydWasm`] offers owned CYD display/touch
+//! parts against an HTML canvas, so the same generic example code that drives
+//! the real esp32 `CydEsp` also runs in a web page. Its [`CydFrameWasm::flush`]
+//! awaits the next browser animation frame (see [`next_animation_frame`]),
+//! blits the frame to the canvas, then resolves.
 
 mod animation_frame;
 
@@ -19,10 +16,10 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    Calibrated, Cyd, CydCalibrated, CydDisplay, CydScreen, CydTouch, CydUncalibrated, Uncalibrated,
+    CydDisplay,
     display::{CydFrame, Orientation},
     touch::{
-        CydRawTouch, RawPoint, RawTouchEvent, TouchEvent,
+        CydTouch, CydTouchUncalibrated, RawPoint, RawTouchEvent, TouchEvent,
         calibration::{CalibrationConfig, distort_demo_screen_to_raw},
     },
 };
@@ -51,8 +48,12 @@ const FLASH_BLOCK_SIZE: usize = 4096;
 const FLASH_BLOCK_OFFSET: u32 = 0;
 const FLASH_ERASED_BYTE: u8 = 0xFF;
 
+const fn identity_calibration_config() -> CalibrationConfig {
+    CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+}
+
 /// A CYD display simulated on an HTML canvas.
-pub struct CydWasm<State = Uncalibrated> {
+pub struct CydWasm {
     context: CanvasRenderingContext2d,
     size: Size,
     background: Rgb888,
@@ -63,11 +64,11 @@ pub struct CydWasm<State = Uncalibrated> {
     raw_touch_events: RawTouchEvents,
     interaction_state: Rc<Cell<InteractionState>>,
     latest_raw_point: Rc<Cell<Option<RawPoint>>>,
-    state: State,
 }
 
-pub struct CydDisplayWasmPart<'a> {
-    context: &'a CanvasRenderingContext2d,
+#[derive(Clone)]
+pub struct CydDisplayWasm {
+    context: CanvasRenderingContext2d,
     size: Size,
     background: Rgb888,
     foreground: Rgb888,
@@ -76,9 +77,17 @@ pub struct CydDisplayWasmPart<'a> {
     font: &'static MonoFont<'static>,
 }
 
-pub struct CydTouchWasmPart {
+pub struct CydTouchWasm {
     raw_touch_events: RawTouchEvents,
+    interaction_state: Rc<Cell<InteractionState>>,
+    latest_raw_point: Rc<Cell<Option<RawPoint>>>,
     calibration_config: CalibrationConfig,
+}
+
+pub struct CydTouchUncalibratedWasm {
+    raw_touch_events: RawTouchEvents,
+    interaction_state: Rc<Cell<InteractionState>>,
+    latest_raw_point: Rc<Cell<Option<RawPoint>>>,
 }
 
 #[derive(Clone)]
@@ -122,7 +131,7 @@ enum InteractionState {
     WaitingForFreshPress,
 }
 
-impl CydWasm<Uncalibrated> {
+impl CydWasm {
     /// Build a simulated CYD that presents onto `context`, sized for `orientation`.
     #[must_use]
     pub fn new(
@@ -144,51 +153,9 @@ impl CydWasm<Uncalibrated> {
             raw_touch_events: touch_source.raw_touch_events,
             interaction_state: touch_source.interaction_state,
             latest_raw_point: touch_source.latest_raw_point,
-            state: Uncalibrated,
         }
     }
 
-    pub fn calibrate(self, calibration_config: CalibrationConfig) -> CydWasm<Calibrated> {
-        CydWasm {
-            context: self.context,
-            size: self.size,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            raw_touch_events: self.raw_touch_events,
-            interaction_state: self.interaction_state,
-            latest_raw_point: self.latest_raw_point,
-            state: Calibrated(calibration_config),
-        }
-    }
-}
-
-impl CydWasm<Calibrated> {
-    #[must_use]
-    pub fn calibration_config(&self) -> CalibrationConfig {
-        self.state.0
-    }
-
-    pub fn recalibrate(self) -> CydWasm<Uncalibrated> {
-        CydWasm {
-            context: self.context,
-            size: self.size,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            raw_touch_events: self.raw_touch_events,
-            interaction_state: self.interaction_state,
-            latest_raw_point: self.latest_raw_point,
-            state: Uncalibrated,
-        }
-    }
-}
-
-impl<State> CydWasm<State> {
     #[must_use]
     pub fn touch_source(&self) -> CydTouchWasmSource {
         CydTouchWasmSource {
@@ -196,6 +163,44 @@ impl<State> CydWasm<State> {
             interaction_state: self.interaction_state.clone(),
             latest_raw_point: self.latest_raw_point.clone(),
         }
+    }
+
+    #[must_use]
+    pub fn display(&self) -> CydDisplayWasm {
+        CydDisplayWasm {
+            context: self.context.clone(),
+            size: self.size,
+            background: self.background,
+            foreground: self.foreground,
+            background565: self.background565,
+            foreground565: self.foreground565,
+            font: self.font,
+        }
+    }
+
+    #[must_use]
+    pub fn parts(&self) -> (CydDisplayWasm, CydTouchWasm) {
+        (
+            self.display(),
+            CydTouchWasm {
+                raw_touch_events: self.raw_touch_events.clone(),
+                interaction_state: self.interaction_state.clone(),
+                latest_raw_point: self.latest_raw_point.clone(),
+                calibration_config: identity_calibration_config(),
+            },
+        )
+    }
+
+    #[must_use]
+    pub fn parts_uncalibrated(&self) -> (CydDisplayWasm, CydTouchUncalibratedWasm) {
+        (
+            self.display(),
+            CydTouchUncalibratedWasm {
+                raw_touch_events: self.raw_touch_events.clone(),
+                interaction_state: self.interaction_state.clone(),
+                latest_raw_point: self.latest_raw_point.clone(),
+            },
+        )
     }
 }
 
@@ -464,74 +469,7 @@ const fn decode_hex_nibble(byte: u8) -> Option<u8> {
     }
 }
 
-impl<State> CydScreen for CydWasm<State> {
-    // Presenting to a canvas cannot fail, so the device-agnostic render loop
-    // never has a real error to propagate.
-    type Error = Infallible;
-    type Display<'a>
-        = CydDisplayWasmPart<'a>
-    where
-        State: 'a;
-
-    fn display(&mut self) -> CydDisplayWasmPart<'_> {
-        CydDisplayWasmPart {
-            context: &self.context,
-            size: self.size,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-        }
-    }
-}
-
-impl Cyd for CydWasm<Calibrated> {
-    type Touch<'a> = CydTouchWasmPart;
-
-    fn parts(&mut self) -> (CydDisplayWasmPart<'_>, CydTouchWasmPart) {
-        // Built inline rather than via `CydScreen::display()`: a method call
-        // borrows all of `self` and would conflict with the touch-part reads,
-        // while struct-literal field borrows are disjoint.
-        (
-            CydDisplayWasmPart {
-                context: &self.context,
-                size: self.size,
-                background: self.background,
-                foreground: self.foreground,
-                background565: self.background565,
-                foreground565: self.foreground565,
-                font: self.font,
-            },
-            CydTouchWasmPart {
-                raw_touch_events: self.raw_touch_events.clone(),
-                calibration_config: self.state.0,
-            },
-        )
-    }
-}
-
-impl CydUncalibrated for CydWasm<Uncalibrated> {
-    type Calibrated = CydWasm<Calibrated>;
-
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
-        CydWasm::calibrate(self, calibration_config)
-    }
-}
-
-impl CydCalibrated for CydWasm<Calibrated> {
-    type Uncalibrated = CydWasm<Uncalibrated>;
-
-    fn recalibrate(self) -> Self::Uncalibrated {
-        CydWasm::recalibrate(self)
-    }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config()
-    }
-}
-
-impl CydDisplay for CydDisplayWasmPart<'_> {
+impl CydDisplay for CydDisplayWasm {
     type Error = Infallible;
     type Frame<'a>
         = CydFrameWasm<'a>
@@ -556,10 +494,6 @@ impl CydDisplay for CydDisplayWasmPart<'_> {
 
     fn foreground_565(&self) -> Rgb565 {
         self.foreground565
-    }
-
-    fn frame_mut(&mut self, rectangle: Rectangle) -> CydFrameWasm<'_> {
-        self.frame_mut_with_tile_top_left(rectangle, Point::zero())
     }
 
     fn frame_mut_with_tile_top_left(
@@ -595,7 +529,7 @@ impl CydDisplay for CydDisplayWasmPart<'_> {
             push_rgb565_rgba(&mut bytes, color.into_storage());
         }
 
-        put_image_data(self.context, rectangle, &bytes);
+        put_image_data(&self.context, rectangle, &bytes);
         Ok(())
     }
 
@@ -613,13 +547,14 @@ impl CydDisplay for CydDisplayWasmPart<'_> {
             push_rgb565_rgba(&mut bytes, pixel.into_storage());
         }
 
-        put_image_data(self.context, rectangle, &bytes);
+        put_image_data(&self.context, rectangle, &bytes);
         Ok(())
     }
 }
 
-impl CydTouch for CydTouchWasmPart {
+impl CydTouch for CydTouchWasm {
     type Error = Infallible;
+    type Uncalibrated = CydTouchUncalibratedWasm;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
         Ok(self
@@ -642,10 +577,23 @@ impl CydTouch for CydTouchWasmPart {
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
     }
+
+    fn calibration_config(&self) -> CalibrationConfig {
+        self.calibration_config
+    }
+
+    fn decalibrate(self) -> Self::Uncalibrated {
+        CydTouchUncalibratedWasm {
+            raw_touch_events: self.raw_touch_events,
+            interaction_state: self.interaction_state,
+            latest_raw_point: self.latest_raw_point,
+        }
+    }
 }
 
-impl CydRawTouch for CydWasm<Uncalibrated> {
+impl CydTouchUncalibrated for CydTouchUncalibratedWasm {
     type Error = Infallible;
+    type Calibrated = CydTouchWasm;
 
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Infallible> {
         if let Some(raw_touch_event) = self.raw_touch_events.borrow_mut().pop_front() {
@@ -664,6 +612,15 @@ impl CydRawTouch for CydWasm<Uncalibrated> {
             raw_x: raw_point.x,
             raw_y: raw_point.y,
         }))
+    }
+
+    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
+        CydTouchWasm {
+            raw_touch_events: self.raw_touch_events,
+            interaction_state: self.interaction_state,
+            latest_raw_point: self.latest_raw_point,
+            calibration_config,
+        }
     }
 }
 

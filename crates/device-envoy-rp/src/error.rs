@@ -77,11 +77,9 @@ pub enum Error {
 impl From<crate::cyd::CydError> for Error {
     fn from(error: crate::cyd::CydError) -> Self {
         match error {
-            crate::cyd::CydError::Flash(error) => error,
             crate::cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
             crate::cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
             crate::cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
-            crate::cyd::CydError::TouchUnavailable => Self::CydTouchUnavailable,
         }
     }
 }
@@ -90,14 +88,14 @@ impl From<crate::cyd::CydError> for Error {
 impl
     From<
         device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            crate::cyd::CydRp<device_envoy_core::cyd::Uncalibrated>,
+            crate::cyd::CydTouchUncalibratedRp,
             Error,
         >,
     > for Error
 {
     fn from(
         error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            crate::cyd::CydRp<device_envoy_core::cyd::Uncalibrated>,
+            crate::cyd::CydTouchUncalibratedRp,
             Error,
         >,
     ) -> Self {

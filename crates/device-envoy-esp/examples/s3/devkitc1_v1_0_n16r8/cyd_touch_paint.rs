@@ -43,7 +43,8 @@ use device_envoy_esp::{
     Result,
     button::{ButtonEsp, PressedTo},
     cyd::{
-        Cyd as _, CydDisplay as _, CydEsp, CydStaticEsp, CydTouch as _, DEFAULT_FONT, Orientation,
+        CydDisplay as _, CydEsp, CydEspUncalibrated, CydStaticEsp, CydTouch as _, DEFAULT_FONT,
+        Orientation,
     },
     flash_block::FlashBlockEsp,
     init_and_start,
@@ -68,7 +69,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
-    let cyd = CydEsp::new(
+    let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
         &CYD_STATIC,
         p.SPI2,
         p.GPIO1,
@@ -91,8 +92,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     )?;
     info!("CYD display and touch initialized");
 
-    let (mut cyd, calibration_outcome) = ensure_calibration(
-        cyd,
+    let (mut touch, calibration_outcome) = ensure_calibration(
+        &mut display,
+        touch,
         &mut calibration_flash_block,
         &mut recalibration_button,
         Some("recalibrating"),
@@ -104,7 +106,6 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     }
     info!("Touch calibrated; tap the panel to paint");
 
-    let (mut display, mut touch) = cyd.parts();
     let mut frame = display.full_frame_mut();
     frame.flush()?;
 

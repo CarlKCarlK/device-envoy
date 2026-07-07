@@ -4,7 +4,8 @@ use crate::button::Button;
 use crate::flash_block::FlashBlock;
 use heapless::String;
 
-use super::super::{CydDisplay, CydScreen, CydUncalibrated};
+use super::super::CydDisplay;
+use super::CydTouchUncalibrated;
 use super::calibration::{
     CalibrationConfig, CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS,
     calibration_verify_target_center, draw_calibration_ack_dot, draw_calibration_cross,
@@ -50,16 +51,16 @@ impl EnsureCalibrationOutcome {
 }
 
 /// Error from the shared calibration driver.
-pub struct EnsureCalibrationError<U: CydUncalibrated, FlashError> {
-    pub cyd: U,
-    pub kind: EnsureCalibrationErrorKind<<U as CydScreen>::Error, FlashError>,
+pub struct EnsureCalibrationError<T: CydTouchUncalibrated, FlashError> {
+    pub touch: T,
+    pub kind: EnsureCalibrationErrorKind<T::Error, FlashError>,
 }
 
 // Manual impl: the returned device is not `Debug`, so only `kind` is shown.
-impl<U, FlashError> core::fmt::Debug for EnsureCalibrationError<U, FlashError>
+impl<T, FlashError> core::fmt::Debug for EnsureCalibrationError<T, FlashError>
 where
-    U: CydUncalibrated,
-    <U as CydScreen>::Error: core::fmt::Debug,
+    T: CydTouchUncalibrated,
+    T::Error: core::fmt::Debug,
     FlashError: core::fmt::Debug,
 {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -118,7 +119,7 @@ enum CalibrationDriverState {
     },
 }
 
-/// Ensure that `cyd` has a calibration, running the shared four-tap flow when
+/// Ensure that `touch` has a calibration, running the shared four-tap flow when
 /// the flash block does not currently deserialize as a valid configuration.
 ///
 /// Invalid, corrupt, or absent flash content is treated as "not calibrated"
@@ -131,7 +132,7 @@ enum CalibrationDriverState {
 /// # use core::{convert::Infallible, future::ready};
 /// # use device_envoy_core::{
 /// #     button::{Button, __ButtonMonitor},
-/// #     cyd::{Cyd, CydCalibrated, CydDisplay, CydScreen, CydTouch, CydUncalibrated, Uncalibrated, display::CydFrame, touch::{CydRawTouch, RawTouchEvent, calibration::{CalibrationConfig, ensure_calibration}}},
+/// #     cyd::{CydDisplay, display::CydFrame, touch::{CydTouch, CydTouchUncalibrated, RawTouchEvent, calibration::{CalibrationConfig, ensure_calibration}}},
 /// #     flash_block::FlashBlock,
 /// #     pixel_target::PixelTarget,
 /// # };
@@ -141,45 +142,32 @@ enum CalibrationDriverState {
 /// #     primitives::Rectangle,
 /// # };
 /// # use serde::{Deserialize, Serialize};
-/// # struct DemoCyd;
-/// # struct DemoCydCalibrated;
 /// # struct DemoDisplay;
 /// # struct DemoFrame;
+/// # struct DemoTouch;
+/// # struct DemoTouchUncalibrated;
 /// # struct DemoFlashBlock {
 /// #     calibration_config: Option<CalibrationConfig>,
 /// # }
 /// # struct DemoButton;
-/// # impl CydScreen for DemoCyd {
+/// # impl CydTouch for DemoTouch {
 /// #     type Error = Infallible;
-/// #     type Display<'a> = DemoDisplay;
-/// #     fn display(&mut self) -> Self::Display<'_> { DemoDisplay }
-/// # }
-/// # impl CydUncalibrated for DemoCyd {
-/// #     type Calibrated = DemoCydCalibrated;
-/// #     fn calibrate(self, _calibration_config: CalibrationConfig) -> Self::Calibrated {
-/// #         DemoCydCalibrated
-/// #     }
-/// # }
-/// # impl CydScreen for DemoCydCalibrated {
-/// #     type Error = Infallible;
-/// #     type Display<'a> = DemoDisplay;
-/// #     fn display(&mut self) -> Self::Display<'_> { DemoDisplay }
-/// # }
-/// # impl Cyd for DemoCydCalibrated {
-/// #     type Touch<'a> = DemoTouch;
-/// #     fn parts(&mut self) -> (Self::Display<'_>, Self::Touch<'_>) { (DemoDisplay, DemoTouch) }
-/// # }
-/// # struct DemoTouch;
-/// # impl CydCalibrated for DemoCydCalibrated {
-/// #     type Uncalibrated = DemoCyd;
-/// #     fn recalibrate(self) -> Self::Uncalibrated { DemoCyd }
+/// #     type Uncalibrated = DemoTouchUncalibrated;
+/// #     fn read(&mut self) -> Result<Option<device_envoy_core::cyd::touch::TouchEvent>, Self::Error> { Ok(None) }
 /// #     fn calibration_config(&self) -> CalibrationConfig {
 /// #         CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 /// #     }
+/// #     fn decalibrate(self) -> Self::Uncalibrated { DemoTouchUncalibrated }
 /// # }
-/// # impl CydTouch for DemoTouch {
+/// # impl CydTouchUncalibrated for DemoTouchUncalibrated {
 /// #     type Error = Infallible;
-/// #     fn read(&mut self) -> Result<Option<device_envoy_core::cyd::touch::TouchEvent>, Self::Error> { Ok(None) }
+/// #     type Calibrated = DemoTouch;
+/// #     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
+/// #         Ok(None)
+/// #     }
+/// #     fn calibrate(self, _calibration_config: CalibrationConfig) -> Self::Calibrated {
+/// #         DemoTouch
+/// #     }
 /// # }
 /// # impl CydDisplay for DemoDisplay {
 /// #     type Error = Infallible;
@@ -251,12 +239,6 @@ enum CalibrationDriverState {
 /// #         ready(Ok(()))
 /// #     }
 /// # }
-/// # impl CydRawTouch for DemoCyd {
-/// #     type Error = Infallible;
-/// #     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
-/// #         Ok(None)
-/// #     }
-/// # }
 /// # impl FlashBlock for DemoFlashBlock {
 /// #     type Error = Infallible;
 /// #     fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
@@ -278,14 +260,16 @@ enum CalibrationDriverState {
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
 /// # impl Button for DemoButton {}
-/// # async fn demo() -> Result<(), device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<DemoCyd, Infallible>> {
-/// let cyd = DemoCyd;
+/// # async fn demo() -> Result<(), device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<DemoTouchUncalibrated, Infallible>> {
+/// let mut display = DemoDisplay;
+/// let touch = DemoTouchUncalibrated;
 /// let mut calibration_flash_block = DemoFlashBlock {
 ///     calibration_config: None,
 /// };
 /// let mut recalibration_button = DemoButton;
-/// let (_cyd, _outcome) = ensure_calibration(
-///     cyd,
+/// let (_touch, _outcome) = ensure_calibration(
+///     &mut display,
+///     touch,
 ///     &mut calibration_flash_block,
 ///     &mut recalibration_button,
 ///     Some("Touch calibrated"),
@@ -293,19 +277,22 @@ enum CalibrationDriverState {
 /// # Ok(())
 /// # }
 /// ```
-pub async fn ensure_calibration<U, F, R>(
-    cyd: U,
+pub async fn ensure_calibration<D, T, F, R>(
+    display: &mut D,
+    touch: T,
     calibration_flash_block: &mut F,
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
-) -> Result<(U::Calibrated, EnsureCalibrationOutcome), EnsureCalibrationError<U, F::Error>>
+) -> Result<(T::Calibrated, EnsureCalibrationOutcome), EnsureCalibrationError<T, F::Error>>
 where
-    U: CydUncalibrated,
+    D: CydDisplay,
+    T: CydTouchUncalibrated<Error = D::Error>,
     F: FlashBlock,
     R: Button,
 {
     ensure_calibration_with_settings(
-        cyd,
+        display,
+        touch,
         calibration_flash_block,
         recalibration_button,
         confirmed_message,
@@ -319,15 +306,17 @@ where
 /// Browser builds redraw much faster than the classic CYD, so they need a
 /// larger verify-frame budget to preserve the intended real-time grace period
 /// before the center confirmation tap.
-pub async fn ensure_calibration_with_settings<U, F, R>(
-    mut cyd: U,
+pub async fn ensure_calibration_with_settings<D, T, F, R>(
+    display: &mut D,
+    mut touch: T,
     calibration_flash_block: &mut F,
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
     ensure_calibration_settings: EnsureCalibrationSettings,
-) -> Result<(U::Calibrated, EnsureCalibrationOutcome), EnsureCalibrationError<U, F::Error>>
+) -> Result<(T::Calibrated, EnsureCalibrationOutcome), EnsureCalibrationError<T, F::Error>>
 where
-    U: CydUncalibrated,
+    D: CydDisplay,
+    T: CydTouchUncalibrated<Error = D::Error>,
     F: FlashBlock,
     R: Button,
 {
@@ -336,7 +325,7 @@ where
         .unwrap_or(None)
     {
         return Ok((
-            cyd.calibrate(calibration_config),
+            touch.calibrate(calibration_config),
             EnsureCalibrationOutcome::Loaded(calibration_config),
         ));
     }
@@ -355,11 +344,11 @@ where
 
         let mut saw_idle = false;
         for _raw_event_index in 0..MAX_RAW_EVENTS_PER_FRAME {
-            let raw_touch_event = match cyd.read_raw_touch_event() {
+            let raw_touch_event = match touch.read_raw_touch_event() {
                 Ok(raw_touch_event) => raw_touch_event,
                 Err(error) => {
                     return Err(EnsureCalibrationError {
-                        cyd,
+                        touch,
                         kind: EnsureCalibrationErrorKind::Device(error),
                     });
                 }
@@ -443,23 +432,23 @@ where
                     if hit_verify_target(mapped_x, mapped_y) {
                         if let Some(confirmed_message) = confirmed_message {
                             if let Err(error) =
-                                draw_message_screen(&mut cyd, confirmed_message).await
+                                draw_message_screen(display, confirmed_message).await
                             {
                                 return Err(EnsureCalibrationError {
-                                    cyd,
+                                    touch,
                                     kind: EnsureCalibrationErrorKind::Device(error),
                                 });
                             }
                         }
                         if let Err(error) = calibration_flash_block.save(candidate_config) {
                             return Err(EnsureCalibrationError {
-                                cyd,
+                                touch,
                                 kind: EnsureCalibrationErrorKind::Flash(error),
                             });
                         }
                         let calibration_config = *candidate_config;
                         return Ok((
-                            cyd.calibrate(calibration_config),
+                            touch.calibrate(calibration_config),
                             EnsureCalibrationOutcome::Saved(calibration_config),
                         ));
                     } else {
@@ -480,21 +469,20 @@ where
         }
 
         if let Err(error) =
-            draw_calibration_screen(&mut cyd, &calibration_flow, &calibration_driver_state).await
+            draw_calibration_screen(display, &calibration_flow, &calibration_driver_state).await
         {
             return Err(EnsureCalibrationError {
-                cyd,
+                touch,
                 kind: EnsureCalibrationErrorKind::Device(error),
             });
         }
     }
 }
 
-async fn draw_message_screen<C>(cyd: &mut C, message: &str) -> Result<(), C::Error>
+async fn draw_message_screen<D>(display: &mut D, message: &str) -> Result<(), D::Error>
 where
-    C: CydScreen,
+    D: CydDisplay,
 {
-    let mut display = cyd.display();
     let background565 = display.background_565();
     let mut frame = display.full_frame_mut();
     frame.fill(background565);
@@ -549,15 +537,14 @@ fn advance_driver_state_after_idle(
     }
 }
 
-async fn draw_calibration_screen<C>(
-    cyd: &mut C,
+async fn draw_calibration_screen<D>(
+    display: &mut D,
     calibration_flow: &CalibrationFlow,
     calibration_driver_state: &CalibrationDriverState,
-) -> Result<(), C::Error>
+) -> Result<(), D::Error>
 where
-    C: CydScreen,
+    D: CydDisplay,
 {
-    let mut display = cyd.display();
     let background565 = display.background_565();
     let mut frame = display.full_frame_mut();
     frame.fill(background565);

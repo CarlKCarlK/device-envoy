@@ -91,12 +91,17 @@ pub struct CydTouchEsp {
 // likewise ...Rp, ...Wasm
 ```
 
+> **Note:** the bundle-constructor and generic-consumer story below is
+> revised by `CYD_BUNDLE_FOLLOWUPS_SPEC.md` (flow-absorbing `CydEsp::new`,
+> restored thin `Cyd` trait). This section records what this spec's
+> implementation pass built.
+
 `CydEsp` survives, but as a **plain two-field bundle, not a device with
 methods to route through** — it is what you get back when you already have a
-saved `CalibrationConfig` (the common case: boot with flash already
-populated). A sibling `CydEspUncalibrated` is the bundle for the pre-
-calibration case, and `CydDisplayEsp` alone covers touch-free construction.
-All three are ordinary structs; no trait lattice, no generic state parameter:
+saved `CalibrationConfig`. A sibling `CydEspUncalibrated` is the bundle for
+the pre-calibration case, and `CydDisplayEsp` alone covers touch-free
+construction. All three are ordinary structs; no trait lattice, no generic
+state parameter:
 
 ```rust
 pub struct CydEsp {
@@ -113,8 +118,7 @@ impl CydEsp {
     pub const SCREEN_PIXELS: usize;
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT>;
 
-    /// Construct with an already-known calibration (the common boot path:
-    /// flash already holds a saved `CalibrationConfig`).
+    /// Construct with an already-known calibration.
     pub fn new(/* statics, display pins, colors, font, touch pins */, calibration_config: CalibrationConfig)
         -> Result<Self, Error>;
 }
@@ -132,10 +136,8 @@ impl CydDisplayEsp {
 ```
 
 Both bundle structs derive nothing special — an app that wants the pair
-destructures it (`let CydEsp { display, touch } = cyd;` or the field access
-directly); an app that wants the current call-site shape can still write
-`let (display, touch) = (cyd.display, cyd.touch);`. Deleted with this change:
-the `touch: Option<CydTouchEsp>` field and the display-only-device-with-
+destructures it or uses field access. Deleted with this change: the
+`touch: Option<CydTouchEsp>` field and the display-only-device-with-
 phantom-state awkwardness. Display-only apps (ballet, clock, skeleton-clock,
 cyd_tiles) construct a `CydDisplayEsp` and nothing else — they already hold
 only `display`, so their diffs are one line.

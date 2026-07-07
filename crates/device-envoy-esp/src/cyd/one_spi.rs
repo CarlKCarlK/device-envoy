@@ -2,15 +2,17 @@
 //!
 //! This module provides [`CydEspOneSpi`], which arbitrates a single physical SPI bus between
 //! the ILI9341 display and the XPT2046 touch controller using an
-//! `embedded_hal_bus::spi::RefCellDevice` per peripheral (each with its own chip-select pin).
-//! It reuses the same display/touch drivers as the two-SPI [`super::CydEsp`] — see
-//! [`super::CydDisplayEsp::new_from_device`] and [`super::CydTouchUncalibratedEsp::from_device`] —
-//! so the only new code here is building the shared bus itself.
+//! `embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig` per peripheral (each
+//! with its own chip-select pin *and* its own SPI clock speed — see [`DISPLAY_SPI_HZ`] vs
+//! [`TOUCH_SPI_HZ`]). It reuses the same display/touch drivers as the two-SPI [`super::CydEsp`] —
+//! see [`super::CydDisplayEsp::new_from_device`] and [`super::CydTouchUncalibratedEsp::from_device`]
+//! — so the only new code here is building the shared bus itself.
 
 use core::cell::RefCell;
 
+use embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig;
+use embassy_sync::blocking_mutex::{Mutex, raw::NoopRawMutex};
 use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
-use embedded_hal_bus::spi::{NoDelay, RefCellDevice};
 use esp_hal::{
     gpio::{Output, OutputConfig},
     spi,
@@ -24,26 +26,28 @@ use device_envoy_core::cyd::{
 };
 
 use super::{
-    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, Orientation,
-    TOUCH_SPI_HZ, buffer::PixelBuffer,
+    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, DISPLAY_SPI_HZ,
+    Orientation, TOUCH_SPI_HZ, buffer::PixelBuffer,
 };
 use crate::flash_block::FlashBlockEsp;
 
 type SharedSpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
-type SharedSpiDevice = RefCellDevice<'static, SharedSpiBus, Output<'static>, NoDelay>;
+type SharedSpiMutex = Mutex<NoopRawMutex, RefCell<SharedSpiBus>>;
+/// Both the display and touch device share this same concrete type — each instance just
+/// carries its own [`spi::master::Config`] (clock speed), applied to the shared bus by
+/// [`SpiDeviceWithConfig`] before every transaction it makes.
+type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, Output<'static>>;
 
 /// A CYD-family ESP32 bundle using one shared SPI peripheral for display and touch.
 ///
-/// Display and touch each get their own `embedded_hal_bus::spi::RefCellDevice` over the same
-/// underlying bus, with independent chip-select pins, so accesses are serialized through the
-/// `RefCell` rather than requiring two physical SPI peripherals. Because the two halves share
+/// Display and touch each get their own [`SpiDeviceWithConfig`] over the same underlying bus,
+/// with independent chip-select pins *and* independent clock speeds: [`SpiDeviceWithConfig`]
+/// re-applies its device's [`spi::master::Config`] to the shared bus immediately before each of
+/// its transactions, so the physical SPI clock switches between [`DISPLAY_SPI_HZ`] and
+/// [`TOUCH_SPI_HZ`] as display and touch take turns using the bus. Because the two halves share
 /// state through that bus, this type implements [`Cyd`] but not
 /// [`CydParts`](device_envoy_core::cyd::CydParts) — see that trait's documentation for why
 /// shared-bus backends cannot safely split into independently-owned parts.
-///
-/// The shared bus runs at [`TOUCH_SPI_HZ`] (2.5 MHz), the XPT2046 touch controller's ceiling,
-/// since both peripherals share one clock configuration. This is slower than the two-SPI
-/// design's 60 MHz display bus — an accepted trade-off for boards with only one SPI peripheral.
 pub struct CydEspOneSpi {
     display: CydDisplayEsp<SharedSpiDevice>,
     touch: CydTouchEsp<SharedSpiDevice>,
@@ -106,6 +110,11 @@ impl CydEspOneSpi {
         recalibration_button: &mut R,
         confirmed_message: Option<&str>,
     ) -> crate::Result<(Self, EnsureCalibrationOutcome)> {
+        // The bus's own construction-time config barely matters: every transaction through
+        // either `SharedSpiDevice` below re-applies its own config first (see
+        // `SpiDeviceWithConfig`), so this initial value is immediately overwritten before any
+        // real transfer happens. `TOUCH_SPI_HZ` is used here only as a conservative starting
+        // point.
         let spi_config = spi::master::Config::default()
             .with_frequency(esp_hal::time::Rate::from_hz(TOUCH_SPI_HZ))
             .with_mode(spi::Mode::_0);
@@ -114,8 +123,9 @@ impl CydEspOneSpi {
             .with_mosi(mosi_pin)
             .with_miso(miso_pin);
 
-        static SHARED_SPI: StaticCell<RefCell<SharedSpiBus>> = StaticCell::new();
-        let shared_spi: &'static RefCell<SharedSpiBus> = SHARED_SPI.init(RefCell::new(spi));
+        static SHARED_SPI: StaticCell<SharedSpiMutex> = StaticCell::new();
+        let shared_spi: &'static SharedSpiMutex =
+            SHARED_SPI.init(Mutex::new(RefCell::new(spi)));
 
         let lcd_cs = Output::new(
             lcd_cs_pin,
@@ -128,12 +138,26 @@ impl CydEspOneSpi {
             OutputConfig::default(),
         );
 
-        // `Output`'s digital error type is `Infallible` (see esp-hal's
-        // `embedded_hal_impls`), so `RefCellDevice::new_no_delay` can't actually fail here.
-        let lcd_spi_device = RefCellDevice::new_no_delay(shared_spi, lcd_cs)
-            .unwrap_or_else(|infallible| match infallible {});
-        let touch_spi_device = RefCellDevice::new_no_delay(shared_spi, touch_cs)
-            .unwrap_or_else(|infallible| match infallible {});
+        // The ILI9341 display tolerates a much faster clock than the XPT2046 touch
+        // controller; running the shared bus at the touch controller's ceiling for both (as
+        // this bundle used to) capped every full-frame flush at roughly 2 fps. Each device now
+        // carries its own `Config`, applied to the bus immediately before its own transactions.
+        //
+        // Measured on real ESP32-C6 hardware: a requested 60 MHz gave ~59ms/16.8fps full-frame
+        // flushes vs. an explicit 20 MHz's ~90ms/11fps — confirming per-device config really
+        // does take effect and 60 MHz is the better choice. Both numbers run well above their
+        // pure-bit-rate predictions (~20ms and ~61ms respectively); the gap is fixed per-frame
+        // overhead (ILI9341 addressing commands, CS/DC toggling, driver-side pixel iteration)
+        // that doesn't scale with SPI clock, not a bug in this config-switching approach.
+        let lcd_spi_config = spi::master::Config::default()
+            .with_frequency(esp_hal::time::Rate::from_hz(DISPLAY_SPI_HZ))
+            .with_mode(spi::Mode::_0);
+        let touch_spi_config = spi::master::Config::default()
+            .with_frequency(esp_hal::time::Rate::from_hz(TOUCH_SPI_HZ))
+            .with_mode(spi::Mode::_0);
+
+        let lcd_spi_device = SpiDeviceWithConfig::new(shared_spi, lcd_cs, lcd_spi_config);
+        let touch_spi_device = SpiDeviceWithConfig::new(shared_spi, touch_cs, touch_spi_config);
 
         let pixel_buffer = PixelBuffer::init_static(&statics.pixel_buffer);
         let mut display = CydDisplayEsp::new_from_device(

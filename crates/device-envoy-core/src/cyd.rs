@@ -266,7 +266,7 @@ pub trait CydTouch: Sized {
 /// The screen is a fixed 320x240 RGB565 panel. `CydDisplay` offers three
 /// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
 /// drawn into and flushed to any rectangle on screen; tiled frames (see
-/// [`CydDisplay::tiles`]) that cover the screen in smaller pieces when memory
+/// [`CydDisplay::tiles`]) that cover the screen (or a rectangle) in smaller pieces when memory
 /// is tight; and contiguous-pixel methods (see
 /// [`CydDisplay::fill_contiguous`]) that stream pixels straight to the screen
 /// with virtually no buffering.

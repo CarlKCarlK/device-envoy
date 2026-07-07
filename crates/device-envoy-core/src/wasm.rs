@@ -16,7 +16,7 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydParts, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{CydFrame, Orientation},
     touch::{
         RawPoint, RawTouchEvent, TouchEvent,
@@ -188,7 +188,9 @@ impl Cyd for CydWasm {
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
     }
+}
 
+impl CydParts for CydWasm {
     fn into_parts(self) -> (Self::Display, Self::Touch) {
         let Self { display, touch } = self;
         (display, touch)

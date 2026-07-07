@@ -27,7 +27,7 @@ use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydParts, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
@@ -526,7 +526,9 @@ impl Cyd for CydRp {
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
     }
+}
 
+impl CydParts for CydRp {
     fn into_parts(self) -> (Self::Display, Self::Touch) {
         let Self { display, touch } = self;
         (display, touch)

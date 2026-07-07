@@ -26,14 +26,15 @@ use embedded_graphics::{
 
 use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 
-/// A device abstraction for the “Cheap Yellow Display” (CYD) display and touch parts.
+/// A device abstraction for the "Cheap Yellow Display" (CYD) display and touch parts.
+///
+/// `Cyd` is the core trait for ready-to-use device bundles. It provides borrowed access
+/// to calibrated display and touch halves. Generic app code should use `Cyd` to remain
+/// compatible with hardware designs where display and touch share underlying resources.
+///
+/// For backends that support owned deconstruction and reassembly, see [`CydParts`].
 ///
 /// CYD boards pair an ILI9341 display with an XPT2046 resistive touch controller.
-///
-/// `Cyd` lets generic runtime code take a single device value while still
-/// deconstructing it into the calibrated touch and display parts it needs.
-/// Construction and calibration remain parts-based; `Cyd` sits one layer
-/// above that as the generic "ready-to-use device" abstraction.
 #[cfg_attr(
     feature = "host",
     doc = r#"
@@ -98,65 +99,6 @@ pub trait Cyd: Sized {
     /// See the [`Cyd`] trait documentation for a usage example.
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
 
-    /// Consume the device into its owned calibrated halves.
-    ///
-    /// This makes ownership-level touch transitions such as
-    /// [`CydTouch::decalibrate`] reachable from a whole bundle.
-    ///
-    #[cfg_attr(
-        feature = "host",
-        doc = r#"
-
-```rust
-use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch,
-    display::CydFrame,
-    touch::TouchEvent,
-};
-use embedded_graphics::pixelcolor::Rgb888;
-# use device_envoy_core::memory::CydMemory;
-# use embedded_graphics::{
-#     mono_font::ascii::FONT_9X15_BOLD,
-#     pixelcolor::Rgb565,
-#     prelude::{Point, RgbColor, Size},
-# };
-# futures_executor::block_on(async {
-# let mut cyd = CydMemory::new(
-#     Size::new(320, 240),
-#     Rgb888::BLACK,
-#     Rgb888::WHITE,
-#     &FONT_9X15_BOLD,
-# );
-# cyd.push_touch_event(TouchEvent::Down { point: Point::new(12, 34) });
-let (mut display, mut touch) = cyd.into_parts();
-assert_eq!(display.screen_size(), Size::new(320, 240));
-assert!(matches!(
-    touch.read()?,
-    Some(TouchEvent::Down { point }) if point == Point::new(12, 34)
-));
-
-let mut cyd = CydMemory::from_parts(display, touch);
-let mut frame = Cyd::display(&mut cyd).full_frame_mut();
-frame.fill(Rgb565::RED);
-frame.flush().await?;
-assert_eq!(cyd.pixel(0, 0), Rgb565::RED);
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
-# })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
-```
-"#
-    )]
-    fn into_parts(self) -> (Self::Display, Self::Touch);
-
-    /// Reassemble a device from its owned calibrated halves.
-    ///
-    /// The parts must come from the same underlying device. On unique
-    /// hardware bundles that is naturally enforced, but `Rc`-backed harnesses
-    /// such as `CydMemory` and `CydWasm` cannot detect mismatched pairings.
-    ///
-    /// See [`Cyd::into_parts`] for a round-trip example.
-    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self;
-
     /// Borrow the display half.
     ///
     #[cfg_attr(
@@ -219,6 +161,76 @@ assert!(matches!(
     fn touch(&mut self) -> &mut Self::Touch {
         self.parts().1
     }
+}
+
+/// Extension trait for device implementations that support owned deconstruction and reassembly.
+///
+/// Some `Cyd` implementations can cleanly split into independently-owned display and touch
+/// parts, then be reassembled from those parts. For example, backends with two independent
+/// SPI peripherals or reference-counted shared state.
+///
+/// Backends that share a single bus (like one-SPI hardware) cannot guarantee that the
+/// split parts remain valid in isolation, so they do not implement `CydParts`.
+///
+/// Generic code that only needs borrowed access should depend on [`Cyd`], not `CydParts`.
+/// Use `CydParts` only when ownership-level transitions are required, such as in test
+/// harnesses or calibration flows.
+///
+/// See [`CydParts::into_parts`] for a round-trip example.
+#[cfg_attr(
+    feature = "host",
+    doc = r#"
+
+```rust
+use device_envoy_core::cyd::{
+    Cyd, CydParts, CydDisplay, CydTouch,
+    display::CydFrame,
+    touch::TouchEvent,
+};
+use embedded_graphics::pixelcolor::Rgb888;
+# use device_envoy_core::memory::CydMemory;
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     pixelcolor::Rgb565,
+#     prelude::{Point, RgbColor, Size},
+# };
+# futures_executor::block_on(async {
+# let cyd = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+let mut cyd = CydMemory::from_parts(cyd.display().to_owned(), cyd.touch().to_owned());
+cyd.push_touch_event(TouchEvent::Down { point: Point::new(12, 34) });
+let (mut display, mut touch) = cyd.into_parts();
+assert_eq!(display.screen_size(), Size::new(320, 240));
+assert!(matches!(
+    touch.read()?,
+    Some(TouchEvent::Down { point }) if point == Point::new(12, 34)
+));
+
+let cyd = CydMemory::from_parts(display, touch);
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# })?;
+# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+```
+"#
+)]
+pub trait CydParts: Cyd {
+    /// Consume the device into its owned calibrated halves.
+    ///
+    /// The parts must come from the same underlying device. On shared-state backends like
+    /// `CydMemory` and `CydWasm`, mismatched pairings cannot be detected.
+    fn into_parts(self) -> (Self::Display, Self::Touch);
+
+    /// Reassemble a device from its owned calibrated halves.
+    ///
+    /// The parts must come from the same underlying device. On shared-state backends like
+    /// `CydMemory` and `CydWasm`, mismatched pairings cannot be detected.
+    ///
+    /// See [`CydParts::into_parts`] for a round-trip example.
+    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self;
 }
 
 /// A raw-touch source that can run the shared calibration flow and become calibrated.

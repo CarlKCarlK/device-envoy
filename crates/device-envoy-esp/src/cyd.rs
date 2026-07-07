@@ -11,6 +11,7 @@ mod display;
 mod text;
 #[path = "cyd/touch.rs"]
 mod touch_driver;
+mod one_spi;
 
 use core::{convert::Infallible, fmt};
 
@@ -39,12 +40,13 @@ pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_H
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydParts, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
+pub use one_spi::{CydEspOneSpi, CydEspOneSpiBundleUncalibrated, CydStaticEsp};
 
 use crate::flash_block::FlashBlockEsp;
 use display::CydDisplayEsp as CydDisplayEspDevice;
@@ -456,7 +458,9 @@ impl Cyd for CydEsp {
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
     }
+}
 
+impl CydParts for CydEsp {
     fn into_parts(self) -> (Self::Display, Self::Touch) {
         let Self { display, touch } = self;
         (display, touch)

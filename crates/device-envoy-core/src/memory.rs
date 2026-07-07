@@ -50,7 +50,7 @@ use std::{
 #[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydParts, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{CydFrame, RectanglePixels},
     touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
@@ -247,7 +247,9 @@ impl Cyd for CydMemory {
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
     }
+}
 
+impl CydParts for CydMemory {
     fn into_parts(self) -> (Self::Display, Self::Touch) {
         let Self {
             display,

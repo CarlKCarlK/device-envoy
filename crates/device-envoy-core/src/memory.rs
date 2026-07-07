@@ -6,8 +6,8 @@
 //! [`assert_framebuffer_matches_expected_png`].
 //!
 //! ```rust
+//! use device_envoy_core::cyd::{Cyd, CydDisplay};
 //! use device_envoy_core::memory::CydMemory;
-//! use device_envoy_core::cyd::CydDisplay;
 //! use device_envoy_core::cyd::display::CydFrame;
 //! use embedded_graphics::{
 //!     mono_font::ascii::FONT_9X15_BOLD,
@@ -22,7 +22,7 @@
 //!     Rgb888::WHITE,
 //!     &FONT_9X15_BOLD,
 //! );
-//! let (mut display, _touch) = cyd_memory.parts();
+//! let (mut display, _touch) = Cyd::parts(&mut cyd_memory);
 //! let mut frame = display.full_frame_mut();
 //! frame.fill(Rgb565::RED);
 //! block_on(frame.flush())?;
@@ -50,18 +50,16 @@ use std::{
 #[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    CydDisplay,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{CydFrame, RectanglePixels},
-    touch::{
-        CydTouch, CydTouchUncalibrated, RawTouchEvent, TouchEvent, calibration::CalibrationConfig,
-    },
+    touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
 #[cfg(test)]
 use crate::flash_block::{
     FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block,
 };
 use crate::{
-    UnwrapNever,
+    UnwrapInfallible,
     button::{__ButtonMonitor, Button},
     pixel_target::{PixelTarget, rgb888_from_rgb565},
 };
@@ -108,12 +106,8 @@ pub enum CydMemoryError {
 }
 /// In-memory CYD device for host-side tests and screenshots.
 pub struct CydMemory {
-    size: Size,
-    background: Rgb888,
-    foreground: Rgb888,
-    background565: Rgb565,
-    foreground565: Rgb565,
-    font: &'static MonoFont<'static>,
+    display: CydDisplayMemory,
+    touch: CydTouchMemory,
     shared: Rc<RefCell<CydMemoryShared>>,
 }
 
@@ -140,6 +134,7 @@ pub struct CydDisplayMemory {
 }
 
 /// Owned calibrated touch half of [`CydMemory`].
+#[derive(Clone)]
 pub struct CydTouchMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
     calibration_config: CalibrationConfig,
@@ -196,59 +191,61 @@ impl CydMemory {
     ) -> Self {
         let background565 = Rgb565::from(background);
         let pixel_count = size.width as usize * size.height as usize;
-        Self {
+        let shared = Rc::new(RefCell::new(CydMemoryShared {
+            framebuffer: vec![background565.into_storage(); pixel_count],
+            flush_count: 0,
+            last_flush_rectangle: None,
+            frame_budget: DEFAULT_FRAME_BUDGET,
+            raw_touch_script: FrameScript::default(),
+            touch_script: FrameScript::default(),
+            frame_clock: FrameClockMemory {
+                frame_index: Rc::new(Cell::new(0)),
+            },
+        }));
+        let display = CydDisplayMemory {
             size,
             background,
             foreground,
             background565,
             foreground565: Rgb565::from(foreground),
             font,
-            shared: Rc::new(RefCell::new(CydMemoryShared {
-                framebuffer: vec![background565.into_storage(); pixel_count],
-                flush_count: 0,
-                last_flush_rectangle: None,
-                frame_budget: DEFAULT_FRAME_BUDGET,
-                raw_touch_script: FrameScript::default(),
-                touch_script: FrameScript::default(),
-                frame_clock: FrameClockMemory {
-                    frame_index: Rc::new(Cell::new(0)),
-                },
-            })),
+            shared: shared.clone(),
+        };
+        let touch = CydTouchMemory {
+            shared: shared.clone(),
+            calibration_config: identity_calibration_config(),
+        };
+        Self {
+            display,
+            touch,
+            shared,
         }
     }
 
     #[must_use]
     pub fn display(&self) -> CydDisplayMemory {
-        CydDisplayMemory {
-            size: self.size,
-            background: self.background,
-            foreground: self.foreground,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            shared: self.shared.clone(),
-        }
+        self.display.clone()
     }
 
+    /// Clone owned calibrated parts that share this harness's backing state.
     #[must_use]
-    pub fn parts(&self) -> (CydDisplayMemory, CydTouchMemory) {
-        (
-            self.display(),
-            CydTouchMemory {
-                shared: self.shared.clone(),
-                calibration_config: identity_calibration_config(),
-            },
-        )
+    pub fn owned_parts(&self) -> (CydDisplayMemory, CydTouchMemory) {
+        (self.display.clone(), self.touch.clone())
     }
 
     #[must_use]
     pub fn parts_uncalibrated(&self) -> (CydDisplayMemory, CydTouchUncalibratedMemory) {
-        (
-            self.display(),
-            CydTouchUncalibratedMemory {
-                shared: self.shared.clone(),
-            },
-        )
+        (self.display.clone(), self.touch.clone().decalibrate())
+    }
+}
+
+impl Cyd for CydMemory {
+    type Error = CydMemoryError;
+    type Display = CydDisplayMemory;
+    type Touch = CydTouchMemory;
+
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 }
 
@@ -317,14 +314,14 @@ impl CydMemory {
     #[must_use]
     pub fn pixel(&self, position_x: usize, position_y: usize) -> Rgb565 {
         assert!(
-            position_x < self.size.width as usize,
+            position_x < self.display.size.width as usize,
             "position_x must stay within the screen"
         );
         assert!(
-            position_y < self.size.height as usize,
+            position_y < self.display.size.height as usize,
             "position_y must stay within the screen"
         );
-        let stride = self.size.width as usize;
+        let stride = self.display.size.width as usize;
         let shared = self.shared.borrow();
         Rgb565::from(RawU16::new(
             shared.framebuffer[position_y * stride + position_x],
@@ -336,8 +333,8 @@ impl CydMemory {
         &self,
         path: impl AsRef<Path>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let width = self.size.width;
-        let height = self.size.height;
+        let width = self.display.size.width;
+        let height = self.display.size.height;
         let mut rgb_bytes = Vec::with_capacity(width as usize * height as usize * 3);
         let shared = self.shared.borrow();
         for pixel in &shared.framebuffer {
@@ -728,7 +725,7 @@ impl CydFrame for CydFrameMemory {
             Baseline::Top,
         )
         .draw(self)
-        .unwrap_never();
+        .unwrap_infallible();
         self
     }
 
@@ -1088,14 +1085,17 @@ mod tests {
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
     };
-    use crate::cyd::touch::{CydTouch, CydTouchUncalibrated, RawPoint, RawTouchEvent};
     use crate::cyd::{
-        CydDisplay,
+        CydDisplay, CydTouch, CydTouchUncalibrated,
         display::{CydFrame, RectanglePixels},
-        touch::calibration::{
-            CalibrationConfig, CalibrationCorner, EnsureCalibrationErrorKind,
-            EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
-            calibration_verify_target_center, distort_demo_screen_to_raw, ensure_calibration,
+        touch::{
+            RawPoint, RawTouchEvent,
+            calibration::{
+                CalibrationConfig, CalibrationCorner, EnsureCalibrationErrorKind,
+                EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
+                calibration_verify_target_center, distort_demo_screen_to_raw,
+                ensure_calibration,
+            },
         },
     };
     use crate::flash_block::FlashBlock;

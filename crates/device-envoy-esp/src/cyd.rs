@@ -25,23 +25,28 @@ use static_cell::StaticCell;
 
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
+use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
     display::{CydFrame, RectanglePixels},
-    touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
+    touch::{
+        RawTouchEvent, TouchEvent,
+        calibration::{CalibrationConfig, EnsureCalibrationOutcome, ensure_calibration},
+    },
 };
 use device_envoy_core::pixel_target::PixelTarget;
 pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
 
+use crate::flash_block::FlashBlockEsp;
 use display::CydDisplayEsp as CydDisplayEspDevice;
 use touch_driver::CydTouchEsp as CydTouchEspDevice;
 
@@ -75,13 +80,17 @@ pub struct CydTouchEsp {
 
 /// A calibrated CYD-family ESP32 bundle.
 pub struct CydEsp {
+    /// The owned display component.
     pub display: CydDisplayEsp,
+    /// The owned calibrated touch component.
     pub touch: CydTouchEsp,
 }
 
 /// An uncalibrated CYD-family ESP32 bundle.
 pub struct CydEspUncalibrated {
+    /// The owned display component.
     pub display: CydDisplayEsp,
+    /// The owned uncalibrated touch component.
     pub touch: CydTouchUncalibratedEsp,
 }
 
@@ -341,6 +350,7 @@ impl CydDisplayEsp {
 }
 
 impl CydTouchUncalibratedEsp {
+    /// Construct an uncalibrated touch component.
     pub fn new(
         touch_spi: impl esp_hal::spi::master::Instance + 'static,
         touch_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
@@ -372,7 +382,8 @@ impl CydEsp {
         CydStaticEsp::new()
     }
 
-    pub fn new<const PIXEL_COUNT: usize>(
+    /// Construct a calibrated CYD bundle using the saved-or-interactive calibration flow.
+    pub async fn new<const PIXEL_COUNT: usize, R: Button>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
         display_spi: impl esp_hal::spi::master::Instance + 'static,
         display_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
@@ -392,9 +403,11 @@ impl CydEsp {
         touch_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
-        calibration_config: CalibrationConfig,
-    ) -> Result<Self, CydError> {
-        let display = CydDisplayEsp::new(
+        calibration_flash_block: &mut FlashBlockEsp,
+        recalibration_button: &mut R,
+        confirmed_message: Option<&str>,
+    ) -> crate::Result<(Self, EnsureCalibrationOutcome)> {
+        let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
             statics,
             display_spi,
             display_sck_pin,
@@ -408,17 +421,40 @@ impl CydEsp {
             background,
             foreground,
             font,
-        )?;
-        let touch = CydTouchUncalibratedEsp::new(
             touch_spi,
             touch_sck_pin,
             touch_mosi_pin,
             touch_miso_pin,
             touch_cs_pin,
             touch_irq_pin,
-        )?
-        .calibrate(calibration_config);
-        Ok(Self { display, touch })
+        )?;
+        let (touch, ensure_calibration_outcome) = ensure_calibration(
+            &mut display,
+            touch,
+            calibration_flash_block,
+            recalibration_button,
+            confirmed_message,
+        )
+        .await
+        .map_err(|error| match error.kind {
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
+                cyd_error,
+            ) => crate::Error::from(cyd_error),
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
+                flash_error,
+            ) => flash_error,
+        })?;
+        Ok((Self { display, touch }, ensure_calibration_outcome))
+    }
+}
+
+impl Cyd for CydEsp {
+    type Error = CydError;
+    type Display = CydDisplayEsp;
+    type Touch = CydTouchEsp;
+
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 }
 

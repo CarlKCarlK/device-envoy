@@ -1,85 +1,134 @@
-# CYD Bundle Follow-Ups: One-Call Construction and a Thin `Cyd` Trait
+# CYD Bundle Follow-Ups: Restore `Cyd` for Generic Code
 
 <!-- todo0 consider deleting this spec once the work below is implemented and released. -->
 
-Follow-up to `CYD_OWNED_PARTS_SPEC.md` (implemented). Review of that
-implementation found three gaps between what landed and where the API should
-end up:
+Follow-up to `CYD_OWNED_PARTS_SPEC.md` (implemented). That refactor improved
+the ownership model around calibration, but it overshot on API shape:
+construction and calibration became cleanly parts-based, while generic runtime
+code lost the ability to simply "take a Cyd".
 
-1. **`CydEsp::new(..., calibration_config)` is dead code.** No call site
-   constructs a `CydEsp` (or `CydRp`), because the flash load lives *inside*
-   `ensure_calibration` — no app ever has a `CalibrationConfig` in hand
-   before construction. Every app boots via `CydEspUncalibrated::new` →
-   destructure → `ensure_calibration` → carry loose parts forever; the
-   calibrated bundle never appears.
-2. **Generic core code lost its whole-device abstraction.** `armatron` takes
-   `(&mut impl CydDisplay, &mut impl CydTouch, ...)`; there is no way to
-   pass "a Cyd".
-3. **`CydError` was not folded into the crate `Error`** (resolved decision
-   #3 of the previous spec, unimplemented).
+This spec restores that missing layer without undoing the owned-parts work.
 
-This spec fixes all three. Goal restated: *users just create a Cyd, and
-generic code just accepts a Cyd* — with the owned-parts machinery remaining
-underneath as the calibration/construction layer and the escape hatch.
+## Summary
 
-## F1: `CydEsp::new` absorbs `ensure_calibration`
+The owned-parts refactor got one major thing right:
 
-Replace the dead config-taking constructor. `CydEsp::new` becomes the one
-call most apps make: async, loads the calibration from flash or runs the
-on-screen four-tap flow (saving the result), and returns a ready calibrated
-bundle. The uncalibrated state exists only inside the constructor.
+- calibration is a property of touch, not of the whole device
+- `ensure_calibration` should borrow display and consume/return touch
+- display-only apps should be able to construct just a display
+
+But it also introduced three follow-up problems:
+
+1. `CydEsp::new(..., calibration_config)` and `CydRp::new(..., calibration_config)`
+   are not the real construction path. Apps do not have a
+   `CalibrationConfig` before boot; the flash load and calibration flow live
+   inside `ensure_calibration`.
+2. Generic app code can no longer take `&mut impl Cyd`; it must take loose
+   `display` and `touch` values separately.
+3. `CydError` survived as a parallel error type in esp/rp, even though the
+   previous spec explicitly intended to fold those variants into the crate
+   `Error`.
+
+The intended end state is:
+
+- generic runtime code takes `&mut impl Cyd`
+- construction/calibration remains parts-based internally
+- constructors remain inherent methods on concrete platform types such as
+  `CydEsp::new(...).await`, `CydRp::new(...).await`, `CydWasm::new(...)`, and
+  `CydMemory::new(...)`
+- the parts APIs remain public as the lower-level escape hatch
+
+## Design Goal
+
+Separate the two layers cleanly:
+
+- **Construction/calibration layer:** owned `display` and `touch` parts
+- **Generic runtime layer:** a thin bundled `Cyd` trait over stored parts
+
+There is **no** platform-independent `Cyd::new`. The shared `Cyd`
+abstraction exists for generic app code only after a concrete platform type
+has already been constructed.
+
+The mistake in the implemented pass was treating the construction layer as if
+it had to also be the only generic runtime abstraction. It does not.
+
+## Part 1: platform constructors stay concrete and absorb calibration
+
+The top-level platform constructors should match the real boot path, but they
+stay on the concrete platform types.
+
+Replace:
+
+```rust
+pub fn new(..., calibration_config: CalibrationConfig) -> Result<Self, Error>
+```
+
+with an async constructor that performs the same sequence apps currently
+write manually:
+
+1. construct `Cyd*Uncalibrated`
+2. run `ensure_calibration`
+3. return the calibrated bundle plus `EnsureCalibrationOutcome`
+
+Shape:
 
 ```rust
 impl CydEsp {
-    /// Construct a ready, calibrated CYD: loads the calibration from flash,
-    /// or runs the on-screen four-tap flow and saves the result.
-    /// Internally: `CydEspUncalibrated::new(...)` + `ensure_calibration(...)`.
-    ///
-    /// Returns the outcome alongside the device so callers can keep the
-    /// reset-after-fresh-save behavior (`outcome.was_saved()`).
     pub async fn new<const PIXEL_COUNT: usize>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
-        /* display pins, orientation, background, foreground, font */
+        /* display pins, orientation, colors, font */
         /* touch pins */
         calibration_flash_block: &mut FlashBlockEsp,
         recalibration_button: &mut impl Button,
         confirmed_message: Option<&str>,
     ) -> Result<(Self, EnsureCalibrationOutcome), Error>;
 }
-// likewise CydRp::new with FlashBlockRp
 ```
 
-- The flash block is the concrete platform type (`FlashBlockEsp`), which
-  collapses the error story: with F3, both the device and flash sides of
-  `EnsureCalibrationErrorKind` are already `Error`, so the constructor
-  returns plain `crate::Error` — no touch-carrying error type at this level.
-- **Trade-off (accepted):** if the flow errors mid-way, the ESP pins were
-  consumed and the hardware cannot be rebuilt in place — unlike the
-  parts-level flow, whose error hands the touch back. On embedded the
-  realistic response to a boot-time failure is panic/reset. Apps that need
-  mid-flow recovery use the `CydEspUncalibrated` escape hatch, which stays.
-- `CydEspUncalibrated::new`, `CydDisplayEsp::new`, and the parts-level
-  `ensure_calibration` are unchanged — they are the layer `CydEsp::new` is
-  built from, and remain public for custom calibration UIs.
-- wasm gets no flow-absorbing constructor: the browser build already runs a
-  reconstruct-per-calibration loop with `ensure_calibration_with_settings`
-  and its larger verify budget; see F2 for how it bundles the result.
+Likewise for `CydRp`.
 
-## F2: restore `Cyd` as a thin trait over stored parts
+`CydWasm::new(...)` and `CydMemory::new(...)` remain synchronous because they
+already construct ready-to-use local/test devices without embedded flash boot
+flow.
 
-The old `Cyd` trait needed GATs because `parts()` *manufactured* part values
-per call. Under owned parts, implementors **store** the two components as
-fields, so the trait returns plain disjoint `&mut` borrows — no GATs, no
-lifetime gymnastics:
+Notes:
+
+- `CydEspUncalibrated::new`, `CydRpUncalibrated::new`, `CydDisplayEsp::new`,
+  `CydDisplayRp::new`, and `ensure_calibration` all stay public.
+- The async top-level constructor is the **default path**, not the only path.
+- This keeps the reset-after-fresh-save flow straightforward:
 
 ```rust
-// device-envoy-core::cyd
+let (mut cyd, calibration_outcome) =
+    CydEsp::new(&CYD_STATIC, /* pins... */, &mut flash, &mut button, Some("rebooting")).await?;
+if calibration_outcome.was_saved() {
+    software_reset();
+}
+```
+
+Trade-off:
+
+- if boot-time calibration fails inside `CydEsp::new`, the consumed platform
+  peripherals are gone, so this constructor cannot hand the device back
+  piece-by-piece
+- that is acceptable for the top-level embedded boot path
+- callers that need recovery or a custom calibration UI use
+  `CydEspUncalibrated::new` / `CydRpUncalibrated::new` directly
+
+## Part 2: restore a thin `Cyd` trait in core
+
+Generic runtime code should be able to say "give me a Cyd" again.
+
+The restored trait is intentionally thin. It does not own calibration state,
+does not model type-state, and does not manufacture temporary part wrappers.
+It simply borrows the two stored parts of an already-constructed bundle.
+
+```rust
 pub trait Cyd {
     type Error;
     type Display: CydDisplay<Error = Self::Error>;
     type Touch: CydTouch<Error = Self::Error>;
 
-    /// Borrow both halves at once (disjoint field borrows).
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
 
     fn display(&mut self) -> &mut Self::Display {
@@ -92,108 +141,186 @@ pub trait Cyd {
 }
 ```
 
-Implementors:
+This trait is different from the old one in one important way:
 
-- **`CydEsp` / `CydRp`** — one-liners returning field refs.
-- **`CydBundle<D, T>`** (new, in core) — a generic two-field struct with
-  public fields and a blanket impl, so *any* parts pair can be bundled after
-  a custom flow:
+- the old trait needed a larger lattice because the parts were effectively
+  synthesized through borrowed wrappers
+- the new trait is just a borrowing facade over already-owned fields
 
-  ```rust
-  pub struct CydBundle<D, T> {
-      pub display: D,
-      pub touch: T,
-  }
+That means:
 
-  impl<D, T> Cyd for CydBundle<D, T>
-  where
-      D: CydDisplay,
-      T: CydTouch<Error = D::Error>,
-  { /* field refs */ }
-  ```
+- no `CydScreen`
+- no `CydUncalibrated`
+- no `CydCalibrated`
+- no state-marker parameter on the whole device
+- no GAT-heavy borrowed-part manufacturing API
 
-- **`CydMemory` / `CydWasm` harnesses** — store one `display` and one
-  (identity-calibrated) `touch` as fields at construction instead of minting
-  them per call; `Cyd::parts` returns refs to those. The inherent by-value
-  `parts()` is deleted (the trait method takes its name); the by-value
-  `display()` clone accessor and `parts_uncalibrated()` stay for driver
-  tests and extra handles. Inspection surface (`pixel()`, `flush_count()`,
-  `push_touch_event()`, `script_raw_frames()`) is unchanged.
+## Part 3: platform bundles implement `Cyd`
 
-Generic runtime code goes back to a single parameter:
+`CydEsp` and `CydRp` remain real structs with real `display` and `touch`
+fields. They should implement the restored `Cyd` trait directly:
 
 ```rust
-pub async fn armatron<C: Cyd, R: Button>(
+impl Cyd for CydEsp {
+    type Error = Error;
+    type Display = CydDisplayEsp;
+    type Touch = CydTouchEsp;
+
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
+    }
+}
+```
+
+Likewise for RP.
+
+This gives the API its missing shape back:
+
+- apps can destructure and use parts when they want to
+- generic code can take `&mut impl Cyd` when that is the natural abstraction
+
+## Part 4: memory/wasm harnesses implement `Cyd`
+
+The harnesses should stop being "special non-`Cyd` things" for generic code.
+
+Target shape:
+
+- `CydMemory` stores one calibrated display part and one calibrated touch part
+- `CydWasm` stores one calibrated display part and one calibrated touch part
+- both implement the restored `Cyd` trait
+
+Important nuance:
+
+- keep the extra harness/testing surface
+- keep lower-level helpers like `parts_uncalibrated()` where they are useful
+- only remove the old inherent by-value `parts()` if it conflicts with the
+  trait method name
+
+This means:
+
+- app tests can pass `&mut CydMemory` directly to generic `Cyd` consumers
+- wasm can still do custom calibration work and then update its stored touch
+  before entering generic `Cyd`-consuming code
+
+## Part 5: fold `CydError` into crate `Error`
+
+This follow-up should finish the error-model simplification that the owned
+parts spec intended but the implementation did not complete.
+
+Delete `CydError` from esp and rp.
+
+Move its variants into the crate-level `Error`:
+
+- `DisplayInit(...)`
+- `TouchInit(...)`
+- `DisplayFlush(...)`
+
+Delete:
+
+- `Flash(crate::Error)` wrapper variant
+- `TouchUnavailable`
+
+Rationale:
+
+- `TouchUnavailable` belonged to the old optional-touch runtime model and is
+  invalid under owned calibrated touch values
+- a separate `CydError` now adds conversion noise without carrying distinct
+  meaning
+
+After this, CYD APIs in esp/rp return the crate `Result<T>` directly.
+
+## Generic app signatures after this spec
+
+`armatron` is the main consumer that should change back:
+
+```rust
+pub async fn armatron<C, R>(
     cyd: &mut C,
     recalibration_button: &mut R,
-) -> Result<ArmatronExit, Error<C::Error>> {
+) -> Result<ArmatronExit, Error<C::Error>>
+where
+    C: Cyd,
+    R: Button,
+{
     let (display, touch) = cyd.parts();
-    // ... loop unchanged
+    // loop body remains effectively the same
 }
-// ballet/clock/skeleton-clock stay display-only: `&mut impl CydDisplay`.
 ```
 
-Call sites:
+Display-only apps stay as they are:
 
 ```rust
-// esp (with F1): one constructor, one Cyd, pass it whole
-let (mut cyd, outcome) =
-    CydEsp::new(&CYD_STATIC, /* pins... */, &mut flash, &mut button, Some("rebooting")).await?;
-if outcome.was_saved() {
-    software_reset();
-}
-armatron(&mut cyd, &mut button).await?;
-
-// wasm: parts-level flow (real config from localStorage), then bundle
-let (mut display, touch_uncalibrated) = source_cyd.parts_uncalibrated();
-let (touch, _outcome) = ensure_calibration_with_settings(
-    &mut display, touch_uncalibrated, &mut flash, &mut button, None, settings,
-).await /* error handling */;
-let mut cyd = CydBundle { display, touch };
-armatron(&mut cyd, &mut button).await;
-
-// tests: pass the harness directly
-armatron(&mut memory_cyd, &mut memory_button)
+pub async fn ballet<D: CydDisplay>(display: &mut D) -> ...;
+pub async fn clock<D: CydDisplay>(display: &mut D, ...) -> ...;
 ```
 
-Division of labor after F2:
+This distinction is intentional:
 
-- **Construction & calibration**: parts-based (ownership transitions live
-  here; `ensure_calibration` borrows the display, consumes/returns touch).
-- **Generic runtime code**: `&mut impl Cyd`.
-- **Display-only code**: `&mut impl CydDisplay`, unchanged.
+- display-only code should not be forced to pretend it has touch
+- touch-driven generic code should not be forced to traffic in loose parts if
+  it conceptually wants a device
 
-## F3: fold `CydError` into the crate `Error`
+## Example call-site shapes
 
-Carried over from the previous spec's resolved decision #3. `CydError` is
-deleted in both esp and rp:
+### Embedded default boot path
 
-- `DisplayInit(CydDisplayEspInitError)`, `TouchInit(CydTouchEspInitError)`,
-  and `DisplayFlush(CydDisplayEspFlushError)` become variants of
-  `device_envoy_esp::Error` directly (same pattern for rp).
-- The `Flash(crate::Error)` wrapper variant disappears — the outer type *is*
-  now `Error`.
-- Every CYD operation returns `device_envoy_esp::Result<T>`; consuming apps
-  (armatron esp binary and friends) delete their `From<CydError> for
-  MainError` boilerplate.
+```rust
+let (mut cyd, calibration_outcome) =
+    CydEsp::new(&CYD_STATIC, /* pins... */, &mut flash, &mut button, Some("rebooting")).await?;
+
+if calibration_outcome.was_saved() {
+    software_reset();
+}
+
+armatron(&mut cyd, &mut button).await?;
+```
+
+### Generic app boundary
+
+```rust
+async fn run_app(cyd: &mut impl Cyd) -> Result<(), Error> {
+    let (display, touch) = cyd.parts();
+    // ...
+    # let _ = (display, touch);
+    Ok(())
+}
+```
+
+### Test harness path
+
+```rust
+let mut cyd = CydMemory::new(size, background, foreground, &FONT);
+armatron(&mut cyd, &mut button).await?;
+```
 
 ## Migration checklist
 
-- [ ] core `cyd.rs`: add the `Cyd` trait and `CydBundle`
-- [ ] core `memory.rs` / `wasm.rs`: harnesses store `display`/`touch` fields,
-      implement `Cyd`, drop the inherent by-value `parts()`
-- [ ] esp: replace `CydEsp::new(..., calibration_config)` with the
-      flow-absorbing async constructor; fold `CydError` into `Error`
-- [ ] rp: same two changes (`CydRp::new`, `CydError` fold)
-- [ ] core driver/doc examples: update the demo boilerplate to the new
-      shapes
-- [ ] esp templates (`cyd_touch_paint.rs.j2`), then
-      `cargo xtask generate-board-examples`; rp `cyd_touch_paint.rs`
-- [ ] linkage-blaze: armatron generic fn back to `C: Cyd`; esp binary uses
-      `CydEsp::new` and drops `From<CydError>`; wasm binary bundles with
-      `CydBundle`; memory tests pass the harness directly
-- [ ] `cargo check-all` (device-envoy) and `just check-all` (linkage-blaze)
-      both green
+- [ ] add `Cyd` and `CydBundle` to `device-envoy-core::cyd`
+- [ ] add `Cyd` to `device-envoy-core::cyd`
+- [ ] implement `Cyd` for `CydEsp`, `CydRp`, `CydMemory`, and wasm CYD
+- [ ] replace config-taking `CydEsp::new` / `CydRp::new` with async
+      flow-absorbing constructors
+- [ ] keep `Cyd*Uncalibrated::new` and display-only constructors public
+- [ ] fold `CydError` variants into the esp/rp crate `Error`
+- [ ] update core examples/docs to show the new top-level constructor story
+- [ ] update esp/rp examples to prefer `CydEsp::new` / `CydRp::new` where they
+      want the default boot path
+- [ ] move `armatron` and similar generic code back to `C: Cyd`
+- [ ] update wasm and any other custom calibration flows to write their
+      calibrated touch back into a concrete `Cyd` implementor before entering
+      generic runtime code
+- [ ] run full device-envoy validation
+- [ ] run full linkage-blaze validation
 
-No backwards-compatibility shims or type aliases — refactor call sites
-directly (per AGENTS.md).
+## Non-goals
+
+- restoring the old device-level calibration type-state
+- reintroducing `CydScreen`
+- making display-only code depend on `Cyd`
+- hiding the owned-parts APIs
+- introducing a generic `CydBundle<D, T>` as the primary answer to the lost
+  bundle abstraction
+- adding a platform-independent `Cyd::new`
+
+The owned-parts layer remains the right substrate. This follow-up only
+restores the missing bundle abstraction above it.

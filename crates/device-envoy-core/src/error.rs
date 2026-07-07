@@ -5,19 +5,19 @@ use core::convert::Infallible;
 /// A specialized `Result` where the error is this crate's [`Error`] type.
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-/// Extension for unwrapping a `Result` whose error type is uninhabited.
-pub trait UnwrapNever {
+/// Extension for unwrapping a `Result` whose error type is [`Infallible`].
+pub trait UnwrapInfallible {
     /// Success value produced by the result.
     type Output;
 
     /// Unwrap a `Result<T, Infallible>` without a possible panic path.
-    fn unwrap_never(self) -> Self::Output;
+    fn unwrap_infallible(self) -> Self::Output;
 }
 
-impl<T> UnwrapNever for core::result::Result<T, Infallible> {
+impl<T> UnwrapInfallible for core::result::Result<T, Infallible> {
     type Output = T;
 
-    fn unwrap_never(self) -> T {
+    fn unwrap_infallible(self) -> T {
         match self {
             Ok(value) => value,
             Err(never) => match never {},

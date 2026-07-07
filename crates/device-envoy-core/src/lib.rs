@@ -31,7 +31,7 @@ mod to_png;
 pub mod wasm;
 pub mod wifi_auto;
 
-pub use error::{Error, Result, UnwrapNever};
+pub use error::{Error, Result, UnwrapInfallible};
 /// Used internally by other macros.
 #[doc(hidden)]
 pub use paste::paste as __paste;

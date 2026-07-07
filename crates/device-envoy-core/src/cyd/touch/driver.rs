@@ -4,8 +4,7 @@ use crate::button::Button;
 use crate::flash_block::FlashBlock;
 use heapless::String;
 
-use super::super::CydDisplay;
-use super::CydTouchUncalibrated;
+use super::super::{CydDisplay, CydTouchUncalibrated};
 use super::calibration::{
     CalibrationConfig, CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS,
     calibration_verify_target_center, draw_calibration_ack_dot, draw_calibration_cross,
@@ -132,7 +131,7 @@ enum CalibrationDriverState {
 /// # use core::{convert::Infallible, future::ready};
 /// # use device_envoy_core::{
 /// #     button::{Button, __ButtonMonitor},
-/// #     cyd::{CydDisplay, display::CydFrame, touch::{CydTouch, CydTouchUncalibrated, RawTouchEvent, calibration::{CalibrationConfig, ensure_calibration}}},
+/// #     cyd::{CydDisplay, CydTouch, CydTouchUncalibrated, display::CydFrame, touch::{RawTouchEvent, calibration::{CalibrationConfig, ensure_calibration}}},
 /// #     flash_block::FlashBlock,
 /// #     pixel_target::PixelTarget,
 /// # };

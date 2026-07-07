@@ -14,16 +14,20 @@ mod touch_driver;
 
 use core::{convert::Infallible, fmt};
 
+use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
     display::{CydFrame, RectanglePixels},
-    touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
+    touch::{
+        RawTouchEvent, TouchEvent,
+        calibration::{CalibrationConfig, EnsureCalibrationOutcome, ensure_calibration},
+    },
 };
 use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
@@ -46,6 +50,7 @@ pub use display::{CydDisplayRpFlushError, CydDisplayRpInitError, DISPLAY_SPI_HZ}
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchRpInitError, TOUCH_SPI_HZ};
 
+use crate::flash_block::FlashBlockRp;
 use display::CydDisplayRp as CydDisplayRpDevice;
 use touch_driver::CydTouchRp as CydTouchRpDevice;
 
@@ -418,9 +423,9 @@ impl CydRp {
         CydStaticRp::new()
     }
 
-    /// Construct a calibrated CYD bundle from display, touch, and calibration parts.
+    /// Construct a calibrated CYD bundle using the saved-or-interactive calibration flow.
     #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
-    pub fn new<
+    pub async fn new<
         const PIXEL_COUNT: usize,
         Sck,
         Mosi,
@@ -454,8 +459,10 @@ impl CydRp {
         touch_miso_pin: Peri<'static, TouchMiso>,
         touch_cs_pin: Peri<'static, TouchCs>,
         touch_irq_pin: Peri<'static, TouchIrq>,
-        calibration_config: CalibrationConfig,
-    ) -> Result<Self, CydError>
+        calibration_flash_block: &mut FlashBlockRp,
+        recalibration_button: &mut impl Button,
+        confirmed_message: Option<&str>,
+    ) -> crate::Result<(Self, EnsureCalibrationOutcome)>
     where
         Sck: Pin + ClkPin<SPI0>,
         Mosi: Pin + MosiPin<SPI0>,
@@ -470,32 +477,54 @@ impl CydRp {
         TouchCs: Pin,
         TouchIrq: Pin,
     {
-        Ok(Self {
-            display: CydDisplayRp::new(
-                statics,
-                display_spi,
-                display_sck_pin,
-                display_mosi_pin,
-                display_miso_pin,
-                display_cs_pin,
-                display_dc_pin,
-                display_rst_pin,
-                display_backlight_pin,
-                orientation,
-                background,
-                foreground,
-                font,
-            )?,
-            touch: CydTouchUncalibratedRp::new(
-                touch_spi,
-                touch_sck_pin,
-                touch_mosi_pin,
-                touch_miso_pin,
-                touch_cs_pin,
-                touch_irq_pin,
-            )?
-            .calibrate(calibration_config),
-        })
+        let CydRpUncalibrated { mut display, touch } = CydRpUncalibrated::new(
+            statics,
+            display_spi,
+            display_sck_pin,
+            display_mosi_pin,
+            display_miso_pin,
+            display_cs_pin,
+            display_dc_pin,
+            display_rst_pin,
+            display_backlight_pin,
+            orientation,
+            background,
+            foreground,
+            font,
+            touch_spi,
+            touch_sck_pin,
+            touch_mosi_pin,
+            touch_miso_pin,
+            touch_cs_pin,
+            touch_irq_pin,
+        )?;
+        let (touch, ensure_calibration_outcome) = ensure_calibration(
+            &mut display,
+            touch,
+            calibration_flash_block,
+            recalibration_button,
+            confirmed_message,
+        )
+        .await
+        .map_err(|error| match error.kind {
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
+                cyd_error,
+            ) => crate::Error::from(cyd_error),
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
+                flash_error,
+            ) => flash_error,
+        })?;
+        Ok((Self { display, touch }, ensure_calibration_outcome))
+    }
+}
+
+impl Cyd for CydRp {
+    type Error = CydError;
+    type Display = CydDisplayRp;
+    type Touch = CydTouchRp;
+
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 }
 

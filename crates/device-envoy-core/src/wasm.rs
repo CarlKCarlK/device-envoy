@@ -178,11 +178,6 @@ impl CydWasm {
     pub fn parts_uncalibrated(&self) -> (CydDisplayWasm, CydTouchUncalibratedWasm) {
         (self.display.clone(), self.touch.clone().decalibrate())
     }
-
-    /// Replace the stored calibrated touch mapping.
-    pub fn set_calibration_config(&mut self, calibration_config: CalibrationConfig) {
-        self.touch.calibration_config = calibration_config;
-    }
 }
 
 impl Cyd for CydWasm {
@@ -192,6 +187,15 @@ impl Cyd for CydWasm {
 
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
+    }
+
+    fn into_parts(self) -> (Self::Display, Self::Touch) {
+        let Self { display, touch } = self;
+        (display, touch)
+    }
+
+    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self {
+        Self { display, touch }
     }
 }
 

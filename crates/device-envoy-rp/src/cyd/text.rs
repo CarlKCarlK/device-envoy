@@ -20,7 +20,7 @@ use embedded_graphics::{
 
 use super::CydFrameRp;
 
-/// Font apps typically pass to [`super::CydRp::new_display_only`] as the device default.
+/// Font apps typically pass to [`super::CydDisplayRp::new`] as the device default.
 pub const DEFAULT_FONT: MonoFont<'static> = FONT_9X15_BOLD;
 
 impl CydFrameRp<'_> {

@@ -79,7 +79,7 @@ frame.flush().await?;
 ```
 "#
 )]
-pub trait Cyd {
+pub trait Cyd: Sized {
     /// Error returned by both the display and calibrated touch parts.
     type Error;
 
@@ -93,6 +93,23 @@ pub trait Cyd {
     ///
     /// See the [`Cyd`] trait documentation for a usage example.
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
+
+    /// Consume the device into its owned calibrated halves.
+    ///
+    /// This makes ownership-level touch transitions such as
+    /// [`CydTouch::decalibrate`] reachable from a whole bundle.
+    ///
+    /// See the [`Cyd`] trait documentation for a usage example.
+    fn into_parts(self) -> (Self::Display, Self::Touch);
+
+    /// Reassemble a device from its owned calibrated halves.
+    ///
+    /// The parts must come from the same underlying device. On unique
+    /// hardware bundles that is naturally enforced, but `Rc`-backed harnesses
+    /// such as `CydMemory` and `CydWasm` cannot detect mismatched pairings.
+    ///
+    /// See the [`Cyd`] trait documentation for a usage example.
+    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self;
 
     /// Borrow the display half.
     ///

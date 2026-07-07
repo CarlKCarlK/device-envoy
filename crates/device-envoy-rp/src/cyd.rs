@@ -526,6 +526,15 @@ impl Cyd for CydRp {
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
     }
+
+    fn into_parts(self) -> (Self::Display, Self::Touch) {
+        let Self { display, touch } = self;
+        (display, touch)
+    }
+
+    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self {
+        Self { display, touch }
+    }
 }
 
 impl CydRpUncalibrated {

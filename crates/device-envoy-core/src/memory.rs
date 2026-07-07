@@ -247,6 +247,23 @@ impl Cyd for CydMemory {
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
     }
+
+    fn into_parts(self) -> (Self::Display, Self::Touch) {
+        let Self {
+            display,
+            touch,
+            shared: _shared,
+        } = self;
+        (display, touch)
+    }
+
+    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self {
+        Self {
+            shared: display.shared.clone(),
+            display,
+            touch,
+        }
+    }
 }
 
 impl CydMemory {
@@ -1086,15 +1103,14 @@ mod tests {
         VERIFY_TIMEOUT_FRAMES,
     };
     use crate::cyd::{
-        CydDisplay, CydTouch, CydTouchUncalibrated,
+        Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
         display::{CydFrame, RectanglePixels},
         touch::{
-            RawPoint, RawTouchEvent,
+            RawPoint, RawTouchEvent, TouchEvent,
             calibration::{
                 CalibrationConfig, CalibrationCorner, EnsureCalibrationErrorKind,
                 EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
-                calibration_verify_target_center, distort_demo_screen_to_raw,
-                ensure_calibration,
+                calibration_verify_target_center, distort_demo_screen_to_raw, ensure_calibration,
             },
         },
     };
@@ -1207,6 +1223,46 @@ mod tests {
         assert_eq!(memory_cyd.pixel(0, 0), Rgb565::CSS_GREEN);
         assert_eq!(memory_cyd.pixel(1, 1), Rgb565::CSS_GREEN);
         assert_eq!(memory_cyd.pixel(3, 3), Rgb565::CSS_BLACK);
+    }
+
+    #[test]
+    fn cyd_into_from_parts_decalibrates_and_recalibrates() {
+        let cyd = test_cyd_memory();
+        let saved_config = CalibrationConfig::new(1.0, 0.0, 2.0, 0.0, 1.0, 3.0);
+        let mut memory_flash_block = FlashBlockMemory::with_value(&saved_config);
+        let mut memory_button = cyd.button_memory();
+
+        let (mut display, touch) = cyd.into_parts();
+        let touch_uncalibrated = touch.decalibrate();
+
+        let (touch, ensure_calibration_outcome) = block_on(ensure_calibration(
+            &mut display,
+            touch_uncalibrated,
+            &mut memory_flash_block,
+            &mut memory_button,
+            None,
+        ))
+        .expect("preloaded calibration should load");
+        assert!(matches!(
+            ensure_calibration_outcome,
+            EnsureCalibrationOutcome::Loaded(_)
+        ));
+        assert_eq!(touch.calibration_config(), saved_config);
+
+        let mut cyd = CydMemory::from_parts(display, touch);
+        cyd.push_touch_event(TouchEvent::Down {
+            point: Point::new(12, 34),
+        });
+        {
+            let (display, touch) = cyd.parts();
+            assert!(matches!(
+                touch.read().expect("touch read should succeed"),
+                Some(TouchEvent::Down { .. })
+            ));
+            let mut frame = display.full_frame_mut();
+            block_on(frame.flush()).expect("flush should succeed");
+        }
+        assert_eq!(cyd.flush_count(), 1);
     }
 
     #[test]

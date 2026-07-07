@@ -6,6 +6,7 @@ use embedded_graphics::{
     prelude::{Point, Size},
     primitives::Rectangle,
 };
+use embedded_hal::spi::SpiDevice;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
     delay::Delay,
@@ -31,9 +32,10 @@ pub const DISPLAY_SPI_HZ: u32 = 60_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
 type CydDisplaySpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
-type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'static>, NoDelay>;
-type CydDisplayInterface = SpiInterface<'static, CydDisplaySpiDevice, Output<'static>>;
-type CydDisplayDevice = mipidsi::Display<CydDisplayInterface, ILI9341Rgb565, Output<'static>>;
+/// The SPI device type used when the display owns an exclusive SPI peripheral.
+pub(crate) type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'static>, NoDelay>;
+type CydDisplayInterface<D> = SpiInterface<'static, D, Output<'static>>;
+type CydDisplayDevice<D> = mipidsi::Display<CydDisplayInterface<D>, ILI9341Rgb565, Output<'static>>;
 
 /// Error initializing the display over SPI.
 #[derive(Clone, Copy, Debug)]
@@ -53,12 +55,17 @@ pub enum CydDisplayEspFlushError {
     FlushFrameBuffer,
 }
 
-pub(crate) struct CydDisplayEsp {
-    display: CydDisplayDevice,
+/// An ILI9341 display driven over `D`, an `embedded-hal` SPI device.
+///
+/// `D` defaults to [`CydDisplaySpiDevice`], an exclusively-owned SPI
+/// peripheral. Shared-bus backends (see `one_spi`) instead construct this
+/// with an `embedded_hal_bus::spi::RefCellDevice` via [`CydDisplayEsp::new_from_device`].
+pub(crate) struct CydDisplayEsp<D: SpiDevice<u8> = CydDisplaySpiDevice> {
+    display: CydDisplayDevice<D>,
     screen_size: Size,
 }
 
-impl CydDisplayEsp {
+impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
     /// Oriented screen size stored at init time.
     #[must_use]
     pub const fn size(&self) -> Size {
@@ -82,33 +89,21 @@ impl CydDisplayEsp {
         Some(rectangle)
     }
 
-    pub(crate) fn new(
-        spi: impl spi::master::Instance + 'static,
-        sck_pin: impl PeripheralOutput<'static>,
-        mosi_pin: impl PeripheralOutput<'static>,
-        miso_pin: impl PeripheralInput<'static>,
-        cs_pin: impl OutputPin + 'static,
+    /// Construct a display driver from an already-built SPI device.
+    ///
+    /// Used by shared-bus backends that build their own `SpiDevice` (for
+    /// example an `embedded_hal_bus::spi::RefCellDevice` wrapping a bus
+    /// shared with touch) instead of owning an exclusive SPI peripheral.
+    pub(crate) fn new_from_device(
+        spi_device: D,
         dc_pin: impl OutputPin + 'static,
         rst_pin: impl OutputPin + 'static,
         backlight_pin: impl OutputPin + 'static,
         orientation: Orientation,
-    ) -> Result<CydDisplayEsp, CydDisplayEspInitError> {
-        let spi_config = spi::master::Config::default()
-            .with_frequency(esp_hal::time::Rate::from_hz(DISPLAY_SPI_HZ))
-            .with_mode(spi::Mode::_0);
-        let spi = spi::master::Spi::new(spi, spi_config)
-            .map_err(|_| CydDisplayEspInitError::ConfigureDisplaySpi)?
-            .with_sck(sck_pin)
-            .with_mosi(mosi_pin)
-            .with_miso(miso_pin);
-
-        let cs = Output::new(cs_pin, Level::High, OutputConfig::default());
+    ) -> Result<CydDisplayEsp<D>, CydDisplayEspInitError> {
         let dc = Output::new(dc_pin, Level::Low, OutputConfig::default());
         let rst = Output::new(rst_pin, Level::High, OutputConfig::default());
         let mut backlight = Output::new(backlight_pin, Level::High, OutputConfig::default());
-
-        let spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
-            .map_err(|_| CydDisplayEspInitError::CreateDisplaySpiDevice)?;
 
         static SPI_BUFFER: StaticCell<[u8; DISPLAY_SPI_BUFFER_LEN]> = StaticCell::new();
         let spi_buffer = SPI_BUFFER.init([0u8; DISPLAY_SPI_BUFFER_LEN]);
@@ -177,7 +172,7 @@ impl CydDisplayEsp {
         background565: Rgb565,
         foreground565: Rgb565,
         font: &'static MonoFont<'static>,
-    ) -> CydFrameEsp<'a> {
+    ) -> CydFrameEsp<'a, D> {
         let size = rectangle.size;
         let mut view = pixel_buffer.view_mut(size.width as usize, size.height as usize);
         // Every new frame starts cleared to the device background so callers
@@ -224,5 +219,35 @@ impl CydDisplayEsp {
         self.display
             .fill_contiguous(&rectangle, pixels)
             .map_err(|_| CydDisplayEspFlushError::FlushFrameBuffer)
+    }
+}
+
+impl CydDisplayEsp<CydDisplaySpiDevice> {
+    pub(crate) fn new(
+        spi: impl spi::master::Instance + 'static,
+        sck_pin: impl PeripheralOutput<'static>,
+        mosi_pin: impl PeripheralOutput<'static>,
+        miso_pin: impl PeripheralInput<'static>,
+        cs_pin: impl OutputPin + 'static,
+        dc_pin: impl OutputPin + 'static,
+        rst_pin: impl OutputPin + 'static,
+        backlight_pin: impl OutputPin + 'static,
+        orientation: Orientation,
+    ) -> Result<CydDisplayEsp<CydDisplaySpiDevice>, CydDisplayEspInitError> {
+        let spi_config = spi::master::Config::default()
+            .with_frequency(esp_hal::time::Rate::from_hz(DISPLAY_SPI_HZ))
+            .with_mode(spi::Mode::_0);
+        let spi = spi::master::Spi::new(spi, spi_config)
+            .map_err(|_| CydDisplayEspInitError::ConfigureDisplaySpi)?
+            .with_sck(sck_pin)
+            .with_mosi(mosi_pin)
+            .with_miso(miso_pin);
+
+        let cs = Output::new(cs_pin, Level::High, OutputConfig::default());
+
+        let spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
+            .map_err(|_| CydDisplayEspInitError::CreateDisplaySpiDevice)?;
+
+        Self::new_from_device(spi_device, dc_pin, rst_pin, backlight_pin, orientation)
     }
 }

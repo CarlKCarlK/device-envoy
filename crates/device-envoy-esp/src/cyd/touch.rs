@@ -1,4 +1,5 @@
 use device_envoy_core::cyd::touch::RawTouchEvent;
+use embedded_hal::spi::SpiDevice;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
     gpio::{
@@ -12,7 +13,8 @@ use esp_hal::{
 pub const TOUCH_SPI_HZ: u32 = 2_500_000;
 
 type CydTouchSpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
-type CydTouchSpiDevice = ExclusiveDevice<CydTouchSpiBus, Output<'static>, NoDelay>;
+/// The SPI device type used when touch owns an exclusive SPI peripheral.
+pub(crate) type CydTouchSpiDevice = ExclusiveDevice<CydTouchSpiBus, Output<'static>, NoDelay>;
 
 /// Error initializing the touch controller over SPI.
 #[derive(Clone, Copy, Debug)]
@@ -23,12 +25,37 @@ pub enum CydTouchEspInitError {
     CreateTouchSpiDevice,
 }
 
-pub(crate) struct CydTouchEsp {
-    touch_spi_device: CydTouchSpiDevice,
+/// An XPT2046 touch controller driven over `D`, an `embedded-hal` SPI device.
+///
+/// `D` defaults to [`CydTouchSpiDevice`], an exclusively-owned SPI
+/// peripheral. Shared-bus backends (see `one_spi`) instead construct this
+/// with an `embedded_hal_bus::spi::RefCellDevice` via [`CydTouchEsp::from_device`].
+pub(crate) struct CydTouchEsp<D = CydTouchSpiDevice> {
+    touch_spi_device: D,
     touch_input: Xpt2046TouchInput<Input<'static>>,
 }
 
-impl CydTouchEsp {
+impl<D: SpiDevice<u8>> CydTouchEsp<D> {
+    /// Construct a touch driver from an already-built SPI device.
+    ///
+    /// Used by shared-bus backends that build their own `SpiDevice` (for
+    /// example an `embedded_hal_bus::spi::RefCellDevice` wrapping a bus
+    /// shared with the display) instead of owning an exclusive SPI peripheral.
+    pub(crate) fn from_device(touch_spi_device: D, irq_pin: impl EspInputPin + 'static) -> Self {
+        let irq = Input::new(irq_pin, InputConfig::default().with_pull(Pull::Up));
+        CydTouchEsp {
+            touch_spi_device,
+            touch_input: Xpt2046TouchInput::new(irq),
+        }
+    }
+
+    pub(crate) fn read_raw_touch_event(&mut self) -> Option<RawTouchEvent> {
+        self.touch_input
+            .read_raw_touch_event(&mut self.touch_spi_device)
+    }
+}
+
+impl CydTouchEsp<CydTouchSpiDevice> {
     pub(crate) fn new(
         spi: impl spi::master::Instance + 'static,
         sck_pin: impl PeripheralOutput<'static>,
@@ -36,7 +63,7 @@ impl CydTouchEsp {
         miso_pin: impl PeripheralInput<'static>,
         cs_pin: impl OutputPin + 'static,
         irq_pin: impl EspInputPin + 'static,
-    ) -> Result<CydTouchEsp, CydTouchEspInitError> {
+    ) -> Result<CydTouchEsp<CydTouchSpiDevice>, CydTouchEspInitError> {
         let spi_config = spi::master::Config::default()
             .with_frequency(esp_hal::time::Rate::from_hz(TOUCH_SPI_HZ))
             .with_mode(spi::Mode::_0);
@@ -47,21 +74,11 @@ impl CydTouchEsp {
             .with_miso(miso_pin);
 
         let cs = Output::new(cs_pin, esp_hal::gpio::Level::High, OutputConfig::default());
-        let irq = Input::new(irq_pin, InputConfig::default().with_pull(Pull::Up));
 
         let touch_spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
             .map_err(|_| CydTouchEspInitError::CreateTouchSpiDevice)?;
-        let touch_input = Xpt2046TouchInput::new(irq);
 
-        Ok(CydTouchEsp {
-            touch_spi_device,
-            touch_input,
-        })
-    }
-
-    pub(crate) fn read_raw_touch_event(&mut self) -> Option<RawTouchEvent> {
-        self.touch_input
-            .read_raw_touch_event(&mut self.touch_spi_device)
+        Ok(Self::from_device(touch_spi_device, irq_pin))
     }
 }
 

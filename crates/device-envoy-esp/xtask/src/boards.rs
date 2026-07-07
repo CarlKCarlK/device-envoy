@@ -277,6 +277,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             rst_pin_num: 8,
             backlight_pin_num: 9,
         },
+        // todo0 cs_pin_num (3) and irq_pin_num (4) collide with cyd_display_wiring's
+        // sck/mosi pins, and button_pin (6) collides with cyd_display_wiring's cs pin.
+        // This is harmless for the two-SPI CydEsp examples (always placeholder-stubbed
+        // on this 1-SPI board), but it means armatron_one_spi is placeholder-stubbed
+        // here too (see NoCydOneSpiPinConflict in linkage-blaze's
+        // xtask/src/linkage_esp_examples_generated.rs). Fixing this needs real
+        // hardware-verified free GPIOs for this board, not a guess from this repo.
         cyd_touch_wiring: CydTouchWiring {
             sck_pin_num: 0,
             mosi_pin_num: 1,
@@ -329,6 +336,13 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             rst_pin_num: 8,
             backlight_pin_num: 9,
         },
+        // todo0 cs_pin_num (3) and irq_pin_num (4) collide with cyd_display_wiring's
+        // sck/mosi pins, and button_pin (6) collides with cyd_display_wiring's cs pin.
+        // This is harmless for the two-SPI CydEsp examples (always placeholder-stubbed
+        // on this 1-SPI board), but it means armatron_one_spi is placeholder-stubbed
+        // here too (see NoCydOneSpiPinConflict in linkage-blaze's
+        // xtask/src/linkage_esp_examples_generated.rs). Fixing this needs real
+        // hardware-verified free GPIOs for this board, not a guess from this repo.
         cyd_touch_wiring: CydTouchWiring {
             sck_pin_num: 0,
             mosi_pin_num: 1,

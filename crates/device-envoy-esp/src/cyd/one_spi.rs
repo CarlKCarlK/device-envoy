@@ -1,268 +1,179 @@
 //! CYD bundle for one-SPI shared-bus designs where display and touch share a single SPI peripheral.
 //!
-//! This module provides [`CydEspOneSpi`], which manages SPI arbitration between display and
-//! touch controllers internally using interior mutability. The public API presents display and
-//! touch as independently-borrowable halves of a bundle, hiding the shared-bus machinery.
+//! This module provides [`CydEspOneSpi`], which arbitrates a single physical SPI bus between
+//! the ILI9341 display and the XPT2046 touch controller using an
+//! `embedded_hal_bus::spi::RefCellDevice` per peripheral (each with its own chip-select pin).
+//! It reuses the same display/touch drivers as the two-SPI [`super::CydEsp`] — see
+//! [`super::CydDisplayEsp::new_from_device`] and [`super::CydTouchUncalibratedEsp::from_device`] —
+//! so the only new code here is building the shared bus itself.
 
-use core::convert::Infallible;
+use core::cell::RefCell;
 
-use embedded_graphics::{
-    Pixel,
-    mono_font::MonoFont,
-    pixelcolor::{Rgb565, Rgb888},
-    prelude::{Dimensions, DrawTarget, Point, Size},
-    primitives::Rectangle,
+use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
+use embedded_hal_bus::spi::{NoDelay, RefCellDevice};
+use esp_hal::{
+    gpio::{Output, OutputConfig},
+    spi,
 };
-use esp_hal::gpio::OutputPin;
+use static_cell::StaticCell;
 
+use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
-    display::CydFrame,
-    touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
+    Cyd,
+    touch::calibration::{EnsureCalibrationOutcome, ensure_calibration},
 };
-use device_envoy_core::pixel_target::PixelTarget;
 
-/// Display facade for one-SPI bundle.
-pub struct CydDisplayOneSpi {
-    screen_size: Size,
-    background: Rgb888,
-    foreground: Rgb888,
-    background565: Rgb565,
-    foreground565: Rgb565,
-    font: &'static MonoFont<'static>,
-}
+use super::{
+    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, Orientation,
+    TOUCH_SPI_HZ, buffer::PixelBuffer,
+};
+use crate::flash_block::FlashBlockEsp;
 
-/// Calibrated touch facade for one-SPI bundle.
-pub struct CydTouchOneSpi {
-    calibration_config: CalibrationConfig,
-}
-
-/// Uncalibrated touch facade for one-SPI bundle.
-#[derive(Clone)]
-pub struct CydTouchUncalibratedOneSpi;
-
-/// Frame for one-SPI bundle display.
-#[allow(dead_code)]
-pub struct CydFrameOneSpi {
-    rectangle: Rectangle,
-    tile_top_left: Point,
-    foreground565: Rgb565,
-    font: &'static MonoFont<'static>,
-}
+type SharedSpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
+type SharedSpiDevice = RefCellDevice<'static, SharedSpiBus, Output<'static>, NoDelay>;
 
 /// A CYD-family ESP32 bundle using one shared SPI peripheral for display and touch.
 ///
-/// This type manages SPI arbitration between the ILI9341 display and XPT2046 touch controller
-/// via interior mutability. Display and touch access is serialized to prevent conflicts on
-/// the shared bus. The public API hides this machinery entirely.
+/// Display and touch each get their own `embedded_hal_bus::spi::RefCellDevice` over the same
+/// underlying bus, with independent chip-select pins, so accesses are serialized through the
+/// `RefCell` rather than requiring two physical SPI peripherals. Because the two halves share
+/// state through that bus, this type implements [`Cyd`] but not
+/// [`CydParts`](device_envoy_core::cyd::CydParts) — see that trait's documentation for why
+/// shared-bus backends cannot safely split into independently-owned parts.
 ///
-/// Construction takes raw GPIO pins and a single SPI peripheral, not a pre-built bus object.
-///
-/// Note: The current implementation is a placeholder. Full implementation requires wrapping
-/// the display and touch drivers to coordinate through a shared SPI bus.
+/// The shared bus runs at [`TOUCH_SPI_HZ`] (2.5 MHz), the XPT2046 touch controller's ceiling,
+/// since both peripherals share one clock configuration. This is slower than the two-SPI
+/// design's 60 MHz display bus — an accepted trade-off for boards with only one SPI peripheral.
 pub struct CydEspOneSpi {
-    display: CydDisplayOneSpi,
-    touch: CydTouchOneSpi,
+    display: CydDisplayEsp<SharedSpiDevice>,
+    touch: CydTouchEsp<SharedSpiDevice>,
 }
 
 impl CydEspOneSpi {
-    /// Construct a calibrated one-SPI CYD bundle.
+    /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
+    pub const SCREEN_PIXELS: usize = device_envoy_core::cyd::SCREEN_PIXELS;
+
+    /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    #[must_use]
+    pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
+        CydStaticEsp::new()
+    }
+
+    /// Construct a calibrated one-SPI CYD bundle using the saved-or-interactive calibration flow.
+    ///
+    /// Mirrors [`super::CydEsp::new`]'s calibration handling exactly (same
+    /// [`ensure_calibration`] flow, same flash-backed load/save behavior) — the only
+    /// difference from the two-SPI bundle is that display and touch share one physical bus.
     ///
     /// # Arguments
     ///
-    /// * `spi` - The shared SPI peripheral (VSPI or HSPI)
+    /// * `statics` - Static storage for the display's draw buffer
+    /// * `spi` - The shared SPI peripheral
+    /// * `sck_pin` / `mosi_pin` / `miso_pin` - Shared bus pins for both display and touch
     /// * `lcd_cs_pin` - LCD chip-select pin (active low)
     /// * `lcd_dc_pin` - LCD data/command pin
     /// * `lcd_rst_pin` - LCD reset pin (active low)
+    /// * `lcd_backlight_pin` - LCD backlight enable pin
     /// * `touch_cs_pin` - Touch chip-select pin (active low)
     /// * `touch_irq_pin` - Touch interrupt pin
-    /// * `calibration` - Pre-computed touch calibration
-    /// * `delay` - Delay provider for initialization
+    /// * `orientation` - Screen orientation
     /// * `background` - Default background color
     /// * `foreground` - Default foreground/text color
     /// * `font` - Default monospace font for text drawing
+    /// * `calibration_flash_block` - Flash block used to load/save the touch calibration
+    /// * `recalibration_button` - Button that restarts the interactive calibration flow
+    /// * `confirmed_message` - Message shown after a fresh calibration is saved
     ///
-    /// Returns a [`CydEspOneSpi`] ready for use.
+    /// Returns a [`CydEspOneSpi`] ready for use, along with how calibration was obtained.
     #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        _spi: impl esp_hal::spi::master::Instance + 'static,
-        _lcd_cs_pin: impl OutputPin + 'static,
-        _lcd_dc_pin: impl OutputPin + 'static,
-        _lcd_rst_pin: impl OutputPin + 'static,
-        _touch_cs_pin: impl OutputPin + 'static,
-        _touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
-        calibration: CalibrationConfig,
-        _delay: esp_hal::delay::Delay,
+    pub async fn new<const PIXEL_COUNT: usize, R: Button>(
+        statics: &'static CydStaticEsp<PIXEL_COUNT>,
+        spi: impl spi::master::Instance + 'static,
+        sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
+        lcd_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
+        lcd_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
+        lcd_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        lcd_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
+        touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
+        touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
+        orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
-    ) -> Result<Self, Infallible> {
-        let background565 = Rgb565::from(background);
-        let foreground565 = Rgb565::from(foreground);
+        calibration_flash_block: &mut FlashBlockEsp,
+        recalibration_button: &mut R,
+        confirmed_message: Option<&str>,
+    ) -> crate::Result<(Self, EnsureCalibrationOutcome)> {
+        let spi_config = spi::master::Config::default()
+            .with_frequency(esp_hal::time::Rate::from_hz(TOUCH_SPI_HZ))
+            .with_mode(spi::Mode::_0);
+        let spi = spi::master::Spi::new(spi, spi_config)?
+            .with_sck(sck_pin)
+            .with_mosi(mosi_pin)
+            .with_miso(miso_pin);
 
-        Ok(Self {
-            display: CydDisplayOneSpi {
-                screen_size: Size::new(320, 240),
-                background,
-                foreground,
-                background565,
-                foreground565,
-                font,
-            },
-            touch: CydTouchOneSpi { calibration_config: calibration },
-        })
-    }
-}
+        static SHARED_SPI: StaticCell<RefCell<SharedSpiBus>> = StaticCell::new();
+        let shared_spi: &'static RefCell<SharedSpiBus> = SHARED_SPI.init(RefCell::new(spi));
 
-impl CydDisplay for CydDisplayOneSpi {
-    type Error = Infallible;
-    type Frame<'a> = CydFrameOneSpi;
+        let lcd_cs = Output::new(
+            lcd_cs_pin,
+            esp_hal::gpio::Level::High,
+            OutputConfig::default(),
+        );
+        let touch_cs = Output::new(
+            touch_cs_pin,
+            esp_hal::gpio::Level::High,
+            OutputConfig::default(),
+        );
 
-    fn screen_size(&self) -> Size {
-        self.screen_size
-    }
+        // `Output`'s digital error type is `Infallible` (see esp-hal's
+        // `embedded_hal_impls`), so `RefCellDevice::new_no_delay` can't actually fail here.
+        let lcd_spi_device = RefCellDevice::new_no_delay(shared_spi, lcd_cs)
+            .unwrap_or_else(|infallible| match infallible {});
+        let touch_spi_device = RefCellDevice::new_no_delay(shared_spi, touch_cs)
+            .unwrap_or_else(|infallible| match infallible {});
 
-    fn background(&self) -> Rgb888 {
-        self.background
-    }
+        let pixel_buffer = PixelBuffer::init_static(&statics.pixel_buffer);
+        let mut display = CydDisplayEsp::new_from_device(
+            lcd_spi_device,
+            lcd_dc_pin,
+            lcd_rst_pin,
+            lcd_backlight_pin,
+            orientation,
+            background,
+            foreground,
+            font,
+            pixel_buffer,
+        )?;
+        let touch = CydTouchUncalibratedEsp::from_device(touch_spi_device, touch_irq_pin);
 
-    fn foreground(&self) -> Rgb888 {
-        self.foreground
-    }
+        let (touch, ensure_calibration_outcome) = ensure_calibration(
+            &mut display,
+            touch,
+            calibration_flash_block,
+            recalibration_button,
+            confirmed_message,
+        )
+        .await
+        .map_err(|error| match error.kind {
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
+                cyd_error,
+            ) => crate::Error::from(cyd_error),
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
+                flash_error,
+            ) => flash_error,
+        })?;
 
-    fn background_565(&self) -> Rgb565 {
-        self.background565
-    }
-
-    fn foreground_565(&self) -> Rgb565 {
-        self.foreground565
-    }
-
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> Self::Frame<'_> {
-        CydFrameOneSpi {
-            rectangle,
-            tile_top_left,
-            foreground565: self.foreground565,
-            font: self.font,
-        }
-    }
-
-    fn fill_rectangle(
-        &mut self,
-        _rectangle: Rectangle,
-        _color: Rgb565,
-    ) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    fn fill_contiguous<I>(
-        &mut self,
-        _rectangle: Rectangle,
-        _pixels: I,
-    ) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = Rgb565>,
-    {
-        Ok(())
-    }
-}
-
-impl CydTouch for CydTouchOneSpi {
-    type Error = Infallible;
-    type Uncalibrated = CydTouchUncalibratedOneSpi;
-
-    fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
-        Ok(None)
-    }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config
-    }
-
-    fn decalibrate(self) -> Self::Uncalibrated {
-        CydTouchUncalibratedOneSpi
-    }
-}
-
-impl CydTouchUncalibrated for CydTouchUncalibratedOneSpi {
-    type Error = Infallible;
-    type Calibrated = CydTouchOneSpi;
-
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
-        Ok(None)
-    }
-
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
-        CydTouchOneSpi { calibration_config }
-    }
-}
-
-impl DrawTarget for CydFrameOneSpi {
-    type Color = Rgb565;
-    type Error = Infallible;
-
-    fn draw_iter<I>(&mut self, _pixels: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = Pixel<Self::Color>>,
-    {
-        Ok(())
-    }
-}
-
-impl Dimensions for CydFrameOneSpi {
-    fn bounding_box(&self) -> Rectangle {
-        self.rectangle
-    }
-}
-
-impl PixelTarget for CydFrameOneSpi {
-    fn width(&self) -> usize {
-        self.rectangle.size.width as usize
-    }
-
-    fn height(&self) -> usize {
-        self.rectangle.size.height as usize
-    }
-
-    fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
-}
-
-impl CydFrame for CydFrameOneSpi {
-    type Error = Infallible;
-
-    fn tile_top_left(&self) -> Point {
-        self.tile_top_left
-    }
-
-    fn rectangle(&self) -> Rectangle {
-        self.rectangle
-    }
-
-    fn fill(&mut self, _color: Rgb565) -> &mut Self {
-        self
-    }
-
-    fn write_text(&mut self, _text: &str) -> &mut Self {
-        self
-    }
-
-    fn copy_from_565(&mut self, _src: &[u16]) -> Result<(), device_envoy_core::Error> {
-        Ok(())
-    }
-
-    async fn flush(&mut self) -> Result<(), Infallible> {
-        Ok(())
+        Ok((Self { display, touch }, ensure_calibration_outcome))
     }
 }
 
 impl Cyd for CydEspOneSpi {
-    type Error = Infallible;
-    type Display = CydDisplayOneSpi;
-    type Touch = CydTouchOneSpi;
+    type Error = CydError;
+    type Display = CydDisplayEsp<SharedSpiDevice>;
+    type Touch = CydTouchEsp<SharedSpiDevice>;
 
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)

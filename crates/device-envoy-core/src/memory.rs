@@ -1100,6 +1100,7 @@ mod tests {
         ButtonMemory, CydMemory, CydMemoryError, CydTouchMemory, CydTouchUncalibratedMemory,
         FlashBlockMemory,
     };
+    use crate::cyd::CydParts;
     use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,

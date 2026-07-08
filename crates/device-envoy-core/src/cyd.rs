@@ -164,7 +164,7 @@ use embedded_graphics::pixelcolor::Rgb888;
 #     Rgb888::WHITE,
 #     &FONT_9X15_BOLD,
 # );
-# cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
+cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
 assert!(matches!(
     Cyd::touch(&mut cyd).read()?,
     Some(TouchEvent::Down { point }) if point == Point::new(160, 120)

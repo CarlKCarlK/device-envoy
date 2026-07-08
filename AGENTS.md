@@ -618,6 +618,8 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 This pattern keeps `main` free of `?` (which `-> !` forbids) while keeping `inner_main` ergonomic.
 Prefer consuming the `Result<Infallible>` post-condition with `unwrap_err()` in `main` rather than re-matching the unreachable `Ok` branch.
 
+**File layout:** order top-level items as includes/constants, then `main`/`inner_main` (the entry point), then error types, other helper types, and helper functions. Error enums (e.g. `MainError`) and their `From` impls belong after `inner_main`, not before it — readers should see the program flow before its error plumbing.
+
 ### init_and_start! Macro (ESP)
 
 Use `init_and_start!(p)` as the **first statement** inside `#[esp_rtos::main]` (or `inner_main`). It:

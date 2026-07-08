@@ -326,7 +326,10 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         lcd_sda_pin: 4,
         lcd_scl_pin: 5,
         servo_pin: 10,
-        servo2_pin: 18,
+        // GPIO3, not 18: servo2_pin must differ from button_pin (both dual-servo and
+        // servo+button examples need servo_pin/servo2_pin/button_pin to be three distinct
+        // GPIOs; they previously collided on 18, breaking servos_calibrate compilation).
+        servo2_pin: 3,
         led4_cell_pins: [10, 9, 8, 7],
         led4_segment_pins: [4, 3, 2, 1, 0, 5, 18, 19],
         ir_pin_rx_channel: (7, 2),

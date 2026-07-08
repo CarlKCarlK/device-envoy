@@ -9,13 +9,13 @@
 //! Wiring:
 //! - Button -> GPIO18 to GND (`PressedTo::Ground`)
 //! - Servo A signal -> GPIO10
-//! - Servo B signal -> GPIO18
+//! - Servo B signal -> GPIO3
 //! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
 //! - Servo ground -> GND (shared with ESP32 GND)
 //! - If using a separate 5V supply, connect supply GND to ESP32 GND (common ground required)
 //! - Do not power a servo directly from a GPIO pin
 //! - Common red/brown/yellow wiring (each servo):
-//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10 / GPIO18)
+//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10 / GPIO3)
 
 #![no_std]
 #![no_main]
@@ -47,7 +47,7 @@ servo! {
 
 servo! {
     ServoB {
-        pin: GPIO18,
+        pin: GPIO3,
         timer: Timer1,
         channel: Channel1,
     }
@@ -66,11 +66,11 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     info!("servos_calibrate: starting");
     info!(
         "servos_calibrate: button=GPIO{}, servo_a=GPIO{}, servo_b=GPIO{}",
-        18, 10, 18
+        18, 10, 3
     );
 
     let servo_a = ServoA::new(&ledc, p.GPIO10)?;
-    let servo_b = ServoB::new(&ledc, p.GPIO18)?;
+    let servo_b = ServoB::new(&ledc, p.GPIO3)?;
     let mut button = ButtonEsp::new(p.GPIO18, PressedTo::Ground);
 
     info!("servos_calibrate: startup sweep 0 -> 180 -> 0");
@@ -109,7 +109,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
 fn set_both(servo_a: &ServoEsp, servo_b: &ServoEsp, degrees: u16) {
     info!(
-        "servos_calibrate: set both servos to {} degrees (GPIO10, GPIO18)",
+        "servos_calibrate: set both servos to {} degrees (GPIO10, GPIO3)",
         degrees
     );
     servo_a.set_degrees(degrees);

@@ -3,13 +3,13 @@
 //! Wiring:
 //! - Force-portal button -> GPIO18 to GND (`PressedTo::Ground`)
 //! - Bottom servo signal -> GPIO10
-//! - Top servo signal -> GPIO18
+//! - Top servo signal -> GPIO3
 //! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
 //! - Servo ground -> GND (shared with ESP32 GND)
 //! - If using a separate 5V supply, connect supply GND to ESP32 GND (common ground required)
 //! - Do not power a servo directly from a GPIO pin
 //! - Common red/brown/yellow wiring (each servo):
-//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10 / GPIO18)
+//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10 / GPIO3)
 //! Wi-Fi enabled clock that visualizes time with two hobby servos.
 
 #![no_std]
@@ -62,7 +62,7 @@ servo_player! {
 
 servo_player! {
     TopServoPlayer {
-        pin: GPIO18,
+        pin: GPIO3,
         timer: Timer1,
         channel: Channel1,
         direction: Direction::Reverse,
@@ -97,7 +97,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let bottom_servo_player = BottomServoPlayer::new(&ledc, p.GPIO10, spawner)?;
-    let top_servo_player = TopServoPlayer::new(&ledc, p.GPIO18, spawner)?;
+    let top_servo_player = TopServoPlayer::new(&ledc, p.GPIO3, spawner)?;
 
     let servo_clock_display = ServoClockDisplay::new(bottom_servo_player, top_servo_player);
     let servo_clock_display_ref = &servo_clock_display;

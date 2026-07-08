@@ -4,13 +4,13 @@
 //!
 //! Wiring:
 //! - Servo A signal -> GPIO10
-//! - Servo B signal -> GPIO18
+//! - Servo B signal -> GPIO3
 //! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
 //! - Servo ground -> GND (shared with ESP32 GND)
 //! - If using a separate 5V supply, connect supply GND to ESP32 GND (common ground required)
 //! - Do not power a servo directly from a GPIO pin
 //! - Common red/brown/yellow wiring (each servo):
-//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10 or GPIO18)
+//!   red -> 5V, brown -> GND, yellow -> signal (GPIO10 or GPIO3)
 
 #![no_std]
 #![no_main]
@@ -36,7 +36,7 @@ servo! {
 
 servo! {
     ServoB {
-        pin: GPIO18,
+        pin: GPIO3,
         timer: Timer1,
         channel: Channel1,
     }
@@ -55,7 +55,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     info!("Starting dual servo example");
 
     let servo_a = ServoA::new(&ledc, p.GPIO10)?;
-    let servo_b = ServoB::new(&ledc, p.GPIO18)?;
+    let servo_b = ServoB::new(&ledc, p.GPIO3)?;
 
     info!("Moving servos in opposite directions for 2 seconds");
 

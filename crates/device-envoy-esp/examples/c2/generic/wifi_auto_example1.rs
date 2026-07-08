@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)
+//! - Force-portal button -> GPIO18 to GND (`PressedTo::Ground`)
 //!
 #![no_std]
 #![no_main]
@@ -55,10 +55,10 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!("wifi_auto_example1: starting");
-    info!("wifi_auto_example1: press button on GPIO6 to force captive portal");
+    info!("wifi_auto_example1: press button on GPIO18 to force captive portal");
 
     let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO18, PressedTo::Ground);
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,

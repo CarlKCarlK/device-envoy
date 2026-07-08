@@ -50,7 +50,7 @@ use std::{
 #[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Cyd, CydParts, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated,
     display::{CydFrame, RectanglePixels},
     touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };

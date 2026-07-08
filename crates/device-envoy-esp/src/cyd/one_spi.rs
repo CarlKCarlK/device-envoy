@@ -124,8 +124,7 @@ impl CydEspOneSpi {
             .with_miso(miso_pin);
 
         static SHARED_SPI: StaticCell<SharedSpiMutex> = StaticCell::new();
-        let shared_spi: &'static SharedSpiMutex =
-            SHARED_SPI.init(Mutex::new(RefCell::new(spi)));
+        let shared_spi: &'static SharedSpiMutex = SHARED_SPI.init(Mutex::new(RefCell::new(spi)));
 
         let lcd_cs = Output::new(
             lcd_cs_pin,

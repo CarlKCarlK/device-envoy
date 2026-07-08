@@ -16,7 +16,7 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    Cyd, CydParts, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated,
     display::{CydFrame, Orientation},
     touch::{
         RawPoint, RawTouchEvent, TouchEvent,

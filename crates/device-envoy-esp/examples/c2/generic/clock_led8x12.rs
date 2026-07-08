@@ -6,7 +6,7 @@
 //!
 //! Wiring:
 //! - NeoPixel-style (WS2812) 8x12 panel data input -> GPIO18
-//! - Force-portal button -> GPIO6 to GND
+//! - Force-portal button -> GPIO18 to GND
 //! - Panel power -> 5V (or per panel spec), shared GND with board
 //! - Uses SPI output engine on this board profile (`SPI2`)
 
@@ -54,7 +54,7 @@ const LED_LAYOUT_8X12: LedLayout<96, 8, 12> =
 
 button_watch! {
     ForcePortalButtonWatch {
-        pin: GPIO6,
+        pin: GPIO18,
     }
 }
 
@@ -88,7 +88,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let [wifi_auto_flash_block, mut timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
-    let button6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    let button6 = ForcePortalButtonWatch::new(p.GPIO18, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,

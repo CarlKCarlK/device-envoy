@@ -27,7 +27,7 @@ use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydParts, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };

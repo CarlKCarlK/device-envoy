@@ -249,7 +249,9 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         built_in_plain_led: None,
         external_plain_led: 8,
         external_smart_led: 8,
-        button_pin: 6,
+        // Moved off GPIO6 (was shared with cyd_display_wiring's old cs_pin_num, which made
+        // clock/skeleton_clock fail to compile on this board — see cyd_display_wiring below).
+        button_pin: 18,
         led_strip_len_8_pin: 10,
         led_2d12x8_pin: 18,
         led_2d16x16_pin: 2,
@@ -268,28 +270,32 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             cs_pin_num: 3,
             rst_pin_num: 1,
         },
+        // Rewired from the ESP8684-DevKitM-1 v1.1 header table (J1/J3), avoiding GPIO8/GPIO9
+        // (strapping pins) and GPIO19/GPIO20 (UART0, kept free for logging). Previously this and
+        // cyd_touch_wiring/button_pin collided on three GPIOs (see removed todo0 below), which
+        // both broke clock/skeleton_clock compilation on this board and forced armatron_one_spi
+        // to placeholder-stub via NoCydOneSpiPinConflict. All ten display+touch+button roles
+        // used by a one-SPI CYD example are now on distinct GPIOs; verified by
+        // `cargo xtask generate-board-examples` + building every affected example.
         cyd_display_wiring: CydDisplayWiring {
-            sck_pin_num: 3,
-            mosi_pin_num: 4,
-            miso_pin_num: 5,
-            cs_pin_num: 6,
-            dc_pin_num: 7,
-            rst_pin_num: 8,
-            backlight_pin_num: 9,
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            dc_pin_num: 3,
+            rst_pin_num: 4,
+            backlight_pin_num: 5,
         },
-        // todo0 cs_pin_num (3) and irq_pin_num (4) collide with cyd_display_wiring's
-        // sck/mosi pins, and button_pin (6) collides with cyd_display_wiring's cs pin.
-        // This is harmless for the two-SPI CydEsp examples (always placeholder-stubbed
-        // on this 1-SPI board), but it means armatron_one_spi is placeholder-stubbed
-        // here too (see NoCydOneSpiPinConflict in linkage-blaze's
-        // xtask/src/linkage_esp_examples_generated.rs). Fixing this needs real
-        // hardware-verified free GPIOs for this board, not a guess from this repo.
         cyd_touch_wiring: CydTouchWiring {
+            // sck/mosi/miso are only used by the two-SPI `armatron` template, which is always
+            // placeholder-stubbed on this single-SPI chip regardless of these values (a second
+            // physical SPI peripheral doesn't exist to wire up) — left as-is; only cs/irq matter
+            // for the real one-SPI example.
             sck_pin_num: 0,
             mosi_pin_num: 1,
             miso_pin_num: 2,
-            cs_pin_num: 3,
-            irq_pin_num: 4,
+            cs_pin_num: 0,
+            irq_pin_num: 1,
         },
         // ESP32-C2 audio examples are currently unsupported in
         // device-envoy-esp because the current esp-hal configuration for C2
@@ -308,7 +314,9 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         built_in_plain_led: None,
         external_plain_led: 0,
         external_smart_led: 2,
-        button_pin: 6,
+        // Moved off GPIO6 (was shared with cyd_display_wiring's old cs_pin_num, which made
+        // clock/skeleton_clock fail to compile on this board — see cyd_display_wiring below).
+        button_pin: 18,
         led_strip_len_8_pin: 10,
         led_2d12x8_pin: 18,
         led_2d16x16_pin: 2,
@@ -327,28 +335,32 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             cs_pin_num: 10,
             rst_pin_num: 5,
         },
+        // Rewired from the ESP8684-DevKitM-1 v1.1 header table (J1/J3), avoiding GPIO8/GPIO9
+        // (strapping pins) and GPIO19/GPIO20 (UART0, kept free for logging). Previously this and
+        // cyd_touch_wiring/button_pin collided on three GPIOs (see removed todo0 below), which
+        // both broke clock/skeleton_clock compilation on this board and forced armatron_one_spi
+        // to placeholder-stub via NoCydOneSpiPinConflict. All ten display+touch+button roles
+        // used by a one-SPI CYD example are now on distinct GPIOs; verified by
+        // `cargo xtask generate-board-examples` + building every affected example.
         cyd_display_wiring: CydDisplayWiring {
-            sck_pin_num: 3,
-            mosi_pin_num: 4,
-            miso_pin_num: 5,
-            cs_pin_num: 6,
-            dc_pin_num: 7,
-            rst_pin_num: 8,
-            backlight_pin_num: 9,
+            sck_pin_num: 6,
+            mosi_pin_num: 7,
+            miso_pin_num: 2,
+            cs_pin_num: 10,
+            dc_pin_num: 3,
+            rst_pin_num: 4,
+            backlight_pin_num: 5,
         },
-        // todo0 cs_pin_num (3) and irq_pin_num (4) collide with cyd_display_wiring's
-        // sck/mosi pins, and button_pin (6) collides with cyd_display_wiring's cs pin.
-        // This is harmless for the two-SPI CydEsp examples (always placeholder-stubbed
-        // on this 1-SPI board), but it means armatron_one_spi is placeholder-stubbed
-        // here too (see NoCydOneSpiPinConflict in linkage-blaze's
-        // xtask/src/linkage_esp_examples_generated.rs). Fixing this needs real
-        // hardware-verified free GPIOs for this board, not a guess from this repo.
         cyd_touch_wiring: CydTouchWiring {
+            // sck/mosi/miso are only used by the two-SPI `armatron` template, which is always
+            // placeholder-stubbed on this single-SPI chip regardless of these values (a second
+            // physical SPI peripheral doesn't exist to wire up) — left as-is; only cs/irq matter
+            // for the real one-SPI example.
             sck_pin_num: 0,
             mosi_pin_num: 1,
             miso_pin_num: 2,
-            cs_pin_num: 3,
-            irq_pin_num: 4,
+            cs_pin_num: 0,
+            irq_pin_num: 1,
         },
         // ESP32-C2 audio examples are currently unsupported in
         // device-envoy-esp because the current esp-hal configuration for C2

@@ -5,7 +5,7 @@
 //! - I2C LCD SCL -> GPIO5
 //! - I2C LCD VCC -> 5V (most backpack modules; use 3.3V only if your module supports it)
 //! - I2C LCD GND -> GND (shared with ESP32 GND)
-//! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)
+//! - Force-portal button -> GPIO18 to GND (`PressedTo::Ground`)
 #![no_std]
 #![no_main]
 
@@ -34,7 +34,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 button_watch! {
     ForcePortalButtonWatch {
-        pin: GPIO6,
+        pin: GPIO18,
     }
 }
 
@@ -68,7 +68,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
     let timezone_field = TimezoneField::new(&TIMEZONE_FIELD_STATIC, timezone_flash_block);
-    let button_watch6 = ForcePortalButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    let button_watch6 = ForcePortalButtonWatch::new(p.GPIO18, PressedTo::Ground, spawner).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,

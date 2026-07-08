@@ -7,7 +7,7 @@
 //! - Long press: reset both servos to 0.
 //!
 //! Wiring:
-//! - Button -> GPIO6 to GND (`PressedTo::Ground`)
+//! - Button -> GPIO18 to GND (`PressedTo::Ground`)
 //! - Servo A signal -> GPIO10
 //! - Servo B signal -> GPIO18
 //! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
@@ -66,12 +66,12 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     info!("servos_calibrate: starting");
     info!(
         "servos_calibrate: button=GPIO{}, servo_a=GPIO{}, servo_b=GPIO{}",
-        6, 10, 18
+        18, 10, 18
     );
 
     let servo_a = ServoA::new(&ledc, p.GPIO10)?;
     let servo_b = ServoB::new(&ledc, p.GPIO18)?;
-    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO18, PressedTo::Ground);
 
     info!("servos_calibrate: startup sweep 0 -> 180 -> 0");
     set_both(&servo_a, &servo_b, 0);

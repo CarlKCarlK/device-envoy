@@ -1,5 +1,5 @@
 //! Wiring:
-//! - Button -> GPIO6 to GND (`PressedTo::Ground`)
+//! - Button -> GPIO18 to GND (`PressedTo::Ground`)
 //!
 #![no_std]
 #![no_main]
@@ -29,7 +29,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO18, PressedTo::Ground);
     info!("button_example1: waiting for short/long presses");
 
     // Wait for a press without measuring duration.

@@ -6,7 +6,7 @@
 //! - Do not power a servo directly from a GPIO pin
 //! - Common red/brown/yellow wiring:
 //!   red -> 5V, brown -> GND, yellow -> signal (GPIO10)
-//! - Button -> GPIO6 to GND (`PressedTo::Ground`)
+//! - Button -> GPIO18 to GND (`PressedTo::Ground`)
 //!
 #![no_std]
 #![no_main]
@@ -46,7 +46,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p, ledc: ledc);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    let mut button = ButtonEsp::new(p.GPIO18, PressedTo::Ground);
     let servo_player10 = ServoPlayer10::new(&ledc, p.GPIO10, spawner)?;
 
     loop {

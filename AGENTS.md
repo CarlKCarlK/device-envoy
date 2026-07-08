@@ -168,6 +168,12 @@ When adding new examples, also add the standard cargo aliases in `.cargo/config.
 - In trait-migration examples and doctests, prefer inline trait bounds (`impl Trait<...>`) over `where` clauses when readability allows.
 - In trait-migration examples and doctests, avoid placeholder generic type names like `WifiAutoType`; use `impl Trait` or a concrete descriptive type name when a type parameter is required.
 
+### CYD Doctest Previews
+
+- Every CYD-related doctest that renders visible output should have a generated golden PNG and assert against it, typically in hidden doctest lines so the visible example stays focused on API usage.
+- Every CYD-related doctest that renders visible output should also show a preview image in the rendered docs, and that preview should appear after the code example, not before it.
+- For rustdoc-hosted CYD previews, prefer the existing `embed-doc-image` pattern with assets checked into `docs/assets`; place the embedded-image attribute on the same documented item that renders the preview.
+
 Spelling: use American over British spelling.
 
 When making up variable names for examples and elsewhere, never use the prefix "My". Avoid this prefix.

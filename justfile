@@ -13,7 +13,7 @@ show-docs-esp:
 
 # Update core docs only
 update-docs-core:
-    cargo doc -p device-envoy-core --no-deps --features host,wasm
+    cargo doc -p device-envoy-core --no-deps --features host,wasm,doc-images
 
 # Update ESP docs only
 update-docs-esp:

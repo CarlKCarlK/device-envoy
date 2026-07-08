@@ -37,6 +37,10 @@ use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 ///
 /// For backends that support owned deconstruction and reassembly, see [`CydParts`].
 #[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!("cyd_trait_preview", "docs/assets/cyd_trait_preview.png")
+)]
+#[cfg_attr(
     feature = "host",
     doc = r#"
 
@@ -50,6 +54,7 @@ use device_envoy_core::cyd::{
 };
 use embedded_graphics::pixelcolor::Rgb888;
 # use device_envoy_core::memory::CydMemory;
+# use device_envoy_core::memory::assert_framebuffer_matches_expected_png;
 # use embedded_graphics::{
 #     mono_font::ascii::FONT_9X15_BOLD,
 #     pixelcolor::Rgb565,
@@ -79,10 +84,19 @@ if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch.rea
 }
 frame.flush().await?;
 # assert_eq!(cyd.pixel(160, 120), Rgb565::RED);
+# if let Err(error) = assert_framebuffer_matches_expected_png(
+#     &cyd,
+#     env!("CARGO_MANIFEST_DIR"),
+#     "cyd_trait_preview.png",
+# ) {
+#     panic!("{error}");
+# }
 # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 # })?;
 # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 ```
+
+![CYD trait preview][cyd_trait_preview]
 "#
 )]
 pub trait Cyd: Sized {
@@ -196,7 +210,7 @@ use embedded_graphics::pixelcolor::Rgb888;
 #     prelude::{Point, RgbColor, Size},
 # };
 # futures_executor::block_on(async {
-# let cyd = CydMemory::new(
+# let mut cyd = CydMemory::new(
 #     Size::new(320, 240),
 #     Rgb888::BLACK,
 #     Rgb888::WHITE,
@@ -362,18 +376,25 @@ assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground()));
     /// draw in frame-local coordinates.
     ///
     #[cfg_attr(
+        feature = "doc-images",
+        doc = ::embed_doc_image::embed_image!(
+            "cyd_frame_mut_with_tile_top_left_preview",
+            "docs/assets/cyd_frame_mut_with_tile_top_left_preview.png"
+        )
+    )]
+    #[cfg_attr(
         feature = "host",
         doc = r#"
 
 ```rust
 use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
 use device_envoy_core::UnwrapInfallible;
-use device_envoy_core::memory::CydMemory;
+use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
 use embedded_graphics::{
-    Pixel,
+    Drawable,
     pixelcolor::{Rgb565, Rgb888},
-    prelude::{DrawTarget, Point, RgbColor, Size},
-    primitives::Rectangle,
+    prelude::{Point, Primitive, RgbColor, Size},
+    primitives::{PrimitiveStyle, Rectangle},
 };
 # use embedded_graphics::mono_font::ascii::FONT_9X15_BOLD;
 # futures_executor::block_on(async {
@@ -385,18 +406,32 @@ use embedded_graphics::{
 # );
 # let mut display = memory_cyd.display();
 let mut frame = display.frame_mut_with_tile_top_left(
-    Rectangle::new(Point::new(10, 20), Size::new(4, 3)),
-    Point::new(10, 20),
+    Rectangle::new(Point::new(32, 24), Size::new(48, 32)),
+    Point::new(32, 24),
 );
-frame
-    .draw_iter([Pixel(Point::new(11, 21), Rgb565::RED)])
+frame.fill(Rgb565::GREEN);
+Rectangle::new(Point::new(36, 28), Size::new(6, 6))
+    .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
+    .draw(&mut frame)
+    .unwrap_infallible();
+Rectangle::new(Point::new(70, 46), Size::new(6, 6))
+    .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
+    .draw(&mut frame)
     .unwrap_infallible();
 frame.flush().await?;
-assert_eq!(memory_cyd.pixel(11, 21), Rgb565::RED);
+# if let Err(error) = assert_framebuffer_matches_expected_png(
+#     &memory_cyd,
+#     env!("CARGO_MANIFEST_DIR"),
+#     "cyd_frame_mut_with_tile_top_left_preview.png",
+# ) {
+#     panic!("{error}");
+# }
 # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 # })?;
 # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 ```
+
+![CYD tiled frame preview][cyd_frame_mut_with_tile_top_left_preview]
 "#
     )]
     fn frame_mut_with_tile_top_left(
@@ -411,12 +446,19 @@ assert_eq!(memory_cyd.pixel(11, 21), Rgb565::RED);
     /// at the rectangle's top-left with no separate position argument.
     ///
     #[cfg_attr(
+        feature = "doc-images",
+        doc = ::embed_doc_image::embed_image!(
+            "cyd_frame_mut_preview",
+            "docs/assets/cyd_frame_mut_preview.png"
+        )
+    )]
+    #[cfg_attr(
         feature = "host",
         doc = r#"
 
 ```rust
 use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
-use device_envoy_core::memory::CydMemory;
+use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
 use embedded_graphics::{
     pixelcolor::{Rgb565, Rgb888},
     prelude::{RgbColor, Size},
@@ -434,13 +476,19 @@ use embedded_graphics::{
 let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(50, 40)));
 frame.fill(Rgb565::RED);
 frame.flush().await?;
-assert_eq!(memory_cyd.pixel(10, 10), Rgb565::RED);
-assert_eq!(memory_cyd.pixel(59, 49), Rgb565::RED);
-assert_eq!(memory_cyd.pixel(9, 9), Rgb565::BLACK);
+# if let Err(error) = assert_framebuffer_matches_expected_png(
+#     &memory_cyd,
+#     env!("CARGO_MANIFEST_DIR"),
+#     "cyd_frame_mut_preview.png",
+# ) {
+#     panic!("{error}");
+# }
 # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 # })?;
 # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 ```
+
+![CYD frame preview][cyd_frame_mut_preview]
 "#
     )]
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {

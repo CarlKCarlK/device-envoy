@@ -1,3 +1,7 @@
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!("cyd_memory_bitmap", "docs/assets/cyd_memory_bitmap.png")
+)]
 //! In-memory [`Button`] mocks and a CYD test harness for host-side tests.
 //!
 //! Requires the `host` feature. Script touch and button input into
@@ -8,27 +12,74 @@
 //! ```rust
 //! use device_envoy_core::cyd::{Cyd, CydDisplay};
 //! use device_envoy_core::memory::CydMemory;
-//! use device_envoy_core::cyd::display::CydFrame;
+//! use device_envoy_core::cyd::display::{CydFrame, DrawItem, Image565View};
 //! use embedded_graphics::{
 //!     mono_font::ascii::FONT_9X15_BOLD,
-//!     pixelcolor::{Rgb565, Rgb888},
-//!     prelude::{RgbColor, Size},
+//!     pixelcolor::Rgb888,
+//!     prelude::{Point, RgbColor, Size},
 //! };
 //! use futures_executor::block_on;
 //!
+//! const BITMAP_WIDTH: usize = 64;
+//! const BITMAP_HEIGHT: usize = 64;
+//! const BITMAP_PIXEL_COUNT: usize = BITMAP_WIDTH * BITMAP_HEIGHT;
+//! const BITMAP_COLOR0: u16 = 0xfbe0;
+//! const BITMAP_COLOR1: u16 = 0x051f;
+//! const BITMAP_COLOR2: u16 = 0xffff;
+//!
+//! const fn cyd_memory_bitmap_pixels() -> [u16; BITMAP_PIXEL_COUNT] {
+//!     let mut pixels = [0u16; BITMAP_PIXEL_COUNT];
+//!     let mut y = 0;
+//!     while y < BITMAP_HEIGHT {
+//!         let mut x = 0;
+//!         while x < BITMAP_WIDTH {
+//!             let edge = x < 2 || y < 2 || x >= BITMAP_WIDTH - 2 || y >= BITMAP_HEIGHT - 2;
+//!             let diagonal = x == y || x + y == BITMAP_WIDTH - 1;
+//!             pixels[y * BITMAP_WIDTH + x] = if edge {
+//!                 BITMAP_COLOR2
+//!             } else if diagonal {
+//!                 BITMAP_COLOR1
+//!             } else {
+//!                 BITMAP_COLOR0
+//!             };
+//!             x += 1;
+//!         }
+//!         y += 1;
+//!     }
+//!     pixels
+//! }
+//!
+//! static BITMAP_PIXELS: [u16; BITMAP_PIXEL_COUNT] = cyd_memory_bitmap_pixels();
+//!
 //! let mut cyd_memory = CydMemory::new(
-//!     Size::new(8, 8),
+//!     Size::new(320, 240),
 //!     Rgb888::BLACK,
 //!     Rgb888::WHITE,
 //!     &FONT_9X15_BOLD,
 //! );
 //! let (mut display, _touch) = Cyd::parts(&mut cyd_memory);
 //! let mut frame = display.full_frame_mut();
-//! frame.fill(Rgb565::RED);
+//! frame.write_text("Hello CYD");
+//! DrawItem::Bitmap {
+//!     view: Image565View::new(
+//!         &BITMAP_PIXELS,
+//!         Size::new(BITMAP_WIDTH as u32, BITMAP_HEIGHT as u32),
+//!     ),
+//!     top_left: Point::new(128, 88),
+//! }
+//! .draw(&mut frame);
 //! block_on(frame.flush())?;
-//! assert_eq!(cyd_memory.pixel(0, 0), Rgb565::RED);
+//! # if let Err(error) = device_envoy_core::memory::assert_framebuffer_matches_expected_png(
+//! #     &cyd_memory,
+//! #     env!("CARGO_MANIFEST_DIR"),
+//! #     "cyd_memory_bitmap.png",
+//! # ) {
+//! #     panic!("{error}");
+//! # }
 //! # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
 //! ```
+//!
+//! ![CydMemory framebuffer preview][cyd_memory_bitmap]
 
 #[cfg(test)]
 use core::ops::Range;

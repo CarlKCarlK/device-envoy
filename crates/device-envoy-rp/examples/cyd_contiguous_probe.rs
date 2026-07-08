@@ -15,7 +15,7 @@ use defmt_rtt as _;
 use device_envoy_core::cyd::CydDisplay as _;
 use device_envoy_rp::{
     Result,
-    cyd::{CydDisplayRp, CydRp, CydStaticRp, DEFAULT_FONT, Orientation},
+    cyd::{CydDisplayRp, CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation},
 };
 use embassy_executor::Spawner;
 use embassy_time::Timer;
@@ -48,6 +48,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.PIN_20,
         p.PIN_21,
         p.PIN_22,
+        DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,
         Rgb888::new(0, 0, 0),
         Rgb888::new(255, 255, 255),

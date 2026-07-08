@@ -37,7 +37,7 @@ use device_envoy_core::cyd::{
     },
 };
 use device_envoy_core::pixel_target::PixelTarget;
-pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DISPLAY_SPI_HZ};
+pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DEFAULT_DISPLAY_SPI_HZ};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
@@ -344,6 +344,7 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_spi_hz: u32,
         orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
@@ -359,6 +360,7 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
             display_dc_pin,
             display_rst_pin,
             display_backlight_pin,
+            display_spi_hz,
             orientation,
         )?;
         Self::from_display_device(display, background, foreground, font, pixel_buffer)
@@ -424,6 +426,7 @@ impl CydEsp {
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_spi_hz: u32,
         orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
@@ -448,6 +451,7 @@ impl CydEsp {
             display_dc_pin,
             display_rst_pin,
             display_backlight_pin,
+            display_spi_hz,
             orientation,
             background,
             foreground,
@@ -511,6 +515,7 @@ impl CydEspUncalibrated {
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_spi_hz: u32,
         orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
@@ -533,6 +538,7 @@ impl CydEspUncalibrated {
                 display_dc_pin,
                 display_rst_pin,
                 display_backlight_pin,
+                display_spi_hz,
                 orientation,
                 background,
                 foreground,

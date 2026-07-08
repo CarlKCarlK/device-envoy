@@ -27,8 +27,8 @@ use log::info;
 use device_envoy_esp::{
     Result,
     cyd::{
-        CydDisplay as _, CydDisplayEsp, CydEsp, CydStaticEsp, DEFAULT_FONT, Orientation,
-        tiling::TileGrid,
+        CydDisplay as _, CydDisplayEsp, CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
+        Orientation, tiling::TileGrid,
     },
     init_and_start,
 };
@@ -63,6 +63,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO5,
         p.GPIO7,
         p.GPIO8,
+        DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,
         embedded_graphics::pixelcolor::Rgb888::new(10, 10, 12),
         embedded_graphics::pixelcolor::Rgb888::new(230, 230, 230),

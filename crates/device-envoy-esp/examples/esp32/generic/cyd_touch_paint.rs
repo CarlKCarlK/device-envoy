@@ -43,8 +43,8 @@ use device_envoy_esp::{
     Result,
     button::{ButtonEsp, PressedTo},
     cyd::{
-        CydDisplay as _, CydEsp, CydEspUncalibrated, CydStaticEsp, CydTouch as _, DEFAULT_FONT,
-        Orientation,
+        CydDisplay as _, CydEsp, CydEspUncalibrated, CydStaticEsp, CydTouch as _,
+        DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation,
     },
     flash_block::FlashBlockEsp,
     init_and_start,
@@ -79,6 +79,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO2,
         p.GPIO4,
         p.GPIO21,
+        DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,
         Rgb888::new(10, 10, 12),
         Rgb888::new(230, 230, 230),

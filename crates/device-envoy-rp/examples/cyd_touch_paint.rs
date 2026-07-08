@@ -33,8 +33,8 @@ use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressedTo},
     cyd::{
-        CydDisplay as _, CydRp, CydRpUncalibrated, CydStaticRp, CydTouch as _, DEFAULT_FONT,
-        Orientation,
+        CydDisplay as _, CydRp, CydRpUncalibrated, CydStaticRp, CydTouch as _,
+        DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation,
     },
     flash_block::FlashBlockRp,
 };
@@ -74,6 +74,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.PIN_20,
         p.PIN_21,
         p.PIN_22,
+        DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,
         Rgb888::new(10, 10, 12),
         Rgb888::new(230, 230, 230),

@@ -18,10 +18,7 @@ use embassy_rp::gpio::{Level, Output};
 use embassy_rp::spi::{Config as SpiConfig, Phase, Polarity, Spi};
 use embassy_time::Timer;
 use embedded_graphics::{
-    draw_target::DrawTarget,
-    pixelcolor::Rgb565,
-    prelude::RgbColor,
-    primitives::Rectangle,
+    draw_target::DrawTarget, pixelcolor::Rgb565, prelude::RgbColor, primitives::Rectangle,
 };
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use mipidsi::{
@@ -33,7 +30,7 @@ use mipidsi::{
 use panic_probe as _;
 use static_cell::StaticCell;
 
-const DISPLAY_SPI_HZ: u32 = 2_000_000;
+const DEFAULT_DISPLAY_SPI_HZ: u32 = 2_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
 #[embassy_executor::main]
@@ -49,7 +46,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     let spi_config = {
         let mut spi_config = SpiConfig::default();
-        spi_config.frequency = DISPLAY_SPI_HZ;
+        spi_config.frequency = DEFAULT_DISPLAY_SPI_HZ;
         spi_config.polarity = Polarity::IdleLow;
         spi_config.phase = Phase::CaptureOnFirstTransition;
         spi_config
@@ -105,35 +102,43 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         Timer::after_secs(2).await;
 
         info!("Filling GREEN");
-        display.fill_solid(&full_screen, Rgb565::GREEN).map_err(|_| {
-            device_envoy_rp::Error::CydDisplayFlush(
-                device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
-            )
-        })?;
+        display
+            .fill_solid(&full_screen, Rgb565::GREEN)
+            .map_err(|_| {
+                device_envoy_rp::Error::CydDisplayFlush(
+                    device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
+                )
+            })?;
         Timer::after_secs(2).await;
 
         info!("Filling BLUE");
-        display.fill_solid(&full_screen, Rgb565::BLUE).map_err(|_| {
-            device_envoy_rp::Error::CydDisplayFlush(
-                device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
-            )
-        })?;
+        display
+            .fill_solid(&full_screen, Rgb565::BLUE)
+            .map_err(|_| {
+                device_envoy_rp::Error::CydDisplayFlush(
+                    device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
+                )
+            })?;
         Timer::after_secs(2).await;
 
         info!("Filling WHITE");
-        display.fill_solid(&full_screen, Rgb565::WHITE).map_err(|_| {
-            device_envoy_rp::Error::CydDisplayFlush(
-                device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
-            )
-        })?;
+        display
+            .fill_solid(&full_screen, Rgb565::WHITE)
+            .map_err(|_| {
+                device_envoy_rp::Error::CydDisplayFlush(
+                    device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
+                )
+            })?;
         Timer::after_secs(2).await;
 
         info!("Filling BLACK");
-        display.fill_solid(&full_screen, Rgb565::BLACK).map_err(|_| {
-            device_envoy_rp::Error::CydDisplayFlush(
-                device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
-            )
-        })?;
+        display
+            .fill_solid(&full_screen, Rgb565::BLACK)
+            .map_err(|_| {
+                device_envoy_rp::Error::CydDisplayFlush(
+                    device_envoy_rp::cyd::CydDisplayRpFlushError::FlushFrameBuffer,
+                )
+            })?;
         Timer::after_secs(2).await;
     }
 }

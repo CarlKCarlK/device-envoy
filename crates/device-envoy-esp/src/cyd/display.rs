@@ -26,9 +26,11 @@ use static_cell::StaticCell;
 
 use super::{CydFrameEsp, Orientation, buffer::DynPixelBuffer};
 
-// 80 MHz measured 10.9 draw+flush fps but produced visible display corruption.
-/// SPI clock frequency for the display bus.
-pub const DISPLAY_SPI_HZ: u32 = 60_000_000;
+// 60 MHz is the current tested default for CYD display traffic on ESP: 80 MHz
+// was faster in measurement but produced visible corruption on the tested
+// panel.
+/// Default SPI clock for CYD display traffic on ESP boards.
+pub const DEFAULT_DISPLAY_SPI_HZ: u32 = 60_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
 type CydDisplaySpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
@@ -232,10 +234,11 @@ impl CydDisplayEsp<CydDisplaySpiDevice> {
         dc_pin: impl OutputPin + 'static,
         rst_pin: impl OutputPin + 'static,
         backlight_pin: impl OutputPin + 'static,
+        display_spi_hz: u32,
         orientation: Orientation,
     ) -> Result<CydDisplayEsp<CydDisplaySpiDevice>, CydDisplayEspInitError> {
         let spi_config = spi::master::Config::default()
-            .with_frequency(esp_hal::time::Rate::from_hz(DISPLAY_SPI_HZ))
+            .with_frequency(esp_hal::time::Rate::from_hz(display_spi_hz))
             .with_mode(spi::Mode::_0);
         let spi = spi::master::Spi::new(spi, spi_config)
             .map_err(|_| CydDisplayEspInitError::ConfigureDisplaySpi)?

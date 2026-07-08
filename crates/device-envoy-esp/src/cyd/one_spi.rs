@@ -3,7 +3,7 @@
 //! This module provides [`CydEspOneSpi`], which arbitrates a single physical SPI bus between
 //! the ILI9341 display and the XPT2046 touch controller using an
 //! `embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig` per peripheral (each
-//! with its own chip-select pin *and* its own SPI clock speed — see [`DISPLAY_SPI_HZ`] vs
+//! with its own chip-select pin *and* its own SPI clock speed — see [`DEFAULT_DISPLAY_SPI_HZ`] vs
 //! [`TOUCH_SPI_HZ`]). It reuses the same display/touch drivers as the two-SPI [`super::CydEsp`] —
 //! see [`super::CydDisplayEsp::new_from_device`] and [`super::CydTouchUncalibratedEsp::from_device`]
 //! — so the only new code here is building the shared bus itself.
@@ -26,8 +26,8 @@ use device_envoy_core::cyd::{
 };
 
 use super::{
-    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, DISPLAY_SPI_HZ,
-    Orientation, TOUCH_SPI_HZ, buffer::PixelBuffer,
+    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp,
+    DEFAULT_DISPLAY_SPI_HZ, Orientation, TOUCH_SPI_HZ, buffer::PixelBuffer,
 };
 use crate::flash_block::FlashBlockEsp;
 
@@ -43,7 +43,7 @@ type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, 
 /// Display and touch each get their own [`SpiDeviceWithConfig`] over the same underlying bus,
 /// with independent chip-select pins *and* independent clock speeds: [`SpiDeviceWithConfig`]
 /// re-applies its device's [`spi::master::Config`] to the shared bus immediately before each of
-/// its transactions, so the physical SPI clock switches between [`DISPLAY_SPI_HZ`] and
+/// its transactions, so the physical SPI clock switches between [`DEFAULT_DISPLAY_SPI_HZ`] and
 /// [`TOUCH_SPI_HZ`] as display and touch take turns using the bus. Because the two halves share
 /// state through that bus, this type implements [`Cyd`] but not
 /// [`CydParts`](device_envoy_core::cyd::CydParts) — see that trait's documentation for why
@@ -100,6 +100,7 @@ impl CydEspOneSpi {
         lcd_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
         lcd_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
         lcd_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_spi_hz: u32,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
         orientation: Orientation,
@@ -149,7 +150,7 @@ impl CydEspOneSpi {
         // overhead (ILI9341 addressing commands, CS/DC toggling, driver-side pixel iteration)
         // that doesn't scale with SPI clock, not a bug in this config-switching approach.
         let lcd_spi_config = spi::master::Config::default()
-            .with_frequency(esp_hal::time::Rate::from_hz(DISPLAY_SPI_HZ))
+            .with_frequency(esp_hal::time::Rate::from_hz(display_spi_hz))
             .with_mode(spi::Mode::_0);
         let touch_spi_config = spi::master::Config::default()
             .with_frequency(esp_hal::time::Rate::from_hz(TOUCH_SPI_HZ))

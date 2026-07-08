@@ -46,7 +46,7 @@ use static_cell::StaticCell;
 
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
-pub use display::{CydDisplayRpFlushError, CydDisplayRpInitError, DISPLAY_SPI_HZ};
+pub use display::{CydDisplayRpFlushError, CydDisplayRpInitError, DEFAULT_DISPLAY_SPI_HZ};
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchRpInitError, TOUCH_SPI_HZ};
 
@@ -299,6 +299,7 @@ impl CydDisplayRp {
         display_dc_pin: Peri<'static, Dc>,
         display_rst_pin: Peri<'static, Rst>,
         display_backlight_pin: Peri<'static, Backlight>,
+        display_spi_hz: u32,
         orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
@@ -323,6 +324,7 @@ impl CydDisplayRp {
             display_dc_pin,
             display_rst_pin,
             display_backlight_pin,
+            display_spi_hz,
             orientation,
             background,
             foreground,
@@ -341,6 +343,7 @@ impl CydDisplayRp {
         display_dc_pin: Peri<'static, Dc>,
         display_rst_pin: Peri<'static, Rst>,
         display_backlight_pin: Peri<'static, Backlight>,
+        display_spi_hz: u32,
         orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
@@ -365,6 +368,7 @@ impl CydDisplayRp {
             display_dc_pin,
             display_rst_pin,
             display_backlight_pin,
+            display_spi_hz,
             orientation,
         )?;
         let background565 = rgb565(background);
@@ -449,6 +453,7 @@ impl CydRp {
         display_dc_pin: Peri<'static, Dc>,
         display_rst_pin: Peri<'static, Rst>,
         display_backlight_pin: Peri<'static, Backlight>,
+        display_spi_hz: u32,
         orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
@@ -487,6 +492,7 @@ impl CydRp {
             display_dc_pin,
             display_rst_pin,
             display_backlight_pin,
+            display_spi_hz,
             orientation,
             background,
             foreground,
@@ -566,6 +572,7 @@ impl CydRpUncalibrated {
         display_dc_pin: Peri<'static, Dc>,
         display_rst_pin: Peri<'static, Rst>,
         display_backlight_pin: Peri<'static, Backlight>,
+        display_spi_hz: u32,
         orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
@@ -602,6 +609,7 @@ impl CydRpUncalibrated {
                 display_dc_pin,
                 display_rst_pin,
                 display_backlight_pin,
+                display_spi_hz,
                 orientation,
                 background,
                 foreground,

@@ -23,11 +23,11 @@ use static_cell::StaticCell;
 
 use super::{CydFrameRp, Orientation, buffer::DynPixelBuffer};
 
-// The CYD panel tolerates high SPI clocks on short PCB traces, but RP bring-up
-// here often uses jumper wires between boards. Use a conservative rate first so
-// display validation is not dominated by signal-integrity failures.
-/// SPI clock frequency for the display bus.
-pub const DISPLAY_SPI_HZ: u32 = 2_000_000;
+// 80 MHz is the current tested default for CYD display traffic on RP: it is
+// materially faster than bring-up speeds while still stable on the hardware
+// used so far.
+/// Default SPI clock for CYD display traffic on RP boards.
+pub const DEFAULT_DISPLAY_SPI_HZ: u32 = 80_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
 type CydDisplaySpiBus = Spi<'static, SPI0, Blocking>;
@@ -89,6 +89,7 @@ impl CydDisplayRp {
         dc_pin: Peri<'static, Dc>,
         rst_pin: Peri<'static, Rst>,
         backlight_pin: Peri<'static, Backlight>,
+        display_spi_hz: u32,
         orientation: Orientation,
     ) -> Result<CydDisplayRp, CydDisplayRpInitError>
     where
@@ -102,7 +103,7 @@ impl CydDisplayRp {
     {
         let spi_config = {
             let mut spi_config = SpiConfig::default();
-            spi_config.frequency = DISPLAY_SPI_HZ;
+            spi_config.frequency = display_spi_hz;
             spi_config.polarity = Polarity::IdleLow;
             spi_config.phase = Phase::CaptureOnFirstTransition;
             spi_config

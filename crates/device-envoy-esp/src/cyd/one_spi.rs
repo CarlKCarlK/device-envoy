@@ -3,7 +3,7 @@
 //! This module provides [`CydEspOneSpi`], which arbitrates a single physical SPI bus between
 //! the ILI9341 display and the XPT2046 touch controller using an
 //! `embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig` per peripheral (each
-//! with its own chip-select pin *and* its own SPI clock speed — see [`DEFAULT_DISPLAY_SPI_HZ`] vs
+//! with its own chip-select pin *and* its own SPI clock speed — see [`super::DEFAULT_DISPLAY_SPI_HZ`] vs
 //! [`TOUCH_SPI_HZ`]). It reuses the same display/touch drivers as the two-SPI [`super::CydEsp`] —
 //! see [`super::CydDisplayEsp::new_from_device`] and [`super::CydTouchUncalibratedEsp::from_device`]
 //! — so the only new code here is building the shared bus itself.
@@ -26,8 +26,8 @@ use device_envoy_core::cyd::{
 };
 
 use super::{
-    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp,
-    DEFAULT_DISPLAY_SPI_HZ, Orientation, TOUCH_SPI_HZ, buffer::PixelBuffer,
+    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, Orientation,
+    TOUCH_SPI_HZ, buffer::PixelBuffer,
 };
 use crate::flash_block::FlashBlockEsp;
 
@@ -43,7 +43,7 @@ type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, 
 /// Display and touch each get their own [`SpiDeviceWithConfig`] over the same underlying bus,
 /// with independent chip-select pins *and* independent clock speeds: [`SpiDeviceWithConfig`]
 /// re-applies its device's [`spi::master::Config`] to the shared bus immediately before each of
-/// its transactions, so the physical SPI clock switches between [`DEFAULT_DISPLAY_SPI_HZ`] and
+/// its transactions, so the physical SPI clock switches between [`super::DEFAULT_DISPLAY_SPI_HZ`] and
 /// [`TOUCH_SPI_HZ`] as display and touch take turns using the bus. Because the two halves share
 /// state through that bus, this type implements [`Cyd`] but not
 /// [`CydParts`](device_envoy_core::cyd::CydParts) — see that trait's documentation for why

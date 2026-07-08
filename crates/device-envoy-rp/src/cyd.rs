@@ -1,5 +1,5 @@
-//! A device abstraction for a standalone 320x240 ILI9341 + XPT2046
-//! resistive-touch module wired over SPI to a Raspberry Pi Pico (1 or 2).
+//! A device abstraction for a standalone 320x240 CYD-style SPI display/touch
+//! module wired over SPI to a Raspberry Pi Pico (1 or 2).
 //!
 //! See [`CydRp`], [`CydRpUncalibrated`], and [`CydDisplayRp`] for the
 //! primary constructors; the device-agnostic [`CydDisplay`],

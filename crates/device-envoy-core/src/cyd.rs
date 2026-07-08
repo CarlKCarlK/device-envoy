@@ -1,7 +1,10 @@
 //! A device abstraction for the "Cheap Yellow Display" (CYD) display and touch parts.
 //!
-//! CYD boards pair an ILI9341 display with an XPT2046 resistive touch
-//! controller.
+//! Tested on so far:
+//!
+//! - an integrated ESP32 Cheap Yellow Display board
+//! - the same standalone CYD 320x240 SPI display/touch board, driven
+//!   externally by both ESP32 and Raspberry Pi Pico 2 setups
 //!
 //! See [`Cyd`] for the primary trait and usage example.
 
@@ -33,8 +36,6 @@ use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 /// compatible with hardware designs where display and touch share underlying resources.
 ///
 /// For backends that support owned deconstruction and reassembly, see [`CydParts`].
-///
-/// CYD boards pair an ILI9341 display with an XPT2046 resistive touch controller.
 #[cfg_attr(
     feature = "host",
     doc = r#"

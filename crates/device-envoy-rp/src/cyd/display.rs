@@ -16,23 +16,24 @@ use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use mipidsi::{
     Builder,
     interface::SpiInterface,
-    models::ILI9341Rgb565,
+    models::ST7789,
     options::{ColorOrder, Orientation as MipiOrientation, Rotation},
 };
 use static_cell::StaticCell;
 
 use super::{CydFrameRp, Orientation, buffer::DynPixelBuffer};
 
-// 80 MHz measured visible display corruption on the esp32 CydEsp equivalent;
-// keep the same conservative 60 MHz starting point here.
+// The CYD panel tolerates high SPI clocks on short PCB traces, but RP bring-up
+// here often uses jumper wires between boards. Use a conservative rate first so
+// display validation is not dominated by signal-integrity failures.
 /// SPI clock frequency for the display bus.
-pub const DISPLAY_SPI_HZ: u32 = 60_000_000;
+pub const DISPLAY_SPI_HZ: u32 = 2_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
 type CydDisplaySpiBus = Spi<'static, SPI0, Blocking>;
 type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'static>, NoDelay>;
 type CydDisplayInterface = SpiInterface<'static, CydDisplaySpiDevice, Output<'static>>;
-type CydDisplayDevice = mipidsi::Display<CydDisplayInterface, ILI9341Rgb565, Output<'static>>;
+type CydDisplayDevice = mipidsi::Display<CydDisplayInterface, ST7789, Output<'static>>;
 
 /// Error initializing the display over SPI.
 #[derive(Clone, Copy, Debug)]
@@ -51,6 +52,7 @@ pub enum CydDisplayRpFlushError {
 pub(crate) struct CydDisplayRp {
     display: CydDisplayDevice,
     screen_size: Size,
+    _backlight: Output<'static>,
 }
 
 impl CydDisplayRp {
@@ -82,7 +84,7 @@ impl CydDisplayRp {
         spi: Peri<'static, SPI0>,
         sck_pin: Peri<'static, Sck>,
         mosi_pin: Peri<'static, Mosi>,
-        miso_pin: Peri<'static, Miso>,
+        _miso_pin: Peri<'static, Miso>,
         cs_pin: Peri<'static, Cs>,
         dc_pin: Peri<'static, Dc>,
         rst_pin: Peri<'static, Rst>,
@@ -105,7 +107,10 @@ impl CydDisplayRp {
             spi_config.phase = Phase::CaptureOnFirstTransition;
             spi_config
         };
-        let spi = Spi::new_blocking(spi, sck_pin, mosi_pin, miso_pin, spi_config);
+        // The display path here is write-only. Driving SPI0 in TX-only mode
+        // avoids relying on a display MISO line that may be absent, floating,
+        // or incompatible on loose jumper-wire bring-up setups.
+        let spi = Spi::new_blocking_txonly(spi, sck_pin, mosi_pin, spi_config);
 
         let cs = Output::new(cs_pin, Level::High);
         let dc = Output::new(dc_pin, Level::Low);
@@ -137,7 +142,7 @@ impl CydDisplayRp {
             Orientation::PortraitInverted => MipiOrientation::new().flip_horizontal(),
         };
 
-        let display = Builder::new(ILI9341Rgb565, interface)
+        let display = Builder::new(ST7789, interface)
             .reset_pin(rst)
             .display_size(240, 320)
             .color_order(ColorOrder::Bgr)
@@ -150,6 +155,7 @@ impl CydDisplayRp {
         Ok(CydDisplayRp {
             display,
             screen_size,
+            _backlight: backlight,
         })
     }
 

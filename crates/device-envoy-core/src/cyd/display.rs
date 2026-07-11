@@ -22,12 +22,9 @@ use crate::pixel_target::PixelTarget;
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
-pub use tga::{Image565Fixed, Image565Mask};
+pub use tga::{mask_byte_count, Image565Fixed, MaskFixed, TgaImageFixed};
 
-pub use crate::{
-    __cyd_tga565 as tga565, __cyd_tga565_magenta_mask as tga565_magenta_mask,
-    __cyd_tga565_mask as tga565_mask, __cyd_tga565_white_mask as tga565_white_mask,
-};
+pub use crate::__cyd_tga as tga;
 
 /// A borrowed or owned rectangular RGB565 pixel buffer.
 ///

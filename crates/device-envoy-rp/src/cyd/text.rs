@@ -17,13 +17,14 @@ use embedded_graphics::{
     prelude::Point,
     text::{Baseline, Text},
 };
+use embedded_hal::spi::SpiDevice;
 
 use super::CydFrameRp;
 
 /// Font apps typically pass to [`super::CydDisplayRp::new`] as the device default.
 pub const DEFAULT_FONT: MonoFont<'static> = FONT_9X15_BOLD;
 
-impl CydFrameRp<'_> {
+impl<D: SpiDevice<u8>> CydFrameRp<'_, D> {
     /// Draw `text` at input coordinate `(0, 0)` using the device default
     /// font and foreground color.
     ///

@@ -69,7 +69,6 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO{{ cyd_display_rst_pin }},
         p.GPIO{{ cyd_display_backlight_pin }},
         DEFAULT_DISPLAY_SPI_HZ,
-        DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,
         embedded_graphics::pixelcolor::Rgb888::new(10, 10, 12),
         embedded_graphics::pixelcolor::Rgb888::new(230, 230, 230),

@@ -5,7 +5,7 @@
 //! - Digit select pins ->
 //!   GPIO10,   GPIO9,   GPIO8,   GPIO7
 //! - Segment pins (A..G, DP) ->
-//!   GPIO4,   GPIO3,   GPIO2,   GPIO1,   GPIO0,   GPIO5,   GPIO18,   GPIO19
+//!   GPIO4,   GPIO3,   GPIO2,   GPIO1,   GPIO0,   GPIO5,   GPIO6,   GPIO19
 //! Wi-Fi enabled 4-digit clock that provisions credentials through `WifiAuto`.
 
 #![no_std]
@@ -86,7 +86,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         Output::new(p.GPIO1, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO0, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO5, Level::Low, OutputConfig::default()),
-        Output::new(p.GPIO18, Level::Low, OutputConfig::default()),
+        Output::new(p.GPIO6, Level::Low, OutputConfig::default()),
         Output::new(p.GPIO19, Level::Low, OutputConfig::default()),
     ]);
 

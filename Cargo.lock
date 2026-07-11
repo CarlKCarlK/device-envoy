@@ -870,6 +870,7 @@ dependencies = [
  "derive_more",
  "device-envoy-core",
  "device-envoy-example-common",
+ "embassy-embedded-hal",
  "embassy-executor",
  "embassy-futures",
  "embassy-hal-internal 0.5.0",

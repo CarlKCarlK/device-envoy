@@ -5,7 +5,7 @@
 //! The display shows hours on the top line and minutes on the bottom line.
 //!
 //! Wiring:
-//! - NeoPixel-style (WS2812) 8x12 panel data input -> GPIO18
+//! - NeoPixel-style (WS2812) 8x12 panel data input -> GPIO6
 //! - Force-portal button -> GPIO18 to GND
 //! - Panel power -> 5V (or per panel spec), shared GND with board
 //! - Uses SPI output engine on this board profile (`SPI2`)
@@ -60,7 +60,7 @@ button_watch! {
 
 led2d! {
     Led8x12Clock {
-        pin: GPIO18,
+        pin: GPIO6,
         len: 96,
         led_layout: LED_LAYOUT_8X12,
         max_current: Current::Milliamps(250),
@@ -83,7 +83,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("clock_led8x12 starting");
 
-    let led8x12_clock = Led8x12Clock::new(p.GPIO18, p.SPI2, spawner)?;
+    let led8x12_clock = Led8x12Clock::new(p.GPIO6, p.SPI2, spawner)?;
 
     let [wifi_auto_flash_block, mut timezone_flash_block] = FlashBlockEsp::new_array::<2>(p.FLASH)?;
     static TIMEZONE_FIELD_STATIC: TimezoneFieldStatic = TimezoneField::new_static();

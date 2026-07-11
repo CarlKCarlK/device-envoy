@@ -12,6 +12,7 @@ use embedded_graphics::{
     prelude::{Point, Size},
     primitives::Rectangle,
 };
+use embedded_hal::spi::SpiDevice;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use mipidsi::{
     Builder,
@@ -31,9 +32,10 @@ pub const DEFAULT_DISPLAY_SPI_HZ: u32 = 80_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
 type CydDisplaySpiBus = Spi<'static, SPI0, Blocking>;
-type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'static>, NoDelay>;
-type CydDisplayInterface = SpiInterface<'static, CydDisplaySpiDevice, Output<'static>>;
-type CydDisplayDevice = mipidsi::Display<CydDisplayInterface, ST7789, Output<'static>>;
+/// The SPI device type used when the display owns an exclusive SPI peripheral.
+pub(crate) type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'static>, NoDelay>;
+type CydDisplayInterface<D> = SpiInterface<'static, D, Output<'static>>;
+type CydDisplayDevice<D> = mipidsi::Display<CydDisplayInterface<D>, ST7789, Output<'static>>;
 
 /// Error initializing the display over SPI.
 #[derive(Clone, Copy, Debug)]
@@ -49,13 +51,19 @@ pub enum CydDisplayRpFlushError {
     FlushFrameBuffer,
 }
 
-pub(crate) struct CydDisplayRp {
-    display: CydDisplayDevice,
+/// An ST7789 display driven over `D`, an `embedded-hal` SPI device.
+///
+/// `D` defaults to [`CydDisplaySpiDevice`], an exclusively-owned SPI
+/// peripheral. Shared-bus backends (see `one_spi`) instead construct this
+/// with an `embassy_embedded_hal::shared_bus` device via
+/// [`CydDisplayRp::new_from_device`].
+pub(crate) struct CydDisplayRp<D: SpiDevice<u8> = CydDisplaySpiDevice> {
+    display: CydDisplayDevice<D>,
     screen_size: Size,
     _backlight: Output<'static>,
 }
 
-impl CydDisplayRp {
+impl<D: SpiDevice<u8>> CydDisplayRp<D> {
     /// Oriented screen size stored at init time.
     #[must_use]
     pub const fn size(&self) -> Size {
@@ -80,46 +88,26 @@ impl CydDisplayRp {
         Some(rectangle)
     }
 
-    pub(crate) fn new<Sck, Mosi, Miso, Cs, Dc, Rst, Backlight>(
-        spi: Peri<'static, SPI0>,
-        sck_pin: Peri<'static, Sck>,
-        mosi_pin: Peri<'static, Mosi>,
-        _miso_pin: Peri<'static, Miso>,
-        cs_pin: Peri<'static, Cs>,
+    /// Construct a display driver from an already-built SPI device.
+    ///
+    /// Used by shared-bus backends that build their own `SpiDevice` (for
+    /// example an `embassy_embedded_hal::shared_bus` device wrapping a bus
+    /// shared with touch) instead of owning an exclusive SPI peripheral.
+    pub(crate) fn new_from_device<Dc, Rst, Backlight>(
+        spi_device: D,
         dc_pin: Peri<'static, Dc>,
         rst_pin: Peri<'static, Rst>,
         backlight_pin: Peri<'static, Backlight>,
-        display_spi_hz: u32,
         orientation: Orientation,
-    ) -> Result<CydDisplayRp, CydDisplayRpInitError>
+    ) -> Result<CydDisplayRp<D>, CydDisplayRpInitError>
     where
-        Sck: Pin + ClkPin<SPI0>,
-        Mosi: Pin + MosiPin<SPI0>,
-        Miso: Pin + MisoPin<SPI0>,
-        Cs: Pin,
         Dc: Pin,
         Rst: Pin,
         Backlight: Pin,
     {
-        let spi_config = {
-            let mut spi_config = SpiConfig::default();
-            spi_config.frequency = display_spi_hz;
-            spi_config.polarity = Polarity::IdleLow;
-            spi_config.phase = Phase::CaptureOnFirstTransition;
-            spi_config
-        };
-        // The display path here is write-only. Driving SPI0 in TX-only mode
-        // avoids relying on a display MISO line that may be absent, floating,
-        // or incompatible on loose jumper-wire bring-up setups.
-        let spi = Spi::new_blocking_txonly(spi, sck_pin, mosi_pin, spi_config);
-
-        let cs = Output::new(cs_pin, Level::High);
         let dc = Output::new(dc_pin, Level::Low);
         let rst = Output::new(rst_pin, Level::High);
         let mut backlight = Output::new(backlight_pin, Level::High);
-
-        let spi_device =
-            ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs).expect("CS pin is infallible");
 
         static SPI_BUFFER: StaticCell<[u8; DISPLAY_SPI_BUFFER_LEN]> = StaticCell::new();
         let spi_buffer = SPI_BUFFER.init([0u8; DISPLAY_SPI_BUFFER_LEN]);
@@ -189,7 +177,7 @@ impl CydDisplayRp {
         background565: Rgb565,
         foreground565: Rgb565,
         font: &'static MonoFont<'static>,
-    ) -> CydFrameRp<'a> {
+    ) -> CydFrameRp<'a, D> {
         let size = rectangle.size;
         let mut view = pixel_buffer.view_mut(size.width as usize, size.height as usize);
         // Every new frame starts cleared to the device background so callers
@@ -236,5 +224,49 @@ impl CydDisplayRp {
         self.display
             .fill_contiguous(&rectangle, pixels)
             .map_err(|_| CydDisplayRpFlushError::FlushFrameBuffer)
+    }
+}
+
+impl CydDisplayRp<CydDisplaySpiDevice> {
+    #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
+    pub(crate) fn new<Sck, Mosi, Miso, Cs, Dc, Rst, Backlight>(
+        spi: Peri<'static, SPI0>,
+        sck_pin: Peri<'static, Sck>,
+        mosi_pin: Peri<'static, Mosi>,
+        _miso_pin: Peri<'static, Miso>,
+        cs_pin: Peri<'static, Cs>,
+        dc_pin: Peri<'static, Dc>,
+        rst_pin: Peri<'static, Rst>,
+        backlight_pin: Peri<'static, Backlight>,
+        display_spi_hz: u32,
+        orientation: Orientation,
+    ) -> Result<CydDisplayRp<CydDisplaySpiDevice>, CydDisplayRpInitError>
+    where
+        Sck: Pin + ClkPin<SPI0>,
+        Mosi: Pin + MosiPin<SPI0>,
+        Miso: Pin + MisoPin<SPI0>,
+        Cs: Pin,
+        Dc: Pin,
+        Rst: Pin,
+        Backlight: Pin,
+    {
+        let spi_config = {
+            let mut spi_config = SpiConfig::default();
+            spi_config.frequency = display_spi_hz;
+            spi_config.polarity = Polarity::IdleLow;
+            spi_config.phase = Phase::CaptureOnFirstTransition;
+            spi_config
+        };
+        // The display path here is write-only. Driving SPI0 in TX-only mode
+        // avoids relying on a display MISO line that may be absent, floating,
+        // or incompatible on loose jumper-wire bring-up setups.
+        let spi = Spi::new_blocking_txonly(spi, sck_pin, mosi_pin, spi_config);
+
+        let cs = Output::new(cs_pin, Level::High);
+
+        let spi_device =
+            ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs).expect("CS pin is infallible");
+
+        Self::new_from_device(spi_device, dc_pin, rst_pin, backlight_pin, orientation)
     }
 }

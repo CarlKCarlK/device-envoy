@@ -1,13 +1,15 @@
 //! A device abstraction for a standalone 320x240 CYD-style SPI display/touch
 //! module wired over SPI to a Raspberry Pi Pico (1 or 2).
 //!
-//! See [`CydRp`], [`CydRpUncalibrated`], and [`CydDisplayRp`] for the
-//! primary constructors; the device-agnostic [`CydDisplay`],
+//! See [`CydRp`], [`CydRpUncalibrated`], [`CydRpOneSpi`], and [`CydDisplayRp`]
+//! for the primary constructors; the device-agnostic [`CydDisplay`],
 //! [`CydTouch`], and [`CydTouchUncalibrated`] traits live in
-//! [`device_envoy_core::cyd`]. The display uses `SPI0`; touch uses `SPI1`.
+//! [`device_envoy_core::cyd`]. [`CydRp`] uses `SPI0` for the display and `SPI1`
+//! for touch; [`CydRpOneSpi`] shares a single SPI peripheral between the two.
 
 mod buffer;
 mod display;
+mod one_spi;
 mod text;
 #[path = "cyd/touch.rs"]
 mod touch_driver;
@@ -42,11 +44,13 @@ use embedded_graphics::{
     prelude::{Dimensions, DrawTarget, OriginDimensions, Point, Size},
     primitives::Rectangle,
 };
+use embedded_hal::spi::SpiDevice;
 use static_cell::StaticCell;
 
 use buffer::DynPixelBuffer;
 pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
 pub use display::{CydDisplayRpFlushError, CydDisplayRpInitError, DEFAULT_DISPLAY_SPI_HZ};
+pub use one_spi::{CydRpOneSpi, CydRpOneSpiStatic};
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchRpInitError, TOUCH_SPI_HZ};
 
@@ -55,8 +59,12 @@ use display::CydDisplayRp as CydDisplayRpDevice;
 use touch_driver::CydTouchRp as CydTouchRpDevice;
 
 /// An owned CYD display component for RP boards.
-pub struct CydDisplayRp {
-    display: CydDisplayRpDevice,
+///
+/// `D` is the underlying `embedded-hal` SPI device type; it defaults to an
+/// exclusively-owned SPI peripheral. Shared-bus backends (see
+/// [`CydRpOneSpi`]) instantiate this with a shared-bus device instead.
+pub struct CydDisplayRp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
+    display: CydDisplayRpDevice<D>,
     // Every CydRp owns exactly one draw buffer. Apps that don't draw through it
     // pass a zero-sized buffer (e.g. `CydStaticRp<0>`).
     pixel_buffer: &'static mut dyn DynPixelBuffer,
@@ -72,13 +80,16 @@ pub struct CydDisplayRp {
 }
 
 /// An owned uncalibrated CYD touch component for RP boards.
-pub struct CydTouchUncalibratedRp {
-    touch: CydTouchRpDevice,
+///
+/// `D` is the underlying `embedded-hal` SPI device type; see
+/// [`CydDisplayRp`] for the shared-bus rationale.
+pub struct CydTouchUncalibratedRp<D = touch_driver::CydTouchSpiDevice> {
+    touch: CydTouchRpDevice<D>,
 }
 
 /// An owned calibrated CYD touch component for RP boards.
-pub struct CydTouchRp {
-    raw: CydTouchUncalibratedRp,
+pub struct CydTouchRp<D = touch_driver::CydTouchSpiDevice> {
+    raw: CydTouchUncalibratedRp<D>,
     calibration_config: CalibrationConfig,
 }
 
@@ -130,8 +141,8 @@ impl<const PIXEL_COUNT: usize> CydStaticRp<PIXEL_COUNT> {
 }
 
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
-pub struct CydFrameRp<'a> {
-    display: &'a mut CydDisplayRpDevice,
+pub struct CydFrameRp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
+    display: &'a mut CydDisplayRpDevice<D>,
     view: RegionView<'a>,
     // Where this frame presents and how large it is: set from the `Rectangle`
     // passed to `frame_mut`, so `flush` needs no separate position argument.
@@ -145,7 +156,7 @@ pub struct CydFrameRp<'a> {
     pub(crate) font: &'static MonoFont<'static>,
 }
 
-impl<'a> CydFrameRp<'a> {
+impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     /// Borrow the frame's underlying pixel view.
     pub fn view_mut(&mut self) -> &mut RegionView<'a> {
         &mut self.view
@@ -191,7 +202,7 @@ impl<'a> CydFrameRp<'a> {
     }
 }
 
-impl DrawTarget for CydFrameRp<'_> {
+impl<D: SpiDevice<u8>> DrawTarget for CydFrameRp<'_, D> {
     type Color = Rgb565;
     type Error = Infallible;
 
@@ -220,13 +231,13 @@ impl DrawTarget for CydFrameRp<'_> {
     }
 }
 
-impl Dimensions for CydFrameRp<'_> {
+impl<D: SpiDevice<u8>> Dimensions for CydFrameRp<'_, D> {
     fn bounding_box(&self) -> Rectangle {
         Rectangle::new(self.tile_top_left, self.view.size())
     }
 }
 
-impl PixelTarget for CydFrameRp<'_> {
+impl<D: SpiDevice<u8>> PixelTarget for CydFrameRp<'_, D> {
     fn width(&self) -> usize {
         usize::try_from(self.tile_top_left.x)
             .expect("tile top-left x must be non-negative")
@@ -283,7 +294,61 @@ pub enum CydError {
     DisplayFlush(CydDisplayRpFlushError),
 }
 
-impl CydDisplayRp {
+impl<D: SpiDevice<u8>> CydDisplayRp<D> {
+    fn from_display_device(
+        mut display: CydDisplayRpDevice<D>,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+        pixel_buffer: &'static mut dyn DynPixelBuffer,
+    ) -> Result<Self, CydError> {
+        let background565 = rgb565(background);
+        display.fill(background565)?;
+
+        Ok(Self {
+            display,
+            pixel_buffer,
+            background,
+            foreground,
+            background565,
+            foreground565: rgb565(foreground),
+            font,
+        })
+    }
+
+    /// Construct a display component from an already-built SPI device.
+    ///
+    /// Used by shared-bus backends (see [`CydRpOneSpi`]) that build their own
+    /// `SpiDevice` instead of owning an exclusive SPI peripheral.
+    #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
+    pub(crate) fn new_from_device<Dc, Rst, Backlight>(
+        spi_device: D,
+        dc_pin: Peri<'static, Dc>,
+        rst_pin: Peri<'static, Rst>,
+        backlight_pin: Peri<'static, Backlight>,
+        orientation: Orientation,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+        pixel_buffer: &'static mut dyn DynPixelBuffer,
+    ) -> Result<Self, CydError>
+    where
+        Dc: Pin,
+        Rst: Pin,
+        Backlight: Pin,
+    {
+        let display = CydDisplayRpDevice::new_from_device(
+            spi_device,
+            dc_pin,
+            rst_pin,
+            backlight_pin,
+            orientation,
+        )?;
+        Self::from_display_device(display, background, foreground, font, pixel_buffer)
+    }
+}
+
+impl CydDisplayRp<display::CydDisplaySpiDevice> {
     /// Construct a display-only `CydDisplayRp` that owns its draw buffer.
     #[expect(
         clippy::too_many_arguments,
@@ -315,51 +380,7 @@ impl CydDisplayRp {
         Backlight: Pin,
     {
         let pixel_buffer = PixelBuffer::init_static(&statics.pixel_buffer);
-        Self::new_inner(
-            display_spi,
-            display_sck_pin,
-            display_mosi_pin,
-            display_miso_pin,
-            display_cs_pin,
-            display_dc_pin,
-            display_rst_pin,
-            display_backlight_pin,
-            display_spi_hz,
-            orientation,
-            background,
-            foreground,
-            font,
-            pixel_buffer,
-        )
-    }
-
-    #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
-    fn new_inner<Sck, Mosi, Miso, Cs, Dc, Rst, Backlight>(
-        display_spi: Peri<'static, SPI0>,
-        display_sck_pin: Peri<'static, Sck>,
-        display_mosi_pin: Peri<'static, Mosi>,
-        display_miso_pin: Peri<'static, Miso>,
-        display_cs_pin: Peri<'static, Cs>,
-        display_dc_pin: Peri<'static, Dc>,
-        display_rst_pin: Peri<'static, Rst>,
-        display_backlight_pin: Peri<'static, Backlight>,
-        display_spi_hz: u32,
-        orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
-        font: &'static MonoFont<'static>,
-        pixel_buffer: &'static mut dyn DynPixelBuffer,
-    ) -> Result<Self, CydError>
-    where
-        Sck: Pin + ClkPin<SPI0>,
-        Mosi: Pin + MosiPin<SPI0>,
-        Miso: Pin + MisoPin<SPI0>,
-        Cs: Pin,
-        Dc: Pin,
-        Rst: Pin,
-        Backlight: Pin,
-    {
-        let mut display = CydDisplayRpDevice::new(
+        let display = CydDisplayRpDevice::new(
             display_spi,
             display_sck_pin,
             display_mosi_pin,
@@ -371,22 +392,26 @@ impl CydDisplayRp {
             display_spi_hz,
             orientation,
         )?;
-        let background565 = rgb565(background);
-        display.fill(background565)?;
-
-        Ok(Self {
-            display,
-            pixel_buffer,
-            background,
-            foreground,
-            background565,
-            foreground565: rgb565(foreground),
-            font,
-        })
+        Self::from_display_device(display, background, foreground, font, pixel_buffer)
     }
 }
 
-impl CydTouchUncalibratedRp {
+impl<D: SpiDevice<u8>> CydTouchUncalibratedRp<D> {
+    /// Construct an uncalibrated touch component from an already-built SPI device.
+    ///
+    /// Used by shared-bus backends (see [`CydRpOneSpi`]) that build their own
+    /// `SpiDevice` instead of owning an exclusive SPI peripheral.
+    pub(crate) fn from_device<Irq: Pin>(
+        touch_spi_device: D,
+        touch_irq_pin: Peri<'static, Irq>,
+    ) -> Self {
+        Self {
+            touch: CydTouchRpDevice::from_device(touch_spi_device, touch_irq_pin),
+        }
+    }
+}
+
+impl CydTouchUncalibratedRp<touch_driver::CydTouchSpiDevice> {
     /// Construct an uncalibrated touch component.
     #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
     pub fn new<TouchSck, TouchMosi, TouchMiso, TouchCs, TouchIrq>(
@@ -631,7 +656,7 @@ fn rgb565(color: Rgb888) -> Rgb565 {
     Rgb565::from(color)
 }
 
-impl fmt::Debug for CydDisplayRp {
+impl<D: SpiDevice<u8>> fmt::Debug for CydDisplayRp<D> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydDisplayRp")
@@ -639,7 +664,7 @@ impl fmt::Debug for CydDisplayRp {
     }
 }
 
-impl fmt::Debug for CydTouchUncalibratedRp {
+impl<D> fmt::Debug for CydTouchUncalibratedRp<D> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydTouchUncalibratedRp")
@@ -647,7 +672,7 @@ impl fmt::Debug for CydTouchUncalibratedRp {
     }
 }
 
-impl fmt::Debug for CydTouchRp {
+impl<D> fmt::Debug for CydTouchRp<D> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydTouchRp")
@@ -670,10 +695,10 @@ impl fmt::Debug for CydRpUncalibrated {
     }
 }
 
-impl CydDisplay for CydDisplayRp {
+impl<D: SpiDevice<u8>> CydDisplay for CydDisplayRp<D> {
     type Error = CydError;
     type Frame<'a>
-        = CydFrameRp<'a>
+        = CydFrameRp<'a, D>
     where
         Self: 'a;
 
@@ -702,7 +727,7 @@ impl CydDisplay for CydDisplayRp {
         &mut self,
         rectangle: Rectangle,
         tile_top_left: Point,
-    ) -> CydFrameRp<'_> {
+    ) -> CydFrameRp<'_, D> {
         self.display.make_frame_with_tile_top_left(
             &mut *self.pixel_buffer,
             rectangle,
@@ -732,9 +757,9 @@ impl CydDisplay for CydDisplayRp {
     }
 }
 
-impl CydTouchUncalibrated for CydTouchUncalibratedRp {
+impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedRp<D> {
     type Error = CydError;
-    type Calibrated = CydTouchRp;
+    type Calibrated = CydTouchRp<D>;
 
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
         Ok(self.touch.read_raw_touch_event())
@@ -748,9 +773,9 @@ impl CydTouchUncalibrated for CydTouchUncalibratedRp {
     }
 }
 
-impl CydTouch for CydTouchRp {
+impl<D: SpiDevice<u8>> CydTouch for CydTouchRp<D> {
     type Error = CydError;
-    type Uncalibrated = CydTouchUncalibratedRp;
+    type Uncalibrated = CydTouchUncalibratedRp<D>;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, CydError> {
         Ok(self
@@ -783,7 +808,7 @@ impl CydTouch for CydTouchRp {
     }
 }
 
-impl CydFrame for CydFrameRp<'_> {
+impl<D: SpiDevice<u8>> CydFrame for CydFrameRp<'_, D> {
     type Error = CydError;
 
     fn tile_top_left(&self) -> Point {

@@ -108,6 +108,7 @@ fixed = "1.31"
 mipidsi = "=0.9.0"
 
 [target.'cfg(target_os = "none")'.dependencies]
+embassy-embedded-hal = { version = "0.6.0", default-features = false }
 embassy-rp = { version = "0.10.0", default-features = false, features = [
     "rt",
     "defmt",

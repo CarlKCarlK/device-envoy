@@ -253,7 +253,9 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         // clock/skeleton_clock fail to compile on this board — see cyd_display_wiring below).
         button_pin: 18,
         led_strip_len_8_pin: 10,
-        led_2d12x8_pin: 18,
+        // GPIO6, not 18: led_2d12x8_pin must not collide with button_pin (both reachable
+        // together from clock_led8x12, which broke compilation with a GPIO18 double-move).
+        led_2d12x8_pin: 6,
         led_2d16x16_pin: 2,
         lcd_sda_pin: 4,
         lcd_scl_pin: 5,
@@ -263,7 +265,10 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         // GPIOs; they previously collided on 18, breaking servos_calibrate compilation).
         servo2_pin: 3,
         led4_cell_pins: [10, 9, 8, 7],
-        led4_segment_pins: [4, 3, 2, 1, 0, 5, 18, 19],
+        // GPIO6, not 18: led4_segment_pins must not collide with button_pin (both
+        // reachable together from clock_led4, which broke compilation — see the
+        // GPIO18 double-move fixed here).
+        led4_segment_pins: [4, 3, 2, 1, 0, 5, 6, 19],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
         rfid_wiring: RfidWiring {
@@ -321,7 +326,9 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         // clock/skeleton_clock fail to compile on this board — see cyd_display_wiring below).
         button_pin: 18,
         led_strip_len_8_pin: 10,
-        led_2d12x8_pin: 18,
+        // GPIO6, not 18: led_2d12x8_pin must not collide with button_pin (both reachable
+        // together from clock_led8x12, which broke compilation with a GPIO18 double-move).
+        led_2d12x8_pin: 6,
         led_2d16x16_pin: 2,
         lcd_sda_pin: 4,
         lcd_scl_pin: 5,
@@ -331,7 +338,10 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         // GPIOs; they previously collided on 18, breaking servos_calibrate compilation).
         servo2_pin: 3,
         led4_cell_pins: [10, 9, 8, 7],
-        led4_segment_pins: [4, 3, 2, 1, 0, 5, 18, 19],
+        // GPIO6, not 18: led4_segment_pins must not collide with button_pin (both
+        // reachable together from clock_led4, which broke compilation — see the
+        // GPIO18 double-move fixed here).
+        led4_segment_pins: [4, 3, 2, 1, 0, 5, 6, 19],
         ir_pin_rx_channel: (7, 2),
         ir_pin_rx_channel2: (4, 3),
         rfid_wiring: RfidWiring {

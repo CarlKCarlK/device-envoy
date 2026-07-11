@@ -1,12 +1,12 @@
 #![cfg(feature = "host")]
 
+use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
     Cyd, CydDisplay, CydTouch,
     display::{CydFrame, DrawItem, Image565View},
     touch::TouchEvent,
 };
 use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
-use device_envoy_core::UnwrapInfallible;
 use embedded_graphics::{
     Drawable,
     mono_font::ascii::FONT_9X15_BOLD,
@@ -177,5 +177,8 @@ const fn cyd_trait_bitmap_pixels() -> [u16; BITMAP_PIXEL_COUNT] {
 static BITMAP_PIXELS: [u16; BITMAP_PIXEL_COUNT] = cyd_trait_bitmap_pixels();
 
 fn bitmap_view() -> Image565View {
-    Image565View::new(&BITMAP_PIXELS, Size::new(BITMAP_WIDTH as u32, BITMAP_HEIGHT as u32))
+    Image565View::new(
+        &BITMAP_PIXELS,
+        Size::new(BITMAP_WIDTH as u32, BITMAP_HEIGHT as u32),
+    )
 }

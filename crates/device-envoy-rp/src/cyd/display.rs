@@ -28,7 +28,7 @@ use super::{CydFrameRp, Orientation, buffer::DynPixelBuffer};
 // materially faster than bring-up speeds while still stable on the hardware
 // used so far.
 /// Default SPI clock for CYD display traffic on RP boards.
-pub const DEFAULT_DISPLAY_SPI_HZ: u32 = 80_000_000;
+pub const DEFAULT_DISPLAY_SPI_HZ: u32 = 40_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
 type CydDisplaySpiBus = Spi<'static, SPI0, Blocking>;

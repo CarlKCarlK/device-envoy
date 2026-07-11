@@ -75,19 +75,6 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
         Rectangle::new(Point::new(0, 0), self.screen_size)
     }
 
-    // TODO0000 Revisit whether this software clipping should stay here or be
-    // delegated to panel hardware/windowing behavior after measuring the real
-    // controller semantics and cost (mirrors the same open question on the
-    // esp32 CydEsp equivalent).
-    #[must_use]
-    fn clip_to_screen(&self, rectangle: Rectangle) -> Option<Rectangle> {
-        let rectangle = rectangle.intersection(&self.screen_rectangle());
-        if rectangle.size.width == 0 || rectangle.size.height == 0 {
-            return None;
-        }
-        Some(rectangle)
-    }
-
     /// Construct a display driver from an already-built SPI device.
     ///
     /// Used by shared-bus backends that build their own `SpiDevice` (for
@@ -202,9 +189,6 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
         rectangle: Rectangle,
         color: Rgb565,
     ) -> Result<(), CydDisplayRpFlushError> {
-        let Some(rectangle) = self.clip_to_screen(rectangle) else {
-            return Ok(());
-        };
         self.display
             .fill_solid(&rectangle, color)
             .map_err(|_| CydDisplayRpFlushError::FlushFrameBuffer)

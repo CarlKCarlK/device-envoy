@@ -8,7 +8,7 @@ pub const MIN_SAMPLES_PER_POINT: usize = 3;
 
 /// Sans-io state machine for the four-tap calibration flow.
 ///
-/// Callers own I/O: they draw [`CalibrationCorner`] crosses, log progress, and
+/// Callers own I/O: they draw [`CalibrationCorner`] targets, log progress, and
 /// persist the finished solve. This flow tracks which corner is next and
 /// accumulates per-touch raw samples until all four corners have been captured
 /// on release.

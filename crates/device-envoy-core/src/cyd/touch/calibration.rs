@@ -23,15 +23,15 @@ pub use super::driver::{
 pub use super::flow::CalibrationFlow;
 
 pub const CALIBRATION_POINT_COUNT: usize = 4;
-// Keep the lower crosshair above the bottom 20-pixel calibration message.
-pub const CALIBRATION_CROSS_MARGIN: i32 = 40;
-pub const CALIBRATION_CROSS_HALF_SIZE: i32 = 18;
+// Keep the lower target above the bottom 20-pixel calibration message.
+pub const CALIBRATION_TARGET_MARGIN: i32 = 40;
+pub const CALIBRATION_TARGET_HALF_SIZE: i32 = 18;
 pub const CALIBRATION_CENTER_DOT_RADIUS: i32 = 3;
 pub const MAX_RESIDUAL_PIXELS: f32 = 12.0;
 pub const VERIFY_HIT_RADIUS_PIXELS: f32 = 20.0;
 
-const CALIBRATION_CROSS_COLOR: Rgb888 = Rgb888::CSS_YELLOW;
-const CALIBRATION_REJECTED_CROSS_COLOR: Rgb888 = Rgb888::CSS_RED;
+const CALIBRATION_TARGET_COLOR: Rgb888 = Rgb888::CSS_YELLOW;
+const CALIBRATION_REJECTED_TARGET_COLOR: Rgb888 = Rgb888::CSS_RED;
 const CALIBRATION_DOT_COLOR: Rgb888 = Rgb888::CSS_WHITE;
 const AFFINE_DETERMINANT_EPSILON: f32 = 0.000_001;
 #[cfg(any(feature = "wasm", test))]
@@ -174,19 +174,19 @@ pub fn calibration_corner_center(calibration_corner: CalibrationCorner) -> Point
 
     match calibration_corner {
         CalibrationCorner::UpperLeft => {
-            Point::new(CALIBRATION_CROSS_MARGIN, CALIBRATION_CROSS_MARGIN)
+            Point::new(CALIBRATION_TARGET_MARGIN, CALIBRATION_TARGET_MARGIN)
         }
         CalibrationCorner::UpperRight => Point::new(
-            width - 1 - CALIBRATION_CROSS_MARGIN,
-            CALIBRATION_CROSS_MARGIN,
+            width - 1 - CALIBRATION_TARGET_MARGIN,
+            CALIBRATION_TARGET_MARGIN,
         ),
         CalibrationCorner::LowerRight => Point::new(
-            width - 1 - CALIBRATION_CROSS_MARGIN,
-            height - 1 - CALIBRATION_CROSS_MARGIN,
+            width - 1 - CALIBRATION_TARGET_MARGIN,
+            height - 1 - CALIBRATION_TARGET_MARGIN,
         ),
         CalibrationCorner::LowerLeft => Point::new(
-            CALIBRATION_CROSS_MARGIN,
-            height - 1 - CALIBRATION_CROSS_MARGIN,
+            CALIBRATION_TARGET_MARGIN,
+            height - 1 - CALIBRATION_TARGET_MARGIN,
         ),
     }
 }
@@ -198,7 +198,7 @@ const CALIBRATION_TEXT_HEIGHT: usize = 20;
 /// Minimum device static-buffer pixel count required for `ensure_calibration`'s
 /// on-screen flow.
 ///
-/// The crosshair/dot geometry streams straight to the panel via
+/// The target/dot geometry streams straight to the panel via
 /// [`crate::cyd::CydDisplay::draw_items`] and needs no buffer at all, but the
 /// instruction/confirmation text still needs a small buffered frame. Apps
 /// that also draw their own status content should size their static buffer
@@ -215,24 +215,24 @@ pub(super) const CALIBRATION_TEXT_RECTANGLE: Rectangle = Rectangle::new(
 );
 
 /// Maximum number of [`DrawItem`]s any single calibration redraw produces
-/// (a captured-corner dot plus the next corner's crosshair).
+/// (a captured-corner dot plus the next corner's target).
 pub(super) const CALIBRATION_MAX_DRAW_ITEMS: usize = 4;
 
-/// Draw items for a calibration crosshair with a center dot at `calibration_corner`.
+/// Draw items for a calibration target with a center dot at `calibration_corner`.
 #[must_use]
-pub fn calibration_cross_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
-    crosshair_items_at(
+pub fn calibration_target_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
+    target_items_at(
         calibration_corner_center(calibration_corner),
-        CALIBRATION_CROSS_COLOR,
+        CALIBRATION_TARGET_COLOR,
     )
 }
 
-/// Like [`calibration_cross_items`], colored to indicate a rejected attempt.
+/// Like [`calibration_target_items`], colored to indicate a rejected attempt.
 #[must_use]
-pub fn calibration_rejected_cross_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
-    crosshair_items_at(
+pub fn calibration_rejected_target_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
+    target_items_at(
         calibration_corner_center(calibration_corner),
-        CALIBRATION_REJECTED_CROSS_COLOR,
+        CALIBRATION_REJECTED_TARGET_COLOR,
     )
 }
 
@@ -244,7 +244,7 @@ pub fn calibration_verify_target_center() -> Point {
 /// Draw items for the post-calibration verify target at screen center.
 #[must_use]
 pub fn calibration_verify_target_items() -> [DrawItem; 3] {
-    crosshair_items_at(calibration_verify_target_center(), CALIBRATION_CROSS_COLOR)
+    target_items_at(calibration_verify_target_center(), CALIBRATION_TARGET_COLOR)
 }
 
 /// Draw item for the small dot acknowledging a captured corner.
@@ -253,20 +253,20 @@ pub fn calibration_ack_dot_item(calibration_corner: CalibrationCorner) -> DrawIt
     dot_item_at(calibration_corner_center(calibration_corner))
 }
 
-fn crosshair_items_at(center: Point, cross_color: Rgb888) -> [DrawItem; 3] {
-    let half = CALIBRATION_CROSS_HALF_SIZE as f32;
+fn target_items_at(center: Point, target_color: Rgb888) -> [DrawItem; 3] {
+    let half = CALIBRATION_TARGET_HALF_SIZE as f32;
     let (center_x, center_y) = (center.x as f32, center.y as f32);
     [
         DrawItem::Stroke {
             start: (center_x - half, center_y),
             end: (center_x + half, center_y),
-            color: cross_color,
+            color: target_color,
             pixel_width: 4.0,
         },
         DrawItem::Stroke {
             start: (center_x, center_y - half),
             end: (center_x, center_y + half),
-            color: cross_color,
+            color: target_color,
             pixel_width: 4.0,
         },
         dot_item_at(center),

@@ -96,7 +96,7 @@ testing controls or using it as an app-level point.
 
 **Core fix: buffer-free calibration UI (`device-envoy-core`)**
 
-- `ensure_calibration()` used to draw its crosshair/dot UI via
+- `ensure_calibration()` used to draw its target/dot UI via
   `display.full_frame_mut()`, which requires a static workspace ≥ the full
   screen (320×240 = 76,800px / 150KB) whenever calibration hasn't been saved
   to flash yet — regardless of what the calling example itself draws.
@@ -104,7 +104,7 @@ testing controls or using it as an app-level point.
   time (`stack.x: cannot move location counter backwards`), reproduced
   directly with `cargo +esp build --release`.
 - Rewrote `draw_calibration_screen`/`draw_message_screen`
-  (`crates/device-envoy-core/src/cyd/touch/driver.rs`) to draw crosshairs/dots
+  (`crates/device-envoy-core/src/cyd/touch/driver.rs`) to draw targets/dots
   via `CydDisplay::draw_items()` (the `DrawItem` → `ContiguousPixels` →
   `fill_contiguous` streaming path, zero static buffer, already proven by
   linkage-blaze's clock-hands rendering) and moved the instruction/
@@ -136,14 +136,14 @@ testing controls or using it as an app-level point.
 
 - **Flash and visually eyeball the redesigned calibration UI on real
   hardware.** All the above is compile/link/unit-test verification; nobody
-  has watched the buffer-free crosshair/dot rendering actually draw on a
+  has watched the buffer-free target/dot rendering actually draw on a
   physical CYD panel yet. The touch-script-driven memory tests check exact
   pixel colors at exact coordinates and all pass, which is a strong signal,
   but it's not the same as seeing it.
 - **Flash `dns_tester` on RP hardware** (Pico W / Pico 2 W) — only
   build/link-verified so far, same as the ESP side originally was before the
   memory bugs surfaced.
-- Consider a dedicated golden-image (PNG) test for the calibration crosshair
+- Consider a dedicated golden-image (PNG) test for the calibration target
   rendering, similar to `clock_renders_expected_frame` in linkage-blaze, to
   lock in visual correctness going forward rather than relying solely on the
   touch-script pixel-color assertions.

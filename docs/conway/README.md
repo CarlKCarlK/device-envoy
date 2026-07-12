@@ -2,34 +2,39 @@
 
 This page runs the same Conway logic used by the embedded demo through WebAssembly and renders the same `Frame2d` data as PNG bytes.
 
-The GitHub Pages root redirects to the current version at `web/v1/`. Keep released versions in `web/vN/` folders so old full URLs remain stable when a newer version becomes current.
+The GitHub Pages root redirects to the current version at `docs/conway/v2/`.
+Keep released versions in `docs/conway/vN/` folders so old URLs remain stable
+when a newer version becomes current.
 
 ## Build
 
 Run from the repository root:
 
 ```bash
-cargo build -p device-envoy-conway-wasm --release --target wasm32-unknown-unknown
-wasm-bindgen target/wasm32-unknown-unknown/release/device_envoy_conway_wasm.wasm --out-dir web/v1/pkg --target web
+just build-conway v2
 ```
 
 ## View
 
-Use the VS Code Live Preview extension:
+Use the built-in local server:
 
-1. Open `web/index.html` for the current version redirect, or `web/v1/index.html` for the versioned page directly.
-2. Run `Live Preview: Show Preview` from the Command Palette.
-3. If the preview opens a directory URL, navigate to `/web/` or `/web/v1/`.
+```bash
+just run-conway v2 8000
+```
+
+Then open `http://localhost:8000/`. This serves the selected version directly.
 
 ## GitHub Pages
 
-Publish the `web/` directory with GitHub Pages. The current redirect is:
+Publish the `docs/` directory with GitHub Pages. The current redirect is:
 
 ```text
-/ -> /v1/
+/conway/ -> /conway/v2/
 ```
 
-When creating `v2`, copy `web/v1/` to `web/v2/`, rebuild the WASM package into `web/v2/pkg/`, and update `web/index.html` to redirect to `./v2/`.
+When creating a new version, copy the previous `docs/conway/vN/` directory,
+rebuild the WASM package into its `pkg/` directory, and update
+`docs/conway/index.html` to redirect to the new version.
 
 ## Controls
 

@@ -9,9 +9,9 @@ use heapless::String;
 use super::super::{CydDisplay, CydTouchUncalibrated};
 use super::calibration::{
     CALIBRATION_MAX_DRAW_ITEMS, CALIBRATION_TEXT_RECTANGLE, CalibrationConfig, CalibrationCorner,
-    VERIFY_HIT_RADIUS_PIXELS, calibration_ack_dot_item, calibration_cross_items,
-    calibration_rejected_cross_items, calibration_verify_target_center,
-    calibration_verify_target_items, validate_calibration_points,
+    VERIFY_HIT_RADIUS_PIXELS, calibration_ack_dot_item, calibration_rejected_target_items,
+    calibration_target_items, calibration_verify_target_center, calibration_verify_target_items,
+    validate_calibration_points,
 };
 use super::flow::CalibrationFlow;
 use super::flow::CalibrationFlowEvent;
@@ -33,7 +33,7 @@ const CALIBRATION_DRAW_FRAMES_PER_SECOND: usize = 10;
 pub const VERIFY_TIMEOUT_FRAMES: usize =
     VERIFY_TIMEOUT_SECONDS * CALIBRATION_DRAW_FRAMES_PER_SECOND;
 
-/// Bounds for the crosshair/dot geometry, streamed buffer-free via
+/// Bounds for the target/dot geometry, streamed buffer-free via
 /// [`CydDisplay::draw_items`]. Covers the whole screen so every redraw
 /// erases any stale shape from the previous state before drawing the
 /// current one; the text banner is drawn afterward so it always wins the
@@ -537,7 +537,7 @@ async fn draw_message_screen<D>(display: &mut D, message: &str) -> Result<(), D:
 where
     D: CydDisplay,
 {
-    // Erase any leftover crosshair geometry from the redraw just before this
+    // Erase any leftover target geometry from the redraw just before this
     // one; buffer-free, so it costs nothing beyond the SPI transfer itself.
     display.clear()?;
     display
@@ -615,10 +615,10 @@ where
             if let Some(calibration_corner) = next_corner {
                 push_calibration_items(
                     &mut shape_items,
-                    calibration_cross_items(calibration_corner),
+                    calibration_target_items(calibration_corner),
                 );
             }
-            push_calibration_message(&mut message, "Tap cross, then lift");
+            push_calibration_message(&mut message, "Tap target, then lift");
         }
         CalibrationDriverState::ShowCaptured {
             calibration_corner, ..
@@ -633,7 +633,7 @@ where
                 [calibration_ack_dot_item(*calibration_corner)],
             );
             if let Some(next_corner) = next_corner {
-                push_calibration_items(&mut shape_items, calibration_cross_items(next_corner));
+                push_calibration_items(&mut shape_items, calibration_target_items(next_corner));
             }
             push_calibration_message(&mut message, "Corner captured");
         }
@@ -646,7 +646,7 @@ where
             if let Some(calibration_corner) = next_corner {
                 push_calibration_items(
                     &mut shape_items,
-                    calibration_rejected_cross_items(calibration_corner),
+                    calibration_rejected_target_items(calibration_corner),
                 );
             }
             match worst_residual_pixels {

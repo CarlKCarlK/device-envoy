@@ -75,8 +75,7 @@ const TOUCH_POLL_PERIOD: Duration = Duration::from_millis(16);
 /// risks overflowing RAM once Wi-Fi's own heap is added in (this bit ESP32
 /// in practice; no RP board has been verified against a full-screen buffer
 /// plus Wi-Fi, so the same small-buffer discipline is applied here too).
-const STATUS_HEIGHT: u32 = 20;
-const CONTROL_WIDTH: u32 = 40;
+const STATUS_LINE_HEIGHT: u32 = 20;
 const CONTROL_HEIGHT: u32 = 20;
 
 /// `ensure_calibration`'s own on-screen text banner needs a buffer at least
@@ -203,7 +202,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut success_count: u32 = 0;
     let mut failure_count: u32 = 0;
     let mut last_latency_millis: u64 = 0;
-    let mut status_text: heapless::String<96> = heapless::String::new();
+    let mut status_text: heapless::String<64> = heapless::String::new();
     let mut is_touch_down = false;
 
     draw_status(
@@ -324,19 +323,52 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
 fn draw_status(
     display: &mut device_envoy_rp::cyd::CydDisplayRp,
-    status_text: &mut heapless::String<96>,
+    status_text: &mut heapless::String<64>,
     tap_count: u32,
     success_count: u32,
     failure_count: u32,
     last_latency_millis: u64,
 ) -> Result<()> {
+    for (line_index, line) in [
+        "Tap Screen",
+        DNS_HOSTNAME,
+        "DNS Queries:",
+        "DNS Successes:",
+        "DNS Failures:",
+        "Last latency:",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        status_text.clear();
+        match line_index {
+            0 => status_text
+                .push_str(line)
+                .expect("status text exceeds fixed buffer"),
+            1 => write!(status_text, "DNS: {line}").expect("status text exceeds fixed buffer"),
+            2 => write!(status_text, "DNS Queries: {tap_count}")
+                .expect("status text exceeds fixed buffer"),
+            3 => write!(status_text, "DNS Successes: {success_count}")
+                .expect("status text exceeds fixed buffer"),
+            4 => write!(status_text, "DNS Failures: {failure_count}")
+                .expect("status text exceeds fixed buffer"),
+            5 => write!(status_text, "Last latency: {last_latency_millis}ms")
+                .expect("status text exceeds fixed buffer"),
+            _ => unreachable!(),
+        }
+        let rectangle = status_line_rectangle(display, line_index as u32);
+        display
+            .frame_mut(rectangle)
+            .clear()
+            .write_text(status_text.as_str())
+            .flush()?;
+    }
     status_text.clear();
-    write!(
-        status_text,
-        "Tap: DNS {DNS_HOSTNAME} T:{tap_count} OK:{success_count} F:{failure_count} {last_latency_millis}ms",
-    )
-    .expect("status text exceeds fixed buffer");
-    let rectangle = status_rectangle(display);
+    status_text
+        .push_str("Tap Settings:")
+        .expect("status text exceeds fixed buffer");
+    let settings_line_index = display.screen_size().height / STATUS_LINE_HEIGHT - 2;
+    let rectangle = status_line_rectangle(display, settings_line_index);
     display
         .frame_mut(rectangle)
         .clear()
@@ -347,48 +379,56 @@ fn draw_status(
 
 #[derive(Clone, Copy)]
 enum Control {
+    Orientation,
     Calibration,
     Wifi,
-    Orientation,
 }
 
 fn status_rectangle(display: &device_envoy_rp::cyd::CydDisplayRp) -> Rectangle {
+    status_line_rectangle(display, 0)
+}
+
+fn status_line_rectangle(
+    display: &device_envoy_rp::cyd::CydDisplayRp,
+    line_index: u32,
+) -> Rectangle {
     Rectangle::new(
-        Point::zero(),
-        Size::new(display.screen_size().width, STATUS_HEIGHT),
+        Point::new(0, (line_index * STATUS_LINE_HEIGHT) as i32),
+        Size::new(display.screen_size().width, STATUS_LINE_HEIGHT),
     )
 }
 
 fn control_rectangle(display: &device_envoy_rp::cyd::CydDisplayRp, control: Control) -> Rectangle {
     let index = match control {
-        Control::Calibration => 0,
-        Control::Wifi => 1,
-        Control::Orientation => 2,
+        Control::Orientation => 0,
+        Control::Calibration => 1,
+        Control::Wifi => 2,
     };
     Rectangle::new(
         Point::new(
-            display.screen_size().width as i32 - CONTROL_WIDTH as i32 * (3 - index),
+            display.screen_size().width as i32
+                - display.screen_size().width as i32 / 3 * (3 - index),
             display.screen_size().height as i32 - CONTROL_HEIGHT as i32,
         ),
-        Size::new(CONTROL_WIDTH, CONTROL_HEIGHT),
+        Size::new(display.screen_size().width / 3, CONTROL_HEIGHT),
     )
 }
 
 fn control_at(point: Point, screen_size: Size) -> Option<Control> {
-    [Control::Calibration, Control::Wifi, Control::Orientation]
+    [Control::Orientation, Control::Calibration, Control::Wifi]
         .into_iter()
         .find(|control| {
             let index = match control {
-                Control::Calibration => 0,
-                Control::Wifi => 1,
-                Control::Orientation => 2,
+                Control::Orientation => 0,
+                Control::Calibration => 1,
+                Control::Wifi => 2,
             };
             Rectangle::new(
                 Point::new(
-                    screen_size.width as i32 - CONTROL_WIDTH as i32 * (3 - index),
+                    screen_size.width as i32 - screen_size.width as i32 / 3 * (3 - index),
                     screen_size.height as i32 - CONTROL_HEIGHT as i32,
                 ),
-                Size::new(CONTROL_WIDTH, CONTROL_HEIGHT),
+                Size::new(screen_size.width / 3, CONTROL_HEIGHT),
             )
             .contains(point)
         })
@@ -396,9 +436,9 @@ fn control_at(point: Point, screen_size: Size) -> Option<Control> {
 
 fn draw_controls(display: &mut device_envoy_rp::cyd::CydDisplayRp) -> Result<()> {
     for (control, label) in [
+        (Control::Orientation, "ROT"),
         (Control::Calibration, "CAL"),
         (Control::Wifi, "WiFi"),
-        (Control::Orientation, "ROT"),
     ] {
         let rectangle = control_rectangle(display, control);
         display

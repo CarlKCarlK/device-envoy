@@ -188,6 +188,14 @@ const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
         "cyd_touch_paint",
         &[Capability::DUAL_SPI, Capability::LARGE_STACK],
     ),
+    (
+        "dns_tester",
+        &[
+            Capability::WIFI,
+            Capability::DUAL_SPI,
+            Capability::LARGE_STACK,
+        ],
+    ),
     ("flash_block_example1", &[]),
     ("ir", &[Capability::RMT]),
     ("ir_example1", &[Capability::RMT]),

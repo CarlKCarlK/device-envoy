@@ -1475,9 +1475,12 @@ mod tests {
             );
         }
         assert!(memory_cyd.flush_count() > 0);
+        // The confirmation message is the only buffered flush per redraw;
+        // crosshair/dot geometry streams buffer-free via `draw_items` and
+        // doesn't touch `last_flush_rectangle`. See `CALIBRATION_TEXT_RECTANGLE`.
         assert_eq!(
             memory_cyd.last_flush_rectangle(),
-            Some(Rectangle::new(Point::zero(), Size::new(320, 240)))
+            Some(Rectangle::new(Point::new(0, 220), Size::new(320, 20)))
         );
     }
 

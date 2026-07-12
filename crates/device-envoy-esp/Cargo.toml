@@ -236,6 +236,10 @@ name = "cyd_touch_paint_esp32_generic"
 path = "examples/esp32/generic/cyd_touch_paint.rs"
 
 [[example]]
+name = "dns_tester_esp32_generic"
+path = "examples/esp32/generic/dns_tester.rs"
+
+[[example]]
 name = "flash_block_example1_esp32_generic"
 path = "examples/esp32/generic/flash_block_example1.rs"
 
@@ -454,6 +458,10 @@ path = "examples/c2/generic/cyd_tiles.rs"
 [[example]]
 name = "cyd_touch_paint_esp32c2_generic"
 path = "examples/c2/generic/cyd_touch_paint.rs"
+
+[[example]]
+name = "dns_tester_esp32c2_generic"
+path = "examples/c2/generic/dns_tester.rs"
 
 [[example]]
 name = "flash_block_example1_esp32c2_generic"
@@ -676,6 +684,10 @@ name = "cyd_touch_paint_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/cyd_touch_paint.rs"
 
 [[example]]
+name = "dns_tester_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/dns_tester.rs"
+
+[[example]]
 name = "flash_block_example1_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/flash_block_example1.rs"
 
@@ -894,6 +906,10 @@ path = "examples/c3/generic/cyd_tiles.rs"
 [[example]]
 name = "cyd_touch_paint_esp32c3_generic"
 path = "examples/c3/generic/cyd_touch_paint.rs"
+
+[[example]]
+name = "dns_tester_esp32c3_generic"
+path = "examples/c3/generic/dns_tester.rs"
 
 [[example]]
 name = "flash_block_example1_esp32c3_generic"
@@ -1116,6 +1132,10 @@ name = "cyd_touch_paint_esp32c3_luatos"
 path = "examples/c3/luatos/cyd_touch_paint.rs"
 
 [[example]]
+name = "dns_tester_esp32c3_luatos"
+path = "examples/c3/luatos/dns_tester.rs"
+
+[[example]]
 name = "flash_block_example1_esp32c3_luatos"
 path = "examples/c3/luatos/flash_block_example1.rs"
 
@@ -1334,6 +1354,10 @@ path = "examples/c5/generic/cyd_tiles.rs"
 [[example]]
 name = "cyd_touch_paint_esp32c5_generic"
 path = "examples/c5/generic/cyd_touch_paint.rs"
+
+[[example]]
+name = "dns_tester_esp32c5_generic"
+path = "examples/c5/generic/dns_tester.rs"
 
 [[example]]
 name = "flash_block_example1_esp32c5_generic"
@@ -1556,6 +1580,10 @@ name = "cyd_touch_paint_esp32c6_generic"
 path = "examples/c6/generic/cyd_touch_paint.rs"
 
 [[example]]
+name = "dns_tester_esp32c6_generic"
+path = "examples/c6/generic/dns_tester.rs"
+
+[[example]]
 name = "flash_block_example1_esp32c6_generic"
 path = "examples/c6/generic/flash_block_example1.rs"
 
@@ -1774,6 +1802,10 @@ path = "examples/c61/generic/cyd_tiles.rs"
 [[example]]
 name = "cyd_touch_paint_esp32c61_generic"
 path = "examples/c61/generic/cyd_touch_paint.rs"
+
+[[example]]
+name = "dns_tester_esp32c61_generic"
+path = "examples/c61/generic/dns_tester.rs"
 
 [[example]]
 name = "flash_block_example1_esp32c61_generic"
@@ -1996,6 +2028,10 @@ name = "cyd_touch_paint_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/cyd_touch_paint.rs"
 
 [[example]]
+name = "dns_tester_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/dns_tester.rs"
+
+[[example]]
 name = "flash_block_example1_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/flash_block_example1.rs"
 
@@ -2214,6 +2250,10 @@ path = "examples/h2/generic/cyd_tiles.rs"
 [[example]]
 name = "cyd_touch_paint_esp32h2_generic"
 path = "examples/h2/generic/cyd_touch_paint.rs"
+
+[[example]]
+name = "dns_tester_esp32h2_generic"
+path = "examples/h2/generic/dns_tester.rs"
 
 [[example]]
 name = "flash_block_example1_esp32h2_generic"
@@ -2436,6 +2476,10 @@ name = "cyd_touch_paint_esp32s2_generic"
 path = "examples/s2/generic/cyd_touch_paint.rs"
 
 [[example]]
+name = "dns_tester_esp32s2_generic"
+path = "examples/s2/generic/dns_tester.rs"
+
+[[example]]
 name = "flash_block_example1_esp32s2_generic"
 path = "examples/s2/generic/flash_block_example1.rs"
 
@@ -2654,6 +2698,10 @@ path = "examples/s3/generic/cyd_tiles.rs"
 [[example]]
 name = "cyd_touch_paint_esp32s3_generic"
 path = "examples/s3/generic/cyd_touch_paint.rs"
+
+[[example]]
+name = "dns_tester_esp32s3_generic"
+path = "examples/s3/generic/dns_tester.rs"
 
 [[example]]
 name = "flash_block_example1_esp32s3_generic"
@@ -2876,6 +2924,10 @@ name = "cyd_touch_paint_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/cyd_touch_paint.rs"
 
 [[example]]
+name = "dns_tester_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/dns_tester.rs"
+
+[[example]]
 name = "flash_block_example1_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/flash_block_example1.rs"
 
@@ -3094,6 +3146,10 @@ path = "examples/s3/devkitc1_v1_0_n16r8/cyd_tiles.rs"
 [[example]]
 name = "cyd_touch_paint_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/cyd_touch_paint.rs"
+
+[[example]]
+name = "dns_tester_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/dns_tester.rs"
 
 [[example]]
 name = "flash_block_example1_esp32s3_devkitc1_v1_0_n16r8"

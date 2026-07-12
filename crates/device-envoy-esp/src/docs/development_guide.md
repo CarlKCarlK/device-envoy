@@ -91,7 +91,7 @@ Regenerate after changing templates or board mappings:
 
 ```bash
 cd crates/device-envoy-esp
-cargo xtask generate-board-examples
+just generate-board-examples
 ```
 
 ## Run Full Workspace Checks

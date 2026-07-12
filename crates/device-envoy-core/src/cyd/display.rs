@@ -22,7 +22,7 @@ use crate::pixel_target::PixelTarget;
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
-pub use tga::{mask_byte_count, Image565Fixed, MaskFixed, TgaImageFixed};
+pub use tga::{Image565Fixed, MaskFixed, TgaImageFixed, mask_byte_count};
 
 pub use crate::__cyd_tga as tga;
 
@@ -62,7 +62,6 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
         Point::zero()
     }
 
-    // TODO0x Arg! "region" (may no longer apply, RegionPixels renamed to RectanglePixels)
     /// This frame's rectangle (top-left and size) in physical-screen coordinates.
     ///
     /// See the [Cyd trait documentation](super::Cyd) for a usage example.

@@ -6,17 +6,14 @@
 //! persistence, and reset wiring. Start at [`ensure_calibration`].
 
 use embedded_graphics::{
-    draw_target::DrawTarget,
-    geometry::Point,
-    mono_font::{MonoTextStyle, ascii::FONT_6X10},
-    pixelcolor::{Rgb565, Rgb888, WebColors},
-    prelude::*,
-    primitives::{Circle, Line, PrimitiveStyle},
-    text::{Baseline, Text},
+    geometry::{Point, Size},
+    pixelcolor::{Rgb888, WebColors},
+    primitives::Rectangle,
 };
 use serde::{Deserialize, Serialize};
 
 use super::RawPoint;
+use crate::cyd::display::DrawItem;
 use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub use super::driver::{
@@ -26,7 +23,8 @@ pub use super::driver::{
 pub use super::flow::CalibrationFlow;
 
 pub const CALIBRATION_POINT_COUNT: usize = 4;
-pub const CALIBRATION_CROSS_MARGIN: i32 = 28;
+// Keep the lower crosshair above the bottom 20-pixel calibration message.
+pub const CALIBRATION_CROSS_MARGIN: i32 = 40;
 pub const CALIBRATION_CROSS_HALF_SIZE: i32 = 18;
 pub const CALIBRATION_CENTER_DOT_RADIUS: i32 = 3;
 pub const MAX_RESIDUAL_PIXELS: f32 = 12.0;
@@ -193,28 +191,48 @@ pub fn calibration_corner_center(calibration_corner: CalibrationCorner) -> Point
     }
 }
 
-/// Draw a calibration crosshair with a center dot onto `target`.
-pub fn draw_calibration_cross<E>(
-    target: &mut impl DrawTarget<Color = Rgb565, Error = E>,
-    calibration_corner: CalibrationCorner,
-) -> Result<(), E> {
-    draw_crosshair_at(
-        target,
+/// Height, in pixels, of the small text banner `ensure_calibration` draws
+/// its instruction/confirmation messages into.
+const CALIBRATION_TEXT_HEIGHT: usize = 20;
+
+/// Minimum device static-buffer pixel count required for `ensure_calibration`'s
+/// on-screen flow.
+///
+/// The crosshair/dot geometry streams straight to the panel via
+/// [`crate::cyd::CydDisplay::draw_items`] and needs no buffer at all, but the
+/// instruction/confirmation text still needs a small buffered frame. Apps
+/// that also draw their own status content should size their static buffer
+/// to at least `max(CALIBRATION_MIN_PIXEL_COUNT, their_own_needs)` rather
+/// than a full-screen buffer — combining a full-screen buffer with, say, a
+/// Wi-Fi stack's own heap can overflow memory-constrained boards.
+pub const CALIBRATION_MIN_PIXEL_COUNT: usize = SCREEN_WIDTH * CALIBRATION_TEXT_HEIGHT;
+
+/// Rectangle `ensure_calibration` draws its instruction/confirmation text
+/// into: a thin banner across the bottom of the screen.
+pub(super) const CALIBRATION_TEXT_RECTANGLE: Rectangle = Rectangle::new(
+    Point::new(0, SCREEN_HEIGHT as i32 - CALIBRATION_TEXT_HEIGHT as i32),
+    Size::new(SCREEN_WIDTH as u32, CALIBRATION_TEXT_HEIGHT as u32),
+);
+
+/// Maximum number of [`DrawItem`]s any single calibration redraw produces
+/// (a captured-corner dot plus the next corner's crosshair).
+pub(super) const CALIBRATION_MAX_DRAW_ITEMS: usize = 4;
+
+/// Draw items for a calibration crosshair with a center dot at `calibration_corner`.
+#[must_use]
+pub fn calibration_cross_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
+    crosshair_items_at(
         calibration_corner_center(calibration_corner),
-        Rgb565::from(CALIBRATION_CROSS_COLOR),
-        Rgb565::from(CALIBRATION_DOT_COLOR),
+        CALIBRATION_CROSS_COLOR,
     )
 }
 
-pub fn draw_calibration_rejected_cross<E>(
-    target: &mut impl DrawTarget<Color = Rgb565, Error = E>,
-    calibration_corner: CalibrationCorner,
-) -> Result<(), E> {
-    draw_crosshair_at(
-        target,
+/// Like [`calibration_cross_items`], colored to indicate a rejected attempt.
+#[must_use]
+pub fn calibration_rejected_cross_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
+    crosshair_items_at(
         calibration_corner_center(calibration_corner),
-        Rgb565::from(CALIBRATION_REJECTED_CROSS_COLOR),
-        Rgb565::from(CALIBRATION_DOT_COLOR),
+        CALIBRATION_REJECTED_CROSS_COLOR,
     )
 }
 
@@ -223,76 +241,44 @@ pub fn calibration_verify_target_center() -> Point {
     Point::new(SCREEN_WIDTH as i32 / 2, SCREEN_HEIGHT as i32 / 2)
 }
 
-pub fn draw_calibration_verify_target<E>(
-    target: &mut impl DrawTarget<Color = Rgb565, Error = E>,
-) -> Result<(), E> {
-    draw_crosshair_at(
-        target,
-        calibration_verify_target_center(),
-        Rgb565::from(CALIBRATION_CROSS_COLOR),
-        Rgb565::from(CALIBRATION_DOT_COLOR),
-    )
+/// Draw items for the post-calibration verify target at screen center.
+#[must_use]
+pub fn calibration_verify_target_items() -> [DrawItem; 3] {
+    crosshair_items_at(calibration_verify_target_center(), CALIBRATION_CROSS_COLOR)
 }
 
-pub fn draw_calibration_instruction<E>(
-    target: &mut impl DrawTarget<Color = Rgb565, Error = E>,
-    message: &str,
-) -> Result<(), E> {
-    Text::with_baseline(
-        message,
-        Point::new(12, SCREEN_HEIGHT as i32 - 14),
-        MonoTextStyle::new(&FONT_6X10, Rgb565::from(CALIBRATION_DOT_COLOR)),
-        Baseline::Top,
-    )
-    .draw(target)?;
-    Ok(())
+/// Draw item for the small dot acknowledging a captured corner.
+#[must_use]
+pub fn calibration_ack_dot_item(calibration_corner: CalibrationCorner) -> DrawItem {
+    dot_item_at(calibration_corner_center(calibration_corner))
 }
 
-pub fn draw_calibration_ack_dot<E>(
-    target: &mut impl DrawTarget<Color = Rgb565, Error = E>,
-    calibration_corner: CalibrationCorner,
-) -> Result<(), E> {
-    Circle::new(
-        calibration_corner_center(calibration_corner)
-            - Point::new(CALIBRATION_CENTER_DOT_RADIUS, CALIBRATION_CENTER_DOT_RADIUS),
-        (CALIBRATION_CENTER_DOT_RADIUS * 2) as u32,
-    )
-    .into_styled(PrimitiveStyle::with_fill(Rgb565::from(
-        CALIBRATION_DOT_COLOR,
-    )))
-    .draw(target)?;
-    Ok(())
+fn crosshair_items_at(center: Point, cross_color: Rgb888) -> [DrawItem; 3] {
+    let half = CALIBRATION_CROSS_HALF_SIZE as f32;
+    let (center_x, center_y) = (center.x as f32, center.y as f32);
+    [
+        DrawItem::Stroke {
+            start: (center_x - half, center_y),
+            end: (center_x + half, center_y),
+            color: cross_color,
+            pixel_width: 4.0,
+        },
+        DrawItem::Stroke {
+            start: (center_x, center_y - half),
+            end: (center_x, center_y + half),
+            color: cross_color,
+            pixel_width: 4.0,
+        },
+        dot_item_at(center),
+    ]
 }
 
-fn draw_crosshair_at<E>(
-    target: &mut impl DrawTarget<Color = Rgb565, Error = E>,
-    center: Point,
-    cross_color: Rgb565,
-    dot_color: Rgb565,
-) -> Result<(), E> {
-    let left = Point::new(center.x - CALIBRATION_CROSS_HALF_SIZE, center.y);
-    let right = Point::new(center.x + CALIBRATION_CROSS_HALF_SIZE, center.y);
-    let top = Point::new(center.x, center.y - CALIBRATION_CROSS_HALF_SIZE);
-    let bottom = Point::new(center.x, center.y + CALIBRATION_CROSS_HALF_SIZE);
-
-    Line::new(left, right)
-        .into_styled(PrimitiveStyle::with_stroke(cross_color, 4))
-        .draw(target)?;
-    Line::new(top, bottom)
-        .into_styled(PrimitiveStyle::with_stroke(cross_color, 4))
-        .draw(target)?;
-
-    Circle::new(
-        Point::new(
-            center.x - CALIBRATION_CENTER_DOT_RADIUS,
-            center.y - CALIBRATION_CENTER_DOT_RADIUS,
-        ),
-        (CALIBRATION_CENTER_DOT_RADIUS * 2 + 1) as u32,
-    )
-    .into_styled(PrimitiveStyle::with_fill(dot_color))
-    .draw(target)?;
-
-    Ok(())
+fn dot_item_at(center: Point) -> DrawItem {
+    DrawItem::Circle {
+        center: (center.x as f32, center.y as f32),
+        pixel_radius: CALIBRATION_CENTER_DOT_RADIUS as f32,
+        color: CALIBRATION_DOT_COLOR,
+    }
 }
 
 #[cfg(any(feature = "wasm", test))]

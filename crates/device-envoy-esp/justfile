@@ -13,14 +13,18 @@ show-docs-esp:
     just update-docs-esp
     ./scripts/open-docs-esp.sh
 
+# Regenerate board-specific ESP examples from their templates.
+generate-board-examples:
+    cargo xtask generate-board-examples
+
 attach-esp:
     source "$HOME/export-esp.sh" && espflash monitor
 
-run name chip="" port="":
+run name chip="" port="": generate-board-examples
     ./scripts/device-action.sh run "{{name}}" "{{chip}}" "{{port}}" "{{invocation_directory()}}"
 
-check name chip="":
+check name chip="": generate-board-examples
     ./scripts/device-action.sh check "{{name}}" "{{chip}}" "" "{{invocation_directory()}}"
 
-build name chip="":
+build name chip="": generate-board-examples
     ./scripts/device-action.sh build "{{name}}" "{{chip}}" "" "{{invocation_directory()}}"

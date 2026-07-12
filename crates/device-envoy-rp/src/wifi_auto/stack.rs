@@ -343,6 +343,14 @@ impl Wifi {
         })
     }
 
+    /// Clear saved credentials and select captive-portal startup mode.
+    pub fn reset_to_captive_portal(&self) -> Result<(), &'static str> {
+        self.update_state(|state| {
+            state.credentials = None;
+            state.start_mode = WifiStartMode::CaptivePortal;
+        })
+    }
+
     /// Update the start mode flag in a raw flash block before WiFi initialization.
     pub fn prepare_start_mode(
         block: &mut FlashBlockRp,

@@ -2,29 +2,46 @@ use core::fmt::Write;
 
 use crate::button::Button;
 use crate::flash_block::FlashBlock;
+#[cfg(not(test))]
+use embassy_time::Timer;
 use heapless::String;
 
 use super::super::{CydDisplay, CydTouchUncalibrated};
 use super::calibration::{
-    CalibrationConfig, CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS,
-    calibration_verify_target_center, draw_calibration_ack_dot, draw_calibration_cross,
-    draw_calibration_instruction, draw_calibration_rejected_cross, draw_calibration_verify_target,
-    validate_calibration_points,
+    CALIBRATION_MAX_DRAW_ITEMS, CALIBRATION_TEXT_RECTANGLE, CalibrationConfig, CalibrationCorner,
+    VERIFY_HIT_RADIUS_PIXELS, calibration_ack_dot_item, calibration_cross_items,
+    calibration_rejected_cross_items, calibration_verify_target_center,
+    calibration_verify_target_items, validate_calibration_points,
 };
 use super::flow::CalibrationFlow;
 use super::flow::CalibrationFlowEvent;
 use super::flow::{ReleaseTouchCapture, ReleaseTouchCaptureEvent};
-use crate::cyd::display::CydFrame;
+use crate::cyd::display::{CydFrame, DrawItem};
+use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use embedded_graphics::{
+    geometry::{Point, Size},
+    primitives::Rectangle,
+};
 
 pub const CAPTURE_ACK_FRAME_COUNT: usize = 8;
 pub const REJECTED_FRAME_COUNT: usize = 30;
 pub const MAX_RAW_EVENTS_PER_FRAME: usize = 64;
 const VERIFY_TIMEOUT_SECONDS: usize = 10;
-// The ESP classic CYD currently redraws the full calibration screen at about
-// 10 fps, so 100 drawn frames is roughly the intended 10-second timeout.
+// Verification is paced below so this frame budget remains a real-time
+// timeout even when the display only needs to redraw a small text rectangle.
 const CALIBRATION_DRAW_FRAMES_PER_SECOND: usize = 10;
 pub const VERIFY_TIMEOUT_FRAMES: usize =
     VERIFY_TIMEOUT_SECONDS * CALIBRATION_DRAW_FRAMES_PER_SECOND;
+
+/// Bounds for the crosshair/dot geometry, streamed buffer-free via
+/// [`CydDisplay::draw_items`]. Covers the whole screen so every redraw
+/// erases any stale shape from the previous state before drawing the
+/// current one; the text banner is drawn afterward so it always wins the
+/// small overlap at the bottom of the screen.
+const CALIBRATION_SHAPES_RECTANGLE: Rectangle = Rectangle::new(
+    Point::zero(),
+    Size::new(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
+);
 
 /// Result of ensuring calibration at startup.
 #[derive(Clone, Copy, Debug)]
@@ -116,6 +133,17 @@ enum CalibrationDriverState {
         release_touch_capture: ReleaseTouchCapture,
         polls_remaining: usize,
     },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CalibrationShape {
+    Capturing(Option<CalibrationCorner>),
+    ShowCaptured {
+        calibration_corner: CalibrationCorner,
+        next_corner: Option<CalibrationCorner>,
+    },
+    ShowRejected(Option<CalibrationCorner>),
+    Verifying,
 }
 
 /// Ensure that `touch` has a calibration, running the shared four-tap flow when
@@ -302,10 +330,6 @@ where
 }
 
 /// Like [`ensure_calibration`], with tunable flow timings.
-///
-/// Browser builds redraw much faster than the classic CYD, so they need a
-/// larger verify-frame budget to preserve the intended real-time grace period
-/// before the center confirmation tap.
 pub async fn ensure_calibration_with_settings<D, T, F, R>(
     display: &mut D,
     mut touch: T,
@@ -332,15 +356,19 @@ where
 
     let mut calibration_flow = CalibrationFlow::new();
     let mut calibration_driver_state = CalibrationDriverState::Capturing;
+    let mut last_calibration_shape = None;
+    let mut calibration_button_released = true;
 
     loop {
         // A plain Button is intentional here: this loop does synchronous
         // per-frame polling, not cancelable button futures, so ButtonWatch
         // would add an ESP-only dependency without buying correctness.
-        if recalibration_button.is_pressed() {
+        let calibration_button_pressed = recalibration_button.is_pressed();
+        if calibration_button_pressed && calibration_button_released {
             calibration_flow.restart();
             calibration_driver_state = CalibrationDriverState::Capturing;
         }
+        calibration_button_released = !calibration_button_pressed;
 
         let mut saw_idle = false;
         for _raw_event_index in 0..MAX_RAW_EVENTS_PER_FRAME {
@@ -468,24 +496,55 @@ where
             advance_driver_state_after_idle(&mut calibration_flow, &mut calibration_driver_state);
         }
 
-        if let Err(error) =
-            draw_calibration_screen(display, &calibration_flow, &calibration_driver_state).await
+        if let Err(error) = draw_calibration_screen(
+            display,
+            &calibration_flow,
+            &calibration_driver_state,
+            &mut last_calibration_shape,
+        )
+        .await
         {
             return Err(EnsureCalibrationError {
                 touch,
                 kind: EnsureCalibrationErrorKind::Device(error),
             });
         }
+
+        if saw_idle {
+            pace_verification_frame(&calibration_driver_state).await;
+        }
     }
 }
+
+#[cfg(not(test))]
+async fn pace_verification_frame(calibration_driver_state: &CalibrationDriverState) {
+    // The memory-backed tests intentionally use frame counts without waiting
+    // for wall-clock time. Hardware and browser builds need the pause because
+    // the optimized redraw path can otherwise consume all timeout frames in a
+    // few milliseconds.
+    if matches!(
+        calibration_driver_state,
+        CalibrationDriverState::Verifying { .. }
+    ) {
+        Timer::after_millis(100).await;
+    }
+}
+
+#[cfg(test)]
+async fn pace_verification_frame(_calibration_driver_state: &CalibrationDriverState) {}
 
 async fn draw_message_screen<D>(display: &mut D, message: &str) -> Result<(), D::Error>
 where
     D: CydDisplay,
 {
-    let mut frame = display.full_frame_mut();
-    frame.clear();
-    frame.write_text(message).flush().await
+    // Erase any leftover crosshair geometry from the redraw just before this
+    // one; buffer-free, so it costs nothing beyond the SPI transfer itself.
+    display.clear()?;
+    display
+        .frame_mut(CALIBRATION_TEXT_RECTANGLE)
+        .write_text(message)
+        .flush()
+        .await
 }
 
 fn advance_driver_state_after_idle(
@@ -540,55 +599,56 @@ async fn draw_calibration_screen<D>(
     display: &mut D,
     calibration_flow: &CalibrationFlow,
     calibration_driver_state: &CalibrationDriverState,
+    last_calibration_shape: &mut Option<CalibrationShape>,
 ) -> Result<(), D::Error>
 where
     D: CydDisplay,
 {
-    let mut frame = display.full_frame_mut();
-    frame.clear();
+    let mut shape_items: heapless::Vec<DrawItem, CALIBRATION_MAX_DRAW_ITEMS> = heapless::Vec::new();
+    let mut message = String::<48>::new();
+    let calibration_shape;
 
     match calibration_driver_state {
         CalibrationDriverState::Capturing => {
-            if let Some(calibration_corner) = calibration_flow.next_corner() {
-                match draw_calibration_cross(&mut frame, calibration_corner) {
-                    Ok(()) => {}
-                    Err(infallible) => match infallible {},
-                }
+            let next_corner = calibration_flow.next_corner();
+            calibration_shape = CalibrationShape::Capturing(next_corner);
+            if let Some(calibration_corner) = next_corner {
+                push_calibration_items(
+                    &mut shape_items,
+                    calibration_cross_items(calibration_corner),
+                );
             }
-            match draw_calibration_instruction(&mut frame, "Tap cross, then lift") {
-                Ok(()) => {}
-                Err(infallible) => match infallible {},
-            }
+            push_calibration_message(&mut message, "Tap cross, then lift");
         }
         CalibrationDriverState::ShowCaptured {
             calibration_corner, ..
         } => {
-            match draw_calibration_ack_dot(&mut frame, *calibration_corner) {
-                Ok(()) => {}
-                Err(infallible) => match infallible {},
+            let next_corner = calibration_flow.next_corner();
+            calibration_shape = CalibrationShape::ShowCaptured {
+                calibration_corner: *calibration_corner,
+                next_corner,
+            };
+            push_calibration_items(
+                &mut shape_items,
+                [calibration_ack_dot_item(*calibration_corner)],
+            );
+            if let Some(next_corner) = next_corner {
+                push_calibration_items(&mut shape_items, calibration_cross_items(next_corner));
             }
-            if let Some(next_corner) = calibration_flow.next_corner() {
-                match draw_calibration_cross(&mut frame, next_corner) {
-                    Ok(()) => {}
-                    Err(infallible) => match infallible {},
-                }
-            }
-            match draw_calibration_instruction(&mut frame, "Corner captured") {
-                Ok(()) => {}
-                Err(infallible) => match infallible {},
-            }
+            push_calibration_message(&mut message, "Corner captured");
         }
         CalibrationDriverState::ShowRejected {
             worst_residual_pixels,
             ..
         } => {
-            if let Some(calibration_corner) = calibration_flow.next_corner() {
-                match draw_calibration_rejected_cross(&mut frame, calibration_corner) {
-                    Ok(()) => {}
-                    Err(infallible) => match infallible {},
-                }
+            let next_corner = calibration_flow.next_corner();
+            calibration_shape = CalibrationShape::ShowRejected(next_corner);
+            if let Some(calibration_corner) = next_corner {
+                push_calibration_items(
+                    &mut shape_items,
+                    calibration_rejected_cross_items(calibration_corner),
+                );
             }
-            let mut message = String::<48>::new();
             match worst_residual_pixels {
                 Some(worst_residual_pixels) => {
                     match write!(&mut message, "Try again ({worst_residual_pixels:.1}px)") {
@@ -596,29 +656,54 @@ where
                         Err(_) => unreachable!("heapless message capacity is sufficient"),
                     }
                 }
-                None => match message.push_str("Try again") {
-                    Ok(()) => {}
-                    Err(_) => unreachable!("heapless message capacity is sufficient"),
-                },
-            }
-            match draw_calibration_instruction(&mut frame, message.as_str()) {
-                Ok(()) => {}
-                Err(infallible) => match infallible {},
+                None => push_calibration_message(&mut message, "Try again"),
             }
         }
         CalibrationDriverState::Verifying { .. } => {
-            match draw_calibration_verify_target(&mut frame) {
-                Ok(()) => {}
-                Err(infallible) => match infallible {},
-            }
-            match draw_calibration_instruction(&mut frame, "Tap center to save") {
-                Ok(()) => {}
-                Err(infallible) => match infallible {},
-            }
+            calibration_shape = CalibrationShape::Verifying;
+            push_calibration_items(&mut shape_items, calibration_verify_target_items());
+            push_calibration_message(&mut message, "Tap center to save");
         }
     }
 
-    frame.flush().await
+    // Buffer-free: stream the shape only when it changes. Re-streaming a
+    // full-screen background on every polling iteration makes the panel flash
+    // between the background and the text frame.
+    if *last_calibration_shape != Some(calibration_shape) {
+        let background = display.background_565();
+        display.draw_items::<CALIBRATION_MAX_DRAW_ITEMS>(
+            CALIBRATION_SHAPES_RECTANGLE,
+            background,
+            shape_items,
+        )?;
+        *last_calibration_shape = Some(calibration_shape);
+    }
+
+    // The one buffered flush per redraw: small (`CALIBRATION_TEXT_RECTANGLE`
+    // is `CALIBRATION_MIN_PIXEL_COUNT` pixels, not the full screen), drawn
+    // after the shapes so it always wins the small overlap at the bottom.
+    display
+        .frame_mut(CALIBRATION_TEXT_RECTANGLE)
+        .write_text(message.as_str())
+        .flush()
+        .await
+}
+
+fn push_calibration_items<const N: usize, const M: usize>(
+    shape_items: &mut heapless::Vec<DrawItem, N>,
+    items: [DrawItem; M],
+) {
+    for item in items {
+        shape_items
+            .push(item)
+            .expect("calibration draw items fit CALIBRATION_MAX_DRAW_ITEMS");
+    }
+}
+
+fn push_calibration_message(message: &mut String<48>, text: &str) {
+    message
+        .push_str(text)
+        .expect("calibration message fits fixed buffer");
 }
 
 fn hit_verify_target(mapped_x: f32, mapped_y: f32) -> bool {

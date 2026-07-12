@@ -216,7 +216,7 @@ impl Default for WifiAutoPersistedState {
 /// #         OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
 /// #         OnError: From<Self::Error>,
 /// #     >(
-/// #         self,
+/// #         &self,
 /// #         button: &mut impl Button,
 /// #         mut on_event: OnEvent,
 /// #     ) -> Result<WifiStack, OnError>
@@ -228,6 +228,7 @@ impl Default for WifiAutoPersistedState {
 /// #         .await?;
 /// #         panic!("DemoWifiAuto::connect is not implemented in this doctest")
 /// #     }
+/// #     fn reset_to_captive_portal(&self) -> Result<(), Self::Error> { Ok(()) }
 /// # }
 /// # fn main() {
 /// #     let wifi_auto = DemoWifiAuto;
@@ -247,13 +248,17 @@ pub trait WifiAuto {
     /// a richer error (e.g. a display error) and still use `?`. Returning the
     /// platform error itself is the `OnError = Self::Error` case.
     async fn connect<OnEvent, OnError>(
-        self,
+        &self,
         button: &mut impl Button,
         on_event: OnEvent,
     ) -> Result<WifiStack, OnError>
     where
         OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
         OnError: From<Self::Error>;
+
+    /// Clear saved credentials, select captive-portal startup, and leave the
+    /// device ready for the caller to reboot.
+    fn reset_to_captive_portal(&self) -> Result<(), Self::Error>;
 }
 
 /// Backend contract for platform-specific Wi-Fi auto-connect operations.

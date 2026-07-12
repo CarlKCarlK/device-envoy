@@ -10,6 +10,7 @@ use core::{cell::RefCell, future::Future};
 use cortex_m::peripheral::SCB;
 use defmt::{info, warn};
 use embassy_executor::Spawner;
+use embassy_futures::select::{Either, select};
 use embassy_net::Ipv4Address;
 use embassy_rp::{
     Peri,
@@ -74,7 +75,7 @@ pub(crate) struct WifiAutoStatic {
 ///
 /// The typical usage pattern is:
 ///
-/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
+/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode or pressed while connecting to reset Wi-Fi setup.
 /// 2. Construct a [`ButtonWatch`](macro@crate::button::button_watch) to control the physical button.
 /// 3. Construct a [`FlashBlockRp`] to store WiFi credentials.
 /// 4. Use [`WifiAutoRp::new`] to construct a `WifiAutoRp`.
@@ -329,7 +330,7 @@ impl WifiAutoRp {
 
     /// Connect to Wi-Fi using a caller-provided button reference.
     pub async fn connect<OnEvent, OnError>(
-        self,
+        &self,
         button: &mut impl Button,
         on_event: OnEvent,
     ) -> Result<WifiStack, OnError>
@@ -345,7 +346,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     type Error = Error;
 
     /// Connects to WiFi (if possible), reports status, and returns the
-    /// network stack, consuming the `WifiAutoRp`.
+    /// network stack while retaining the `WifiAutoRp` reset handle.
     ///
     /// See the [WifiAutoRp struct example](Self) for a usage example.
     ///
@@ -478,7 +479,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # }
     /// ```
     async fn connect<OnEvent, OnError>(
-        self,
+        &self,
         button: &mut impl Button,
         on_event: OnEvent,
     ) -> Result<WifiStack, OnError>
@@ -503,7 +504,25 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
                 self.wifi_auto.force_captive_portal();
             }
         }
-        self.wifi_auto.connect(on_event).await
+        match select(self.wifi_auto.connect(on_event), button.wait_for_press()).await {
+            Either::First(result) => result,
+            Either::Second(()) => {
+                while button.is_pressed() {
+                    Timer::after(Duration::from_millis(10)).await;
+                }
+                self.reset_to_captive_portal()?;
+                info!("WifiAutoRp: Wi-Fi reset requested via button press");
+                Timer::after_secs(1).await;
+                SCB::sys_reset();
+            }
+        }
+    }
+
+    fn reset_to_captive_portal(&self) -> Result<()> {
+        self.wifi_auto
+            .wifi
+            .reset_to_captive_portal()
+            .map_err(|_| Error::StorageCorrupted)
     }
 }
 

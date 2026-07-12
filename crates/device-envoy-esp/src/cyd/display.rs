@@ -109,11 +109,9 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
             Orientation::Portrait => MipiOrientation::new()
                 .rotate(Rotation::Deg180)
                 .flip_horizontal(),
-            // todo000 verify on device; provisional 180° rotation of Landscape.
             Orientation::LandscapeInverted => MipiOrientation::new()
                 .rotate(Rotation::Deg90)
                 .flip_horizontal(),
-            // todo000 verify on device; provisional 180° rotation of Portrait.
             Orientation::PortraitInverted => MipiOrientation::new().flip_horizontal(),
         };
 

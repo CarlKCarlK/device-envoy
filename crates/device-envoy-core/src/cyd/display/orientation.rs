@@ -10,8 +10,6 @@ use super::super::{SCREEN_HEIGHT, SCREEN_WIDTH};
 /// only knows the resulting oriented dimensions.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Orientation {
-    // todo000 later support a full algebra of rotations and flips like the
-    // device-envoy 2D LED panel orientation model.
     Landscape,
     Portrait,
     LandscapeInverted,

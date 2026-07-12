@@ -142,6 +142,7 @@ pub struct CydFrameEsp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     tile_top_left: Point,
     // Default foreground color and font, copied from the owning `CydDisplayEsp`, so
     // `write_text` can render with the device default style.
+    pub(crate) background565: Rgb565,
     pub(crate) foreground565: Rgb565,
     pub(crate) font: &'static MonoFont<'static>,
 }
@@ -725,6 +726,10 @@ impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
 
     fn fill(&mut self, color: Rgb565) -> &mut Self {
         CydFrameEsp::fill(self, color)
+    }
+
+    fn clear(&mut self) -> &mut Self {
+        self.fill(self.background565)
     }
 
     fn write_text(&mut self, text: &str) -> &mut Self {

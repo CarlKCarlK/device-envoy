@@ -225,6 +225,7 @@ enum CalibrationDriverState {
 /// #         Rectangle::new(Point::zero(), Size::new(320, 240))
 /// #     }
 /// #     fn fill(&mut self, _color: Rgb565) -> &mut Self { self }
+/// #     fn clear(&mut self) -> &mut Self { self }
 /// #     fn write_text(&mut self, _text: &str) -> &mut Self { self }
 /// #     fn copy_from_565(
 /// #         &mut self,
@@ -482,9 +483,8 @@ async fn draw_message_screen<D>(display: &mut D, message: &str) -> Result<(), D:
 where
     D: CydDisplay,
 {
-    let background565 = display.background_565();
     let mut frame = display.full_frame_mut();
-    frame.fill(background565);
+    frame.clear();
     frame.write_text(message).flush().await
 }
 
@@ -544,9 +544,8 @@ async fn draw_calibration_screen<D>(
 where
     D: CydDisplay,
 {
-    let background565 = display.background_565();
     let mut frame = display.full_frame_mut();
-    frame.fill(background565);
+    frame.clear();
 
     match calibration_driver_state {
         CalibrationDriverState::Capturing => {

@@ -73,6 +73,12 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// See the [Cyd trait documentation](super::Cyd) for a usage example.
     fn fill(&mut self, color: Rgb565) -> &mut Self;
 
+    /// Clear this frame with the display's default background color.
+    ///
+    /// Unlike [`CydDisplay::clear`](super::CydDisplay::clear), this only
+    /// updates the frame buffer and does not immediately write to the panel.
+    fn clear(&mut self) -> &mut Self;
+
     /// Draw `text` at the frame's top-left using the device default font and
     /// foreground color. Returns `&mut Self` for chaining.
     ///

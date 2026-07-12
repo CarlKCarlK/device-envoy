@@ -727,6 +727,10 @@ mod tests {
             self
         }
 
+        fn clear(&mut self) -> &mut Self {
+            self
+        }
+
         fn write_text(&mut self, _text: &str) -> &mut Self {
             self
         }

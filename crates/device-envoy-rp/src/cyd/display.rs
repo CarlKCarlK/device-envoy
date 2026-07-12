@@ -175,6 +175,7 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
             view,
             rectangle,
             tile_top_left,
+            background565,
             foreground565,
             font,
         }

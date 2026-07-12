@@ -508,6 +508,7 @@ impl CydDisplay for CydDisplayWasm {
             pixels,
             rectangle,
             tile_top_left,
+            background565: self.background565,
             foreground565: self.foreground565,
             font: self.font,
         }
@@ -655,6 +656,7 @@ pub struct CydFrameWasm<'a> {
     // Tile top-left in screen coordinates. Drawing coordinates are translated
     // by this point before reaching the local frame buffer.
     tile_top_left: Point,
+    background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
 }
@@ -801,6 +803,10 @@ impl CydFrame for CydFrameWasm<'_> {
 
     fn fill(&mut self, color: Rgb565) -> &mut Self {
         CydFrameWasm::fill(self, color)
+    }
+
+    fn clear(&mut self) -> &mut Self {
+        self.fill(self.background565)
     }
 
     fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()> {

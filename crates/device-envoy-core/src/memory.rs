@@ -102,7 +102,7 @@ use std::{
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
     Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated,
-    display::{CydFrame, RectanglePixels},
+    display::{CydFrame, Orientation, RectanglePixels},
     touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
 #[cfg(test)]
@@ -202,6 +202,7 @@ pub struct CydFrameMemory {
     screen_size: Size,
     rectangle: Rectangle,
     tile_top_left: Point,
+    background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
     pixels: Vec<u16>,
@@ -235,6 +236,26 @@ impl CydMemory {
     /// Construct an empty in-memory CYD surface with the given screen style.
     #[must_use]
     pub fn new(
+        size: Size,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+    ) -> Self {
+        Self::new_inner(size, background, foreground, font)
+    }
+
+    /// Construct an in-memory CYD surface with an oriented logical screen.
+    #[must_use]
+    pub fn new_with_orientation(
+        orientation: Orientation,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+    ) -> Self {
+        Self::new_inner(orientation.size(), background, foreground, font)
+    }
+
+    fn new_inner(
         size: Size,
         background: Rgb888,
         foreground: Rgb888,
@@ -593,6 +614,7 @@ impl CydDisplay for CydDisplayMemory {
             screen_size: self.size,
             rectangle,
             tile_top_left,
+            background565: self.background565,
             foreground565: self.foreground565,
             font: self.font,
             pixels: vec![self.background565.into_storage(); pixel_count],
@@ -785,6 +807,10 @@ impl CydFrame for CydFrameMemory {
     fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.pixels.fill(color.into_storage());
         self
+    }
+
+    fn clear(&mut self) -> &mut Self {
+        self.fill(self.background565)
     }
 
     fn write_text(&mut self, text: &str) -> &mut Self {

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240" role="img" aria-label="DNS test landscape background design">
+  <defs>
+    <style>
+      .bg { fill: #07131f; }
+      .panel { fill: #0f2637; }
+      .panel2 { fill: #0b1d2c; }
+      .line { stroke: #315267; stroke-width: 1; }
+      .grid { stroke: #173348; stroke-width: .6; opacity: .42; }
+      .label { fill: #7898ad; font: 700 10px Arial, sans-serif; letter-spacing: 0; }
+      .small { fill: #5f7f94; font: 700 8px Arial, sans-serif; letter-spacing: 0; }
+      .value { fill: #d9f3ff; font: 700 16px Arial, sans-serif; letter-spacing: 0; }
+      .latency { fill: #e6f8ff; font: 700 36px Arial, sans-serif; letter-spacing: 0; }
+      .accent { fill: #20cfff; font: 700 11px Arial, sans-serif; letter-spacing: 0; }
+      .success { fill: #69dc9e; }
+      .failure { fill: #ff716d; }
+      .muted-stroke { stroke: #24465c; stroke-width: 1; fill: none; }
+    </style>
+    <pattern id="trace-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path class="grid" d="M16 0H0V16"/>
+    </pattern>
+  </defs>
+
+  <rect class="bg" width="320" height="240"/>
+  <rect width="320" height="240" fill="url(#trace-grid)"/>
+  <path class="muted-stroke" opacity=".28" d="M18 66h42v-24h38M244 58h32v34h26M70 164h36v20h58M196 34h20v22h38"/>
+
+  <rect class="panel" x="10" y="10" width="300" height="184" rx="7"/>
+  <rect class="panel2" x="20" y="54" width="280" height="112" rx="5"/>
+  <line class="line" x1="20" y1="42" x2="300" y2="42"/>
+  <line class="line" x1="20" y1="178" x2="300" y2="178"/>
+
+  <text class="label" x="22" y="28">DNS TEST</text>
+  <circle class="success" cx="252" cy="24" r="4"/>
+  <text class="label" x="263" y="28">READY</text>
+
+  <text class="small" x="22" y="72">TARGET</text>
+  <text class="small" x="272" y="72" text-anchor="middle">STATUS</text>
+
+  <g id="preview-values">
+    <text class="value" x="22" y="92">example.com</text>
+    <g id="preview-values-latency">
+      <text class="latency" x="160" y="121" text-anchor="middle">22 ms</text>
+      <text class="small" x="160" y="141" text-anchor="middle">LAST LOOKUP</text>
+    </g>
+    <text class="value success" x="272" y="102" text-anchor="middle">OK</text>
+    <g id="preview-values-stats">
+      <text class="small" x="52" y="158" text-anchor="middle">QUERIES</text>
+      <text class="value" x="52" y="176" text-anchor="middle">1</text>
+      <text class="small" x="160" y="158" text-anchor="middle">SUCCESS</text>
+      <text class="value success" x="160" y="176" text-anchor="middle">1</text>
+      <text class="small" x="268" y="158" text-anchor="middle">FAILED</text>
+      <text class="value failure" x="268" y="176" text-anchor="middle">0</text>
+    </g>
+  </g>
+
+  <rect class="panel2" x="10" y="202" width="300" height="28" rx="6"/>
+  <line class="line" x1="85" y1="206" x2="85" y2="226"/>
+  <line class="line" x1="160" y1="206" x2="160" y2="226"/>
+  <line class="line" x1="235" y1="206" x2="235" y2="226"/>
+
+  <g transform="translate(28 212)">
+    <circle cx="0" cy="4" r="5" class="muted-stroke"/>
+    <path d="M-3 4h6M0 1v6" stroke="#20cfff" stroke-width="1.4"/>
+    <text class="accent" x="13" y="8">CAL</text>
+  </g>
+  <g transform="translate(98 212)">
+    <path d="M0 8c4-4 16-4 20 0" class="muted-stroke"/>
+    <path d="M5 4c3-3 7-3 10 0" class="muted-stroke"/>
+    <circle cx="10" cy="11" r="2" fill="#20cfff"/>
+    <text class="accent" x="26" y="8">WI-FI</text>
+  </g>
+  <g transform="translate(172 212)">
+    <path d="M1 5a8 8 0 0 1 14-5" class="muted-stroke"/>
+    <path d="M15 0v6h-6" stroke="#20cfff" stroke-width="1.4" fill="none"/>
+    <text class="accent" x="21" y="8">ROTATE</text>
+  </g>
+  <g transform="translate(249 212)">
+    <circle cx="6" cy="4" r="5" class="muted-stroke"/>
+    <circle cx="6" cy="4" r="2" class="muted-stroke"/>
+    <path d="M6-3v2M6 9v2M-1 4h2M11 4h2M1 0l1.5 1.5M9.5 6.5 11 8M1 8l1.5-1.5M9.5 1.5 11 0" stroke="#20cfff" stroke-width="1.2"/>
+    <text class="accent" x="18" y="8">SET</text>
+  </g>
+</svg>

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="320" viewBox="0 0 240 320" role="img" aria-label="DNS test portrait background design">
+  <defs>
+    <style>
+      .bg { fill: #07131f; }
+      .panel { fill: #0f2637; }
+      .panel2 { fill: #0b1d2c; }
+      .line { stroke: #315267; stroke-width: 1; }
+      .grid { stroke: #173348; stroke-width: .6; opacity: .42; }
+      .label { fill: #7898ad; font: 700 10px Arial, sans-serif; letter-spacing: 0; }
+      .small { fill: #5f7f94; font: 700 8px Arial, sans-serif; letter-spacing: 0; }
+      .value { fill: #d9f3ff; font: 700 16px Arial, sans-serif; letter-spacing: 0; }
+      .latency { fill: #e6f8ff; font: 700 34px Arial, sans-serif; letter-spacing: 0; }
+      .accent { fill: #20cfff; font: 700 10px Arial, sans-serif; letter-spacing: 0; }
+      .success { fill: #69dc9e; }
+      .failure { fill: #ff716d; }
+      .muted-stroke { stroke: #24465c; stroke-width: 1; fill: none; }
+    </style>
+    <pattern id="trace-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path class="grid" d="M16 0H0V16"/>
+    </pattern>
+  </defs>
+
+  <rect class="bg" width="240" height="320"/>
+  <rect width="240" height="320" fill="url(#trace-grid)"/>
+  <path class="muted-stroke" opacity=".28" d="M18 78h24v-32h42M182 58h24v42h20M40 232h44v22h62M136 34h18v26h36"/>
+
+  <rect class="panel" x="10" y="10" width="220" height="258" rx="7"/>
+  <line class="line" x1="20" y1="42" x2="220" y2="42"/>
+  <line class="line" x1="20" y1="246" x2="220" y2="246"/>
+
+  <text class="label" x="22" y="28">DNS TEST</text>
+  <circle class="success" cx="174" cy="24" r="4"/>
+  <text class="label" x="185" y="28">READY</text>
+
+  <text class="small" x="22" y="68">TARGET</text>
+  <rect class="panel2" x="20" y="96" width="200" height="80" rx="5"/>
+
+  <g id="preview-values">
+    <text class="value" x="22" y="88">example.com</text>
+    <g id="preview-values-latency">
+      <text class="latency" x="120" y="142" text-anchor="middle">22 ms</text>
+      <text class="small" x="120" y="162" text-anchor="middle">LAST LOOKUP</text>
+    </g>
+    <g id="preview-values-stats">
+      <text class="small" x="28" y="200">QUERIES</text>
+      <text class="value" x="210" y="200" text-anchor="end">1</text>
+      <text class="small" x="28" y="222">SUCCESS</text>
+      <text class="value success" x="210" y="222" text-anchor="end">1</text>
+      <text class="small" x="28" y="240">FAILED</text>
+      <text class="value failure" x="210" y="240" text-anchor="end">0</text>
+    </g>
+  </g>
+
+  <rect class="panel2" x="10" y="276" width="220" height="36" rx="6"/>
+  <line class="line" x1="65" y1="280" x2="65" y2="308"/>
+  <line class="line" x1="120" y1="280" x2="120" y2="308"/>
+  <line class="line" x1="175" y1="280" x2="175" y2="308"/>
+
+  <g transform="translate(38 285)">
+    <circle cx="0" cy="2" r="5" class="muted-stroke"/>
+    <path d="M-3 2h6M0-1v6" stroke="#20cfff" stroke-width="1.4"/>
+    <text class="accent" x="0" y="21" text-anchor="middle">CAL</text>
+  </g>
+  <g transform="translate(83 281)">
+    <path d="M0 8c4-4 15-4 19 0" class="muted-stroke"/>
+    <path d="M5 4c3-2 6-2 9 0" class="muted-stroke"/>
+    <circle cx="9.5" cy="11" r="2" fill="#20cfff"/>
+    <text class="accent" x="9.5" y="25" text-anchor="middle">WI-FI</text>
+  </g>
+  <g transform="translate(140 283)">
+    <path d="M1 5a8 8 0 0 1 14-5" class="muted-stroke"/>
+    <path d="M15 0v6h-6" stroke="#20cfff" stroke-width="1.4" fill="none"/>
+    <text class="accent" x="8" y="23" text-anchor="middle">ROTATE</text>
+  </g>
+  <g transform="translate(197 285)">
+    <circle cx="6" cy="2" r="5" class="muted-stroke"/>
+    <circle cx="6" cy="2" r="2" class="muted-stroke"/>
+    <path d="M6-5v2M6 7v2M-1 2h2M11 2h2M1-2l1.5 1.5M9.5 4.5 11 6M1 6l1.5-1.5M9.5-.5 11-2" stroke="#20cfff" stroke-width="1.2"/>
+    <text class="accent" x="6" y="21" text-anchor="middle">SET</text>
+  </g>
+</svg>

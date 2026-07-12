@@ -5,7 +5,7 @@ use device_envoy_core::{
     button::Button as _,
     cyd::{
         CydDisplay as _, CydTouch as _, CydTouchUncalibrated as _,
-        display::{CydFrame, Orientation},
+        display::{CydFrame, DrawItem, Image565Fixed, Orientation},
         touch::{
             TouchEvent,
             calibration::{CalibrationConfig, ensure_calibration},
@@ -30,8 +30,22 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 const DNS_HOSTNAME: &str = "example.com";
 const BACKGROUND: Rgb888 = Rgb888::new(10, 10, 12); // near-black
 const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
-const STATUS_LINE_HEIGHT: i32 = 20;
 const CONTROL_HEIGHT: u32 = 24;
+
+const LANDSCAPE_BACKGROUND: Image565Fixed<320, 240, { 320 * 240 }> =
+    device_envoy_core::cyd::display::tga!(
+        "../../../docs/dns-tester/v1/assets/dns_tester_background_landscape.tga",
+        320,
+        240
+    )
+    .to_565();
+const PORTRAIT_BACKGROUND: Image565Fixed<240, 320, { 240 * 320 }> =
+    device_envoy_core::cyd::display::tga!(
+        "../../../docs/dns-tester/v1/assets/dns_tester_background_portrait.tga",
+        240,
+        320
+    )
+    .to_565();
 
 #[wasm_bindgen]
 pub struct DnsTesterWeb {
@@ -155,8 +169,114 @@ impl DnsTesterWeb {
         let Some(display) = &mut state.display else {
             return Ok(());
         };
-        let mut frame = Self::render(display, taps, successes, failures, last_latency_millis);
-        frame.flush().await.map_err(|error| match error {})
+        let screen_size = display.screen_size();
+        let background = background_for_size(screen_size);
+        let background_color = display.background_565();
+        display
+            .draw_items::<1>(
+                Rectangle::new(Point::zero(), screen_size),
+                background_color,
+                [DrawItem::Bitmap {
+                    view: background.view(),
+                    top_left: Point::zero(),
+                }],
+            )
+            .unwrap_infallible();
+
+        let status = if taps == 0 { "TAP TO TEST" } else { "READY" };
+        let latency = if taps == 0 {
+            "—".to_owned()
+        } else {
+            format!("{last_latency_millis} ms")
+        };
+        let queries = taps.to_string();
+        let success_count = successes.to_string();
+        let failure_count = failures.to_string();
+
+        if screen_size.width > screen_size.height {
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(220, 0), Size::new(100, 20)),
+                status.to_owned(),
+                Rgb888::new(127, 220, 255), // bright cyan
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(80, 78), Size::new(160, 28)),
+                latency,
+                Rgb888::new(185, 210, 223), // pale blue-white
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(70, 164), Size::new(38, 18)),
+                queries,
+                Rgb888::new(185, 210, 223), // pale blue-white
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(177, 164), Size::new(38, 18)),
+                success_count,
+                Rgb888::new(130, 220, 150), // soft green
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(282, 164), Size::new(38, 18)),
+                failure_count,
+                Rgb888::new(240, 125, 115), // coral red
+            )
+            .await?;
+        } else {
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(150, 0), Size::new(90, 20)),
+                status.to_owned(),
+                Rgb888::new(127, 220, 255), // bright cyan
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(50, 98), Size::new(140, 25)),
+                latency,
+                Rgb888::new(185, 210, 223), // pale blue-white
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(195, 168), Size::new(45, 16)),
+                queries,
+                Rgb888::new(185, 210, 223), // pale blue-white
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(195, 185), Size::new(45, 16)),
+                success_count,
+                Rgb888::new(130, 220, 150), // soft green
+            )
+            .await?;
+            draw_text_value(
+                display,
+                background,
+                Rectangle::new(Point::new(195, 202), Size::new(45, 16)),
+                failure_count,
+                Rgb888::new(240, 125, 115), // coral red
+            )
+            .await?;
+        }
+        Ok(())
     }
 
     pub fn touch_down(&self, x: f32, y: f32) {
@@ -287,64 +407,56 @@ impl DnsTesterWeb {
     fn action(message: &str) -> String {
         message.into()
     }
+}
 
-    fn render(
-        display: &mut CydDisplayWasm,
-        taps: u32,
-        successes: u32,
-        failures: u32,
-        last_latency_millis: u32,
-    ) -> device_envoy_core::wasm::CydFrameWasm<'_> {
-        let screen_size = display.screen_size();
-        let foreground = display.foreground_565();
-        let mut frame = display.full_frame_mut();
-        CydFrame::clear(&mut frame);
-        let style = MonoTextStyle::new(&FONT_6X10, foreground);
-        let lines = [
-            "Tap Screen",
-            DNS_HOSTNAME,
-            &format!("DNS Queries: {taps}"),
-            &format!("DNS Successes: {successes}"),
-            &format!("DNS Failures: {failures}"),
-            &format!("Last latency: {last_latency_millis}ms"),
-        ];
-        for (line_index, line) in lines.into_iter().enumerate() {
-            Text::with_baseline(
-                line,
-                Point::new(4, line_index as i32 * STATUS_LINE_HEIGHT),
-                style,
-                Baseline::Top,
-            )
-            .draw(&mut frame)
-            .unwrap_infallible();
+#[derive(Clone, Copy)]
+enum Background {
+    Landscape,
+    Portrait,
+}
+
+impl Background {
+    fn view(self) -> device_envoy_core::cyd::display::Image565View {
+        match self {
+            Self::Landscape => LANDSCAPE_BACKGROUND.view(),
+            Self::Portrait => PORTRAIT_BACKGROUND.view(),
         }
-        Text::with_baseline(
-            "Tap Settings:",
-            Point::new(4, screen_size.height as i32 - 2 * STATUS_LINE_HEIGHT),
-            style,
-            Baseline::Top,
-        )
+    }
+
+    fn view_rect(self, rectangle: Rectangle) -> device_envoy_core::cyd::display::Image565View {
+        match self {
+            Self::Landscape => LANDSCAPE_BACKGROUND.view_rect(rectangle),
+            Self::Portrait => PORTRAIT_BACKGROUND.view_rect(rectangle),
+        }
+    }
+}
+
+fn background_for_size(size: Size) -> Background {
+    if size.width > size.height {
+        Background::Landscape
+    } else {
+        Background::Portrait
+    }
+}
+
+async fn draw_text_value(
+    display: &mut CydDisplayWasm,
+    background: Background,
+    rectangle: Rectangle,
+    text: String,
+    color: Rgb888,
+) -> Result<(), JsValue> {
+    let mut frame = display.frame_mut(rectangle);
+    DrawItem::Bitmap {
+        view: background.view_rect(rectangle),
+        top_left: rectangle.top_left,
+    }
+    .draw(&mut frame);
+    let style = MonoTextStyle::new(&FONT_6X10, color.into());
+    Text::with_baseline(text.as_str(), Point::zero(), style, Baseline::Top)
         .draw(&mut frame)
         .unwrap_infallible();
-        for (control, label) in [
-            (Control::Orientation, "ROT"),
-            (Control::Calibration, "CAL"),
-            (Control::Wifi, "WiFi"),
-        ]
-        .into_iter()
-        {
-            let rectangle = control_rectangle(control, screen_size);
-            Text::with_baseline(
-                label,
-                rectangle.top_left + Point::new(8, 5),
-                style,
-                Baseline::Top,
-            )
-            .draw(&mut frame)
-            .unwrap_infallible();
-        }
-        frame
-    }
+    frame.flush().await.map_err(|error| match error {})
 }
 
 #[derive(Clone, Copy)]
@@ -357,8 +469,8 @@ enum Control {
 fn control_rectangle(control: Control, size: Size) -> Rectangle {
     let index = match control {
         Control::Orientation => 0,
-        Control::Calibration => 1,
-        Control::Wifi => 2,
+        Control::Wifi => 1,
+        Control::Calibration => 2,
     };
     Rectangle::new(
         Point::new(
@@ -370,7 +482,7 @@ fn control_rectangle(control: Control, size: Size) -> Rectangle {
 }
 
 fn control_at(point: Point, size: Size) -> Option<Control> {
-    [Control::Orientation, Control::Calibration, Control::Wifi]
+    [Control::Orientation, Control::Wifi, Control::Calibration]
         .into_iter()
         .find(|control| control_rectangle(*control, size).contains(point))
 }

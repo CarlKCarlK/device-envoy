@@ -172,7 +172,7 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "demo-ux-device-button";
-  button.textContent = "device mode";
+  button.textContent = "full-screen mode";
 
   const overlay = document.createElement("div");
   overlay.className = "demo-ux-device-overlay";
@@ -181,7 +181,7 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
   const closeButton = document.createElement("button");
   closeButton.type = "button";
   closeButton.className = "demo-ux-device-close";
-  closeButton.setAttribute("aria-label", "Exit device mode");
+  closeButton.setAttribute("aria-label", "Exit full-screen mode");
   closeButton.textContent = "\u00d7";
 
   const screenHost = document.createElement("div");

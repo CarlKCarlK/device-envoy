@@ -150,12 +150,10 @@ impl<const PIXEL_COUNT: usize> Default for PixelBuffer<PIXEL_COUNT> {
     }
 }
 
-// todo00 understand this code.
-/// Type-erased draw buffer a [`CydEsp`](super::CydEsp) can own: it can be initialized
-/// into a `'static` cell and hand out [`RegionView`]s. Implemented for every
-/// [`PixelBuffer<PIXEL_COUNT>`] so that `CydEsp` can hold a buffer of any size without
-/// itself being generic. Internal only — apps pick the size via the
-/// `PIXEL_COUNT` on their [`CydStaticEsp`](super::CydStaticEsp).
+/// Draw buffer that a [`CydEsp`](super::CydEsp) can own and use to create
+/// [`RegionView`]s. It works with any [`PixelBuffer<PIXEL_COUNT>`] size, while
+/// the app chooses the capacity through `PIXEL_COUNT` on its
+/// [`CydStaticEsp`](super::CydStaticEsp).
 pub(crate) trait DynPixelBuffer: 'static {
     /// Borrow a `width`×`height` view out of the buffer (must fit the capacity).
     fn view_mut(&mut self, width: usize, height: usize) -> RegionView<'_>;

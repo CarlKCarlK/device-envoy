@@ -17,7 +17,7 @@ use portable_atomic::{AtomicBool, Ordering};
 
 use crate::Result;
 #[cfg(target_os = "none")]
-use crate::button::Button;
+use crate::button::{Button, PressDuration};
 #[cfg(target_os = "none")]
 use crate::flash_block::{FlashBlock as _, FlashBlockEsp};
 #[cfg(target_os = "none")]
@@ -35,7 +35,7 @@ extern crate alloc;
 #[cfg(target_os = "none")]
 use alloc::string::String;
 #[cfg(target_os = "none")]
-use embassy_futures::select::{Either4, select4};
+use embassy_futures::select::{Either, Either4, select, select4};
 
 use device_envoy_core::wifi_auto::{
     HtmlBuffer, WifiAutoPersistedState, WifiCredentials, WifiStartMode,
@@ -63,7 +63,7 @@ enum WifiAutoStorage {
 ///
 /// The typical usage pattern is:
 ///
-/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
+/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode, or held for a long press while connecting to reset Wi-Fi setup.
 /// 2. Construct a [`ButtonEsp`](crate::button::ButtonEsp) to control the physical button.
 /// 3. Construct a [`FlashBlockEsp`] to store WiFi credentials.
 /// 4. Use [`WifiAutoEsp::new`] to construct a `WifiAutoEsp`.
@@ -298,6 +298,14 @@ impl<'a> WifiAutoEsp<'a> {
     pub(crate) fn set_start_mode(&self, wifi_start_mode: WifiStartMode) -> Result<()> {
         let mut wifi_auto_persisted_state = self.load_persisted_state()?;
         wifi_auto_persisted_state.wifi_start_mode = wifi_start_mode;
+        self.store_persisted_state(&wifi_auto_persisted_state)
+    }
+
+    #[cfg(target_os = "none")]
+    fn prepare_for_captive_portal_reset(&self) -> Result<()> {
+        let mut wifi_auto_persisted_state = self.load_persisted_state()?;
+        wifi_auto_persisted_state.wifi_credentials = None;
+        wifi_auto_persisted_state.wifi_start_mode = WifiStartMode::CaptivePortal;
         self.store_persisted_state(&wifi_auto_persisted_state)
     }
 
@@ -696,6 +704,9 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     ///
     /// This `connect` method reports progress by calling a user-provided async
     /// handler whenever the WiFi state changes.
+    /// A long button press while connecting clears the saved credentials,
+    /// marks captive-portal mode in flash, and resets the ESP. The next boot
+    /// therefore starts in Wi-Fi setup mode.
     /// The handler receives a [`WifiAutoEvent`].
     /// The handler is called sequentially for each event and may `await`.
     ///
@@ -807,7 +818,30 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
         if self.force_captive_portal_if_pressed_state(force_captive_portal)? {
             info!("wifi_auto force-captive-portal requested via button");
         }
-        self.connect_inner(force_captive_portal, on_event).await
+
+        let wait_for_wifi_reset = async {
+            loop {
+                if matches!(button.wait_for_press_duration().await, PressDuration::Long) {
+                    break;
+                }
+            }
+        };
+
+        match select(
+            self.connect_inner(force_captive_portal, on_event),
+            wait_for_wifi_reset,
+        )
+        .await
+        {
+            Either::First(result) => result,
+            Either::Second(()) => {
+                self.prepare_for_captive_portal_reset()?;
+                info!("wifi_auto Wi-Fi reset requested via long button press");
+                info!("wifi_auto resetting in 1 second");
+                Timer::after(Duration::from_secs(1)).await;
+                esp_hal::system::software_reset();
+            }
+        }
     }
 }
 

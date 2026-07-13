@@ -1,6 +1,7 @@
 //! A shared CYD DNS tester UI renderer.
 //!
-//! The renderer is platform-neutral: ESP, RP, WASM, and [`CydMemory`](crate::memory::CydMemory)
+//! The renderer is platform-neutral: ESP, RP, WASM, and
+//! [`CydMemory`](device_envoy_core::memory::CydMemory)
 //! all consume the same TGA-backed background and dynamic-value layout.
 
 use core::fmt::Write;
@@ -75,6 +76,15 @@ pub enum DnsTesterAction {
     SaveOrientationAndRestart(Orientation),
 }
 
+/// Physical control placement used by a DNS Tester platform adapter.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DnsTesterLayout {
+    /// Full-screen CYD artwork with fixed landscape/portrait controls.
+    FullScreen,
+    /// Compact text dashboard with three equal controls along the bottom edge.
+    Compact,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum DnsTesterScreen {
     Splash,
@@ -85,6 +95,7 @@ enum DnsTesterScreen {
 }
 
 /// Shared DNS Tester state and transition logic used by hardware, WASM, and memory tests.
+#[derive(Clone, Copy)]
 pub struct DnsTesterApp {
     orientation: Orientation,
     target: &'static str,
@@ -93,6 +104,7 @@ pub struct DnsTesterApp {
     failures: u32,
     last_latency_millis: u64,
     screen: DnsTesterScreen,
+    layout: DnsTesterLayout,
 }
 
 #[derive(Clone, Copy)]
@@ -102,7 +114,26 @@ enum Control {
     Orientation,
 }
 
-fn control_at(point: Point, size: Size) -> Option<Control> {
+fn control_at(point: Point, size: Size, layout: DnsTesterLayout) -> Option<Control> {
+    if layout == DnsTesterLayout::Compact {
+        return [Control::Orientation, Control::Calibration, Control::Wifi]
+            .into_iter()
+            .find(|control| {
+                let index = match control {
+                    Control::Orientation => 0,
+                    Control::Calibration => 1,
+                    Control::Wifi => 2,
+                };
+                Rectangle::new(
+                    Point::new(
+                        size.width as i32 - size.width as i32 / 3 * (3 - index),
+                        size.height as i32 - 20,
+                    ),
+                    Size::new(size.width / 3, 20),
+                )
+                .contains(point)
+            });
+    }
     let landscape = size.width > size.height;
     [
         (
@@ -150,13 +181,53 @@ impl DnsTesterApp {
             failures: 0,
             last_latency_millis: 0,
             screen: DnsTesterScreen::Splash,
+            layout: DnsTesterLayout::FullScreen,
         }
+    }
+
+    /// Construct a DNS Tester with an explicit platform control layout.
+    #[must_use]
+    pub const fn new_with_layout(
+        target: &'static str,
+        orientation: Orientation,
+        layout: DnsTesterLayout,
+    ) -> Self {
+        let mut app = Self::new(target, orientation);
+        app.layout = layout;
+        app
+    }
+
+    /// Select the display orientation used while touch calibration is running.
+    ///
+    /// Calibration coordinates are defined in landscape. A saved application
+    /// orientation is used only when a valid calibration already exists.
+    #[must_use]
+    pub const fn display_orientation_for_calibration(
+        saved_orientation: Orientation,
+        calibration_is_available: bool,
+    ) -> Orientation {
+        if calibration_is_available {
+            saved_orientation
+        } else {
+            Orientation::Landscape
+        }
+    }
+
+    /// Return the application orientation after calibration has completed.
+    #[must_use]
+    pub const fn orientation_after_calibration(saved_orientation: Orientation) -> Orientation {
+        saved_orientation
     }
 
     /// Return the currently selected screen orientation.
     #[must_use]
     pub const fn orientation(&self) -> Orientation {
         self.orientation
+    }
+
+    /// Set the adapter's current orientation after platform initialization or persistence.
+    pub fn set_orientation(&mut self, orientation: Orientation) {
+        self.orientation = orientation;
     }
 
     /// Return the current dynamic dashboard values.
@@ -199,7 +270,7 @@ impl DnsTesterApp {
             }
             DnsTesterInput::Boot => DnsTesterAction::ClearCalibrationAndRestart,
             DnsTesterInput::Touch(TouchEvent::Down { point }) => {
-                if let Some(control) = control_at(point, self.orientation.size()) {
+                if let Some(control) = control_at(point, self.orientation.size(), self.layout) {
                     match control {
                         Control::Calibration => DnsTesterAction::ClearCalibrationAndRestart,
                         Control::Wifi => {
@@ -227,6 +298,18 @@ impl DnsTesterApp {
     pub const fn is_unavailable(&self) -> bool {
         matches!(self.screen, DnsTesterScreen::Unavailable)
     }
+
+    /// Return the pre-dashboard notice, when one should be rendered.
+    #[must_use]
+    pub const fn notice(&self) -> Option<DnsTesterUiNotice> {
+        match self.screen {
+            DnsTesterScreen::Splash => Some(DnsTesterUiNotice::Splash),
+            DnsTesterScreen::Connecting => Some(DnsTesterUiNotice::WifiConnecting),
+            DnsTesterScreen::Setup => Some(DnsTesterUiNotice::WifiSetup),
+            DnsTesterScreen::Unavailable => Some(DnsTesterUiNotice::WifiUnavailable),
+            DnsTesterScreen::Dashboard => None,
+        }
+    }
 }
 
 /// The changing values shown by the DNS tester UI.
@@ -247,8 +330,12 @@ pub struct DnsTesterUiState {
 /// A full-screen DNS tester notice shown before the test dashboard is usable.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DnsTesterUiNotice {
+    /// The display has initialized and networking has not started yet.
+    Splash,
     /// The device is joining the configured Wi-Fi network.
     WifiConnecting,
+    /// Wi-Fi setup is available through the captive portal.
+    WifiSetup,
     /// Browser WebAssembly cannot perform arbitrary DNS queries.
     WifiUnavailable,
 }
@@ -461,7 +548,9 @@ where
         )
     };
     let (heading, detail) = match notice {
+        DnsTesterUiNotice::Splash => ("DNS", "STARTING"),
         DnsTesterUiNotice::WifiConnecting => ("WI-FI", "CONNECTING"),
+        DnsTesterUiNotice::WifiSetup => ("WI-FI", "SETUP"),
         DnsTesterUiNotice::WifiUnavailable => ("WI-FI", "UNAVAILABLE"),
     };
     fill_panel(display, rectangle).await?;
@@ -479,6 +568,20 @@ where
         &FONT_10X20,
     )
     .await
+}
+
+/// Render the screen selected by the shared DNS Tester state.
+pub async fn render_app<D>(
+    display: &mut D,
+    app: &DnsTesterApp,
+) -> Result<(), DnsTesterUiError<D::Error>>
+where
+    D: CydDisplay,
+{
+    match app.notice() {
+        Some(notice) => render_notice(display, app.orientation(), notice).await,
+        None => render(display, app.orientation(), app.ui_state()).await,
+    }
 }
 
 async fn fill_panel<D>(
@@ -644,5 +747,31 @@ mod tests {
         assert_eq!(app.ui_state().successes, 1);
         assert_eq!(app.ui_state().failures, 1);
         assert_eq!(app.ui_state().last_latency_millis, 18);
+    }
+
+    #[test]
+    fn compact_layout_routes_settings_controls_before_dns_lookup() {
+        let mut app = DnsTesterApp::new_with_layout(
+            "example.com",
+            Orientation::Landscape,
+            DnsTesterLayout::Compact,
+        );
+        assert_eq!(
+            app.input(DnsTesterInput::Touch(TouchEvent::Down {
+                point: Point::new(50, 230),
+            })),
+            DnsTesterAction::SaveOrientationAndRestart(Orientation::Portrait)
+        );
+        let mut wifi_app = DnsTesterApp::new_with_layout(
+            "example.com",
+            Orientation::Landscape,
+            DnsTesterLayout::Compact,
+        );
+        assert_eq!(
+            wifi_app.input(DnsTesterInput::Touch(TouchEvent::Down {
+                point: Point::new(250, 230),
+            })),
+            DnsTesterAction::ResetWifiAndRestart
+        );
     }
 }

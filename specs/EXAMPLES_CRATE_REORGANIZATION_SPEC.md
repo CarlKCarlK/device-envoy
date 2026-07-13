@@ -4,8 +4,9 @@
 
 ## Status
 
-Planning only. This document describes the intended organization for the DNS
-Tester and Conway applications. It does not authorize implementation by itself.
+Implementation complete. This document records the organization and
+acceptance gates for the DNS Tester and Conway applications. Physical hardware
+smoke tests and browser tests remain environment-dependent validation steps.
 
 ## Purpose
 
@@ -543,8 +544,8 @@ Work:
 Gate:
 
 ```text
-cargo xtask generate-board-examples
-just check-all
+cargo run --manifest-path crates/device-envoy-examples-esp/xtask/Cargo.toml -- generate-board-examples
+cargo check-all
 ```
 
 - Regeneration leaves the worktree unchanged.
@@ -556,8 +557,8 @@ just check-all
 At minimum, implementation must run:
 
 ```text
-just check-all
-cargo xtask generate-board-examples
+cargo check-all
+cargo run --manifest-path crates/device-envoy-examples-esp/xtask/Cargo.toml -- generate-board-examples
 ```
 
 The implementation should also directly verify:
@@ -597,7 +598,7 @@ missing.
 - `device-envoy-core` contains reusable abstractions rather than complete demo
   applications.
 - The one-off `device-envoy-conway-core` crate is removed.
-- `just check-all` builds every required target and passes.
+- `cargo check-all` builds every required target and passes.
 
 ## Non-goals
 

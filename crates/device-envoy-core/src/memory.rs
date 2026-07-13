@@ -419,6 +419,31 @@ impl CydMemory {
         ))
     }
 
+    /// Apply the physical 180-degree presentation used by an inverted CYD orientation.
+    ///
+    /// Hardware display drivers and browser shells apply this transform outside the logical
+    /// application framebuffer. Host previews can call this after rendering to compare the
+    /// user-facing presentation rather than the untransformed logical buffer.
+    #[cfg(feature = "host")]
+    pub fn rotate_framebuffer_180(&self) {
+        let mut shared = self.shared.borrow_mut();
+        let width = self.display.size.width as usize;
+        let height = self.display.size.height as usize;
+        for row_index in 0..height / 2 {
+            let opposite_row_index = height - 1 - row_index;
+            for column_index in 0..width {
+                let first_index = row_index * width + column_index;
+                let second_index = opposite_row_index * width + (width - 1 - column_index);
+                shared.framebuffer.swap(first_index, second_index);
+            }
+        }
+        if height % 2 == 1 {
+            let row_start = (height / 2) * width;
+            let row_end = row_start + width;
+            shared.framebuffer[row_start..row_end].reverse();
+        }
+    }
+
     /// Write the framebuffer as an RGB PNG for host-side previews and assertions.
     pub(crate) fn write_framebuffer_png(
         &self,
@@ -454,9 +479,9 @@ impl CydMemory {
 ///
 /// `manifest_dir` is normally `env!("CARGO_MANIFEST_DIR")` from the calling
 /// crate, so the expected PNG lives at `<crate>/tests/assets/<relative_filename>`.
-/// Set `LINKAGE_BLAZE_UPDATE_CYD_PNGS=1` to (re)write the expected file
+/// Set `DEVICE_ENVOY_UPDATE_CYD_PNGS=1` to (re)write the expected file
 /// instead of comparing against it, e.g. after an intentional visual change.
-/// The helper also honors `LINKAGE_BLAZE_PREVIEW_OUTPUT_PATH` to copy the
+/// The helper also honors `DEVICE_ENVOY_PREVIEW_OUTPUT_PATH` to copy the
 /// freshly rendered PNG to an arbitrary path while still performing the normal
 /// golden-image comparison.
 pub fn assert_framebuffer_matches_expected_png(
@@ -470,7 +495,7 @@ pub fn assert_framebuffer_matches_expected_png(
     // env var to also copy the freshly rendered frame out to an arbitrary
     // path, on top of (not instead of) the normal golden-image comparison
     // below, so a preview build still catches a real rendering regression.
-    if let Some(preview_output_path) = std::env::var_os("LINKAGE_BLAZE_PREVIEW_OUTPUT_PATH") {
+    if let Some(preview_output_path) = std::env::var_os("DEVICE_ENVOY_PREVIEW_OUTPUT_PATH") {
         cyd_memory.write_framebuffer_png(preview_output_path)?;
     }
 
@@ -479,7 +504,7 @@ pub fn assert_framebuffer_matches_expected_png(
     expected_path.push("assets");
     expected_path.push(relative_filename);
 
-    if std::env::var_os("LINKAGE_BLAZE_UPDATE_CYD_PNGS").is_some() {
+    if std::env::var_os("DEVICE_ENVOY_UPDATE_CYD_PNGS").is_some() {
         cyd_memory.write_framebuffer_png(&expected_path)?;
         std::println!("updated PNG at {}", expected_path.display());
         return Ok(());
@@ -487,7 +512,7 @@ pub fn assert_framebuffer_matches_expected_png(
 
     if !expected_path.exists() {
         return Err(std::format!(
-            "expected PNG is missing at {}; rerun with LINKAGE_BLAZE_UPDATE_CYD_PNGS=1 to create it",
+            "expected PNG is missing at {}; rerun with DEVICE_ENVOY_UPDATE_CYD_PNGS=1 to create it",
             expected_path.display()
         )
         .into());
@@ -514,7 +539,7 @@ pub fn assert_framebuffer_matches_expected_png(
 
     if expected_bytes != actual_bytes {
         return Err(std::format!(
-            "PNG bytes differ from {}; rerun with LINKAGE_BLAZE_UPDATE_CYD_PNGS=1 to accept the new image",
+            "PNG bytes differ from {}; rerun with DEVICE_ENVOY_UPDATE_CYD_PNGS=1 to accept the new image",
             expected_path.display()
         )
         .into());

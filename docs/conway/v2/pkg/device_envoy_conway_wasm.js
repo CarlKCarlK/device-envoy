@@ -1,7 +1,8 @@
 /* @ts-self-types="./device_envoy_conway_wasm.d.ts" */
-import * as import1 from "env"
 
-
+/**
+ * Browser adapter for the shared Conway application.
+ */
 export class ConwayWeb {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -20,6 +21,7 @@ export class ConwayWeb {
         return this;
     }
     /**
+     * Forward one browser control key to the shared application.
      * @param {string} key
      * @returns {string}
      */
@@ -38,6 +40,7 @@ export class ConwayWeb {
         }
     }
     /**
+     * Render the shared application as a PNG.
      * @returns {Uint8Array}
      */
     render_png() {
@@ -50,6 +53,7 @@ export class ConwayWeb {
         return v1;
     }
     /**
+     * Render the shared application as a PNG with a maximum dimension.
      * @param {number} max_dimension
      * @returns {Uint8Array}
      */
@@ -63,6 +67,7 @@ export class ConwayWeb {
         return v1;
     }
     /**
+     * Advance the shared application by one browser tick.
      * @returns {string}
      */
     tick() {
@@ -78,6 +83,7 @@ export class ConwayWeb {
         }
     }
     /**
+     * Return the shared simulation's current animation interval.
      * @returns {number}
      */
     tick_interval_ms() {
@@ -110,7 +116,6 @@ function __wbg_get_imports() {
     return {
         __proto__: null,
         "./device_envoy_conway_wasm_bg.js": import0,
-        "env": import1,
     };
 }
 

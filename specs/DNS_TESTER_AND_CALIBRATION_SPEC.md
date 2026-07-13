@@ -85,11 +85,12 @@ testing controls or using it as an app-level point.
   update a single status line with running tap/success/fail counts and last
   round-trip latency. Meant to run for hours unattended on hardware with no
   reachable physical reset button, exercising touch + Wi-Fi together.
-- ESP: `crates/device-envoy-esp/examples/templates/dns_tester.rs.j2`, generated
-  for all 13 chip/board profiles via `cargo xtask generate-board-examples`.
+- ESP: `crates/device-envoy-examples-esp/examples/templates/dns_tester.rs.j2`, generated
+  for all 13 chip/board profiles via the examples-ESP xtask's
+  `generate-board-examples` command.
   Real code on the 4 boards with dual SPI + Wi-Fi + large stack (esp32,
   esp32s3 ×3); placeholder-stubbed elsewhere.
-- RP: hand-written `crates/device-envoy-rp/examples/dns_tester.rs` (no
+- RP: hand-written `crates/device-envoy-examples-rp/examples/dns_tester.rs` (no
   templating on this side). Builds for Pico1 W and Pico2 W (`w`/`2w`);
   compiles to nothing on `1`/`2` via `#![cfg(feature = "wifi")]`, matching
   existing RP examples.
@@ -124,9 +125,10 @@ testing controls or using it as an app-level point.
   banner instead).
 - Real `cargo +esp build --release` (not just `cargo check`, which doesn't
   fully link) on classic ESP32 (`esp32/generic`): clean, no warnings.
-- `cargo xtask check-examples` across all 9 ESP chip families: full run
+- the examples-ESP xtask's board-aware `check-examples-all-processors` command
+  across all 9 ESP chip families: full run
   completed, zero failures.
-- RP: `cargo xtask check-examples` (all boards) passes; real
+- RP: `cargo check-all` (all migrated examples) passes; real
   `cargo build --release` on Pico1 W (RP2040, tightest RAM at 256KB) links
   clean too — previously untested territory for touch calibration + Wi-Fi.
 - WASM/host feature build: clean.

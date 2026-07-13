@@ -1,0 +1,274 @@
+#![allow(missing_docs)]
+//! Touch-triggered Wi-Fi/DNS reliability tester for a CYD-style touchscreen
+//! wired to a Pico W / Pico 2 W.
+//!
+//! Tap anywhere on the panel to fire one DNS query and update a running tally
+//! of hits/misses and the last round-trip latency on a single status line.
+//! Meant to run for hours unattended on hardware with no reachable physical
+//! reset button, repeatedly exercising the touch driver and the Wi-Fi stack
+//! together so long-run failures (socket exhaustion, dropped connections,
+//! stuck touch reads) show up on screen instead of silently wedging the
+//! board. The status line stays deliberately small rather than using a
+//! full-screen frame buffer, mirroring the ESP32 port of this example, where
+//! a full-screen buffer plus the Wi-Fi stack's own heap overflowed DRAM.
+//!
+//! Wiring: a standalone 320x240 ILI9341 + XPT2046 module wired to spare
+//! SPI-capable GPIOs (see `device_envoy_rp::cyd` module docs for the CYD
+//! abstraction). The CYW43 Wi-Fi pins are fixed by the Pico W / Pico 2 W
+//! module itself.
+//!
+//! - Display SPI0 SCK  -> PIN_18
+//! - Display SPI0 MOSI -> PIN_19
+//! - Display SPI0 MISO -> PIN_16
+//! - Display CS        -> PIN_17
+//! - Display DC        -> PIN_20
+//! - Display RST       -> PIN_21
+//! - Display backlight -> PIN_22
+//! - Touch SPI1 SCK    -> PIN_10
+//! - Touch SPI1 MOSI   -> PIN_11
+//! - Touch SPI1 MISO   -> PIN_12
+//! - Touch CS          -> PIN_13
+//! - Touch IRQ         -> PIN_14
+//! - Button (Wi-Fi reset while connecting; calibration backup afterward) -> PIN_15 to GND
+//!   (`PressedTo::Ground`)
+//! - Plus 3.3V and GND
+
+#![cfg(feature = "wifi")]
+#![no_std]
+#![no_main]
+#![allow(clippy::future_not_send, reason = "single-threaded")]
+
+extern crate defmt_rtt as _;
+extern crate panic_probe as _;
+
+use core::convert::Infallible;
+
+use defmt::{info, warn};
+use device_envoy_core::cyd::display::Orientation;
+use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
+use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
+use device_envoy_core::flash_block::FlashBlock as _;
+use device_envoy_core::wifi_auto::WifiAuto as _;
+use device_envoy_examples_core::dns_tester::{
+    DnsResult, DnsTesterAction, DnsTesterApp, DnsTesterInput, DnsTesterUiError, render_app,
+};
+use device_envoy_rp::{
+    Error, Result,
+    button::{Button as _, ButtonRp, PressedTo},
+    cyd::{
+        CydRp, CydRpUncalibrated, CydStaticRp, CydTouch as _, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
+    },
+    flash_block::FlashBlockRp,
+    wifi_auto::{WifiAutoEvent, WifiAutoRp},
+};
+use embassy_executor::Spawner;
+use embassy_net::dns::DnsQueryType;
+use embassy_time::{Duration, Instant, Timer};
+
+const DNS_HOSTNAME: &str = "example.com";
+const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
+const TOUCH_POLL_PERIOD: Duration = Duration::from_millis(16);
+
+/// One text line across the top of the panel. Kept small on purpose: this
+/// example runs alongside the Wi-Fi stack, and a full-screen frame buffer
+/// risks overflowing RAM once Wi-Fi's own heap is added in (this bit ESP32
+/// in practice; no RP board has been verified against a full-screen buffer
+/// plus Wi-Fi, so the same small-buffer discipline is applied here too).
+/// `ensure_calibration`'s own on-screen text banner needs a buffer at least
+/// `CALIBRATION_MIN_PIXEL_COUNT` pixels; its crosshair/dot geometry streams
+/// buffer-free. The DNS status line uses the same small-buffer budget.
+const STATUS_PIXEL_COUNT: usize = CALIBRATION_MIN_PIXEL_COUNT;
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err}");
+}
+
+async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+    let p = embassy_rp::init(Default::default());
+    info!("Starting CYD DNS tester");
+
+    let [
+        wifi_flash_block,
+        mut calibration_flash_block,
+        mut orientation_flash_block,
+    ] = FlashBlockRp::new_array::<3>(p.FLASH)?;
+    let orientation = orientation_flash_block
+        .load::<Orientation>()?
+        .unwrap_or(Orientation::Landscape);
+    let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
+        Ok(Some(_)) => true,
+        Ok(None) | Err(_) => false,
+    };
+    let display_orientation =
+        DnsTesterApp::display_orientation_for_calibration(orientation, calibration_is_available);
+    let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
+
+    static CYD_STATIC: CydStaticRp<STATUS_PIXEL_COUNT> = CydRp::new_static();
+    let CydRpUncalibrated { mut display, touch } = CydRpUncalibrated::new(
+        &CYD_STATIC,
+        p.SPI0,
+        p.PIN_18,
+        p.PIN_19,
+        p.PIN_16,
+        p.PIN_17,
+        p.PIN_20,
+        p.PIN_21,
+        p.PIN_22,
+        DEFAULT_DISPLAY_SPI_HZ,
+        display_orientation,
+        embedded_graphics::pixelcolor::Rgb888::new(10, 10, 12), // near-black
+        embedded_graphics::pixelcolor::Rgb888::new(230, 230, 230), // near-white
+        &DEFAULT_FONT,
+        p.SPI1,
+        p.PIN_10,
+        p.PIN_11,
+        p.PIN_12,
+        p.PIN_13,
+        p.PIN_14,
+    )?;
+    info!("CYD display and touch initialized");
+
+    let (mut touch, calibration_outcome) = ensure_calibration(
+        &mut display,
+        touch,
+        &mut calibration_flash_block,
+        &mut button,
+        Some("recalibrating"),
+    )
+    .await?;
+    if calibration_outcome.was_saved() {
+        while button.is_pressed() {
+            Timer::after(Duration::from_millis(10)).await;
+        }
+        info!("Calibration saved, restarting");
+        cortex_m::peripheral::SCB::sys_reset();
+    }
+    info!("Touch calibrated");
+
+    let mut app = DnsTesterApp::new(DNS_HOSTNAME, orientation);
+    render_dns_tester(&mut display, &app).await?;
+    app.input(DnsTesterInput::WifiConnecting);
+    render_dns_tester(&mut display, &app).await?;
+
+    let wifi_auto = WifiAutoRp::new(
+        p.PIN_23,  // CYW43 power
+        p.PIN_24,  // CYW43 data
+        p.PIN_25,  // CYW43 chip select
+        p.PIN_29,  // CYW43 clock
+        p.PIO0,    // WiFi PIO
+        p.DMA_CH0, // WiFi DMA
+        wifi_flash_block,
+        CAPTIVE_PORTAL_SSID,
+        [],
+        spawner,
+    )?;
+    let stack = wifi_auto
+        .connect(&mut button, async |wifi_auto_event| -> Result<(), Error> {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    app.input(DnsTesterInput::WifiSetup);
+                }
+                WifiAutoEvent::Connecting { .. } | WifiAutoEvent::ConnectionFailed => {}
+            };
+            render_dns_tester(&mut display, &app).await?;
+            Ok(())
+        })
+        .await?;
+
+    while !stack.is_link_up() || stack.config_v4().is_none() {
+        Timer::after(Duration::from_millis(200)).await;
+    }
+    info!("Wi-Fi up with DHCP");
+
+    app.input(DnsTesterInput::WifiReady);
+    render_dns_tester(&mut display, &app).await?;
+    let mut is_touch_down = false;
+
+    loop {
+        if button.is_pressed() {
+            while button.is_pressed() {
+                Timer::after(Duration::from_millis(10)).await;
+            }
+            app.input(DnsTesterInput::Boot);
+            calibration_flash_block.clear()?;
+            cortex_m::peripheral::SCB::sys_reset();
+        }
+        if let Some(touch_event) = touch.read()? {
+            match touch_event {
+                device_envoy_rp::cyd::touch::TouchEvent::Down { point } => {
+                    if !is_touch_down {
+                        is_touch_down = true;
+                        let point = orientation.map_landscape_point(point);
+                        let action = app.input(DnsTesterInput::Touch(
+                            device_envoy_rp::cyd::touch::TouchEvent::Down { point },
+                        ));
+                        match action {
+                            DnsTesterAction::ClearCalibrationAndRestart => {
+                                calibration_flash_block.clear()?;
+                                render_dns_tester(&mut display, &app).await?;
+                                cortex_m::peripheral::SCB::sys_reset();
+                            }
+                            DnsTesterAction::ResetWifiAndRestart => {
+                                wifi_auto.reset_to_captive_portal()?;
+                                render_dns_tester(&mut display, &app).await?;
+                                cortex_m::peripheral::SCB::sys_reset();
+                            }
+                            DnsTesterAction::SaveOrientationAndRestart(next_orientation) => {
+                                orientation_flash_block.save(&next_orientation)?;
+                                render_dns_tester(&mut display, &app).await?;
+                                cortex_m::peripheral::SCB::sys_reset();
+                            }
+                            DnsTesterAction::StartDnsLookup => {
+                                let query_start = Instant::now();
+                                let dns_result =
+                                    stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
+                                let latency_millis = query_start.elapsed().as_millis();
+                                let succeeded = match dns_result {
+                                    Ok(addresses) if !addresses.is_empty() => {
+                                        info!(
+                                            "DNS ok in {}ms: {:?}",
+                                            latency_millis,
+                                            addresses.first()
+                                        );
+                                        true
+                                    }
+                                    Ok(_) => {
+                                        warn!("DNS query returned no addresses");
+                                        false
+                                    }
+                                    Err(_) => {
+                                        warn!("DNS query failed");
+                                        false
+                                    }
+                                };
+                                app.input(DnsTesterInput::DnsFinished(DnsResult {
+                                    succeeded,
+                                    latency_millis,
+                                }));
+                            }
+                            DnsTesterAction::None => {}
+                        }
+                        render_dns_tester(&mut display, &app).await?;
+                    }
+                }
+                device_envoy_rp::cyd::touch::TouchEvent::Move { .. } => {}
+                device_envoy_rp::cyd::touch::TouchEvent::Up => {
+                    is_touch_down = false;
+                }
+            }
+        }
+        Timer::after(TOUCH_POLL_PERIOD).await;
+    }
+}
+
+async fn render_dns_tester(
+    display: &mut device_envoy_rp::cyd::CydDisplayRp,
+    app: &DnsTesterApp,
+) -> Result<()> {
+    render_app(display, app).await.map_err(|error| match error {
+        DnsTesterUiError::Text(_) => Error::FormatError,
+        DnsTesterUiError::Display(error) => error.into(),
+    })
+}

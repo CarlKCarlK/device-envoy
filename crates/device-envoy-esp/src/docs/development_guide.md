@@ -32,7 +32,7 @@ toolchain/runtime flow used by this repo:
 
 - Install/use the `+esp` toolchain as needed for Xtensa builds.
 - Load your ESP environment before S3 commands (for this repo that is usually `source "$HOME/export-esp.sh"`).
-- Use `just run/check/build` commands in `crates/device-envoy-esp/justfile`.
+- Use `just run/check/build` commands in `crates/device-envoy-examples-esp/justfile`.
 
 ## Run Examples
 
@@ -73,7 +73,7 @@ just check f1 2w
 For board-generated ESP blinkies, the preferred flow is to run from the board directory:
 
 ```bash
-cd crates/device-envoy-esp/examples/<chip-dir>/<board-dir>
+cd crates/device-envoy-examples-esp/examples/<chip-dir>/<board-dir>
 just run blinky
 ```
 
@@ -99,7 +99,7 @@ just generate-board-examples
 From the workspace root:
 
 ```bash
-just check-all
+cargo check-all
 ```
 
 Equivalent command:
@@ -148,6 +148,6 @@ ESP defaults are chip- and board-dependent.
 
 For current source-of-truth pin/capability mappings, see:
 
-- `crates/device-envoy-esp/xtask/src/boards.rs` (`BOARD_PROFILES`)
-- `crates/device-envoy-esp/xtask/src/main.rs` (capability-based example/test gating)
-- Generated board examples under `crates/device-envoy-esp/examples/<chip>/<board>/`
+- `crates/device-envoy-examples-esp/xtask/src/boards.rs` (`BOARD_PROFILES`)
+- `crates/device-envoy-examples-esp/xtask/src/main.rs` (capability-based example/test gating)
+- Generated board examples under `crates/device-envoy-examples-esp/examples/<chip>/<board>/`

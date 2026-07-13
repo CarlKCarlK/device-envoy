@@ -12,7 +12,7 @@ documentation = "https://docs.rs/device-envoy-rp"
 homepage = "https://github.com/CarlKCarlK/device-envoy"
 exclude = ["demos/**", "tests-compile-only/**"]
 
-# Pure library crate - all applications are in examples/
+# Pure library crate - application launchers live in device-envoy-examples-rp.
 [lib]
 name = "device_envoy_rp"
 path = "src/lib.rs"
@@ -32,6 +32,7 @@ rename-from = "device-kit" # Historical: renamed from device-kit to device-envoy
 default = ["host"]
 defmt = ["dep:defmt-rtt", "dep:panic-probe"]
 embedded = ["defmt", "pico1", "arm"]
+embedded-pico2 = ["defmt", "pico2", "arm"]
 pico1 = ["dep:embassy-rp", "embassy-rp/rp2040", "defmt"]
 pico2 = ["dep:embassy-rp", "embassy-rp/rp235xb", "defmt"]
 arm = [
@@ -80,7 +81,6 @@ time = { version = "0.3", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 smart-leds = "0.4.0"
 device-envoy-core = { version = "0.1.0", path = "../device-envoy-core", features = ["defmt"] }
-device-envoy-examples-core = { path = "../device-envoy-examples-core" }
 itertools = { version = "0.14.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
 embedded-hal = "1.0.0"
@@ -138,7 +138,6 @@ cortex-m-rt = { version = "0.7.5", optional = true }
 cortex-m = { version = "0.7.7", optional = true }
 
 [dev-dependencies]
-device-envoy-example-common = { path = "../device-envoy-example-common" }
 
 [lints.rust]
 # To use the `unsafe` keyword, do not remove the `unsafe_code = "forbid"` entry.

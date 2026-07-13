@@ -8,8 +8,6 @@ export const conwayweb_render_png: (a: number) => [number, number, number, numbe
 export const conwayweb_render_png_with_max_dimension: (a: number, b: number) => [number, number, number, number];
 export const conwayweb_tick: (a: number) => [number, number];
 export const conwayweb_tick_interval_ms: (a: number) => number;
-export const __embassy_time_queue_item_from_waker: (a: number) => number;
-export const __try_embassy_time_queue_item_from_waker: (a: number) => number;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

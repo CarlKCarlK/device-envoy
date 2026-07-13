@@ -1,14 +1,32 @@
 /* tslint:disable */
 /* eslint-disable */
 
+/**
+ * Browser adapter for the shared Conway application.
+ */
 export class ConwayWeb {
     free(): void;
     [Symbol.dispose](): void;
     constructor();
+    /**
+     * Forward one browser control key to the shared application.
+     */
     press_key(key: string): string;
+    /**
+     * Render the shared application as a PNG.
+     */
     render_png(): Uint8Array;
+    /**
+     * Render the shared application as a PNG with a maximum dimension.
+     */
     render_png_with_max_dimension(max_dimension: number): Uint8Array;
+    /**
+     * Advance the shared application by one browser tick.
+     */
     tick(): string;
+    /**
+     * Return the shared simulation's current animation interval.
+     */
     tick_interval_ms(): number;
 }
 
@@ -23,8 +41,6 @@ export interface InitOutput {
     readonly conwayweb_render_png_with_max_dimension: (a: number, b: number) => [number, number, number, number];
     readonly conwayweb_tick: (a: number) => [number, number];
     readonly conwayweb_tick_interval_ms: (a: number) => number;
-    readonly __embassy_time_queue_item_from_waker: (a: number) => number;
-    readonly __try_embassy_time_queue_item_from_waker: (a: number) => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

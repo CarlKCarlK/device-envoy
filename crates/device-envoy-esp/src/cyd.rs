@@ -61,6 +61,7 @@ use touch_driver::CydTouchEsp as CydTouchEspDevice;
 /// `embedded_hal_bus::spi::RefCellDevice` instead.
 pub struct CydDisplayEsp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: CydDisplayEspDevice<D>,
+    orientation: Orientation,
     // Every CydEsp owns exactly one draw buffer. Apps that don't draw through it
     // pass a zero-sized buffer (e.g. `CydStaticEsp<0>`).
     pixel_buffer: &'static mut dyn DynPixelBuffer,
@@ -288,6 +289,7 @@ pub enum CydError {
 impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
     fn from_display_device(
         mut display: CydDisplayEspDevice<D>,
+        orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
@@ -298,6 +300,7 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
 
         Ok(Self {
             display,
+            orientation,
             pixel_buffer,
             background,
             foreground,
@@ -329,7 +332,14 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
             backlight_pin,
             orientation,
         )?;
-        Self::from_display_device(display, background, foreground, font, pixel_buffer)
+        Self::from_display_device(
+            display,
+            orientation,
+            background,
+            foreground,
+            font,
+            pixel_buffer,
+        )
     }
 }
 
@@ -364,7 +374,14 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
             display_spi_hz,
             orientation,
         )?;
-        Self::from_display_device(display, background, foreground, font, pixel_buffer)
+        Self::from_display_device(
+            display,
+            orientation,
+            background,
+            foreground,
+            font,
+            pixel_buffer,
+        )
     }
 }
 
@@ -491,6 +508,10 @@ impl Cyd for CydEsp {
 
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
+    }
+
+    fn orientation(&mut self) -> Orientation {
+        self.display.orientation
     }
 }
 

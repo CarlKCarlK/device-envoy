@@ -160,6 +160,7 @@ pub struct CydMemory {
     display: CydDisplayMemory,
     touch: CydTouchMemory,
     shared: Rc<RefCell<CydMemoryShared>>,
+    orientation: Orientation,
 }
 
 struct CydMemoryShared {
@@ -241,7 +242,12 @@ impl CydMemory {
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
-        Self::new_inner(size, background, foreground, font)
+        let orientation = if size.width > size.height {
+            Orientation::Landscape
+        } else {
+            Orientation::Portrait
+        };
+        Self::new_inner(size, orientation, background, foreground, font)
     }
 
     /// Construct an in-memory CYD surface with an oriented logical screen.
@@ -252,11 +258,18 @@ impl CydMemory {
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
-        Self::new_inner(orientation.size(), background, foreground, font)
+        Self::new_inner(
+            orientation.size(),
+            orientation,
+            background,
+            foreground,
+            font,
+        )
     }
 
     fn new_inner(
         size: Size,
+        orientation: Orientation,
         background: Rgb888,
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
@@ -291,6 +304,7 @@ impl CydMemory {
             display,
             touch,
             shared,
+            orientation,
         }
     }
 
@@ -319,6 +333,10 @@ impl Cyd for CydMemory {
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
     }
+
+    fn orientation(&mut self) -> Orientation {
+        self.orientation
+    }
 }
 
 impl CydParts for CydMemory {
@@ -327,15 +345,24 @@ impl CydParts for CydMemory {
             display,
             touch,
             shared: _shared,
+            orientation: _,
         } = self;
         (display, touch)
     }
 
     fn from_parts(display: Self::Display, touch: Self::Touch) -> Self {
+        // The owned parts carry dimensions but not the saved inverted state.
+        // Reassembly therefore follows Cyd's dimension-based default.
+        let orientation = if display.screen_size().width > display.screen_size().height {
+            Orientation::Landscape
+        } else {
+            Orientation::Portrait
+        };
         Self {
             shared: display.shared.clone(),
             display,
             touch,
+            orientation,
         }
     }
 }
@@ -1242,6 +1269,40 @@ mod tests {
             Rgb888::CSS_WHITE,
             &FONT_9X15_BOLD,
         )
+    }
+
+    #[test]
+    fn orientation_is_preserved_by_oriented_memory() {
+        for orientation in [
+            crate::cyd::display::Orientation::Landscape,
+            crate::cyd::display::Orientation::Portrait,
+            crate::cyd::display::Orientation::LandscapeInverted,
+            crate::cyd::display::Orientation::PortraitInverted,
+        ] {
+            let mut memory_cyd = CydMemory::new_with_orientation(
+                orientation,
+                Rgb888::CSS_BLACK,
+                Rgb888::CSS_WHITE,
+                &FONT_9X15_BOLD,
+            );
+            assert_eq!(memory_cyd.orientation(), orientation);
+        }
+    }
+
+    #[test]
+    fn reassembled_memory_uses_dimension_based_orientation_default() {
+        let memory_cyd = CydMemory::new_with_orientation(
+            crate::cyd::display::Orientation::PortraitInverted,
+            Rgb888::CSS_BLACK,
+            Rgb888::CSS_WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let (display, touch) = memory_cyd.into_parts();
+        let mut reassembled_memory = CydMemory::from_parts(display, touch);
+        assert_eq!(
+            reassembled_memory.orientation(),
+            crate::cyd::display::Orientation::Portrait
+        );
     }
 
     fn read_next_raw_touch_event(

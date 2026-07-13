@@ -220,6 +220,7 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
     canvas.style.left = "auto";
     canvas.style.top = "auto";
     canvas.style.position = "relative";
+    canvas.style.transform = canvas.dataset.inverted === "true" ? "rotate(180deg)" : "";
   };
 
   const restoreCanvas = () => {
@@ -232,6 +233,7 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
     canvas.style.left = "";
     canvas.style.top = "";
     canvas.style.position = "";
+    canvas.style.transform = "";
   };
 
   const finishDeactivate = () => {

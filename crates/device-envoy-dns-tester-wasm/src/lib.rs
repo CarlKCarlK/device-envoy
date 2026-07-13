@@ -183,7 +183,23 @@ impl DnsTesterWeb {
         match self.exit.take() {
             Some(CoreExit::Calibrate) => "recalibrate".into(),
             Some(CoreExit::ResetWifi) => "wifi".into(),
-            Some(CoreExit::Reorientate(_)) => "orientation".into(),
+            Some(CoreExit::Reorientate(next_orientation)) => {
+                let save_result = self
+                    .state
+                    .borrow_mut()
+                    .orientation_flash_block
+                    .save(&next_orientation);
+                match save_result {
+                    Ok(()) => {
+                        self.state.borrow_mut().orientation = next_orientation;
+                        "orientation".into()
+                    }
+                    Err(_) => {
+                        self.failed.set(true);
+                        "runtime error".into()
+                    }
+                }
+            }
             None if self.failed.get() => "runtime error".into(),
             None => "idle".into(),
         }

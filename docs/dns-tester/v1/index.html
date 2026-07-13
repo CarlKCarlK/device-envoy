@@ -48,6 +48,12 @@
       transform: rotate(180deg);
     }
 
+    /* Full-screen mode moves #screen out of .stage, so carry the same
+       presentation transform on the canvas while it is in the overlay. */
+    .demo-ux-device-screen canvas[data-inverted="true"] {
+      transform: rotate(180deg);
+    }
+
     #screen {
       position: absolute;
       left: 0;

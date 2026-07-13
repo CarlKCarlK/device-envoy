@@ -62,6 +62,7 @@ pub struct CydWasm {
 pub struct CydDisplayWasm {
     context: CanvasRenderingContext2d,
     size: Size,
+    orientation: Orientation,
     background: Rgb888,
     foreground: Rgb888,
     background565: Rgb565,
@@ -139,6 +140,7 @@ impl CydWasm {
         let display = CydDisplayWasm {
             context: context.clone(),
             size: orientation.size(),
+            orientation,
             background,
             foreground,
             background565: Rgb565::from(background),
@@ -187,6 +189,10 @@ impl Cyd for CydWasm {
 
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
         (&mut self.display, &mut self.touch)
+    }
+
+    fn orientation(&mut self) -> Orientation {
+        self.display.orientation
     }
 }
 

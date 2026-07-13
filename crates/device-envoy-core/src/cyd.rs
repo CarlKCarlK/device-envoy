@@ -291,11 +291,14 @@ pub trait CydTouch: Sized {
     type Error;
     type Uncalibrated: CydTouchUncalibrated<Error = Self::Error, Calibrated = Self>;
 
-    /// Read the next calibrated, screen-space touch event, if any.
+    /// Read the next calibrated touch event, if any.
     ///
-    /// Returns `Ok(None)` when there is no pending touch. Errors only on a
-    /// hardware/read failure. See the [`Cyd`] trait documentation for a usage
-    /// example.
+    /// Returned points use fixed landscape-panel coordinates (`320x240`),
+    /// regardless of display orientation. Consumers that render an oriented
+    /// screen must apply [`Orientation::map_landscape_point`] exactly once
+    /// before hit testing. Returns `Ok(None)` when there is no pending touch.
+    /// Errors only on a hardware/read failure. See the [`Cyd`] trait
+    /// documentation for a usage example.
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
 
     fn calibration_config(&self) -> CalibrationConfig;

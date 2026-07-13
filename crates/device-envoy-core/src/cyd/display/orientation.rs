@@ -57,9 +57,9 @@ impl Orientation {
 
     /// Map a calibrated landscape point into this orientation's screen space.
     ///
-    /// Touch calibration always describes the fixed landscape panel. The DNS
-    /// application uses this conversion when the display is presented in one
-    /// of the three alternate orientations.
+    /// Touch calibration always describes the fixed 320x240 landscape panel.
+    /// A calibrated [`TouchEvent`](crate::cyd::touch::TouchEvent) must be
+    /// converted with this method exactly once before logical UI hit testing.
     #[must_use]
     pub const fn map_landscape_point(self, point: Point) -> Point {
         let landscape_width = SCREEN_WIDTH as i32;
@@ -72,6 +72,76 @@ impl Orientation {
                 landscape_height - 1 - point.y,
             ),
             Self::PortraitInverted => Point::new(landscape_height - 1 - point.y, point.x),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Orientation;
+    use embedded_graphics::geometry::Point;
+
+    const ORIENTATIONS: [Orientation; 4] = [
+        Orientation::Landscape,
+        Orientation::Portrait,
+        Orientation::LandscapeInverted,
+        Orientation::PortraitInverted,
+    ];
+
+    #[test]
+    fn landscape_points_map_inside_each_oriented_screen() {
+        for orientation in ORIENTATIONS {
+            for position_y in 0..240 {
+                for position_x in 0..320 {
+                    let mapped_point =
+                        orientation.map_landscape_point(Point::new(position_x, position_y));
+                    assert!(mapped_point.x >= 0);
+                    assert!(mapped_point.y >= 0);
+                    assert!(mapped_point.x < orientation.width() as i32);
+                    assert!(mapped_point.y < orientation.height() as i32);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn orientation_mapping_round_trips_all_landscape_pixels() {
+        for orientation in ORIENTATIONS {
+            for position_y in 0..240 {
+                for position_x in 0..320 {
+                    let landscape_point = Point::new(position_x, position_y);
+                    let logical_point = orientation.map_landscape_point(landscape_point);
+                    assert_eq!(
+                        inverse_map_logical_point(orientation, logical_point),
+                        landscape_point
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn orientation_cycle_visits_each_state_once() {
+        for orientation in ORIENTATIONS {
+            let mut next_orientation = orientation;
+            for expected_orientation in [
+                orientation.next(),
+                orientation.next().next(),
+                orientation.next().next().next(),
+                orientation,
+            ] {
+                next_orientation = next_orientation.next();
+                assert_eq!(next_orientation, expected_orientation);
+            }
+        }
+    }
+
+    const fn inverse_map_logical_point(orientation: Orientation, point: Point) -> Point {
+        match orientation {
+            Orientation::Landscape => point,
+            Orientation::Portrait => Point::new(319 - point.y, point.x),
+            Orientation::LandscapeInverted => Point::new(319 - point.x, 239 - point.y),
+            Orientation::PortraitInverted => Point::new(point.y, 239 - point.x),
         }
     }
 }

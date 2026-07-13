@@ -111,6 +111,8 @@
     }
 
     .boot-button {
+      position: relative;
+      z-index: 3;
       min-width: 72px;
       margin-top: calc(var(--stage-height) * -0.205);
       padding: 7px 16px 8px;
@@ -128,6 +130,23 @@
 
     .boot-button:hover { filter: brightness(1.05); }
     .boot-button:active { transform: translateY(1px); }
+
+    .simulation-notice {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 10;
+      max-width: min(360px, calc(100vw - 32px));
+      padding: 10px 16px;
+      border: 1px solid rgba(197, 220, 230, 0.7);
+      border-radius: 999px;
+      background: rgba(10, 30, 44, 0.96);
+      color: rgb(230, 242, 247);
+      font: 600 14px/1.3 "Trebuchet MS", "Verdana", sans-serif;
+      text-align: center;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+      transform: translate(-50%, 0);
+    }
   </style>
 </head>
 
@@ -140,7 +159,7 @@
     </div>
     <button id="boot-button" class="boot-button" type="button">boot</button>
   </div>
-  <script type="module" src="./main.js?v=5"></script>
+  <script type="module" src="./main.js?v=7"></script>
 </body>
 
 </html>

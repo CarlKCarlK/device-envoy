@@ -26,8 +26,8 @@ Touch rectangles:
 
 | Purpose | Rectangle | Font | Color | Alignment |
 |---|---:|---|---|---|
-| DNS target | `(22, 68, 190, 20)` | `FONT_10X20` | `#ffffff` | Left |
-| Lookup status | `(180, 18, 50, 20)` | `FONT_10X20` | `#79e2a4` or `#ff756e` | Center |
+| DNS target | `(22, 68, 130, 20)` | `FONT_10X20` | `#ffffff` | Left |
+| Lookup status | `(170, 68, 50, 20)` | `FONT_10X20` | `#79e2a4` or `#ff756e` | Center |
 | Latest latency | `(60, 119, 120, 24)` | `PROFONT_24_POINT` | `#ffffff` | Center |
 | Query count | `(160, 180, 50, 20)` | `FONT_10X20` | `#ffffff` | Right |
 | Success count | `(160, 202, 50, 20)` | `FONT_10X20` | `#79e2a4` | Right |

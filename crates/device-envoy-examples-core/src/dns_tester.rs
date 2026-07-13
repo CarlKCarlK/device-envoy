@@ -42,6 +42,7 @@ const VALUE_TEXT: Rgb888 = Rgb888::new(255, 255, 255); // white
 const SUCCESS_TEXT: Rgb888 = Rgb888::new(121, 226, 164); // soft green
 const FAILURE_TEXT: Rgb888 = Rgb888::new(255, 117, 110); // coral red
 const PANEL_FILL: Rgb888 = Rgb888::new(15, 38, 55); // dark desaturated blue
+const ARTWORK_PANEL_FILL: Rgb888 = Rgb888::new(10, 82, 120); // deep blue panel
 
 /// Run the shared DNS Tester loop on calibrated platform resources.
 ///
@@ -264,7 +265,7 @@ const LANDSCAPE_LAYOUT: Layout = Layout {
 const PORTRAIT_LAYOUT: Layout = Layout {
     bitmap: PORTRAIT_BITMAP,
     hostname: TextSlot::new(
-        Rectangle::new(Point::new(22, 68), Size::new(190, 20)),
+        Rectangle::new(Point::new(22, 68), Size::new(130, 20)),
         TextFont::Body,
         Alignment::Left,
         VALUE_TEXT,
@@ -277,7 +278,7 @@ const PORTRAIT_LAYOUT: Layout = Layout {
     ),
     status: StatusSlot::new(
         TextSlot::new(
-            Rectangle::new(Point::new(180, 18), Size::new(50, 20)),
+            Rectangle::new(Point::new(170, 68), Size::new(50, 20)),
             TextFont::Body,
             Alignment::Center,
             SUCCESS_TEXT,
@@ -613,6 +614,15 @@ where
             .map_err(UiError::Display)?,
     }
 
+    // READY belongs to the live dashboard, not to a startup or operational
+    // notice. Mask the static artwork indicator while the notice is shown.
+    let ready_rectangle = if orientation.width() > orientation.height() {
+        Rectangle::new(Point::new(236, 14), Size::new(68, 28))
+    } else {
+        Rectangle::new(Point::new(164, 14), Size::new(66, 28))
+    };
+    fill_artwork_panel(display, ready_rectangle).await?;
+
     let (rectangle, heading_y, detail_y) = if orientation.width() > orientation.height() {
         (
             Rectangle::new(Point::new(20, 54), Size::new(280, 112)),
@@ -620,6 +630,19 @@ where
             110,
         )
     } else {
+        // The portrait dashboard has several static labels and controls around
+        // the notice rectangle. Clear those regions so a splash is a splash,
+        // rather than a partially obscured dashboard.
+        fill_panel(
+            display,
+            Rectangle::new(Point::new(0, 43), Size::new(240, 203)),
+        )
+        .await?;
+        fill_panel(
+            display,
+            Rectangle::new(Point::new(0, 246), Size::new(240, 66)),
+        )
+        .await?;
         (
             Rectangle::new(Point::new(20, 96), Size::new(200, 80)),
             104,
@@ -633,16 +656,21 @@ where
         UiNotice::WifiUnavailable => ("WI-FI", "UNAVAILABLE"),
     };
     fill_panel(display, rectangle).await?;
+    let text_x = if orientation.width() > orientation.height() {
+        60
+    } else {
+        20
+    };
     draw_notice_text(
         display,
-        Rectangle::new(Point::new(60, heading_y), Size::new(200, 29)),
+        Rectangle::new(Point::new(text_x, heading_y), Size::new(200, 29)),
         heading,
         &PROFONT_24_POINT,
     )
     .await?;
     draw_notice_text(
         display,
-        Rectangle::new(Point::new(60, detail_y), Size::new(200, 20)),
+        Rectangle::new(Point::new(text_x, detail_y), Size::new(200, 20)),
         detail,
         &FONT_10X20,
     )
@@ -661,6 +689,27 @@ where
             Size::new(rectangle.size.width, height),
         ));
         frame.fill(Rgb565::from(PANEL_FILL));
+        frame.flush().await.map_err(UiError::Display)?;
+        offset_y += height;
+    }
+    Ok(())
+}
+
+async fn fill_artwork_panel<D>(
+    display: &mut D,
+    rectangle: Rectangle,
+) -> Result<(), UiError<D::Error>>
+where
+    D: CydDisplay,
+{
+    let mut offset_y = 0;
+    while offset_y < rectangle.size.height {
+        let height = (rectangle.size.height - offset_y).min(20);
+        let mut frame = display.frame_mut(Rectangle::new(
+            rectangle.top_left + Point::new(0, offset_y as i32),
+            Size::new(rectangle.size.width, height),
+        ));
+        frame.fill(Rgb565::from(ARTWORK_PANEL_FILL));
         frame.flush().await.map_err(UiError::Display)?;
         offset_y += height;
     }

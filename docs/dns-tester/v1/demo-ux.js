@@ -223,6 +223,12 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
     canvas.style.transform = canvas.dataset.inverted === "true" ? "rotate(180deg)" : "";
   };
 
+  const canvasSizeObserver = new MutationObserver(resizeDeviceCanvas);
+  canvasSizeObserver.observe(canvas, {
+    attributes: true,
+    attributeFilter: ["width", "height"],
+  });
+
   const restoreCanvas = () => {
     if (canvasPlaceholder?.parentNode) {
       canvasPlaceholder.replaceWith(canvas);

@@ -11,11 +11,12 @@ use device_envoy_core::{
     },
     dns::{DnsResult, DnsRuntime},
     flash_block::FlashBlock as _,
-    wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm},
+    wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm, next_animation_frame},
 };
 use device_envoy_examples_core::dns_tester::{
     Error as CoreError, Exit as CoreExit, UiError as CoreUiError,
-    display_orientation_for_calibration, dns_tester, orientation_after_calibration,
+    display_orientation_for_calibration, dns_tester, dns_tester_splash,
+    orientation_after_calibration,
 };
 use embedded_graphics::{geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::{JsCast, prelude::*};
@@ -116,7 +117,7 @@ impl DnsTesterWeb {
             self.canvas.set_width(saved_orientation.width());
             self.canvas.set_height(saved_orientation.height());
         }
-        let (display, touch) = if outcome.was_saved() {
+        let (mut display, touch) = if outcome.was_saved() {
             let dashboard_device = CydWasm::new(
                 self.context.clone(),
                 saved_orientation,
@@ -133,6 +134,12 @@ impl DnsTesterWeb {
         } else {
             (display, touch)
         };
+        dns_tester_splash(&mut display, state.orientation)
+            .await
+            .map_err(|error| JsValue::from_str(&format!("Splash: {error:?}")))?;
+        for _ in 0..60 {
+            next_animation_frame().await;
+        }
         let mut device = CydWasm::from_parts(display, touch);
         let exit = self.exit.clone();
         let failed = self.failed.clone();
@@ -192,6 +199,8 @@ impl DnsTesterWeb {
                 match save_result {
                     Ok(()) => {
                         self.state.borrow_mut().orientation = next_orientation;
+                        self.canvas.set_width(next_orientation.width());
+                        self.canvas.set_height(next_orientation.height());
                         "orientation".into()
                     }
                     Err(_) => {
@@ -211,6 +220,7 @@ impl DnsTesterWeb {
 
     /// Present the simulated CYD in landscape while touch calibration runs.
     pub fn prepare_calibration_landscape(&self) {
+        self.button_source.release();
         self.state.borrow_mut().orientation = Orientation::Landscape;
         self.canvas.set_width(Orientation::Landscape.width());
         self.canvas.set_height(Orientation::Landscape.height());

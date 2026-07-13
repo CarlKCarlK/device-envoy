@@ -32,8 +32,10 @@
 
   <text class="label" x="22" y="28">DNS TEST</text>
   <circle class="success" cx="174" cy="24" r="4"/>
+  <text class="label" x="185" y="28">READY</text>
 
   <text class="small" x="22" y="62">TARGET</text>
+  <text class="small" x="195" y="62" text-anchor="middle">STATUS</text>
   <rect class="panel2" x="20" y="96" width="200" height="80" rx="5"/>
 
   <text class="small" x="120" y="162" text-anchor="middle">LAST LOOKUP</text>
@@ -43,10 +45,10 @@
 
   <!-- Remove this entire group before exporting the static background bitmap. -->
   <g id="preview-values" data-remove-before-export="true">
-    <!-- STATUS: dynamic lookup state; firmware box=(180,18,50,20), centered. -->
-    <text id="placeholder-status" class="value success" x="205" y="36" text-anchor="middle" data-purpose="Lookup status" data-screen-x="180" data-screen-y="18" data-width="50" data-height="20" data-color-success="#79e2a4" data-color-failure="#ff756e" data-font="FONT_10X20" data-align="center">TAP</text>
-    <!-- TARGET: DNS name; firmware origin=(22,68), bounds=190x20, color=#ffffff, font=FONT_10X20, left aligned. -->
-    <text id="placeholder-target" class="value" x="22" y="86" data-purpose="DNS target" data-screen-x="22" data-screen-y="68" data-width="190" data-height="20" data-color="#ffffff" data-font="FONT_10X20" data-align="left">example.com</text>
+    <!-- STATUS: dynamic lookup state; firmware box=(170,68,50,20), centered. -->
+    <text id="placeholder-status" class="value success" x="195" y="86" text-anchor="middle" data-purpose="Lookup status" data-screen-x="170" data-screen-y="68" data-width="50" data-height="20" data-color-success="#79e2a4" data-color-failure="#ff756e" data-font="FONT_10X20" data-align="center">TAP</text>
+    <!-- TARGET: DNS name; firmware origin=(22,68), bounds=130x20, color=#ffffff, font=FONT_10X20, left aligned. -->
+    <text id="placeholder-target" class="value" x="22" y="86" data-purpose="DNS target" data-screen-x="22" data-screen-y="68" data-width="130" data-height="20" data-color="#ffffff" data-font="FONT_10X20" data-align="left">example.com</text>
     <!-- LATENCY: latest lookup time; firmware box=(60,119,120,24), color=#ffffff, font=PROFONT_24_POINT, centered. -->
     <text id="placeholder-latency" class="latency" x="120" y="142" text-anchor="middle" data-purpose="Latest latency" data-screen-x="60" data-screen-y="119" data-width="120" data-height="24" data-color="#ffffff" data-font="PROFONT_24_POINT" data-align="center">22 ms</text>
     <!-- COUNTERS: right-aligned at x=210; top positions 180, 202, 220; FONT_10X20. -->
@@ -82,8 +84,8 @@
   <!-- Hidden developer overlay. Change display to inline to see exact dynamic slots and touch hitboxes. -->
   <g id="developer-guides" display="none" data-remove-before-export="true">
     <g id="dynamic-slot-guides">
-      <rect id="slot-target" class="slot-guide" x="22" y="68" width="190" height="20" data-purpose="DNS target" data-font="FONT_10X20" data-color="#ffffff"/>
-      <rect id="slot-status" class="slot-guide" x="180" y="18" width="50" height="20" data-purpose="Lookup status" data-font="FONT_10X20"/>
+      <rect id="slot-target" class="slot-guide" x="22" y="68" width="130" height="20" data-purpose="DNS target" data-font="FONT_10X20" data-color="#ffffff"/>
+      <rect id="slot-status" class="slot-guide" x="170" y="68" width="50" height="20" data-purpose="Lookup status" data-font="FONT_10X20"/>
       <rect id="slot-latency" class="slot-guide" x="60" y="119" width="120" height="24" data-purpose="Latest latency" data-font="PROFONT_24_POINT" data-color="#ffffff"/>
       <rect id="slot-queries" class="slot-guide" x="160" y="180" width="50" height="20" data-purpose="Query count" data-font="FONT_10X20"/>
       <rect id="slot-success" class="slot-guide" x="160" y="202" width="50" height="20" data-purpose="Success count" data-font="FONT_10X20"/>

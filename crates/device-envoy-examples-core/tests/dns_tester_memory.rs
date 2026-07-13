@@ -5,7 +5,7 @@ use device_envoy_core::{
     dns::{Dns, DnsResult},
     memory::{CydMemory, assert_framebuffer_matches_expected_png},
 };
-use device_envoy_examples_core::dns_tester::{Exit, dns_tester};
+use device_envoy_examples_core::dns_tester::{Exit, UiNotice, dns_tester, render_notice};
 use embedded_graphics::{
     geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888, prelude::Size,
 };
@@ -119,6 +119,29 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
         }
         assert_framebuffer_matches_expected_png(&cyd_memory, env!("CARGO_MANIFEST_DIR"), filename)?;
     }
+    Ok(())
+}
+
+#[test]
+fn portrait_splash_golden() -> Result<(), Box<dyn std::error::Error>> {
+    let cyd_memory = CydMemory::new_with_orientation(
+        Orientation::Portrait,
+        Rgb888::new(10, 10, 12),
+        Rgb888::new(230, 230, 230),
+        &FONT_6X10,
+    );
+    let mut display = cyd_memory.display();
+    block_on(render_notice(
+        &mut display,
+        Orientation::Portrait,
+        UiNotice::Splash,
+    ))
+    .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
+    assert_framebuffer_matches_expected_png(
+        &cyd_memory,
+        env!("CARGO_MANIFEST_DIR"),
+        "dns_tester_portrait_splash.png",
+    )?;
     Ok(())
 }
 

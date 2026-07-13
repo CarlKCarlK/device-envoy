@@ -66,6 +66,8 @@ async fn wrapper_forwards_rotation_and_boot_calibration_flow() -> Result<(), JsV
     }
     assert_eq!(exit, "orientation");
     assert!(tester.orientation_is_inverted());
+    assert_eq!(canvas.width(), Orientation::LandscapeInverted.width());
+    assert_eq!(canvas.height(), Orientation::LandscapeInverted.height());
     tester.reboot().await?;
 
     tester.boot_down();
@@ -78,7 +80,6 @@ async fn wrapper_forwards_rotation_and_boot_calibration_flow() -> Result<(), JsV
         }
     }
     assert_eq!(exit, "recalibrate");
-    tester.boot_up();
     tester.prepare_calibration_landscape();
     assert_eq!(canvas.width(), Orientation::Landscape.width());
     assert_eq!(canvas.height(), Orientation::Landscape.height());
@@ -90,6 +91,10 @@ async fn wrapper_forwards_rotation_and_boot_calibration_flow() -> Result<(), JsV
     assert_eq!(canvas.width(), Orientation::LandscapeInverted.width());
     assert_eq!(canvas.height(), Orientation::LandscapeInverted.height());
     assert!(tester.orientation_is_inverted());
+    for _ in 0..3 {
+        next_animation_frame().await;
+    }
+    assert_eq!(tester.take_exit(), "idle");
     Ok(())
 }
 

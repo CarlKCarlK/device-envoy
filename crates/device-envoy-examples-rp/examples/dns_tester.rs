@@ -51,7 +51,7 @@ use device_envoy_core::dns_lookup::{DnsLookupFn, DnsLookupResult};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester::{
-    DnsTesterError, DnsTesterExit, DnsTesterUiError, DnsTesterUiNotice,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice as CoreUiNotice,
     display_orientation_for_calibration, dns_tester, dns_tester_splash, render_notice,
 };
 use device_envoy_rp::{
@@ -168,7 +168,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .connect(&mut button, async |wifi_auto_event| -> Result<(), Error> {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    render_notice(cyd.display(), orientation, DnsTesterUiNotice::WifiSetup)
+                    render_notice(cyd.display(), orientation, CoreUiNotice::WifiSetup)
                         .await
                         .map_err(map_ui_error)?
                 }
@@ -209,23 +209,23 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let exit = dns_tester(&mut cyd, &mut button, DNS_HOSTNAME, &mut dns_lookup)
         .await
         .map_err(|error| match error {
-            DnsTesterError::Display(error) => map_ui_error(error),
-            DnsTesterError::Touch(error) => error.into(),
-            DnsTesterError::Dns(error) => match error {},
+            CoreError::Display(error) => map_ui_error(error),
+            CoreError::Touch(error) => error.into(),
+            CoreError::Dns(error) => match error {},
         })?;
     match exit {
-        DnsTesterExit::CalibrationRequested => calibration_flash_block.clear()?,
-        DnsTesterExit::WifiResetRequested => wifi_auto.reset_to_captive_portal()?,
-        DnsTesterExit::OrientationChanged(next_orientation) => {
+        CoreExit::CalibrationRequested => calibration_flash_block.clear()?,
+        CoreExit::WifiResetRequested => wifi_auto.reset_to_captive_portal()?,
+        CoreExit::OrientationChanged(next_orientation) => {
             orientation_flash_block.save(&next_orientation)?;
         }
     }
     cortex_m::peripheral::SCB::sys_reset();
 }
 
-fn map_ui_error(error: DnsTesterUiError<device_envoy_rp::Error>) -> Error {
+fn map_ui_error(error: CoreUiError<device_envoy_rp::Error>) -> Error {
     match error {
-        DnsTesterUiError::Text(_) => Error::FormatError,
-        DnsTesterUiError::Display(error) => error.into(),
+        CoreUiError::Text(_) => Error::FormatError,
+        CoreUiError::Display(error) => error.into(),
     }
 }

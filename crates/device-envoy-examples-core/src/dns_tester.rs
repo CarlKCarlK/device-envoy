@@ -55,7 +55,7 @@ pub async fn dns_tester<CydDevice, ButtonDevice, DnsLookupDevice>(
     button: &mut ButtonDevice,
     target: &'static str,
     dns_lookup: &mut DnsLookupDevice,
-) -> Result<DnsTesterExit, DnsTesterError<CydDevice::Error, DnsLookupDevice::Error>>
+) -> Result<Exit, Error<CydDevice::Error, DnsLookupDevice::Error>>
 where
     CydDevice: Cyd,
     ButtonDevice: Button,
@@ -69,7 +69,7 @@ where
     };
     display
         .fill_contiguous_full(bitmap.rgb565_iter())
-        .map_err(DnsTesterError::display_error)?;
+        .map_err(Error::display)?;
     let mut queries: u32 = 0;
     let mut successes: u32 = 0;
     let mut failures: u32 = 0;
@@ -87,7 +87,7 @@ where
         if queries == 0 {
             latency
                 .push_str("--")
-                .map_err(|_| DnsTesterError::Display(DnsTesterUiError::Text(core::fmt::Error)))?;
+                .map_err(|_| Error::Display(UiError::Text(core::fmt::Error)))?;
         } else {
             write!(latency, "{} ms", last_latency_millis)?;
         }
@@ -226,10 +226,10 @@ where
         }
 
         if button.is_pressed() {
-            return Ok(DnsTesterExit::CalibrationRequested);
+            return Ok(Exit::CalibrationRequested);
         }
 
-        if let Some(touch_event) = touch.read().map_err(DnsTesterError::Touch)? {
+        if let Some(touch_event) = touch.read().map_err(Error::Touch)? {
             let touch_event = match touch_event {
                 TouchEvent::Down { point } => TouchEvent::Down {
                     point: orientation.map_landscape_point(point),
@@ -238,23 +238,23 @@ where
             };
             let action = match touch_event {
                 TouchEvent::Down { point } => match control_at(point, orientation.size()) {
-                    Some(Control::Calibration) => DnsTesterAction::ClearCalibrationAndRestart,
-                    Some(Control::Wifi) => DnsTesterAction::ResetWifiAndRestart,
+                    Some(Control::Calibration) => Action::ClearCalibrationAndRestart,
+                    Some(Control::Wifi) => Action::ResetWifiAndRestart,
                     Some(Control::Orientation) => {
                         orientation = orientation.next();
-                        DnsTesterAction::SaveOrientationAndRestart(orientation)
+                        Action::SaveOrientationAndRestart(orientation)
                     }
-                    None => DnsTesterAction::StartDnsLookup,
+                    None => Action::StartDnsLookup,
                 },
-                TouchEvent::Move { .. } | TouchEvent::Up => DnsTesterAction::None,
+                TouchEvent::Move { .. } | TouchEvent::Up => Action::None,
             };
             let exit = match action {
-                DnsTesterAction::None => None,
-                DnsTesterAction::StartDnsLookup => {
+                Action::None => None,
+                Action::StartDnsLookup => {
                     let result = dns_lookup
                         .lookup(target)
                         .await
-                        .map_err(DnsTesterError::Dns)?;
+                        .map_err(Error::Dns)?;
                     queries = queries.saturating_add(1);
                     last_latency_millis = result.latency_millis;
                     if result.succeeded {
@@ -264,12 +264,12 @@ where
                     }
                     None
                 }
-                DnsTesterAction::ClearCalibrationAndRestart => {
-                    Some(DnsTesterExit::CalibrationRequested)
+                Action::ClearCalibrationAndRestart => {
+                    Some(Exit::CalibrationRequested)
                 }
-                DnsTesterAction::ResetWifiAndRestart => Some(DnsTesterExit::WifiResetRequested),
-                DnsTesterAction::SaveOrientationAndRestart(next_orientation) => {
-                    Some(DnsTesterExit::OrientationChanged(next_orientation))
+                Action::ResetWifiAndRestart => Some(Exit::WifiResetRequested),
+                Action::SaveOrientationAndRestart(next_orientation) => {
+                    Some(Exit::OrientationChanged(next_orientation))
                 }
             };
             if let Some(exit) = exit {
@@ -284,45 +284,45 @@ where
 pub async fn dns_tester_splash<D>(
     display: &mut D,
     orientation: Orientation,
-) -> Result<(), DnsTesterUiError<D::Error>>
+) -> Result<(), UiError<D::Error>>
 where
     D: CydDisplay,
 {
-    render_notice(display, orientation, DnsTesterUiNotice::Splash).await
+    render_notice(display, orientation, UiNotice::Splash).await
 }
 
 /// Errors returned by the shared DNS Tester loop.
 #[derive(Debug)]
-pub enum DnsTesterError<CydError, DnsError> {
+pub enum Error<CydError, DnsError> {
     /// Rendering failed.
-    Display(DnsTesterUiError<CydError>),
+    Display(UiError<CydError>),
     /// Reading calibrated touch failed.
     Touch(CydError),
     /// The DNS lookup failed at the platform boundary.
     Dns(DnsError),
 }
 
-impl<CydError, DnsError> DnsTesterError<CydError, DnsError> {
-    fn display_error(error: CydError) -> Self {
-        Self::Display(DnsTesterUiError::Display(error))
+impl<CydError, DnsError> Error<CydError, DnsError> {
+    fn display(error: CydError) -> Self {
+        Self::Display(UiError::Display(error))
     }
 }
 
-impl<CydError, DnsError> From<DnsTesterUiError<CydError>> for DnsTesterError<CydError, DnsError> {
-    fn from(error: DnsTesterUiError<CydError>) -> Self {
+impl<CydError, DnsError> From<UiError<CydError>> for Error<CydError, DnsError> {
+    fn from(error: UiError<CydError>) -> Self {
         Self::Display(error)
     }
 }
 
-impl<CydError, DnsError> From<core::fmt::Error> for DnsTesterError<CydError, DnsError> {
+impl<CydError, DnsError> From<core::fmt::Error> for Error<CydError, DnsError> {
     fn from(error: core::fmt::Error) -> Self {
-        Self::Display(DnsTesterUiError::Text(error))
+        Self::Display(UiError::Text(error))
     }
 }
 
 /// Result returned when the shared DNS Tester loop needs platform handling.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DnsTesterExit {
+pub enum Exit {
     /// Clear calibration and restart the platform calibration flow.
     CalibrationRequested,
     /// Clear Wi-Fi credentials and restart the platform setup flow.
@@ -333,7 +333,7 @@ pub enum DnsTesterExit {
 
 /// Platform control request selected by the game loop.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum DnsTesterAction {
+enum Action {
     /// No platform work is required.
     None,
     /// Start one DNS lookup.
@@ -410,7 +410,7 @@ pub const fn orientation_after_calibration(saved_orientation: Orientation) -> Or
 
 /// A full-screen DNS tester notice shown before the test dashboard is usable.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DnsTesterUiNotice {
+pub enum UiNotice {
     /// The display has initialized and networking has not started yet.
     Splash,
     /// The device is joining the configured Wi-Fi network.
@@ -423,14 +423,14 @@ pub enum DnsTesterUiNotice {
 
 /// Errors from rendering the shared DNS tester UI.
 #[derive(Debug)]
-pub enum DnsTesterUiError<F> {
+pub enum UiError<F> {
     /// The fixed-size text buffer was too small.
     Text(core::fmt::Error),
     /// The display failed to flush.
     Display(F),
 }
 
-impl<F> From<core::fmt::Error> for DnsTesterUiError<F> {
+impl<F> From<core::fmt::Error> for UiError<F> {
     fn from(error: core::fmt::Error) -> Self {
         Self::Text(error)
     }
@@ -440,18 +440,18 @@ impl<F> From<core::fmt::Error> for DnsTesterUiError<F> {
 pub async fn render_notice<D>(
     display: &mut D,
     orientation: Orientation,
-    notice: DnsTesterUiNotice,
-) -> Result<(), DnsTesterUiError<D::Error>>
+    notice: UiNotice,
+) -> Result<(), UiError<D::Error>>
 where
     D: CydDisplay,
 {
     match orientation {
         Orientation::Landscape | Orientation::LandscapeInverted => display
             .fill_contiguous_full(LANDSCAPE_BITMAP.rgb565_iter())
-            .map_err(DnsTesterUiError::Display)?,
+            .map_err(UiError::Display)?,
         Orientation::Portrait | Orientation::PortraitInverted => display
             .fill_contiguous_full(PORTRAIT_BITMAP.rgb565_iter())
-            .map_err(DnsTesterUiError::Display)?,
+            .map_err(UiError::Display)?,
     }
 
     let (rectangle, heading_y, detail_y) = if orientation.width() > orientation.height() {
@@ -468,10 +468,10 @@ where
         )
     };
     let (heading, detail) = match notice {
-        DnsTesterUiNotice::Splash => ("DNS", "STARTING"),
-        DnsTesterUiNotice::WifiConnecting => ("WI-FI", "CONNECTING"),
-        DnsTesterUiNotice::WifiSetup => ("WI-FI", "SETUP"),
-        DnsTesterUiNotice::WifiUnavailable => ("WI-FI", "UNAVAILABLE"),
+        UiNotice::Splash => ("DNS", "STARTING"),
+        UiNotice::WifiConnecting => ("WI-FI", "CONNECTING"),
+        UiNotice::WifiSetup => ("WI-FI", "SETUP"),
+        UiNotice::WifiUnavailable => ("WI-FI", "UNAVAILABLE"),
     };
     fill_panel(display, rectangle).await?;
     draw_notice_text(
@@ -493,7 +493,7 @@ where
 async fn fill_panel<D>(
     display: &mut D,
     rectangle: Rectangle,
-) -> Result<(), DnsTesterUiError<D::Error>>
+) -> Result<(), UiError<D::Error>>
 where
     D: CydDisplay,
 {
@@ -505,7 +505,7 @@ where
             Size::new(rectangle.size.width, height),
         ));
         frame.fill(Rgb565::from(PANEL_FILL));
-        frame.flush().await.map_err(DnsTesterUiError::Display)?;
+        frame.flush().await.map_err(UiError::Display)?;
         offset_y += height;
     }
     Ok(())
@@ -516,7 +516,7 @@ async fn draw_notice_text<D>(
     rectangle: Rectangle,
     text: &str,
     font: &MonoFont<'_>,
-) -> Result<(), DnsTesterUiError<D::Error>>
+) -> Result<(), UiError<D::Error>>
 where
     D: CydDisplay,
 {
@@ -534,7 +534,7 @@ where
     )
     .draw(&mut frame)
     .unwrap_infallible();
-    frame.flush().await.map_err(DnsTesterUiError::Display)
+        frame.flush().await.map_err(UiError::Display)
 }
 
 async fn draw_text<D>(
@@ -545,7 +545,7 @@ async fn draw_text<D>(
     font: &MonoFont<'_>,
     alignment: Alignment,
     color: Rgb888,
-) -> Result<(), DnsTesterUiError<D::Error>>
+) -> Result<(), UiError<D::Error>>
 where
     D: CydDisplay,
 {
@@ -571,5 +571,5 @@ where
     )
     .draw(&mut frame)
     .unwrap_infallible();
-    frame.flush().await.map_err(DnsTesterUiError::Display)
+    frame.flush().await.map_err(UiError::Display)
 }

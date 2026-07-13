@@ -54,7 +54,7 @@ use device_envoy_esp::{
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
 };
 use device_envoy_examples_core::dns_tester::{
-    DnsTesterExit, display_orientation_for_calibration, dns_tester, dns_tester_splash,
+    Exit as CoreExit, display_orientation_for_calibration, dns_tester, dns_tester_splash,
     render_notice,
 };
 
@@ -140,8 +140,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     dns_tester_splash(cyd.display(), orientation)
         .await
         .map_err(|error| match error {
-            device_envoy_examples_core::dns_tester::DnsTesterUiError::Text(_) => Error::FormatError,
-            device_envoy_examples_core::dns_tester::DnsTesterUiError::Display(error) => {
+            device_envoy_examples_core::dns_tester::Error::Text(_) => Error::FormatError,
+            device_envoy_examples_core::dns_tester::Error::Display(error) => {
                 error.into()
             }
         })?;
@@ -160,14 +160,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     render_notice(
                         cyd.display(),
                         orientation,
-                        device_envoy_examples_core::dns_tester::DnsTesterUiNotice::WifiSetup,
+                        device_envoy_examples_core::dns_tester::UiNotice::WifiSetup,
                     )
                     .await
                     .map_err(|error| match error {
-                        device_envoy_examples_core::dns_tester::DnsTesterUiError::Text(_) => {
+                        device_envoy_examples_core::dns_tester::Error::Text(_) => {
                             Error::FormatError
                         }
-                        device_envoy_examples_core::dns_tester::DnsTesterUiError::Display(
+                        device_envoy_examples_core::dns_tester::Error::Display(
                             error,
                         ) => error.into(),
                     })?;
@@ -212,25 +212,25 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let exit = dns_tester(&mut cyd, &mut button, DNS_HOSTNAME, &mut dns_lookup)
         .await
         .map_err(|error| match error {
-            device_envoy_examples_core::dns_tester::DnsTesterError::Display(error) => match error {
-                device_envoy_examples_core::dns_tester::DnsTesterUiError::Text(_) => {
+            device_envoy_examples_core::dns_tester::Error::Display(error) => match error {
+                device_envoy_examples_core::dns_tester::Error::Text(_) => {
                     Error::FormatError
                 }
-                device_envoy_examples_core::dns_tester::DnsTesterUiError::Display(error) => {
+                device_envoy_examples_core::dns_tester::Error::Display(error) => {
                     error.into()
                 }
             },
-            device_envoy_examples_core::dns_tester::DnsTesterError::Touch(error) => error.into(),
-            device_envoy_examples_core::dns_tester::DnsTesterError::Dns(error) => match error {},
+            device_envoy_examples_core::dns_tester::Error::Touch(error) => error.into(),
+            device_envoy_examples_core::dns_tester::Error::Dns(error) => match error {},
         })?;
     match exit {
-        DnsTesterExit::CalibrationRequested => {
+        CoreExit::CalibrationRequested => {
             calibration_flash_block.clear()?;
         }
-        DnsTesterExit::WifiResetRequested => {
+        CoreExit::WifiResetRequested => {
             wifi_auto.reset_to_captive_portal()?;
         }
-        DnsTesterExit::OrientationChanged(next_orientation) => {
+        CoreExit::OrientationChanged(next_orientation) => {
             orientation_flash_block.save(&next_orientation)?;
         }
     }

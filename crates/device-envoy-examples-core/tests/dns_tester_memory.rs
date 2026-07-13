@@ -5,7 +5,7 @@ use device_envoy_core::{
     dns_lookup::{DnsLookup, DnsLookupResult},
     memory::{CydMemory, assert_framebuffer_matches_expected_png},
 };
-use device_envoy_examples_core::dns_tester::{DnsTesterExit, dns_tester};
+use device_envoy_examples_core::dns_tester::{Exit, dns_tester};
 use embedded_graphics::{
     geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888, prelude::Size,
 };
@@ -44,7 +44,7 @@ fn scripted_runtime_owns_startup_input_dns_and_rendering() -> Result<(), Box<dyn
             &mut dns_lookup
         ))
         .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-        DnsTesterExit::CalibrationRequested
+        Exit::CalibrationRequested
     );
     assert!(cyd_memory.flush_count() > 0);
     Ok(())
@@ -89,7 +89,7 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
                 &mut dns_lookup,
             ))
             .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-            DnsTesterExit::CalibrationRequested
+            Exit::CalibrationRequested
         );
         if matches!(
             orientation,

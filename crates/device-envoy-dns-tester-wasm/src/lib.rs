@@ -14,7 +14,7 @@ use device_envoy_core::{
     wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm},
 };
 use device_envoy_examples_core::dns_tester::{
-    DnsTesterError, DnsTesterExit, DnsTesterUiError, display_orientation_for_calibration,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, display_orientation_for_calibration,
     dns_tester, orientation_after_calibration,
 };
 use embedded_graphics::{geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
@@ -31,7 +31,7 @@ pub struct DnsTesterWeb {
     context: CanvasRenderingContext2d,
     touch_source: CydTouchWasmSource,
     button_source: ButtonWasmSource,
-    exit: Rc<Cell<Option<DnsTesterExit>>>,
+    exit: Rc<Cell<Option<CoreExit>>>,
     failed: Rc<Cell<bool>>,
     state: RefCell<DnsTesterState>,
 }
@@ -148,10 +148,10 @@ impl DnsTesterWeb {
         wasm_bindgen_futures::spawn_local(async move {
             match dns_tester(&mut device, &mut button, target, &mut dns_lookup).await {
                 Ok(exit_value) => exit.set(Some(exit_value)),
-                Err(DnsTesterError::Display(DnsTesterUiError::Text(_))) => failed.set(true),
-                Err(DnsTesterError::Display(DnsTesterUiError::Display(error))) => match error {},
-                Err(DnsTesterError::Touch(error)) => match error {},
-                Err(DnsTesterError::Dns(error)) => match error {},
+                Err(CoreError::Display(CoreUiError::Text(_))) => failed.set(true),
+                Err(CoreError::Display(CoreUiError::Display(error))) => match error {},
+                Err(CoreError::Touch(error)) => match error {},
+                Err(CoreError::Dns(error)) => match error {},
             }
         });
         Ok(())
@@ -181,9 +181,9 @@ impl DnsTesterWeb {
 
     pub fn take_exit(&self) -> String {
         match self.exit.take() {
-            Some(DnsTesterExit::CalibrationRequested) => "recalibrate".into(),
-            Some(DnsTesterExit::WifiResetRequested) => "wifi".into(),
-            Some(DnsTesterExit::OrientationChanged(_)) => "orientation".into(),
+            Some(CoreExit::CalibrationRequested) => "recalibrate".into(),
+            Some(CoreExit::WifiResetRequested) => "wifi".into(),
+            Some(CoreExit::OrientationChanged(_)) => "orientation".into(),
             None if self.failed.get() => "runtime error".into(),
             None => "idle".into(),
         }

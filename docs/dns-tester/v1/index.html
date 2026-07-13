@@ -41,6 +41,11 @@
       --stage-height: 480px;
       width: 640px;
       height: var(--stage-height);
+      transition: transform 180ms ease;
+    }
+
+    .stage[data-inverted="true"] {
+      transform: rotate(180deg);
     }
 
     #screen {
@@ -129,7 +134,7 @@
     </div>
     <button id="boot-button" class="boot-button" type="button">boot</button>
   </div>
-  <script type="module" src="./main.js?v=3"></script>
+  <script type="module" src="./main.js?v=5"></script>
 </body>
 
 </html>

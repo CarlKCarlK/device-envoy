@@ -1,4 +1,4 @@
-import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=1";
+import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=3";
 import { setupDemoUx } from "./demo-ux.js";
 
 const canvas = document.querySelector("#screen");
@@ -9,12 +9,19 @@ let tester;
 function syncStage() {
   const isPortrait = canvas.height > canvas.width;
   stage.dataset.orientation = isPortrait ? "portrait" : "landscape";
+  stage.dataset.inverted = tester.orientation_is_inverted() ? "true" : "false";
   window.dispatchEvent(new Event("resize"));
 }
 
 function point(event) {
   const bounds = canvas.getBoundingClientRect();
-  return [(event.clientX - bounds.left) * canvas.width / bounds.width, (event.clientY - bounds.top) * canvas.height / bounds.height];
+  let x = (event.clientX - bounds.left) * canvas.width / bounds.width;
+  let y = (event.clientY - bounds.top) * canvas.height / bounds.height;
+  if (stage.dataset.inverted === "true") {
+    x = canvas.width - x;
+    y = canvas.height - y;
+  }
+  return [x, y];
 }
 
 function enqueuePressSamples(x, y) {
@@ -29,7 +36,12 @@ function enqueuePressSamples(x, y) {
 
 async function refresh() {
   const result = tester.tick();
-  if (result === "orientation" || result === "recalibrate") {
+  if (result === "recalibrate") {
+    tester.prepare_calibration_landscape();
+    syncStage();
+    await tester.reboot();
+    syncStage();
+  } else if (result === "orientation") {
     await tester.reboot();
     syncStage();
   }

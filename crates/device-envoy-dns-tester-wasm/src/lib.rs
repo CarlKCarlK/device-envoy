@@ -4,25 +4,24 @@ use device_envoy_core::{
     UnwrapInfallible as _,
     button::Button as _,
     cyd::{
-        CydDisplay as _, CydTouch as _, CydTouchUncalibrated as _,
-        display::{CydFrame, DrawItem, Image565Fixed, Orientation},
+        CydTouch as _, CydTouchUncalibrated as _,
+        display::Orientation,
         touch::{
             TouchEvent,
             calibration::{CalibrationConfig, ensure_calibration},
         },
     },
+    dns_tester::{DnsTesterUiError, DnsTesterUiNotice, DnsTesterUiState, render, render_notice},
     flash_block::FlashBlock as _,
     wasm::{
         ButtonWasmSource, CydDisplayWasm, CydTouchWasm, CydTouchWasmSource, CydWasm, FlashBlockWasm,
     },
 };
 use embedded_graphics::{
-    Drawable,
     geometry::{Point, Size},
-    mono_font::{MonoTextStyle, ascii::FONT_6X10},
+    mono_font::ascii::FONT_6X10,
     pixelcolor::Rgb888,
     primitives::Rectangle,
-    text::{Baseline, Text},
 };
 use wasm_bindgen::{JsCast, prelude::*};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
@@ -30,22 +29,6 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 const DNS_HOSTNAME: &str = "example.com";
 const BACKGROUND: Rgb888 = Rgb888::new(10, 10, 12); // near-black
 const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
-const CONTROL_HEIGHT: u32 = 24;
-
-const LANDSCAPE_BACKGROUND: Image565Fixed<320, 240, { 320 * 240 }> =
-    device_envoy_core::cyd::display::tga!(
-        "../../../docs/dns-tester/v1/assets/dns_tester_background_landscape.tga",
-        320,
-        240
-    )
-    .to_565();
-const PORTRAIT_BACKGROUND: Image565Fixed<240, 320, { 240 * 320 }> =
-    device_envoy_core::cyd::display::tga!(
-        "../../../docs/dns-tester/v1/assets/dns_tester_background_portrait.tga",
-        240,
-        320
-    )
-    .to_565();
 
 #[wasm_bindgen]
 pub struct DnsTesterWeb {
@@ -67,8 +50,15 @@ struct DnsTesterState {
     taps: u32,
     successes: u32,
     failures: u32,
-    last_latency_millis: u32,
+    last_latency_millis: u64,
     button_was_pressed: bool,
+    screen: Screen,
+}
+
+#[derive(Clone, Copy)]
+enum Screen {
+    Tester,
+    WifiUnavailable,
 }
 
 #[wasm_bindgen]
@@ -100,6 +90,7 @@ impl DnsTesterWeb {
                 failures: 0,
                 last_latency_millis: 0,
                 button_was_pressed: false,
+                screen: Screen::Tester,
             }),
         })
     }
@@ -147,9 +138,11 @@ impl DnsTesterWeb {
         state.touch = Some(touch);
 
         if outcome.was_saved() {
-            // Calibration is always completed in landscape; the next app boot
-            // applies the persisted orientation just like the hardware flow.
+            // Calibration is always completed in landscape. Restore the saved
+            // dashboard orientation as soon as calibration has been persisted.
             self.orientation.set(saved_orientation);
+            self.canvas.set_width(saved_orientation.width());
+            self.canvas.set_height(saved_orientation.height());
             self.rebuild_display(&mut state, Some(outcome.calibration_config()));
         }
         drop(state);
@@ -166,116 +159,38 @@ impl DnsTesterWeb {
         let successes = state.successes;
         let failures = state.failures;
         let last_latency_millis = state.last_latency_millis;
+        let screen = state.screen;
         let Some(display) = &mut state.display else {
             return Ok(());
         };
-        let screen_size = display.screen_size();
-        let background = background_for_size(screen_size);
-        let background_color = display.background_565();
-        display
-            .draw_items::<1>(
-                Rectangle::new(Point::zero(), screen_size),
-                background_color,
-                [DrawItem::Bitmap {
-                    view: background.view(),
-                    top_left: Point::zero(),
-                }],
-            )
-            .unwrap_infallible();
-
-        let status = if taps == 0 { "TAP TO TEST" } else { "READY" };
-        let latency = if taps == 0 {
-            "—".to_owned()
-        } else {
-            format!("{last_latency_millis} ms")
-        };
-        let queries = taps.to_string();
-        let success_count = successes.to_string();
-        let failure_count = failures.to_string();
-
-        if screen_size.width > screen_size.height {
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(220, 0), Size::new(100, 20)),
-                status.to_owned(),
-                Rgb888::new(127, 220, 255), // bright cyan
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(80, 78), Size::new(160, 28)),
-                latency,
-                Rgb888::new(185, 210, 223), // pale blue-white
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(70, 164), Size::new(38, 18)),
-                queries,
-                Rgb888::new(185, 210, 223), // pale blue-white
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(177, 164), Size::new(38, 18)),
-                success_count,
-                Rgb888::new(130, 220, 150), // soft green
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(282, 164), Size::new(38, 18)),
-                failure_count,
-                Rgb888::new(240, 125, 115), // coral red
-            )
-            .await?;
-        } else {
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(150, 0), Size::new(90, 20)),
-                status.to_owned(),
-                Rgb888::new(127, 220, 255), // bright cyan
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(50, 98), Size::new(140, 25)),
-                latency,
-                Rgb888::new(185, 210, 223), // pale blue-white
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(195, 168), Size::new(45, 16)),
-                queries,
-                Rgb888::new(185, 210, 223), // pale blue-white
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(195, 185), Size::new(45, 16)),
-                success_count,
-                Rgb888::new(130, 220, 150), // soft green
-            )
-            .await?;
-            draw_text_value(
-                display,
-                background,
-                Rectangle::new(Point::new(195, 202), Size::new(45, 16)),
-                failure_count,
-                Rgb888::new(240, 125, 115), // coral red
-            )
-            .await?;
+        match screen {
+            Screen::Tester => {
+                render(
+                    display,
+                    self.orientation.get(),
+                    DnsTesterUiState {
+                        target: DNS_HOSTNAME,
+                        queries: taps,
+                        successes,
+                        failures,
+                        last_latency_millis,
+                    },
+                )
+                .await
+            }
+            Screen::WifiUnavailable => {
+                render_notice(
+                    display,
+                    self.orientation.get(),
+                    DnsTesterUiNotice::WifiUnavailable,
+                )
+                .await
+            }
         }
+        .map_err(|error| match error {
+            DnsTesterUiError::Text(_) => JsValue::from_str("DNS tester text formatting failed"),
+            DnsTesterUiError::Display(error) => match error {},
+        })?;
         Ok(())
     }
 
@@ -319,8 +234,12 @@ impl DnsTesterWeb {
         let Some(touch) = &mut state.touch else {
             return "starting".into();
         };
-        let Some(TouchEvent::Down { point }) = touch.read().unwrap_infallible() else {
-            return "idle".into();
+        let point = loop {
+            match touch.read().unwrap_infallible() {
+                Some(TouchEvent::Down { point }) => break point,
+                Some(TouchEvent::Move { .. } | TouchEvent::Up) => {}
+                None => return "idle".into(),
+            }
         };
         let orientation = self.orientation.get();
         let point = map_to_orientation(orientation, point);
@@ -343,10 +262,14 @@ impl DnsTesterWeb {
                     }
                     Self::action("recalibrate")
                 }
-                Control::Wifi => Self::action("WiFi unavailable in browser"),
+                Control::Wifi => {
+                    state.screen = Screen::WifiUnavailable;
+                    Self::action("wifi")
+                }
             };
         }
 
+        state.screen = Screen::Tester;
         state.taps += 1;
         state.successes += 1;
         state.last_latency_millis = 12;
@@ -358,6 +281,21 @@ impl DnsTesterWeb {
 
     pub async fn reboot(&self) -> Result<(), JsValue> {
         self.start().await
+    }
+
+    /// Present the simulated CYD in landscape while touch calibration runs.
+    pub fn prepare_calibration_landscape(&self) {
+        self.orientation.set(Orientation::Landscape);
+        self.canvas.set_width(Orientation::Landscape.width());
+        self.canvas.set_height(Orientation::Landscape.height());
+    }
+
+    /// Whether the current simulated display orientation is upside down.
+    pub fn orientation_is_inverted(&self) -> bool {
+        matches!(
+            self.orientation.get(),
+            Orientation::LandscapeInverted | Orientation::PortraitInverted
+        )
     }
 
     pub async fn clear_storage(&self) -> Result<(), JsValue> {
@@ -409,57 +347,7 @@ impl DnsTesterWeb {
     }
 }
 
-#[derive(Clone, Copy)]
-enum Background {
-    Landscape,
-    Portrait,
-}
-
-impl Background {
-    fn view(self) -> device_envoy_core::cyd::display::Image565View {
-        match self {
-            Self::Landscape => LANDSCAPE_BACKGROUND.view(),
-            Self::Portrait => PORTRAIT_BACKGROUND.view(),
-        }
-    }
-
-    fn view_rect(self, rectangle: Rectangle) -> device_envoy_core::cyd::display::Image565View {
-        match self {
-            Self::Landscape => LANDSCAPE_BACKGROUND.view_rect(rectangle),
-            Self::Portrait => PORTRAIT_BACKGROUND.view_rect(rectangle),
-        }
-    }
-}
-
-fn background_for_size(size: Size) -> Background {
-    if size.width > size.height {
-        Background::Landscape
-    } else {
-        Background::Portrait
-    }
-}
-
-async fn draw_text_value(
-    display: &mut CydDisplayWasm,
-    background: Background,
-    rectangle: Rectangle,
-    text: String,
-    color: Rgb888,
-) -> Result<(), JsValue> {
-    let mut frame = display.frame_mut(rectangle);
-    DrawItem::Bitmap {
-        view: background.view_rect(rectangle),
-        top_left: rectangle.top_left,
-    }
-    .draw(&mut frame);
-    let style = MonoTextStyle::new(&FONT_6X10, color.into());
-    Text::with_baseline(text.as_str(), Point::zero(), style, Baseline::Top)
-        .draw(&mut frame)
-        .unwrap_infallible();
-    frame.flush().await.map_err(|error| match error {})
-}
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Control {
     Orientation,
     Calibration,
@@ -467,40 +355,77 @@ enum Control {
 }
 
 fn control_rectangle(control: Control, size: Size) -> Rectangle {
-    let index = match control {
-        Control::Orientation => 0,
-        Control::Wifi => 1,
-        Control::Calibration => 2,
-    };
-    Rectangle::new(
-        Point::new(
-            size.width as i32 * index / 3,
-            size.height as i32 - CONTROL_HEIGHT as i32,
-        ),
-        Size::new(size.width / 3, CONTROL_HEIGHT),
-    )
+    match (control, size.width > size.height) {
+        (Control::Calibration, true) => Rectangle::new(Point::new(10, 202), Size::new(100, 28)),
+        (Control::Wifi, true) => Rectangle::new(Point::new(110, 202), Size::new(100, 28)),
+        (Control::Orientation, true) => Rectangle::new(Point::new(210, 202), Size::new(100, 28)),
+        (Control::Calibration, false) => Rectangle::new(Point::new(10, 276), Size::new(73, 36)),
+        (Control::Wifi, false) => Rectangle::new(Point::new(83, 276), Size::new(74, 36)),
+        (Control::Orientation, false) => Rectangle::new(Point::new(157, 276), Size::new(73, 36)),
+    }
 }
 
 fn control_at(point: Point, size: Size) -> Option<Control> {
-    [Control::Orientation, Control::Wifi, Control::Calibration]
+    [Control::Calibration, Control::Wifi, Control::Orientation]
         .into_iter()
         .find(|control| control_rectangle(*control, size).contains(point))
 }
 
 fn map_to_orientation(orientation: Orientation, point: Point) -> Point {
-    match orientation {
-        Orientation::Landscape => point,
-        Orientation::Portrait => Orientation::PortraitInverted.map_landscape_point(point),
-        Orientation::LandscapeInverted => Orientation::LandscapeInverted.map_landscape_point(point),
-        Orientation::PortraitInverted => Orientation::Portrait.map_landscape_point(point),
-    }
+    orientation.map_landscape_point(point)
 }
 
 fn map_to_landscape(orientation: Orientation, point: Point) -> Point {
     match orientation {
         Orientation::Landscape => point,
-        Orientation::Portrait => Orientation::PortraitInverted.map_landscape_point(point),
-        Orientation::LandscapeInverted => Orientation::LandscapeInverted.map_landscape_point(point),
-        Orientation::PortraitInverted => Orientation::Portrait.map_landscape_point(point),
+        Orientation::Portrait => Point::new(319 - point.y, point.x),
+        Orientation::LandscapeInverted => Point::new(319 - point.x, 239 - point.y),
+        Orientation::PortraitInverted => Point::new(point.y, 239 - point.x),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
+    #[cfg_attr(not(target_arch = "wasm32"), test)]
+    fn control_hitboxes_round_trip_through_every_orientation() {
+        for (orientation, calibration, wifi, rotate) in [
+            (
+                Orientation::Landscape,
+                Point::new(60, 216),
+                Point::new(160, 216),
+                Point::new(260, 216),
+            ),
+            (
+                Orientation::Portrait,
+                Point::new(46, 294),
+                Point::new(120, 294),
+                Point::new(193, 294),
+            ),
+            (
+                Orientation::LandscapeInverted,
+                Point::new(60, 216),
+                Point::new(160, 216),
+                Point::new(260, 216),
+            ),
+            (
+                Orientation::PortraitInverted,
+                Point::new(46, 294),
+                Point::new(120, 294),
+                Point::new(193, 294),
+            ),
+        ] {
+            for (point, expected) in [
+                (calibration, Control::Calibration),
+                (wifi, Control::Wifi),
+                (rotate, Control::Orientation),
+            ] {
+                let landscape_point = map_to_landscape(orientation, point);
+                assert_eq!(map_to_orientation(orientation, landscape_point), point);
+                assert_eq!(control_at(point, orientation.size()), Some(expected));
+            }
+        }
     }
 }

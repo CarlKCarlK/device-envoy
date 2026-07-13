@@ -8,6 +8,14 @@ export class DnsTesterWeb {
     boot_up(): void;
     clear_storage(): Promise<void>;
     constructor(canvas: HTMLCanvasElement);
+    /**
+     * Whether the current simulated display orientation is upside down.
+     */
+    orientation_is_inverted(): boolean;
+    /**
+     * Present the simulated CYD in landscape while touch calibration runs.
+     */
+    prepare_calibration_landscape(): void;
     present(): Promise<void>;
     reboot(): Promise<void>;
     start(): Promise<void>;
@@ -26,6 +34,8 @@ export interface InitOutput {
     readonly dnstesterweb_boot_up: (a: number) => void;
     readonly dnstesterweb_clear_storage: (a: number) => any;
     readonly dnstesterweb_new: (a: any) => [number, number, number];
+    readonly dnstesterweb_orientation_is_inverted: (a: number) => number;
+    readonly dnstesterweb_prepare_calibration_landscape: (a: number) => void;
     readonly dnstesterweb_present: (a: number) => any;
     readonly dnstesterweb_reboot: (a: number) => any;
     readonly dnstesterweb_start: (a: number) => any;

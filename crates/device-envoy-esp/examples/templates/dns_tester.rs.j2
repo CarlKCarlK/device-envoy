@@ -50,7 +50,7 @@ use log::{info, warn};
 
 use device_envoy_core::{
     cyd::display::Orientation,
-    dns_tester::{DnsTesterUiError, DnsTesterUiState},
+    dns_tester::{DnsTesterUiError, DnsTesterUiNotice, DnsTesterUiState, render_notice},
 };
 use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
 use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
@@ -150,7 +150,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
     info!("Touch calibrated");
 
-    render_dns_tester(&mut display, orientation, DnsTesterUiState::default()).await?;
+    render_dns_tester_notice(&mut display, orientation, DnsTesterUiNotice::WifiConnecting).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
@@ -179,10 +179,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let mut tap_count: u32 = 0;
     let mut success_count: u32 = 0;
     let mut failure_count: u32 = 0;
-    let mut last_latency_millis: u64 = 0;
     let mut is_touch_down = false;
 
-    render_dns_tester(&mut display, orientation, DnsTesterUiState::default()).await?;
+    render_dns_tester(
+        &mut display,
+        orientation,
+        DnsTesterUiState {
+            target: DNS_HOSTNAME,
+            ..DnsTesterUiState::default()
+        },
+    )
+    .await?;
 
     loop {
         if button.is_pressed() {
@@ -224,7 +231,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
                         let query_start = Instant::now();
                         let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
-                        last_latency_millis = query_start.elapsed().as_millis();
+                        let last_latency_millis = query_start.elapsed().as_millis();
 
                         match dns_result {
                             Ok(addresses) if !addresses.is_empty() => {
@@ -248,6 +255,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                             &mut display,
                             orientation,
                             DnsTesterUiState {
+                                target: DNS_HOSTNAME,
                                 queries: tap_count,
                                 successes: success_count,
                                 failures: failure_count,
@@ -273,6 +281,19 @@ async fn render_dns_tester(
     state: DnsTesterUiState,
 ) -> Result<()> {
     device_envoy_core::dns_tester::render(display, orientation, state)
+        .await
+        .map_err(|error| match error {
+            DnsTesterUiError::Text(_) => Error::FormatError,
+            DnsTesterUiError::Display(error) => error.into(),
+        })
+}
+
+async fn render_dns_tester_notice(
+    display: &mut device_envoy_esp::cyd::CydDisplayEsp,
+    orientation: Orientation,
+    notice: DnsTesterUiNotice,
+) -> Result<()> {
+    render_notice(display, orientation, notice)
         .await
         .map_err(|error| match error {
             DnsTesterUiError::Text(_) => Error::FormatError,

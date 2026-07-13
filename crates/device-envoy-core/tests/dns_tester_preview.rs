@@ -24,6 +24,7 @@ fn dns_tester_landscape_preview_matches_expected() -> Result<(), Box<dyn Error>>
         &mut display,
         Orientation::Landscape,
         DnsTesterUiState {
+            target: "example.com",
             queries: 1,
             successes: 1,
             failures: 0,
@@ -54,6 +55,7 @@ fn dns_tester_portrait_preview_matches_expected() -> Result<(), Box<dyn Error>> 
         &mut display,
         Orientation::Portrait,
         DnsTesterUiState {
+            target: "example.com",
             queries: 1,
             successes: 1,
             failures: 0,

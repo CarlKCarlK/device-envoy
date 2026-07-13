@@ -2,7 +2,7 @@
 
 use device_envoy_core::{
     cyd::{display::Orientation, touch::TouchEvent},
-    dns_lookup::{DnsLookup, DnsLookupResult},
+    dns::{Dns, DnsResult},
     memory::{CydMemory, assert_framebuffer_matches_expected_png},
 };
 use device_envoy_examples_core::dns_tester::{Exit, dns_tester};
@@ -11,13 +11,17 @@ use embedded_graphics::{
 };
 use futures_executor::block_on;
 
-struct SuccessfulDnsLookup;
+struct SuccessfulDns;
 
-impl DnsLookup for SuccessfulDnsLookup {
+impl Dns for SuccessfulDns {
     type Error = core::convert::Infallible;
 
-    async fn lookup(&mut self, _hostname: &str) -> Result<DnsLookupResult, Self::Error> {
-        Ok(DnsLookupResult {
+    fn hostname(&self) -> &'static str {
+        "example.com"
+    }
+
+    async fn lookup(&mut self) -> Result<DnsResult, Self::Error> {
+        Ok(DnsResult {
             succeeded: true,
             latency_millis: 22,
         })
@@ -35,15 +39,10 @@ fn scripted_runtime_owns_startup_input_dns_and_rendering() -> Result<(), Box<dyn
     );
     let mut button = cyd_memory.button_memory();
     button.set_pressed(true);
-    let mut dns_lookup = SuccessfulDnsLookup;
+    let mut dns = SuccessfulDns;
     assert_eq!(
-        block_on(dns_tester(
-            &mut cyd_memory,
-            &mut button,
-            "example.com",
-            &mut dns_lookup
-        ))
-        .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
+        block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns))
+            .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
         Exit::CalibrationRequested
     );
     assert!(cyd_memory.flush_count() > 0);
@@ -80,15 +79,10 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
         for frame_index in 7..100 {
             button.set_pressed_for_frame(frame_index, true);
         }
-        let mut dns_lookup = SuccessfulDnsLookup;
+        let mut dns = SuccessfulDns;
         assert_eq!(
-            block_on(dns_tester(
-                &mut cyd_memory,
-                &mut button,
-                "example.com",
-                &mut dns_lookup,
-            ))
-            .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
+            block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns,))
+                .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
             Exit::CalibrationRequested
         );
         if matches!(

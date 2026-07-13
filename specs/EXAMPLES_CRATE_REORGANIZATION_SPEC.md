@@ -184,7 +184,7 @@ pub enum DnsTesterInput {
 
 pub enum DnsTesterAction {
     None,
-    StartDnsLookup,
+    StartDns,
     ClearCalibrationAndRestart,
     ResetWifiAndRestart,
     SaveOrientationAndRestart(Orientation),

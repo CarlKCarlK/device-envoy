@@ -9,7 +9,7 @@ use device_envoy_core::{
         display::Orientation,
         touch::calibration::{CalibrationConfig, ensure_calibration},
     },
-    dns_lookup::{DnsLookupFn, DnsLookupResult},
+    dns::{DnsResult, DnsRuntime},
     flash_block::FlashBlock as _,
     wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm},
 };
@@ -41,7 +41,7 @@ struct DnsTesterState {
     calibration_flash_block: FlashBlockWasm,
     orientation_flash_block: FlashBlockWasm,
     orientation: Orientation,
-    target: &'static str,
+    hostname: &'static str,
 }
 
 #[wasm_bindgen]
@@ -67,7 +67,7 @@ impl DnsTesterWeb {
                 orientation_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/orientation")
                     .map_err(|error| JsValue::from_str(&format!("Orientation flash: {error:?}")))?,
                 orientation: Orientation::Landscape,
-                target: DNS_HOSTNAME,
+                hostname: DNS_HOSTNAME,
             }),
         })
     }
@@ -136,17 +136,17 @@ impl DnsTesterWeb {
         let mut device = CydWasm::from_parts(display, touch);
         let exit = self.exit.clone();
         let failed = self.failed.clone();
-        let target = state.target;
+        let hostname = state.hostname;
         let mut button = self.button_source.button();
-        let mut dns_lookup = DnsLookupFn(async |_hostname: &str| {
-            Ok::<DnsLookupResult, core::convert::Infallible>(DnsLookupResult {
+        let mut dns = DnsRuntime::new(hostname, async || {
+            Ok::<DnsResult, core::convert::Infallible>(DnsResult {
                 succeeded: true,
                 latency_millis: 12,
             })
         });
         drop(state);
         wasm_bindgen_futures::spawn_local(async move {
-            match dns_tester(&mut device, &mut button, target, &mut dns_lookup).await {
+            match dns_tester(&mut device, &mut button, &mut dns).await {
                 Ok(exit_value) => exit.set(Some(exit_value)),
                 Err(CoreError::Display(CoreUiError::Text(_))) => failed.set(true),
                 Err(CoreError::Display(CoreUiError::Display(error))) => match error {},

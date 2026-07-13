@@ -8,7 +8,7 @@ pub(crate) mod clock;
 #[cfg(feature = "wifi")]
 pub mod clock_sync;
 pub mod cyd;
-pub mod dns_lookup;
+pub mod dns;
 pub mod error;
 pub mod flash_block;
 pub mod ir;

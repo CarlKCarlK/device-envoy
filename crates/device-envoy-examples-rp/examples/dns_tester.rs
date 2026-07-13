@@ -47,7 +47,7 @@ use defmt::{info, warn};
 use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
 use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
 use device_envoy_core::cyd::{Cyd as _, CydParts as _, display::Orientation};
-use device_envoy_core::dns_lookup::{DnsLookupFn, DnsLookupResult};
+use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester::{
@@ -183,7 +183,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
     info!("Wi-Fi up with DHCP");
 
-    let mut dns_lookup = DnsLookupFn(async |hostname: &str| {
+    let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
         let query_start = Instant::now();
         let dns_result = stack.dns_query(hostname, DnsQueryType::A).await;
         let latency_millis = query_start.elapsed().as_millis();
@@ -201,12 +201,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 false
             }
         };
-        Ok::<DnsLookupResult, Infallible>(DnsLookupResult {
+        Ok::<DnsResult, Infallible>(DnsResult {
             succeeded,
             latency_millis,
         })
     });
-    let exit = dns_tester(&mut cyd, &mut button, DNS_HOSTNAME, &mut dns_lookup)
+    let exit = dns_tester(&mut cyd, &mut button, &mut dns)
         .await
         .map_err(|error| match error {
             CoreError::Display(error) => map_ui_error(error),

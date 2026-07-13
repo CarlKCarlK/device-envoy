@@ -43,7 +43,7 @@ use log::{info, warn};
 use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
 use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
 use device_envoy_core::cyd::{Cyd as _, CydParts as _, display::Orientation};
-use device_envoy_core::dns_lookup::{DnsLookupFn, DnsLookupResult};
+use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_esp::{
     Error, Result,
@@ -54,8 +54,7 @@ use device_envoy_esp::{
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
 };
 use device_envoy_examples_core::dns_tester::{
-    Exit as CoreExit, display_orientation_for_calibration, dns_tester, dns_tester_splash,
-    render_notice,
+    display_orientation_for_calibration, dns_tester, dns_tester_splash, render_notice,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -184,9 +183,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
 
-    let mut dns_lookup = DnsLookupFn(async |hostname: &str| {
+    let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
         let query_start = Instant::now();
-        let dns_result = stack.dns_query(hostname, DnsQueryType::A).await;
+        let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
         let latency_millis = query_start.elapsed().as_millis();
         let succeeded = match dns_result {
             Ok(addresses) if !addresses.is_empty() => {
@@ -202,12 +201,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                 false
             }
         };
-        Ok::<DnsLookupResult, Infallible>(DnsLookupResult {
+        Ok::<DnsResult, Infallible>(DnsResult {
             succeeded,
             latency_millis,
         })
     });
-    let exit = dns_tester(&mut cyd, &mut button, DNS_HOSTNAME, &mut dns_lookup)
+    let exit = dns_tester(&mut cyd, &mut button, &mut dns)
         .await
         .map_err(|error| match error {
             device_envoy_examples_core::dns_tester::Error::Display(error) => match error {
@@ -218,13 +217,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             device_envoy_examples_core::dns_tester::Error::Dns(error) => match error {},
         })?;
     match exit {
-        CoreExit::CalibrationRequested => {
+        device_envoy_examples_core::dns_tester::Exit::CalibrationRequested => {
             calibration_flash_block.clear()?;
         }
-        CoreExit::WifiResetRequested => {
+        device_envoy_examples_core::dns_tester::Exit::WifiResetRequested => {
             wifi_auto.reset_to_captive_portal()?;
         }
-        CoreExit::OrientationChanged(next_orientation) => {
+        device_envoy_examples_core::dns_tester::Exit::OrientationChanged(next_orientation) => {
             orientation_flash_block.save(&next_orientation)?;
         }
     }

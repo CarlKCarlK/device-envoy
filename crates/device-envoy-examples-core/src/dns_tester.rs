@@ -26,7 +26,7 @@ use device_envoy_core::{
         display::{CydFrame, DrawItem, Image565View, Orientation, tga},
         touch::TouchEvent,
     },
-    dns_lookup::DnsLookup,
+    dns::Dns,
 };
 use embassy_futures::yield_now;
 
@@ -51,32 +51,37 @@ const PANEL_FILL: Rgb888 = Rgb888::new(15, 38, 55); // dark desaturated blue
 /// accounting, and rendering. Call [`dns_tester_splash`] during platform
 /// setup before entering this loop. The loop returns platform control
 /// requests instead of knowing how persistence or reboot works.
-pub async fn dns_tester<CydDevice, ButtonDevice, DnsLookupDevice>(
+pub async fn dns_tester<CydDevice, ButtonDevice, DnsDevice>(
     cyd: &mut CydDevice,
     button: &mut ButtonDevice,
-    target: &'static str,
-    dns_lookup: &mut DnsLookupDevice,
-) -> Result<Exit, Error<CydDevice::Error, DnsLookupDevice::Error>>
+    dns: &mut DnsDevice,
+) -> Result<Exit, Error<CydDevice::Error, DnsDevice::Error>>
 where
     CydDevice: Cyd,
     ButtonDevice: Button,
-    DnsLookupDevice: DnsLookup,
+    DnsDevice: Dns,
 {
-    let mut orientation = cyd.orientation();
-    let (display, touch) = cyd.parts();
-    let bitmap = match orientation {
-        Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_BITMAP,
-        Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_BITMAP,
-    };
-    display
-        .fill_contiguous_full(bitmap.rgb565_iter())
-        .map_err(Error::display)?;
     let mut queries: u32 = 0;
     let mut successes: u32 = 0;
     let mut failures: u32 = 0;
     let mut last_latency_millis = 0;
+
+    let hostname = dns.hostname();
+    let mut orientation = cyd.orientation();
+    let (display, touch) = cyd.parts();
+    let layout = match orientation {
+        Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
+        Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
+    };
+    let mut ui = Ui {
+        display,
+        bitmap: layout.bitmap,
+    };
+    ui.fill_contiguous_full()?;
+    ui.text(layout.hostname, hostname).await?;
     loop {
         // todo0000 review these
+
         let status = if queries == 0 {
             "TAP"
         } else if failures > 0 {
@@ -84,272 +89,29 @@ where
         } else {
             "OK"
         };
+        if let Some(status_slot) = layout.status {
+            ui.status(status_slot, status, failures > 0).await?;
+        }
+
         let mut latency = heapless::String::<16>::new();
         if queries == 0 {
             latency.push_str("--").map_err(|_| fmt::Error)?;
         } else {
             write!(latency, "{} ms", last_latency_millis)?;
         }
+        ui.text(layout.latency, latency.as_str()).await?;
+
         let mut query_text = heapless::String::<12>::new();
-        let mut success_text = heapless::String::<12>::new();
-        let mut failure_text = heapless::String::<12>::new();
         write!(query_text, "{}", queries)?;
+        ui.text(layout.queries, query_text.as_str()).await?;
+
+        let mut success_text = heapless::String::<12>::new();
         write!(success_text, "{}", successes)?;
+        ui.text(layout.successes, success_text.as_str()).await?;
+
+        let mut failure_text = heapless::String::<12>::new();
         write!(failure_text, "{}", failures)?;
-
-        match orientation {
-            Orientation::Landscape | Orientation::LandscapeInverted => {
-                // ------ Draw the DNS hostname being tested. ------
-                let rectangle = Rectangle::new(Point::new(22, 76), Size::new(150, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    target,
-                    Point::zero(),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Left)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the current test status. ------
-                let rectangle = Rectangle::new(Point::new(244, 82), Size::new(56, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    status,
-                    Point::new((rectangle.size.width / 2) as i32, 0),
-                    MonoTextStyle::new(
-                        &FONT_10X20,
-                        Rgb565::from(if failures > 0 {
-                            FAILURE_TEXT
-                        } else {
-                            SUCCESS_TEXT
-                        }),
-                    ),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Center)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the most recent lookup latency. ------
-                let rectangle = Rectangle::new(Point::new(100, 100), Size::new(120, 29));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    latency.as_str(),
-                    Point::new((rectangle.size.width / 2) as i32, 0),
-                    MonoTextStyle::new(&PROFONT_24_POINT, Rgb565::from(VALUE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Center)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the total number of DNS queries. ------
-                let rectangle = Rectangle::new(Point::new(27, 156), Size::new(50, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    query_text.as_str(),
-                    Point::new((rectangle.size.width / 2) as i32, 0),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Center)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the number of successful DNS queries. ------
-                let rectangle = Rectangle::new(Point::new(135, 156), Size::new(50, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    success_text.as_str(),
-                    Point::new((rectangle.size.width / 2) as i32, 0),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(SUCCESS_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Center)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the number of failed DNS queries. ------
-                let rectangle = Rectangle::new(Point::new(243, 156), Size::new(50, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    failure_text.as_str(),
-                    Point::new((rectangle.size.width / 2) as i32, 0),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(FAILURE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Center)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-            }
-            Orientation::Portrait | Orientation::PortraitInverted => {
-                // ------ Draw the DNS hostname being tested. ------
-                let rectangle = Rectangle::new(Point::new(22, 68), Size::new(190, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    target,
-                    Point::zero(),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Left)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the most recent lookup latency. ------
-                let rectangle = Rectangle::new(Point::new(60, 119), Size::new(120, 29));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    latency.as_str(),
-                    Point::new((rectangle.size.width / 2) as i32, 0),
-                    MonoTextStyle::new(&PROFONT_24_POINT, Rgb565::from(VALUE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Center)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the total number of DNS queries. ------
-                let rectangle = Rectangle::new(Point::new(160, 180), Size::new(50, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    query_text.as_str(),
-                    Point::new(rectangle.size.width as i32, 0),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Right)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the number of successful DNS queries. ------
-                let rectangle = Rectangle::new(Point::new(160, 202), Size::new(50, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    success_text.as_str(),
-                    Point::new(rectangle.size.width as i32, 0),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(SUCCESS_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Right)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-
-                // ------ Draw the number of failed DNS queries. ------
-                let rectangle = Rectangle::new(Point::new(160, 220), Size::new(50, 20));
-                let mut frame = display.frame_mut(rectangle);
-                DrawItem::Bitmap {
-                    view: bitmap,
-                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-                }
-                .draw(&mut frame);
-                Text::with_text_style(
-                    failure_text.as_str(),
-                    Point::new(rectangle.size.width as i32, 0),
-                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(FAILURE_TEXT)),
-                    TextStyleBuilder::new()
-                        .alignment(Alignment::Right)
-                        .baseline(Baseline::Top)
-                        .build(),
-                )
-                .draw(&mut frame)
-                .unwrap_infallible();
-                frame.flush().await.map_err(UiError::Display)?;
-                drop(frame);
-            }
-        }
+        ui.text(layout.failures, failure_text.as_str()).await?;
 
         if button.is_pressed() {
             return Ok(Exit::CalibrationRequested);
@@ -363,21 +125,21 @@ where
                 touch_event => touch_event,
             };
             let action = match touch_event {
-                TouchEvent::Down { point } => match control_at(point, orientation.size()) {
+                TouchEvent::Down { point } => match layout.control_at(point) {
                     Some(Control::Calibration) => Action::ClearCalibrationAndRestart,
                     Some(Control::Wifi) => Action::ResetWifiAndRestart,
                     Some(Control::Orientation) => {
                         orientation = orientation.next();
                         Action::SaveOrientationAndRestart(orientation)
                     }
-                    None => Action::StartDnsLookup,
+                    None => Action::StartDns,
                 },
                 TouchEvent::Move { .. } | TouchEvent::Up => Action::None,
             };
             let exit = match action {
                 Action::None => None,
-                Action::StartDnsLookup => {
-                    let result = dns_lookup.lookup(target).await.map_err(Error::Dns)?;
+                Action::StartDns => {
+                    let result = dns.lookup().await.map_err(Error::Dns)?;
                     queries = queries.saturating_add(1);
                     last_latency_millis = result.latency_millis;
                     if result.succeeded {
@@ -398,6 +160,274 @@ where
             }
         }
         yield_now().await;
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Layout {
+    bitmap: Image565View,
+    hostname: TextSlot,
+    latency: TextSlot,
+    status: Option<StatusSlot>,
+    queries: TextSlot,
+    successes: TextSlot,
+    failures: TextSlot,
+    taps: [TapRegion; 3],
+}
+
+#[derive(Clone, Copy)]
+struct TextSlot {
+    rectangle: Rectangle,
+    font: TextFont,
+    alignment: Alignment,
+    color: Rgb888,
+}
+
+#[derive(Clone, Copy)]
+struct StatusSlot {
+    text: TextSlot,
+    success_color: Rgb888,
+    failure_color: Rgb888,
+}
+
+#[derive(Clone, Copy)]
+struct TapRegion {
+    rectangle: Rectangle,
+    control: Control,
+}
+
+#[derive(Clone, Copy)]
+enum TextFont {
+    Body,
+    Latency,
+}
+
+impl TextSlot {
+    const fn new(
+        rectangle: Rectangle,
+        font: TextFont,
+        alignment: Alignment,
+        color: Rgb888,
+    ) -> Self {
+        Self {
+            rectangle,
+            font,
+            alignment,
+            color,
+        }
+    }
+}
+
+impl StatusSlot {
+    const fn new(text: TextSlot, success_color: Rgb888, failure_color: Rgb888) -> Self {
+        Self {
+            text,
+            success_color,
+            failure_color,
+        }
+    }
+}
+
+impl TapRegion {
+    const fn new(rectangle: Rectangle, control: Control) -> Self {
+        Self { rectangle, control }
+    }
+}
+
+const LANDSCAPE_LAYOUT: Layout = Layout {
+    bitmap: LANDSCAPE_BITMAP,
+    hostname: TextSlot::new(
+        Rectangle::new(Point::new(22, 76), Size::new(150, 20)),
+        TextFont::Body,
+        Alignment::Left,
+        VALUE_TEXT,
+    ),
+    latency: TextSlot::new(
+        Rectangle::new(Point::new(100, 100), Size::new(120, 24)),
+        TextFont::Latency,
+        Alignment::Center,
+        VALUE_TEXT,
+    ),
+    status: Some(StatusSlot::new(
+        TextSlot::new(
+            Rectangle::new(Point::new(244, 82), Size::new(56, 20)),
+            TextFont::Body,
+            Alignment::Center,
+            SUCCESS_TEXT,
+        ),
+        SUCCESS_TEXT,
+        FAILURE_TEXT,
+    )),
+    queries: TextSlot::new(
+        Rectangle::new(Point::new(27, 156), Size::new(50, 20)),
+        TextFont::Body,
+        Alignment::Center,
+        VALUE_TEXT,
+    ),
+    successes: TextSlot::new(
+        Rectangle::new(Point::new(135, 156), Size::new(50, 20)),
+        TextFont::Body,
+        Alignment::Center,
+        SUCCESS_TEXT,
+    ),
+    failures: TextSlot::new(
+        Rectangle::new(Point::new(243, 156), Size::new(50, 20)),
+        TextFont::Body,
+        Alignment::Center,
+        FAILURE_TEXT,
+    ),
+    taps: [
+        TapRegion::new(
+            Rectangle::new(Point::new(10, 202), Size::new(100, 28)),
+            Control::Calibration,
+        ),
+        TapRegion::new(
+            Rectangle::new(Point::new(110, 202), Size::new(100, 28)),
+            Control::Wifi,
+        ),
+        TapRegion::new(
+            Rectangle::new(Point::new(210, 202), Size::new(100, 28)),
+            Control::Orientation,
+        ),
+    ],
+};
+
+const PORTRAIT_LAYOUT: Layout = Layout {
+    bitmap: PORTRAIT_BITMAP,
+    hostname: TextSlot::new(
+        Rectangle::new(Point::new(22, 68), Size::new(190, 20)),
+        TextFont::Body,
+        Alignment::Left,
+        VALUE_TEXT,
+    ),
+    latency: TextSlot::new(
+        Rectangle::new(Point::new(60, 119), Size::new(120, 24)),
+        TextFont::Latency,
+        Alignment::Center,
+        VALUE_TEXT,
+    ),
+    status: None,
+    queries: TextSlot::new(
+        Rectangle::new(Point::new(160, 180), Size::new(50, 20)),
+        TextFont::Body,
+        Alignment::Right,
+        VALUE_TEXT,
+    ),
+    successes: TextSlot::new(
+        Rectangle::new(Point::new(160, 202), Size::new(50, 20)),
+        TextFont::Body,
+        Alignment::Right,
+        SUCCESS_TEXT,
+    ),
+    failures: TextSlot::new(
+        Rectangle::new(Point::new(160, 220), Size::new(50, 20)),
+        TextFont::Body,
+        Alignment::Right,
+        FAILURE_TEXT,
+    ),
+    taps: [
+        TapRegion::new(
+            Rectangle::new(Point::new(10, 276), Size::new(73, 36)),
+            Control::Calibration,
+        ),
+        TapRegion::new(
+            Rectangle::new(Point::new(83, 276), Size::new(74, 36)),
+            Control::Wifi,
+        ),
+        TapRegion::new(
+            Rectangle::new(Point::new(157, 276), Size::new(73, 36)),
+            Control::Orientation,
+        ),
+    ],
+};
+
+struct Ui<'a, Display> {
+    display: &'a mut Display,
+    bitmap: Image565View,
+}
+
+impl<'a, Display> Ui<'a, Display>
+where
+    Display: CydDisplay,
+{
+    fn fill_contiguous_full(&mut self) -> Result<(), UiError<Display::Error>> {
+        self.display
+            .fill_contiguous_full(self.bitmap.rgb565_iter())
+            .map_err(UiError::Display)
+    }
+
+    async fn text(&mut self, slot: TextSlot, text: &str) -> Result<(), UiError<Display::Error>> {
+        self.draw_text(slot, text, slot.color).await
+    }
+
+    async fn status(
+        &mut self,
+        slot: StatusSlot,
+        text: &str,
+        failed: bool,
+    ) -> Result<(), UiError<Display::Error>> {
+        self.draw_text(
+            slot.text,
+            text,
+            if failed {
+                slot.failure_color
+            } else {
+                slot.success_color
+            },
+        )
+        .await
+    }
+
+    async fn draw_text(
+        &mut self,
+        slot: TextSlot,
+        text: &str,
+        color: Rgb888,
+    ) -> Result<(), UiError<Display::Error>> {
+        let rectangle = slot.rectangle;
+        let mut frame = self.display.frame_mut(rectangle);
+        DrawItem::Bitmap {
+            view: self.bitmap,
+            top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+        }
+        .draw(&mut frame);
+        let position = match slot.alignment {
+            Alignment::Left => Point::zero(),
+            Alignment::Center => Point::new((rectangle.size.width / 2) as i32, 0),
+            Alignment::Right => Point::new(rectangle.size.width as i32, 0),
+        };
+        Text::with_text_style(
+            text,
+            position,
+            MonoTextStyle::new(slot.font.value(), Rgb565::from(color)),
+            TextStyleBuilder::new()
+                .alignment(slot.alignment)
+                .baseline(Baseline::Top)
+                .build(),
+        )
+        .draw(&mut frame)
+        .unwrap_infallible();
+        frame.flush().await.map_err(UiError::Display)?;
+        drop(frame);
+        Ok(())
+    }
+}
+
+impl TextFont {
+    fn value(self) -> &'static MonoFont<'static> {
+        match self {
+            Self::Body => &FONT_10X20,
+            Self::Latency => &PROFONT_24_POINT,
+        }
+    }
+}
+
+impl Layout {
+    fn control_at(self, point: Point) -> Option<Control> {
+        self.taps
+            .into_iter()
+            .find(|tap_region| tap_region.rectangle.contains(point))
+            .map(|tap_region| tap_region.control)
     }
 }
 
@@ -434,12 +464,6 @@ impl<CydError, DnsError> From<fmt::Error> for Error<CydError, DnsError> {
     }
 }
 
-impl<CydError, DnsError> Error<CydError, DnsError> {
-    fn display(error: CydError) -> Self {
-        Self::Display(UiError::Display(error))
-    }
-}
-
 /// Result returned when the shared DNS Tester loop needs platform handling.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Exit {
@@ -457,7 +481,7 @@ enum Action {
     /// No platform work is required.
     None,
     /// Start one DNS lookup.
-    StartDnsLookup,
+    StartDns,
     /// Clear calibration and restart the platform calibration flow.
     ClearCalibrationAndRestart,
     /// Clear Wi-Fi configuration and restart the Wi-Fi setup flow.
@@ -466,47 +490,11 @@ enum Action {
     SaveOrientationAndRestart(Orientation),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Control {
     Calibration,
     Wifi,
     Orientation,
-}
-
-fn control_at(point: Point, size: Size) -> Option<Control> {
-    let landscape = size.width > size.height;
-    [
-        (
-            Control::Calibration,
-            if landscape {
-                (10, 202, 100, 28)
-            } else {
-                (10, 276, 73, 36)
-            },
-        ),
-        (
-            Control::Wifi,
-            if landscape {
-                (110, 202, 100, 28)
-            } else {
-                (83, 276, 74, 36)
-            },
-        ),
-        (
-            Control::Orientation,
-            if landscape {
-                (210, 202, 100, 28)
-            } else {
-                (157, 276, 73, 36)
-            },
-        ),
-    ]
-    .into_iter()
-    .find_map(|(control, (x, y, width, height))| {
-        Rectangle::new(Point::new(x, y), Size::new(width, height))
-            .contains(point)
-            .then_some(control)
-    })
 }
 
 /// Select the display orientation used while touch calibration is running.
@@ -649,6 +637,157 @@ where
     .draw(&mut frame)
     .unwrap_infallible();
     frame.flush().await.map_err(UiError::Display)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_contained(rectangle: Rectangle, screen_size: Size) {
+        let screen = Rectangle::new(Point::zero(), screen_size);
+        let bottom_right = rectangle.top_left
+            + Point::new(
+                rectangle.size.width as i32 - 1,
+                rectangle.size.height as i32 - 1,
+            );
+        assert!(screen.contains(rectangle.top_left));
+        assert!(screen.contains(bottom_right));
+    }
+
+    fn assert_layout_invariants(layout: Layout) {
+        let screen_size = layout.bitmap.size();
+        let slots = [
+            layout.hostname,
+            layout.latency,
+            layout.queries,
+            layout.successes,
+            layout.failures,
+        ];
+        for slot in slots {
+            assert_contained(slot.rectangle, screen_size);
+        }
+        if let Some(status) = layout.status {
+            assert_contained(status.text.rectangle, screen_size);
+        }
+
+        for tap_region in layout.taps {
+            assert_contained(tap_region.rectangle, screen_size);
+        }
+        for (first_index, first_tap) in layout.taps.iter().enumerate() {
+            for second_tap in layout.taps.iter().skip(first_index + 1) {
+                assert_eq!(
+                    first_tap.rectangle.intersection(&second_tap.rectangle).size,
+                    Size::zero()
+                );
+            }
+        }
+
+        assert_eq!(
+            layout
+                .taps
+                .iter()
+                .filter(|tap| tap.control == Control::Calibration)
+                .count(),
+            1
+        );
+        assert_eq!(
+            layout
+                .taps
+                .iter()
+                .filter(|tap| tap.control == Control::Wifi)
+                .count(),
+            1
+        );
+        assert_eq!(
+            layout
+                .taps
+                .iter()
+                .filter(|tap| tap.control == Control::Orientation)
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn manual_layouts_fit_their_screens_and_have_disjoint_controls() {
+        assert_layout_invariants(LANDSCAPE_LAYOUT);
+        assert_layout_invariants(PORTRAIT_LAYOUT);
+    }
+
+    #[test]
+    fn orientation_selects_a_matching_screen_and_layout() {
+        let landscape_layout = match Orientation::Landscape {
+            Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
+            Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
+        };
+        let landscape_inverted_layout = match Orientation::LandscapeInverted {
+            Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
+            Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
+        };
+        let portrait_layout = match Orientation::Portrait {
+            Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
+            Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
+        };
+        let portrait_inverted_layout = match Orientation::PortraitInverted {
+            Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
+            Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
+        };
+        assert_eq!(landscape_layout.bitmap.size(), Size::new(320, 240));
+        assert_eq!(
+            landscape_inverted_layout.hostname.rectangle,
+            LANDSCAPE_LAYOUT.hostname.rectangle
+        );
+        assert_eq!(portrait_layout.bitmap.size(), Size::new(240, 320));
+        assert_eq!(
+            portrait_inverted_layout.hostname.rectangle,
+            PORTRAIT_LAYOUT.hostname.rectangle
+        );
+    }
+
+    #[test]
+    fn status_slot_has_distinct_success_and_failure_colors() {
+        if let Some(status) = LANDSCAPE_LAYOUT.status {
+            assert_eq!(status.success_color, SUCCESS_TEXT);
+            assert_eq!(status.failure_color, FAILURE_TEXT);
+            assert_eq!(status.text.color, SUCCESS_TEXT);
+        } else {
+            assert!(false, "landscape must have a status slot");
+        }
+    }
+
+    #[test]
+    fn control_hit_testing_uses_rectangle_boundaries() {
+        for layout in [LANDSCAPE_LAYOUT, PORTRAIT_LAYOUT] {
+            let [calibration, wifi, orientation] = layout.taps;
+            assert_eq!(
+                layout.control_at(calibration.rectangle.top_left),
+                Some(Control::Calibration)
+            );
+            assert_eq!(
+                layout.control_at(wifi.rectangle.top_left),
+                Some(Control::Wifi)
+            );
+            assert_eq!(
+                layout.control_at(orientation.rectangle.top_left),
+                Some(Control::Orientation)
+            );
+            assert_eq!(
+                layout.control_at(Point::new(
+                    calibration.rectangle.top_left.x + calibration.rectangle.size.width as i32,
+                    calibration.rectangle.top_left.y,
+                )),
+                Some(Control::Wifi)
+            );
+            assert_eq!(
+                layout.control_at(Point::new(
+                    calibration.rectangle.top_left.x,
+                    calibration.rectangle.top_left.y - 1,
+                )),
+                None
+            );
+            assert_eq!(layout.control_at(Point::new(0, 0)), None);
+        }
+    }
 }
 
 // todo0000 understand the nested error story.

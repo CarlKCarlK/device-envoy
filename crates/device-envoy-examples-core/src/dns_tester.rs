@@ -1,72 +1,345 @@
-//! A shared CYD DNS tester UI renderer.
+//! A shared CYD DNS tester game loop and UI.
 //!
-//! The renderer is platform-neutral: ESP, RP, WASM, and
+//! [`dns_tester`] is the platform-neutral game loop: ESP, RP, WASM, and
 //! [`CydMemory`](device_envoy_core::memory::CydMemory)
-//! all consume the same TGA-backed background and dynamic-value layout.
+//! provide resources and events while it owns state transitions, commands,
+//! rendering, and the redraw schedule. All platforms consume the same
+//! TGA-backed background and dynamic-value layout.
 
 use core::fmt::Write;
 
 use embedded_graphics::{
-    Drawable,
     geometry::{Point, Size},
-    mono_font::{MonoFont, MonoTextStyle, ascii::FONT_10X20},
+    mono_font::{ascii::FONT_10X20, MonoFont, MonoTextStyle},
     pixelcolor::{Rgb565, Rgb888},
     primitives::Rectangle,
     text::{Alignment, Baseline, Text, TextStyleBuilder},
+    Drawable,
 };
 use profont::PROFONT_24_POINT;
 
 use device_envoy_core::{
-    UnwrapInfallible,
+    button::Button,
     cyd::{
-        CydDisplay,
-        display::{CydFrame, DrawItem, Image565Fixed, Image565View, Orientation, tga},
+        display::{tga, CydFrame, DrawItem, Image565Fixed, Image565View, Orientation},
         touch::TouchEvent,
+        Cyd, CydDisplay, CydTouch,
     },
+    dns_lookup::DnsLookup,
+    UnwrapInfallible,
 };
+use embassy_futures::yield_now;
 
-const LANDSCAPE_BACKGROUND: Image565Fixed<320, 240, { 320 * 240 }> =
+const LANDSCAPE_BACKGROUND_FIXED: Image565Fixed<320, 240, { 320 * 240 }> =
     tga!(concat!(env!("OUT_DIR"), "/dns_landscape.tga")).to_565();
-const PORTRAIT_BACKGROUND: Image565Fixed<240, 320, { 240 * 320 }> =
+const PORTRAIT_BACKGROUND_FIXED: Image565Fixed<240, 320, { 240 * 320 }> =
     tga!(concat!(env!("OUT_DIR"), "/dns_portrait.tga")).to_565();
+const LANDSCAPE_BACKGROUND: Image565View = LANDSCAPE_BACKGROUND_FIXED.view();
+const PORTRAIT_BACKGROUND: Image565View = PORTRAIT_BACKGROUND_FIXED.view();
 
 const VALUE_TEXT: Rgb888 = Rgb888::new(255, 255, 255); // white
 const SUCCESS_TEXT: Rgb888 = Rgb888::new(121, 226, 164); // soft green
 const FAILURE_TEXT: Rgb888 = Rgb888::new(255, 117, 110); // coral red
 const PANEL_FILL: Rgb888 = Rgb888::new(15, 38, 55); // dark desaturated blue
 
-/// A DNS lookup result supplied by a platform adapter.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct DnsResult {
-    /// Whether the lookup returned at least one address.
-    pub succeeded: bool,
-    /// Measured lookup duration in milliseconds.
-    pub latency_millis: u64,
+/// Run the shared DNS Tester loop on calibrated platform resources.
+///
+/// Platform setup follows the Linkage Blaze pattern: construct and calibrate
+/// the display and touch resources, show the splash, connect Wi-Fi, then call
+/// this function. The loop owns input policy, application state, DNS result
+/// accounting, and rendering. Call [`dns_tester_splash`] during platform
+/// setup before entering this loop. The loop returns platform control
+/// requests instead of knowing how persistence or reboot works.
+pub async fn dns_tester<CydDevice, ButtonDevice, DnsLookupDevice>(
+    cyd: &mut CydDevice,
+    button: &mut ButtonDevice,
+    target: &'static str,
+    dns_lookup: &mut DnsLookupDevice,
+) -> Result<DnsTesterExit, DnsTesterError<CydDevice::Error, DnsLookupDevice::Error>>
+where
+    CydDevice: Cyd,
+    ButtonDevice: Button,
+    DnsLookupDevice: DnsLookup,
+{
+    let mut orientation = cyd.orientation();
+    let (display, touch) = cyd.parts();
+    let background = match orientation {
+        Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_BACKGROUND,
+        Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_BACKGROUND,
+    };
+    display
+        .fill_contiguous(
+            Rectangle::new(Point::zero(), orientation.size()),
+            background.rgb565_iter(),
+        )
+        .map_err(DnsTesterError::display_error)?;
+    let mut queries: u32 = 0;
+    let mut successes: u32 = 0;
+    let mut failures: u32 = 0;
+    let mut last_latency_millis = 0;
+    loop {
+        // todo0000 review these
+        let status = if queries == 0 {
+            "TAP"
+        } else if failures > 0 {
+            "FAIL"
+        } else {
+            "OK"
+        };
+        let mut latency = heapless::String::<16>::new();
+        if queries == 0 {
+            latency
+                .push_str("--")
+                .map_err(|_| DnsTesterError::Display(DnsTesterUiError::Text(core::fmt::Error)))?;
+        } else {
+            write!(latency, "{} ms", last_latency_millis)?;
+        }
+        let mut query_text = heapless::String::<12>::new();
+        let mut success_text = heapless::String::<12>::new();
+        let mut failure_text = heapless::String::<12>::new();
+        write!(query_text, "{}", queries)?;
+        write!(success_text, "{}", successes)?;
+        write!(failure_text, "{}", failures)?;
+
+        match orientation {
+            Orientation::Landscape | Orientation::LandscapeInverted => {
+                // Draw the DNS hostname being tested.
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(22, 76), Size::new(150, 20)),
+                    target,
+                    &FONT_10X20,
+                    Alignment::Left,
+                    VALUE_TEXT,
+                )
+                .await?;
+                // Draw the current test status.
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(244, 82), Size::new(56, 20)),
+                    status,
+                    &FONT_10X20,
+                    Alignment::Center,
+                    if failures > 0 {
+                        FAILURE_TEXT
+                    } else {
+                        SUCCESS_TEXT
+                    },
+                )
+                .await?;
+                // Draw the most recent lookup latency.
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(100, 100), Size::new(120, 29)),
+                    latency.as_str(),
+                    &PROFONT_24_POINT,
+                    Alignment::Center,
+                    VALUE_TEXT,
+                )
+                .await?;
+                // Draw the total number of DNS queries.
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(27, 156), Size::new(50, 20)),
+                    query_text.as_str(),
+                    &FONT_10X20,
+                    Alignment::Center,
+                    VALUE_TEXT,
+                )
+                .await?;
+                // Draw the number of successful DNS queries.
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(135, 156), Size::new(50, 20)),
+                    success_text.as_str(),
+                    &FONT_10X20,
+                    Alignment::Center,
+                    SUCCESS_TEXT,
+                )
+                .await?;
+                // Draw the number of failed DNS queries.
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(243, 156), Size::new(50, 20)),
+                    failure_text.as_str(),
+                    &FONT_10X20,
+                    Alignment::Center,
+                    FAILURE_TEXT,
+                )
+                .await?;
+            }
+            Orientation::Portrait | Orientation::PortraitInverted => {
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(22, 68), Size::new(190, 20)),
+                    target,
+                    &FONT_10X20,
+                    Alignment::Left,
+                    VALUE_TEXT,
+                )
+                .await?;
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(60, 119), Size::new(120, 29)),
+                    latency.as_str(),
+                    &PROFONT_24_POINT,
+                    Alignment::Center,
+                    VALUE_TEXT,
+                )
+                .await?;
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(160, 180), Size::new(50, 20)),
+                    query_text.as_str(),
+                    &FONT_10X20,
+                    Alignment::Right,
+                    VALUE_TEXT,
+                )
+                .await?;
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(160, 202), Size::new(50, 20)),
+                    success_text.as_str(),
+                    &FONT_10X20,
+                    Alignment::Right,
+                    SUCCESS_TEXT,
+                )
+                .await?;
+                draw_text(
+                    display,
+                    background,
+                    Rectangle::new(Point::new(160, 220), Size::new(50, 20)),
+                    failure_text.as_str(),
+                    &FONT_10X20,
+                    Alignment::Right,
+                    FAILURE_TEXT,
+                )
+                .await?;
+            }
+        }
+
+        if button.is_pressed() {
+            return Ok(DnsTesterExit::CalibrationRequested);
+        }
+
+        if let Some(touch_event) = touch.read().map_err(DnsTesterError::Touch)? {
+            let touch_event = match touch_event {
+                TouchEvent::Down { point } => TouchEvent::Down {
+                    point: orientation.map_landscape_point(point),
+                },
+                touch_event => touch_event,
+            };
+            let action = match touch_event {
+                TouchEvent::Down { point } => match control_at(point, orientation.size()) {
+                    Some(Control::Calibration) => DnsTesterAction::ClearCalibrationAndRestart,
+                    Some(Control::Wifi) => DnsTesterAction::ResetWifiAndRestart,
+                    Some(Control::Orientation) => {
+                        orientation = orientation.next();
+                        DnsTesterAction::SaveOrientationAndRestart(orientation)
+                    }
+                    None => DnsTesterAction::StartDnsLookup,
+                },
+                TouchEvent::Move { .. } | TouchEvent::Up => DnsTesterAction::None,
+            };
+            let exit = match action {
+                DnsTesterAction::None => None,
+                DnsTesterAction::StartDnsLookup => {
+                    let result = dns_lookup
+                        .lookup(target)
+                        .await
+                        .map_err(DnsTesterError::Dns)?;
+                    queries = queries.saturating_add(1);
+                    last_latency_millis = result.latency_millis;
+                    if result.succeeded {
+                        successes = successes.saturating_add(1);
+                    } else {
+                        failures = failures.saturating_add(1);
+                    }
+                    None
+                }
+                DnsTesterAction::ClearCalibrationAndRestart => {
+                    Some(DnsTesterExit::CalibrationRequested)
+                }
+                DnsTesterAction::ResetWifiAndRestart => Some(DnsTesterExit::WifiResetRequested),
+                DnsTesterAction::SaveOrientationAndRestart(next_orientation) => {
+                    Some(DnsTesterExit::OrientationChanged(next_orientation))
+                }
+            };
+            if let Some(exit) = exit {
+                return Ok(exit);
+            }
+        }
+        yield_now().await;
+    }
 }
 
-/// Inputs accepted by the platform-neutral DNS Tester state machine.
-#[derive(Clone, Copy, Debug)]
-pub enum DnsTesterInput {
-    /// A calibrated touch event in the current screen orientation.
-    Touch(TouchEvent),
-    /// Wi-Fi initialization has started.
-    WifiConnecting,
-    /// Wi-Fi setup is available.
-    WifiSetup,
-    /// Wi-Fi and DNS services are ready.
-    WifiReady,
-    /// A platform DNS adapter has completed a lookup.
-    DnsFinished(DnsResult),
-    /// The physical or simulated BOOT button was pressed.
-    Boot,
+/// Show the DNS Tester splash immediately after display initialization.
+pub async fn dns_tester_splash<D>(
+    display: &mut D,
+    orientation: Orientation,
+) -> Result<(), DnsTesterUiError<D::Error>>
+where
+    D: CydDisplay,
+{
+    render_notice(display, orientation, DnsTesterUiNotice::Splash).await
 }
 
-/// Platform services requested by [`DnsTesterApp::input`].
+/// Errors returned by the shared DNS Tester loop.
+#[derive(Debug)]
+pub enum DnsTesterError<CydError, DnsError> {
+    /// Rendering failed.
+    Display(DnsTesterUiError<CydError>),
+    /// Reading calibrated touch failed.
+    Touch(CydError),
+    /// The DNS lookup failed at the platform boundary.
+    Dns(DnsError),
+}
+
+impl<CydError, DnsError> DnsTesterError<CydError, DnsError> {
+    fn display_error(error: CydError) -> Self {
+        Self::Display(DnsTesterUiError::Display(error))
+    }
+}
+
+impl<CydError, DnsError> From<DnsTesterUiError<CydError>> for DnsTesterError<CydError, DnsError> {
+    fn from(error: DnsTesterUiError<CydError>) -> Self {
+        Self::Display(error)
+    }
+}
+
+impl<CydError, DnsError> From<core::fmt::Error> for DnsTesterError<CydError, DnsError> {
+    fn from(error: core::fmt::Error) -> Self {
+        Self::Display(DnsTesterUiError::Text(error))
+    }
+}
+
+/// Result returned when the shared DNS Tester loop needs platform handling.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DnsTesterAction {
+pub enum DnsTesterExit {
+    /// Clear calibration and restart the platform calibration flow.
+    CalibrationRequested,
+    /// Clear Wi-Fi credentials and restart the platform setup flow.
+    WifiResetRequested,
+    /// Persist this orientation and restart the display adapter.
+    OrientationChanged(Orientation),
+}
+
+/// Platform control request selected by the game loop.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DnsTesterAction {
     /// No platform work is required.
     None,
-    /// Start one DNS lookup and report its result with [`DnsTesterInput::DnsFinished`].
+    /// Start one DNS lookup.
     StartDnsLookup,
     /// Clear calibration and restart the platform calibration flow.
     ClearCalibrationAndRestart,
@@ -76,37 +349,6 @@ pub enum DnsTesterAction {
     SaveOrientationAndRestart(Orientation),
 }
 
-/// Physical control placement used by a DNS Tester platform adapter.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DnsTesterLayout {
-    /// Full-screen CYD artwork with fixed landscape/portrait controls.
-    FullScreen,
-    /// Compact text dashboard with three equal controls along the bottom edge.
-    Compact,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum DnsTesterScreen {
-    Splash,
-    Connecting,
-    Setup,
-    Dashboard,
-    Unavailable,
-}
-
-/// Shared DNS Tester state and transition logic used by hardware, WASM, and memory tests.
-#[derive(Clone, Copy)]
-pub struct DnsTesterApp {
-    orientation: Orientation,
-    target: &'static str,
-    queries: u32,
-    successes: u32,
-    failures: u32,
-    last_latency_millis: u64,
-    screen: DnsTesterScreen,
-    layout: DnsTesterLayout,
-}
-
 #[derive(Clone, Copy)]
 enum Control {
     Calibration,
@@ -114,26 +356,7 @@ enum Control {
     Orientation,
 }
 
-fn control_at(point: Point, size: Size, layout: DnsTesterLayout) -> Option<Control> {
-    if layout == DnsTesterLayout::Compact {
-        return [Control::Orientation, Control::Calibration, Control::Wifi]
-            .into_iter()
-            .find(|control| {
-                let index = match control {
-                    Control::Orientation => 0,
-                    Control::Calibration => 1,
-                    Control::Wifi => 2,
-                };
-                Rectangle::new(
-                    Point::new(
-                        size.width as i32 - size.width as i32 / 3 * (3 - index),
-                        size.height as i32 - 20,
-                    ),
-                    Size::new(size.width / 3, 20),
-                )
-                .contains(point)
-            });
-    }
+fn control_at(point: Point, size: Size) -> Option<Control> {
     let landscape = size.width > size.height;
     [
         (
@@ -169,162 +392,23 @@ fn control_at(point: Point, size: Size, layout: DnsTesterLayout) -> Option<Contr
     })
 }
 
-impl DnsTesterApp {
-    /// Construct a DNS Tester in its startup splash state.
-    #[must_use]
-    pub const fn new(target: &'static str, orientation: Orientation) -> Self {
-        Self {
-            orientation,
-            target,
-            queries: 0,
-            successes: 0,
-            failures: 0,
-            last_latency_millis: 0,
-            screen: DnsTesterScreen::Splash,
-            layout: DnsTesterLayout::FullScreen,
-        }
-    }
-
-    /// Construct a DNS Tester with an explicit platform control layout.
-    #[must_use]
-    pub const fn new_with_layout(
-        target: &'static str,
-        orientation: Orientation,
-        layout: DnsTesterLayout,
-    ) -> Self {
-        let mut app = Self::new(target, orientation);
-        app.layout = layout;
-        app
-    }
-
-    /// Select the display orientation used while touch calibration is running.
-    ///
-    /// Calibration coordinates are defined in landscape. A saved application
-    /// orientation is used only when a valid calibration already exists.
-    #[must_use]
-    pub const fn display_orientation_for_calibration(
-        saved_orientation: Orientation,
-        calibration_is_available: bool,
-    ) -> Orientation {
-        if calibration_is_available {
-            saved_orientation
-        } else {
-            Orientation::Landscape
-        }
-    }
-
-    /// Return the application orientation after calibration has completed.
-    #[must_use]
-    pub const fn orientation_after_calibration(saved_orientation: Orientation) -> Orientation {
+/// Select the display orientation used while touch calibration is running.
+#[must_use]
+pub const fn display_orientation_for_calibration(
+    saved_orientation: Orientation,
+    calibration_is_available: bool,
+) -> Orientation {
+    if calibration_is_available {
         saved_orientation
-    }
-
-    /// Return the currently selected screen orientation.
-    #[must_use]
-    pub const fn orientation(&self) -> Orientation {
-        self.orientation
-    }
-
-    /// Set the adapter's current orientation after platform initialization or persistence.
-    pub fn set_orientation(&mut self, orientation: Orientation) {
-        self.orientation = orientation;
-    }
-
-    /// Return the current dynamic dashboard values.
-    #[must_use]
-    pub const fn ui_state(&self) -> DnsTesterUiState {
-        DnsTesterUiState {
-            target: self.target,
-            queries: self.queries,
-            successes: self.successes,
-            failures: self.failures,
-            last_latency_millis: self.last_latency_millis,
-        }
-    }
-
-    /// Apply one platform event and return any requested platform operation.
-    pub fn input(&mut self, input: DnsTesterInput) -> DnsTesterAction {
-        match input {
-            DnsTesterInput::WifiConnecting => {
-                self.screen = DnsTesterScreen::Connecting;
-                DnsTesterAction::None
-            }
-            DnsTesterInput::WifiSetup => {
-                self.screen = DnsTesterScreen::Setup;
-                DnsTesterAction::None
-            }
-            DnsTesterInput::WifiReady => {
-                self.screen = DnsTesterScreen::Dashboard;
-                DnsTesterAction::None
-            }
-            DnsTesterInput::DnsFinished(result) => {
-                self.queries = self.queries.saturating_add(1);
-                self.last_latency_millis = result.latency_millis;
-                if result.succeeded {
-                    self.successes = self.successes.saturating_add(1);
-                } else {
-                    self.failures = self.failures.saturating_add(1);
-                }
-                self.screen = DnsTesterScreen::Dashboard;
-                DnsTesterAction::None
-            }
-            DnsTesterInput::Boot => DnsTesterAction::ClearCalibrationAndRestart,
-            DnsTesterInput::Touch(TouchEvent::Down { point }) => {
-                if let Some(control) = control_at(point, self.orientation.size(), self.layout) {
-                    match control {
-                        Control::Calibration => DnsTesterAction::ClearCalibrationAndRestart,
-                        Control::Wifi => {
-                            self.screen = DnsTesterScreen::Unavailable;
-                            DnsTesterAction::ResetWifiAndRestart
-                        }
-                        Control::Orientation => {
-                            let orientation = self.orientation.next();
-                            self.orientation = orientation;
-                            DnsTesterAction::SaveOrientationAndRestart(orientation)
-                        }
-                    }
-                } else {
-                    DnsTesterAction::StartDnsLookup
-                }
-            }
-            DnsTesterInput::Touch(TouchEvent::Move { .. } | TouchEvent::Up) => {
-                DnsTesterAction::None
-            }
-        }
-    }
-
-    /// Whether the app currently displays its browser-unavailable notice.
-    #[must_use]
-    pub const fn is_unavailable(&self) -> bool {
-        matches!(self.screen, DnsTesterScreen::Unavailable)
-    }
-
-    /// Return the pre-dashboard notice, when one should be rendered.
-    #[must_use]
-    pub const fn notice(&self) -> Option<DnsTesterUiNotice> {
-        match self.screen {
-            DnsTesterScreen::Splash => Some(DnsTesterUiNotice::Splash),
-            DnsTesterScreen::Connecting => Some(DnsTesterUiNotice::WifiConnecting),
-            DnsTesterScreen::Setup => Some(DnsTesterUiNotice::WifiSetup),
-            DnsTesterScreen::Unavailable => Some(DnsTesterUiNotice::WifiUnavailable),
-            DnsTesterScreen::Dashboard => None,
-        }
+    } else {
+        Orientation::Landscape
     }
 }
 
-/// The changing values shown by the DNS tester UI.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct DnsTesterUiState {
-    /// DNS name for the current test.
-    pub target: &'static str,
-    /// Number of DNS tests started.
-    pub queries: u32,
-    /// Number of successful DNS tests.
-    pub successes: u32,
-    /// Number of failed DNS tests.
-    pub failures: u32,
-    /// Most recent lookup latency in milliseconds.
-    pub last_latency_millis: u64,
+/// Return the application orientation after calibration has completed.
+#[must_use]
+pub const fn orientation_after_calibration(saved_orientation: Orientation) -> Orientation {
+    saved_orientation
 }
 
 /// A full-screen DNS tester notice shown before the test dashboard is usable.
@@ -349,168 +433,10 @@ pub enum DnsTesterUiError<F> {
     Display(F),
 }
 
-/// Render the shared DNS tester screen.
-pub async fn render<D>(
-    display: &mut D,
-    orientation: Orientation,
-    state: DnsTesterUiState,
-) -> Result<(), DnsTesterUiError<D::Error>>
-where
-    D: CydDisplay,
-{
-    let background = Background::for_orientation(orientation);
-    let screen_size = orientation.size();
-    display
-        .draw_items::<1>(
-            Rectangle::new(Point::zero(), screen_size),
-            display.background_565(),
-            [DrawItem::Bitmap {
-                view: background.view(),
-                top_left: Point::zero(),
-            }],
-        )
-        .map_err(DnsTesterUiError::Display)?;
-
-    let status = if state.queries == 0 {
-        "TAP"
-    } else if state.failures > 0 {
-        "FAIL"
-    } else {
-        "OK"
-    };
-    let mut latency = heapless::String::<16>::new();
-    if state.queries == 0 {
-        latency
-            .push_str("--")
-            .map_err(|_| DnsTesterUiError::Text(core::fmt::Error))?;
-    } else {
-        write!(latency, "{} ms", state.last_latency_millis).map_err(DnsTesterUiError::Text)?;
+impl<F> From<core::fmt::Error> for DnsTesterUiError<F> {
+    fn from(error: core::fmt::Error) -> Self {
+        Self::Text(error)
     }
-    let mut queries = heapless::String::<12>::new();
-    let mut successes = heapless::String::<12>::new();
-    let mut failures = heapless::String::<12>::new();
-    write!(queries, "{}", state.queries).map_err(DnsTesterUiError::Text)?;
-    write!(successes, "{}", state.successes).map_err(DnsTesterUiError::Text)?;
-    write!(failures, "{}", state.failures).map_err(DnsTesterUiError::Text)?;
-
-    if orientation.width() > orientation.height() {
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(22, 76), Size::new(150, 20)),
-            state.target,
-            &FONT_10X20,
-            Alignment::Left,
-            VALUE_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(244, 82), Size::new(56, 20)),
-            status,
-            &FONT_10X20,
-            Alignment::Center,
-            if state.failures > 0 {
-                FAILURE_TEXT
-            } else {
-                SUCCESS_TEXT
-            },
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(100, 100), Size::new(120, 29)),
-            latency.as_str(),
-            &PROFONT_24_POINT,
-            Alignment::Center,
-            VALUE_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(27, 156), Size::new(50, 20)),
-            queries.as_str(),
-            &FONT_10X20,
-            Alignment::Center,
-            VALUE_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(135, 156), Size::new(50, 20)),
-            successes.as_str(),
-            &FONT_10X20,
-            Alignment::Center,
-            SUCCESS_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(243, 156), Size::new(50, 20)),
-            failures.as_str(),
-            &FONT_10X20,
-            Alignment::Center,
-            FAILURE_TEXT,
-        )
-        .await?;
-    } else {
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(22, 68), Size::new(190, 20)),
-            state.target,
-            &FONT_10X20,
-            Alignment::Left,
-            VALUE_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(60, 119), Size::new(120, 29)),
-            latency.as_str(),
-            &PROFONT_24_POINT,
-            Alignment::Center,
-            VALUE_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(160, 180), Size::new(50, 20)),
-            queries.as_str(),
-            &FONT_10X20,
-            Alignment::Right,
-            VALUE_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(160, 202), Size::new(50, 20)),
-            successes.as_str(),
-            &FONT_10X20,
-            Alignment::Right,
-            SUCCESS_TEXT,
-        )
-        .await?;
-        draw_text(
-            display,
-            background,
-            Rectangle::new(Point::new(160, 220), Size::new(50, 20)),
-            failures.as_str(),
-            &FONT_10X20,
-            Alignment::Right,
-            FAILURE_TEXT,
-        )
-        .await?;
-    }
-    Ok(())
 }
 
 /// Render a full-screen operational notice over the DNS tester artwork.
@@ -522,17 +448,20 @@ pub async fn render_notice<D>(
 where
     D: CydDisplay,
 {
-    let background = Background::for_orientation(orientation);
-    display
-        .draw_items::<1>(
-            Rectangle::new(Point::zero(), orientation.size()),
-            display.background_565(),
-            [DrawItem::Bitmap {
-                view: background.view(),
-                top_left: Point::zero(),
-            }],
-        )
-        .map_err(DnsTesterUiError::Display)?;
+    match orientation {
+        Orientation::Landscape | Orientation::LandscapeInverted => display
+            .fill_contiguous(
+                Rectangle::new(Point::zero(), orientation.size()),
+                LANDSCAPE_BACKGROUND.rgb565_iter(),
+            )
+            .map_err(DnsTesterUiError::Display)?,
+        Orientation::Portrait | Orientation::PortraitInverted => display
+            .fill_contiguous(
+                Rectangle::new(Point::zero(), orientation.size()),
+                PORTRAIT_BACKGROUND.rgb565_iter(),
+            )
+            .map_err(DnsTesterUiError::Display)?,
+    }
 
     let (rectangle, heading_y, detail_y) = if orientation.width() > orientation.height() {
         (
@@ -568,20 +497,6 @@ where
         &FONT_10X20,
     )
     .await
-}
-
-/// Render the screen selected by the shared DNS Tester state.
-pub async fn render_app<D>(
-    display: &mut D,
-    app: &DnsTesterApp,
-) -> Result<(), DnsTesterUiError<D::Error>>
-where
-    D: CydDisplay,
-{
-    match app.notice() {
-        Some(notice) => render_notice(display, app.orientation(), notice).await,
-        None => render(display, app.orientation(), app.ui_state()).await,
-    }
 }
 
 async fn fill_panel<D>(
@@ -631,38 +546,9 @@ where
     frame.flush().await.map_err(DnsTesterUiError::Display)
 }
 
-#[derive(Clone, Copy)]
-enum Background {
-    Landscape,
-    Portrait,
-}
-
-impl Background {
-    const fn for_orientation(orientation: Orientation) -> Self {
-        match orientation {
-            Orientation::Landscape | Orientation::LandscapeInverted => Self::Landscape,
-            Orientation::Portrait | Orientation::PortraitInverted => Self::Portrait,
-        }
-    }
-
-    const fn view(self) -> Image565View {
-        match self {
-            Self::Landscape => LANDSCAPE_BACKGROUND.view(),
-            Self::Portrait => PORTRAIT_BACKGROUND.view(),
-        }
-    }
-
-    const fn view_rect(self, rectangle: Rectangle) -> Image565View {
-        match self {
-            Self::Landscape => LANDSCAPE_BACKGROUND.view_rect(rectangle),
-            Self::Portrait => PORTRAIT_BACKGROUND.view_rect(rectangle),
-        }
-    }
-}
-
 async fn draw_text<D>(
     display: &mut D,
-    background: Background,
+    background: Image565View,
     rectangle: Rectangle,
     text: &str,
     font: &MonoFont<'_>,
@@ -674,8 +560,8 @@ where
 {
     let mut frame = display.frame_mut(rectangle);
     DrawItem::Bitmap {
-        view: background.view_rect(rectangle),
-        top_left: Point::zero(),
+        view: background,
+        top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
     }
     .draw(&mut frame);
     let position_x = match alignment {
@@ -695,83 +581,4 @@ where
     .draw(&mut frame)
     .unwrap_infallible();
     frame.flush().await.map_err(DnsTesterUiError::Display)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn orientation_control_cycles_through_all_presentations() {
-        let mut app = DnsTesterApp::new("example.com", Orientation::Landscape);
-        for expected_orientation in [
-            Orientation::Portrait,
-            Orientation::LandscapeInverted,
-            Orientation::PortraitInverted,
-            Orientation::Landscape,
-        ] {
-            let action = app.input(DnsTesterInput::Touch(TouchEvent::Down {
-                point: Point::new(
-                    if app.orientation().width() > app.orientation().height() {
-                        260
-                    } else {
-                        193
-                    },
-                    if app.orientation().width() > app.orientation().height() {
-                        216
-                    } else {
-                        294
-                    },
-                ),
-            }));
-            assert_eq!(
-                action,
-                DnsTesterAction::SaveOrientationAndRestart(expected_orientation)
-            );
-            assert_eq!(app.orientation(), expected_orientation);
-        }
-    }
-
-    #[test]
-    fn dns_results_update_shared_counters() {
-        let mut app = DnsTesterApp::new("example.com", Orientation::Landscape);
-        app.input(DnsTesterInput::DnsFinished(DnsResult {
-            succeeded: true,
-            latency_millis: 12,
-        }));
-        app.input(DnsTesterInput::DnsFinished(DnsResult {
-            succeeded: false,
-            latency_millis: 18,
-        }));
-        assert_eq!(app.ui_state().queries, 2);
-        assert_eq!(app.ui_state().successes, 1);
-        assert_eq!(app.ui_state().failures, 1);
-        assert_eq!(app.ui_state().last_latency_millis, 18);
-    }
-
-    #[test]
-    fn compact_layout_routes_settings_controls_before_dns_lookup() {
-        let mut app = DnsTesterApp::new_with_layout(
-            "example.com",
-            Orientation::Landscape,
-            DnsTesterLayout::Compact,
-        );
-        assert_eq!(
-            app.input(DnsTesterInput::Touch(TouchEvent::Down {
-                point: Point::new(50, 230),
-            })),
-            DnsTesterAction::SaveOrientationAndRestart(Orientation::Portrait)
-        );
-        let mut wifi_app = DnsTesterApp::new_with_layout(
-            "example.com",
-            Orientation::Landscape,
-            DnsTesterLayout::Compact,
-        );
-        assert_eq!(
-            wifi_app.input(DnsTesterInput::Touch(TouchEvent::Down {
-                point: Point::new(250, 230),
-            })),
-            DnsTesterAction::ResetWifiAndRestart
-        );
-    }
 }

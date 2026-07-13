@@ -16,10 +16,9 @@ export class DnsTesterWeb {
      * Present the simulated CYD in landscape while touch calibration runs.
      */
     prepare_calibration_landscape(): void;
-    present(): Promise<void>;
     reboot(): Promise<void>;
     start(): Promise<void>;
-    tick(): string;
+    take_exit(): string;
     touch_down(x: number, y: number): void;
     touch_move(x: number, y: number): void;
     touch_up(): void;
@@ -36,10 +35,9 @@ export interface InitOutput {
     readonly dnstesterweb_new: (a: any) => [number, number, number];
     readonly dnstesterweb_orientation_is_inverted: (a: number) => number;
     readonly dnstesterweb_prepare_calibration_landscape: (a: number) => void;
-    readonly dnstesterweb_present: (a: number) => any;
     readonly dnstesterweb_reboot: (a: number) => any;
     readonly dnstesterweb_start: (a: number) => any;
-    readonly dnstesterweb_tick: (a: number) => [number, number];
+    readonly dnstesterweb_take_exit: (a: number) => [number, number];
     readonly dnstesterweb_touch_down: (a: number, b: number, c: number) => void;
     readonly dnstesterweb_touch_move: (a: number, b: number, c: number) => void;
     readonly dnstesterweb_touch_up: (a: number) => void;

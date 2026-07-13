@@ -44,22 +44,24 @@ extern crate panic_probe as _;
 use core::convert::Infallible;
 
 use defmt::{info, warn};
-use device_envoy_core::cyd::display::Orientation;
 use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
-use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
+use device_envoy_core::cyd::touch::calibration::{ensure_calibration, CALIBRATION_MIN_PIXEL_COUNT};
+use device_envoy_core::cyd::{display::Orientation, Cyd as _, CydParts as _};
+use device_envoy_core::dns_lookup::{DnsLookupFn, DnsLookupResult};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester::{
-    DnsResult, DnsTesterAction, DnsTesterApp, DnsTesterInput, DnsTesterUiError, render_app,
+    display_orientation_for_calibration, dns_tester, dns_tester_splash, render_notice,
+    DnsTesterError, DnsTesterExit, DnsTesterUiError, DnsTesterUiNotice,
 };
 use device_envoy_rp::{
-    Error, Result,
     button::{Button as _, ButtonRp, PressedTo},
     cyd::{
         CydRp, CydRpUncalibrated, CydStaticRp, CydTouch as _, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
     },
     flash_block::FlashBlockRp,
     wifi_auto::{WifiAutoEvent, WifiAutoRp},
+    Error, Result,
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
@@ -67,8 +69,6 @@ use embassy_time::{Duration, Instant, Timer};
 
 const DNS_HOSTNAME: &str = "example.com";
 const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
-const TOUCH_POLL_PERIOD: Duration = Duration::from_millis(16);
-
 /// One text line across the top of the panel. Kept small on purpose: this
 /// example runs alongside the Wi-Fi stack, and a full-screen frame buffer
 /// risks overflowing RAM once Wi-Fi's own heap is added in (this bit ESP32
@@ -89,11 +89,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
     info!("Starting CYD DNS tester");
 
-    let [
-        wifi_flash_block,
-        mut calibration_flash_block,
-        mut orientation_flash_block,
-    ] = FlashBlockRp::new_array::<3>(p.FLASH)?;
+    let [wifi_flash_block, mut calibration_flash_block, mut orientation_flash_block] =
+        FlashBlockRp::new_array::<3>(p.FLASH)?;
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);
@@ -102,7 +99,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         Ok(None) | Err(_) => false,
     };
     let display_orientation =
-        DnsTesterApp::display_orientation_for_calibration(orientation, calibration_is_available);
+        display_orientation_for_calibration(orientation, calibration_is_available);
     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticRp<STATUS_PIXEL_COUNT> = CydRp::new_static();
@@ -147,10 +144,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
     info!("Touch calibrated");
 
-    let mut app = DnsTesterApp::new(DNS_HOSTNAME, orientation);
-    render_dns_tester(&mut display, &app).await?;
-    app.input(DnsTesterInput::WifiConnecting);
-    render_dns_tester(&mut display, &app).await?;
+    let mut cyd = CydRp::from_parts(display, touch);
+    dns_tester_splash(cyd.display(), orientation)
+        .await
+        .map_err(map_ui_error)?;
 
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
@@ -168,11 +165,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .connect(&mut button, async |wifi_auto_event| -> Result<(), Error> {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
-                    app.input(DnsTesterInput::WifiSetup);
+                    render_notice(cyd.display(), orientation, DnsTesterUiNotice::WifiSetup)
+                        .await
+                        .map_err(map_ui_error)?
                 }
                 WifiAutoEvent::Connecting { .. } | WifiAutoEvent::ConnectionFailed => {}
             };
-            render_dns_tester(&mut display, &app).await?;
             Ok(())
         })
         .await?;
@@ -182,93 +180,49 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
     info!("Wi-Fi up with DHCP");
 
-    app.input(DnsTesterInput::WifiReady);
-    render_dns_tester(&mut display, &app).await?;
-    let mut is_touch_down = false;
-
-    loop {
-        if button.is_pressed() {
-            while button.is_pressed() {
-                Timer::after(Duration::from_millis(10)).await;
+    let mut dns_lookup = DnsLookupFn(async |hostname: &str| {
+        let query_start = Instant::now();
+        let dns_result = stack.dns_query(hostname, DnsQueryType::A).await;
+        let latency_millis = query_start.elapsed().as_millis();
+        let succeeded = match dns_result {
+            Ok(addresses) if !addresses.is_empty() => {
+                info!("DNS ok in {}ms: {:?}", latency_millis, addresses.first());
+                true
             }
-            app.input(DnsTesterInput::Boot);
-            calibration_flash_block.clear()?;
-            cortex_m::peripheral::SCB::sys_reset();
-        }
-        if let Some(touch_event) = touch.read()? {
-            match touch_event {
-                device_envoy_rp::cyd::touch::TouchEvent::Down { point } => {
-                    if !is_touch_down {
-                        is_touch_down = true;
-                        let point = orientation.map_landscape_point(point);
-                        let action = app.input(DnsTesterInput::Touch(
-                            device_envoy_rp::cyd::touch::TouchEvent::Down { point },
-                        ));
-                        match action {
-                            DnsTesterAction::ClearCalibrationAndRestart => {
-                                calibration_flash_block.clear()?;
-                                render_dns_tester(&mut display, &app).await?;
-                                cortex_m::peripheral::SCB::sys_reset();
-                            }
-                            DnsTesterAction::ResetWifiAndRestart => {
-                                wifi_auto.reset_to_captive_portal()?;
-                                render_dns_tester(&mut display, &app).await?;
-                                cortex_m::peripheral::SCB::sys_reset();
-                            }
-                            DnsTesterAction::SaveOrientationAndRestart(next_orientation) => {
-                                orientation_flash_block.save(&next_orientation)?;
-                                render_dns_tester(&mut display, &app).await?;
-                                cortex_m::peripheral::SCB::sys_reset();
-                            }
-                            DnsTesterAction::StartDnsLookup => {
-                                let query_start = Instant::now();
-                                let dns_result =
-                                    stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
-                                let latency_millis = query_start.elapsed().as_millis();
-                                let succeeded = match dns_result {
-                                    Ok(addresses) if !addresses.is_empty() => {
-                                        info!(
-                                            "DNS ok in {}ms: {:?}",
-                                            latency_millis,
-                                            addresses.first()
-                                        );
-                                        true
-                                    }
-                                    Ok(_) => {
-                                        warn!("DNS query returned no addresses");
-                                        false
-                                    }
-                                    Err(_) => {
-                                        warn!("DNS query failed");
-                                        false
-                                    }
-                                };
-                                app.input(DnsTesterInput::DnsFinished(DnsResult {
-                                    succeeded,
-                                    latency_millis,
-                                }));
-                            }
-                            DnsTesterAction::None => {}
-                        }
-                        render_dns_tester(&mut display, &app).await?;
-                    }
-                }
-                device_envoy_rp::cyd::touch::TouchEvent::Move { .. } => {}
-                device_envoy_rp::cyd::touch::TouchEvent::Up => {
-                    is_touch_down = false;
-                }
+            Ok(_) => {
+                warn!("DNS query returned no addresses");
+                false
             }
+            Err(_) => {
+                warn!("DNS query failed");
+                false
+            }
+        };
+        Ok::<DnsLookupResult, Infallible>(DnsLookupResult {
+            succeeded,
+            latency_millis,
+        })
+    });
+    let exit = dns_tester(&mut cyd, &mut button, DNS_HOSTNAME, &mut dns_lookup)
+        .await
+        .map_err(|error| match error {
+            DnsTesterError::Display(error) => map_ui_error(error),
+            DnsTesterError::Touch(error) => error.into(),
+            DnsTesterError::Dns(error) => match error {},
+        })?;
+    match exit {
+        DnsTesterExit::CalibrationRequested => calibration_flash_block.clear()?,
+        DnsTesterExit::WifiResetRequested => wifi_auto.reset_to_captive_portal()?,
+        DnsTesterExit::OrientationChanged(next_orientation) => {
+            orientation_flash_block.save(&next_orientation)?;
         }
-        Timer::after(TOUCH_POLL_PERIOD).await;
     }
+    cortex_m::peripheral::SCB::sys_reset();
 }
 
-async fn render_dns_tester(
-    display: &mut device_envoy_rp::cyd::CydDisplayRp,
-    app: &DnsTesterApp,
-) -> Result<()> {
-    render_app(display, app).await.map_err(|error| match error {
+fn map_ui_error(error: DnsTesterUiError<device_envoy_rp::Error>) -> Error {
+    match error {
         DnsTesterUiError::Text(_) => Error::FormatError,
         DnsTesterUiError::Display(error) => error.into(),
-    })
+    }
 }

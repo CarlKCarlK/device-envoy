@@ -3,10 +3,10 @@
 use crate::cyd::display::CydFrame;
 use crate::pixel_target::rgb565_raw_from_rgb888_components;
 use embedded_graphics::{
-    Drawable, Pixel,
-    pixelcolor::{Rgb565, raw::RawU16},
+    pixelcolor::{raw::RawU16, Rgb565},
     prelude::{DrawTarget, Point, Size},
     primitives::Rectangle,
+    Drawable, Pixel,
 };
 
 /// Returns the number of bytes required for a packed one-bit mask.
@@ -183,13 +183,6 @@ impl<const W: usize, const H: usize, const N: usize> Image565Fixed<W, H, N> {
     pub fn copy_to<F: CydFrame>(&self, frame: &mut F) -> crate::Result<()> {
         frame.copy_from_565(&self.pixels)
     }
-
-    pub fn rgb565_iter(&self) -> impl Iterator<Item = Rgb565> + '_ {
-        self.pixels
-            .iter()
-            .copied()
-            .map(|pixel| Rgb565::from(RawU16::new(pixel)))
-    }
 }
 
 impl<const W: usize, const H: usize, const MASK_N: usize> MaskFixed<W, H, MASK_N> {
@@ -212,13 +205,11 @@ impl<'a, const W: usize, const H: usize, const N: usize> PlacedImage565<'a, W, H
             top_left: self.top_left,
             index: 0,
         };
-        target.draw_iter(core::iter::from_fn(|| {
-            loop {
-                let pixel = pixels.next()?;
-                let index = pixels.index - 1;
-                if mask.is_set(index) {
-                    return Some(pixel);
-                }
+        target.draw_iter(core::iter::from_fn(|| loop {
+            let pixel = pixels.next()?;
+            let index = pixels.index - 1;
+            if mask.is_set(index) {
+                return Some(pixel);
             }
         }))
     }

@@ -27,6 +27,7 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
+use display::Orientation;
 use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 
 /// A device abstraction for the "Cheap Yellow Display" (CYD) display and touch parts.
@@ -113,6 +114,21 @@ pub trait Cyd: Sized {
     ///
     /// See the [`Cyd`] trait documentation for a usage example.
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
+
+    /// Return the logical orientation of the bundled display and touch parts.
+    ///
+    /// The default uses the oriented screen dimensions. It intentionally
+    /// treats equal-sized inverted presentations as their non-inverted
+    /// orientation; applications that preserve 180-degree inversion should
+    /// override this method with their stored orientation.
+    fn orientation(&mut self) -> Orientation {
+        let screen_size = self.display().screen_size();
+        if screen_size.width > screen_size.height {
+            Orientation::Landscape
+        } else {
+            Orientation::Portrait
+        }
+    }
 
     /// Borrow the display half.
     ///

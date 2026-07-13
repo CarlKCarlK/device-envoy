@@ -35,7 +35,8 @@ function enqueuePressSamples(x, y) {
 }
 
 async function refresh() {
-  const result = tester.tick();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const result = tester.take_exit();
   if (result === "recalibrate") {
     tester.prepare_calibration_landscape();
     syncStage();
@@ -45,7 +46,6 @@ async function refresh() {
     await tester.reboot();
     syncStage();
   }
-  await tester.present();
 }
 
 try {

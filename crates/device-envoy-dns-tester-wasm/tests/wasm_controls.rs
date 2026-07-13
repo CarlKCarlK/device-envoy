@@ -1,12 +1,12 @@
 use device_envoy_core::{
     cyd::{display::Orientation, touch::calibration::CalibrationConfig},
     flash_block::FlashBlock as _,
-    wasm::FlashBlockWasm,
+    wasm::{next_animation_frame, FlashBlockWasm},
 };
 use device_envoy_dns_tester_wasm::DnsTesterWeb;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
-use web_sys::{HtmlCanvasElement, window};
+use web_sys::{window, HtmlCanvasElement};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
@@ -45,11 +45,13 @@ async fn wrapper_forwards_rotation_and_boot_calibration_flow() -> Result<(), JsV
 
     tester.touch_down(193.0, 294.0);
     tester.touch_up();
-    assert_eq!(tester.tick(), "orientation");
+    next_animation_frame().await;
+    assert_eq!(tester.take_exit(), "orientation");
     assert!(tester.orientation_is_inverted());
 
     tester.boot_down();
-    assert_eq!(tester.tick(), "recalibrate");
+    next_animation_frame().await;
+    assert_eq!(tester.take_exit(), "recalibrate");
     tester.boot_up();
     tester.prepare_calibration_landscape();
     assert_eq!(canvas.width(), Orientation::Landscape.width());

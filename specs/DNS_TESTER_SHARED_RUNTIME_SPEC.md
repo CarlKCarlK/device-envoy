@@ -12,8 +12,8 @@ should provide platform resources and invoke that same core path.
 This spec refines the runtime portion of
 [`EXAMPLES_CRATE_REORGANIZATION_SPEC.md`](EXAMPLES_CRATE_REORGANIZATION_SPEC.md).
 It corrects an architectural weakness in the first migration: the shared
-`DnsTesterApp` state type exists, but each platform still manually drives its
-inputs, actions, rendering, and service loop.
+the shared runtime must own state, input policy, rendering, and the service
+loop rather than exposing an application object for each platform to drive.
 
 ## Linkage Blaze model
 
@@ -39,15 +39,10 @@ services consumed by one shared loop.
 
 ## Current problem
 
-The current architecture stops at an event-driven state object:
+The old architecture stopped at an event-driven state object:
 
 ```text
-platform main
-  -> initialize platform resources
-  -> call DnsTesterApp::input
-  -> interpret DnsTesterAction
-  -> call render_app
-  -> repeat platform-specific orchestration
+platform main -> initialize resources -> repeatedly drive a shared state object
 ```
 
 ESP, RP, WASM, and memory tests therefore each own a version of the startup,
@@ -74,9 +69,8 @@ The exact names may change, but the architecture must have:
 - one shared event and action policy;
 - platform adapters for real, browser, and scripted services.
 
-`DnsTesterApp` may remain as an implementation detail of the shared runtime,
-but callers should not have to reproduce its event loop by repeatedly calling
-`input`, matching every action, and calling `render_app` themselves.
+The runtime keeps its changing state in local variables in the shared game
+loop. Callers do not reproduce an event loop or drive an application object.
 
 ## Shared runtime responsibilities
 
@@ -165,8 +159,7 @@ restart differences.
 ### Phase 1: Establish the shared entry points
 
 Add a core splash function and a core DNS Tester runtime function. Keep the
-existing `DnsTesterApp` state temporarily as the runtime's private state.
-Write a short API-level test proving that the runtime can start at splash,
+runtime state local to that function. Write a short API-level test proving that the runtime can start at splash,
 advance through Wi-Fi setup, and reach the dashboard.
 
 ### Phase 2: Build a scripted runtime

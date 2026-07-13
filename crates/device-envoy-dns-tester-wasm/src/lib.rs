@@ -1,23 +1,24 @@
-use std::cell::{Cell, RefCell};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use device_envoy_core::{
-    UnwrapInfallible as _,
-    button::Button as _,
     cyd::{
-        CydTouch as _, CydTouchUncalibrated as _,
         display::Orientation,
-        touch::calibration::{CalibrationConfig, ensure_calibration},
+        touch::calibration::{ensure_calibration, CalibrationConfig},
+        CydParts as _, CydTouchUncalibrated as _,
     },
+    dns_lookup::{DnsLookupFn, DnsLookupResult},
     flash_block::FlashBlock as _,
-    wasm::{
-        ButtonWasmSource, CydDisplayWasm, CydTouchWasm, CydTouchWasmSource, CydWasm, FlashBlockWasm,
-    },
+    wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm},
 };
 use device_envoy_examples_core::dns_tester::{
-    DnsResult, DnsTesterAction, DnsTesterApp, DnsTesterInput, DnsTesterUiError, render_app,
+    display_orientation_for_calibration, dns_tester, orientation_after_calibration, DnsTesterError,
+    DnsTesterExit, DnsTesterUiError,
 };
 use embedded_graphics::{geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
-use wasm_bindgen::{JsCast, prelude::*};
+use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 const DNS_HOSTNAME: &str = "example.com";
@@ -30,18 +31,17 @@ pub struct DnsTesterWeb {
     context: CanvasRenderingContext2d,
     touch_source: CydTouchWasmSource,
     button_source: ButtonWasmSource,
-    ready: Cell<bool>,
+    exit: Rc<Cell<Option<DnsTesterExit>>>,
+    failed: Rc<Cell<bool>>,
     state: RefCell<DnsTesterState>,
 }
 
 struct DnsTesterState {
-    display: Option<CydDisplayWasm>,
-    touch: Option<CydTouchWasm>,
     wifi_flash_block: FlashBlockWasm,
     calibration_flash_block: FlashBlockWasm,
     orientation_flash_block: FlashBlockWasm,
-    app: DnsTesterApp,
-    button_was_pressed: bool,
+    orientation: Orientation,
+    target: &'static str,
 }
 
 #[wasm_bindgen]
@@ -57,24 +57,24 @@ impl DnsTesterWeb {
             context,
             touch_source: CydTouchWasmSource::new(),
             button_source: ButtonWasmSource::new(),
-            ready: Cell::new(false),
+            exit: Rc::new(Cell::new(None)),
+            failed: Rc::new(Cell::new(false)),
             state: RefCell::new(DnsTesterState {
-                display: None,
-                touch: None,
                 wifi_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/wifi")
                     .map_err(|error| JsValue::from_str(&format!("Wi-Fi flash: {error:?}")))?,
                 calibration_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/calibration")
                     .map_err(|error| JsValue::from_str(&format!("Calibration flash: {error:?}")))?,
                 orientation_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/orientation")
                     .map_err(|error| JsValue::from_str(&format!("Orientation flash: {error:?}")))?,
-                app: DnsTesterApp::new(DNS_HOSTNAME, Orientation::Landscape),
-                button_was_pressed: false,
+                orientation: Orientation::Landscape,
+                target: DNS_HOSTNAME,
             }),
         })
     }
 
     pub async fn start(&self) -> Result<(), JsValue> {
-        self.ready.set(false);
+        self.exit.set(None);
+        self.failed.set(false);
         let mut state = self.state.borrow_mut();
         let saved_orientation = state
             .orientation_flash_block
@@ -85,11 +85,9 @@ impl DnsTesterWeb {
             Ok(calibration_config) => calibration_config,
             Err(_) => None,
         };
-        let orientation = DnsTesterApp::display_orientation_for_calibration(
-            saved_orientation,
-            calibration_config.is_some(),
-        );
-        state.app.set_orientation(orientation);
+        let orientation =
+            display_orientation_for_calibration(saved_orientation, calibration_config.is_some());
+        state.orientation = orientation;
         self.canvas.set_width(orientation.width());
         self.canvas.set_height(orientation.height());
 
@@ -111,42 +109,51 @@ impl DnsTesterWeb {
         )
         .await
         .map_err(|error| JsValue::from_str(&format!("Calibration: {error:?}")))?;
-        state.display = Some(display);
-        state.touch = Some(touch);
-
         if outcome.was_saved() {
             // Calibration is always completed in landscape. Restore the saved
             // dashboard orientation as soon as calibration has been persisted.
-            state
-                .app
-                .set_orientation(DnsTesterApp::orientation_after_calibration(
-                    saved_orientation,
-                ));
+            state.orientation = orientation_after_calibration(saved_orientation);
             self.canvas.set_width(saved_orientation.width());
             self.canvas.set_height(saved_orientation.height());
-            self.rebuild_display(&mut state, Some(outcome.calibration_config()));
         }
-        state.app.input(DnsTesterInput::WifiReady);
-        drop(state);
-        self.ready.set(true);
-        self.present().await
-    }
-
-    pub async fn present(&self) -> Result<(), JsValue> {
-        if !self.ready.get() {
-            return Ok(());
-        }
-        let mut state = self.state.borrow_mut();
-        let app = state.app;
-        let Some(display) = &mut state.display else {
-            return Ok(());
+        let (display, touch) = if outcome.was_saved() {
+            let dashboard_device = CydWasm::new(
+                self.context.clone(),
+                saved_orientation,
+                BACKGROUND,
+                FOREGROUND,
+                &FONT_6X10,
+                self.touch_source.clone(),
+            );
+            let (display, uncalibrated_touch) = dashboard_device.parts_uncalibrated();
+            (
+                display,
+                uncalibrated_touch.calibrate(outcome.calibration_config()),
+            )
+        } else {
+            (display, touch)
         };
-        render_app(display, &app)
-            .await
-            .map_err(|error| match error {
-                DnsTesterUiError::Text(_) => JsValue::from_str("DNS tester text formatting failed"),
-                DnsTesterUiError::Display(error) => match error {},
-            })?;
+        let mut device = CydWasm::from_parts(display, touch);
+        let exit = self.exit.clone();
+        let failed = self.failed.clone();
+        let target = state.target;
+        let mut button = self.button_source.button();
+        let mut dns_lookup = DnsLookupFn(async |_hostname: &str| {
+            Ok::<DnsLookupResult, core::convert::Infallible>(DnsLookupResult {
+                succeeded: true,
+                latency_millis: 12,
+            })
+        });
+        drop(state);
+        wasm_bindgen_futures::spawn_local(async move {
+            match dns_tester(&mut device, &mut button, target, &mut dns_lookup).await {
+                Ok(exit_value) => exit.set(Some(exit_value)),
+                Err(DnsTesterError::Display(DnsTesterUiError::Text(_))) => failed.set(true),
+                Err(DnsTesterError::Display(DnsTesterUiError::Display(error))) => match error {},
+                Err(DnsTesterError::Touch(error)) => match error {},
+                Err(DnsTesterError::Dns(error)) => match error {},
+            }
+        });
         Ok(())
     }
 
@@ -172,42 +179,14 @@ impl DnsTesterWeb {
         self.button_source.release();
     }
 
-    pub fn tick(&self) -> String {
-        if !self.ready.get() {
-            return "starting".into();
+    pub fn take_exit(&self) -> String {
+        match self.exit.take() {
+            Some(DnsTesterExit::CalibrationRequested) => "recalibrate".into(),
+            Some(DnsTesterExit::WifiResetRequested) => "wifi".into(),
+            Some(DnsTesterExit::OrientationChanged(_)) => "orientation".into(),
+            None if self.failed.get() => "runtime error".into(),
+            None => "idle".into(),
         }
-        let mut state = self.state.borrow_mut();
-        let is_pressed = self.button_source.button().is_pressed();
-        if is_pressed && !state.button_was_pressed {
-            state.button_was_pressed = true;
-            let action = state.app.input(DnsTesterInput::Boot);
-            return self.apply_action(&mut state, action);
-        }
-        state.button_was_pressed = is_pressed;
-
-        let Some(touch) = &mut state.touch else {
-            return "starting".into();
-        };
-        let Some(event) = touch.read().unwrap_infallible() else {
-            return "idle".into();
-        };
-        let event = match event {
-            device_envoy_core::cyd::touch::TouchEvent::Down { point } => {
-                device_envoy_core::cyd::touch::TouchEvent::Down {
-                    point: map_to_orientation(state.app.orientation(), point),
-                }
-            }
-            event => event,
-        };
-        let action = state.app.input(DnsTesterInput::Touch(event));
-        if matches!(action, DnsTesterAction::StartDnsLookup) {
-            state.app.input(DnsTesterInput::DnsFinished(DnsResult {
-                succeeded: true,
-                latency_millis: 12,
-            }));
-            return format!("DNS success: {DNS_HOSTNAME} (12ms)");
-        }
-        self.apply_action(&mut state, action)
     }
 
     pub async fn reboot(&self) -> Result<(), JsValue> {
@@ -216,10 +195,7 @@ impl DnsTesterWeb {
 
     /// Present the simulated CYD in landscape while touch calibration runs.
     pub fn prepare_calibration_landscape(&self) {
-        self.state
-            .borrow_mut()
-            .app
-            .set_orientation(Orientation::Landscape);
+        self.state.borrow_mut().orientation = Orientation::Landscape;
         self.canvas.set_width(Orientation::Landscape.width());
         self.canvas.set_height(Orientation::Landscape.height());
     }
@@ -252,62 +228,8 @@ impl DnsTesterWeb {
 }
 
 impl DnsTesterWeb {
-    fn rebuild_display(
-        &self,
-        state: &mut DnsTesterState,
-        calibration_config: Option<CalibrationConfig>,
-    ) {
-        let device = CydWasm::new(
-            self.context.clone(),
-            self.orientation(),
-            BACKGROUND,
-            FOREGROUND,
-            &FONT_6X10,
-            self.touch_source.clone(),
-        );
-        let (display, uncalibrated_touch) = device.parts_uncalibrated();
-        let touch = match calibration_config {
-            Some(calibration_config) => uncalibrated_touch.calibrate(calibration_config),
-            None => {
-                uncalibrated_touch.calibrate(CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0))
-            }
-        };
-        state.display = Some(display);
-        state.touch = Some(touch);
-    }
-
-    fn action(message: &str) -> String {
-        message.into()
-    }
-}
-
-fn map_to_orientation(orientation: Orientation, point: Point) -> Point {
-    orientation.map_landscape_point(point)
-}
-
-impl DnsTesterWeb {
     fn orientation(&self) -> Orientation {
-        self.state.borrow().app.orientation()
-    }
-
-    fn apply_action(&self, state: &mut DnsTesterState, action: DnsTesterAction) -> String {
-        match action {
-            DnsTesterAction::None => "idle".into(),
-            DnsTesterAction::StartDnsLookup => "starting DNS lookup".into(),
-            DnsTesterAction::ClearCalibrationAndRestart => {
-                if state.calibration_flash_block.clear().is_err() {
-                    return Self::action("storage error");
-                }
-                Self::action("recalibrate")
-            }
-            DnsTesterAction::ResetWifiAndRestart => Self::action("wifi"),
-            DnsTesterAction::SaveOrientationAndRestart(orientation) => {
-                if state.orientation_flash_block.save(&orientation).is_err() {
-                    return Self::action("storage error");
-                }
-                Self::action("orientation")
-            }
-        }
+        self.state.borrow().orientation
     }
 }
 
@@ -355,7 +277,7 @@ mod tests {
         ] {
             for point in [calibration, wifi, rotate] {
                 let landscape_point = map_to_landscape(orientation, point);
-                assert_eq!(map_to_orientation(orientation, landscape_point), point);
+                assert_eq!(orientation.map_landscape_point(landscape_point), point);
             }
         }
     }

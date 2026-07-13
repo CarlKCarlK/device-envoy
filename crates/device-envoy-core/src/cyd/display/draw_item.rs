@@ -1,12 +1,12 @@
 use crate::pixel_target::{
-    PixelTarget, PixelTargetAdapter, fill_ellipse_pixels, pixel_put, pixel_put_565,
+    fill_ellipse_pixels, pixel_put, pixel_put_565, PixelTarget, PixelTargetAdapter,
 };
 use embedded_graphics::{
-    Drawable,
-    pixelcolor::{Rgb565, Rgb888, raw::RawU16},
+    pixelcolor::{raw::RawU16, Rgb565, Rgb888},
     prelude::{IntoStorage, Point, Size},
     primitives::Rectangle,
     primitives::{Circle, Line, Primitive, PrimitiveStyle},
+    Drawable,
 };
 
 /// A view into a statically-stored RGB565 bitmap, optionally cropped to a
@@ -79,6 +79,42 @@ impl Image565View {
         let source_y = self.source.top_left.y as usize + vy;
         let index = source_y * self.stride as usize + source_x;
         Rgb565::from(RawU16::new(self.pixels[index]))
+    }
+
+    /// Iterate over the view's pixels in row-major order as `Rgb565` values.
+    ///
+    /// Cropped views skip the pixels outside the view while preserving the
+    /// view's local row order.
+    pub fn rgb565_iter(&self) -> impl Iterator<Item = Rgb565> + '_ {
+        Image565ViewPixels {
+            view: *self,
+            index: 0,
+        }
+    }
+}
+
+struct Image565ViewPixels {
+    view: Image565View,
+    index: usize,
+}
+
+impl Iterator for Image565ViewPixels {
+    type Item = Rgb565;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let width = self.view.source.size.width as usize;
+        let height = self.view.source.size.height as usize;
+        if self.index >= width * height {
+            return None;
+        }
+
+        let view_x = self.index % width;
+        let view_y = self.index / width;
+        let source_x = self.view.source.top_left.x as usize + view_x;
+        let source_y = self.view.source.top_left.y as usize + view_y;
+        let source_index = source_y * self.view.stride as usize + source_x;
+        self.index += 1;
+        Some(Rgb565::from(RawU16::new(self.view.pixels[source_index])))
     }
 }
 

@@ -4,6 +4,11 @@ This file contains both shared workspace rules and crate-specific rules for this
 
 ## General Policies
 
+- In this repository, **devolve** means inlining a code element's behavior at
+  its call sites (or into its containing function) and deleting the original
+  struct, enum, helper, or other abstraction. Prefer the clearer term
+  **inline** in prose when there is no need for the project-specific shorthand.
+
 - **Never silently skip required build targets in xtask/CI.** Every supported target (e.g., ESP32-C6, ESP32-S3, Pico 1, Pico 2) must be built on every `check-all` run. If a required toolchain component is missing, fail loudly with a clear error message and instructions to install it — do not skip or silently ignore the missing target. Silent skips hide real breakage.
 - When loading data from flash (or any other storage) into a local variable, name the variable after the concrete type. Example: `DeviceConfig` data should live in variables like `device_config`, not generic `config` or `flash0`.
 - Avoid introducing `unsafe` blocks. If a change truly requires `unsafe`, call it out explicitly and explain the justification so the user can review it carefully.

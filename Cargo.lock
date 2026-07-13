@@ -908,6 +908,7 @@ dependencies = [
 name = "device-envoy-examples-core"
 version = "0.0.0"
 dependencies = [
+ "derive_more",
  "device-envoy-core",
  "embassy-futures",
  "embassy-sync 0.8.0",

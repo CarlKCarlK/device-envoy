@@ -6,7 +6,7 @@
 //! rendering, and the redraw schedule. All platforms consume the same
 //! TGA-backed bitmap and dynamic-value layout.
 
-use core::fmt::Write;
+use core::fmt::{self, Write};
 
 use embedded_graphics::{
     Drawable,
@@ -23,19 +23,20 @@ use device_envoy_core::{
     button::Button,
     cyd::{
         Cyd, CydDisplay, CydTouch,
-        display::{CydFrame, DrawItem, Image565Fixed, Image565View, Orientation, tga},
+        display::{CydFrame, DrawItem, Image565View, Orientation, tga},
         touch::TouchEvent,
     },
     dns_lookup::DnsLookup,
 };
 use embassy_futures::yield_now;
 
-const LANDSCAPE_BITMAP_FIXED: Image565Fixed<320, 240, { 320 * 240 }> =
-    tga!(concat!(env!("OUT_DIR"), "/dns_landscape.tga")).to_565();
-const PORTRAIT_BITMAP_FIXED: Image565Fixed<240, 320, { 240 * 320 }> =
-    tga!(concat!(env!("OUT_DIR"), "/dns_portrait.tga")).to_565();
-const LANDSCAPE_BITMAP: Image565View = LANDSCAPE_BITMAP_FIXED.view();
-const PORTRAIT_BITMAP: Image565View = PORTRAIT_BITMAP_FIXED.view();
+const LANDSCAPE_BITMAP: Image565View =
+    tga!(concat!(env!("OUT_DIR"), "/dns_landscape.tga"), 320, 240)
+        .to_565()
+        .view();
+const PORTRAIT_BITMAP: Image565View = tga!(concat!(env!("OUT_DIR"), "/dns_portrait.tga"), 240, 320)
+    .to_565()
+    .view();
 
 const VALUE_TEXT: Rgb888 = Rgb888::new(255, 255, 255); // white
 const SUCCESS_TEXT: Rgb888 = Rgb888::new(121, 226, 164); // soft green
@@ -85,9 +86,7 @@ where
         };
         let mut latency = heapless::String::<16>::new();
         if queries == 0 {
-            latency
-                .push_str("--")
-                .map_err(|_| Error::Display(UiError::Text(core::fmt::Error)))?;
+            latency.push_str("--").map_err(|_| fmt::Error)?;
         } else {
             write!(latency, "{} ms", last_latency_millis)?;
         }
@@ -100,128 +99,255 @@ where
 
         match orientation {
             Orientation::Landscape | Orientation::LandscapeInverted => {
-                // Draw the DNS hostname being tested.
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(22, 76), Size::new(150, 20)),
+                // ------ Draw the DNS hostname being tested. ------
+                let rectangle = Rectangle::new(Point::new(22, 76), Size::new(150, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     target,
-                    &FONT_10X20,
-                    Alignment::Left,
-                    VALUE_TEXT,
+                    Point::zero(),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Left)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                // Draw the current test status.
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(244, 82), Size::new(56, 20)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the current test status. ------
+                let rectangle = Rectangle::new(Point::new(244, 82), Size::new(56, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     status,
-                    &FONT_10X20,
-                    Alignment::Center,
-                    if failures > 0 {
-                        FAILURE_TEXT
-                    } else {
-                        SUCCESS_TEXT
-                    },
+                    Point::new((rectangle.size.width / 2) as i32, 0),
+                    MonoTextStyle::new(
+                        &FONT_10X20,
+                        Rgb565::from(if failures > 0 {
+                            FAILURE_TEXT
+                        } else {
+                            SUCCESS_TEXT
+                        }),
+                    ),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Center)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                // Draw the most recent lookup latency.
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(100, 100), Size::new(120, 29)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the most recent lookup latency. ------
+                let rectangle = Rectangle::new(Point::new(100, 100), Size::new(120, 29));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     latency.as_str(),
-                    &PROFONT_24_POINT,
-                    Alignment::Center,
-                    VALUE_TEXT,
+                    Point::new((rectangle.size.width / 2) as i32, 0),
+                    MonoTextStyle::new(&PROFONT_24_POINT, Rgb565::from(VALUE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Center)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                // Draw the total number of DNS queries.
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(27, 156), Size::new(50, 20)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the total number of DNS queries. ------
+                let rectangle = Rectangle::new(Point::new(27, 156), Size::new(50, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     query_text.as_str(),
-                    &FONT_10X20,
-                    Alignment::Center,
-                    VALUE_TEXT,
+                    Point::new((rectangle.size.width / 2) as i32, 0),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Center)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                // Draw the number of successful DNS queries.
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(135, 156), Size::new(50, 20)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the number of successful DNS queries. ------
+                let rectangle = Rectangle::new(Point::new(135, 156), Size::new(50, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     success_text.as_str(),
-                    &FONT_10X20,
-                    Alignment::Center,
-                    SUCCESS_TEXT,
+                    Point::new((rectangle.size.width / 2) as i32, 0),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(SUCCESS_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Center)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                // Draw the number of failed DNS queries.
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(243, 156), Size::new(50, 20)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the number of failed DNS queries. ------
+                let rectangle = Rectangle::new(Point::new(243, 156), Size::new(50, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     failure_text.as_str(),
-                    &FONT_10X20,
-                    Alignment::Center,
-                    FAILURE_TEXT,
+                    Point::new((rectangle.size.width / 2) as i32, 0),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(FAILURE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Center)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
             }
             Orientation::Portrait | Orientation::PortraitInverted => {
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(22, 68), Size::new(190, 20)),
+                // ------ Draw the DNS hostname being tested. ------
+                let rectangle = Rectangle::new(Point::new(22, 68), Size::new(190, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     target,
-                    &FONT_10X20,
-                    Alignment::Left,
-                    VALUE_TEXT,
+                    Point::zero(),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Left)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(60, 119), Size::new(120, 29)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the most recent lookup latency. ------
+                let rectangle = Rectangle::new(Point::new(60, 119), Size::new(120, 29));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     latency.as_str(),
-                    &PROFONT_24_POINT,
-                    Alignment::Center,
-                    VALUE_TEXT,
+                    Point::new((rectangle.size.width / 2) as i32, 0),
+                    MonoTextStyle::new(&PROFONT_24_POINT, Rgb565::from(VALUE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Center)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(160, 180), Size::new(50, 20)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the total number of DNS queries. ------
+                let rectangle = Rectangle::new(Point::new(160, 180), Size::new(50, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     query_text.as_str(),
-                    &FONT_10X20,
-                    Alignment::Right,
-                    VALUE_TEXT,
+                    Point::new(rectangle.size.width as i32, 0),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(VALUE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Right)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(160, 202), Size::new(50, 20)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the number of successful DNS queries. ------
+                let rectangle = Rectangle::new(Point::new(160, 202), Size::new(50, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     success_text.as_str(),
-                    &FONT_10X20,
-                    Alignment::Right,
-                    SUCCESS_TEXT,
+                    Point::new(rectangle.size.width as i32, 0),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(SUCCESS_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Right)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
-                draw_text(
-                    display,
-                    bitmap,
-                    Rectangle::new(Point::new(160, 220), Size::new(50, 20)),
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
+
+                // ------ Draw the number of failed DNS queries. ------
+                let rectangle = Rectangle::new(Point::new(160, 220), Size::new(50, 20));
+                let mut frame = display.frame_mut(rectangle);
+                DrawItem::Bitmap {
+                    view: bitmap,
+                    top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+                }
+                .draw(&mut frame);
+                Text::with_text_style(
                     failure_text.as_str(),
-                    &FONT_10X20,
-                    Alignment::Right,
-                    FAILURE_TEXT,
+                    Point::new(rectangle.size.width as i32, 0),
+                    MonoTextStyle::new(&FONT_10X20, Rgb565::from(FAILURE_TEXT)),
+                    TextStyleBuilder::new()
+                        .alignment(Alignment::Right)
+                        .baseline(Baseline::Top)
+                        .build(),
                 )
-                .await?;
+                .draw(&mut frame)
+                .unwrap_infallible();
+                frame.flush().await.map_err(UiError::Display)?;
+                drop(frame);
             }
         }
 
@@ -251,10 +377,7 @@ where
             let exit = match action {
                 Action::None => None,
                 Action::StartDnsLookup => {
-                    let result = dns_lookup
-                        .lookup(target)
-                        .await
-                        .map_err(Error::Dns)?;
+                    let result = dns_lookup.lookup(target).await.map_err(Error::Dns)?;
                     queries = queries.saturating_add(1);
                     last_latency_millis = result.latency_millis;
                     if result.succeeded {
@@ -264,9 +387,7 @@ where
                     }
                     None
                 }
-                Action::ClearCalibrationAndRestart => {
-                    Some(Exit::CalibrationRequested)
-                }
+                Action::ClearCalibrationAndRestart => Some(Exit::CalibrationRequested),
                 Action::ResetWifiAndRestart => Some(Exit::WifiResetRequested),
                 Action::SaveOrientationAndRestart(next_orientation) => {
                     Some(Exit::OrientationChanged(next_orientation))
@@ -292,31 +413,30 @@ where
 }
 
 /// Errors returned by the shared DNS Tester loop.
-#[derive(Debug)]
+// `Touch`, `Dns`, and `UiError::Display` remain explicit because blanket
+// conversions for their generic error types would collide with the concrete
+// `fmt::Error` conversions below and in `UiError`.
+#[derive(Debug, derive_more::From)]
 pub enum Error<CydError, DnsError> {
     /// Rendering failed.
     Display(UiError<CydError>),
     /// Reading calibrated touch failed.
+    #[from(ignore)]
     Touch(CydError),
     /// The DNS lookup failed at the platform boundary.
+    #[from(ignore)]
     Dns(DnsError),
+}
+
+impl<CydError, DnsError> From<fmt::Error> for Error<CydError, DnsError> {
+    fn from(error: fmt::Error) -> Self {
+        Self::Display(UiError::Text(error))
+    }
 }
 
 impl<CydError, DnsError> Error<CydError, DnsError> {
     fn display(error: CydError) -> Self {
         Self::Display(UiError::Display(error))
-    }
-}
-
-impl<CydError, DnsError> From<UiError<CydError>> for Error<CydError, DnsError> {
-    fn from(error: UiError<CydError>) -> Self {
-        Self::Display(error)
-    }
-}
-
-impl<CydError, DnsError> From<core::fmt::Error> for Error<CydError, DnsError> {
-    fn from(error: core::fmt::Error) -> Self {
-        Self::Display(UiError::Text(error))
     }
 }
 
@@ -422,18 +542,15 @@ pub enum UiNotice {
 }
 
 /// Errors from rendering the shared DNS tester UI.
-#[derive(Debug)]
+// The generic display error is explicit for the same coherence reason as the
+// generic device and DNS errors in [`Error`].
+#[derive(Debug, derive_more::From)]
 pub enum UiError<F> {
     /// The fixed-size text buffer was too small.
-    Text(core::fmt::Error),
+    Text(fmt::Error),
     /// The display failed to flush.
+    #[from(ignore)]
     Display(F),
-}
-
-impl<F> From<core::fmt::Error> for UiError<F> {
-    fn from(error: core::fmt::Error) -> Self {
-        Self::Text(error)
-    }
 }
 
 /// Render a full-screen operational notice over the DNS tester artwork.
@@ -490,10 +607,7 @@ where
     .await
 }
 
-async fn fill_panel<D>(
-    display: &mut D,
-    rectangle: Rectangle,
-) -> Result<(), UiError<D::Error>>
+async fn fill_panel<D>(display: &mut D, rectangle: Rectangle) -> Result<(), UiError<D::Error>>
 where
     D: CydDisplay,
 {
@@ -534,42 +648,7 @@ where
     )
     .draw(&mut frame)
     .unwrap_infallible();
-        frame.flush().await.map_err(UiError::Display)
-}
-
-async fn draw_text<D>(
-    display: &mut D,
-    bitmap: Image565View,
-    rectangle: Rectangle,
-    text: &str,
-    font: &MonoFont<'_>,
-    alignment: Alignment,
-    color: Rgb888,
-) -> Result<(), UiError<D::Error>>
-where
-    D: CydDisplay,
-{
-    let mut frame = display.frame_mut(rectangle);
-    DrawItem::Bitmap {
-        view: bitmap,
-        top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-    }
-    .draw(&mut frame);
-    let position_x = match alignment {
-        Alignment::Left => 0,
-        Alignment::Center => (rectangle.size.width / 2) as i32,
-        Alignment::Right => rectangle.size.width as i32,
-    };
-    Text::with_text_style(
-        text,
-        Point::new(position_x, 0),
-        MonoTextStyle::new(font, Rgb565::from(color)),
-        TextStyleBuilder::new()
-            .alignment(alignment)
-            .baseline(Baseline::Top)
-            .build(),
-    )
-    .draw(&mut frame)
-    .unwrap_infallible();
     frame.flush().await.map_err(UiError::Display)
 }
+
+// todo0000 understand the nested error story.

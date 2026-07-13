@@ -14,8 +14,8 @@ use device_envoy_core::{
     wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm},
 };
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, display_orientation_for_calibration,
-    dns_tester, orientation_after_calibration,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError,
+    display_orientation_for_calibration, dns_tester, orientation_after_calibration,
 };
 use embedded_graphics::{geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::{JsCast, prelude::*};

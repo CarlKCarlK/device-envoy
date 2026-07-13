@@ -5,20 +5,20 @@ use std::{
 
 use device_envoy_core::{
     cyd::{
-        display::Orientation,
-        touch::calibration::{ensure_calibration, CalibrationConfig},
         CydParts as _, CydTouchUncalibrated as _,
+        display::Orientation,
+        touch::calibration::{CalibrationConfig, ensure_calibration},
     },
     dns_lookup::{DnsLookupFn, DnsLookupResult},
     flash_block::FlashBlock as _,
     wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm},
 };
 use device_envoy_examples_core::dns_tester::{
-    display_orientation_for_calibration, dns_tester, orientation_after_calibration, DnsTesterError,
-    DnsTesterExit, DnsTesterUiError,
+    DnsTesterError, DnsTesterExit, DnsTesterUiError, display_orientation_for_calibration,
+    dns_tester, orientation_after_calibration,
 };
 use embedded_graphics::{geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::{JsCast, prelude::*};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 const DNS_HOSTNAME: &str = "example.com";

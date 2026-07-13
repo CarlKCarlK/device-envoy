@@ -6,11 +6,11 @@
       .panel2 { fill: #074569; }
       .line { stroke: #4f91aa; stroke-width: 1; }
       .grid { stroke: #2d7898; stroke-width: .6; opacity: .48; }
-      .label { fill: #c5dce6; font: 700 10px Arial, sans-serif; letter-spacing: 0; }
-      .small { fill: #9fc4d3; font: 700 8px Arial, sans-serif; letter-spacing: 0; }
-      .value { fill: #ffffff; font: 700 20px "Courier New", monospace; letter-spacing: 0; }
-      .latency { fill: #ffffff; font: 700 24px "Courier New", monospace; letter-spacing: 0; }
-      .accent { fill: #ffc247; font: 700 10px Arial, sans-serif; letter-spacing: 0; }
+      .label { fill: #c5dce6; font: 700 10px sans-serif; letter-spacing: 0; }
+      .small { fill: #9fc4d3; font: 700 8px sans-serif; letter-spacing: 0; }
+      .value { fill: #ffffff; font: 700 20px monospace; letter-spacing: 0; }
+      .latency { fill: #ffffff; font: 700 24px monospace; letter-spacing: 0; }
+      .accent { fill: #ffc247; font: 700 10px sans-serif; letter-spacing: 0; }
       .success { fill: #79e2a4; }
       .failure { fill: #ff756e; }
       .muted-stroke { stroke: #77aabe; stroke-width: 1; fill: none; }

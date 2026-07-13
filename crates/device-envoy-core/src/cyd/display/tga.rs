@@ -3,10 +3,10 @@
 use crate::cyd::display::CydFrame;
 use crate::pixel_target::rgb565_raw_from_rgb888_components;
 use embedded_graphics::{
-    pixelcolor::{raw::RawU16, Rgb565},
+    Drawable, Pixel,
+    pixelcolor::{Rgb565, raw::RawU16},
     prelude::{DrawTarget, Point, Size},
     primitives::Rectangle,
-    Drawable, Pixel,
 };
 
 /// Returns the number of bytes required for a packed one-bit mask.
@@ -205,11 +205,13 @@ impl<'a, const W: usize, const H: usize, const N: usize> PlacedImage565<'a, W, H
             top_left: self.top_left,
             index: 0,
         };
-        target.draw_iter(core::iter::from_fn(|| loop {
-            let pixel = pixels.next()?;
-            let index = pixels.index - 1;
-            if mask.is_set(index) {
-                return Some(pixel);
+        target.draw_iter(core::iter::from_fn(|| {
+            loop {
+                let pixel = pixels.next()?;
+                let index = pixels.index - 1;
+                if mask.is_set(index) {
+                    return Some(pixel);
+                }
             }
         }))
     }

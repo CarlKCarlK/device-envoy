@@ -45,23 +45,23 @@ use core::convert::Infallible;
 
 use defmt::{info, warn};
 use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
-use device_envoy_core::cyd::touch::calibration::{ensure_calibration, CALIBRATION_MIN_PIXEL_COUNT};
-use device_envoy_core::cyd::{display::Orientation, Cyd as _, CydParts as _};
+use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
+use device_envoy_core::cyd::{Cyd as _, CydParts as _, display::Orientation};
 use device_envoy_core::dns_lookup::{DnsLookupFn, DnsLookupResult};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester::{
-    display_orientation_for_calibration, dns_tester, dns_tester_splash, render_notice,
     DnsTesterError, DnsTesterExit, DnsTesterUiError, DnsTesterUiNotice,
+    display_orientation_for_calibration, dns_tester, dns_tester_splash, render_notice,
 };
 use device_envoy_rp::{
+    Error, Result,
     button::{Button as _, ButtonRp, PressedTo},
     cyd::{
         CydRp, CydRpUncalibrated, CydStaticRp, CydTouch as _, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
     },
     flash_block::FlashBlockRp,
     wifi_auto::{WifiAutoEvent, WifiAutoRp},
-    Error, Result,
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
@@ -89,8 +89,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
     info!("Starting CYD DNS tester");
 
-    let [wifi_flash_block, mut calibration_flash_block, mut orientation_flash_block] =
-        FlashBlockRp::new_array::<3>(p.FLASH)?;
+    let [
+        wifi_flash_block,
+        mut calibration_flash_block,
+        mut orientation_flash_block,
+    ] = FlashBlockRp::new_array::<3>(p.FLASH)?;
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);

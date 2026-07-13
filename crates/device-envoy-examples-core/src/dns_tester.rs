@@ -9,24 +9,24 @@
 use core::fmt::Write;
 
 use embedded_graphics::{
+    Drawable,
     geometry::{Point, Size},
-    mono_font::{ascii::FONT_10X20, MonoFont, MonoTextStyle},
+    mono_font::{MonoFont, MonoTextStyle, ascii::FONT_10X20},
     pixelcolor::{Rgb565, Rgb888},
     primitives::Rectangle,
     text::{Alignment, Baseline, Text, TextStyleBuilder},
-    Drawable,
 };
 use profont::PROFONT_24_POINT;
 
 use device_envoy_core::{
+    UnwrapInfallible,
     button::Button,
     cyd::{
-        display::{tga, CydFrame, DrawItem, Image565Fixed, Image565View, Orientation},
-        touch::TouchEvent,
         Cyd, CydDisplay, CydTouch,
+        display::{CydFrame, DrawItem, Image565Fixed, Image565View, Orientation, tga},
+        touch::TouchEvent,
     },
     dns_lookup::DnsLookup,
-    UnwrapInfallible,
 };
 use embassy_futures::yield_now;
 

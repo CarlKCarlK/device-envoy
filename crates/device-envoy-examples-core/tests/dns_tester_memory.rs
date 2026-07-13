@@ -3,9 +3,9 @@
 use device_envoy_core::{
     cyd::{display::Orientation, touch::TouchEvent},
     dns_lookup::{DnsLookup, DnsLookupResult},
-    memory::{assert_framebuffer_matches_expected_png, CydMemory},
+    memory::{CydMemory, assert_framebuffer_matches_expected_png},
 };
-use device_envoy_examples_core::dns_tester::{dns_tester, DnsTesterExit};
+use device_envoy_examples_core::dns_tester::{DnsTesterExit, dns_tester};
 use embedded_graphics::{
     geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888, prelude::Size,
 };

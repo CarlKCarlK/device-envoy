@@ -1,15 +1,11 @@
-[alias]
-check-all = "run --manifest-path xtask/Cargo.toml -- check-all"
-publish-core-dry-run = "publish --package device-envoy-core --dry-run"
-publish-core = "publish --package device-envoy-core"
-publish-rp-dry-run = "publish --package device-envoy-rp --dry-run --no-verify"
-publish-rp = "publish --package device-envoy-rp --no-verify"
-publish-esp-dry-run = "publish --package device-envoy-esp --dry-run --no-verify"
-publish-esp = "publish --package device-envoy-esp --no-verify"
-publish-device-envoy-dry-run = "publish --package device-envoy --dry-run"
-publish-device-envoy = "publish --package device-envoy"
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "link-arg=-Tlinkall.x"]
 
-lcd-text-2 = "run --package device-envoy-rp --example lcd_text --release --target thumbv8m.main-none-eabihf --features pico2,arm --no-default-features"
-lcd-text-2-check = "check --package device-envoy-rp --example lcd_text --release --target thumbv8m.main-none-eabihf --features pico2,arm --no-default-features"
-lcd-texts-2 = "run --package device-envoy-rp --example lcd_texts --release --target thumbv8m.main-none-eabihf --features pico2,arm --no-default-features"
-lcd-texts-2-check = "check --package device-envoy-rp --example lcd_texts --release --target thumbv8m.main-none-eabihf --features pico2,arm --no-default-features"
+[target.xtensa-esp32s2-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "link-arg=-Tlinkall.x"]
+
+[target.xtensa-esp32s3-none-elf]
+runner = "espflash flash --monitor"
+rustflags = ["-C", "link-arg=-Tlinkall.x"]

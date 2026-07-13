@@ -48,10 +48,7 @@ use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_esp::{
     Error, Result,
     button::{Button as _, ButtonEsp, PressedTo},
-    cyd::{
-        CydEsp, CydEspUncalibrated, CydStaticEsp, CydTouch as _, DEFAULT_DISPLAY_SPI_HZ,
-        DEFAULT_FONT,
-    },
+    cyd::{CydEsp, CydEspUncalibrated, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
@@ -122,7 +119,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
     info!("CYD display and touch initialized");
 
-    let (mut touch, calibration_outcome) = ensure_calibration(
+    let (touch, calibration_outcome) = ensure_calibration(
         &mut display,
         touch,
         &mut calibration_flash_block,

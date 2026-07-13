@@ -1,12 +1,12 @@
 use device_envoy_core::{
     cyd::{display::Orientation, touch::calibration::CalibrationConfig},
     flash_block::FlashBlock as _,
-    wasm::{next_animation_frame, FlashBlockWasm},
+    wasm::{FlashBlockWasm, next_animation_frame},
 };
 use device_envoy_dns_tester_wasm::DnsTesterWeb;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
-use web_sys::{window, HtmlCanvasElement};
+use web_sys::{HtmlCanvasElement, window};
 
 wasm_bindgen_test_configure!(run_in_browser);
 

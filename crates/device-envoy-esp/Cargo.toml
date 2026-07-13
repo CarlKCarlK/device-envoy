@@ -24,6 +24,8 @@ compile-fail-tests = []
 doc-images = ["dep:embed-doc-image"]
 esp32 = [
     "esp-hal/esp32",
+    "esp-hal/rt",
+    "esp-hal/unstable",
     "esp-rtos/esp32",
     "esp-storage/esp32",
     "esp-alloc/esp32",

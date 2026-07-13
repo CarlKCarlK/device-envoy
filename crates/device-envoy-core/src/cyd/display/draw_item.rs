@@ -1,12 +1,12 @@
 use crate::pixel_target::{
-    fill_ellipse_pixels, pixel_put, pixel_put_565, PixelTarget, PixelTargetAdapter,
+    PixelTarget, PixelTargetAdapter, fill_ellipse_pixels, pixel_put, pixel_put_565,
 };
 use embedded_graphics::{
-    pixelcolor::{raw::RawU16, Rgb565, Rgb888},
+    Drawable,
+    pixelcolor::{Rgb565, Rgb888, raw::RawU16},
     prelude::{IntoStorage, Point, Size},
     primitives::Rectangle,
     primitives::{Circle, Line, Primitive, PrimitiveStyle},
-    Drawable,
 };
 
 /// A view into a statically-stored RGB565 bitmap, optionally cropped to a

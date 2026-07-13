@@ -40,7 +40,10 @@ pub fn rasterize_svg(svg: &str, source: &Path, width: u32, height: u32) -> Vec<u
         "{} must contain exactly one preview-values group",
         source.display()
     );
-    let tree = usvg::Tree::from_data(svg.as_bytes(), &usvg::Options::default())
+    let mut options = usvg::Options::default();
+    options.fontdb_mut().load_system_fonts();
+    configure_font_families(options.fontdb_mut(), source);
+    let tree = usvg::Tree::from_data(svg.as_bytes(), &options)
         .unwrap_or_else(|error| panic!("parse {}: {error}", source.display()));
     assert_eq!(
         tree.size().width(),
@@ -62,6 +65,30 @@ pub fn rasterize_svg(svg: &str, source: &Path, width: u32, height: u32) -> Vec<u
         &mut pixmap.as_mut(),
     );
     encode_tga(width, height, pixmap.data())
+}
+
+fn configure_font_families(fontdb: &mut usvg::fontdb::Database, source: &Path) {
+    let sans_serif_family = ["Arial", "Liberation Sans", "DejaVu Sans", "Ubuntu"]
+        .into_iter()
+        .find(|family| fontdb_has_family(fontdb, family))
+        .unwrap_or_else(|| panic!("no sans-serif font is installed for {}", source.display()));
+    let monospace_family = [
+        "Courier New",
+        "Liberation Mono",
+        "DejaVu Sans Mono",
+        "Ubuntu Mono",
+    ]
+    .into_iter()
+    .find(|family| fontdb_has_family(fontdb, family))
+    .unwrap_or_else(|| panic!("no monospace font is installed for {}", source.display()));
+    fontdb.set_sans_serif_family(sans_serif_family);
+    fontdb.set_monospace_family(monospace_family);
+}
+
+fn fontdb_has_family(fontdb: &usvg::fontdb::Database, family: &str) -> bool {
+    fontdb
+        .faces()
+        .any(|face| face.families.iter().any(|(name, _)| name == family))
 }
 
 pub fn remove_preview_groups(svg: &str, source: &Path) -> (String, usize) {

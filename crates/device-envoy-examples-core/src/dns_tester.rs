@@ -64,7 +64,8 @@ where
     let mut queries: u32 = 0;
     let mut successes: u32 = 0;
     let mut failures: u32 = 0;
-    let mut last_latency_millis = 0;
+    let mut last_latency_millis = None;
+    let mut status = Status::Tap;
 
     let hostname = dns.hostname();
     let mut orientation = cyd.orientation();
@@ -79,39 +80,28 @@ where
     };
     ui.fill_contiguous_full()?;
     ui.text(layout.hostname, hostname).await?;
+    let mut text = heapless::String::<16>::new();
     loop {
-        // todo0000 review these
+        ui.status(layout.status, status, status.is_good()).await?;
 
-        let status = if queries == 0 {
-            "TAP"
-        } else if failures > 0 {
-            "FAIL"
-        } else {
-            "OK"
-        };
-        if let Some(status_slot) = layout.status {
-            ui.status(status_slot, status, failures > 0).await?;
+        text.clear();
+        match last_latency_millis {
+            Some(latency_millis) => write!(text, "{} ms", latency_millis)?,
+            None => write!(text, "--")?,
         }
+        ui.text(layout.latency, &text).await?;
 
-        let mut latency = heapless::String::<16>::new();
-        if queries == 0 {
-            latency.push_str("--").map_err(|_| fmt::Error)?;
-        } else {
-            write!(latency, "{} ms", last_latency_millis)?;
-        }
-        ui.text(layout.latency, latency.as_str()).await?;
+        text.clear();
+        write!(text, "{}", queries)?;
+        ui.text(layout.queries, &text).await?;
 
-        let mut query_text = heapless::String::<12>::new();
-        write!(query_text, "{}", queries)?;
-        ui.text(layout.queries, query_text.as_str()).await?;
+        text.clear();
+        write!(text, "{}", successes)?;
+        ui.text(layout.successes, &text).await?;
 
-        let mut success_text = heapless::String::<12>::new();
-        write!(success_text, "{}", successes)?;
-        ui.text(layout.successes, success_text.as_str()).await?;
-
-        let mut failure_text = heapless::String::<12>::new();
-        write!(failure_text, "{}", failures)?;
-        ui.text(layout.failures, failure_text.as_str()).await?;
+        text.clear();
+        write!(text, "{}", failures)?;
+        ui.text(layout.failures, &text).await?;
 
         if button.is_pressed() {
             return Ok(Exit::CalibrationRequested);
@@ -141,11 +131,15 @@ where
                 Action::StartDns => {
                     let result = dns.lookup().await.map_err(Error::Dns)?;
                     queries = queries.saturating_add(1);
-                    last_latency_millis = result.latency_millis;
+                    last_latency_millis = Some(result.latency_millis);
                     if result.succeeded {
                         successes = successes.saturating_add(1);
+                        if matches!(status, Status::Tap) {
+                            status = Status::Ok;
+                        }
                     } else {
                         failures = failures.saturating_add(1);
+                        status = Status::Fail;
                     }
                     None
                 }
@@ -168,7 +162,7 @@ struct Layout {
     bitmap: Image565View,
     hostname: TextSlot,
     latency: TextSlot,
-    status: Option<StatusSlot>,
+    status: StatusSlot,
     queries: TextSlot,
     successes: TextSlot,
     failures: TextSlot,
@@ -248,7 +242,7 @@ const LANDSCAPE_LAYOUT: Layout = Layout {
         Alignment::Center,
         VALUE_TEXT,
     ),
-    status: Some(StatusSlot::new(
+    status: StatusSlot::new(
         TextSlot::new(
             Rectangle::new(Point::new(244, 82), Size::new(56, 20)),
             TextFont::Body,
@@ -257,7 +251,7 @@ const LANDSCAPE_LAYOUT: Layout = Layout {
         ),
         SUCCESS_TEXT,
         FAILURE_TEXT,
-    )),
+    ),
     queries: TextSlot::new(
         Rectangle::new(Point::new(27, 156), Size::new(50, 20)),
         TextFont::Body,
@@ -306,7 +300,16 @@ const PORTRAIT_LAYOUT: Layout = Layout {
         Alignment::Center,
         VALUE_TEXT,
     ),
-    status: None,
+    status: StatusSlot::new(
+        TextSlot::new(
+            Rectangle::new(Point::new(180, 18), Size::new(50, 20)),
+            TextFont::Body,
+            Alignment::Center,
+            SUCCESS_TEXT,
+        ),
+        SUCCESS_TEXT,
+        FAILURE_TEXT,
+    ),
     queries: TextSlot::new(
         Rectangle::new(Point::new(160, 180), Size::new(50, 20)),
         TextFont::Body,
@@ -356,23 +359,28 @@ where
             .map_err(UiError::Display)
     }
 
-    async fn text(&mut self, slot: TextSlot, text: &str) -> Result<(), UiError<Display::Error>> {
-        self.draw_text(slot, text, slot.color).await
+    async fn text(
+        &mut self,
+        slot: TextSlot,
+        text: impl AsRef<str>,
+    ) -> Result<(), UiError<Display::Error>> {
+        self.draw_text(slot, text.as_ref(), slot.color).await
     }
 
     async fn status(
         &mut self,
         slot: StatusSlot,
-        text: &str,
-        failed: bool,
+        text: impl AsRef<str>,
+        is_good: bool,
     ) -> Result<(), UiError<Display::Error>> {
+        let text = text.as_ref();
         self.draw_text(
             slot.text,
             text,
-            if failed {
-                slot.failure_color
-            } else {
+            if is_good {
                 slot.success_color
+            } else {
+                slot.failure_color
             },
         )
         .await
@@ -488,6 +496,33 @@ enum Action {
     ResetWifiAndRestart,
     /// Persist this orientation and restart the display adapter.
     SaveOrientationAndRestart(Orientation),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Status {
+    Tap,
+    Ok,
+    Fail,
+}
+
+impl Status {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Tap => "TAP",
+            Self::Ok => "OK",
+            Self::Fail => "FAIL",
+        }
+    }
+
+    const fn is_good(self) -> bool {
+        !matches!(self, Self::Fail)
+    }
+}
+
+impl AsRef<str> for Status {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -666,9 +701,7 @@ mod tests {
         for slot in slots {
             assert_contained(slot.rectangle, screen_size);
         }
-        if let Some(status) = layout.status {
-            assert_contained(status.text.rectangle, screen_size);
-        }
+        assert_contained(layout.status.text.rectangle, screen_size);
 
         for tap_region in layout.taps {
             assert_contained(tap_region.rectangle, screen_size);
@@ -746,13 +779,11 @@ mod tests {
 
     #[test]
     fn status_slot_has_distinct_success_and_failure_colors() {
-        if let Some(status) = LANDSCAPE_LAYOUT.status {
-            assert_eq!(status.success_color, SUCCESS_TEXT);
-            assert_eq!(status.failure_color, FAILURE_TEXT);
-            assert_eq!(status.text.color, SUCCESS_TEXT);
-        } else {
-            assert!(false, "landscape must have a status slot");
-        }
+        assert_eq!(LANDSCAPE_LAYOUT.status.success_color, SUCCESS_TEXT);
+        assert_eq!(LANDSCAPE_LAYOUT.status.failure_color, FAILURE_TEXT);
+        assert_eq!(LANDSCAPE_LAYOUT.status.text.color, SUCCESS_TEXT);
+        assert_eq!(PORTRAIT_LAYOUT.status.success_color, SUCCESS_TEXT);
+        assert_eq!(PORTRAIT_LAYOUT.status.failure_color, FAILURE_TEXT);
     }
 
     #[test]

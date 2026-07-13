@@ -4,7 +4,7 @@
 //! [`CydMemory`](device_envoy_core::memory::CydMemory)
 //! provide resources and events while it owns state transitions, commands,
 //! rendering, and the redraw schedule. All platforms consume the same
-//! TGA-backed background and dynamic-value layout.
+//! TGA-backed bitmap and dynamic-value layout.
 
 use core::fmt::Write;
 
@@ -30,12 +30,12 @@ use device_envoy_core::{
 };
 use embassy_futures::yield_now;
 
-const LANDSCAPE_BACKGROUND_FIXED: Image565Fixed<320, 240, { 320 * 240 }> =
+const LANDSCAPE_BITMAP_FIXED: Image565Fixed<320, 240, { 320 * 240 }> =
     tga!(concat!(env!("OUT_DIR"), "/dns_landscape.tga")).to_565();
-const PORTRAIT_BACKGROUND_FIXED: Image565Fixed<240, 320, { 240 * 320 }> =
+const PORTRAIT_BITMAP_FIXED: Image565Fixed<240, 320, { 240 * 320 }> =
     tga!(concat!(env!("OUT_DIR"), "/dns_portrait.tga")).to_565();
-const LANDSCAPE_BACKGROUND: Image565View = LANDSCAPE_BACKGROUND_FIXED.view();
-const PORTRAIT_BACKGROUND: Image565View = PORTRAIT_BACKGROUND_FIXED.view();
+const LANDSCAPE_BITMAP: Image565View = LANDSCAPE_BITMAP_FIXED.view();
+const PORTRAIT_BITMAP: Image565View = PORTRAIT_BITMAP_FIXED.view();
 
 const VALUE_TEXT: Rgb888 = Rgb888::new(255, 255, 255); // white
 const SUCCESS_TEXT: Rgb888 = Rgb888::new(121, 226, 164); // soft green
@@ -63,15 +63,12 @@ where
 {
     let mut orientation = cyd.orientation();
     let (display, touch) = cyd.parts();
-    let background = match orientation {
-        Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_BACKGROUND,
-        Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_BACKGROUND,
+    let bitmap = match orientation {
+        Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_BITMAP,
+        Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_BITMAP,
     };
     display
-        .fill_contiguous(
-            Rectangle::new(Point::zero(), orientation.size()),
-            background.rgb565_iter(),
-        )
+        .fill_contiguous_full(bitmap.rgb565_iter())
         .map_err(DnsTesterError::display_error)?;
     let mut queries: u32 = 0;
     let mut successes: u32 = 0;
@@ -106,7 +103,7 @@ where
                 // Draw the DNS hostname being tested.
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(22, 76), Size::new(150, 20)),
                     target,
                     &FONT_10X20,
@@ -117,7 +114,7 @@ where
                 // Draw the current test status.
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(244, 82), Size::new(56, 20)),
                     status,
                     &FONT_10X20,
@@ -132,7 +129,7 @@ where
                 // Draw the most recent lookup latency.
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(100, 100), Size::new(120, 29)),
                     latency.as_str(),
                     &PROFONT_24_POINT,
@@ -143,7 +140,7 @@ where
                 // Draw the total number of DNS queries.
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(27, 156), Size::new(50, 20)),
                     query_text.as_str(),
                     &FONT_10X20,
@@ -154,7 +151,7 @@ where
                 // Draw the number of successful DNS queries.
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(135, 156), Size::new(50, 20)),
                     success_text.as_str(),
                     &FONT_10X20,
@@ -165,7 +162,7 @@ where
                 // Draw the number of failed DNS queries.
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(243, 156), Size::new(50, 20)),
                     failure_text.as_str(),
                     &FONT_10X20,
@@ -177,7 +174,7 @@ where
             Orientation::Portrait | Orientation::PortraitInverted => {
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(22, 68), Size::new(190, 20)),
                     target,
                     &FONT_10X20,
@@ -187,7 +184,7 @@ where
                 .await?;
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(60, 119), Size::new(120, 29)),
                     latency.as_str(),
                     &PROFONT_24_POINT,
@@ -197,7 +194,7 @@ where
                 .await?;
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(160, 180), Size::new(50, 20)),
                     query_text.as_str(),
                     &FONT_10X20,
@@ -207,7 +204,7 @@ where
                 .await?;
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(160, 202), Size::new(50, 20)),
                     success_text.as_str(),
                     &FONT_10X20,
@@ -217,7 +214,7 @@ where
                 .await?;
                 draw_text(
                     display,
-                    background,
+                    bitmap,
                     Rectangle::new(Point::new(160, 220), Size::new(50, 20)),
                     failure_text.as_str(),
                     &FONT_10X20,
@@ -450,16 +447,10 @@ where
 {
     match orientation {
         Orientation::Landscape | Orientation::LandscapeInverted => display
-            .fill_contiguous(
-                Rectangle::new(Point::zero(), orientation.size()),
-                LANDSCAPE_BACKGROUND.rgb565_iter(),
-            )
+            .fill_contiguous_full(LANDSCAPE_BITMAP.rgb565_iter())
             .map_err(DnsTesterUiError::Display)?,
         Orientation::Portrait | Orientation::PortraitInverted => display
-            .fill_contiguous(
-                Rectangle::new(Point::zero(), orientation.size()),
-                PORTRAIT_BACKGROUND.rgb565_iter(),
-            )
+            .fill_contiguous_full(PORTRAIT_BITMAP.rgb565_iter())
             .map_err(DnsTesterUiError::Display)?,
     }
 
@@ -548,7 +539,7 @@ where
 
 async fn draw_text<D>(
     display: &mut D,
-    background: Image565View,
+    bitmap: Image565View,
     rectangle: Rectangle,
     text: &str,
     font: &MonoFont<'_>,
@@ -560,7 +551,7 @@ where
 {
     let mut frame = display.frame_mut(rectangle);
     DrawItem::Bitmap {
-        view: background,
+        view: bitmap,
         top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
     }
     .draw(&mut frame);

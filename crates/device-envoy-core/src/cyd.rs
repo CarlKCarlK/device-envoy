@@ -536,6 +536,18 @@ frame.flush().await?;
     where
         I: IntoIterator<Item = Rgb565>;
 
+    /// Fill the entire screen immediately from row-major native-color pixels.
+    ///
+    /// This is the full-screen convenience form of [`CydDisplay::fill_contiguous`].
+    /// Empty pixel iterators are allowed; implementations retain the same size
+    /// validation behavior as [`CydDisplay::fill_contiguous`].
+    fn fill_contiguous_full<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Rgb565>,
+    {
+        self.fill_contiguous(Rectangle::new(Point::zero(), self.screen_size()), pixels)
+    }
+
     /// Present a native-color rectangle buffer at `top_left`.
     ///
     /// See the [CydDisplay trait documentation](Self) for related drawing APIs.

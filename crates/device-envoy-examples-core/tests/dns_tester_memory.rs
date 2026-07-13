@@ -43,7 +43,7 @@ fn scripted_runtime_owns_startup_input_dns_and_rendering() -> Result<(), Box<dyn
     assert_eq!(
         block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns))
             .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-        Exit::CalibrationRequested
+        Exit::Calibrate
     );
     assert!(cyd_memory.flush_count() > 0);
     Ok(())
@@ -83,7 +83,7 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
         assert_eq!(
             block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns,))
                 .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-            Exit::CalibrationRequested
+            Exit::Calibrate
         );
         if matches!(
             orientation,

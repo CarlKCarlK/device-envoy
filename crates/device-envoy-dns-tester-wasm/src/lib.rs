@@ -181,9 +181,9 @@ impl DnsTesterWeb {
 
     pub fn take_exit(&self) -> String {
         match self.exit.take() {
-            Some(CoreExit::CalibrationRequested) => "recalibrate".into(),
-            Some(CoreExit::WifiResetRequested) => "wifi".into(),
-            Some(CoreExit::OrientationChanged(_)) => "orientation".into(),
+            Some(CoreExit::Calibrate) => "recalibrate".into(),
+            Some(CoreExit::ResetWifi) => "wifi".into(),
+            Some(CoreExit::Reorientate(_)) => "orientation".into(),
             None if self.failed.get() => "runtime error".into(),
             None => "idle".into(),
         }

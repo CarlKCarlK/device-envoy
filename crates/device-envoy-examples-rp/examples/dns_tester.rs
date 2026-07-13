@@ -214,9 +214,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             CoreError::Dns(error) => match error {},
         })?;
     match exit {
-        CoreExit::CalibrationRequested => calibration_flash_block.clear()?,
-        CoreExit::WifiResetRequested => wifi_auto.reset_to_captive_portal()?,
-        CoreExit::OrientationChanged(next_orientation) => {
+        CoreExit::Calibrate => calibration_flash_block.clear()?,
+        CoreExit::ResetWifi => wifi_auto.reset_to_captive_portal()?,
+        CoreExit::Reorientate(next_orientation) => {
             orientation_flash_block.save(&next_orientation)?;
         }
     }

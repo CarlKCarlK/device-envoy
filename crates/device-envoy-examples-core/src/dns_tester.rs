@@ -67,7 +67,7 @@ where
     let mut last_latency_millis = None;
     let mut status = Status::Tap;
 
-    let mut orientation = cyd.orientation();
+    let orientation = cyd.orientation();
     let (display, touch) = cyd.parts();
     let layout = match orientation {
         Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
@@ -80,7 +80,7 @@ where
         yield_now().await;
 
         if button.is_pressed() {
-            return Ok(Exit::CalibrationRequested);
+            return Ok(Exit::Calibrate);
         }
 
         ui.begin(touch.read().map_err(Error::Touch)?, orientation);
@@ -120,14 +120,13 @@ where
                 }
             }
             TouchAction::Control(Control::Calibration) => {
-                return Ok(Exit::CalibrationRequested);
+                return Ok(Exit::Calibrate);
             }
             TouchAction::Control(Control::Wifi) => {
-                return Ok(Exit::WifiResetRequested);
+                return Ok(Exit::ResetWifi);
             }
             TouchAction::Control(Control::Orientation) => {
-                orientation = orientation.next();
-                return Ok(Exit::OrientationChanged(orientation));
+                return Ok(Exit::Reorientate(orientation.next()));
             }
         }
     }
@@ -504,11 +503,11 @@ impl<CydError, DnsError> From<fmt::Error> for Error<CydError, DnsError> {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Exit {
     /// Clear calibration and restart the platform calibration flow.
-    CalibrationRequested,
+    Calibrate,
     /// Clear Wi-Fi credentials and restart the platform setup flow.
-    WifiResetRequested,
+    ResetWifi,
     /// Persist this orientation and restart the display adapter.
-    OrientationChanged(Orientation),
+    Reorientate(Orientation),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

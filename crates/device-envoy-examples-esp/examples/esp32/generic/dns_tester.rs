@@ -139,8 +139,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     dns_tester_splash(cyd.display(), orientation)
         .await
         .map_err(|error| match error {
-            device_envoy_examples_core::dns_tester::Error::Text(_) => Error::FormatError,
-            device_envoy_examples_core::dns_tester::Error::Display(error) => error.into(),
+            device_envoy_examples_core::dns_tester::UiError::Text(_) => Error::FormatError,
+            device_envoy_examples_core::dns_tester::UiError::Display(error) => error.into(),
         })?;
 
     let wifi_auto = WifiAutoEsp::new(
@@ -161,10 +161,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
                     )
                     .await
                     .map_err(|error| match error {
-                        device_envoy_examples_core::dns_tester::Error::Text(_) => {
+                        device_envoy_examples_core::dns_tester::UiError::Text(_) => {
                             Error::FormatError
                         }
-                        device_envoy_examples_core::dns_tester::Error::Display(error) => {
+                        device_envoy_examples_core::dns_tester::UiError::Display(error) => {
                             error.into()
                         }
                     })?;
@@ -210,8 +210,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .await
         .map_err(|error| match error {
             device_envoy_examples_core::dns_tester::Error::Display(error) => match error {
-                device_envoy_examples_core::dns_tester::Error::Text(_) => Error::FormatError,
-                device_envoy_examples_core::dns_tester::Error::Display(error) => error.into(),
+                device_envoy_examples_core::dns_tester::UiError::Text(_) => Error::FormatError,
+                device_envoy_examples_core::dns_tester::UiError::Display(error) => error.into(),
             },
             device_envoy_examples_core::dns_tester::Error::Touch(error) => error.into(),
             device_envoy_examples_core::dns_tester::Error::Dns(error) => match error {},

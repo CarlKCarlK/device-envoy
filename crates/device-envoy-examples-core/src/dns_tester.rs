@@ -67,93 +67,69 @@ where
     let mut last_latency_millis = None;
     let mut status = Status::Tap;
 
-    let hostname = dns.hostname();
     let mut orientation = cyd.orientation();
     let (display, touch) = cyd.parts();
     let layout = match orientation {
         Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
         Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
     };
-    let mut ui = Ui {
-        display,
-        bitmap: layout.bitmap,
-    };
+    let mut ui = Ui::<_, 16>::new(display, layout.bitmap);
     ui.fill_contiguous_full()?;
-    ui.text(layout.hostname, hostname).await?;
-    let mut text = heapless::String::<16>::new();
+    ui.text(layout.hostname, dns.hostname()).await?;
     loop {
-        ui.status(layout.status, status, status.is_good()).await?;
-
-        text.clear();
-        match last_latency_millis {
-            Some(latency_millis) => write!(text, "{} ms", latency_millis)?,
-            None => write!(text, "--")?,
-        }
-        ui.text(layout.latency, &text).await?;
-
-        text.clear();
-        write!(text, "{}", queries)?;
-        ui.text(layout.queries, &text).await?;
-
-        text.clear();
-        write!(text, "{}", successes)?;
-        ui.text(layout.successes, &text).await?;
-
-        text.clear();
-        write!(text, "{}", failures)?;
-        ui.text(layout.failures, &text).await?;
+        yield_now().await;
 
         if button.is_pressed() {
             return Ok(Exit::CalibrationRequested);
         }
 
-        if let Some(touch_event) = touch.read().map_err(Error::Touch)? {
-            let touch_event = match touch_event {
-                TouchEvent::Down { point } => TouchEvent::Down {
-                    point: orientation.map_landscape_point(point),
-                },
-                touch_event => touch_event,
-            };
-            let action = match touch_event {
-                TouchEvent::Down { point } => match layout.control_at(point) {
-                    Some(Control::Calibration) => Action::ClearCalibrationAndRestart,
-                    Some(Control::Wifi) => Action::ResetWifiAndRestart,
-                    Some(Control::Orientation) => {
-                        orientation = orientation.next();
-                        Action::SaveOrientationAndRestart(orientation)
+        ui.begin(touch.read().map_err(Error::Touch)?, orientation);
+
+        ui.status(layout.status, status, status.is_good()).await?;
+
+        match last_latency_millis {
+            Some(latency_millis) => {
+                ui.value(layout.latency, format_args!("{latency_millis} ms"))
+                    .await?
+            }
+            None => ui.value(layout.latency, format_args!("--")).await?,
+        }
+
+        ui.value(layout.queries, format_args!("{queries}")).await?;
+
+        ui.value(layout.successes, format_args!("{successes}"))
+            .await?;
+
+        ui.value(layout.failures, format_args!("{failures}"))
+            .await?;
+
+        match ui.touch(layout) {
+            TouchAction::None => {}
+            TouchAction::StartDns => {
+                let result = dns.lookup().await.map_err(Error::Dns)?;
+                queries = queries.saturating_add(1);
+                last_latency_millis = Some(result.latency_millis);
+                if result.succeeded {
+                    successes = successes.saturating_add(1);
+                    if matches!(status, Status::Tap) {
+                        status = Status::Ok;
                     }
-                    None => Action::StartDns,
-                },
-                TouchEvent::Move { .. } | TouchEvent::Up => Action::None,
-            };
-            let exit = match action {
-                Action::None => None,
-                Action::StartDns => {
-                    let result = dns.lookup().await.map_err(Error::Dns)?;
-                    queries = queries.saturating_add(1);
-                    last_latency_millis = Some(result.latency_millis);
-                    if result.succeeded {
-                        successes = successes.saturating_add(1);
-                        if matches!(status, Status::Tap) {
-                            status = Status::Ok;
-                        }
-                    } else {
-                        failures = failures.saturating_add(1);
-                        status = Status::Fail;
-                    }
-                    None
+                } else {
+                    failures = failures.saturating_add(1);
+                    status = Status::Fail;
                 }
-                Action::ClearCalibrationAndRestart => Some(Exit::CalibrationRequested),
-                Action::ResetWifiAndRestart => Some(Exit::WifiResetRequested),
-                Action::SaveOrientationAndRestart(next_orientation) => {
-                    Some(Exit::OrientationChanged(next_orientation))
-                }
-            };
-            if let Some(exit) = exit {
-                return Ok(exit);
+            }
+            TouchAction::Control(Control::Calibration) => {
+                return Ok(Exit::CalibrationRequested);
+            }
+            TouchAction::Control(Control::Wifi) => {
+                return Ok(Exit::WifiResetRequested);
+            }
+            TouchAction::Control(Control::Orientation) => {
+                orientation = orientation.next();
+                return Ok(Exit::OrientationChanged(orientation));
             }
         }
-        yield_now().await;
     }
 }
 
@@ -344,15 +320,44 @@ const PORTRAIT_LAYOUT: Layout = Layout {
     ],
 };
 
-struct Ui<'a, Display> {
+struct Ui<'a, Display, const TEXT_CAPACITY: usize> {
     display: &'a mut Display,
     bitmap: Image565View,
+    text: heapless::String<TEXT_CAPACITY>,
+    touch_event: Option<TouchEvent>,
 }
 
-impl<'a, Display> Ui<'a, Display>
+impl<'a, Display, const TEXT_CAPACITY: usize> Ui<'a, Display, TEXT_CAPACITY>
 where
     Display: CydDisplay,
 {
+    fn new(display: &'a mut Display, bitmap: Image565View) -> Self {
+        Self {
+            display,
+            bitmap,
+            text: heapless::String::new(),
+            touch_event: None,
+        }
+    }
+
+    fn begin(&mut self, touch_event: Option<TouchEvent>, orientation: Orientation) {
+        self.touch_event = touch_event.map(|touch_event| match touch_event {
+            TouchEvent::Down { point } => TouchEvent::Down {
+                point: orientation.map_landscape_point(point),
+            },
+            touch_event => touch_event,
+        });
+    }
+
+    fn touch(&self, layout: Layout) -> TouchAction {
+        match self.touch_event {
+            Some(TouchEvent::Down { point }) => layout
+                .control_at(point)
+                .map_or(TouchAction::StartDns, TouchAction::Control),
+            Some(TouchEvent::Move { .. }) | Some(TouchEvent::Up) | None => TouchAction::None,
+        }
+    }
+
     fn fill_contiguous_full(&mut self) -> Result<(), UiError<Display::Error>> {
         self.display
             .fill_contiguous_full(self.bitmap.rgb565_iter())
@@ -364,7 +369,24 @@ where
         slot: TextSlot,
         text: impl AsRef<str>,
     ) -> Result<(), UiError<Display::Error>> {
-        self.draw_text(slot, text.as_ref(), slot.color).await
+        draw_text(self.display, self.bitmap, slot, text.as_ref(), slot.color).await
+    }
+
+    async fn value(
+        &mut self,
+        slot: TextSlot,
+        arguments: fmt::Arguments<'_>,
+    ) -> Result<(), UiError<Display::Error>> {
+        self.text.clear();
+        self.text.write_fmt(arguments)?;
+        draw_text(
+            self.display,
+            self.bitmap,
+            slot,
+            self.text.as_str(),
+            slot.color,
+        )
+        .await
     }
 
     async fn status(
@@ -374,7 +396,9 @@ where
         is_good: bool,
     ) -> Result<(), UiError<Display::Error>> {
         let text = text.as_ref();
-        self.draw_text(
+        draw_text(
+            self.display,
+            self.bitmap,
             slot.text,
             text,
             if is_good {
@@ -385,40 +409,44 @@ where
         )
         .await
     }
+}
 
-    async fn draw_text(
-        &mut self,
-        slot: TextSlot,
-        text: &str,
-        color: Rgb888,
-    ) -> Result<(), UiError<Display::Error>> {
-        let rectangle = slot.rectangle;
-        let mut frame = self.display.frame_mut(rectangle);
-        DrawItem::Bitmap {
-            view: self.bitmap,
-            top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
-        }
-        .draw(&mut frame);
-        let position = match slot.alignment {
-            Alignment::Left => Point::zero(),
-            Alignment::Center => Point::new((rectangle.size.width / 2) as i32, 0),
-            Alignment::Right => Point::new(rectangle.size.width as i32, 0),
-        };
-        Text::with_text_style(
-            text,
-            position,
-            MonoTextStyle::new(slot.font.value(), Rgb565::from(color)),
-            TextStyleBuilder::new()
-                .alignment(slot.alignment)
-                .baseline(Baseline::Top)
-                .build(),
-        )
-        .draw(&mut frame)
-        .unwrap_infallible();
-        frame.flush().await.map_err(UiError::Display)?;
-        drop(frame);
-        Ok(())
+async fn draw_text<Display>(
+    display: &mut Display,
+    bitmap: Image565View,
+    slot: TextSlot,
+    text: &str,
+    color: Rgb888,
+) -> Result<(), UiError<Display::Error>>
+where
+    Display: CydDisplay,
+{
+    let rectangle = slot.rectangle;
+    let mut frame = display.frame_mut(rectangle);
+    DrawItem::Bitmap {
+        view: bitmap,
+        top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
     }
+    .draw(&mut frame);
+    let position = match slot.alignment {
+        Alignment::Left => Point::zero(),
+        Alignment::Center => Point::new((rectangle.size.width / 2) as i32, 0),
+        Alignment::Right => Point::new(rectangle.size.width as i32, 0),
+    };
+    Text::with_text_style(
+        text,
+        position,
+        MonoTextStyle::new(slot.font.value(), Rgb565::from(color)),
+        TextStyleBuilder::new()
+            .alignment(slot.alignment)
+            .baseline(Baseline::Top)
+            .build(),
+    )
+    .draw(&mut frame)
+    .unwrap_infallible();
+    frame.flush().await.map_err(UiError::Display)?;
+    drop(frame);
+    Ok(())
 }
 
 impl TextFont {
@@ -483,19 +511,11 @@ pub enum Exit {
     OrientationChanged(Orientation),
 }
 
-/// Platform control request selected by the game loop.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Action {
-    /// No platform work is required.
+enum TouchAction {
     None,
-    /// Start one DNS lookup.
     StartDns,
-    /// Clear calibration and restart the platform calibration flow.
-    ClearCalibrationAndRestart,
-    /// Clear Wi-Fi configuration and restart the Wi-Fi setup flow.
-    ResetWifiAndRestart,
-    /// Persist this orientation and restart the display adapter.
-    SaveOrientationAndRestart(Orientation),
+    Control(Control),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

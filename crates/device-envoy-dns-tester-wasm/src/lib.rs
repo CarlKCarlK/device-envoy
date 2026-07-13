@@ -11,11 +11,13 @@ use device_envoy_core::{
             calibration::{CalibrationConfig, ensure_calibration},
         },
     },
-    dns_tester::{DnsTesterUiError, DnsTesterUiNotice, DnsTesterUiState, render, render_notice},
     flash_block::FlashBlock as _,
     wasm::{
         ButtonWasmSource, CydDisplayWasm, CydTouchWasm, CydTouchWasmSource, CydWasm, FlashBlockWasm,
     },
+};
+use device_envoy_examples_core::dns_tester::{
+    DnsTesterUiError, DnsTesterUiNotice, DnsTesterUiState, render, render_notice,
 };
 use embedded_graphics::{
     geometry::{Point, Size},

@@ -752,19 +752,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "device-envoy-conway-core"
-version = "0.0.0"
-dependencies = [
- "device-envoy-core",
- "smart-leds",
-]
-
-[[package]]
 name = "device-envoy-conway-wasm"
 version = "0.0.0"
 dependencies = [
- "device-envoy-conway-core",
  "device-envoy-core",
+ "device-envoy-examples-core",
  "smart-leds",
  "wasm-bindgen",
 ]
@@ -826,6 +818,7 @@ name = "device-envoy-dns-tester-wasm"
 version = "0.0.0"
 dependencies = [
  "device-envoy-core",
+ "device-envoy-examples-core",
  "embedded-graphics",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -840,6 +833,7 @@ dependencies = [
  "derive_more",
  "device-envoy-core",
  "device-envoy-example-common",
+ "device-envoy-examples-core",
  "embassy-embedded-hal",
  "embassy-executor",
  "embassy-futures",
@@ -877,11 +871,23 @@ dependencies = [
 name = "device-envoy-example-common"
 version = "0.0.0"
 dependencies = [
- "device-envoy-conway-core",
  "device-envoy-core",
+ "device-envoy-examples-core",
  "embassy-futures",
  "embassy-sync 0.8.0",
  "embassy-time",
+ "smart-leds",
+]
+
+[[package]]
+name = "device-envoy-examples-core"
+version = "0.0.0"
+dependencies = [
+ "device-envoy-core",
+ "embedded-graphics",
+ "futures-executor",
+ "heapless 0.9.2",
+ "profont",
  "smart-leds",
 ]
 
@@ -900,6 +906,7 @@ dependencies = [
  "derive_more",
  "device-envoy-core",
  "device-envoy-example-common",
+ "device-envoy-examples-core",
  "embassy-embedded-hal",
  "embassy-executor",
  "embassy-futures",

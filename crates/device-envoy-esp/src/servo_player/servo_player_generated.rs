@@ -16,11 +16,11 @@
 pub struct ServoPlayerGenerated;
 
 #[cfg(doc)]
-use crate::Result;
-#[cfg(doc)]
 use crate::servo::Servo;
 #[cfg(doc)]
 use crate::servo::{AtEnd, ServoPlayer};
+#[cfg(doc)]
+use crate::Result;
 
 #[cfg(doc)]
 impl ServoPlayerGenerated {

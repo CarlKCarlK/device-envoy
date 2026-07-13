@@ -1,4 +1,4 @@
-use device_envoy_conway_core::{
+use device_envoy_examples_core::conway::{
     AutoResetTracker, Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome,
     SearchStep,
 };

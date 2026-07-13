@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 device-envoy-core = { path = "../device-envoy-core", features = ["wasm"] }
+device-envoy-examples-core = { path = "../device-envoy-examples-core", features = ["wasm"] }
 embedded-graphics = { version = "0.8", default-features = false }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

@@ -44,13 +44,10 @@ use embedded_graphics::{
 use esp_backtrace as _;
 use log::{info, warn};
 
+use device_envoy_core::cyd::display::Orientation;
 use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
 use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
 use device_envoy_core::flash_block::FlashBlock as _;
-use device_envoy_core::{
-    cyd::display::Orientation,
-    dns_tester::{DnsTesterUiError, DnsTesterUiNotice, DnsTesterUiState, render_notice},
-};
 use device_envoy_esp::{
     Error, Result,
     button::{Button as _, ButtonEsp, PressedTo},
@@ -61,6 +58,9 @@ use device_envoy_esp::{
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+};
+use device_envoy_examples_core::dns_tester::{
+    DnsTesterUiError, DnsTesterUiNotice, DnsTesterUiState, render_notice,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -277,7 +277,7 @@ async fn render_dns_tester(
     orientation: Orientation,
     state: DnsTesterUiState,
 ) -> Result<()> {
-    device_envoy_core::dns_tester::render(display, orientation, state)
+    device_envoy_examples_core::dns_tester::render(display, orientation, state)
         .await
         .map_err(|error| match error {
             DnsTesterUiError::Text(_) => Error::FormatError,

@@ -1,11 +1,11 @@
-use device_envoy_conway_core::{
-    AutoResetTracker, Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome,
-    SearchStep,
-};
 use device_envoy_core::{
     ir::kepler::{IrKepler, KeplerKeys},
     led_strip::RGB8,
     led2d::{Frame2d, Led2d},
+};
+use device_envoy_examples_core::conway::{
+    AutoResetTracker, Board, Pattern, PredecessorSearch, RandomSymmetryMode, SearchOutcome,
+    SearchStep,
 };
 use embassy_futures::{
     join::join,

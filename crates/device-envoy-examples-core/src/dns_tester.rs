@@ -15,23 +15,219 @@ use embedded_graphics::{
 };
 use profont::PROFONT_24_POINT;
 
-use crate::{
+use device_envoy_core::{
     UnwrapInfallible,
     cyd::{
         CydDisplay,
         display::{CydFrame, DrawItem, Image565Fixed, Image565View, Orientation, tga},
+        touch::TouchEvent,
     },
 };
 
 const LANDSCAPE_BACKGROUND: Image565Fixed<320, 240, { 320 * 240 }> =
-    tga!("../docs/assets/dns_tester/dns_landscape.tga").to_565();
+    tga!(concat!(env!("OUT_DIR"), "/dns_landscape.tga")).to_565();
 const PORTRAIT_BACKGROUND: Image565Fixed<240, 320, { 240 * 320 }> =
-    tga!("../docs/assets/dns_tester/dns_portrait.tga").to_565();
+    tga!(concat!(env!("OUT_DIR"), "/dns_portrait.tga")).to_565();
 
 const VALUE_TEXT: Rgb888 = Rgb888::new(255, 255, 255); // white
 const SUCCESS_TEXT: Rgb888 = Rgb888::new(121, 226, 164); // soft green
 const FAILURE_TEXT: Rgb888 = Rgb888::new(255, 117, 110); // coral red
 const PANEL_FILL: Rgb888 = Rgb888::new(15, 38, 55); // dark desaturated blue
+
+/// A DNS lookup result supplied by a platform adapter.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DnsResult {
+    /// Whether the lookup returned at least one address.
+    pub succeeded: bool,
+    /// Measured lookup duration in milliseconds.
+    pub latency_millis: u64,
+}
+
+/// Inputs accepted by the platform-neutral DNS Tester state machine.
+#[derive(Clone, Copy, Debug)]
+pub enum DnsTesterInput {
+    /// A calibrated touch event in the current screen orientation.
+    Touch(TouchEvent),
+    /// Wi-Fi initialization has started.
+    WifiConnecting,
+    /// Wi-Fi setup is available.
+    WifiSetup,
+    /// Wi-Fi and DNS services are ready.
+    WifiReady,
+    /// A platform DNS adapter has completed a lookup.
+    DnsFinished(DnsResult),
+    /// The physical or simulated BOOT button was pressed.
+    Boot,
+}
+
+/// Platform services requested by [`DnsTesterApp::input`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DnsTesterAction {
+    /// No platform work is required.
+    None,
+    /// Start one DNS lookup and report its result with [`DnsTesterInput::DnsFinished`].
+    StartDnsLookup,
+    /// Clear calibration and restart the platform calibration flow.
+    ClearCalibrationAndRestart,
+    /// Clear Wi-Fi configuration and restart the Wi-Fi setup flow.
+    ResetWifiAndRestart,
+    /// Persist this orientation and restart the display adapter.
+    SaveOrientationAndRestart(Orientation),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DnsTesterScreen {
+    Splash,
+    Connecting,
+    Setup,
+    Dashboard,
+    Unavailable,
+}
+
+/// Shared DNS Tester state and transition logic used by hardware, WASM, and memory tests.
+pub struct DnsTesterApp {
+    orientation: Orientation,
+    target: &'static str,
+    queries: u32,
+    successes: u32,
+    failures: u32,
+    last_latency_millis: u64,
+    screen: DnsTesterScreen,
+}
+
+#[derive(Clone, Copy)]
+enum Control {
+    Calibration,
+    Wifi,
+    Orientation,
+}
+
+fn control_at(point: Point, size: Size) -> Option<Control> {
+    let landscape = size.width > size.height;
+    [
+        (
+            Control::Calibration,
+            if landscape {
+                (10, 202, 100, 28)
+            } else {
+                (10, 276, 73, 36)
+            },
+        ),
+        (
+            Control::Wifi,
+            if landscape {
+                (110, 202, 100, 28)
+            } else {
+                (83, 276, 74, 36)
+            },
+        ),
+        (
+            Control::Orientation,
+            if landscape {
+                (210, 202, 100, 28)
+            } else {
+                (157, 276, 73, 36)
+            },
+        ),
+    ]
+    .into_iter()
+    .find_map(|(control, (x, y, width, height))| {
+        Rectangle::new(Point::new(x, y), Size::new(width, height))
+            .contains(point)
+            .then_some(control)
+    })
+}
+
+impl DnsTesterApp {
+    /// Construct a DNS Tester in its startup splash state.
+    #[must_use]
+    pub const fn new(target: &'static str, orientation: Orientation) -> Self {
+        Self {
+            orientation,
+            target,
+            queries: 0,
+            successes: 0,
+            failures: 0,
+            last_latency_millis: 0,
+            screen: DnsTesterScreen::Splash,
+        }
+    }
+
+    /// Return the currently selected screen orientation.
+    #[must_use]
+    pub const fn orientation(&self) -> Orientation {
+        self.orientation
+    }
+
+    /// Return the current dynamic dashboard values.
+    #[must_use]
+    pub const fn ui_state(&self) -> DnsTesterUiState {
+        DnsTesterUiState {
+            target: self.target,
+            queries: self.queries,
+            successes: self.successes,
+            failures: self.failures,
+            last_latency_millis: self.last_latency_millis,
+        }
+    }
+
+    /// Apply one platform event and return any requested platform operation.
+    pub fn input(&mut self, input: DnsTesterInput) -> DnsTesterAction {
+        match input {
+            DnsTesterInput::WifiConnecting => {
+                self.screen = DnsTesterScreen::Connecting;
+                DnsTesterAction::None
+            }
+            DnsTesterInput::WifiSetup => {
+                self.screen = DnsTesterScreen::Setup;
+                DnsTesterAction::None
+            }
+            DnsTesterInput::WifiReady => {
+                self.screen = DnsTesterScreen::Dashboard;
+                DnsTesterAction::None
+            }
+            DnsTesterInput::DnsFinished(result) => {
+                self.queries = self.queries.saturating_add(1);
+                self.last_latency_millis = result.latency_millis;
+                if result.succeeded {
+                    self.successes = self.successes.saturating_add(1);
+                } else {
+                    self.failures = self.failures.saturating_add(1);
+                }
+                self.screen = DnsTesterScreen::Dashboard;
+                DnsTesterAction::None
+            }
+            DnsTesterInput::Boot => DnsTesterAction::ClearCalibrationAndRestart,
+            DnsTesterInput::Touch(TouchEvent::Down { point }) => {
+                if let Some(control) = control_at(point, self.orientation.size()) {
+                    match control {
+                        Control::Calibration => DnsTesterAction::ClearCalibrationAndRestart,
+                        Control::Wifi => {
+                            self.screen = DnsTesterScreen::Unavailable;
+                            DnsTesterAction::ResetWifiAndRestart
+                        }
+                        Control::Orientation => {
+                            let orientation = self.orientation.next();
+                            self.orientation = orientation;
+                            DnsTesterAction::SaveOrientationAndRestart(orientation)
+                        }
+                    }
+                } else {
+                    DnsTesterAction::StartDnsLookup
+                }
+            }
+            DnsTesterInput::Touch(TouchEvent::Move { .. } | TouchEvent::Up) => {
+                DnsTesterAction::None
+            }
+        }
+    }
+
+    /// Whether the app currently displays its browser-unavailable notice.
+    #[must_use]
+    pub const fn is_unavailable(&self) -> bool {
+        matches!(self.screen, DnsTesterScreen::Unavailable)
+    }
+}
 
 /// The changing values shown by the DNS tester UI.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -396,4 +592,57 @@ where
     .draw(&mut frame)
     .unwrap_infallible();
     frame.flush().await.map_err(DnsTesterUiError::Display)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn orientation_control_cycles_through_all_presentations() {
+        let mut app = DnsTesterApp::new("example.com", Orientation::Landscape);
+        for expected_orientation in [
+            Orientation::Portrait,
+            Orientation::LandscapeInverted,
+            Orientation::PortraitInverted,
+            Orientation::Landscape,
+        ] {
+            let action = app.input(DnsTesterInput::Touch(TouchEvent::Down {
+                point: Point::new(
+                    if app.orientation().width() > app.orientation().height() {
+                        260
+                    } else {
+                        193
+                    },
+                    if app.orientation().width() > app.orientation().height() {
+                        216
+                    } else {
+                        294
+                    },
+                ),
+            }));
+            assert_eq!(
+                action,
+                DnsTesterAction::SaveOrientationAndRestart(expected_orientation)
+            );
+            assert_eq!(app.orientation(), expected_orientation);
+        }
+    }
+
+    #[test]
+    fn dns_results_update_shared_counters() {
+        let mut app = DnsTesterApp::new("example.com", Orientation::Landscape);
+        app.input(DnsTesterInput::DnsFinished(DnsResult {
+            succeeded: true,
+            latency_millis: 12,
+        }));
+        app.input(DnsTesterInput::DnsFinished(DnsResult {
+            succeeded: false,
+            latency_millis: 18,
+        }));
+        assert_eq!(app.ui_state().queries, 2);
+        assert_eq!(app.ui_state().successes, 1);
+        assert_eq!(app.ui_state().failures, 1);
+        assert_eq!(app.ui_state().last_latency_millis, 18);
+    }
 }

@@ -1,5 +1,3 @@
-#![no_std]
-
 use device_envoy_core::{led_strip::RGB8, led2d::Frame2d};
 
 /// Maximum number of backtracking iterations before giving up on the predecessor search.

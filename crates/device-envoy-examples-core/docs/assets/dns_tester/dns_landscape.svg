@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240" role="img" aria-label="DNS test landscape background design">
+  <defs>
+    <style>
+      .bg { fill: #075a83; }
+      .panel { fill: #0a5278; }
+      .panel2 { fill: #074569; }
+      .line { stroke: #4f91aa; stroke-width: 1; }
+      .grid { stroke: #2d7898; stroke-width: .6; opacity: .48; }
+      .label { fill: #c5dce6; font: 700 10px Arial, sans-serif; letter-spacing: 0; }
+      .small { fill: #9fc4d3; font: 700 8px Arial, sans-serif; letter-spacing: 0; }
+      .value { fill: #ffffff; font: 700 20px "Courier New", monospace; letter-spacing: 0; }
+      .latency { fill: #ffffff; font: 700 24px "Courier New", monospace; letter-spacing: 0; }
+      .accent { fill: #ffc247; font: 700 11px Arial, sans-serif; letter-spacing: 0; }
+      .success { fill: #79e2a4; }
+      .failure { fill: #ff756e; }
+      .muted-stroke { stroke: #77aabe; stroke-width: 1; fill: none; }
+      .slot-guide { fill: none; stroke: #ffc247; stroke-width: 1; stroke-dasharray: 3 2; }
+      .touch-guide { fill: none; stroke: #79e2a4; stroke-width: 1; stroke-dasharray: 4 2; }
+    </style>
+    <pattern id="trace-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path class="grid" d="M16 0H0V16"/>
+    </pattern>
+  </defs>
+
+  <rect class="bg" width="320" height="240"/>
+  <rect width="320" height="240" fill="url(#trace-grid)"/>
+  <path class="muted-stroke" opacity=".28" d="M18 66h42v-24h38M244 58h32v34h26M70 164h36v20h58M196 34h20v22h38"/>
+
+  <rect class="panel" x="10" y="10" width="300" height="184" rx="7"/>
+  <rect class="panel2" x="20" y="54" width="280" height="112" rx="5"/>
+  <line class="line" x1="20" y1="42" x2="300" y2="42"/>
+  <line class="line" x1="20" y1="186" x2="300" y2="186"/>
+
+  <text class="label" x="22" y="28">DNS TEST</text>
+  <circle class="success" cx="252" cy="24" r="4"/>
+  <text class="label" x="263" y="28">READY</text>
+
+  <text class="small" x="22" y="72">TARGET</text>
+  <text class="small" x="272" y="72" text-anchor="middle">STATUS</text>
+
+  <text class="small" x="160" y="141" text-anchor="middle">LAST LOOKUP</text>
+  <text class="small" x="52" y="150" text-anchor="middle">QUERIES</text>
+  <text class="small" x="160" y="150" text-anchor="middle">SUCCESS</text>
+  <text class="small" x="268" y="150" text-anchor="middle">FAILED</text>
+
+  <!-- Remove this entire group before exporting the static background bitmap. -->
+  <g id="preview-values" data-remove-before-export="true">
+    <!-- TARGET: DNS name; firmware origin=(22,76), bounds=150x20, color=#ffffff, font=FONT_10X20, left aligned. -->
+    <text id="placeholder-target" class="value" x="22" y="94" data-purpose="DNS target" data-screen-x="22" data-screen-y="76" data-width="150" data-height="20" data-color="#ffffff" data-font="FONT_10X20" data-align="left">example.com</text>
+    <!-- LATENCY: latest lookup time; firmware box=(100,100,120,24), color=#ffffff, font=PROFONT_24_POINT, centered. -->
+    <text id="placeholder-latency" class="latency" x="160" y="121" text-anchor="middle" data-purpose="Latest latency" data-screen-x="100" data-screen-y="100" data-width="120" data-height="24" data-color="#ffffff" data-font="PROFONT_24_POINT" data-align="center">22 ms</text>
+    <!-- STATUS: short result such as OK; firmware box=(244,82,56,20), color=#79e2a4 success / #ff756e failure, font=FONT_10X20, centered. -->
+    <text id="placeholder-status" class="value success" x="272" y="100" text-anchor="middle" data-purpose="Lookup status" data-screen-x="244" data-screen-y="82" data-width="56" data-height="20" data-color-success="#79e2a4" data-color-failure="#ff756e" data-font="FONT_10X20" data-align="center">OK</text>
+    <!-- COUNTERS: firmware boxes=(27,156,50,20), (135,156,50,20), (243,156,50,20); FONT_10X20, centered. -->
+    <g id="preview-values-stats">
+      <text id="placeholder-queries" class="value" x="52" y="174" text-anchor="middle" data-purpose="Query count" data-screen-x="27" data-screen-y="156" data-width="50" data-height="20" data-color="#ffffff" data-font="FONT_10X20" data-align="center">1</text>
+      <text id="placeholder-success" class="value success" x="160" y="174" text-anchor="middle" data-purpose="Success count" data-screen-x="135" data-screen-y="156" data-width="50" data-height="20" data-color="#79e2a4" data-font="FONT_10X20" data-align="center">1</text>
+      <text id="placeholder-failed" class="value failure" x="268" y="174" text-anchor="middle" data-purpose="Failure count" data-screen-x="243" data-screen-y="156" data-width="50" data-height="20" data-color="#ff756e" data-font="FONT_10X20" data-align="center">0</text>
+    </g>
+  </g>
+
+  <rect class="panel2" x="10" y="202" width="300" height="28" rx="6"/>
+  <text class="small" x="18" y="198">SETTINGS</text>
+  <line class="line" x1="110" y1="206" x2="110" y2="226"/>
+  <line class="line" x1="210" y1="206" x2="210" y2="226"/>
+
+  <g transform="translate(42 212)">
+    <circle cx="0" cy="4" r="5" class="muted-stroke"/>
+    <path d="M-3 4h6M0 1v6" stroke="#ffc247" stroke-width="1.4"/>
+    <text class="accent" x="13" y="8">CAL</text>
+  </g>
+  <g transform="translate(136 212)">
+    <path d="M0 8c4-4 16-4 20 0" class="muted-stroke"/>
+    <path d="M5 4c3-3 7-3 10 0" class="muted-stroke"/>
+    <circle cx="10" cy="11" r="2" fill="#ffc247"/>
+    <text class="accent" x="26" y="8">WI-FI</text>
+  </g>
+  <g transform="translate(236 212)">
+    <path d="M1 5a8 8 0 0 1 14-5" class="muted-stroke"/>
+    <path d="M15 0v6h-6" stroke="#ffc247" stroke-width="1.4" fill="none"/>
+    <text class="accent" x="21" y="8">ROTATE</text>
+  </g>
+
+  <!-- Hidden developer overlay. Change display to inline to see exact dynamic slots and touch hitboxes. -->
+  <g id="developer-guides" display="none" data-remove-before-export="true">
+    <g id="dynamic-slot-guides">
+      <rect id="slot-target" class="slot-guide" x="22" y="76" width="150" height="20" data-purpose="DNS target" data-font="FONT_10X20" data-color="#ffffff"/>
+      <rect id="slot-latency" class="slot-guide" x="100" y="100" width="120" height="24" data-purpose="Latest latency" data-font="PROFONT_24_POINT" data-color="#ffffff"/>
+      <rect id="slot-status" class="slot-guide" x="244" y="82" width="56" height="20" data-purpose="Lookup status" data-font="FONT_10X20"/>
+      <rect id="slot-queries" class="slot-guide" x="27" y="156" width="50" height="20" data-purpose="Query count" data-font="FONT_10X20"/>
+      <rect id="slot-success" class="slot-guide" x="135" y="156" width="50" height="20" data-purpose="Success count" data-font="FONT_10X20"/>
+      <rect id="slot-failed" class="slot-guide" x="243" y="156" width="50" height="20" data-purpose="Failure count" data-font="FONT_10X20"/>
+    </g>
+    <!-- TOUCH: CAL=(10,202,100,28), WI-FI=(110,202,100,28), ROTATE=(210,202,100,28), all in screen coordinates. -->
+    <g id="touch-region-guides">
+      <rect id="touch-cal" class="touch-guide" x="10" y="202" width="100" height="28" data-purpose="Calibration button"/>
+      <rect id="touch-wifi" class="touch-guide" x="110" y="202" width="100" height="28" data-purpose="Wi-Fi button"/>
+      <rect id="touch-rotate" class="touch-guide" x="210" y="202" width="100" height="28" data-purpose="Rotate button"/>
+    </g>
+  </g>
+</svg>

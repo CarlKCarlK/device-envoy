@@ -78,8 +78,3 @@ required-features = ["host"]
 name = "pngs"
 path = "tests/pngs.rs"
 required-features = ["host"]
-
-[[test]]
-name = "dns_tester_preview"
-path = "tests/dns_tester_preview.rs"
-required-features = ["host"]

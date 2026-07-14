@@ -85,6 +85,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);
+    //todo000 Is this good code?
     let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
         Ok(Some(_)) => true,
         Ok(None) | Err(_) => false,
@@ -128,6 +129,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     .await?;
     if calibration_outcome.was_saved() {
         while button.is_pressed() {
+            // todo0000 why???
             Timer::after(Duration::from_millis(10)).await;
         }
         info!("Calibration saved, restarting");
@@ -179,10 +181,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .await?;
 
     while !stack.is_link_up() || stack.config_v4().is_none() {
+        // todo000 why?
         Timer::after(Duration::from_millis(200)).await;
     }
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
 
+    // todo000 is this nice?
     let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
         let query_start = Instant::now();
         let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;

@@ -11,6 +11,7 @@ export const dnstesterweb_prepare_calibration_landscape: (a: number) => void;
 export const dnstesterweb_reboot: (a: number) => any;
 export const dnstesterweb_start: (a: number) => any;
 export const dnstesterweb_take_exit: (a: number) => [number, number];
+export const dnstesterweb_take_notice: (a: number) => [number, number];
 export const dnstesterweb_touch_down: (a: number, b: number, c: number) => void;
 export const dnstesterweb_touch_move: (a: number, b: number, c: number) => void;
 export const dnstesterweb_touch_up: (a: number) => void;

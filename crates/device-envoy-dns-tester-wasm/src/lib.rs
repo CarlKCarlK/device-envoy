@@ -12,8 +12,9 @@ use device_envoy_core::{
     dns::{DnsResult, DnsRuntime},
     flash_block::FlashBlock as _,
     wasm::{
-        CydSimulatorControlWasm, CydSimulatorWasm, CydWasm, FlashBlockWasm, WifiConnectEvent,
-        WifiConnectOutcome, next_animation_frame, simulate_wifi_connect,
+        CydSimulatorControlWasm, CydSimulatorWasm, CydWasm, FlashBlockWasm,
+        SimulatorNoticeDisposition, SimulatorNoticeRequest, WifiConnectEvent, WifiConnectOutcome,
+        next_animation_frame, simulate_wifi_connect, simulator_notice_disposition,
     },
 };
 use device_envoy_examples_core::dns_tester::{
@@ -34,6 +35,7 @@ pub struct DnsTesterWeb {
     canvas: HtmlCanvasElement,
     exit: Rc<Cell<Option<CoreExit>>>,
     failed: Rc<Cell<bool>>,
+    pending_notice: Cell<Option<SimulatorNoticeRequest>>,
     orientation: Cell<Orientation>,
     simulator_control: RefCell<Option<CydSimulatorControlWasm>>,
     state: RefCell<DnsTesterState>,
@@ -55,6 +57,7 @@ impl DnsTesterWeb {
             canvas,
             exit: Rc::new(Cell::new(None)),
             failed: Rc::new(Cell::new(false)),
+            pending_notice: Cell::new(None),
             orientation: Cell::new(Orientation::Landscape),
             simulator_control: RefCell::new(None),
             state: RefCell::new(DnsTesterState {
@@ -147,11 +150,25 @@ impl DnsTesterWeb {
         }
 
         let wifi_outcome = simulate_wifi_connect(&mut button, async |event| {
-            let notice = match event {
-                WifiConnectEvent::CaptivePortalReady => UiNotice::WifiSetup,
-                WifiConnectEvent::Connecting { .. } => UiNotice::WifiConnecting,
-                WifiConnectEvent::ConnectionFailed => UiNotice::WifiUnavailable,
+            let (notice_request, notice) = match event {
+                WifiConnectEvent::CaptivePortalReady => {
+                    (SimulatorNoticeRequest::wifi_setup(), UiNotice::WifiSetup)
+                }
+                WifiConnectEvent::Connecting { .. } => (
+                    SimulatorNoticeRequest::wifi_connecting(),
+                    UiNotice::WifiConnecting,
+                ),
+                WifiConnectEvent::ConnectionFailed => (
+                    SimulatorNoticeRequest::wifi_unavailable(),
+                    UiNotice::WifiUnavailable,
+                ),
             };
+            if matches!(
+                self.request_notice(notice_request),
+                SimulatorNoticeDisposition::Terminate
+            ) {
+                return Ok(());
+            }
             render_notice(&mut display, state.orientation, notice)
                 .await
                 .map_err(|error| JsValue::from_str(&format!("Wi-Fi notice: {error:?}")))
@@ -244,6 +261,14 @@ impl DnsTesterWeb {
         }
     }
 
+    /// Take the next typed browser notice identifier, if one was requested.
+    pub fn take_notice(&self) -> String {
+        self.pending_notice
+            .take()
+            .map(|request| request.id.into())
+            .unwrap_or_default()
+    }
+
     pub async fn reboot(&self) -> Result<(), JsValue> {
         self.start().await
     }
@@ -287,6 +312,15 @@ impl DnsTesterWeb {
 }
 
 impl DnsTesterWeb {
+    fn request_notice(&self, request: SimulatorNoticeRequest) -> SimulatorNoticeDisposition {
+        let disposition = simulator_notice_disposition(request);
+        self.pending_notice.set(Some(request));
+        if matches!(disposition, SimulatorNoticeDisposition::Terminate) {
+            self.failed.set(true);
+        }
+        disposition
+    }
+
     fn orientation(&self) -> Orientation {
         self.orientation.get()
     }

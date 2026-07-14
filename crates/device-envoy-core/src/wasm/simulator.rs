@@ -33,6 +33,87 @@ pub struct CydSimulatorControlWasm {
     orientation: Orientation,
 }
 
+/// Severity assigned to a browser simulator notice.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SimulatorNoticeSeverity {
+    /// A recoverable informational message.
+    Info,
+    /// A recoverable warning that needs user attention.
+    Warning,
+    /// An unrecoverable application error.
+    Fatal,
+}
+
+/// A typed request for the shared browser notice facility.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SimulatorNoticeRequest {
+    /// Stable identifier interpreted by the application shell.
+    pub id: &'static str,
+    /// Severity controls accessibility presentation and loop behavior.
+    pub severity: SimulatorNoticeSeverity,
+}
+
+impl SimulatorNoticeRequest {
+    /// Request the recoverable simulated Wi-Fi setup notice.
+    pub const fn wifi_setup() -> Self {
+        Self {
+            id: "wifi-setup",
+            severity: SimulatorNoticeSeverity::Warning,
+        }
+    }
+
+    /// Request the recoverable simulated Wi-Fi connecting notice.
+    pub const fn wifi_connecting() -> Self {
+        Self {
+            id: "wifi-connecting",
+            severity: SimulatorNoticeSeverity::Info,
+        }
+    }
+
+    /// Request the recoverable simulated Wi-Fi unavailable notice.
+    pub const fn wifi_unavailable() -> Self {
+        Self {
+            id: "wifi-unavailable",
+            severity: SimulatorNoticeSeverity::Warning,
+        }
+    }
+
+    /// Request an unrecoverable simulator runtime notice.
+    pub const fn runtime_error() -> Self {
+        Self {
+            id: "runtime-error",
+            severity: SimulatorNoticeSeverity::Fatal,
+        }
+    }
+
+    /// Return whether this request must stop the application loop.
+    #[must_use]
+    pub const fn is_fatal(self) -> bool {
+        matches!(self.severity, SimulatorNoticeSeverity::Fatal)
+    }
+}
+
+/// Result of submitting a notice to the application-facing simulator queue.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SimulatorNoticeDisposition {
+    /// Keep the application input loop running.
+    Continue,
+    /// Stop the application input loop after reporting the notice.
+    Terminate,
+}
+
+/// Classify a notice request according to its typed severity.
+#[must_use]
+pub const fn simulator_notice_disposition(
+    request: SimulatorNoticeRequest,
+) -> SimulatorNoticeDisposition {
+    if request.is_fatal() {
+        SimulatorNoticeDisposition::Terminate
+    } else {
+        SimulatorNoticeDisposition::Continue
+    }
+}
+
 /// Events emitted by the shared browser Wi-Fi connection simulation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WifiConnectEvent {
@@ -212,6 +293,26 @@ fn map_to_landscape(orientation: Orientation, x: f32, y: f32) -> (f32, f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recoverable_notices_continue_the_application_loop() {
+        assert_eq!(
+            simulator_notice_disposition(SimulatorNoticeRequest::wifi_setup()),
+            SimulatorNoticeDisposition::Continue
+        );
+        assert_eq!(
+            simulator_notice_disposition(SimulatorNoticeRequest::wifi_connecting()),
+            SimulatorNoticeDisposition::Continue
+        );
+    }
+
+    #[test]
+    fn fatal_notices_terminate_the_application_loop() {
+        assert_eq!(
+            simulator_notice_disposition(SimulatorNoticeRequest::runtime_error()),
+            SimulatorNoticeDisposition::Terminate
+        );
+    }
 
     #[test]
     fn orientation_mapping_round_trips() {

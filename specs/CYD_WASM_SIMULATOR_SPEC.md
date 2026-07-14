@@ -51,13 +51,13 @@ also a reviewable handoff rather than only a list of intentions.
   events remain usable while asynchronous calibration and Wi-Fi startup are
   in progress. The live simulator control is kept outside the mutable app
   state borrow.
+- [x] Added typed Rust-side simulator notice requests with stable identifiers,
+  warning/info/fatal severity, replacement through a single pending queue, and
+  fatal-loop disposition. The DNS Tester browser shell now consumes those
+  identifiers instead of inventing notice severity from JavaScript.
 
 ### Remaining work
 
-- [ ] Complete the notice protocol as a typed Rust-side request API, including
-  explicit fatal-notice behavior and tests proving recoverable notices do not
-  stop the application loop. The current shell UI is implemented, but the
-  request path is still JavaScript-facing.
 - [ ] Decide and document the `ConnectionFailed` simulation policy. The event
   type exists, but the normal successful simulation currently emits only
   captive-portal-ready and connecting before success.
@@ -68,7 +68,8 @@ also a reviewable handoff rather than only a list of intentions.
 - [x] Run the full Linkage Blaze `just check-all` after the browser harness and
   DNS integration test were added; all checks and embedded example builds
   passed.
-- [x] Identify the Device Envoy full validation command as `cargo check-all`.
+- [x] Identify and run the Device Envoy full validation command as
+  `cargo check-all`; it passes after refreshing the generated ESP examples.
   Targeted core, DNS WASM, formatting, and JavaScript checks also pass.
 
 The simulator is not complete until the remaining checklist items are either

@@ -1,4 +1,4 @@
-import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=6ff0b9453b2b";
+import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=873b1df64ba1";
 import { mountCydSimulator } from "./cyd-simulator.js";
 
 const canvas = document.querySelector("#screen");
@@ -14,9 +14,37 @@ async function rebootAndSyncStage(syncPresentation) {
   syncPresentation();
 }
 
+const SIMULATOR_NOTICES = {
+  "wifi-setup": {
+    severity: "warning",
+    message: "Wi-Fi setup is simulated; reconnecting from the captive-portal state.",
+  },
+  "wifi-connecting": {
+    severity: "info",
+    message: "Wi-Fi connection is simulated.",
+  },
+  "wifi-unavailable": {
+    severity: "warning",
+    message: "Wi-Fi is unavailable in this simulation.",
+  },
+  "runtime-error": {
+    severity: "fatal",
+    message: "The DNS Tester simulator stopped because of a runtime error.",
+    durationMs: 0,
+  },
+};
+
 async function monitorRuntime(syncPresentation, showNotice) {
   while (true) {
     await nextFrame();
+    const noticeId = tester.take_notice();
+    if (noticeId) {
+      const notice = SIMULATOR_NOTICES[noticeId];
+      if (!notice) {
+        throw new Error(`unknown simulator notice: ${noticeId}`);
+      }
+      showNotice(notice);
+    }
     const result = tester.take_exit();
     if (result === "recalibrate") {
       // A browser pointer can remain down while the async reset begins. A
@@ -32,10 +60,6 @@ async function monitorRuntime(syncPresentation, showNotice) {
       syncPresentation();
       await rebootAndSyncStage(syncPresentation);
     } else if (result === "wifi") {
-      showNotice({
-        severity: "warning",
-        message: "Wi-Fi setup is simulated; reconnecting from the captive-portal state.",
-      });
       tester.boot_up();
       await rebootAndSyncStage(syncPresentation);
     } else if (result === "runtime error") {
@@ -46,7 +70,7 @@ async function monitorRuntime(syncPresentation, showNotice) {
 
 try {
   await init({
-    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=6ff0b9453b2b", import.meta.url),
+    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=873b1df64ba1", import.meta.url),
   });
   tester = new DnsTesterWeb(canvas);
   const { syncPresentation, showNotice } = await mountCydSimulator({

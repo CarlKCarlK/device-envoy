@@ -11,8 +11,9 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
+    Error, Result,
     flash_block::{FlashBlock, FlashBlockEsp},
-    init_and_start, Error, Result,
+    init_and_start,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

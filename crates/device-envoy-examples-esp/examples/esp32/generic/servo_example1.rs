@@ -1,4 +1,3 @@
-
 //! Wiring:
 //! - Servo signal -> GPIO4
 //! - Servo power -> 5V (do not use 3.3V for typical hobby servos)
@@ -20,10 +19,10 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
+    Result,
     button::{Button as _, ButtonEsp, PressedTo},
     init_and_start, servo,
     servo::Servo,
-    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

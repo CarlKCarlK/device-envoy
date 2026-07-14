@@ -94,7 +94,8 @@ Checklist:
 - [x] Add deterministic core tests for play/stop, pressed step, and clearing an active run.
 - [x] Add deterministic core coverage for `prev`/`next` seed wraparound.
 - [x] Add WASM browser coverage for `prev`, `next`, play/stop, and step input wiring.
-- [ ] Verify `prev`, `next`, play/stop, and step behavior on WASM, ESP, and RP.
+- [x] Verify `prev`, `next`, play/stop, step, and BOOT behavior on the tested ESP32 hardware.
+- [ ] Verify all four Linkage Blaze apps on the ESP32 CYD (`Armatron`, `Ballet`, `Clock`, and `Skeleton Clock`) before beginning RP hardware acceptance.
 - [x] Verify the simulator's full-screen and normal-mode controls expose the same BOOT input.
 
 ## App 2: Ballet
@@ -240,6 +241,8 @@ Validation completed during this implementation pass:
 - The native Clock/Skeleton Clock test harness now uses timer-free Button doubles plus a dev-only Embassy host executor dependency; no fake `__pender` implementation was added.
 - Linkage Blaze `just test-cyd-browser` passed all 16 browser tests across the shared shell, full-screen BOOT, Armatron controls, Ballet, Clock, Skeleton Clock, DNS Tester, Wi-Fi, calibration, BOOT, ROT, CAL, and time controls.
 - Full-screen mode now moves the shared BOOT control with the canvas and restores it on exit; the browser regression passed.
+- ESP32 CYD verification is being performed for all four Linkage Blaze apps in this order: Armatron, Ballet, Clock, Skeleton Clock. RP acceptance is explicitly deferred until that set is complete.
+- ESP32 Skeleton Clock currently reaches `SkelClock` captive-portal/AP mode and reports DHCP on `192.168.4.1`, but neither Windows nor a phone can associate with the open AP; this remains an open hardware/Wi-Fi investigation.
 - The Armatron WASM browser test passed for `prev`, `next`, reverse-kinematics play/stop, and step input; ESP/RP runtime control acceptance remains open.
 - Linkage Blaze's Clock/Skeleton Clock feature suite passed 135 tests, including BOOT before the first tick and after a rendered steady-state tick.
 - Targeted Playwright BOOT/re-entry tests passed for Ballet, Clock, and Skeleton Clock.

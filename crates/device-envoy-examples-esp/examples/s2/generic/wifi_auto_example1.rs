@@ -1,4 +1,3 @@
-
 //! Wiring:
 //! - Force-portal button -> GPIO0 to GND (`PressedTo::Ground`)
 //!
@@ -11,11 +10,11 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
+    Error, Result,
     button::{Button, ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto, WifiAutoEsp, WifiAutoEvent, WifiStack},
-    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -25,20 +24,23 @@ async fn connect_with_status(
     button: &mut impl Button,
 ) -> Result<WifiStack> {
     wifi_auto
-        .connect(button, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
-            match wifi_auto_event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    info!("wifi_auto_example1: captive portal ready");
+        .connect(
+            button,
+            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+                match wifi_auto_event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        info!("wifi_auto_example1: captive portal ready");
+                    }
+                    WifiAutoEvent::Connecting { .. } => {
+                        info!("wifi_auto_example1: connecting");
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        info!("wifi_auto_example1: connection failed");
+                    }
                 }
-                WifiAutoEvent::Connecting { .. } => {
-                    info!("wifi_auto_example1: connecting");
-                }
-                WifiAutoEvent::ConnectionFailed => {
-                    info!("wifi_auto_example1: connection failed");
-                }
-            }
-            Ok(())
-        })
+                Ok(())
+            },
+        )
         .await
 }
 

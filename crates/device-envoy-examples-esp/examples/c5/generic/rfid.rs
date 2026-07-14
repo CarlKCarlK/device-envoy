@@ -1,4 +1,3 @@
-
 //! Wiring:
 //!
 //! RFID reader example using an MFRC522 module.
@@ -19,9 +18,8 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    init_and_start,
+    Result, init_and_start,
     rfid::{Rfid, RfidEsp, RfidEvent, RfidStatic},
-    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

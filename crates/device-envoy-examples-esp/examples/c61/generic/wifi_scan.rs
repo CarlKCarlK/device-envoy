@@ -1,4 +1,3 @@
-
 //! Wiring:
 //! - No external wiring required; this example only uses the onboard Wi-Fi radio.
 //!
@@ -18,7 +17,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_esp::{init_and_start, Result};
+use device_envoy_esp::{Result, init_and_start};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

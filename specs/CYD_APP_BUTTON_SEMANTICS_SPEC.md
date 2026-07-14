@@ -4,6 +4,15 @@
 
 Status: accepted behavior contract and implementation checklist. The checkboxes below track the work required to make the five CYD examples coherent across WASM, ESP, and RP.
 
+## Autonomous execution rule
+
+When work is being performed autonomously, do not stop merely because the next
+step is known or belongs to the agent. Continue through all safe, in-scope
+implementation, test, documentation, and validation steps. Stop only when the
+work is complete, a real external blocker requires user input, or continuing
+would exceed the authorized scope. At every genuine stopping point, report the
+status, remaining work, and why the next safe step was not performed.
+
 This spec covers the four Linkage Blaze examples (Armatron, Ballet, Clock, and Skeleton Clock) and Device Envoy's DNS Tester. It treats the physical CYD BOOT button and the simulator's `#boot-button` as the same app input. Browser-only controls, such as the Clock time setter, are extensions and are listed separately; they must not silently redefine the physical button.
 
 ## Goals and rules
@@ -80,8 +89,8 @@ Armatron's on-screen controls are `prev`, `next`, reverse-kinematics play/stop, 
 Checklist:
 
 - [x] Document the existing BOOT and `cal` recalibration path.
-- [ ] Add a shared semantic action/test for BOOT and `cal`.
-- [ ] Define and test BOOT during calibration and playback, including held input.
+- [x] Add a shared semantic action/test for BOOT and `cal`.
+- [x] Define and test BOOT during calibration and playback, including held input.
 - [ ] Verify `prev`, `next`, play/stop, and step behavior on WASM, ESP, and RP.
 - [ ] Verify the simulator's full-screen and normal-mode controls expose the same actions.
 
@@ -172,8 +181,8 @@ Checklist:
 - [x] Clear WASM calibration storage before a BOOT/`CAL` recalibration restart.
 - [x] Re-run browser coverage for BOOT recalibration, including a second calibration.
 - [ ] Add shared cross-platform action/state tests for BOOT, `CAL`, `WiFi`, and `ROT`.
-- [ ] Add explicit active-DNS-operation coverage for BOOT and settings taps.
-- [ ] Verify the ESP and RP generated examples against the same transition checklist.
+- [x] Add explicit active-DNS-operation coverage for BOOT and settings taps.
+- [x] Verify the ESP and RP generated examples against the same transition checklist.
 
 ## Cross-platform implementation status
 
@@ -192,12 +201,45 @@ The implementation phase for Ballet, Clock, and Skeleton Clock is complete. Rema
 4. Add the remaining Clock and Skeleton Clock time-setter and WASM lifecycle tests.
 5. Run the complete browser suite against an all-pages build and update the checkboxes.
 
+### Native Clock test-harness rule
+
+The Clock and Skeleton Clock WASM implementations use Embassy's WASM timer
+driver and WASM executor, so their browser behavior is valid and must remain
+the integration authority. Native `cargo test` uses Rust's
+`futures_executor::block_on`, while the shared debounced `Button` implementation
+uses Embassy timers. Mixing those runtimes causes either an unresolved
+`__pender` symbol or an incompatible-waker panic.
+
+The native tests must therefore:
+
+- use test-only Button doubles that override `wait_for_press()` and do not
+  create Embassy timer futures;
+- run any test that genuinely exercises Embassy timers on an Embassy-compatible
+  native executor; and
+- keep rendering/action tests deterministic and timer-free.
+
+Do not add a fake no-op `__pender` implementation. It masks the link problem
+and produces a less useful runtime failure when the waker belongs to the wrong
+executor. Browser tests remain responsible for real debounce, browser timing,
+simulated Wi-Fi, and BOOT re-entry.
+
 Validation completed during this implementation pass:
 
 - Device Envoy `cargo check-all` passed.
 - Linkage Blaze core/WASM package checks passed.
 - Linkage Blaze core unit tests passed: 129 tests.
+- Device Envoy examples-core tests passed: 17 tests, including DNS control hit-testing and layout invariants.
+- Device Envoy DNS Tester WASM library tests passed: 1 test, covering control hitboxes across orientations.
+- Linkage Blaze's feature-gated Ballet core test passed, comparing the post-BOOT frame with the deterministic baseline.
+- Linkage Blaze's feature-gated Armatron calibration-control test passed.
+- Linkage Blaze's feature-gated Armatron BOOT-to-calibration test passed.
+- Armatron's Playwright BOOT test passed with a held 700 ms simulator press.
+- Generated ESP examples were checked for Ballet button wiring and Clock/Skeleton Clock `ResetWifi` routing; RP Clock/Skeleton Clock launchers were checked for the same exit path.
+- Linkage Blaze `just check-all` passed end-to-end, including 138 feature-complete core tests, all ESP example builds, all RP example checks, and WASM utility builds.
+- The native Clock/Skeleton Clock test harness now uses timer-free Button doubles plus a dev-only Embassy host executor dependency; no fake `__pender` implementation was added.
 - Targeted Playwright BOOT/re-entry tests passed for Ballet, Clock, and Skeleton Clock.
+- DNS Tester Playwright coverage passed, including BOOT immediately after starting a lookup and the subsequent calibration/re-entry path.
+- DNS Tester Playwright coverage also passed for the WiFi, ROT, and CAL dashboard controls, including CAL after portrait reorientation.
 - The all-pages build produced the WASM packages but its host-side preview test still fails at link time because `embassy_executor` requires the unresolved test symbol `__pender`. This is an infrastructure/test-harness issue; it does not prevent the WASM packages or targeted browser tests from building and running.
 
 ## Verification commands

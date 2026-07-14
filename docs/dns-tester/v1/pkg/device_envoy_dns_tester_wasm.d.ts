@@ -1,6 +1,43 @@
 /* tslint:disable */
 /* eslint-disable */
 
+/**
+ * Browser input and lifecycle control shared by an application launcher.
+ */
+export class CydSimulatorControlWasm {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * Forward a physical BOOT-button press.
+     */
+    boot_down(): void;
+    /**
+     * Forward a physical BOOT-button release.
+     */
+    boot_up(): void;
+    /**
+     * Return whether the simulated display is presented upside down.
+     */
+    orientation_is_inverted(): boolean;
+    /**
+     * Clear transient browser input after a simulated reset.
+     */
+    reset_transient_state(): void;
+    /**
+     * Forward a browser pointer-down position in logical canvas coordinates.
+     */
+    touch_down(x: number, y: number): void;
+    /**
+     * Forward a browser pointer-move position in logical canvas coordinates.
+     */
+    touch_move(x: number, y: number): void;
+    /**
+     * Forward a browser pointer-up or pointer-cancel event.
+     */
+    touch_up(): void;
+}
+
 export class DnsTesterWeb {
     free(): void;
     [Symbol.dispose](): void;
@@ -41,6 +78,14 @@ export interface InitOutput {
     readonly dnstesterweb_touch_down: (a: number, b: number, c: number) => void;
     readonly dnstesterweb_touch_move: (a: number, b: number, c: number) => void;
     readonly dnstesterweb_touch_up: (a: number) => void;
+    readonly __wbg_cydsimulatorcontrolwasm_free: (a: number, b: number) => void;
+    readonly cydsimulatorcontrolwasm_boot_down: (a: number) => void;
+    readonly cydsimulatorcontrolwasm_boot_up: (a: number) => void;
+    readonly cydsimulatorcontrolwasm_orientation_is_inverted: (a: number) => number;
+    readonly cydsimulatorcontrolwasm_reset_transient_state: (a: number) => void;
+    readonly cydsimulatorcontrolwasm_touch_down: (a: number, b: number, c: number) => void;
+    readonly cydsimulatorcontrolwasm_touch_move: (a: number, b: number, c: number) => void;
+    readonly cydsimulatorcontrolwasm_touch_up: (a: number) => void;
     readonly _embassy_time_now: () => bigint;
     readonly _embassy_time_schedule_wake: (a: bigint, b: number) => void;
     readonly wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_: (a: number, b: number, c: number) => void;

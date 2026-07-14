@@ -7,8 +7,12 @@ use embedded_graphics::{
 use wasm_bindgen::{JsCast, JsValue, prelude::wasm_bindgen};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
-use super::{ButtonWasm, ButtonWasmSource, CydTouchWasmSource, CydWasm};
+use super::{ButtonWasm, ButtonWasmSource, CydTouchWasmSource, CydWasm, next_animation_frame};
+use crate::button::Button;
 use crate::cyd::display::Orientation;
+
+const WIFI_CAPTIVE_PORTAL_WAIT_FRAMES: usize = 15;
+const WIFI_CONNECT_WAIT_FRAMES: usize = 90;
 
 const BACKGROUND: Rgb888 = Rgb888::new(10, 10, 12); // near-black
 const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
@@ -27,6 +31,26 @@ pub struct CydSimulatorControlWasm {
     touch_source: CydTouchWasmSource,
     button_source: ButtonWasmSource,
     orientation: Orientation,
+}
+
+/// Events emitted by the shared browser Wi-Fi connection simulation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WifiConnectEvent {
+    /// The simulated captive-portal setup phase is ready.
+    CaptivePortalReady,
+    /// The simulated client connection has begun.
+    Connecting { try_index: u8, try_count: u8 },
+    /// The simulated connection failed.
+    ConnectionFailed,
+}
+
+/// Result of the shared browser Wi-Fi connection simulation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WifiConnectOutcome {
+    /// The simulated client connection completed.
+    Connected,
+    /// BOOT interrupted the connection and requests a reset.
+    ResetRequested,
 }
 
 impl CydSimulatorWasm {
@@ -91,8 +115,52 @@ impl CydSimulatorControlWasm {
     }
 }
 
+/// Simulate the Wi-Fi connection phase used by applications with real Wi-Fi.
+pub async fn simulate_wifi_connect<OnEvent, Error>(
+    button: &mut ButtonWasm,
+    mut on_event: OnEvent,
+) -> Result<WifiConnectOutcome, Error>
+where
+    OnEvent: AsyncFnMut(WifiConnectEvent) -> Result<(), Error>,
+{
+    on_event(WifiConnectEvent::CaptivePortalReady).await?;
+    if wait_for_wifi_frames(button, WIFI_CAPTIVE_PORTAL_WAIT_FRAMES).await {
+        return Ok(WifiConnectOutcome::ResetRequested);
+    }
+
+    on_event(WifiConnectEvent::Connecting {
+        try_index: 0,
+        try_count: 1,
+    })
+    .await?;
+    if wait_for_wifi_frames(button, WIFI_CONNECT_WAIT_FRAMES).await {
+        return Ok(WifiConnectOutcome::ResetRequested);
+    }
+
+    Ok(WifiConnectOutcome::Connected)
+}
+
+async fn wait_for_wifi_frames(button: &ButtonWasm, frame_count: usize) -> bool {
+    for _ in 0..frame_count {
+        if button.is_pressed() {
+            return true;
+        }
+        next_animation_frame().await;
+    }
+    false
+}
+
 #[wasm_bindgen]
 impl CydSimulatorControlWasm {
+    /// Return whether the simulated display is presented upside down.
+    #[wasm_bindgen(js_name = orientation_is_inverted)]
+    pub fn orientation_is_inverted(&self) -> bool {
+        matches!(
+            self.orientation,
+            Orientation::LandscapeInverted | Orientation::PortraitInverted
+        )
+    }
+
     /// Forward a browser pointer-down position in logical canvas coordinates.
     #[wasm_bindgen(js_name = touch_down)]
     pub fn touch_down(&self, x: f32, y: f32) {

@@ -44,7 +44,10 @@ use wasm_bindgen::Clamped;
 use web_sys::{CanvasRenderingContext2d, ImageData, Storage};
 
 pub use animation_frame::next_animation_frame;
-pub use simulator::{CydSimulatorControlWasm, CydSimulatorWasm};
+pub use simulator::{
+    CydSimulatorControlWasm, CydSimulatorWasm, WifiConnectEvent, WifiConnectOutcome,
+    simulate_wifi_connect,
+};
 
 const FLASH_BLOCK_SIZE: usize = 4096;
 const FLASH_BLOCK_OFFSET: u32 = 0;

@@ -12,13 +12,14 @@ use device_envoy_core::{
     dns::{DnsResult, DnsRuntime},
     flash_block::FlashBlock as _,
     wasm::{
-        CydSimulatorControlWasm, CydSimulatorWasm, CydWasm, FlashBlockWasm, next_animation_frame,
+        CydSimulatorControlWasm, CydSimulatorWasm, CydWasm, FlashBlockWasm, WifiConnectEvent,
+        WifiConnectOutcome, next_animation_frame, simulate_wifi_connect,
     },
 };
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, Exit as CoreExit, UiError as CoreUiError,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice,
     display_orientation_for_calibration, dns_tester, dns_tester_splash,
-    orientation_after_calibration,
+    orientation_after_calibration, render_notice,
 };
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::*;
@@ -47,7 +48,7 @@ struct DnsTesterState {
 
 #[wasm_bindgen]
 impl DnsTesterWeb {
-    #[wasm_bindgen(constructor)]
+    #[wasm_bindgen(constructor)] // todo000 Is this pretty code?
     pub fn new(canvas: HtmlCanvasElement) -> Result<DnsTesterWeb, JsValue> {
         Ok(Self {
             canvas,
@@ -138,6 +139,23 @@ impl DnsTesterWeb {
         for _ in 0..60 {
             next_animation_frame().await;
         }
+
+        let wifi_outcome = simulate_wifi_connect(&mut button, async |event| {
+            let notice = match event {
+                WifiConnectEvent::CaptivePortalReady => UiNotice::WifiSetup,
+                WifiConnectEvent::Connecting { .. } => UiNotice::WifiConnecting,
+                WifiConnectEvent::ConnectionFailed => UiNotice::WifiUnavailable,
+            };
+            render_notice(&mut display, state.orientation, notice)
+                .await
+                .map_err(|error| JsValue::from_str(&format!("Wi-Fi notice: {error:?}")))
+        })
+        .await?;
+        if matches!(wifi_outcome, WifiConnectOutcome::ResetRequested) {
+            self.exit.set(Some(CoreExit::ResetWifi));
+            return Ok(());
+        }
+
         let mut device = CydWasm::from_parts(display, touch);
         let exit = self.exit.clone();
         let failed = self.failed.clone();

@@ -30,7 +30,7 @@ export async function mountCydSimulator({ wasm, app }) {
     attributes: true,
     attributeFilter: ["width", "height"],
   });
-  bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
+  let unbindInput = bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
   syncPresentation();
 
   if (wasm.init) {
@@ -44,13 +44,14 @@ export async function mountCydSimulator({ wasm, app }) {
     syncPresentation();
     const startedHandle = await started;
     if (startedHandle !== undefined) {
+      unbindInput();
       handle = startedHandle;
-      bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
+      unbindInput = bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
     }
     syncPresentation();
   }
-  setupDemoUx({ ...app, orientation: app.orientation ?? "landscape" });
-  return { handle, syncPresentation };
+  const demoUx = setupDemoUx({ ...app, orientation: app.orientation ?? "landscape" });
+  return { handle, syncPresentation, showNotice: demoUx.showNotice };
 }
 
 function ensurePhysicalShell(canvas) {
@@ -99,6 +100,13 @@ function ensurePhysicalShell(canvas) {
 }
 
 function bindInputProtocol(canvas, boot, handle, touchDownSamples) {
+  const listeners = [];
+  let touchActive = false;
+  let bootActive = false;
+  const listen = (target, type, listener, options) => {
+    target.addEventListener(type, listener, options);
+    listeners.push(() => target.removeEventListener(type, listener, options));
+  };
   const invoke = (name, ...arguments_) => {
     if (typeof handle[name] === "function") {
       return handle[name](...arguments_);
@@ -117,41 +125,66 @@ function bindInputProtocol(canvas, boot, handle, touchDownSamples) {
     return point;
   };
 
-  canvas.addEventListener("pointerdown", (event) => {
+  const releaseTouch = () => {
+    if (!touchActive) {
+      return;
+    }
+    touchActive = false;
+    invoke("touch_up");
+  };
+  const releaseBoot = () => {
+    if (!bootActive) {
+      return;
+    }
+    bootActive = false;
+    invoke("boot_up");
+  };
+
+  listen(canvas, "pointerdown", (event) => {
     const [x, y] = point(event);
     event.preventDefault();
     canvas.setPointerCapture(event.pointerId);
+    touchActive = true;
     invoke("touch_down", x, y);
     for (let sampleIndex = 1; sampleIndex < touchDownSamples; sampleIndex += 1) {
       invoke("touch_move", x, y);
     }
   });
-  canvas.addEventListener("pointermove", (event) => {
+  listen(canvas, "pointermove", (event) => {
     if (event.buttons) {
       const [x, y] = point(event);
       invoke("touch_move", x, y);
     }
   });
-  const releaseTouch = () => invoke("touch_up");
-  canvas.addEventListener("pointerup", releaseTouch);
-  canvas.addEventListener("pointercancel", releaseTouch);
-  window.addEventListener("blur", releaseTouch);
+  listen(canvas, "pointerup", releaseTouch);
+  listen(canvas, "pointercancel", releaseTouch);
+  listen(canvas, "lostpointercapture", releaseTouch);
+  listen(window, "blur", releaseTouch);
 
-  boot.addEventListener("pointerdown", (event) => {
+  listen(boot, "pointerdown", (event) => {
     event.preventDefault();
     boot.setPointerCapture?.(event.pointerId);
+    bootActive = true;
     invoke("boot_down");
   });
-  const releaseBoot = () => invoke("boot_up");
-  boot.addEventListener("pointerup", releaseBoot);
-  boot.addEventListener("pointercancel", releaseBoot);
-  window.addEventListener("blur", releaseBoot);
-  document.addEventListener("visibilitychange", () => {
+  listen(boot, "pointerup", releaseBoot);
+  listen(boot, "pointercancel", releaseBoot);
+  listen(boot, "lostpointercapture", releaseBoot);
+  listen(window, "blur", releaseBoot);
+  listen(document, "visibilitychange", () => {
     if (document.hidden) {
       releaseTouch();
       releaseBoot();
     }
   });
+
+  return () => {
+    releaseTouch();
+    releaseBoot();
+    for (const removeListener of listeners) {
+      removeListener();
+    }
+  };
 }
 
 export function setupDemoUx(config) {
@@ -174,8 +207,16 @@ export function setupDemoUx(config) {
     simulator,
     stage,
   });
+  const notice = buildSimulatorNotice();
 
-  body.append(galleryTag.link, sceneCard.restingButton, sceneCard.scrim, deviceMode.button, deviceMode.overlay);
+  body.append(
+    galleryTag.link,
+    sceneCard.restingButton,
+    sceneCard.scrim,
+    deviceMode.button,
+    deviceMode.overlay,
+    notice.element,
+  );
 
   if (config.timeSetter) {
     buildTimeSetter({
@@ -245,6 +286,44 @@ export function setupDemoUx(config) {
       void deviceMode.deactivate();
     }
   });
+
+  return { showNotice: notice.show };
+}
+
+function buildSimulatorNotice() {
+  const element = document.createElement("div");
+  element.className = "cyd-simulator-notice";
+  element.hidden = true;
+  element.setAttribute("role", "status");
+  element.setAttribute("aria-live", "polite");
+  element.setAttribute("aria-atomic", "true");
+
+  let hideTimer = 0;
+
+  const show = ({ severity = "info", message, durationMs = 2200 }) => {
+    if (!["info", "warning", "fatal"].includes(severity)) {
+      throw new Error(`unsupported simulator notice severity: ${severity}`);
+    }
+    if (typeof message !== "string" || message.length === 0) {
+      throw new Error("simulator notice message must be non-empty");
+    }
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new Error("simulator notice duration must be non-negative");
+    }
+
+    window.clearTimeout(hideTimer);
+    element.className = `cyd-simulator-notice cyd-simulator-notice--${severity}`;
+    element.textContent = message;
+    element.setAttribute("role", severity === "fatal" ? "alert" : "status");
+    element.hidden = false;
+    if (durationMs > 0) {
+      hideTimer = window.setTimeout(() => {
+        element.hidden = true;
+      }, durationMs);
+    }
+  };
+
+  return { element, show };
 }
 
 function buildGalleryTag(galleryUrl) {

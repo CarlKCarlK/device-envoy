@@ -1,5 +1,70 @@
 /* @ts-self-types="./device_envoy_dns_tester_wasm.d.ts" */
 
+/**
+ * Browser input and lifecycle control shared by an application launcher.
+ */
+export class CydSimulatorControlWasm {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        CydSimulatorControlWasmFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_cydsimulatorcontrolwasm_free(ptr, 0);
+    }
+    /**
+     * Forward a physical BOOT-button press.
+     */
+    boot_down() {
+        wasm.cydsimulatorcontrolwasm_boot_down(this.__wbg_ptr);
+    }
+    /**
+     * Forward a physical BOOT-button release.
+     */
+    boot_up() {
+        wasm.cydsimulatorcontrolwasm_boot_up(this.__wbg_ptr);
+    }
+    /**
+     * Return whether the simulated display is presented upside down.
+     * @returns {boolean}
+     */
+    orientation_is_inverted() {
+        const ret = wasm.cydsimulatorcontrolwasm_orientation_is_inverted(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Clear transient browser input after a simulated reset.
+     */
+    reset_transient_state() {
+        wasm.cydsimulatorcontrolwasm_reset_transient_state(this.__wbg_ptr);
+    }
+    /**
+     * Forward a browser pointer-down position in logical canvas coordinates.
+     * @param {number} x
+     * @param {number} y
+     */
+    touch_down(x, y) {
+        wasm.cydsimulatorcontrolwasm_touch_down(this.__wbg_ptr, x, y);
+    }
+    /**
+     * Forward a browser pointer-move position in logical canvas coordinates.
+     * @param {number} x
+     * @param {number} y
+     */
+    touch_move(x, y) {
+        wasm.cydsimulatorcontrolwasm_touch_move(this.__wbg_ptr, x, y);
+    }
+    /**
+     * Forward a browser pointer-up or pointer-cancel event.
+     */
+    touch_up() {
+        wasm.cydsimulatorcontrolwasm_touch_up(this.__wbg_ptr);
+    }
+}
+if (Symbol.dispose) CydSimulatorControlWasm.prototype[Symbol.dispose] = CydSimulatorControlWasm.prototype.free;
+
 export class DnsTesterWeb {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -303,6 +368,9 @@ function wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64_____
     wasm.wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_(arg0, arg1, arg2);
 }
 
+const CydSimulatorControlWasmFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_cydsimulatorcontrolwasm_free(ptr >>> 0, 1));
 const DnsTesterWebFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_dnstesterweb_free(ptr >>> 0, 1));

@@ -1,4 +1,4 @@
-import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=8ce1d5f43601";
+import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=52fc9c6b2e8c";
 import { mountCydSimulator } from "./cyd-simulator.js";
 
 const canvas = document.querySelector("#screen");
@@ -8,21 +8,13 @@ function nextFrame() {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
-function showWifiUnavailableNotice() {
-  const notice = document.createElement("div");
-  notice.className = "simulation-notice";
-  notice.textContent = "Wi-Fi setup is not available in the browser simulation.";
-  document.body.append(notice);
-  window.setTimeout(() => notice.remove(), 2200);
-}
-
 async function rebootAndSyncStage(syncPresentation) {
   const reboot = tester.reboot();
   await reboot;
   syncPresentation();
 }
 
-async function monitorRuntime(syncPresentation) {
+async function monitorRuntime(syncPresentation, showNotice) {
   while (true) {
     await nextFrame();
     const result = tester.take_exit();
@@ -40,7 +32,11 @@ async function monitorRuntime(syncPresentation) {
       syncPresentation();
       await rebootAndSyncStage(syncPresentation);
     } else if (result === "wifi") {
-      showWifiUnavailableNotice();
+      showNotice({
+        severity: "warning",
+        message: "Wi-Fi setup is simulated; reconnecting from the captive-portal state.",
+      });
+      tester.boot_up();
       await rebootAndSyncStage(syncPresentation);
     } else if (result === "runtime error") {
       return;
@@ -50,10 +46,10 @@ async function monitorRuntime(syncPresentation) {
 
 try {
   await init({
-    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=8ce1d5f43601", import.meta.url),
+    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=52fc9c6b2e8c", import.meta.url),
   });
   tester = new DnsTesterWeb(canvas);
-  const { syncPresentation } = await mountCydSimulator({
+  const { syncPresentation, showNotice } = await mountCydSimulator({
     wasm: {
       handle: tester,
       start: () => tester.start(),
@@ -64,11 +60,11 @@ try {
       touchDownSamples: 9,
       previewLine: "Exercise CYD touch, calibration, orientation, and reset behavior in your browser.",
       descriptionHtml: "<p>A browser companion to the Device Envoy hardware DNS tester. It uses a deterministic DNS result because browsers cannot issue arbitrary DNS requests directly.</p>",
-      controlsHtml: "<p>Tap the screen to run a test. ROT cycles orientation, CAL clears calibration, WiFi is unavailable, and boot provides the physical-button recalibration path.</p>",
+      controlsHtml: "<p>Tap the screen to run a test. ROT cycles orientation, CAL clears calibration, WiFi restarts the simulated captive-portal connection, and boot provides the physical-button recalibration path.</p>",
       coreCodeUrl: "https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-core/src/dns_tester.rs",
     },
   });
-  void monitorRuntime(syncPresentation);
+  void monitorRuntime(syncPresentation, showNotice);
 } catch (error) {
   console.error(error);
 }

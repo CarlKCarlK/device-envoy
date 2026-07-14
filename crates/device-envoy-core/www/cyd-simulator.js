@@ -202,6 +202,7 @@ export function setupDemoUx(config) {
   const sceneCard = buildSceneCard(config);
   const deviceMode = buildDeviceMode({
     body,
+    boot: requireElement("#boot-button", HTMLButtonElement),
     canvas,
     config,
     simulator,
@@ -415,7 +416,7 @@ function buildSceneCard(config) {
   };
 }
 
-function buildDeviceMode({ body, canvas, config, simulator, stage }) {
+function buildDeviceMode({ body, boot, canvas, config, simulator, stage }) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "demo-ux-device-button";
@@ -439,6 +440,7 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
   let exiting = false;
   let usedFullscreen = false;
   let canvasPlaceholder = null;
+  let bootPlaceholder = null;
 
   const resizeDeviceCanvas = () => {
     if (!active) {
@@ -489,8 +491,21 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
     canvas.style.transform = "";
   };
 
+  const restoreBoot = () => {
+    if (bootPlaceholder?.parentNode) {
+      bootPlaceholder.replaceWith(boot);
+      bootPlaceholder = null;
+    }
+    boot.style.position = "";
+    boot.style.left = "";
+    boot.style.top = "";
+    boot.style.bottom = "";
+    boot.style.transform = "";
+  };
+
   const finishDeactivate = () => {
     restoreCanvas();
+    restoreBoot();
     overlay.hidden = true;
     body.classList.remove("demo-ux-device-active");
     simulator.removeAttribute("aria-hidden");
@@ -513,7 +528,15 @@ function buildDeviceMode({ body, canvas, config, simulator, stage }) {
 
     canvasPlaceholder = document.createComment("demo-ux-canvas-placeholder");
     canvas.parentNode?.insertBefore(canvasPlaceholder, canvas);
+    bootPlaceholder = document.createComment("demo-ux-boot-placeholder");
+    boot.parentNode?.insertBefore(bootPlaceholder, boot);
     screenHost.append(canvas);
+    overlay.append(boot);
+    boot.style.position = "fixed";
+    boot.style.left = "50%";
+    boot.style.top = "auto";
+    boot.style.bottom = "24px";
+    boot.style.transform = "translateX(-50%)";
     resizeDeviceCanvas();
 
     if (typeof overlay.requestFullscreen === "function") {

@@ -424,6 +424,11 @@ body {
   visibility: hidden;
 }
 
+.demo-ux-device-active .demo-ux-device-overlay .boot-button {
+  visibility: visible;
+  z-index: 72;
+}
+
 .demo-ux-time-chip {
   position: fixed;
   left: 14px;

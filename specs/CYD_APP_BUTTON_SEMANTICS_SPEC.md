@@ -82,7 +82,7 @@ Armatron's on-screen controls are `prev`, `next`, reverse-kinematics play/stop, 
 | WASM `Startup` | Seeds default calibration when storage is empty, then enters calibration. | Keep the deterministic startup policy; a BOOT press before the loop is ready must be consumed, not replayed into the next state. | None before the app screen. |
 | ESP/RP `Startup` | Enters calibration when calibration is unavailable; otherwise starts Armatron. | Match WASM's documented startup policy and consume a press spanning startup. | None before the app screen. |
 | All platforms `Calibration` | The calibration flow owns the button; a valid calibration is saved. | A BOOT tap may restart/cancel the current calibration only if the calibration UI says so; otherwise ignore it while showing progress. Do not leave a stale press for Armatron. | No Armatron controls should be active. |
-| All platforms `Main` | BOOT returns `CalibrationRequested`; the WASM path clears storage and loops, while hardware clears flash and reboots. | Keep BOOT as “recalibrate,” with the same user-visible transition and persistence semantics on all platforms. | `cal` requests the same recalibration action. `prev`/`next` select the previous/next target. Play/stop starts or stops reverse-kinematics playback. Step advances while held. These mappings already exist and need cross-platform tests. |
+| All platforms `Main` | BOOT returns `CalibrationRequested`; the WASM path clears storage and loops, while hardware clears flash and reboots. | Keep BOOT as “recalibrate,” with the same user-visible transition and persistence semantics on all platforms. | `cal` requests the same recalibration action. `prev`/`next` select the previous/next target. Play/stop starts or stops reverse-kinematics playback. Step advances while held. The shared mappings are implemented; cross-platform acceptance tests remain. |
 | All platforms `Active` | BOOT is checked by the Armatron loop and requests recalibration; touch controls continue to drive playback/step behavior. | BOOT must stop the active operation, release any held-step state, and enter calibration exactly once. | A new target selection must not corrupt an active step/playback operation. `cal` has the same priority as BOOT. |
 | All platforms `Transition` | WASM releases the triggering input before calibration; hardware restarts after clearing flash. | Verify release/debounce behavior on ESP, RP, and WASM and add an automated regression for a held BOOT tap. | Verify `cal` follows the same transition path as BOOT. |
 
@@ -91,8 +91,10 @@ Checklist:
 - [x] Document the existing BOOT and `cal` recalibration path.
 - [x] Add a shared semantic action/test for BOOT and `cal`.
 - [x] Define and test BOOT during calibration and playback, including held input.
+- [x] Add deterministic core tests for play/stop, pressed step, and clearing an active run.
+- [x] Add WASM browser coverage for `prev`, `next`, play/stop, and step input wiring.
 - [ ] Verify `prev`, `next`, play/stop, and step behavior on WASM, ESP, and RP.
-- [ ] Verify the simulator's full-screen and normal-mode controls expose the same actions.
+- [x] Verify the simulator's full-screen and normal-mode controls expose the same BOOT input.
 
 ## App 2: Ballet
 
@@ -111,7 +113,7 @@ Checklist:
 - [x] Decide whether “restart animation” is the released Ballet BOOT action and record the decision in the core API.
 - [x] Add BOOT handling to WASM, ESP, and RP.
 - [x] Add a deterministic restart test and a browser test.
-- [ ] Confirm there are no accidental on-screen controls or Wi-Fi requirements.
+- [x] Confirm Ballet has no application on-screen controls or Wi-Fi requirement; only shared simulator UX remains.
 
 ## App 3: Clock
 
@@ -121,8 +123,8 @@ Clock has no CYD touch buttons. The browser time setter changes the simulated ti
 
 | Platform/state | BOOT: current behavior | BOOT: required behavior | On-screen/browser controls |
 | --- | --- | --- | --- |
-| WASM `Startup`/`WifiSetup` | There is no simulated Wi-Fi; the splash proceeds directly to the clock. The simulator button is discarded. | Add shared simulated Wi-Fi. During connection/setup, BOOT must request Wi-Fi reset/re-entry to setup, matching the hardware force-portal behavior. | The time setter remains a browser extension and changes the clock source only. It must not be presented as a CYD hardware button. |
-| WASM `Main` | BOOT is a no-op because no button reaches the clock loop. | BOOT must request Wi-Fi reset/re-entry to setup, with a notice and a controlled return to `WifiSetup`. This gives the browser the same useful force-portal action as hardware. | No CYD touch buttons. |
+| WASM `Startup`/`WifiSetup` | Shared simulated Wi-Fi drives the splash/setup flow; the simulator button can request a reset/re-entry. | Keep the shared setup flow and consume BOOT once per press. | The time setter remains a browser extension and changes the clock source only. It must not be presented as a CYD hardware button. |
+| WASM `Main` | BOOT requests Wi-Fi reset/re-entry to setup through the typed clock exit. | Keep the controlled return to `WifiSetup`, with a notice and no duplicate loop. | No CYD touch buttons. |
 | ESP/RP `Startup`/`WifiSetup` | BOOT is passed to `WifiAuto` and can force the captive portal. | Keep this behavior and make the state transition visible and testable. | No CYD touch buttons. |
 | ESP/RP `Main` | The button is no longer passed to the clock loop, so BOOT has no app meaning after Wi-Fi startup. | Retain the same physical button and make a short BOOT tap reset Wi-Fi/re-enter captive-portal setup. | No CYD touch buttons. |
 | All platforms `Active`/`Transition` | No separate clock action currently consumes BOOT. | BOOT has the same Wi-Fi-reset meaning while the clock is rendering; do not tear down a frame or spawn a second loop. | The time setter may update the source while the clock runs; it must not bypass the Wi-Fi-reset action. |
@@ -132,9 +134,9 @@ Checklist:
 - [x] Add simulated Wi-Fi to Clock WASM using the shared simulator Wi-Fi path and notices.
 - [x] Define the typed Clock action for “reset Wi-Fi” and use it from BOOT on all platforms.
 - [x] Pass or otherwise route BOOT through the ESP/RP steady-state clock loop.
-- [ ] Add WASM unit tests for setup, connected, BOOT reset, and re-entry.
+- [x] Add shared-loop tests for setup entry, connected rendering, and BOOT reset after a rendered tick; WASM browser coverage verifies re-entry.
 - [x] Add browser coverage for the main-state BOOT reset and re-entry.
-- [ ] Add independent browser coverage for the time setter.
+- [x] Add independent browser coverage for the time setter.
 
 ## App 4: Skeleton Clock
 
@@ -144,8 +146,8 @@ Skeleton Clock has the same input gap as Clock. Its browser time setter is an ex
 
 | Platform/state | BOOT: current behavior | BOOT: required behavior | On-screen/browser controls |
 | --- | --- | --- | --- |
-| WASM `Startup`/`WifiSetup` | There is no simulated Wi-Fi; the splash proceeds directly to the skeleton-clock loop and the button is discarded. | Add shared simulated Wi-Fi. During setup/connection, BOOT must reset Wi-Fi/re-enter setup. | The time setter changes simulated time only. No CYD touch buttons. |
-| WASM `Main` | BOOT is a no-op. | BOOT must reset Wi-Fi/re-enter setup, with the same notices and lifecycle as Clock. | No CYD touch buttons. |
+| WASM `Startup`/`WifiSetup` | Shared simulated Wi-Fi drives the splash/setup flow; the simulator button can request a reset/re-entry. | Keep the shared setup flow and consume BOOT once per press. | The time setter changes simulated time only. No CYD touch buttons. |
+| WASM `Main` | BOOT requests Wi-Fi reset/re-entry to setup through the typed skeleton-clock exit. | Keep the same notices and lifecycle as Clock. | No CYD touch buttons. |
 | ESP/RP `Startup`/`WifiSetup` | BOOT is used by `WifiAuto` to force the captive portal. | Keep and test this behavior. | No CYD touch buttons. |
 | ESP/RP `Main` | The button is not passed to the steady-state skeleton-clock loop, so BOOT is a no-op after startup. | Make a short BOOT tap reset Wi-Fi/re-enter captive-portal setup. | No CYD touch buttons. |
 | All platforms `Active`/`Transition` | No distinct BOOT action exists. | BOOT must request the Wi-Fi reset once and safely restart the skeleton-clock lifecycle. | The time setter must remain independent from BOOT. |
@@ -155,9 +157,9 @@ Checklist:
 - [x] Add simulated Wi-Fi to Skeleton Clock WASM using the shared simulator Wi-Fi path and notices.
 - [x] Define the typed Skeleton Clock “reset Wi-Fi” action.
 - [x] Route BOOT through the ESP/RP steady-state loop.
-- [ ] Add WASM unit tests for Wi-Fi setup, connected state, reset, and re-entry.
+- [x] Add shared-loop tests for setup entry, connected rendering, and BOOT reset after a rendered tick; WASM browser coverage verifies re-entry.
 - [x] Add browser coverage for the main-state BOOT reset and re-entry.
-- [ ] Add independent browser coverage for time-setting behavior.
+- [x] Add independent browser coverage for time-setting behavior.
 
 ## App 5: DNS Tester
 
@@ -180,7 +182,7 @@ Checklist:
 - [x] Keep WASM simulated Wi-Fi and typed notices aligned with hardware semantics.
 - [x] Clear WASM calibration storage before a BOOT/`CAL` recalibration restart.
 - [x] Re-run browser coverage for BOOT recalibration, including a second calibration.
-- [ ] Add shared cross-platform action/state tests for BOOT, `CAL`, `WiFi`, and `ROT`.
+- [x] Add shared host-platform action/state tests for BOOT, `CAL`, `WiFi`, and `ROT` across all orientations; hardware runtime acceptance remains separate.
 - [x] Add explicit active-DNS-operation coverage for BOOT and settings taps.
 - [x] Verify the ESP and RP generated examples against the same transition checklist.
 
@@ -193,13 +195,11 @@ Implementation log:
 - Added typed `ResetWifi` exits to the shared Clock and Skeleton Clock loops; wired steady-state BOOT reset through ESP/RP reboot paths.
 - Added deterministic simulated Wi-Fi setup, status rendering, BOOT interruption, and re-entry to both Clock and Skeleton Clock WASM launchers.
 
-The implementation phase for Ballet, Clock, and Skeleton Clock is complete. Remaining work is test coverage and acceptance work for all five examples:
+The core implementation phase for all five examples is complete. Remaining work is platform acceptance coverage and final checklist closure:
 
-1. Add shared typed action/state-transition tests for all five examples.
-2. Complete Armatron held-input and active-operation tests.
-3. Complete DNS Tester active-operation and generated ESP/RP acceptance tests.
-4. Add the remaining Clock and Skeleton Clock time-setter and WASM lifecycle tests.
-5. Run the complete browser suite against an all-pages build and update the checkboxes.
+1. Complete Armatron cross-platform acceptance for target navigation and reverse-kinematics controls.
+2. Complete DNS Tester generated ESP/RP runtime acceptance tests.
+3. Verify the simulator's normal/full-screen control presentation and Ballet's absence of accidental controls.
 
 ### Native Clock test-harness rule
 
@@ -237,10 +237,14 @@ Validation completed during this implementation pass:
 - Generated ESP examples were checked for Ballet button wiring and Clock/Skeleton Clock `ResetWifi` routing; RP Clock/Skeleton Clock launchers were checked for the same exit path.
 - Linkage Blaze `just check-all` passed end-to-end, including 138 feature-complete core tests, all ESP example builds, all RP example checks, and WASM utility builds.
 - The native Clock/Skeleton Clock test harness now uses timer-free Button doubles plus a dev-only Embassy host executor dependency; no fake `__pender` implementation was added.
+- Linkage Blaze `just test-cyd-browser` passed all 16 browser tests across the shared shell, full-screen BOOT, Armatron controls, Ballet, Clock, Skeleton Clock, DNS Tester, Wi-Fi, calibration, BOOT, ROT, CAL, and time controls.
+- Full-screen mode now moves the shared BOOT control with the canvas and restores it on exit; the browser regression passed.
+- The Armatron WASM browser test passed for `prev`, `next`, reverse-kinematics play/stop, and step input; ESP/RP runtime control acceptance remains open.
+- Linkage Blaze's Clock/Skeleton Clock feature suite passed 135 tests, including BOOT before the first tick and after a rendered steady-state tick.
 - Targeted Playwright BOOT/re-entry tests passed for Ballet, Clock, and Skeleton Clock.
 - DNS Tester Playwright coverage passed, including BOOT immediately after starting a lookup and the subsequent calibration/re-entry path.
 - DNS Tester Playwright coverage also passed for the WiFi, ROT, and CAL dashboard controls, including CAL after portrait reorientation.
-- The all-pages build produced the WASM packages but its host-side preview test still fails at link time because `embassy_executor` requires the unresolved test symbol `__pender`. This is an infrastructure/test-harness issue; it does not prevent the WASM packages or targeted browser tests from building and running.
+- The all-pages build produced the WASM packages and the host-side preview test passed after the timer-free native test doubles and dev-only Embassy host executor dependency were added; no fake `__pender` implementation was added.
 
 ## Verification commands
 

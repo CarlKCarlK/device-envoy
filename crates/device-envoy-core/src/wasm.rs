@@ -7,6 +7,7 @@
 //! blits the frame to the canvas, then resolves.
 
 mod animation_frame;
+pub mod simulator;
 
 use core::{
     cell::{Cell, RefCell},
@@ -43,6 +44,7 @@ use wasm_bindgen::Clamped;
 use web_sys::{CanvasRenderingContext2d, ImageData, Storage};
 
 pub use animation_frame::next_animation_frame;
+pub use simulator::{CydSimulatorControlWasm, CydSimulatorWasm};
 
 const FLASH_BLOCK_SIZE: usize = 4096;
 const FLASH_BLOCK_OFFSET: u32 = 0;
@@ -304,7 +306,7 @@ impl Default for ButtonWasmSource {
     }
 }
 
-// TODO When a dedicated `device-envoy-wasm` crate exists, move `ButtonWasm`
+// TODO (may no longer apply) When a dedicated `device-envoy-wasm` crate exists, move `ButtonWasm`
 // there so browser button plumbing lives beside the platform button adapter.
 impl __ButtonMonitor for ButtonWasm {
     fn is_pressed_raw(&self) -> bool {

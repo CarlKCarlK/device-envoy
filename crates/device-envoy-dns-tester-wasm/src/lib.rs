@@ -11,16 +11,18 @@ use device_envoy_core::{
     },
     dns::{DnsResult, DnsRuntime},
     flash_block::FlashBlock as _,
-    wasm::{ButtonWasmSource, CydTouchWasmSource, CydWasm, FlashBlockWasm, next_animation_frame},
+    wasm::{
+        CydSimulatorControlWasm, CydSimulatorWasm, CydWasm, FlashBlockWasm, next_animation_frame,
+    },
 };
 use device_envoy_examples_core::dns_tester::{
     Error as CoreError, Exit as CoreExit, UiError as CoreUiError,
     display_orientation_for_calibration, dns_tester, dns_tester_splash,
     orientation_after_calibration,
 };
-use embedded_graphics::{geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
-use wasm_bindgen::{JsCast, prelude::*};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
+use wasm_bindgen::prelude::*;
+use web_sys::HtmlCanvasElement;
 
 const DNS_HOSTNAME: &str = "example.com";
 const BACKGROUND: Rgb888 = Rgb888::new(10, 10, 12); // near-black
@@ -29,9 +31,6 @@ const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
 #[wasm_bindgen]
 pub struct DnsTesterWeb {
     canvas: HtmlCanvasElement,
-    context: CanvasRenderingContext2d,
-    touch_source: CydTouchWasmSource,
-    button_source: ButtonWasmSource,
     exit: Rc<Cell<Option<CoreExit>>>,
     failed: Rc<Cell<bool>>,
     state: RefCell<DnsTesterState>,
@@ -41,6 +40,7 @@ struct DnsTesterState {
     wifi_flash_block: FlashBlockWasm,
     calibration_flash_block: FlashBlockWasm,
     orientation_flash_block: FlashBlockWasm,
+    simulator_control: Option<CydSimulatorControlWasm>,
     orientation: Orientation,
     hostname: &'static str,
 }
@@ -49,15 +49,8 @@ struct DnsTesterState {
 impl DnsTesterWeb {
     #[wasm_bindgen(constructor)]
     pub fn new(canvas: HtmlCanvasElement) -> Result<DnsTesterWeb, JsValue> {
-        let context = canvas
-            .get_context("2d")?
-            .ok_or_else(|| JsValue::from_str("2D canvas context unavailable"))?
-            .dyn_into::<CanvasRenderingContext2d>()?;
         Ok(Self {
             canvas,
-            context,
-            touch_source: CydTouchWasmSource::new(),
-            button_source: ButtonWasmSource::new(),
             exit: Rc::new(Cell::new(None)),
             failed: Rc::new(Cell::new(false)),
             state: RefCell::new(DnsTesterState {
@@ -67,6 +60,7 @@ impl DnsTesterWeb {
                     .map_err(|error| JsValue::from_str(&format!("Calibration flash: {error:?}")))?,
                 orientation_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/orientation")
                     .map_err(|error| JsValue::from_str(&format!("Orientation flash: {error:?}")))?,
+                simulator_control: None,
                 orientation: Orientation::Landscape,
                 hostname: DNS_HOSTNAME,
             }),
@@ -92,20 +86,21 @@ impl DnsTesterWeb {
         self.canvas.set_width(orientation.width());
         self.canvas.set_height(orientation.height());
 
-        let device = CydWasm::new(
-            self.context.clone(),
+        let simulator = CydSimulatorWasm::new_with_style(
+            self.canvas.clone(),
             orientation,
             BACKGROUND,
             FOREGROUND,
             &FONT_6X10,
-            self.touch_source.clone(),
-        );
+        )?;
+        let (device, mut button, simulator_control) = simulator.into_parts();
+        state.simulator_control = Some(simulator_control);
         let (mut display, uncalibrated_touch) = device.parts_uncalibrated();
         let (touch, outcome) = ensure_calibration(
             &mut display,
             uncalibrated_touch,
             &mut state.calibration_flash_block,
-            &mut self.button_source.button(),
+            &mut button,
             Some("Touch calibrated"),
         )
         .await
@@ -118,14 +113,17 @@ impl DnsTesterWeb {
             self.canvas.set_height(saved_orientation.height());
         }
         let (mut display, touch) = if outcome.was_saved() {
-            let dashboard_device = CydWasm::new(
-                self.context.clone(),
+            let dashboard_simulator = CydSimulatorWasm::new_with_style(
+                self.canvas.clone(),
                 saved_orientation,
                 BACKGROUND,
                 FOREGROUND,
                 &FONT_6X10,
-                self.touch_source.clone(),
-            );
+            )?;
+            let (dashboard_device, dashboard_button, dashboard_control) =
+                dashboard_simulator.into_parts();
+            button = dashboard_button;
+            state.simulator_control = Some(dashboard_control);
             let (display, uncalibrated_touch) = dashboard_device.parts_uncalibrated();
             (
                 display,
@@ -144,7 +142,6 @@ impl DnsTesterWeb {
         let exit = self.exit.clone();
         let failed = self.failed.clone();
         let hostname = state.hostname;
-        let mut button = self.button_source.button();
         let mut dns = DnsRuntime::new(hostname, async || {
             Ok::<DnsResult, core::convert::Infallible>(DnsResult {
                 succeeded: true,
@@ -165,25 +162,33 @@ impl DnsTesterWeb {
     }
 
     pub fn touch_down(&self, x: f32, y: f32) {
-        let point = map_to_landscape(self.orientation(), Point::new(x as i32, y as i32));
-        self.touch_source.touch_down(point.x as f32, point.y as f32);
+        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+            control.touch_down(x, y);
+        }
     }
 
     pub fn touch_move(&self, x: f32, y: f32) {
-        let point = map_to_landscape(self.orientation(), Point::new(x as i32, y as i32));
-        self.touch_source.touch_move(point.x as f32, point.y as f32);
+        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+            control.touch_move(x, y);
+        }
     }
 
     pub fn touch_up(&self) {
-        self.touch_source.touch_up();
+        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+            control.touch_up();
+        }
     }
 
     pub fn boot_down(&self) {
-        self.button_source.press();
+        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+            control.boot_down();
+        }
     }
 
     pub fn boot_up(&self) {
-        self.button_source.release();
+        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+            control.boot_up();
+        }
     }
 
     pub fn take_exit(&self) -> String {
@@ -220,7 +225,9 @@ impl DnsTesterWeb {
 
     /// Present the simulated CYD in landscape while touch calibration runs.
     pub fn prepare_calibration_landscape(&self) {
-        self.button_source.release();
+        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+            control.reset_transient_state();
+        }
         self.state.borrow_mut().orientation = Orientation::Landscape;
         self.canvas.set_width(Orientation::Landscape.width());
         self.canvas.set_height(Orientation::Landscape.height());
@@ -259,18 +266,10 @@ impl DnsTesterWeb {
     }
 }
 
-fn map_to_landscape(orientation: Orientation, point: Point) -> Point {
-    match orientation {
-        Orientation::Landscape => point,
-        Orientation::Portrait => Point::new(319 - point.y, point.x),
-        Orientation::LandscapeInverted => Point::new(319 - point.x, 239 - point.y),
-        Orientation::PortraitInverted => Point::new(point.y, 239 - point.x),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use embedded_graphics::geometry::Point;
 
     #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
     #[cfg_attr(not(target_arch = "wasm32"), test)]
@@ -302,8 +301,13 @@ mod tests {
             ),
         ] {
             for point in [calibration, wifi, rotate] {
-                let landscape_point = map_to_landscape(orientation, point);
-                assert_eq!(orientation.map_landscape_point(landscape_point), point);
+                let mapped_point = match orientation {
+                    Orientation::Landscape => point,
+                    Orientation::Portrait => Point::new(319 - point.y, point.x),
+                    Orientation::LandscapeInverted => Point::new(319 - point.x, 239 - point.y),
+                    Orientation::PortraitInverted => Point::new(point.y, 239 - point.x),
+                };
+                assert_eq!(orientation.map_landscape_point(mapped_point), point);
             }
         }
     }

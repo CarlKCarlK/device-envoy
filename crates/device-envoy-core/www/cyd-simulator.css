@@ -1,8 +1,25 @@
-/* Master copy: crates/linkage-blaze-clock-wasm/www/demo-ux.css */
-/* TODO unify the four copies of demo-ux.js/css into one shared source. */
+/* Canonical shared CYD browser shell stylesheet. */
 
 * {
   box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  width: 100vw;
+  height: 100dvh;
+  background: url("./desk.jpg") repeat;
+  background-size: 1024px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .demo-ux-page {
@@ -10,7 +27,143 @@
 }
 
 .simulator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   transform-origin: center center;
+}
+
+.stage {
+  position: relative;
+  z-index: 0;
+  flex: 0 0 auto;
+  width: 640px;
+  height: 480px;
+}
+
+#screen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  touch-action: none;
+  z-index: 2;
+}
+
+.stage .case {
+  position: absolute;
+  z-index: 1;
+  width: 169.844%;
+  height: 290.835%;
+  left: 165.314%;
+  top: -62.709%;
+  transform-origin: top left;
+  transform: rotate(90deg);
+  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.55));
+}
+
+.stage .cord {
+  position: absolute;
+  z-index: 0;
+  left: 165.314%;
+  top: 45.833%;
+  width: 100vw;
+  height: 7.292%;
+  background: linear-gradient(
+    to bottom,
+    rgb(20, 20, 27) 0 50%,
+    rgb(67, 72, 103) 50% 90%,
+    rgb(20, 20, 27) 90% 100%
+  );
+}
+
+.stage[data-orientation="portrait"] {
+  width: 480px;
+  height: 640px;
+}
+
+.stage[data-orientation="portrait"] .case {
+  width: 226.458%;
+  height: 218.125%;
+  left: -62.708%;
+  top: -65.313%;
+  transform: none;
+}
+
+.stage[data-orientation="portrait"] .cord {
+  left: 45.833%;
+  width: 7.292%;
+  top: -100vh;
+  height: 100vh;
+  background: linear-gradient(
+    to right,
+    rgb(20, 20, 27) 0 50%,
+    rgb(67, 72, 103) 50% 90%,
+    rgb(20, 20, 27) 90% 100%
+  );
+}
+
+.boot-button {
+  position: absolute;
+  left: 50.361%;
+  top: 114.609%;
+  transform: translateX(-50%);
+  z-index: 3;
+  min-width: 72px;
+  padding: 7px 16px 8px;
+  border: 1px solid rgb(58, 60, 66); /* charcoal gray */
+  border-radius: 6px;
+  background: linear-gradient(
+    to bottom,
+    rgb(116, 120, 127) 0%,
+    rgb(67, 71, 79) 52%,
+    rgb(44, 47, 53) 100%
+  );
+  color: rgb(230, 232, 235); /* off-white */
+  font: 600 13px/1.1 "Trebuchet MS", "Verdana", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  box-shadow: 0 2px 0 rgb(30, 31, 35), 0 8px 18px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.stage[data-orientation="portrait"] .boot-button {
+  left: 50%;
+  top: 114.609%;
+}
+
+.boot-button:hover {
+  filter: brightness(1.05);
+}
+
+.boot-button:active {
+  transform: translate(-50%, 1px);
+}
+
+.demo-ux-zoom-reset {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 30;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(107, 86, 64, 0.52); /* warm taupe border */
+  border-radius: 14px;
+  background: rgb(247, 241, 230); /* warm paper white */
+  color: rgb(51, 43, 33); /* dark sepia */
+  font: 600 0.9rem/1.2 "Courier New", Georgia, serif;
+  cursor: pointer;
+}
+
+.stage[data-inverted="true"] {
+  transform: rotate(180deg);
+}
+
+.demo-ux-device-screen canvas[data-inverted="true"] {
+  transform: rotate(180deg);
 }
 
 .demo-ux-gallery-tag,

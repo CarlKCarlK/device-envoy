@@ -1,8 +1,17 @@
 # Build the versioned DNS tester WASM package.
 build-dns-tester version="v1":
     mkdir -p "docs/dns-tester/{{version}}/pkg"
+    cp crates/device-envoy-core/www/cyd-simulator.js "docs/dns-tester/{{version}}/cyd-simulator.js"
+    cp crates/device-envoy-core/www/cyd-simulator.css "docs/dns-tester/{{version}}/cyd-simulator.css"
+    cp crates/device-envoy-core/www/case.png "docs/dns-tester/{{version}}/case.png"
+    cp crates/device-envoy-core/www/desk.jpg "docs/dns-tester/{{version}}/desk.jpg"
     cargo build -p device-envoy-dns-tester-wasm --release --target wasm32-unknown-unknown
     wasm-bindgen target/wasm32-unknown-unknown/release/device_envoy_dns_tester_wasm.wasm --out-dir "docs/dns-tester/{{version}}/pkg" --target web
+    wasm_version=$(sha256sum target/wasm32-unknown-unknown/release/device_envoy_dns_tester_wasm.wasm | cut -c1-12); sed -E -i "s/\\?v=[A-Za-z0-9_-]+/\\?v=$wasm_version/g" "docs/dns-tester/{{version}}/main.js" "docs/dns-tester/{{version}}/index.html"
+
+# Run DNS tester browser-boundary tests. Requires wasm-pack and Chromium/Chrome.
+test-dns-tester-browser:
+    wasm-pack test --headless --chrome crates/device-envoy-dns-tester-wasm
 
 # Build and serve the DNS tester Pages tree for browser review.
 run-dns-tester version="v1" port="8000":

@@ -7,7 +7,7 @@ use device_envoy_core::{
         },
     },
     flash_block::FlashBlock as _,
-    wasm::{FlashBlockWasm, next_animation_frame},
+    wasm::{CydSimulatorWasm, FlashBlockWasm, next_animation_frame},
 };
 use device_envoy_dns_tester_wasm::DnsTesterWeb;
 use wasm_bindgen::{JsCast, JsValue};
@@ -15,6 +15,27 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 use web_sys::{HtmlCanvasElement, window};
 
 wasm_bindgen_test_configure!(run_in_browser);
+
+#[wasm_bindgen_test]
+fn shared_simulator_constructs_the_intrinsic_canvas() -> Result<(), JsValue> {
+    let document = window()
+        .ok_or_else(|| JsValue::from_str("window unavailable"))?
+        .document()
+        .ok_or_else(|| JsValue::from_str("document unavailable"))?;
+    let canvas = document
+        .create_element("canvas")?
+        .dyn_into::<HtmlCanvasElement>()?;
+    let simulator = CydSimulatorWasm::new(canvas.clone(), Orientation::Portrait)?;
+    let (_cyd, _button, control) = simulator.into_parts();
+
+    assert_eq!(canvas.width(), Orientation::Portrait.width());
+    assert_eq!(canvas.height(), Orientation::Portrait.height());
+    assert_eq!(control.orientation(), Orientation::Portrait);
+    control.touch_down(120.0, 294.0);
+    control.touch_up();
+    control.reset_transient_state();
+    Ok(())
+}
 
 #[wasm_bindgen_test(async)]
 async fn wrapper_forwards_rotation_and_boot_calibration_flow() -> Result<(), JsValue> {

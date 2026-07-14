@@ -1,12 +1,158 @@
-// Master copy: crates/linkage-blaze-clock-wasm/www/demo-ux.js
-// TODO unify the four copies of demo-ux.js/css into one shared source.
+// Canonical CYD browser shell. Application pages provide metadata and a small
+// WASM handle; generic device and browser interaction stays here.
 
 const SHARED_SMALL_PRINT =
   "The simulation is the same no_std, no-allocation Rust that runs on a ~$15 ESP32-2432S028R - the \"Cheap Yellow Display\" (CYD). Here the core is compiled to WebAssembly; on a real desk it drives a 320x240 touch panel.";
 const SCENE_MARGIN_X = 48;
 const SCENE_MARGIN_TOP = 88;
 const SCENE_MARGIN_BOTTOM = 104;
-const SECONDS_PER_DAY = 86400;
+const SECONDS_PER_DAY = 86399;
+
+/** Mount the shared shell, start an application, and bind its input protocol. */
+export async function mountCydSimulator({ wasm, app }) {
+  const canvas = requireElement("#screen", HTMLCanvasElement);
+  const { boot, stage } = ensurePhysicalShell(canvas);
+
+  let handle = wasm.handle ?? wasm;
+  const syncPresentation = () => {
+    const isPortrait = canvas.height > canvas.width;
+    const isInverted = typeof handle.orientation_is_inverted === "function"
+      ? handle.orientation_is_inverted()
+      : false;
+    stage.dataset.orientation = isPortrait ? "portrait" : "landscape";
+    stage.dataset.inverted = isInverted ? "true" : "false";
+    canvas.dataset.inverted = isInverted ? "true" : "false";
+    window.dispatchEvent(new Event("resize"));
+  };
+
+  const canvasSizeObserver = new MutationObserver(syncPresentation);
+  canvasSizeObserver.observe(canvas, {
+    attributes: true,
+    attributeFilter: ["width", "height"],
+  });
+  bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
+  syncPresentation();
+
+  if (wasm.init) {
+    await wasm.init();
+  }
+  if (wasm.start) {
+    const started = wasm.start("screen");
+    // Applications set intrinsic canvas dimensions before their first await.
+    // Present that orientation immediately so a persisted portrait splash is
+    // never laid out in the default landscape shell.
+    syncPresentation();
+    const startedHandle = await started;
+    if (startedHandle !== undefined) {
+      handle = startedHandle;
+      bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
+    }
+    syncPresentation();
+  }
+  setupDemoUx({ ...app, orientation: app.orientation ?? "landscape" });
+  return { handle, syncPresentation };
+}
+
+function ensurePhysicalShell(canvas) {
+  let simulator = canvas.closest(".simulator");
+  if (!(simulator instanceof HTMLDivElement)) {
+    simulator = document.createElement("div");
+    simulator.className = "simulator";
+    canvas.replaceWith(simulator);
+    simulator.append(canvas);
+  }
+
+  let stage = canvas.closest(".stage");
+  if (!(stage instanceof HTMLDivElement)) {
+    stage = document.createElement("div");
+    stage.className = "stage";
+    canvas.replaceWith(stage);
+    stage.append(canvas);
+  }
+
+  let cord = stage.querySelector(".cord");
+  if (!(cord instanceof HTMLDivElement)) {
+    cord = document.createElement("div");
+    cord.className = "cord";
+    stage.prepend(cord);
+  }
+
+  let caseImage = stage.querySelector(".case");
+  if (!(caseImage instanceof HTMLImageElement)) {
+    caseImage = document.createElement("img");
+    caseImage.className = "case";
+    caseImage.src = "./case.png";
+    caseImage.alt = "CYD device case";
+    stage.insertBefore(caseImage, canvas);
+  }
+
+  let boot = stage.querySelector("#boot-button");
+  if (!(boot instanceof HTMLButtonElement)) {
+    boot = document.createElement("button");
+    boot.id = "boot-button";
+    boot.className = "boot-button";
+    boot.type = "button";
+    boot.textContent = "boot";
+  }
+  stage.append(boot);
+  return { simulator, stage, boot };
+}
+
+function bindInputProtocol(canvas, boot, handle, touchDownSamples) {
+  const invoke = (name, ...arguments_) => {
+    if (typeof handle[name] === "function") {
+      return handle[name](...arguments_);
+    }
+    return undefined;
+  };
+  const point = (event) => {
+    const bounds = canvas.getBoundingClientRect();
+    let point = [
+      (event.clientX - bounds.left) * canvas.width / bounds.width,
+      (event.clientY - bounds.top) * canvas.height / bounds.height,
+    ];
+    if (canvas.dataset.inverted === "true") {
+      point = [canvas.width - point[0], canvas.height - point[1]];
+    }
+    return point;
+  };
+
+  canvas.addEventListener("pointerdown", (event) => {
+    const [x, y] = point(event);
+    event.preventDefault();
+    canvas.setPointerCapture(event.pointerId);
+    invoke("touch_down", x, y);
+    for (let sampleIndex = 1; sampleIndex < touchDownSamples; sampleIndex += 1) {
+      invoke("touch_move", x, y);
+    }
+  });
+  canvas.addEventListener("pointermove", (event) => {
+    if (event.buttons) {
+      const [x, y] = point(event);
+      invoke("touch_move", x, y);
+    }
+  });
+  const releaseTouch = () => invoke("touch_up");
+  canvas.addEventListener("pointerup", releaseTouch);
+  canvas.addEventListener("pointercancel", releaseTouch);
+  window.addEventListener("blur", releaseTouch);
+
+  boot.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    boot.setPointerCapture?.(event.pointerId);
+    invoke("boot_down");
+  });
+  const releaseBoot = () => invoke("boot_up");
+  boot.addEventListener("pointerup", releaseBoot);
+  boot.addEventListener("pointercancel", releaseBoot);
+  window.addEventListener("blur", releaseBoot);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      releaseTouch();
+      releaseBoot();
+    }
+  });
+}
 
 export function setupDemoUx(config) {
   const simulator = requireElement(".simulator", HTMLDivElement);
@@ -19,7 +165,7 @@ export function setupDemoUx(config) {
     body.classList.add("demo-ux-page--has-time-setter");
   }
 
-  const galleryTag = buildGalleryTag();
+  const galleryTag = buildGalleryTag(config.galleryUrl);
   const sceneCard = buildSceneCard(config);
   const deviceMode = buildDeviceMode({
     body,
@@ -39,6 +185,7 @@ export function setupDemoUx(config) {
     });
   }
 
+  let userZoom = 1;
   const updateSceneScale = () => {
     const previousTransform = simulator.style.transform;
     simulator.style.transform = "none";
@@ -55,9 +202,30 @@ export function setupDemoUx(config) {
       240,
       window.innerHeight - SCENE_MARGIN_TOP - SCENE_MARGIN_BOTTOM,
     );
-    const scale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
-    simulator.style.transform = `scale(${scale})`;
+    const fitScale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
+    simulator.style.transform = `scale(${fitScale * userZoom})`;
   };
+
+  const zoomReset = document.createElement("button");
+  zoomReset.type = "button";
+  zoomReset.className = "demo-ux-zoom-reset";
+  zoomReset.textContent = "reset zoom";
+  zoomReset.hidden = true;
+  zoomReset.addEventListener("click", () => {
+    userZoom = 1;
+    zoomReset.hidden = true;
+    updateSceneScale();
+  });
+  simulator.addEventListener("wheel", (event) => {
+    if (event.ctrlKey) {
+      return;
+    }
+    event.preventDefault();
+    userZoom = Math.min(2, Math.max(0.65, userZoom * Math.exp(-event.deltaY * 0.001)));
+    zoomReset.hidden = userZoom === 1;
+    updateSceneScale();
+  }, { passive: false });
+  document.body.append(zoomReset);
 
   window.addEventListener("resize", updateSceneScale);
   window.requestAnimationFrame(updateSceneScale);
@@ -79,10 +247,10 @@ export function setupDemoUx(config) {
   });
 }
 
-function buildGalleryTag() {
+function buildGalleryTag(galleryUrl) {
   const link = document.createElement("a");
   link.className = "demo-ux-gallery-tag";
-  link.href = "../../";
+  link.href = galleryUrl ?? "../../";
   link.textContent = "\u2190 Gallery";
   link.setAttribute("aria-label", "Back to gallery");
   return { link };
@@ -125,7 +293,7 @@ function buildSceneCard(config) {
       <h3>Links</h3>
       <div class="demo-ux-card-links">
         <a href="${config.coreCodeUrl}" target="_blank" rel="noopener">Core code</a>
-        <a href="../../">Gallery</a>
+        <a href="${config.galleryUrl ?? "../../"}">Gallery</a>
         <a href="https://github.com/CarlKCarlK/linkage-blaze" target="_blank" rel="noopener">GitHub repo</a>
         <a href="https://medium.com/@carlmkadie" target="_blank" rel="noopener">Medium</a>
       </div>

@@ -57,9 +57,7 @@ use device_envoy_examples_core::dns_tester::{
 use device_envoy_rp::{
     Error, Result,
     button::{Button as _, ButtonRp, PressedTo},
-    cyd::{
-        CydRp, CydRpUncalibrated, CydStaticRp, CydTouch as _, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
-    },
+    cyd::{CydRp, CydRpUncalibrated, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockRp,
     wifi_auto::{WifiAutoEvent, WifiAutoRp},
 };
@@ -130,7 +128,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
     info!("CYD display and touch initialized");
 
-    let (mut touch, calibration_outcome) = ensure_calibration(
+    let (touch, calibration_outcome) = ensure_calibration(
         &mut display,
         touch,
         &mut calibration_flash_block,
@@ -185,7 +183,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
         let query_start = Instant::now();
-        let dns_result = stack.dns_query(hostname, DnsQueryType::A).await;
+        let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
         let latency_millis = query_start.elapsed().as_millis();
         let succeeded = match dns_result {
             Ok(addresses) if !addresses.is_empty() => {
@@ -223,7 +221,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     cortex_m::peripheral::SCB::sys_reset();
 }
 
-fn map_ui_error(error: CoreUiError<device_envoy_rp::Error>) -> Error {
+fn map_ui_error(error: CoreUiError<device_envoy_rp::cyd::CydError>) -> Error {
     match error {
         CoreUiError::Text(_) => Error::FormatError,
         CoreUiError::Display(error) => error.into(),

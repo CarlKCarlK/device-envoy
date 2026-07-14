@@ -1,3 +1,6 @@
+[alias]
+check-all = "run --manifest-path xtask/Cargo.toml -- check-all"
+
 [target.xtensa-esp32-none-elf]
 runner = "espflash flash --monitor"
 rustflags = ["-C", "link-arg=-Tlinkall.x"]

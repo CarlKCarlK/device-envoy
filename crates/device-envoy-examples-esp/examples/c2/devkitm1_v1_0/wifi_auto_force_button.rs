@@ -1,3 +1,4 @@
+
 //! Demonstrates forcing WifiAuto captive-portal flow using a physical button.
 //!
 //! Wiring:
@@ -13,11 +14,11 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    Result,
     button::{ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -43,17 +44,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let _stack = wifi_auto
-        .connect(
-            &mut button,
-            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
-                match wifi_auto_event {
-                    WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
-                    WifiAutoEvent::Connecting { .. } => info!("Connecting"),
-                    WifiAutoEvent::ConnectionFailed => info!("Connection failed"),
-                }
-                Ok(())
-            },
-        )
+        .connect(&mut button, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => info!("Captive portal ready"),
+                WifiAutoEvent::Connecting { .. } => info!("Connecting"),
+                WifiAutoEvent::ConnectionFailed => info!("Connection failed"),
+            }
+            Ok(())
+        })
         .await?;
 
     pending().await

@@ -92,6 +92,7 @@ Checklist:
 - [x] Add a shared semantic action/test for BOOT and `cal`.
 - [x] Define and test BOOT during calibration and playback, including held input.
 - [x] Add deterministic core tests for play/stop, pressed step, and clearing an active run.
+- [x] Add deterministic core coverage for `prev`/`next` seed wraparound.
 - [x] Add WASM browser coverage for `prev`, `next`, play/stop, and step input wiring.
 - [ ] Verify `prev`, `next`, play/stop, and step behavior on WASM, ESP, and RP.
 - [x] Verify the simulator's full-screen and normal-mode controls expose the same BOOT input.

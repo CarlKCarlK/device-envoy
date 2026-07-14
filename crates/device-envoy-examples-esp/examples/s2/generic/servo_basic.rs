@@ -1,3 +1,4 @@
+
 //! Basic single-servo control example.
 //!
 //! Wiring:
@@ -18,7 +19,7 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 
-use device_envoy_esp::{Result, init_and_start, servo, servo::Servo as _};
+use device_envoy_esp::{init_and_start, servo, servo::Servo as _, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

@@ -1,3 +1,4 @@
+
 //! Wiring:
 //! - I2C LCD SDA -> GPIO16
 //! - I2C LCD SCL -> GPIO17
@@ -11,7 +12,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 use device_envoy_core::lcd_text::LcdText as _;
-use device_envoy_esp::{Result, init_and_start, lcd_text};
+use device_envoy_esp::{init_and_start, lcd_text, Result};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -35,7 +36,12 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
-    let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
+    let lcd_text_simple = LcdTextSimple::new(
+        p.I2C0,
+        p.GPIO16,
+        p.GPIO17,
+        spawner,
+    )?;
     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
 
     pending().await

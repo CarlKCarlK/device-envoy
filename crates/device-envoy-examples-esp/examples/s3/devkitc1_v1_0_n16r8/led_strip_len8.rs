@@ -1,3 +1,4 @@
+
 //! LED strip example: 8 smart LEDs (blue/gray pattern)
 //! plus SOS blink on the built-in smart LED, using two RMT TX channels.
 //!
@@ -21,8 +22,9 @@ use embassy_time::Duration;
 use esp_backtrace as _;
 
 use device_envoy_esp::{
-    Result, init_and_start, led_strip,
-    led_strip::{Current, Frame1d, LedStrip as _, colors},
+    init_and_start, led_strip,
+    led_strip::{colors, Current, Frame1d, LedStrip as _},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

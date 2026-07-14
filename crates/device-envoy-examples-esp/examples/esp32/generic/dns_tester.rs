@@ -47,7 +47,8 @@ use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_esp::{
     Error, Result,
-    button::{Button as _, ButtonEsp, PressedTo},
+    button::{Button as _, PressedTo},
+    button_watch,
     cyd::{CydEsp, CydEspUncalibrated, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockEsp,
     init_and_start,
@@ -58,6 +59,12 @@ use device_envoy_examples_core::dns_tester::{
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
+
+button_watch! {
+    DnsTesterButtonWatch {
+        pin: GPIO0,
+    }
+}
 
 const DNS_HOSTNAME: &str = "example.com";
 const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
@@ -92,7 +99,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     };
     let display_orientation =
         display_orientation_for_calibration(orientation, calibration_is_available);
-    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+    let button = DnsTesterButtonWatch::new(p.GPIO0, PressedTo::Ground, spawner).await?;
 
     static CYD_STATIC: CydStaticEsp<STATUS_PIXEL_COUNT> = CydEsp::new_static();
     let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
@@ -123,7 +130,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         &mut display,
         touch,
         &mut calibration_flash_block,
-        &mut button,
+        &mut *button,
         Some("recalibrating"),
     )
     .await?;
@@ -153,7 +160,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         spawner,
     )?;
     let stack = wifi_auto
-        .connect(&mut button, async |wifi_auto_event| -> Result<(), Error> {
+        .connect(&mut *button, async |wifi_auto_event| -> Result<(), Error> {
             let message = match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
                     render_notice(
@@ -210,7 +217,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             latency_millis,
         })
     });
-    let exit = dns_tester(&mut cyd, &mut button, &mut dns)
+    let exit = dns_tester(&mut cyd, &mut *button, &mut dns)
         .await
         .map_err(|error| match error {
             device_envoy_examples_core::dns_tester::Error::Display(error) => match error {

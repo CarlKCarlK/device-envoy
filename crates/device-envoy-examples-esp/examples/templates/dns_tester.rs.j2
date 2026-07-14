@@ -91,6 +91,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);
+    //todo000 Is this good code?
     let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
         Ok(Some(_)) => true,
         Ok(None) | Err(_) => false,

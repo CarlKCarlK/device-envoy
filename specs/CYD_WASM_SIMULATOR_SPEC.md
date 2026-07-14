@@ -91,7 +91,9 @@ When browser behavior is ambiguous, match the observable ESP CYD behavior:
   requests;
 - calibration uses fixed landscape-panel coordinates;
 - display orientation and touch orientation are applied exactly once;
-- application startup sees a coherent set of device resources.
+- application startup sees a coherent set of device resources;
+- a Wi-Fi-using application's connect phase fires the same connect events and
+  accepts the same BOOT interruption as ESP, not a silent skip to success.
 
 ### Keep explicit application construction
 
@@ -416,10 +418,34 @@ The canonical shell must support optional extensions without forks:
 - Clock and Skeleton Clock time setters;
 - Armatron development alignment controls when explicitly enabled;
 - preview auto-boot for screenshot generation;
+- simulated Wi-Fi connect for applications that use Wi-Fi on real hardware
+  (see "Wi-Fi connect simulation" below);
 - application-specific actions that do not pretend to be CYD hardware.
 
 Extensions register through documented slots or callbacks. They must not copy
 or modify the simulator’s core DOM and listeners.
+
+### Wi-Fi connect simulation
+
+An application that uses Wi-Fi on real hardware (currently DNS Tester) must
+exercise the same connect-time event flow and BOOT interruption in the
+browser rather than skip straight to a fake success or a generic "Wi-Fi
+unsupported" notice.
+
+- Provide this as a shared, platform-level simulator alongside
+  `CydSimulatorWasm`, not as an application-specific fake. Only applications
+  that use Wi-Fi on real hardware register it; it must remain entirely
+  absent, not merely inert, for applications that have no Wi-Fi on real
+  hardware. None of the four current Linkage Blaze examples use Wi-Fi.
+- Fire the same connect-event values that the ESP launcher's Wi-Fi connect
+  call fires (captive-portal-ready, connecting, connection-failed), so
+  application event handlers require no WASM-specific branching.
+- Simulate the connect delay with a fixed wait of a few seconds, then report
+  success. Never attempt real network activity from the browser.
+- Race the simulated wait against BOOT exactly as the ESP connect call does:
+  a BOOT press during the wait clears simulated Wi-Fi state and restarts the
+  application, matching the reset-to-captive-portal-then-reboot behavior on
+  ESP (a WASM restart, not a real reboot).
 
 ## Canonical source location
 
@@ -719,6 +745,9 @@ The work is complete when:
 - normal and full-screen touch use one coordinate pipeline;
 - reset starts with clean transient input and preserved flash;
 - BOOT cannot cause an infinite simulated-reset loop;
+- DNS Tester's simulated Wi-Fi connect fires the same connect events and
+  accepts the same BOOT-triggered reset as ESP, without real network
+  activity, and no non-Wi-Fi application carries this simulation;
 - simulator notices do not accidentally terminate otherwise recoverable apps;
 - no current app owns generic canvas sizing, pointer forwarding, orientation,
   full-screen, wheel zoom, or frame DOM code;

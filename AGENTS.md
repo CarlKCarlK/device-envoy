@@ -4,6 +4,11 @@ This file contains both shared workspace rules and crate-specific rules for this
 
 ## General Policies
 
+- When autonomous work is interrupted or reaches a stopping point, report the
+  current status, what remains, and the recommended next step. If the next
+  step is within the current task and safe to perform, perform it rather than
+  stopping merely to recommend it.
+
 - In this repository, **devolve** means inlining a code element's behavior at
   its call sites (or into its containing function) and deleting the original
   struct, enum, helper, or other abstraction. Prefer the clearer term

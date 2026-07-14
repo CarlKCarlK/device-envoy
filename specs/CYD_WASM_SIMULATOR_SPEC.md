@@ -58,9 +58,10 @@ also a reviewable handoff rather than only a list of intentions.
 
 ### Remaining work
 
-- [ ] Decide and document the `ConnectionFailed` simulation policy. The event
-  type exists, but the normal successful simulation currently emits only
-  captive-portal-ready and connecting before success.
+- [x] Decide and document the `ConnectionFailed` simulation policy. The normal
+  deterministic simulation emits captive-portal-ready and connecting before
+  success; `ConnectionFailed` is reserved for a future explicit failure
+  injection path and is never emitted spontaneously.
 - [ ] Update this specification and
   `CYD_WASM_CONSTRUCTION_MEDIUM_ARTICLE.md` as each acceptance area is
   verified, then remove obsolete planning text rather than leaving completed
@@ -505,9 +506,11 @@ unsupported" notice.
   that use Wi-Fi on real hardware register it; it must remain entirely
   absent, not merely inert, for applications that have no Wi-Fi on real
   hardware. None of the four current Linkage Blaze examples use Wi-Fi.
-- Fire the same connect-event values that the ESP launcher's Wi-Fi connect
-  call fires (captive-portal-ready, connecting, connection-failed), so
-  application event handlers require no WASM-specific branching.
+- Fire the same normal connect-event values that the ESP launcher's Wi-Fi
+  connect call fires (captive-portal-ready and connecting), so application
+  event handlers require no WASM-specific branching. Keep `ConnectionFailed`
+  available for explicit failure injection, but do not invent nondeterministic
+  failures in the normal browser path.
 - Simulate the connect delay with a fixed wait of a few seconds, then report
   success. Never attempt real network activity from the browser.
 - Race the simulated wait against BOOT exactly as the ESP connect call does:

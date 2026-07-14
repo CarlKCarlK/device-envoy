@@ -203,6 +203,12 @@ The Wi-Fi implementation is necessarily platform-specific. The application does
 not need to know about CYW43, sockets, DHCP, or DNS packet types. It receives the
 small `DnsResult` it needs.
 
+The browser adapter keeps this boundary deterministic. It emits the normal
+captive-portal-ready and connecting events, waits against the browser animation
+clock, and reports simulated success without network activity. The
+`ConnectionFailed` event remains a typed hook for explicit failure injection;
+the normal browser path never invents a random failure.
+
 ### 6. Run the shared application and interpret its request
 
 ```rust,no_run

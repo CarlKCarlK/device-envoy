@@ -1,4 +1,4 @@
-import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=873b1df64ba1";
+import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=f2b6c1bb1d82";
 import { mountCydSimulator } from "./cyd-simulator.js";
 
 const canvas = document.querySelector("#screen");
@@ -70,7 +70,7 @@ async function monitorRuntime(syncPresentation, showNotice) {
 
 try {
   await init({
-    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=873b1df64ba1", import.meta.url),
+    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=f2b6c1bb1d82", import.meta.url),
   });
   tester = new DnsTesterWeb(canvas);
   const { syncPresentation, showNotice } = await mountCydSimulator({

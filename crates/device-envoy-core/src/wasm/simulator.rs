@@ -121,7 +121,9 @@ pub enum WifiConnectEvent {
     CaptivePortalReady,
     /// The simulated client connection has begun.
     Connecting { try_index: u8, try_count: u8 },
-    /// The simulated connection failed.
+    /// An explicitly injected simulated connection failure.
+    ///
+    /// The normal deterministic browser path does not emit this event.
     ConnectionFailed,
 }
 
@@ -204,21 +206,28 @@ pub async fn simulate_wifi_connect<OnEvent, Error>(
 where
     OnEvent: AsyncFnMut(WifiConnectEvent) -> Result<(), Error>,
 {
-    on_event(WifiConnectEvent::CaptivePortalReady).await?;
+    let [captive_portal_ready, connecting] = normal_wifi_connect_events();
+    on_event(captive_portal_ready).await?;
     if wait_for_wifi_frames(button, WIFI_CAPTIVE_PORTAL_WAIT_FRAMES).await {
         return Ok(WifiConnectOutcome::ResetRequested);
     }
 
-    on_event(WifiConnectEvent::Connecting {
-        try_index: 0,
-        try_count: 1,
-    })
-    .await?;
+    on_event(connecting).await?;
     if wait_for_wifi_frames(button, WIFI_CONNECT_WAIT_FRAMES).await {
         return Ok(WifiConnectOutcome::ResetRequested);
     }
 
     Ok(WifiConnectOutcome::Connected)
+}
+
+const fn normal_wifi_connect_events() -> [WifiConnectEvent; 2] {
+    [
+        WifiConnectEvent::CaptivePortalReady,
+        WifiConnectEvent::Connecting {
+            try_index: 0,
+            try_count: 1,
+        },
+    ]
 }
 
 async fn wait_for_wifi_frames(button: &ButtonWasm, frame_count: usize) -> bool {
@@ -312,6 +321,20 @@ mod tests {
             simulator_notice_disposition(SimulatorNoticeRequest::runtime_error()),
             SimulatorNoticeDisposition::Terminate
         );
+    }
+
+    #[test]
+    fn normal_wifi_connect_path_does_not_inject_failure() {
+        let events = normal_wifi_connect_events();
+        assert_eq!(events[0], WifiConnectEvent::CaptivePortalReady);
+        assert_eq!(
+            events[1],
+            WifiConnectEvent::Connecting {
+                try_index: 0,
+                try_count: 1,
+            }
+        );
+        assert!(!events.contains(&WifiConnectEvent::ConnectionFailed));
     }
 
     #[test]

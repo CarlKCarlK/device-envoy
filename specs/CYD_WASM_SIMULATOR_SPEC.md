@@ -4,9 +4,76 @@
 
 ## Status
 
-Planning only. This document specifies a cross-repository implementation for
-Device Envoy and Linkage Blaze. It does not authorize publishing or replacing
+Implementation in progress as of commit `57d533d`. The current work covers the canonical shell,
+Linkage Blaze v4 migration, shared input lifecycle, simulator notices, and an
+opt-in DNS Tester Wi-Fi simulation. The remaining work and evidence are
+tracked below. This document does not authorize publishing or replacing
 historical released pages by itself.
+
+## Implementation work log
+
+This section records what has been implemented so that the specification is
+also a reviewable handoff rather than only a list of intentions.
+
+### Completed work
+
+- [x] Extracted the canonical browser shell into
+  `crates/device-envoy-core/www/cyd-simulator.js` and
+  `crates/device-envoy-core/www/cyd-simulator.css`, with canonical `case.png`
+  and `desk.jpg` assets.
+- [x] Migrated the current Linkage Blaze v4 Ballet, Clock, Skeleton Clock,
+  and Armatron pages to `mountCydSimulator` and declarative application
+  metadata. Historical v1-v3 pages remain self-contained.
+- [x] Added Linkage Blaze `build-pages` copying and `check-cyd-shell`
+  consistency verification for generated simulator assets.
+- [x] Added shared Rust simulator construction, orientation-aware touch
+  mapping, persistent flash support, physical BOOT input, calibration support,
+  and exact inverted-orientation reporting.
+- [x] Hardened browser input release handling for pointer cancel, lost pointer
+  capture, window blur, visibility changes, and duplicate release events.
+  Replaced WASM input listeners are removed before a new handle is bound.
+- [x] Added the shared notice UI with informational, warning, and fatal
+  presentation states, replacement, timeout, and live accessibility roles.
+  DNS Tester's browser Wi-Fi message now uses this facility.
+- [x] Added an opt-in shared WASM Wi-Fi simulation with typed captive-portal,
+  connecting, and connection-reset outcomes. DNS Tester opts in; the four
+  Linkage Blaze examples do not.
+- [x] Regenerated DNS Tester v1 simulator assets and WASM output from the
+  canonical sources with cache-busted references.
+- [x] Verified Device Envoy core/WASM checks, DNS Tester WASM compilation,
+  Linkage Blaze shell consistency, and the Linkage Blaze Playwright suite.
+  The suite now starts a repository-owned server on a dynamically selected
+  port; the full run passed all ten tests.
+- [x] Added a real DNS Tester Playwright integration test covering startup
+  notices, simulated Wi-Fi, BOOT interruption and restart, calibration,
+  orientation, reload persistence, and browser error reporting.
+- [x] Fixed DNS Tester's startup lifecycle so orientation queries and input
+  events remain usable while asynchronous calibration and Wi-Fi startup are
+  in progress. The live simulator control is kept outside the mutable app
+  state borrow.
+
+### Remaining work
+
+- [ ] Complete the notice protocol as a typed Rust-side request API, including
+  explicit fatal-notice behavior and tests proving recoverable notices do not
+  stop the application loop. The current shell UI is implemented, but the
+  request path is still JavaScript-facing.
+- [ ] Decide and document the `ConnectionFailed` simulation policy. The event
+  type exists, but the normal successful simulation currently emits only
+  captive-portal-ready and connecting before success.
+- [ ] Update this specification and
+  `CYD_WASM_CONSTRUCTION_MEDIUM_ARTICLE.md` as each acceptance area is
+  verified, then remove obsolete planning text rather than leaving completed
+  work described as future work.
+- [x] Run the full Linkage Blaze `just check-all` after the browser harness and
+  DNS integration test were added; all checks and embedded example builds
+  passed.
+- [x] Identify the Device Envoy full validation command as `cargo check-all`.
+  Targeted core, DNS WASM, formatting, and JavaScript checks also pass.
+
+The simulator is not complete until the remaining checklist items are either
+implemented and tested or explicitly removed from the acceptance criteria by
+the project owner.
 
 ## Objective
 

@@ -34,6 +34,8 @@ pub struct DnsTesterWeb {
     canvas: HtmlCanvasElement,
     exit: Rc<Cell<Option<CoreExit>>>,
     failed: Rc<Cell<bool>>,
+    orientation: Cell<Orientation>,
+    simulator_control: RefCell<Option<CydSimulatorControlWasm>>,
     state: RefCell<DnsTesterState>,
 }
 
@@ -41,7 +43,6 @@ struct DnsTesterState {
     wifi_flash_block: FlashBlockWasm,
     calibration_flash_block: FlashBlockWasm,
     orientation_flash_block: FlashBlockWasm,
-    simulator_control: Option<CydSimulatorControlWasm>,
     orientation: Orientation,
     hostname: &'static str,
 }
@@ -54,6 +55,8 @@ impl DnsTesterWeb {
             canvas,
             exit: Rc::new(Cell::new(None)),
             failed: Rc::new(Cell::new(false)),
+            orientation: Cell::new(Orientation::Landscape),
+            simulator_control: RefCell::new(None),
             state: RefCell::new(DnsTesterState {
                 wifi_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/wifi")
                     .map_err(|error| JsValue::from_str(&format!("Wi-Fi flash: {error:?}")))?,
@@ -61,7 +64,6 @@ impl DnsTesterWeb {
                     .map_err(|error| JsValue::from_str(&format!("Calibration flash: {error:?}")))?,
                 orientation_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/orientation")
                     .map_err(|error| JsValue::from_str(&format!("Orientation flash: {error:?}")))?,
-                simulator_control: None,
                 orientation: Orientation::Landscape,
                 hostname: DNS_HOSTNAME,
             }),
@@ -83,10 +85,12 @@ impl DnsTesterWeb {
         };
         let orientation =
             display_orientation_for_calibration(saved_orientation, calibration_config.is_some());
+        self.orientation.set(orientation);
         state.orientation = orientation;
         self.canvas.set_width(orientation.width());
         self.canvas.set_height(orientation.height());
 
+        // todo000 improve all these names here and elsewhere.
         let simulator = CydSimulatorWasm::new_with_style(
             self.canvas.clone(),
             orientation,
@@ -95,7 +99,7 @@ impl DnsTesterWeb {
             &FONT_6X10,
         )?;
         let (device, mut button, simulator_control) = simulator.into_parts();
-        state.simulator_control = Some(simulator_control);
+        *self.simulator_control.borrow_mut() = Some(simulator_control);
         let (mut display, uncalibrated_touch) = device.parts_uncalibrated();
         let (touch, outcome) = ensure_calibration(
             &mut display,
@@ -110,6 +114,7 @@ impl DnsTesterWeb {
             // Calibration is always completed in landscape. Restore the saved
             // dashboard orientation as soon as calibration has been persisted.
             state.orientation = orientation_after_calibration(saved_orientation);
+            self.orientation.set(state.orientation);
             self.canvas.set_width(saved_orientation.width());
             self.canvas.set_height(saved_orientation.height());
         }
@@ -124,7 +129,7 @@ impl DnsTesterWeb {
             let (dashboard_device, dashboard_button, dashboard_control) =
                 dashboard_simulator.into_parts();
             button = dashboard_button;
-            state.simulator_control = Some(dashboard_control);
+            *self.simulator_control.borrow_mut() = Some(dashboard_control);
             let (display, uncalibrated_touch) = dashboard_device.parts_uncalibrated();
             (
                 display,
@@ -137,6 +142,7 @@ impl DnsTesterWeb {
             .await
             .map_err(|error| JsValue::from_str(&format!("Splash: {error:?}")))?;
         for _ in 0..60 {
+            //todo000 what does this mean?
             next_animation_frame().await;
         }
 
@@ -180,31 +186,31 @@ impl DnsTesterWeb {
     }
 
     pub fn touch_down(&self, x: f32, y: f32) {
-        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+        if let Some(control) = self.simulator_control.borrow().as_ref() {
             control.touch_down(x, y);
         }
     }
 
     pub fn touch_move(&self, x: f32, y: f32) {
-        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+        if let Some(control) = self.simulator_control.borrow().as_ref() {
             control.touch_move(x, y);
         }
     }
 
     pub fn touch_up(&self) {
-        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+        if let Some(control) = self.simulator_control.borrow().as_ref() {
             control.touch_up();
         }
     }
 
     pub fn boot_down(&self) {
-        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+        if let Some(control) = self.simulator_control.borrow().as_ref() {
             control.boot_down();
         }
     }
 
     pub fn boot_up(&self) {
-        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+        if let Some(control) = self.simulator_control.borrow().as_ref() {
             control.boot_up();
         }
     }
@@ -222,6 +228,7 @@ impl DnsTesterWeb {
                 match save_result {
                     Ok(()) => {
                         self.state.borrow_mut().orientation = next_orientation;
+                        self.orientation.set(next_orientation);
                         self.canvas.set_width(next_orientation.width());
                         self.canvas.set_height(next_orientation.height());
                         "orientation".into()
@@ -243,10 +250,11 @@ impl DnsTesterWeb {
 
     /// Present the simulated CYD in landscape while touch calibration runs.
     pub fn prepare_calibration_landscape(&self) {
-        if let Some(control) = self.state.borrow().simulator_control.as_ref() {
+        if let Some(control) = self.simulator_control.borrow().as_ref() {
             control.reset_transient_state();
         }
         self.state.borrow_mut().orientation = Orientation::Landscape;
+        self.orientation.set(Orientation::Landscape);
         self.canvas.set_width(Orientation::Landscape.width());
         self.canvas.set_height(Orientation::Landscape.height());
     }
@@ -280,7 +288,7 @@ impl DnsTesterWeb {
 
 impl DnsTesterWeb {
     fn orientation(&self) -> Orientation {
-        self.state.borrow().orientation
+        self.orientation.get()
     }
 }
 

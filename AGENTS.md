@@ -425,6 +425,19 @@ These tips apply when moving platform-specific code into `device-envoy-core` or 
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 - For `cargo` aliases that target embedded triples (`thumbv6m-none-eabi`, `thumbv8m.main-none-eabihf`, or `riscv32imac-unknown-none-elf`), include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
 
+## Development Tools
+
+Assume the repository's normal development tools are available, including
+Rust/Cargo, `just`, Node.js/npm, Python 3, Playwright, `wasm-pack`, and the
+required embedded and WASM targets. If a required tool is missing, use the
+repository's documented or project-local installation path when available. Do
+not silently install system-wide packages or alter unrelated global
+configuration. For Playwright, install its browser binaries when needed
+before diagnosing browser-test failures.
+
+The full Device Envoy validation command is `cargo check-all`. Run it before
+handing work back; it keeps doctests, examples, and supported targets in sync.
+
 ### Generated Files (RP)
 
 For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `ir_generated`, `lcd_text_generated`, `led_generated`, `led_strip_generated`, and `servo_player_generated`.

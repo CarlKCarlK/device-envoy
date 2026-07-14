@@ -309,6 +309,15 @@ impl DnsTesterWeb {
         drop(state);
         self.start().await
     }
+
+    /// Clear only touch calibration storage before a recalibration restart.
+    pub fn clear_calibration(&self) -> Result<(), JsValue> {
+        self.state
+            .borrow_mut()
+            .calibration_flash_block
+            .clear()
+            .map_err(|error| JsValue::from_str(&format!("Calibration clear: {error:?}")))
+    }
 }
 
 impl DnsTesterWeb {

@@ -55,6 +55,9 @@ also a reviewable handoff rather than only a list of intentions.
   warning/info/fatal severity, replacement through a single pending queue, and
   fatal-loop disposition. The DNS Tester browser shell now consumes those
   identifiers instead of inventing notice severity from JavaScript.
+- [x] Made WASM dashboard CAL and physical BOOT match the ESP recalibration
+  contract: clear only touch calibration storage, release transient input,
+  restart in landscape, and run the real calibration flow again.
 
 ### Remaining work
 
@@ -62,10 +65,11 @@ also a reviewable handoff rather than only a list of intentions.
   deterministic simulation emits captive-portal-ready and connecting before
   success; `ConnectionFailed` is reserved for a future explicit failure
   injection path and is never emitted spontaneously.
-- [ ] Update this specification and
-  `CYD_WASM_CONSTRUCTION_MEDIUM_ARTICLE.md` as each acceptance area is
-  verified, then remove obsolete planning text rather than leaving completed
-  work described as future work.
+- [x] Reconciled this specification and
+  `CYD_WASM_CONSTRUCTION_MEDIUM_ARTICLE.md` with the implemented notice,
+  Wi-Fi, startup-borrow, generated-artifact, and validation behavior.
+- [ ] Complete the remaining visual-regression and sixth-fixture acceptance
+  work before calling the entire simulator project released.
 - [x] Run the full Linkage Blaze `just check-all` after the browser harness and
   DNS integration test were added; all checks and embedded example builds
   passed.
@@ -779,7 +783,7 @@ standard protocol and its optional extensions work:
 - Skeleton Clock renders and its time setter works;
 - Armatron receives touch and BOOT;
 - DNS Tester rotates, calibrates, resets, persists, and continues after its
-  unavailable-Wi-Fi notice.
+  simulated-Wi-Fi notice.
 
 Do not duplicate the full simulator contract suite in every application.
 
@@ -797,7 +801,7 @@ Provide repeatable commands that:
 - build all five current pages.
 
 Integrate the relevant checks into each repository’s local CI. Device Envoy’s
-completed work must pass `just check-all`; Linkage Blaze’s completed work must
+ completed work must pass `cargo check-all`; Linkage Blaze’s completed work must
 pass its corresponding full local CI command.
 
 Do not patch only generated page files. Change canonical sources first and

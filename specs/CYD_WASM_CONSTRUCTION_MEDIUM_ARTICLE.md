@@ -242,6 +242,9 @@ pub fn new(canvas: HtmlCanvasElement) -> Result<DnsTesterWeb, JsValue> {
         canvas,
         exit: Rc::new(Cell::new(None)),
         failed: Rc::new(Cell::new(false)),
+        pending_notice: Cell::new(None),
+        orientation: Cell::new(Orientation::Landscape),
+        simulator_control: RefCell::new(None),
         state: RefCell::new(DnsTesterState {
             wifi_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/wifi")?,
             calibration_flash_block: FlashBlockWasm::new(
@@ -250,7 +253,6 @@ pub fn new(canvas: HtmlCanvasElement) -> Result<DnsTesterWeb, JsValue> {
             orientation_flash_block: FlashBlockWasm::new(
                 "device-envoy/dns-tester/orientation",
             )?,
-            simulator_control: None,
             orientation: Orientation::Landscape,
             hostname: DNS_HOSTNAME,
         }),
@@ -274,7 +276,7 @@ let simulator = CydSimulatorWasm::new_with_style(
     &FONT_6X10,
 )?;
 let (device, mut button, simulator_control) = simulator.into_parts();
-state.simulator_control = Some(simulator_control);
+*self.simulator_control.borrow_mut() = Some(simulator_control);
 let (mut display, uncalibrated_touch) = device.parts_uncalibrated();
 ```
 
@@ -306,6 +308,11 @@ functions operate on a browser-backed `CydDisplay`. The browser-specific delay i
 explicit because a browser needs to yield animation frames; it is not smuggled
 into the core DNS logic.
 
+The live simulator control is kept outside the mutable application-state borrow.
+That matters because the shell can forward calibration and BOOT input while
+startup awaits animation frames. It prevents a browser callback from observing
+an already-held `RefCell` borrow.
+
 ### 4. Replace live DNS with a deterministic browser service
 
 ```rust,no_run
@@ -322,6 +329,11 @@ stack. The WASM constructor therefore supplies a deterministic result. This is
 not pretending that a browser performed a network measurement; it makes the
 application’s rendering and interaction testable while accurately documenting
 the platform limitation.
+
+Startup notices follow the same boundary. Rust submits typed notice identifiers
+with severity; the shared browser shell owns the bubble’s placement,
+accessibility role, timeout, and replacement behavior. Recoverable notices do
+not stop the application loop, while fatal notices do.
 
 ### 5. Launch the same loop without blocking the browser
 

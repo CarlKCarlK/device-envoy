@@ -1,4 +1,4 @@
-import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=f2b6c1bb1d82";
+import init, { DnsTesterWeb } from "./pkg/device_envoy_dns_tester_wasm.js?v=36c98fba5fa0";
 import { mountCydSimulator } from "./cyd-simulator.js";
 
 const canvas = document.querySelector("#screen");
@@ -49,6 +49,7 @@ async function monitorRuntime(syncPresentation, showNotice) {
     if (result === "recalibrate") {
       // A browser pointer can remain down while the async reset begins. A
       // physical reset starts with a fresh button sample, so release it here.
+      tester.clear_calibration();
       tester.boot_up();
       tester.prepare_calibration_landscape();
       syncPresentation();
@@ -70,7 +71,7 @@ async function monitorRuntime(syncPresentation, showNotice) {
 
 try {
   await init({
-    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=f2b6c1bb1d82", import.meta.url),
+    module_or_path: new URL("./pkg/device_envoy_dns_tester_wasm_bg.wasm?v=36c98fba5fa0", import.meta.url),
   });
   tester = new DnsTesterWeb(canvas);
   const { syncPresentation, showNotice } = await mountCydSimulator({

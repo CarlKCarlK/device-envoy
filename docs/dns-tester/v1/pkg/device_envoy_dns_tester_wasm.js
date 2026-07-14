@@ -83,6 +83,15 @@ export class DnsTesterWeb {
         wasm.dnstesterweb_boot_up(this.__wbg_ptr);
     }
     /**
+     * Clear only touch calibration storage before a recalibration restart.
+     */
+    clear_calibration() {
+        const ret = wasm.dnstesterweb_clear_calibration(this.__wbg_ptr);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
      * @returns {Promise<void>}
      */
     clear_storage() {

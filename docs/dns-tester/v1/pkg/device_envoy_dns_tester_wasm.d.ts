@@ -43,6 +43,10 @@ export class DnsTesterWeb {
     [Symbol.dispose](): void;
     boot_down(): void;
     boot_up(): void;
+    /**
+     * Clear only touch calibration storage before a recalibration restart.
+     */
+    clear_calibration(): void;
     clear_storage(): Promise<void>;
     constructor(canvas: HTMLCanvasElement);
     /**
@@ -72,6 +76,7 @@ export interface InitOutput {
     readonly __wbg_dnstesterweb_free: (a: number, b: number) => void;
     readonly dnstesterweb_boot_down: (a: number) => void;
     readonly dnstesterweb_boot_up: (a: number) => void;
+    readonly dnstesterweb_clear_calibration: (a: number) => [number, number];
     readonly dnstesterweb_clear_storage: (a: number) => any;
     readonly dnstesterweb_new: (a: any) => [number, number, number];
     readonly dnstesterweb_orientation_is_inverted: (a: number) => number;

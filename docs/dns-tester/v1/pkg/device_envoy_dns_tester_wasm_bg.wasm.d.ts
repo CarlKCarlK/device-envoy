@@ -4,6 +4,7 @@ export const memory: WebAssembly.Memory;
 export const __wbg_dnstesterweb_free: (a: number, b: number) => void;
 export const dnstesterweb_boot_down: (a: number) => void;
 export const dnstesterweb_boot_up: (a: number) => void;
+export const dnstesterweb_clear_calibration: (a: number) => [number, number];
 export const dnstesterweb_clear_storage: (a: number) => any;
 export const dnstesterweb_new: (a: any) => [number, number, number];
 export const dnstesterweb_orientation_is_inverted: (a: number) => number;

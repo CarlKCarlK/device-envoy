@@ -2,7 +2,7 @@
 
 use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch,
+    Cyd, CydDisplay,
     display::{CydFrame, DrawItem, Image565View},
     touch::TouchEvent,
 };
@@ -66,11 +66,12 @@ fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
         cyd_memory.push_touch_event(TouchEvent::Down {
             point: Point::new(160, 120),
         });
-        let (display, touch) = Cyd::parts(&mut cyd_memory);
+        let touch_event = cyd_memory.read_touch()?;
+        let mut display = cyd_memory.display();
         let mut frame = display.full_frame_mut();
 
         frame.write_text("Hello CYD");
-        if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch.read()? {
+        if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch_event {
             DrawItem::Circle {
                 center: (point.x as f32, point.y as f32),
                 pixel_radius: 24.0,

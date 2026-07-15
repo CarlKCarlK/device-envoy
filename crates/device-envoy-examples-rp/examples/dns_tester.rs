@@ -44,20 +44,18 @@ extern crate panic_probe as _;
 use core::convert::Infallible;
 
 use defmt::{info, warn};
-use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
-use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
-use device_envoy_core::cyd::{Cyd as _, CydParts as _, display::Orientation};
+use device_envoy_core::cyd::{Cyd as _, display::Orientation};
 use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester::{
     Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice as CoreUiNotice,
-    display_orientation_for_calibration, dns_tester, dns_tester_splash, render_notice,
+    dns_tester, dns_tester_splash, render_notice,
 };
 use device_envoy_rp::{
     Error, Result,
-    button::{Button as _, ButtonRp, PressedTo},
-    cyd::{CydRp, CydRpUncalibrated, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
+    button::{ButtonRp, PressedTo},
+    cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockRp,
     wifi_auto::{WifiAutoEvent, WifiAutoRp},
 };
@@ -72,10 +70,7 @@ const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
 /// risks overflowing RAM once Wi-Fi's own heap is added in (this bit ESP32
 /// in practice; no RP board has been verified against a full-screen buffer
 /// plus Wi-Fi, so the same small-buffer discipline is applied here too).
-/// `ensure_calibration`'s own on-screen text banner needs a buffer at least
-/// `CALIBRATION_MIN_PIXEL_COUNT` pixels; its crosshair/dot geometry streams
-/// buffer-free. The DNS status line uses the same small-buffer budget.
-const STATUS_PIXEL_COUNT: usize = CALIBRATION_MIN_PIXEL_COUNT;
+const STATUS_PIXEL_COUNT: usize = 1024;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -95,18 +90,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);
-    // todo0000 Consider replacing this manual calibration and reassembly
-    // with CydUncalibrated::into_calibrated, following the ESP DNS tester.
-    let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
-        Ok(Some(_)) => true,
-        Ok(None) | Err(_) => false,
-    };
-    let display_orientation =
-        display_orientation_for_calibration(orientation, calibration_is_available);
     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticRp<STATUS_PIXEL_COUNT> = CydRp::new_static();
-    let CydRpUncalibrated { mut display, touch } = CydRpUncalibrated::new(
+    let mut cyd = CydRp::new(
         &CYD_STATIC,
         p.SPI0,
         p.PIN_18,
@@ -117,7 +104,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIN_21,
         p.PIN_22,
         DEFAULT_DISPLAY_SPI_HZ,
-        display_orientation,
+        orientation,
         embedded_graphics::pixelcolor::Rgb888::new(10, 10, 12), // near-black
         embedded_graphics::pixelcolor::Rgb888::new(230, 230, 230), // near-white
         &DEFAULT_FONT,
@@ -127,27 +114,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.PIN_12,
         p.PIN_13,
         p.PIN_14,
-    )?;
-    info!("CYD display and touch initialized");
-
-    let (touch, calibration_outcome) = ensure_calibration(
-        &mut display,
-        touch,
         &mut calibration_flash_block,
         &mut button,
-        Some("recalibrating"),
     )
     .await?;
-    if calibration_outcome.was_saved() {
-        while button.is_pressed() {
-            Timer::after(Duration::from_millis(10)).await;
-        }
-        info!("Calibration saved, restarting");
-        cortex_m::peripheral::SCB::sys_reset();
-    }
+    info!("CYD display and touch initialized");
     info!("Touch calibrated");
-
-    let mut cyd = CydRp::from_parts(display, touch);
     dns_tester_splash(&mut cyd).await.map_err(map_core_error)?;
 
     let wifi_auto = WifiAutoRp::new(

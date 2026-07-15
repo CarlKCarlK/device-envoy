@@ -1,9 +1,8 @@
 //! A device abstraction for a standalone 320x240 CYD-style SPI display/touch
 //! module wired over SPI to a Raspberry Pi Pico (1 or 2).
 //!
-//! See [`CydRp`], [`CydRpUncalibrated`], [`CydRpOneSpi`], and [`CydDisplayRp`]
-//! for the primary constructors; the device-agnostic [`CydDisplay`],
-//! [`CydTouch`], and [`CydTouchUncalibrated`] traits live in
+//! See [`CydRp`], [`CydRpOneSpi`], and [`CydDisplayRp`] for the public
+//! constructors; the device-agnostic [`CydDisplay`] and [`CydTouch`] traits live in
 //! [`device_envoy_core::cyd`]. [`CydRp`] uses `SPI0` for the display and `SPI1`
 //! for touch; [`CydRpOneSpi`] shares a single SPI peripheral between the two.
 
@@ -22,14 +21,14 @@ use device_envoy_core::cyd::{
     display::{CydFrame, RectanglePixels},
     touch::{
         RawTouchEvent, TouchEvent,
-        calibration::{CalibrationConfig, EnsureCalibrationOutcome, ensure_calibration},
+        calibration::{CalibrationConfig, ensure_calibration},
     },
 };
 use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated, CydUncalibrated,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated, CydUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
@@ -103,7 +102,7 @@ pub struct CydRp {
 }
 
 /// An uncalibrated CYD RP bundle.
-pub struct CydRpUncalibrated {
+pub(crate) struct CydRpUncalibrated {
     /// The owned display component.
     pub display: CydDisplayRp,
     /// The owned uncalibrated touch component.
@@ -432,7 +431,7 @@ impl<D: SpiDevice<u8>> CydTouchUncalibratedRp<D> {
 impl CydTouchUncalibratedRp<touch_driver::CydTouchSpiDevice> {
     /// Construct an uncalibrated touch component.
     #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
-    pub fn new<TouchSck, TouchMosi, TouchMiso, TouchCs, TouchIrq>(
+    pub(crate) fn new<TouchSck, TouchMosi, TouchMiso, TouchCs, TouchIrq>(
         touch_spi: Peri<'static, SPI1>,
         touch_sck_pin: Peri<'static, TouchSck>,
         touch_mosi_pin: Peri<'static, TouchMosi>,
@@ -509,8 +508,7 @@ impl CydRp {
         touch_irq_pin: Peri<'static, TouchIrq>,
         calibration_flash_block: &mut FlashBlockRp,
         recalibration_button: &mut impl Button,
-        confirmed_message: Option<&str>,
-    ) -> crate::Result<(Self, EnsureCalibrationOutcome)>
+    ) -> crate::Result<Self>
     where
         Sck: Pin + ClkPin<SPI0>,
         Mosi: Pin + MosiPin<SPI0>,
@@ -547,12 +545,12 @@ impl CydRp {
             touch_cs_pin,
             touch_irq_pin,
         )?;
-        let (touch, ensure_calibration_outcome) = ensure_calibration(
+        let (touch, _) = ensure_calibration(
             &mut display,
             touch,
             calibration_flash_block,
             recalibration_button,
-            confirmed_message,
+            None,
         )
         .await
         .map_err(|error| match error.kind {
@@ -563,39 +561,31 @@ impl CydRp {
                 flash_error,
             ) => flash_error,
         })?;
-        Ok((Self { display, touch }, ensure_calibration_outcome))
+        Ok(Self { display, touch })
     }
 }
 
 impl Cyd for CydRp {
     type Error = CydError;
     type Display = CydDisplayRp;
-    type Touch = CydTouchRp;
 
-    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
-        (&mut self.display, &mut self.touch)
+    fn display(&mut self) -> &mut Self::Display {
+        &mut self.display
     }
 
-    fn orientation(&mut self) -> Orientation {
+    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
+        self.touch.read()
+    }
+
+    fn orientation(&self) -> Orientation {
         self.display.orientation
-    }
-}
-
-impl CydParts for CydRp {
-    fn into_parts(self) -> (Self::Display, Self::Touch) {
-        let Self { display, touch } = self;
-        (display, touch)
-    }
-
-    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self {
-        Self { display, touch }
     }
 }
 
 impl CydRpUncalibrated {
     /// Construct an uncalibrated CYD bundle from display and touch parts.
     #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
-    pub fn new<
+    pub(crate) fn new<
         const PIXEL_COUNT: usize,
         Sck,
         Mosi,

@@ -4,22 +4,18 @@ use std::{
 };
 
 use device_envoy_core::{
-    cyd::{
-        CydParts as _, CydTouchUncalibrated as _,
-        display::Orientation,
-        touch::calibration::{CalibrationConfig, ensure_calibration},
-    },
+    cyd::display::Orientation,
     dns::{DnsResult, DnsRuntime},
     flash_block::FlashBlock as _,
     wasm::{
-        CydSimulatorControlWasm, CydSimulatorWasm, CydWasm, FlashBlockWasm,
-        SimulatorNoticeDisposition, SimulatorNoticeRequest, WifiConnectEvent, WifiConnectOutcome,
-        next_animation_frame, simulate_wifi_connect, simulator_notice_disposition,
+        CydSimulatorControlWasm, CydSimulatorWasm, FlashBlockWasm, SimulatorNoticeDisposition,
+        SimulatorNoticeRequest, WifiConnectEvent, WifiConnectOutcome, next_animation_frame,
+        simulate_wifi_connect, simulator_notice_disposition,
     },
 };
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice,
-    display_orientation_for_calibration, dns_tester, orientation_after_calibration, render_notice,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice, dns_tester,
+    render_notice,
 };
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::*;
@@ -81,12 +77,7 @@ impl DnsTesterWeb {
             .load::<Orientation>()
             .map_err(|error| JsValue::from_str(&format!("Orientation load: {error:?}")))?
             .unwrap_or(Orientation::Landscape);
-        let calibration_config = match state.calibration_flash_block.load::<CalibrationConfig>() {
-            Ok(calibration_config) => calibration_config,
-            Err(_) => None,
-        };
-        let orientation =
-            display_orientation_for_calibration(saved_orientation, calibration_config.is_some());
+        let orientation = saved_orientation;
         self.orientation.set(orientation);
         state.orientation = orientation;
         self.canvas.set_width(orientation.width());
@@ -100,47 +91,10 @@ impl DnsTesterWeb {
             FOREGROUND,
             &FONT_6X10,
         )?;
-        let (device, mut button, simulator_control) = simulator.into_parts();
+        let (mut device, mut button, simulator_control) = simulator.into_parts();
         *self.simulator_control.borrow_mut() = Some(simulator_control);
-        let (mut display, uncalibrated_touch) = device.parts_uncalibrated();
-        let (touch, outcome) = ensure_calibration(
-            &mut display,
-            uncalibrated_touch,
-            &mut state.calibration_flash_block,
-            &mut button,
-            Some("Touch calibrated"),
-        )
-        .await
-        .map_err(|error| JsValue::from_str(&format!("Calibration: {error:?}")))?;
-        if outcome.was_saved() {
-            // Calibration is always completed in landscape. Restore the saved
-            // dashboard orientation as soon as calibration has been persisted.
-            state.orientation = orientation_after_calibration(saved_orientation);
-            self.orientation.set(state.orientation);
-            self.canvas.set_width(saved_orientation.width());
-            self.canvas.set_height(saved_orientation.height());
-        }
-        let (mut display, touch) = if outcome.was_saved() {
-            let dashboard_simulator = CydSimulatorWasm::new_with_style(
-                self.canvas.clone(),
-                saved_orientation,
-                BACKGROUND,
-                FOREGROUND,
-                &FONT_6X10,
-            )?;
-            let (dashboard_device, dashboard_button, dashboard_control) =
-                dashboard_simulator.into_parts();
-            button = dashboard_button;
-            *self.simulator_control.borrow_mut() = Some(dashboard_control);
-            let (display, uncalibrated_touch) = dashboard_device.parts_uncalibrated();
-            (
-                display,
-                uncalibrated_touch.calibrate(outcome.calibration_config()),
-            )
-        } else {
-            (display, touch)
-        };
         // TODO0000 Consider using the core CYD splash helper here too.
+        let mut display = device.display();
         render_notice(&mut display, state.orientation, UiNotice::Splash)
             .await
             .map_err(|error| JsValue::from_str(&format!("Splash: {error:?}")))?;
@@ -170,6 +124,7 @@ impl DnsTesterWeb {
                 return Ok(());
             }
             // TODO0000 Consider adding a core helper for this notice too.
+            let mut display = device.display();
             render_notice(&mut display, state.orientation, notice)
                 .await
                 .map_err(|error| JsValue::from_str(&format!("Wi-Fi notice: {error:?}")))
@@ -180,7 +135,6 @@ impl DnsTesterWeb {
             return Ok(());
         }
 
-        let mut device = CydWasm::from_parts(display, touch);
         let exit = self.exit.clone();
         let failed = self.failed.clone();
         let hostname = state.hostname;

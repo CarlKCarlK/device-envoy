@@ -41,17 +41,14 @@ use embedded_graphics::pixelcolor::Rgb888;
 use esp_backtrace as _;
 use log::{info, warn};
 
-use device_envoy_core::cyd::touch::calibration::CALIBRATION_MIN_PIXEL_COUNT;
-use device_envoy_core::cyd::{Cyd as _, CydUncalibrated as _, display::Orientation};
+use device_envoy_core::cyd::{Cyd as _, display::Orientation};
 use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_esp::{
     Error, Result,
     button::{Button as _, PressedTo},
     button_watch,
-    cyd::{
-        CydError, CydEsp, CydEspUncalibrated, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
-    },
+    cyd::{CydError, CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
@@ -70,10 +67,7 @@ button_watch! {
 
 const DNS_HOSTNAME: &str = "example.com";
 const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
-/// `ensure_calibration`'s own on-screen text banner needs a buffer at least
-/// `CALIBRATION_MIN_PIXEL_COUNT` pixels; its crosshair/dot geometry streams
-/// buffer-free. The DNS status line uses the same small-buffer budget.
-const STATUS_PIXEL_COUNT: usize = CALIBRATION_MIN_PIXEL_COUNT;
+const STATUS_PIXEL_COUNT: usize = 1024;
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
@@ -96,7 +90,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .unwrap_or(Orientation::Landscape);
 
     static CYD_STATIC: CydStaticEsp<STATUS_PIXEL_COUNT> = CydEsp::new_static();
-    let uncalibrated_cyd = CydEspUncalibrated::new(
+    let mut button = ButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    let mut cyd = CydEsp::new(
         &CYD_STATIC,                // statics
         p.SPI2,                     // display_spi
         p.GPIO1,                    // display_sck_pin
@@ -117,11 +112,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         p.GPIO11,                   // touch_miso_pin
         p.GPIO12,                   // touch_cs_pin
         p.GPIO13,                   // touch_irq_pin
-    )?;
-    let button = ButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
-    let mut cyd = uncalibrated_cyd
-        .into_calibrated(&mut calibration_flash_block, &mut *button)
-        .await?;
+        &mut calibration_flash_block,
+        &mut *button,
+    )
+    .await?;
     info!("CYD display and touch initialized and calibrated");
     dns_tester_splash(&mut cyd)
         .await

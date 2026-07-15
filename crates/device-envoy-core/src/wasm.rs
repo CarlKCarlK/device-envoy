@@ -17,12 +17,9 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{CydFrame, Orientation},
-    touch::{
-        RawPoint, RawTouchEvent, TouchEvent,
-        calibration::{CalibrationConfig, distort_demo_screen_to_raw},
-    },
+    touch::{RawPoint, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
 use crate::{
     button::{__ButtonMonitor, BUTTON_POLL_INTERVAL, Button},
@@ -191,25 +188,17 @@ impl CydWasm {
 impl Cyd for CydWasm {
     type Error = Infallible;
     type Display = CydDisplayWasm;
-    type Touch = CydTouchWasm;
 
-    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
-        (&mut self.display, &mut self.touch)
+    fn display(&mut self) -> &mut Self::Display {
+        &mut self.display
     }
 
-    fn orientation(&mut self) -> Orientation {
+    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
+        self.touch.read()
+    }
+
+    fn orientation(&self) -> Orientation {
         self.display.orientation
-    }
-}
-
-impl CydParts for CydWasm {
-    fn into_parts(self) -> (Self::Display, Self::Touch) {
-        let Self { display, touch } = self;
-        (display, touch)
-    }
-
-    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self {
-        Self { display, touch }
     }
 }
 
@@ -230,7 +219,12 @@ impl CydTouchWasmSource {
                 self.interaction_state.set(InteractionState::PointerDown);
             }
         }
-        let raw_point = distort_demo_screen_to_raw(x, y);
+        assert!((0.0..=u16::MAX as f32).contains(&x));
+        assert!((0.0..=u16::MAX as f32).contains(&y));
+        let raw_point = RawPoint {
+            x: x as u16,
+            y: y as u16,
+        };
         self.latest_raw_point.set(Some(raw_point));
         self.push(RawTouchEvent::Down {
             raw_x: raw_point.x,
@@ -242,7 +236,12 @@ impl CydTouchWasmSource {
         if self.interaction_state.get() != InteractionState::PointerDown {
             return;
         }
-        let raw_point = distort_demo_screen_to_raw(x, y);
+        assert!((0.0..=u16::MAX as f32).contains(&x));
+        assert!((0.0..=u16::MAX as f32).contains(&y));
+        let raw_point = RawPoint {
+            x: x as u16,
+            y: y as u16,
+        };
         self.latest_raw_point.set(Some(raw_point));
         self.push(RawTouchEvent::Move {
             raw_x: raw_point.x,

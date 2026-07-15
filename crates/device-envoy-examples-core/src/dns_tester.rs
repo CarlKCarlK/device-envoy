@@ -25,7 +25,7 @@ use device_envoy_core::{
     UnwrapInfallible,
     button::Button,
     cyd::{
-        Cyd, CydDisplay, CydTouch,
+        Cyd, CydDisplay,
         display::{CydFrame, DrawItem, Image565View, Orientation, tga},
         touch::TouchEvent,
     },
@@ -73,14 +73,15 @@ where
     let mut status = Status::Tap;
 
     let orientation = cyd.orientation();
-    let (display, touch) = cyd.parts();
     let layout = match orientation {
         Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
         Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
     };
-    let mut ui = Ui::<_, 16>::new(display, layout.bitmap);
-    ui.fill_contiguous_full()?;
-    ui.text(layout.hostname, dns.hostname()).await?;
+    {
+        let mut ui = Ui::<_, 16>::new(cyd.display(), layout.bitmap);
+        ui.fill_contiguous_full()?;
+        ui.text(layout.hostname, dns.hostname()).await?;
+    }
     loop {
         yield_now().await;
 
@@ -88,7 +89,9 @@ where
             return Ok(Exit::Calibrate);
         }
 
-        ui.begin(touch.read().map_err(Error::Touch)?, orientation);
+        let touch_event = cyd.read_touch().map_err(Error::Touch)?;
+        let mut ui = Ui::<_, 16>::new(cyd.display(), layout.bitmap);
+        ui.begin(touch_event, orientation);
 
         ui.status(layout.status, status, status.is_good()).await?;
 

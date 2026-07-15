@@ -38,13 +38,12 @@ use embedded_graphics::{
 use esp_backtrace as _;
 use log::info;
 
-use device_envoy_core::cyd::touch::calibration::ensure_calibration;
 use device_envoy_esp::{
     Result,
     button::{ButtonEsp, PressedTo},
     cyd::{
-        CydDisplay as _, CydEsp, CydEspUncalibrated, CydStaticEsp, CydTouch as _,
-        DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation,
+        Cyd, CydDisplay as _, CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
+        Orientation,
     },
     flash_block::FlashBlockEsp,
     init_and_start,
@@ -69,9 +68,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let mut recalibration_button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
-    // todo0000 Consider constructing the uncalibrated CYD explicitly and then
-    // calling CydUncalibrated::into_calibrated, following the ESP DNS tester.
-    let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
+    let mut cyd = CydEsp::new(
         &CYD_STATIC,
         p.SPI2,
         p.GPIO14,
@@ -92,34 +89,24 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO39,
         p.GPIO33,
         p.GPIO36,
-    )?;
-    info!("CYD display and touch initialized");
-
-    let (mut touch, calibration_outcome) = ensure_calibration(
-        &mut display,
-        touch,
         &mut calibration_flash_block,
         &mut recalibration_button,
-        Some("recalibrating"),
     )
     .await?;
-    if calibration_outcome.was_saved() {
-        info!("Calibration saved, restarting");
-        device_envoy_esp::esp_hal::system::software_reset();
-    }
+    info!("CYD display and touch initialized");
     info!("Touch calibrated; tap the panel to paint");
 
-    let mut frame = display.full_frame_mut();
-    frame.flush()?;
+    cyd.display().full_frame_mut().flush()?;
 
     loop {
-        if let Some(touch_event) = touch.read()? {
+        if let Some(touch_event) = cyd.read_touch()? {
             let point = match touch_event {
                 device_envoy_esp::cyd::touch::TouchEvent::Down { point }
                 | device_envoy_esp::cyd::touch::TouchEvent::Move { point } => Some(point),
                 device_envoy_esp::cyd::touch::TouchEvent::Up => None,
             };
             if let Some(point) = point {
+                let mut frame = cyd.display().full_frame_mut();
                 Circle::with_center(Point::new(point.x, point.y), TOUCH_DOT_RADIUS * 2)
                     .into_styled(PrimitiveStyle::with_fill(Rgb565::new(28, 50, 12)))
                     .draw(&mut frame)

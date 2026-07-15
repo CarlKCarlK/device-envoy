@@ -16,10 +16,8 @@
 use core::cell::RefCell;
 
 use device_envoy_core::button::Button;
-use device_envoy_core::cyd::{
-    Cyd,
-    touch::calibration::{EnsureCalibrationOutcome, ensure_calibration},
-};
+use device_envoy_core::cyd::touch::TouchEvent;
+use device_envoy_core::cyd::{Cyd, CydTouch, touch::calibration::ensure_calibration};
 use embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Level, Output, Pin};
@@ -51,9 +49,8 @@ type SharedSpiDevice<T> =
 /// re-applies its device's `embassy_rp::spi::Config` to the shared bus immediately before each of
 /// its transactions, so the physical SPI clock switches between [`super::DEFAULT_DISPLAY_SPI_HZ`] and
 /// [`TOUCH_SPI_HZ`] as display and touch take turns using the bus. Because the two halves share
-/// state through that bus, this type implements [`Cyd`] but not
-/// [`CydParts`](device_envoy_core::cyd::CydParts) — see that trait's documentation for why
-/// shared-bus backends cannot safely split into independently-owned parts.
+/// state through that bus, this type keeps shared-bus ownership atomic inside the complete
+/// [`Cyd`] bundle.
 ///
 /// `T` is the SPI peripheral instance (`SPI0` or `SPI1`) the shared bus runs on; see
 /// [`CydRpOneSpiStatic`] for why the static storage must name the same `T`.
@@ -132,9 +129,8 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// * `font` - Default monospace font for text drawing
     /// * `calibration_flash_block` - Flash block used to load/save the touch calibration
     /// * `recalibration_button` - Button that restarts the interactive calibration flow
-    /// * `confirmed_message` - Message shown after a fresh calibration is saved
     ///
-    /// Returns a [`CydRpOneSpi`] ready for use, along with how calibration was obtained.
+    /// Returns a ready-to-use [`CydRpOneSpi`].
     #[expect(clippy::too_many_arguments, reason = "mirrors CydEspOneSpi::new")]
     pub async fn new<
         const PIXEL_COUNT: usize,
@@ -167,8 +163,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
         font: &'static MonoFont<'static>,
         calibration_flash_block: &mut FlashBlockRp,
         recalibration_button: &mut R,
-        confirmed_message: Option<&str>,
-    ) -> crate::Result<(Self, EnsureCalibrationOutcome)>
+    ) -> crate::Result<Self>
     where
         Sck: Pin + ClkPin<T>,
         Mosi: Pin + MosiPin<T>,
@@ -237,12 +232,12 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
         )?;
         let touch = CydTouchUncalibratedRp::from_device(touch_spi_device, touch_irq_pin);
 
-        let (touch, ensure_calibration_outcome) = ensure_calibration(
+        let (touch, _) = ensure_calibration(
             &mut display,
             touch,
             calibration_flash_block,
             recalibration_button,
-            confirmed_message,
+            None,
         )
         .await
         .map_err(|error| match error.kind {
@@ -254,17 +249,24 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
             ) => flash_error,
         })?;
 
-        Ok((Self { display, touch }, ensure_calibration_outcome))
+        Ok(Self { display, touch })
     }
 }
 
 impl<T: spi::Instance + 'static> Cyd for CydRpOneSpi<T> {
     type Error = CydError;
     type Display = CydDisplayRp<SharedSpiDevice<T>>;
-    type Touch = CydTouchRp<SharedSpiDevice<T>>;
 
-    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
-        (&mut self.display, &mut self.touch)
+    fn display(&mut self) -> &mut Self::Display {
+        &mut self.display
+    }
+
+    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
+        self.touch.read()
+    }
+
+    fn orientation(&self) -> Orientation {
+        self.display.orientation
     }
 }
 

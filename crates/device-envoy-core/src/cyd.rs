@@ -37,7 +37,6 @@ use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 /// to calibrated display and touch halves. Generic app code should use `Cyd` to remain
 /// compatible with hardware designs where display and touch share underlying resources.
 ///
-/// For backends that support owned deconstruction and reassembly, see [`CydParts`].
 #[cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!("cyd_trait_preview", "docs/assets/cyd_trait_preview.png")
@@ -70,13 +69,14 @@ use embedded_graphics::pixelcolor::Rgb888;
 #     &FONT_9X15_BOLD,
 # );
 # cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
-# let (mut display, mut touch) = Cyd::parts(&mut cyd);
 // Create a pixel-buffer covering the whole screen that starts filled with background color.
+let touch_event = cyd.read_touch()?;
+let mut display = cyd.display();
 let mut frame = display.full_frame_mut();
 
 frame.write_text("Hello CYD");
 // An app would usually run this in a loop: read touch, draw, flush, repeat.
-if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch.read()? {
+if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch_event {
     DrawItem::Circle {
         center: (point.x as f32, point.y as f32),
         pixel_radius: 24.0,
@@ -102,167 +102,19 @@ frame.flush().await?;
 "#
 )]
 pub trait Cyd: Sized {
-    /// Error returned by both the display and calibrated touch parts.
+    /// Error returned by display operations and calibrated touch reads.
     type Error;
 
-    /// The owned display component stored by this device.
     type Display: CydDisplay<Error = Self::Error>;
 
-    /// The owned calibrated touch component stored by this device.
-    type Touch: CydTouch<Error = Self::Error>;
+    /// Borrow the display for the duration of a draw.
+    fn display(&mut self) -> &mut Self::Display;
 
-    /// Borrow both calibrated halves at once.
-    ///
-    /// See the [`Cyd`] trait documentation for a usage example.
-    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
+    /// Read the next calibrated touch event, if one is pending.
+    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
 
-    /// Return the logical orientation of the bundled display and touch parts.
-    ///
-    /// The default uses the oriented screen dimensions. It intentionally
-    /// treats equal-sized inverted presentations as their non-inverted
-    /// orientation; applications that preserve 180-degree inversion should
-    /// override this method with their stored orientation.
-    fn orientation(&mut self) -> Orientation {
-        let screen_size = self.display().screen_size();
-        if screen_size.width > screen_size.height {
-            Orientation::Landscape
-        } else {
-            Orientation::Portrait
-        }
-    }
-
-    /// Borrow the display half.
-    ///
-    #[cfg_attr(
-        feature = "host",
-        doc = r#"
-
-```rust
-use device_envoy_core::cyd::{Cyd, CydDisplay};
-use embedded_graphics::pixelcolor::Rgb888;
-# use device_envoy_core::memory::CydMemory;
-# use embedded_graphics::{
-#     mono_font::ascii::FONT_9X15_BOLD,
-#     prelude::{RgbColor, Size},
-# };
-# let mut cyd = CydMemory::new(
-#     Size::new(320, 240),
-#     Rgb888::BLACK,
-#     Rgb888::WHITE,
-#     &FONT_9X15_BOLD,
-# );
-let display = Cyd::display(&mut cyd);
-assert_eq!(display.screen_size(), Size::new(320, 240));
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
-```
-"#
-    )]
-    fn display(&mut self) -> &mut Self::Display {
-        self.parts().0
-    }
-
-    /// Borrow the calibrated touch half.
-    ///
-    #[cfg_attr(
-        feature = "host",
-        doc = r#"
-
-```rust
-use device_envoy_core::cyd::{Cyd, CydTouch, touch::TouchEvent};
-use embedded_graphics::pixelcolor::Rgb888;
-# use device_envoy_core::memory::CydMemory;
-# use embedded_graphics::{
-#     mono_font::ascii::FONT_9X15_BOLD,
-#     prelude::{Point, RgbColor, Size},
-# };
-# let mut cyd = CydMemory::new(
-#     Size::new(320, 240),
-#     Rgb888::BLACK,
-#     Rgb888::WHITE,
-#     &FONT_9X15_BOLD,
-# );
-cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
-assert!(matches!(
-    Cyd::touch(&mut cyd).read()?,
-    Some(TouchEvent::Down { point }) if point == Point::new(160, 120)
-));
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
-```
-"#
-    )]
-    fn touch(&mut self) -> &mut Self::Touch {
-        self.parts().1
-    }
-}
-
-/// Extension trait for device implementations that support owned deconstruction and reassembly.
-///
-/// Some `Cyd` implementations can cleanly split into independently-owned display and touch
-/// parts, then be reassembled from those parts. For example, backends with two independent
-/// SPI peripherals or reference-counted shared state.
-///
-/// Backends that share a single bus (like one-SPI hardware) cannot guarantee that the
-/// split parts remain valid in isolation, so they do not implement `CydParts`.
-///
-/// Generic code that only needs borrowed access should depend on [`Cyd`], not `CydParts`.
-/// Use `CydParts` only when ownership-level transitions are required, such as in test
-/// harnesses or calibration flows.
-///
-/// See [`CydParts::into_parts`] for a round-trip example.
-#[cfg_attr(
-    feature = "host",
-    doc = r#"
-
-```rust
-use device_envoy_core::cyd::{
-    Cyd, CydParts, CydDisplay, CydTouch,
-    display::CydFrame,
-    touch::TouchEvent,
-};
-use embedded_graphics::pixelcolor::Rgb888;
-# use device_envoy_core::memory::CydMemory;
-# use embedded_graphics::{
-#     mono_font::ascii::FONT_9X15_BOLD,
-#     pixelcolor::Rgb565,
-#     prelude::{Point, RgbColor, Size},
-# };
-# futures_executor::block_on(async {
-# let mut cyd = CydMemory::new(
-#     Size::new(320, 240),
-#     Rgb888::BLACK,
-#     Rgb888::WHITE,
-#     &FONT_9X15_BOLD,
-# );
-let mut cyd = CydMemory::from_parts(cyd.display().to_owned(), cyd.touch().to_owned());
-cyd.push_touch_event(TouchEvent::Down { point: Point::new(12, 34) });
-let (mut display, mut touch) = cyd.into_parts();
-assert_eq!(display.screen_size(), Size::new(320, 240));
-assert!(matches!(
-    touch.read()?,
-    Some(TouchEvent::Down { point }) if point == Point::new(12, 34)
-));
-
-let cyd = CydMemory::from_parts(display, touch);
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
-# })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
-```
-"#
-)]
-pub trait CydParts: Cyd {
-    /// Consume the device into its owned calibrated halves.
-    ///
-    /// The parts must come from the same underlying device. On shared-state backends like
-    /// `CydMemory` and `CydWasm`, mismatched pairings cannot be detected.
-    fn into_parts(self) -> (Self::Display, Self::Touch);
-
-    /// Reassemble a device from its owned calibrated halves.
-    ///
-    /// The parts must come from the same underlying device. On shared-state backends like
-    /// `CydMemory` and `CydWasm`, mismatched pairings cannot be detected.
-    ///
-    /// See [`CydParts::into_parts`] for a round-trip example.
-    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self;
+    /// Return the logical orientation of this complete device.
+    fn orientation(&self) -> Orientation;
 }
 
 /// A complete CYD bundle whose touch half has not yet been calibrated.
@@ -270,6 +122,9 @@ pub trait CydParts: Cyd {
 /// Bundle implementations own the calibration lifecycle and return a ready-to-use
 /// [`Cyd`] in one operation. This keeps display orientation, calibration persistence,
 /// retry behavior, and button handling out of application startup code.
+// TODO0000 Keep this implementation-only trait private once all platform
+// constructors have moved their calibration orchestration below the API.
+#[doc(hidden)]
 pub trait CydUncalibrated: Sized {
     /// The calibrated bundle produced by [`CydUncalibrated::into_calibrated`].
     type Calibrated: Cyd;
@@ -289,6 +144,7 @@ pub trait CydUncalibrated: Sized {
 }
 
 /// A raw-touch source that can run the shared calibration flow and become calibrated.
+#[doc(hidden)]
 pub trait CydTouchUncalibrated: Sized {
     /// Error returned when reading raw touch fails.
     type Error;
@@ -310,6 +166,7 @@ pub trait CydTouchUncalibrated: Sized {
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
 /// the same screen coordinates as the display, or `None` when there is no
 /// touch.
+#[doc(hidden)]
 pub trait CydTouch: Sized {
     /// Error returned when reading touch fails.
     type Error;

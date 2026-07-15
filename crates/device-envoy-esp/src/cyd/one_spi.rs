@@ -21,8 +21,7 @@ use static_cell::StaticCell;
 
 use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{
-    Cyd, CydUncalibrated,
-    touch::calibration::{EnsureCalibrationOutcome, ensure_calibration},
+    Cyd, CydTouch, touch::TouchEvent, touch::calibration::ensure_calibration,
 };
 
 use super::{
@@ -45,39 +44,11 @@ type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, 
 /// re-applies its device's [`spi::master::Config`] to the shared bus immediately before each of
 /// its transactions, so the physical SPI clock switches between [`super::DEFAULT_DISPLAY_SPI_HZ`] and
 /// [`TOUCH_SPI_HZ`] as display and touch take turns using the bus. Because the two halves share
-/// state through that bus, this type implements [`Cyd`] but not
-/// [`CydParts`](device_envoy_core::cyd::CydParts) — see that trait's documentation for why
-/// shared-bus backends cannot safely split into independently-owned parts.
+/// state through that bus, this type keeps shared-bus ownership atomic inside the complete
+/// [`Cyd`] bundle.
 pub struct CydEspOneSpi {
     display: CydDisplayEsp<SharedSpiDevice>,
     touch: CydTouchEsp<SharedSpiDevice>,
-}
-
-/// An uncalibrated one-SPI CYD bundle.
-///
-/// The display and raw touch handles stay together because they share the same
-/// physical SPI bus. This type intentionally does not implement `CydParts`.
-pub struct CydEspOneSpiUncalibrated {
-    display: CydDisplayEsp<SharedSpiDevice>,
-    touch: CydTouchUncalibratedEsp<SharedSpiDevice>,
-}
-
-impl CydUncalibrated for CydEspOneSpiUncalibrated {
-    type Calibrated = CydEspOneSpi;
-    type Error = CydError;
-
-    fn into_calibrated<F, B>(
-        self,
-        _calibration_flash_block: &mut F,
-        _recalibration_button: &mut B,
-    ) -> impl core::future::Future<Output = Result<Self::Calibrated, Self::Error>>
-    where
-        F: device_envoy_core::flash_block::FlashBlock,
-        B: Button,
-        Self::Error: From<F::Error>,
-    {
-        async { todo!("todo0000 fix this up") }
-    }
 }
 
 impl CydEspOneSpi {
@@ -113,9 +84,8 @@ impl CydEspOneSpi {
     /// * `font` - Default monospace font for text drawing
     /// * `calibration_flash_block` - Flash block used to load/save the touch calibration
     /// * `recalibration_button` - Button that restarts the interactive calibration flow
-    /// * `confirmed_message` - Message shown after a fresh calibration is saved
     ///
-    /// Returns a [`CydEspOneSpi`] ready for use, along with how calibration was obtained.
+    /// Returns a ready-to-use [`CydEspOneSpi`].
     #[allow(clippy::too_many_arguments)]
     pub async fn new<const PIXEL_COUNT: usize, R: Button>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
@@ -136,8 +106,7 @@ impl CydEspOneSpi {
         font: &'static MonoFont<'static>,
         calibration_flash_block: &mut FlashBlockEsp,
         recalibration_button: &mut R,
-        confirmed_message: Option<&str>,
-    ) -> crate::Result<(Self, EnsureCalibrationOutcome)> {
+    ) -> crate::Result<Self> {
         // The bus's own construction-time config barely matters: every transaction through
         // either `SharedSpiDevice` below re-applies its own config first (see
         // `SpiDeviceWithConfig`), so this initial value is immediately overwritten before any
@@ -200,12 +169,12 @@ impl CydEspOneSpi {
         )?;
         let touch = CydTouchUncalibratedEsp::from_device(touch_spi_device, touch_irq_pin);
 
-        let (touch, ensure_calibration_outcome) = ensure_calibration(
+        let (touch, _) = ensure_calibration(
             &mut display,
             touch,
             calibration_flash_block,
             recalibration_button,
-            confirmed_message,
+            None,
         )
         .await
         .map_err(|error| match error.kind {
@@ -217,16 +186,23 @@ impl CydEspOneSpi {
             ) => flash_error,
         })?;
 
-        Ok((Self { display, touch }, ensure_calibration_outcome))
+        Ok(Self { display, touch })
     }
 }
 
 impl Cyd for CydEspOneSpi {
     type Error = CydError;
     type Display = CydDisplayEsp<SharedSpiDevice>;
-    type Touch = CydTouchEsp<SharedSpiDevice>;
 
-    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
-        (&mut self.display, &mut self.touch)
+    fn display(&mut self) -> &mut Self::Display {
+        &mut self.display
+    }
+
+    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
+        self.touch.read()
+    }
+
+    fn orientation(&self) -> Orientation {
+        self.display.orientation
     }
 }

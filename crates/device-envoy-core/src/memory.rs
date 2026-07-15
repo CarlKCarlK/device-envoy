@@ -57,7 +57,7 @@
 //!     Rgb888::WHITE,
 //!     &FONT_9X15_BOLD,
 //! );
-//! let (mut display, _touch) = Cyd::parts(&mut cyd_memory);
+//! let mut display = cyd_memory.display();
 //! let mut frame = display.full_frame_mut();
 //! frame.write_text("Hello CYD");
 //! DrawItem::Bitmap {
@@ -101,7 +101,7 @@ use std::{
 #[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{CydFrame, Orientation, RectanglePixels},
     touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
 };
@@ -328,42 +328,17 @@ impl CydMemory {
 impl Cyd for CydMemory {
     type Error = CydMemoryError;
     type Display = CydDisplayMemory;
-    type Touch = CydTouchMemory;
 
-    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
-        (&mut self.display, &mut self.touch)
+    fn display(&mut self) -> &mut Self::Display {
+        &mut self.display
     }
 
-    fn orientation(&mut self) -> Orientation {
+    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
+        self.touch.read()
+    }
+
+    fn orientation(&self) -> Orientation {
         self.orientation
-    }
-}
-
-impl CydParts for CydMemory {
-    fn into_parts(self) -> (Self::Display, Self::Touch) {
-        let Self {
-            display,
-            touch,
-            shared: _shared,
-            orientation: _,
-        } = self;
-        (display, touch)
-    }
-
-    fn from_parts(display: Self::Display, touch: Self::Touch) -> Self {
-        // The owned parts carry dimensions but not the saved inverted state.
-        // Reassembly therefore follows Cyd's dimension-based default.
-        let orientation = if display.screen_size().width > display.screen_size().height {
-            Orientation::Landscape
-        } else {
-            Orientation::Portrait
-        };
-        Self {
-            shared: display.shared.clone(),
-            display,
-            touch,
-            orientation,
-        }
     }
 }
 
@@ -1229,7 +1204,6 @@ mod tests {
         ButtonMemory, CydMemory, CydMemoryError, CydTouchMemory, CydTouchUncalibratedMemory,
         FlashBlockMemory,
     };
-    use crate::cyd::CydParts;
     use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
@@ -1238,7 +1212,7 @@ mod tests {
         Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
         display::{CydFrame, RectanglePixels},
         touch::{
-            RawPoint, RawTouchEvent, TouchEvent,
+            RawPoint, RawTouchEvent,
             calibration::{
                 CalibrationConfig, CalibrationCorner, EnsureCalibrationErrorKind,
                 EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
@@ -1287,22 +1261,6 @@ mod tests {
             );
             assert_eq!(memory_cyd.orientation(), orientation);
         }
-    }
-
-    #[test]
-    fn reassembled_memory_uses_dimension_based_orientation_default() {
-        let memory_cyd = CydMemory::new_with_orientation(
-            crate::cyd::display::Orientation::PortraitInverted,
-            Rgb888::CSS_BLACK,
-            Rgb888::CSS_WHITE,
-            &FONT_9X15_BOLD,
-        );
-        let (display, touch) = memory_cyd.into_parts();
-        let mut reassembled_memory = CydMemory::from_parts(display, touch);
-        assert_eq!(
-            reassembled_memory.orientation(),
-            crate::cyd::display::Orientation::Portrait
-        );
     }
 
     fn read_next_raw_touch_event(
@@ -1389,46 +1347,6 @@ mod tests {
         assert_eq!(memory_cyd.pixel(0, 0), Rgb565::CSS_GREEN);
         assert_eq!(memory_cyd.pixel(1, 1), Rgb565::CSS_GREEN);
         assert_eq!(memory_cyd.pixel(3, 3), Rgb565::CSS_BLACK);
-    }
-
-    #[test]
-    fn cyd_into_from_parts_decalibrates_and_recalibrates() {
-        let cyd = test_cyd_memory();
-        let saved_config = CalibrationConfig::new(1.0, 0.0, 2.0, 0.0, 1.0, 3.0);
-        let mut memory_flash_block = FlashBlockMemory::with_value(&saved_config);
-        let mut memory_button = cyd.button_memory();
-
-        let (mut display, touch) = cyd.into_parts();
-        let touch_uncalibrated = touch.decalibrate();
-
-        let (touch, ensure_calibration_outcome) = block_on(ensure_calibration(
-            &mut display,
-            touch_uncalibrated,
-            &mut memory_flash_block,
-            &mut memory_button,
-            None,
-        ))
-        .expect("preloaded calibration should load");
-        assert!(matches!(
-            ensure_calibration_outcome,
-            EnsureCalibrationOutcome::Loaded(_)
-        ));
-        assert_eq!(touch.calibration_config(), saved_config);
-
-        let mut cyd = CydMemory::from_parts(display, touch);
-        cyd.push_touch_event(TouchEvent::Down {
-            point: Point::new(12, 34),
-        });
-        {
-            let (display, touch) = cyd.parts();
-            assert!(matches!(
-                touch.read().expect("touch read should succeed"),
-                Some(TouchEvent::Down { .. })
-            ));
-            let mut frame = display.full_frame_mut();
-            block_on(frame.flush()).expect("flush should succeed");
-        }
-        assert_eq!(cyd.flush_count(), 1);
     }
 
     #[test]

@@ -19,8 +19,7 @@ use device_envoy_core::{
 };
 use device_envoy_examples_core::dns_tester::{
     Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice,
-    display_orientation_for_calibration, dns_tester, dns_tester_splash,
-    orientation_after_calibration, render_notice,
+    display_orientation_for_calibration, dns_tester, orientation_after_calibration, render_notice,
 };
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::*;
@@ -141,7 +140,8 @@ impl DnsTesterWeb {
         } else {
             (display, touch)
         };
-        dns_tester_splash(&mut display, state.orientation)
+        // TODO0000 Consider using the core CYD splash helper here too.
+        render_notice(&mut display, state.orientation, UiNotice::Splash)
             .await
             .map_err(|error| JsValue::from_str(&format!("Splash: {error:?}")))?;
         for _ in 0..60 {
@@ -169,6 +169,7 @@ impl DnsTesterWeb {
             ) {
                 return Ok(());
             }
+            // TODO0000 Consider adding a core helper for this notice too.
             render_notice(&mut display, state.orientation, notice)
                 .await
                 .map_err(|error| JsValue::from_str(&format!("Wi-Fi notice: {error:?}")))

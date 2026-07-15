@@ -6,7 +6,10 @@
 //! rendering, and the redraw schedule. All platforms consume the same
 //! TGA-backed bitmap and dynamic-value layout.
 
-use core::fmt::{self, Write};
+use core::{
+    convert::Infallible,
+    fmt::{self, Write},
+};
 
 use embedded_graphics::{
     Drawable,
@@ -27,6 +30,7 @@ use device_envoy_core::{
         touch::TouchEvent,
     },
     dns::Dns,
+    wifi_auto::WifiAutoEvent,
 };
 use embassy_futures::yield_now;
 
@@ -49,8 +53,8 @@ const ARTWORK_PANEL_FILL: Rgb888 = Rgb888::new(10, 82, 120); // deep blue panel
 /// Platform setup follows the Linkage Blaze pattern: construct and calibrate
 /// the display and touch resources, show the splash, connect Wi-Fi, then call
 /// this function. The loop owns input policy, application state, DNS result
-/// accounting, and rendering. Call [`dns_tester_splash`] during platform
-/// setup before entering this loop. The loop returns platform control
+/// accounting, and rendering. Call [`dns_tester_splash`] during platform setup
+/// before entering this loop. The loop returns platform control
 /// requests instead of knowing how persistence or reboot works.
 pub async fn dns_tester<CydDevice, ButtonDevice, DnsDevice>(
     cyd: &mut CydDevice,
@@ -467,15 +471,37 @@ impl Layout {
     }
 }
 
-/// Show the DNS Tester splash immediately after display initialization.
-pub async fn dns_tester_splash<D>(
-    display: &mut D,
-    orientation: Orientation,
-) -> Result<(), UiError<D::Error>>
+/// Show the DNS Tester splash on a calibrated CYD.
+pub async fn dns_tester_splash<CydDevice>(
+    cyd: &mut CydDevice,
+) -> Result<(), Error<CydDevice::Error, Infallible>>
 where
-    D: CydDisplay,
+    CydDevice: Cyd,
 {
-    render_notice(display, orientation, UiNotice::Splash).await
+    let orientation = cyd.orientation();
+    render_notice(cyd.display(), orientation, UiNotice::Splash)
+        .await
+        .map_err(Error::Display)
+}
+
+/// Show the DNS Tester Wi-Fi status for a connection event.
+pub async fn dns_tester_wifi_status<CydDevice>(
+    cyd: &mut CydDevice,
+    wifi_auto_event: WifiAutoEvent,
+) -> Result<(), Error<CydDevice::Error, Infallible>>
+where
+    CydDevice: Cyd,
+{
+    let orientation = cyd.orientation();
+    let notice = match wifi_auto_event {
+        WifiAutoEvent::CaptivePortalReady => UiNotice::WifiSetup,
+        WifiAutoEvent::Connecting { .. } => UiNotice::WifiConnecting,
+        WifiAutoEvent::ConnectionFailed => UiNotice::WifiFailed,
+    };
+    //todo000 devolve this and the UiNotice enum
+    render_notice(cyd.display(), orientation, notice)
+        .await
+        .map_err(Error::Display)
 }
 
 /// Errors returned by the shared DNS Tester loop.
@@ -580,6 +606,8 @@ pub enum UiNotice {
     WifiConnecting,
     /// Wi-Fi setup is available through the captive portal.
     WifiSetup,
+    /// Wi-Fi connection attempts are exhausted.
+    WifiFailed,
     /// Browser WebAssembly cannot perform arbitrary DNS queries.
     WifiUnavailable,
 }
@@ -653,6 +681,7 @@ where
         UiNotice::Splash => ("DNS", "STARTING"),
         UiNotice::WifiConnecting => ("WI-FI", "CONNECTING"),
         UiNotice::WifiSetup => ("WI-FI", "SETUP"),
+        UiNotice::WifiFailed => ("WI-FI", "FAILED"),
         UiNotice::WifiUnavailable => ("WI-FI", "UNAVAILABLE"),
     };
     fill_panel(display, rectangle).await?;

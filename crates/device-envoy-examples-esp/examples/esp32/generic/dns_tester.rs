@@ -36,32 +36,34 @@ use core::convert::Infallible;
 
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::Instant;
+use embedded_graphics::pixelcolor::Rgb888;
 use esp_backtrace as _;
 use log::{info, warn};
 
-use device_envoy_core::cyd::touch::calibration::CalibrationConfig;
-use device_envoy_core::cyd::touch::calibration::{CALIBRATION_MIN_PIXEL_COUNT, ensure_calibration};
-use device_envoy_core::cyd::{Cyd as _, CydParts as _, display::Orientation};
+use device_envoy_core::cyd::touch::calibration::CALIBRATION_MIN_PIXEL_COUNT;
+use device_envoy_core::cyd::{Cyd as _, CydUncalibrated as _, display::Orientation};
 use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_esp::{
     Error, Result,
     button::{Button as _, PressedTo},
     button_watch,
-    cyd::{CydEsp, CydEspUncalibrated, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
+    cyd::{
+        CydError, CydEsp, CydEspUncalibrated, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
+    },
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
 };
 use device_envoy_examples_core::dns_tester::{
-    display_orientation_for_calibration, dns_tester, dns_tester_splash, render_notice,
+    Error as CoreError, dns_tester, dns_tester_splash, dns_tester_wifi_status, render_notice,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
 button_watch! {
-    DnsTesterButtonWatch {
+    ButtonWatch {
         pin: GPIO0,
     }
 }
@@ -92,65 +94,38 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);
-    //todo000 Is this good code?
-    let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
-        Ok(Some(_)) => true,
-        Ok(None) | Err(_) => false,
-    };
-    let display_orientation =
-        display_orientation_for_calibration(orientation, calibration_is_available);
-    let button = DnsTesterButtonWatch::new(p.GPIO0, PressedTo::Ground, spawner).await?;
 
     static CYD_STATIC: CydStaticEsp<STATUS_PIXEL_COUNT> = CydEsp::new_static();
-    let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
-        &CYD_STATIC,
-        p.SPI2,
-        p.GPIO14,
-        p.GPIO13,
-        p.GPIO12,
-        p.GPIO15,
-        p.GPIO2,
-        p.GPIO4,
-        p.GPIO21,
-        DEFAULT_DISPLAY_SPI_HZ,
-        display_orientation,
-        embedded_graphics::pixelcolor::Rgb888::new(10, 10, 12), // near-black
-        embedded_graphics::pixelcolor::Rgb888::new(230, 230, 230), // near-white
-        &DEFAULT_FONT,
-        p.SPI3,
-        p.GPIO25,
-        p.GPIO32,
-        p.GPIO39,
-        p.GPIO33,
-        p.GPIO36,
+    let uncalibrated_cyd = CydEspUncalibrated::new(
+        &CYD_STATIC,                // statics
+        p.SPI2,                     // display_spi
+        p.GPIO14,                   // display_sck_pin
+        p.GPIO13,                   // display_mosi_pin
+        p.GPIO12,                   // display_miso_pin
+        p.GPIO15,                   // display_cs_pin
+        p.GPIO2,                    // display_dc_pin
+        p.GPIO4,                    // display_rst_pin
+        p.GPIO21,                   // display_backlight_pin
+        DEFAULT_DISPLAY_SPI_HZ,     // display_spi_hz
+        orientation,                // orientation
+        Rgb888::new(10, 10, 12),    // background: near-black
+        Rgb888::new(230, 230, 230), // foreground: near-white
+        &DEFAULT_FONT,              // font
+        p.SPI3,                     // touch_spi
+        p.GPIO25,                   // touch_sck_pin
+        p.GPIO32,                   // touch_mosi_pin
+        p.GPIO39,                   // touch_miso_pin
+        p.GPIO33,                   // touch_cs_pin
+        p.GPIO36,                   // touch_irq_pin
     )?;
-    info!("CYD display and touch initialized");
-
-    let (touch, calibration_outcome) = ensure_calibration(
-        &mut display,
-        touch,
-        &mut calibration_flash_block,
-        &mut *button,
-        Some("recalibrating"),
-    )
-    .await?;
-    if calibration_outcome.was_saved() {
-        while button.is_pressed() {
-            // todo0000 why???
-            Timer::after(Duration::from_millis(10)).await;
-        }
-        info!("Calibration saved, restarting");
-        device_envoy_esp::esp_hal::system::software_reset();
-    }
-    info!("Touch calibrated");
-
-    let mut cyd = CydEsp::from_parts(display, touch);
-    dns_tester_splash(cyd.display(), orientation)
+    let button = ButtonWatch::new(p.GPIO0, PressedTo::Ground, spawner).await?;
+    let mut cyd = uncalibrated_cyd
+        .into_calibrated(&mut calibration_flash_block, &mut *button)
+        .await?;
+    info!("CYD display and touch initialized and calibrated");
+    dns_tester_splash(&mut cyd)
         .await
-        .map_err(|error| match error {
-            device_envoy_examples_core::dns_tester::UiError::Text(_) => Error::FormatError,
-            device_envoy_examples_core::dns_tester::UiError::Display(error) => error.into(),
-        })?;
+        .map_err(map_dns_tester_error)?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
@@ -161,36 +136,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
     let stack = wifi_auto
         .connect(&mut *button, async |wifi_auto_event| -> Result<(), Error> {
-            let message = match wifi_auto_event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    render_notice(
-                        cyd.display(),
-                        orientation,
-                        device_envoy_examples_core::dns_tester::UiNotice::WifiSetup,
-                    )
-                    .await
-                    .map_err(|error| match error {
-                        device_envoy_examples_core::dns_tester::UiError::Text(_) => {
-                            Error::FormatError
-                        }
-                        device_envoy_examples_core::dns_tester::UiError::Display(error) => {
-                            error.into()
-                        }
-                    })?;
-                    "WiFi setup: join DeviceEnvoySetup"
-                }
-                WifiAutoEvent::Connecting { .. } => "Connecting to WiFi...",
-                WifiAutoEvent::ConnectionFailed => "WiFi connect failed, retrying",
-            };
-            info!("Wi-Fi: {message}");
+            dns_tester_wifi_status(&mut cyd, wifi_auto_event)
+                .await
+                .map_err(map_dns_tester_error)?;
+            info!("Wi-Fi: {wifi_auto_event:?}");
             Ok(())
         })
         .await?;
 
-    while !stack.is_link_up() || stack.config_v4().is_none() {
-        // todo000 why?
-        Timer::after(Duration::from_millis(200)).await;
-    }
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
 
     // todo000 is this nice?
@@ -219,14 +172,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     });
     let exit = dns_tester(&mut cyd, &mut *button, &mut dns)
         .await
-        .map_err(|error| match error {
-            device_envoy_examples_core::dns_tester::Error::Display(error) => match error {
-                device_envoy_examples_core::dns_tester::UiError::Text(_) => Error::FormatError,
-                device_envoy_examples_core::dns_tester::UiError::Display(error) => error.into(),
-            },
-            device_envoy_examples_core::dns_tester::Error::Touch(error) => error.into(),
-            device_envoy_examples_core::dns_tester::Error::Dns(error) => match error {},
-        })?;
+        .map_err(map_dns_tester_error)?;
     match exit {
         device_envoy_examples_core::dns_tester::Exit::Calibrate => {
             calibration_flash_block.clear()?;
@@ -239,4 +185,19 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         }
     }
     device_envoy_esp::esp_hal::system::software_reset();
+}
+
+fn map_ui_error(error: device_envoy_examples_core::dns_tester::UiError<CydError>) -> Error {
+    match error {
+        device_envoy_examples_core::dns_tester::UiError::Text(_) => Error::FormatError,
+        device_envoy_examples_core::dns_tester::UiError::Display(error) => error.into(),
+    }
+}
+
+fn map_dns_tester_error(error: CoreError<CydError, Infallible>) -> Error {
+    match error {
+        CoreError::Display(error) => map_ui_error(error),
+        CoreError::Touch(error) => error.into(),
+        CoreError::Dns(error) => match error {},
+    }
 }

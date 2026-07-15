@@ -554,6 +554,7 @@ impl WifiAutoInner {
     device_envoy_core::__impl_wifi_auto_connect! {
     fn connect(&self as wifi_auto_inner, on_event) -> WifiStack {
         wifi_auto_inner.ensure_connected_with(&mut on_event).await?;
+        // todo000 Audit whether this implementation should wait for IP configuration too.
         Ok(wifi_auto_inner.wifi.wait_for_stack().await)
     }
     }

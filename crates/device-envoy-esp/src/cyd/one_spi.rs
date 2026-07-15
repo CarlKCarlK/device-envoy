@@ -21,7 +21,7 @@ use static_cell::StaticCell;
 
 use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{
-    Cyd,
+    Cyd, CydUncalibrated,
     touch::calibration::{EnsureCalibrationOutcome, ensure_calibration},
 };
 
@@ -51,6 +51,33 @@ type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, 
 pub struct CydEspOneSpi {
     display: CydDisplayEsp<SharedSpiDevice>,
     touch: CydTouchEsp<SharedSpiDevice>,
+}
+
+/// An uncalibrated one-SPI CYD bundle.
+///
+/// The display and raw touch handles stay together because they share the same
+/// physical SPI bus. This type intentionally does not implement `CydParts`.
+pub struct CydEspOneSpiUncalibrated {
+    display: CydDisplayEsp<SharedSpiDevice>,
+    touch: CydTouchUncalibratedEsp<SharedSpiDevice>,
+}
+
+impl CydUncalibrated for CydEspOneSpiUncalibrated {
+    type Calibrated = CydEspOneSpi;
+    type Error = CydError;
+
+    fn into_calibrated<F, B>(
+        self,
+        _calibration_flash_block: &mut F,
+        _recalibration_button: &mut B,
+    ) -> impl core::future::Future<Output = Result<Self::Calibrated, Self::Error>>
+    where
+        F: device_envoy_core::flash_block::FlashBlock,
+        B: Button,
+        Self::Error: From<F::Error>,
+    {
+        async { todo!("todo0000 fix this up") }
+    }
 }
 
 impl CydEspOneSpi {

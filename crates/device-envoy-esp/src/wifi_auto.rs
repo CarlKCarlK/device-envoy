@@ -538,6 +538,7 @@ impl<'a> WifiAutoEsp<'a> {
         let stack = wifi_auto_backend
             .connected_stack
             .expect("stack should be initialized after successful connect");
+        stack.wait_config_up().await;
 
         // Keep the Wi-Fi controller alive for the lifetime of the returned stack.
         // Dropping it would shut Wi-Fi down.

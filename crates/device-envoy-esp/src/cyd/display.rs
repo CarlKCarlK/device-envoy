@@ -39,6 +39,22 @@ pub(crate) type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'
 type CydDisplayInterface<D> = SpiInterface<'static, D, Output<'static>>;
 type CydDisplayDevice<D> = mipidsi::Display<CydDisplayInterface<D>, ILI9341Rgb565, Output<'static>>;
 
+fn orientation_to_mipi(orientation: Orientation) -> MipiOrientation {
+    match orientation {
+        Orientation::Landscape => MipiOrientation::new()
+            .rotate(Rotation::Deg90)
+            .flip_horizontal()
+            .rotate(Rotation::Deg180),
+        Orientation::Portrait => MipiOrientation::new()
+            .rotate(Rotation::Deg180)
+            .flip_horizontal(),
+        Orientation::LandscapeInverted => MipiOrientation::new()
+            .rotate(Rotation::Deg90)
+            .flip_horizontal(),
+        Orientation::PortraitInverted => MipiOrientation::new().flip_horizontal(),
+    }
+}
+
 /// Error initializing the display over SPI.
 #[derive(Clone, Copy, Debug)]
 pub enum CydDisplayEspInitError {
@@ -55,6 +71,8 @@ pub enum CydDisplayEspInitError {
 pub enum CydDisplayEspFlushError {
     /// Writing the frame buffer to the panel over SPI failed.
     FlushFrameBuffer,
+    /// Changing the panel orientation failed.
+    SetOrientation,
 }
 
 /// An ILI9341 display driven over `D`, an `embedded-hal` SPI device.
@@ -72,6 +90,17 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
     #[must_use]
     pub const fn size(&self) -> Size {
         self.screen_size
+    }
+
+    pub(crate) fn set_orientation(
+        &mut self,
+        orientation: Orientation,
+    ) -> Result<(), CydDisplayEspFlushError> {
+        self.display
+            .set_orientation(orientation_to_mipi(orientation))
+            .map_err(|_| CydDisplayEspFlushError::SetOrientation)?;
+        self.screen_size = orientation.size();
+        Ok(())
     }
 
     #[must_use]
@@ -101,25 +130,11 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         let mut delay = Delay::new();
 
         let screen_size = orientation.size();
-        let display_orientation = match orientation {
-            Orientation::Landscape => MipiOrientation::new()
-                .rotate(Rotation::Deg90)
-                .flip_horizontal()
-                .rotate(Rotation::Deg180),
-            Orientation::Portrait => MipiOrientation::new()
-                .rotate(Rotation::Deg180)
-                .flip_horizontal(),
-            Orientation::LandscapeInverted => MipiOrientation::new()
-                .rotate(Rotation::Deg90)
-                .flip_horizontal(),
-            Orientation::PortraitInverted => MipiOrientation::new().flip_horizontal(),
-        };
-
         let display = Builder::new(ILI9341Rgb565, interface)
             .reset_pin(rst)
             .display_size(240, 320)
             .color_order(ColorOrder::Bgr)
-            .orientation(display_orientation)
+            .orientation(orientation_to_mipi(orientation))
             .init(&mut delay)
             .map_err(|_| CydDisplayEspInitError::InitDisplay)?;
 

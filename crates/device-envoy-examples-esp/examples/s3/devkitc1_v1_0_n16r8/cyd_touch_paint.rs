@@ -69,7 +69,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
 
     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
-    //todo000 this should have comments, and other places, too.
+    // todo0000 Consider constructing the uncalibrated CYD explicitly and then
+    // calling CydUncalibrated::into_calibrated, following the ESP DNS tester.
     let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
         &CYD_STATIC,
         p.SPI2,

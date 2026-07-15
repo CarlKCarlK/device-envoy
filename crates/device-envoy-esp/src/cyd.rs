@@ -41,11 +41,11 @@ pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DEFAULT_DISPL
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydParts, CydTouch, CydTouchUncalibrated, CydUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
-pub use one_spi::CydEspOneSpi;
+pub use one_spi::{CydEspOneSpi, CydEspOneSpiUncalibrated};
 pub use text::DEFAULT_FONT;
 pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
 
@@ -284,9 +284,17 @@ pub enum CydError {
     TouchInit(CydTouchEspInitError),
     /// Flushing a frame to the display failed.
     DisplayFlush(CydDisplayEspFlushError),
+    /// Changing the display orientation failed.
+    DisplaySetOrientation(CydDisplayEspFlushError),
 }
 
 impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
+    fn set_orientation(&mut self, orientation: Orientation) -> Result<(), CydError> {
+        self.display
+            .set_orientation(orientation)
+            .map_err(CydError::DisplaySetOrientation)
+    }
+
     fn from_display_device(
         mut display: CydDisplayEspDevice<D>,
         orientation: Orientation,
@@ -574,6 +582,62 @@ impl CydEspUncalibrated {
                 touch_cs_pin,
                 touch_irq_pin,
             )?,
+        })
+    }
+}
+
+impl CydUncalibrated for CydEspUncalibrated {
+    type Calibrated = CydEsp;
+    type Error = crate::Error;
+
+    async fn into_calibrated<F, B>(
+        mut self,
+        calibration_flash_block: &mut F,
+        recalibration_button: &mut B,
+    ) -> Result<Self::Calibrated, Self::Error>
+    where
+        F: device_envoy_core::flash_block::FlashBlock,
+        B: Button,
+        Self::Error: From<F::Error>,
+    {
+        let application_orientation = self.display.orientation;
+        let calibration_is_available = calibration_flash_block
+            .load::<CalibrationConfig>()
+            .unwrap_or(None)
+            .is_some();
+
+        if !calibration_is_available {
+            self.display
+                .set_orientation(Orientation::Landscape)
+                .map_err(crate::Error::from)?;
+        }
+
+        let (touch, _calibration_outcome) = ensure_calibration(
+            &mut self.display,
+            self.touch,
+            calibration_flash_block,
+            recalibration_button,
+            Some("Touch calibrated"),
+        )
+        .await
+        .map_err(|error| match error.kind {
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
+                cyd_error,
+            ) => crate::Error::from(cyd_error),
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
+                flash_error,
+            ) => crate::Error::from(flash_error),
+        })?;
+
+        if !calibration_is_available {
+            self.display
+                .set_orientation(application_orientation)
+                .map_err(crate::Error::from)?;
+        }
+
+        Ok(CydEsp {
+            display: self.display,
+            touch,
         })
     }
 }

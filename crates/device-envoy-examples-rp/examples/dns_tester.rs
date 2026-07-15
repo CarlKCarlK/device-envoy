@@ -95,6 +95,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);
+    // todo0000 Consider replacing this manual calibration and reassembly
+    // with CydUncalibrated::into_calibrated, following the ESP DNS tester.
     let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
         Ok(Some(_)) => true,
         Ok(None) | Err(_) => false,
@@ -146,9 +148,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("Touch calibrated");
 
     let mut cyd = CydRp::from_parts(display, touch);
-    dns_tester_splash(cyd.display(), orientation)
-        .await
-        .map_err(map_ui_error)?;
+    dns_tester_splash(&mut cyd).await.map_err(map_core_error)?;
 
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
@@ -166,6 +166,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         .connect(&mut button, async |wifi_auto_event| -> Result<(), Error> {
             match wifi_auto_event {
                 WifiAutoEvent::CaptivePortalReady => {
+                    // TODO0000 Consider using the shared DNS tester Wi-Fi status helper here.
                     render_notice(cyd.display(), orientation, CoreUiNotice::WifiSetup)
                         .await
                         .map_err(map_ui_error)?
@@ -225,5 +226,13 @@ fn map_ui_error(error: CoreUiError<device_envoy_rp::cyd::CydError>) -> Error {
     match error {
         CoreUiError::Text(_) => Error::FormatError,
         CoreUiError::Display(error) => error.into(),
+    }
+}
+
+fn map_core_error(error: CoreError<device_envoy_rp::cyd::CydError, Infallible>) -> Error {
+    match error {
+        CoreError::Display(error) => map_ui_error(error),
+        CoreError::Touch(error) => error.into(),
+        CoreError::Dns(error) => match error {},
     }
 }

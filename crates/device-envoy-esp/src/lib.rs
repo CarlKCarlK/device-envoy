@@ -317,6 +317,8 @@ pub enum Error {
     #[cfg(target_os = "none")]
     CydDisplayFlush(cyd::CydDisplayEspFlushError),
     #[cfg(target_os = "none")]
+    CydDisplaySetOrientation(cyd::CydDisplayEspFlushError),
+    #[cfg(target_os = "none")]
     CydTouchUnavailable,
 }
 
@@ -333,6 +335,7 @@ impl From<cyd::CydError> for Error {
             cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
             cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
             cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            cyd::CydError::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
         }
     }
 }

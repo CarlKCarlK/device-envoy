@@ -1,27 +1,45 @@
 <!-- todo0 consider deleting this spec once the work below is implemented and released. -->
 
-# One DNS Tester, Two Worlds: Why the ESP and WASM Constructors Stay Small
+# One CYD Constructor, Two Platforms: Building the DNS Tester for ESP32 and WASM
+
+## The prompt that generated this article
+
+> One of our
+> goals is to show how nice and sensible we can make the code. Let’s put that
+> to the test by creating a pretend Medium article that shows the ESP
+> construction, bit by bit, for the DNS Tester; the new general WASM-using code
+> for the same constructor function on WASM; and then a brief overview of the
+> core code they now share. Show the real code in parts and explain how the ESP
+> and WASM constructors differ and why. Argue that both are concise, readable,
+> and sensible, and that their differences are motivated. Put the article in
+> `specs/`.
+
+> Work backward from what the core application needs. Show those capabilities
+> first, then construct each one at a time on ESP and WASM, including anything
+> required by the constructors themselves. After that, handle each `Exit`
+> variant individually and show how the platform applies the requested policy
+> and restarts the core application.
 
 *Pretend Medium article*
 
-The most satisfying embedded code is not code that hides the hardware. It is code
-that makes the hardware visible in the few places where it matters, while keeping
-the application itself independent of the board.
+The most satisfying embedded code is not code that hides the hardware. It is
+code that makes the hardware visible in the few places where it matters, while
+keeping the application independent of the board.
 
-The Device Envoy DNS Tester is a useful example. The ESP32 constructor and the
-browser/WASM constructor look different because they have different jobs. The ESP
-constructor wires real pins, Wi-Fi, flash, and reset behavior. The WASM constructor
-wires a canvas, browser storage, and deterministic substitutes. After that setup,
-both constructors call the same no-std DNS Tester loop.
+The Device Envoy DNS Tester is a useful example. Its ESP32 entry point wires
+real pins, Wi-Fi, flash, calibration, and reset behavior. Its WASM entry point
+wires an HTML canvas, browser storage, browser input, animation frames, and a
+deterministic substitute for Wi-Fi. After those jobs are complete, both
+platforms run the same no-std DNS Tester loop.
 
-That is the whole design in one sentence:
+That is the design in one sentence:
 
 > Platform code constructs capabilities. Core code runs the device behavior.
 
-## Start with the application boundary
+## Start at the application boundary
 
 The shared application does not ask whether it is running on an ESP32 or in a
-browser. It asks for three capabilities:
+browser. It asks for a CYD, a button, and a DNS service:
 
 ```rust,no_run
 pub async fn dns_tester<CydDevice, ButtonDevice, DnsDevice>(
@@ -38,19 +56,16 @@ where
 }
 ```
 
-This signature is intentionally ordinary. `Cyd` supplies display and touch
-parts. `Button` supplies the physical BOOT/calibration input. `Dns` supplies a
-hostname and one asynchronous lookup operation.
+Notice what is not in this signature: flash, Wi-Fi configuration, a canvas,
+SPI, or a reset function. Those are platform-owned construction and lifecycle
+resources. They are used to prepare the three capabilities above and to act on
+the `Exit` value afterward; they are deliberately not passed into the core
+loop.
 
-The core loop owns the things that should be identical everywhere:
-
-- the query, success, failure, and latency counters;
-- the screen layout in each orientation;
-- touch interpretation and control regions;
-- the status display;
-- the decision to request calibration, Wi-Fi reset, or reorientation.
-
-It returns an `Exit` instead of rebooting or changing flash itself:
+The loop owns the query, success, failure, and latency counters; the layout in
+all four orientations; touch interpretation; the status display; and the
+decision to request calibration, Wi-Fi reset, or reorientation. It returns an
+`Exit` rather than clearing flash or rebooting the device:
 
 ```rust,no_run
 pub enum Exit {
@@ -63,209 +78,186 @@ pub enum Exit {
 That return value is the seam between reusable application behavior and
 platform policy.
 
-## The ESP constructor, one responsibility at a time
+## ESP32 construction: follow the actual dependency graph
 
-The ESP32 entry point is longer than the WASM entry point because real hardware
-has more physical facts to establish. The length is not accidental ceremony;
-each block answers one concrete question.
-
-### 1. Start the board and persistent services
+The first core input is not merely a `Cyd`; it is a calibrated `Cyd`. That is
+the right place to begin. The rest of the ESP entry point exists to make this
+line possible:
 
 ```rust,no_run
-async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p);
-    esp_println::logger::init_logger(log::LevelFilter::Info);
-
-    let [
-        wifi_auto_flash_block,
-        mut calibration_flash_block,
-        mut orientation_flash_block,
-    ] = FlashBlockEsp::new_array::<3>(p.FLASH)?;
+let mut cyd = CydEsp::from_parts(display, touch);
 ```
 
-The board starts first. Then the constructor obtains three persistent namespaces:
-Wi-Fi setup, touch calibration, and display orientation. These are real flash
-blocks, so the constructor can preserve the user’s device state across power
-cycles.
+At this point `display` is a real display and `touch` is calibrated. Neither
+is an implementation detail that the core loop should have to reconstruct.
 
-### 2. Restore the display state
-
-```rust,no_run
-    let orientation = orientation_flash_block
-        .load::<Orientation>()?
-        .unwrap_or(Orientation::Landscape);
-    let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
-        Ok(Some(_)) => true,
-        Ok(None) | Err(_) => false,
-    };
-    let display_orientation =
-        display_orientation_for_calibration(orientation, calibration_is_available);
-    let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
+```text
+calibrated CydEsp
+├── display + uncalibrated touch
+│   └── CydEspUncalibrated::new(..., display_orientation, ...)
+│       ├── p from init_and_start!
+│       └── display_orientation
+│           ├── saved orientation from orientation flash
+│           └── calibration availability from calibration flash
+└── calibrated touch
+    └── ensure_calibration(display, uncalibrated touch, calibration flash, BOOT)
 ```
 
-There are two orientations here: the saved dashboard orientation and the
-temporary orientation used while calibration is running. This is a hardware
-detail that belongs in the constructor because the constructor owns startup and
-restart policy.
+### 1. The target: a calibrated `CydEsp`
 
-### 3. Construct the actual CYD
-
-```rust,no_run
-    static CYD_STATIC: CydStaticEsp<STATUS_PIXEL_COUNT> = CydEsp::new_static();
-    let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
-        &CYD_STATIC,
-        p.SPI2,
-        p.GPIO14,
-        p.GPIO13,
-        p.GPIO12,
-        p.GPIO15,
-        p.GPIO2,
-        p.GPIO4,
-        p.GPIO21,
-        DEFAULT_DISPLAY_SPI_HZ,
-        display_orientation,
-        Rgb888::new(10, 10, 12), // near-black
-        Rgb888::new(230, 230, 230), // near-white
-        &DEFAULT_FONT,
-        p.SPI3,
-        p.GPIO25,
-        p.GPIO32,
-        p.GPIO39,
-        p.GPIO33,
-        p.GPIO36,
-    )?;
-```
-
-This is the part that should look unmistakably like embedded code. SPI buses,
-GPIO assignments, display colors, font, and a static memory budget are explicit.
-Nothing generic is pretending that GPIO14 is a browser canvas.
-
-The static buffer is also a deliberate design choice. The DNS Tester runs beside
-Wi-Fi, so a full-screen framebuffer may be an unacceptable memory tradeoff. The
-constructor selects a small buffer budget suitable for calibration text and the
-single-line status display.
-
-### 4. Calibrate before handing the device to the app
+`CydEsp::from_parts` is intentionally small because it is a type-level
+handoff: it accepts only a display and calibrated touch. The calibration step
+supplies that touch:
 
 ```rust,no_run
-    let (touch, calibration_outcome) = ensure_calibration(
-        &mut display,
-        touch,
-        &mut calibration_flash_block,
-        &mut button,
-        Some("recalibrating"),
-    )
-    .await?;
+init_and_start!(p);
+esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    if calibration_outcome.was_saved() {
-        while button.is_pressed() {
-            Timer::after(Duration::from_millis(10)).await;
-        }
-        device_envoy_esp::esp_hal::system::software_reset();
-    }
+// ... construct display, calibrated touch, button, and DNS ...
 
-    let mut cyd = CydEsp::from_parts(display, touch);
-```
+let (touch, calibration_outcome) = ensure_calibration(
+    &mut display,
+    touch,
+    &mut calibration_flash_block,
+    &mut *button,
+    Some("recalibrating"),
+)
+.await?;
 
-Calibration is not in the generic DNS loop. It is a startup concern, it uses
-persistent flash, and on this platform it may require a real software reset.
-Keeping it here makes the shared loop easier to read and keeps ESP-specific
-restart behavior out of application code.
-
-### 5. Adapt real Wi-Fi to the tiny `Dns` contract
-
-```rust,no_run
-    let wifi_auto = WifiAutoEsp::new(
-        p.WIFI,
-        wifi_auto_flash_block,
-        CAPTIVE_PORTAL_SSID,
-        [],
-        spawner,
-    )?;
-    let stack = wifi_auto.connect(&mut button, /* Wi-Fi notices */).await?;
-
-    while !stack.is_link_up() || stack.config_v4().is_none() {
-        Timer::after(Duration::from_millis(200)).await;
-    }
-
-    let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
-        let query_start = Instant::now();
-        let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
-        let latency_millis = query_start.elapsed().as_millis();
-        Ok::<DnsResult, Infallible>(DnsResult {
-            succeeded: matches!(dns_result, Ok(addresses) if !addresses.is_empty()),
-            latency_millis,
-        })
-    });
-```
-
-The Wi-Fi implementation is necessarily platform-specific. The application does
-not need to know about CYW43, sockets, DHCP, or DNS packet types. It receives the
-small `DnsResult` it needs.
-
-The browser adapter keeps this boundary deterministic. It emits the normal
-captive-portal-ready and connecting events, waits against the browser animation
-clock, and reports simulated success without network activity. The
-`ConnectionFailed` event remains a typed hook for explicit failure injection;
-the normal browser path never invents a random failure.
-
-### 6. Run the shared application and interpret its request
-
-```rust,no_run
-    let exit = dns_tester(&mut cyd, &mut button, &mut dns).await?;
-    match exit {
-        Exit::Calibrate => calibration_flash_block.clear()?,
-        Exit::ResetWifi => wifi_auto.reset_to_captive_portal()?,
-        Exit::Reorientate(next_orientation) => {
-            orientation_flash_block.save(&next_orientation)?;
-        }
+if calibration_outcome.was_saved() {
+    while button.is_pressed() {
+        Timer::after(Duration::from_millis(10)).await;
     }
     device_envoy_esp::esp_hal::system::software_reset();
 }
+
+let mut cyd = CydEsp::from_parts(display, touch);
 ```
 
-The constructor handles policy after the core loop returns. That is concise and
-readable precisely because the generic loop does not need to contain any of it.
+The reset after saving is part of the dependency story: a fresh boot now sees
+the saved calibration and can construct the dashboard normally.
 
-## The WASM constructor: the same shape, different materials
+### 2. The input to calibration: an uncalibrated CYD
 
-The browser constructor has no pins and no physical reboot. It still follows the
-same rhythm: restore state, construct a device, perform startup, provide a DNS
-adapter, and launch the shared loop.
-
-### 1. Construct browser substitutes
+`ensure_calibration` needs an actual display and raw touch source, which come
+from the uncalibrated constructor. Its visible dependency is
+`display_orientation`:
 
 ```rust,no_run
-#[wasm_bindgen(constructor)]
-pub fn new(canvas: HtmlCanvasElement) -> Result<DnsTesterWeb, JsValue> {
-    Ok(Self {
-        canvas,
-        exit: Rc::new(Cell::new(None)),
-        failed: Rc::new(Cell::new(false)),
-        pending_notice: Cell::new(None),
-        orientation: Cell::new(Orientation::Landscape),
-        simulator_control: RefCell::new(None),
-        state: RefCell::new(DnsTesterState {
-            wifi_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/wifi")?,
-            calibration_flash_block: FlashBlockWasm::new(
-                "device-envoy/dns-tester/calibration",
-            )?,
-            orientation_flash_block: FlashBlockWasm::new(
-                "device-envoy/dns-tester/orientation",
-            )?,
-            orientation: Orientation::Landscape,
-            hostname: DNS_HOSTNAME,
-        }),
-    })
-}
+static CYD_STATIC: CydStaticEsp<STATUS_PIXEL_COUNT> = CydEsp::new_static();
+let CydEspUncalibrated { mut display, touch } = CydEspUncalibrated::new(
+    &CYD_STATIC,
+    p.SPI2,
+    p.GPIO1, p.GPIO2, p.GPIO3,
+    p.GPIO4, p.GPIO5, p.GPIO7, p.GPIO8,
+    DEFAULT_DISPLAY_SPI_HZ,
+    display_orientation,
+    Rgb888::new(10, 10, 12), // near-black
+    Rgb888::new(230, 230, 230), // near-white
+    &DEFAULT_FONT,
+    p.SPI3,
+    p.GPIO9, p.GPIO10, p.GPIO11,
+    p.GPIO12, p.GPIO13,
+)?;
 ```
 
-The browser has substitutes for the same durable concepts. `FlashBlockWasm`
-uses browser storage. `Rc<Cell<_>>` and `RefCell<_>` hold the small amount of
-state needed to supervise an asynchronous browser task. None of this is a fake
-ESP constructor; it is a browser constructor with browser-appropriate services.
+### 3. The uncalibrated CYD needs an orientation
 
-### 2. Construct the shared WASM CYD
+Many applications use a fixed `Orientation` constant. DNS Tester is different:
+the user can select a new orientation from the dashboard, so the startup
+orientation must be loaded from persistent storage. Calibration is always
+presented in landscape, which means calibration availability also participates
+in computing `display_orientation`:
+
+```rust,no_run
+let orientation = orientation_flash_block
+    .load::<Orientation>()?
+    .unwrap_or(Orientation::Landscape);
+let calibration_is_available = match calibration_flash_block.load::<CalibrationConfig>() {
+    Ok(Some(_)) => true,
+    Ok(None) | Err(_) => false,
+};
+let display_orientation =
+    display_orientation_for_calibration(orientation, calibration_is_available);
+```
+
+### 4. Orientation and calibration state need board and flash resources
+
+`init_and_start!` in the outer construction frame produces the board resources
+named `p`. The real entry point then allocates all three persistent blocks
+together from its single flash resource. The graph uses the orientation and
+calibration blocks above, while the Wi-Fi block waits for the DNS capability:
+
+```rust,no_run
+let [
+    wifi_auto_flash_block,
+    mut calibration_flash_block,
+    mut orientation_flash_block,
+] = FlashBlockEsp::new_array::<3>(p.FLASH)?;
+
+let button = DnsTesterButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+```
+
+The BOOT button belongs here because it is the remaining dependency of
+`ensure_calibration` and is later passed unchanged to the core loop.
+
+### 5. Construct the DNS capability
+
+The third core input is `Dns`. `WifiAutoEsp` consumes the Wi-Fi flash block,
+real radio peripheral, and BOOT button to produce a connected network stack;
+the small `DnsRuntime` closure adapts that stack to the core `Dns` contract:
+
+```rust,no_run
+let wifi_auto = WifiAutoEsp::new(
+    p.WIFI,
+    wifi_auto_flash_block,
+    CAPTIVE_PORTAL_SSID,
+    [],
+    spawner,
+)?;
+let stack = wifi_auto.connect(&mut *button, /* Wi-Fi notices */).await?;
+
+let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
+    let query_start = Instant::now();
+    let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
+    let latency_millis = query_start.elapsed().as_millis();
+    Ok::<DnsResult, Infallible>(DnsResult {
+        succeeded: matches!(dns_result, Ok(addresses) if !addresses.is_empty()),
+        latency_millis,
+    })
+});
+```
+
+The exact GPIO assignments belong here, in the board entry point. The shared
+application sees only the calibrated `CydEsp`, BOOT button, and `DnsRuntime`.
+
+## WASM construction: the same dependency graph, different resources
+
+The browser launcher is in `device-envoy-dns-tester-wasm`, while the reusable
+CYD browser implementation lives in `device-envoy-core::wasm`. The target is
+again a calibrated CYD, this time `CydWasm`:
+
+```text
+calibrated CydWasm
+├── display + uncalibrated touch from CydSimulatorWasm
+│   └── canvas + display_orientation + shared simulator style
+└── calibrated touch from ensure_calibration
+    └── browser calibration storage + browser BOOT source
+```
+
+### 1. The target: a calibrated `CydWasm`
+
+After calibration, the launcher makes the same type-level handoff as ESP:
+
+```rust,no_run
+let mut device = CydWasm::from_parts(display, touch);
+```
+
+### 2. The uncalibrated simulator resources
+
+The general, application-neutral constructor is
+`CydSimulatorWasm::new_with_style`. It produces the display, raw touch, BOOT
+source, and a browser control handle together:
 
 ```rust,no_run
 let simulator = CydSimulatorWasm::new_with_style(
@@ -280,12 +272,32 @@ let (device, mut button, simulator_control) = simulator.into_parts();
 let (mut display, uncalibrated_touch) = device.parts_uncalibrated();
 ```
 
-The canvas is the display. The shared WASM simulator provides touch, BOOT, flash,
-orientation, and canvas presentation behavior. The constructor still explicitly
-chooses the orientation, palette, and font, just as the hardware constructor
-explicitly chooses pins and memory.
+The control handle stays with the browser shell so pointer and virtual BOOT
+events continue to work while startup is awaiting calibration or animation
+frames.
 
-### 3. Reuse calibration and startup
+### 3. The simulator needs persistent orientation and calibration state
+
+As on ESP, the DNS Tester loads orientation because the user can change it;
+many other applications simply pass a fixed orientation constant. Browser
+storage provides both the saved orientation and the answer to whether startup
+must run calibration in landscape:
+
+```rust,no_run
+let saved_orientation = state
+    .orientation_flash_block
+    .load::<Orientation>()?
+    .unwrap_or(Orientation::Landscape);
+let calibration_config = state.calibration_flash_block.load::<CalibrationConfig>()?;
+let orientation = display_orientation_for_calibration(
+    saved_orientation,
+    calibration_config.is_some(),
+);
+```
+
+### 4. Calibrate, then rebuild if the orientation changes
+
+The WASM launcher uses the same `ensure_calibration` operation as ESP:
 
 ```rust,no_run
 let (touch, outcome) = ensure_calibration(
@@ -296,26 +308,30 @@ let (touch, outcome) = ensure_calibration(
     Some("Touch calibrated"),
 )
 .await?;
-
-dns_tester_splash(&mut display, state.orientation).await?;
-for _ in 0..60 {
-    next_animation_frame().await;
-}
 ```
 
-This is an important test of the abstraction. The same calibration and splash
-functions operate on a browser-backed `CydDisplay`. The browser-specific delay is
-explicit because a browser needs to yield animation frames; it is not smuggled
-into the core DNS logic.
+If calibration was just saved, the browser rebuilds the simulator in the saved
+dashboard orientation and applies the new calibration to its touch source. That
+extra reconstruction is a browser-presentation concern; it keeps canvas size,
+orientation, input control, and calibrated touch in agreement.
 
-The live simulator control is kept outside the mutable application-state borrow.
-That matters because the shell can forward calibration and BOOT input while
-startup awaits animation frames. It prevents a browser callback from observing
-an already-held `RefCell` borrow.
+### 5. Construct the deterministic DNS capability
 
-### 4. Replace live DNS with a deterministic browser service
+The browser has no equivalent of an ESP32 Wi-Fi stack, so it simulates the
+connection phase and supplies a deterministic `DnsRuntime`. BOOT can interrupt
+the simulated connection just as it can interrupt ESP Wi-Fi setup:
 
 ```rust,no_run
+let wifi_outcome = simulate_wifi_connect(&mut button, async |event| {
+    self.request_notice(match event {
+        WifiConnectEvent::CaptivePortalReady => SimulatorNoticeRequest::wifi_setup(),
+        WifiConnectEvent::Connecting { .. } => SimulatorNoticeRequest::wifi_connecting(),
+        WifiConnectEvent::ConnectionFailed => SimulatorNoticeRequest::wifi_unavailable(),
+    });
+    Ok::<(), JsValue>(())
+})
+.await?;
+
 let mut dns = DnsRuntime::new(hostname, async || {
     Ok::<DnsResult, Infallible>(DnsResult {
         succeeded: true,
@@ -324,90 +340,270 @@ let mut dns = DnsRuntime::new(hostname, async || {
 });
 ```
 
-Browsers cannot provide the same arbitrary DNS operation as the embedded Wi-Fi
-stack. The WASM constructor therefore supplies a deterministic result. This is
-not pretending that a browser performed a network measurement; it makes the
-application’s rendering and interaction testable while accurately documenting
-the platform limitation.
+`ConnectionFailed` remains a hook for explicit failure injection; the normal
+simulation does not invent failures. The browser now has the same three core
+inputs as ESP: calibrated CYD, BOOT button, and DNS service.
 
-Startup notices follow the same boundary. Rust submits typed notice identifiers
-with severity; the shared browser shell owns the bubble’s placement,
-accessibility role, timeout, and replacement behavior. Recoverable notices do
-not stop the application loop, while fatal notices do.
+### 6. Spawn the shared loop and report its exit
 
-### 5. Launch the same loop without blocking the browser
+The browser task must not block JavaScript, so it runs the same core loop in
+`spawn_local`:
 
 ```rust,no_run
 let mut device = CydWasm::from_parts(display, touch);
 let exit = self.exit.clone();
-let mut dns = dns;
+let failed = self.failed.clone();
 
 wasm_bindgen_futures::spawn_local(async move {
     match dns_tester(&mut device, &mut button, &mut dns).await {
         Ok(exit_value) => exit.set(Some(exit_value)),
-        Err(_) => failed.set(true),
+        Err(CoreError::Display(CoreUiError::Text(_))) => failed.set(true),
+        Err(CoreError::Display(CoreUiError::Display(error))) => match error {},
+        Err(CoreError::Touch(error)) => match error {},
+        Err(CoreError::Dns(error)) => match error {},
     }
 });
 ```
 
-The browser task is spawned rather than awaited by the exported start method.
-The shell remains responsive, animation-frame futures can resolve, and a typed
-core exit can be observed by the page wrapper.
+The page shell later calls `take_exit` and `take_notice`. That is the browser
+version of the ESP entry point’s final `match exit`: the shell performs the
+restart or orientation update appropriate to a web page.
 
-## What both constructors share
+## Notices and failures cross a typed boundary
 
-The two entry points share more than a function name. They share the device
-semantics underneath the constructor:
+The Rust launcher submits `SimulatorNoticeRequest` values containing a stable
+identifier and severity. Recoverable Wi-Fi notices continue the application;
+the fatal `runtime-error` notice marks the browser task as failed. The shared
+JavaScript shell owns placement, timeout, replacement, and accessibility roles.
+JavaScript does not infer severity from message text.
+
+After the shared loop is spawned with `spawn_local`, the launcher exposes typed
+state to the shell through `take_exit` and `take_notice`. A normal exit can
+request recalibration, Wi-Fi reset, or orientation persistence. A display text
+failure becomes `runtime error`; the infallible display, touch, and DNS errors
+are handled exhaustively.
+
+## The small shared core
+
+The platform setup is substantial only because it has real platform work to
+do. The application loop that follows is deliberately small and boring. It
+reads the button, reads calibrated touch, renders the current status, and
+performs a lookup only when the shared UI reports a `StartDns` action:
 
 ```rust,no_run
-pub trait Dns {
-    type Error;
+loop {
+    yield_now().await;
 
-    fn hostname(&self) -> &'static str;
+    if button.is_pressed() {
+        return Ok(Exit::Calibrate);
+    }
 
-    fn lookup(&mut self) -> impl Future<Output = Result<DnsResult, Self::Error>>;
+    ui.begin(touch.read()?, orientation);
+    ui.status(layout.status, status, status.is_good()).await?;
+
+    match ui.touch(layout) {
+        TouchAction::StartDns => {
+            let result = dns.lookup().await?;
+            queries = queries.saturating_add(1);
+            last_latency_millis = Some(result.latency_millis);
+            // Update the shared success/failure state and render it next frame.
+        }
+        TouchAction::Control(Control::Calibration) => {
+            return Ok(Exit::Calibrate);
+        }
+        TouchAction::Control(Control::Wifi) => return Ok(Exit::ResetWifi),
+        TouchAction::Control(Control::Orientation) => {
+            return Ok(Exit::Reorientate(orientation.next()));
+        }
+        TouchAction::None => {}
+    }
 }
 ```
 
-They share the `Cyd` device abstraction, `CydDisplay`, calibrated touch events,
-the `Button` contract, the `DnsRuntime` adapter, the orientation model, the
-calibration flow, the splash renderer, the UI layout, and the complete DNS
-accounting loop.
+The real function also renders the counters, latency, bitmap, and status
+details; the important point here is ownership. No branch in this loop knows
+whether `touch` came from an XPT2046 controller or browser pointer events, or
+whether `dns.lookup()` uses a socket or a deterministic closure.
 
-They also share the same error boundaries. A display error remains a display
-error. A touch error remains a touch error. A DNS error remains a DNS error. The
-hardware constructor maps those errors into its board error type; the WASM
-constructor reports them through `JsValue` or its browser task state.
+## Three exits, three platform policies
 
-## Why the differences are justified
+The return value from the core loop is not an abstract promise to “restart
+somehow.” Each variant has a precise meaning. Looking at the exits one at a
+time makes the boundary between core behavior and platform behavior especially
+clear.
 
-The constructors are not identical because identical code would be suspicious.
+### `Calibrate`: clear calibration, then start fresh
 
-| Concern | ESP32 constructor | WASM constructor | Why the difference is correct |
-| --- | --- | --- | --- |
-| Display | SPI pins, static framebuffer, hardware driver | HTML canvas and `CydSimulatorWasm` | Different physical surfaces require different adapters. |
-| Touch | XPT2046 controller and calibration samples | Pointer events forwarded by the browser shell | The input source is different; calibrated core touch events are the same. |
-| BOOT | GPIO button | Browser BOOT control | Same `Button` capability, different source. |
-| Flash | MCU flash blocks | Browser storage-backed blocks | Both preserve calibration and orientation, but use native persistence mechanisms. |
-| Wi-Fi | CYW43 setup, DHCP, captive portal, live DNS | No Wi-Fi setup; deterministic DNS result | The browser cannot provide the embedded service honestly. |
-| Restart | Software reset after a control request | Page wrapper observes a typed exit and restarts the task | Hardware reset and browser restart have different meanings. |
-| Scheduling | Embassy timers and hardware task scheduling | Animation frames and `spawn_local` | Each platform yields through its native event loop. |
+The core loop returns `Calibrate` when the physical BOOT button is pressed or
+when the on-screen CAL control is touched. The ESP implementation clears only
+the calibration block and then resets:
 
-The differences are therefore motivated by capabilities, not by application
-behavior. The constructors are concise because each one contains only the
-platform facts that the other platform cannot provide.
+```rust,no_run
+match exit {
+    Exit::Calibrate => {
+        calibration_flash_block.clear()?;
+    }
+    // ...the other exits...
+}
+device_envoy_esp::esp_hal::system::software_reset();
+```
 
-## A useful test for good embedded architecture
+On the next hardware boot, startup sees that calibration is absent, constructs
+the CYD in the calibration orientation, and runs `ensure_calibration` again.
+The saved Wi-Fi and dashboard orientation are left alone.
 
-Read the shared `dns_tester` function without knowing which platform called it.
-It should still make complete sense.
+The browser performs the same policy through its page shell. It clears only
+calibration storage, releases transient BOOT input, switches the canvas to
+landscape, and calls `reboot`, which calls `start` again:
 
-Then read the ESP constructor. It should be obvious where pins, persistent
-storage, calibration, Wi-Fi, and reboot policy enter.
+```javascript
+if (result === "recalibrate") {
+  tester.clear_calibration();
+  tester.boot_up();
+  tester.prepare_calibration_landscape();
+  syncPresentation();
+  await tester.reboot();
+  syncPresentation();
+}
+```
 
-Then read the WASM constructor. It should be obvious where canvas, browser
-storage, deterministic DNS, and animation scheduling enter.
+This is a browser restart rather than a machine reset, but the application
+observes the same lifecycle: construct, calibrate, and re-enter the core loop.
 
-That is the standard worth aiming for: both constructors are short enough to
-review, explicit enough to trust, and different only where the platform really
-is different. The code is not clever. The abstraction is doing its job.
+### `ResetWifi`: preserve the device, restart the connection phase
+
+The core loop returns `ResetWifi` from the Wi-Fi control region. ESP delegates
+the policy to `WifiAutoEsp`, which clears its connection state back to the
+captive portal before the normal reset path runs:
+
+```rust,no_run
+match exit {
+    Exit::ResetWifi => {
+        wifi_auto.reset_to_captive_portal()?;
+    }
+    // ...the other exits...
+}
+device_envoy_esp::esp_hal::system::software_reset();
+```
+
+The next boot reconstructs Wi-Fi, waits for link and DHCP, and only then
+re-enters `dns_tester`. The DNS counters therefore belong to the new core-loop
+run, while persistent calibration and orientation remain available.
+
+In the browser, the shell releases the virtual BOOT button and invokes the
+same `reboot` entry point. `start` reconstructs the simulator, runs the
+deterministic captive-portal and connecting phases, and then spawns the core
+loop again:
+
+```javascript
+if (result === "wifi") {
+  tester.boot_up();
+  await tester.reboot();
+  syncPresentation();
+}
+```
+
+The browser does not pretend to reset a Wi-Fi chip. It restarts the simulated
+connection service that the application actually depends on.
+
+### `Reorientate`: persist the next display orientation
+
+The core loop returns `Reorientate(orientation.next())` when the ROT control is
+used. On ESP, the entry point saves the new orientation and resets:
+
+```rust,no_run
+match exit {
+    Exit::Reorientate(next_orientation) => {
+        orientation_flash_block.save(&next_orientation)?;
+    }
+    // ...the other exits...
+}
+device_envoy_esp::esp_hal::system::software_reset();
+```
+
+The next construction pass loads that value before creating the display, so
+the first frame is already in the requested orientation.
+
+On WASM, `take_exit` performs the persistence and updates the intrinsic canvas
+dimensions before returning the string `"orientation"` to JavaScript. The
+shell synchronizes the presentation and then calls `reboot`:
+
+```javascript
+if (result === "orientation") {
+  syncPresentation();
+  await tester.reboot();
+  syncPresentation();
+}
+```
+
+This ordering matters. The browser must resize and relayout the shell before
+the restarted splash is drawn, while the ESP can let its next hardware boot
+perform that work naturally.
+
+### The restart loop is still platform-specific, but the lifecycle is shared
+
+The ESP’s restart loop is supplied by the microcontroller itself: return from
+the core loop, apply one policy, reset, and call `inner_main` again after boot.
+The WASM shell expresses the same lifecycle explicitly:
+
+```javascript
+while (true) {
+  await nextFrame();
+  const result = tester.take_exit();
+
+  if (result === "recalibrate" || result === "wifi" || result === "orientation") {
+    // Apply the variant-specific policy, then call tester.reboot().
+    continue;
+  }
+  if (result === "runtime error") {
+    return;
+  }
+}
+```
+
+The shared core requests a transition. Each platform performs the transition
+with the resources and restart mechanism it owns, then constructs the same core
+application again.
+
+## What the two constructors share
+
+| Concern | ESP32 | WASM |
+| --- | --- | --- |
+| Display | SPI pins, ILI9341 driver, static framebuffer | HTML canvas and `CydSimulatorWasm` |
+| Touch | XPT2046 controller plus calibration | Browser pointer events mapped by simulator control |
+| BOOT | GPIO button | Browser BOOT control |
+| Persistence | ESP flash blocks | `localStorage`-backed `FlashBlockWasm` |
+| Wi-Fi | `WifiAutoEsp`, DHCP, live DNS | `simulate_wifi_connect`, deterministic DNS result |
+| Restart | Software reset | Typed exit observed by the page shell, then `start`/`reboot` |
+| Scheduling | Embassy timers | `spawn_local` and animation-frame futures |
+
+The shared pieces are more important than the table suggests: the `Cyd` and
+`Dns` abstractions, calibrated touch events, orientation model, calibration
+flow, splash renderer, DNS accounting, UI layout, and control exits are the
+same. Only capabilities that truly differ are adapted.
+
+## Why the differences are sensible
+
+Both constructors are concise because they have one job: turn platform
+resources into the capabilities expected by the shared loop. They are readable
+because the construction order follows the device’s actual startup story:
+restore state, construct hardware or browser resources, calibrate, start the
+platform service, and run the application.
+
+They are not identical, and that is a feature. ESP needs GPIOs, SPI, flash,
+DHCP, and a software reset. WASM needs a canvas, `localStorage`, browser input,
+animation frames, typed notices, and a shell-visible restart. Making those
+differences explicit is more honest—and easier to review—than forcing both
+platforms through a misleading universal constructor.
+
+## The architectural test
+
+Read `dns_tester` without knowing its platform. It should still make complete
+sense. Read the ESP entry point and the pins, flash, Wi-Fi, calibration, and
+reset policy should be obvious. Read `DnsTesterWeb::start` and the canvas,
+browser storage, simulator control, typed notices, animation scheduling, and
+deterministic DNS should be equally obvious.
+
+That is the standard worth aiming for: constructors explicit enough to trust,
+shared code broad enough to reuse, and differences that correspond to actual
+platform capabilities rather than accidental duplication.

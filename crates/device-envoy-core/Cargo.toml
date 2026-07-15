@@ -15,7 +15,7 @@ name = "device_envoy_core"
 path = "src/lib.rs"
 
 [features]
-host = ["dep:png"]
+host = ["dep:png", "embassy-time/std"]
 defmt = ["dep:defmt"]
 wifi = ["dep:embassy-executor"]
 doc-images = ["dep:embed-doc-image"]

@@ -5,7 +5,7 @@ use std::{
 
 use device_envoy_core::{
     cyd::display::Orientation,
-    dns::{DnsResult, DnsRuntime},
+    dns::{Addresses, Dns, IpAddress},
     flash_block::FlashBlock as _,
     wasm::{
         CydSimulatorControlWasm, CydSimulatorWasm, FlashBlockWasm, SimulatorNoticeDisposition,
@@ -20,7 +20,6 @@ use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 
-const DNS_HOSTNAME: &str = "example.com";
 const BACKGROUND: Rgb888 = Rgb888::new(10, 10, 12); // near-black
 const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
 
@@ -40,7 +39,18 @@ struct DnsTesterState {
     calibration_flash_block: FlashBlockWasm,
     orientation_flash_block: FlashBlockWasm,
     orientation: Orientation,
-    hostname: &'static str,
+}
+
+struct MockDns;
+
+impl Dns for MockDns {
+    type Error = core::convert::Infallible;
+
+    async fn resolve(&mut self, _hostname: &str) -> Result<Addresses, Self::Error> {
+        Ok([IpAddress::Ipv4([127, 0, 0, 1].into())]
+            .into_iter()
+            .collect())
+    }
 }
 
 #[wasm_bindgen]
@@ -62,7 +72,6 @@ impl DnsTesterWeb {
                 orientation_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/orientation")
                     .map_err(|error| JsValue::from_str(&format!("Orientation flash: {error:?}")))?,
                 orientation: Orientation::Landscape,
-                hostname: DNS_HOSTNAME,
             }),
         })
     }
@@ -136,13 +145,7 @@ impl DnsTesterWeb {
 
         let exit = self.exit.clone();
         let failed = self.failed.clone();
-        let hostname = state.hostname;
-        let mut dns = DnsRuntime::new(hostname, async || {
-            Ok::<DnsResult, core::convert::Infallible>(DnsResult {
-                succeeded: true,
-                latency_millis: 12,
-            })
-        });
+        let mut dns = MockDns;
         drop(state);
         wasm_bindgen_futures::spawn_local(async move {
             match run(&mut device, &mut button, &mut dns).await {

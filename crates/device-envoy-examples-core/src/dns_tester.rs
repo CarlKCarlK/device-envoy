@@ -25,7 +25,7 @@ use device_envoy_core::{
     UnwrapInfallible,
     button::Button,
     cyd::{
-        Cyd, CydDisplay,
+        Cyd, CydDisplay, CydTouch,
         display::{CydFrame, DrawItem, Image565View, Orientation, tga},
         touch::TouchEvent,
     },
@@ -33,6 +33,7 @@ use device_envoy_core::{
     wifi_auto::WifiAutoEvent,
 };
 use embassy_futures::yield_now;
+use embassy_time::Instant;
 
 const LANDSCAPE_BITMAP: Image565View =
     tga!(concat!(env!("OUT_DIR"), "/dns_landscape.tga"), 320, 240)
@@ -47,6 +48,8 @@ const SUCCESS_TEXT: Rgb888 = Rgb888::new(121, 226, 164); // soft green
 const FAILURE_TEXT: Rgb888 = Rgb888::new(255, 117, 110); // coral red
 const PANEL_FILL: Rgb888 = Rgb888::new(15, 38, 55); // dark desaturated blue
 const ARTWORK_PANEL_FILL: Rgb888 = Rgb888::new(10, 82, 120); // deep blue panel
+
+pub const DNS_HOSTNAME: &str = "example.com";
 
 /// Run the shared DNS Tester loop on calibrated platform resources.
 ///
@@ -69,7 +72,7 @@ where
     let mut queries: u32 = 0;
     let mut successes: u32 = 0;
     let mut failures: u32 = 0;
-    let mut last_latency_millis = None;
+    let mut latency_millis = None;
     let mut status = Status::Tap;
 
     let orientation = cyd.orientation();
@@ -77,11 +80,10 @@ where
         Orientation::Landscape | Orientation::LandscapeInverted => LANDSCAPE_LAYOUT,
         Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
     };
-    {
-        let mut ui = Ui::<_, 16>::new(cyd.display(), layout.bitmap);
-        ui.fill_contiguous_full()?;
-        ui.text(layout.hostname, dns.hostname()).await?;
-    }
+    let (display, touch) = cyd.parts();
+    let mut ui = Ui::<_, 16>::new(display, layout, orientation);
+    ui.fill_contiguous_full()?;
+    ui.text(layout.hostname, DNS_HOSTNAME).await?;
     loop {
         yield_now().await;
 
@@ -89,13 +91,9 @@ where
             return Ok(Exit::Calibrate);
         }
 
-        let touch_event = cyd.read_touch().map_err(Error::Touch)?;
-        let mut ui = Ui::<_, 16>::new(cyd.display(), layout.bitmap);
-        ui.begin(touch_event, orientation);
-
         ui.status(layout.status, status, status.is_good()).await?;
 
-        match last_latency_millis {
+        match latency_millis {
             Some(latency_millis) => {
                 ui.value(layout.latency, format_args!("{latency_millis} ms"))
                     .await?
@@ -111,20 +109,22 @@ where
         ui.value(layout.failures, format_args!("{failures}"))
             .await?;
 
-        match ui.touch(layout) {
+        match ui.touch(touch.read()?) {
             TouchAction::None => {}
             TouchAction::StartDns => {
-                let result = dns.lookup().await.map_err(Error::Dns)?;
+                let start = Instant::now();
+                let addresses = dns.resolve(DNS_HOSTNAME).await.map_err(Error::Dns)?;
+                latency_millis = Some(start.elapsed().as_millis());
+
                 queries = queries.saturating_add(1);
-                last_latency_millis = Some(result.latency_millis);
-                if result.succeeded {
+                if addresses.is_empty() {
+                    failures = failures.saturating_add(1);
+                    status = Status::Fail;
+                } else {
                     successes = successes.saturating_add(1);
                     if matches!(status, Status::Tap) {
                         status = Status::Ok;
                     }
-                } else {
-                    failures = failures.saturating_add(1);
-                    status = Status::Fail;
                 }
             }
             TouchAction::Control(Control::Calibration) => {
@@ -335,36 +335,35 @@ pub const FRAME_PIXEL_COUNT: usize = 240 * 20;
 
 struct Ui<'a, Display, const TEXT_CAPACITY: usize> {
     display: &'a mut Display,
-    bitmap: Image565View,
+    layout: Layout,
+    orientation: Orientation,
     text: heapless::String<TEXT_CAPACITY>,
-    touch_event: Option<TouchEvent>,
 }
 
 impl<'a, Display, const TEXT_CAPACITY: usize> Ui<'a, Display, TEXT_CAPACITY>
 where
     Display: CydDisplay,
 {
-    fn new(display: &'a mut Display, bitmap: Image565View) -> Self {
+    fn new(display: &'a mut Display, layout: Layout, orientation: Orientation) -> Self {
         Self {
             display,
-            bitmap,
+            layout,
+            orientation,
             text: heapless::String::new(),
-            touch_event: None,
         }
     }
 
-    fn begin(&mut self, touch_event: Option<TouchEvent>, orientation: Orientation) {
-        self.touch_event = touch_event.map(|touch_event| match touch_event {
+    fn touch(&self, touch_event: Option<TouchEvent>) -> TouchAction {
+        let touch_event = touch_event.map(|touch_event| match touch_event {
             TouchEvent::Down { point } => TouchEvent::Down {
-                point: orientation.map_landscape_point(point),
+                point: self.orientation.map_landscape_point(point),
             },
             touch_event => touch_event,
         });
-    }
 
-    fn touch(&self, layout: Layout) -> TouchAction {
-        match self.touch_event {
-            Some(TouchEvent::Down { point }) => layout
+        match touch_event {
+            Some(TouchEvent::Down { point }) => self
+                .layout
                 .control_at(point)
                 .map_or(TouchAction::StartDns, TouchAction::Control),
             Some(TouchEvent::Move { .. }) | Some(TouchEvent::Up) | None => TouchAction::None,
@@ -373,8 +372,8 @@ where
 
     fn fill_contiguous_full(&mut self) -> Result<(), UiError<Display::Error>> {
         self.display
-            .fill_contiguous_full(self.bitmap.rgb565_iter())
-            .map_err(UiError::Display)
+            .fill_contiguous_full(self.layout.bitmap.rgb565_iter())?;
+        Ok(())
     }
 
     async fn text(
@@ -382,7 +381,14 @@ where
         slot: TextSlot,
         text: impl AsRef<str>,
     ) -> Result<(), UiError<Display::Error>> {
-        draw_text(self.display, self.bitmap, slot, text.as_ref(), slot.color).await
+        draw_text(
+            self.display,
+            self.layout.bitmap,
+            slot,
+            text.as_ref(),
+            slot.color,
+        )
+        .await
     }
 
     async fn value(
@@ -391,10 +397,12 @@ where
         arguments: fmt::Arguments<'_>,
     ) -> Result<(), UiError<Display::Error>> {
         self.text.clear();
-        self.text.write_fmt(arguments)?;
+        if self.text.write_fmt(arguments).is_err() {
+            return Err(UiError::Text(fmt::Error));
+        }
         draw_text(
             self.display,
-            self.bitmap,
+            self.layout.bitmap,
             slot,
             self.text.as_str(),
             slot.color,
@@ -411,7 +419,7 @@ where
         let text = text.as_ref();
         draw_text(
             self.display,
-            self.bitmap,
+            self.layout.bitmap,
             slot.text,
             text,
             if is_good {
@@ -457,7 +465,7 @@ where
     )
     .draw(&mut frame)
     .unwrap_infallible();
-    frame.flush().await.map_err(UiError::Display)?;
+    frame.flush().await?;
     drop(frame);
     Ok(())
 }
@@ -488,9 +496,9 @@ where
     CydDevice: Cyd,
 {
     let orientation = cyd.orientation();
-    render_notice(cyd.display(), orientation, UiNotice::Splash)
-        .await
-        .map_err(Error::Display)
+    let (display, _) = cyd.parts();
+    render_notice(display, orientation, UiNotice::Splash).await?;
+    Ok(())
 }
 
 /// Show the DNS Tester Wi-Fi status for a connection event.
@@ -508,31 +516,23 @@ where
         WifiAutoEvent::ConnectionFailed => UiNotice::WifiFailed,
     };
     //todo000 devolve this and the UiNotice enum
-    render_notice(cyd.display(), orientation, notice)
-        .await
-        .map_err(Error::Display)
+    let (display, _) = cyd.parts();
+    render_notice(display, orientation, notice).await?;
+    Ok(())
 }
 
 /// Errors returned by the shared DNS Tester loop.
-// `Touch`, `Dns`, and `UiError::Display` remain explicit because blanket
-// conversions for their generic error types would collide with the concrete
-// `fmt::Error` conversions below and in `UiError`.
+// `Dns` and `UiError::Display` remain explicit because blanket conversions for
+// their generic error types would collide with the other generic conversions.
 #[derive(Debug, derive_more::From)]
 pub enum Error<CydError, DnsError> {
     /// Rendering failed.
     Display(UiError<CydError>),
     /// Reading calibrated touch failed.
-    #[from(ignore)]
     Touch(CydError),
     /// The DNS lookup failed at the platform boundary.
     #[from(ignore)]
     Dns(DnsError),
-}
-
-impl<CydError, DnsError> From<fmt::Error> for Error<CydError, DnsError> {
-    fn from(error: fmt::Error) -> Self {
-        Self::Display(UiError::Text(error))
-    }
 }
 
 /// Result returned when the shared DNS Tester loop needs platform handling.
@@ -627,9 +627,9 @@ pub enum UiNotice {
 #[derive(Debug, derive_more::From)]
 pub enum UiError<F> {
     /// The fixed-size text buffer was too small.
+    #[from(ignore)]
     Text(fmt::Error),
     /// The display failed to flush.
-    #[from(ignore)]
     Display(F),
 }
 
@@ -643,12 +643,12 @@ where
     D: CydDisplay,
 {
     match orientation {
-        Orientation::Landscape | Orientation::LandscapeInverted => display
-            .fill_contiguous_full(LANDSCAPE_BITMAP.rgb565_iter())
-            .map_err(UiError::Display)?,
-        Orientation::Portrait | Orientation::PortraitInverted => display
-            .fill_contiguous_full(PORTRAIT_BITMAP.rgb565_iter())
-            .map_err(UiError::Display)?,
+        Orientation::Landscape | Orientation::LandscapeInverted => {
+            display.fill_contiguous_full(LANDSCAPE_BITMAP.rgb565_iter())?
+        }
+        Orientation::Portrait | Orientation::PortraitInverted => {
+            display.fill_contiguous_full(PORTRAIT_BITMAP.rgb565_iter())?
+        }
     }
 
     // READY belongs to the live dashboard, not to a startup or operational
@@ -727,7 +727,7 @@ where
             Size::new(rectangle.size.width, height),
         ));
         frame.fill(Rgb565::from(PANEL_FILL));
-        frame.flush().await.map_err(UiError::Display)?;
+        frame.flush().await?;
         offset_y += height;
     }
     Ok(())
@@ -748,7 +748,7 @@ where
             Size::new(rectangle.size.width, height),
         ));
         frame.fill(Rgb565::from(ARTWORK_PANEL_FILL));
-        frame.flush().await.map_err(UiError::Display)?;
+        frame.flush().await?;
         offset_y += height;
     }
     Ok(())
@@ -777,7 +777,8 @@ where
     )
     .draw(&mut frame)
     .unwrap_infallible();
-    frame.flush().await.map_err(UiError::Display)
+    frame.flush().await?;
+    Ok(())
 }
 
 #[cfg(test)]

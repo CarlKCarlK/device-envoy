@@ -16,8 +16,7 @@
 use core::cell::RefCell;
 
 use device_envoy_core::button::Button;
-use device_envoy_core::cyd::touch::TouchEvent;
-use device_envoy_core::cyd::{Cyd, CydTouch, touch::calibration::ensure_calibration};
+use device_envoy_core::cyd::{Cyd, touch::calibration::ensure_calibration};
 use embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Level, Output, Pin};
@@ -256,13 +255,10 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
 impl<T: spi::Instance + 'static> Cyd for CydRpOneSpi<T> {
     type Error = CydError;
     type Display = CydDisplayRp<SharedSpiDevice<T>>;
+    type Touch = CydTouchRp<SharedSpiDevice<T>>;
 
-    fn display(&mut self) -> &mut Self::Display {
-        &mut self.display
-    }
-
-    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
-        self.touch.read()
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 
     fn orientation(&self) -> Orientation {

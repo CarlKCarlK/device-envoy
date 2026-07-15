@@ -188,13 +188,10 @@ impl CydWasm {
 impl Cyd for CydWasm {
     type Error = Infallible;
     type Display = CydDisplayWasm;
+    type Touch = CydTouchWasm;
 
-    fn display(&mut self) -> &mut Self::Display {
-        &mut self.display
-    }
-
-    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
-        self.touch.read()
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 
     fn orientation(&self) -> Orientation {

@@ -20,9 +20,7 @@ use esp_hal::{
 use static_cell::StaticCell;
 
 use device_envoy_core::button::Button;
-use device_envoy_core::cyd::{
-    Cyd, CydTouch, touch::TouchEvent, touch::calibration::ensure_calibration,
-};
+use device_envoy_core::cyd::{Cyd, touch::calibration::ensure_calibration};
 
 use super::{
     CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, Orientation,
@@ -193,13 +191,10 @@ impl CydEspOneSpi {
 impl Cyd for CydEspOneSpi {
     type Error = CydError;
     type Display = CydDisplayEsp<SharedSpiDevice>;
+    type Touch = CydTouchEsp<SharedSpiDevice>;
 
-    fn display(&mut self) -> &mut Self::Display {
-        &mut self.display
-    }
-
-    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
-        self.touch.read()
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 
     fn orientation(&self) -> Orientation {

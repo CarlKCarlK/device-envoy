@@ -46,6 +46,10 @@ pub enum Error {
     #[display("Network Time Protocol (NTP) error: {_0}")]
     Ntp(#[error(not(source))] &'static str),
 
+    #[cfg(feature = "wifi")]
+    #[display("DNS error: {_0:?}")]
+    Dns(#[error(not(source))] embassy_net::dns::Error),
+
     #[cfg(not(feature = "host"))]
     #[display("Flash operation failed: {_0:?}")]
     Flash(#[error(not(source))] embassy_rp::flash::Error),

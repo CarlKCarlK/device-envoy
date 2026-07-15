@@ -42,16 +42,14 @@
 use core::convert::Infallible;
 
 use embassy_executor::Spawner;
-use embassy_net::dns::DnsQueryType;
-use embassy_time::Instant;
 use embedded_graphics::pixelcolor::Rgb888;
 use derive_more::From;
 use esp_hal::system::software_reset;
 use esp_backtrace as _;
-use log::{info, warn};
+use log::info;
 
 use device_envoy_core::cyd::display::Orientation;
-use device_envoy_core::dns::{DnsResult, DnsRuntime};
+use device_envoy_core::dns::DnsWithStack;
 use device_envoy_examples_core::dns_tester::{
     self as dns_tester, Error as CoreError, Exit as CoreExit,
 };
@@ -78,8 +76,12 @@ button_watch! {
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    let err = inner_main(spawner).await.unwrap_err();
-    panic!("{err:?}");
+    match inner_main(spawner).await {
+        Ok(never) => match never {},
+        Err(MainError::Platform(error)) => panic!("{error:?}"),
+        Err(MainError::WifiStatus(error)) => panic!("{error:?}"),
+        Err(MainError::DnsTester(error)) => panic!("{error:?}"),
+    }
 }
 
 async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainError> {
@@ -95,7 +97,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
 
     static CYD_STATIC: CydStaticEsp<{ dns_tester::FRAME_PIXEL_COUNT }> =
         CydEsp::new_static();
-    let mut button = ButtonWatch::new(p.GPIO{{ button_pin }}, PressedTo::Ground, spawner).await?;
+    let button = ButtonWatch::new(p.GPIO{{ button_pin }}, PressedTo::Ground, spawner).await?;
     let mut cyd = CydEsp::new(
         &CYD_STATIC, // statics
         p.SPI2, // display_spi
@@ -142,33 +144,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
 
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
 
-    // TODO000 [addressed] is this nice? Keep the platform-specific DNS query
-    // closure here so it can measure the real network latency.
-    // TODO000 why listed twice?
-    const DNS_HOSTNAME: &str = "example.com";
-    let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
-        let query_start = Instant::now();
-        let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
-        let latency_millis = query_start.elapsed().as_millis();
-        let succeeded = match dns_result {
-            Ok(addresses) if !addresses.is_empty() => {
-                info!("DNS ok in {latency_millis}ms: {:?}", addresses.first());
-                true
-            }
-            Ok(_) => {
-                warn!("DNS query returned no addresses");
-                false
-            }
-            Err(_) => {
-                warn!("DNS query failed");
-                false
-            }
-        };
-        Ok::<DnsResult, Infallible>(DnsResult {
-            succeeded,
-            latency_millis,
-        })
-    });
+    let mut dns = DnsWithStack::new(*stack);
     match dns_tester::run(&mut cyd, &mut *button, &mut dns).await? {
         CoreExit::Calibrate => {
             calibration_flash_block.clear()?;
@@ -186,5 +162,6 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
 #[derive(Debug, From)]
 enum MainError {
     Platform(Error),
-    DnsTester(CoreError<CydError, Infallible>),
+    WifiStatus(CoreError<CydError, Infallible>),
+    DnsTester(CoreError<CydError, embassy_net::dns::Error>),
 }

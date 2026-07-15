@@ -2,7 +2,7 @@
 
 use device_envoy_core::{
     cyd::{display::Orientation, touch::TouchEvent},
-    dns::{Dns, DnsResult},
+    dns::{Addresses, Dns, IpAddress},
     memory::{CydMemory, assert_framebuffer_matches_expected_png},
 };
 use device_envoy_examples_core::dns_tester::{Exit, UiNotice, render_notice, run};
@@ -17,15 +17,10 @@ struct SuccessfulDns;
 impl Dns for SuccessfulDns {
     type Error = core::convert::Infallible;
 
-    fn hostname(&self) -> &'static str {
-        "example.com"
-    }
-
-    async fn lookup(&mut self) -> Result<DnsResult, Self::Error> {
-        Ok(DnsResult {
-            succeeded: true,
-            latency_millis: 22,
-        })
+    async fn resolve(&mut self, _hostname: &str) -> Result<Addresses, Self::Error> {
+        Ok([IpAddress::Ipv4([127, 0, 0, 1].into())]
+            .into_iter()
+            .collect())
     }
 }
 
@@ -36,17 +31,12 @@ struct CountingDns {
 impl Dns for CountingDns {
     type Error = core::convert::Infallible;
 
-    fn hostname(&self) -> &'static str {
-        "example.com"
-    }
-
-    async fn lookup(&mut self) -> Result<DnsResult, Self::Error> {
+    async fn resolve(&mut self, _hostname: &str) -> Result<Addresses, Self::Error> {
         self.lookup_count
             .set(self.lookup_count.get().saturating_add(1));
-        Ok(DnsResult {
-            succeeded: true,
-            latency_millis: 22,
-        })
+        Ok([IpAddress::Ipv4([127, 0, 0, 1].into())]
+            .into_iter()
+            .collect())
     }
 }
 

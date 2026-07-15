@@ -328,13 +328,10 @@ impl CydMemory {
 impl Cyd for CydMemory {
     type Error = CydMemoryError;
     type Display = CydDisplayMemory;
+    type Touch = CydTouchMemory;
 
-    fn display(&mut self) -> &mut Self::Display {
-        &mut self.display
-    }
-
-    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
-        self.touch.read()
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 
     fn orientation(&self) -> Orientation {
@@ -1253,7 +1250,7 @@ mod tests {
             crate::cyd::display::Orientation::LandscapeInverted,
             crate::cyd::display::Orientation::PortraitInverted,
         ] {
-            let mut memory_cyd = CydMemory::new_with_orientation(
+            let memory_cyd = CydMemory::new_with_orientation(
                 orientation,
                 Rgb888::CSS_BLACK,
                 Rgb888::CSS_WHITE,

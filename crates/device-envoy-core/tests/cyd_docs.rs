@@ -2,7 +2,7 @@
 
 use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
-    Cyd, CydDisplay,
+    Cyd, CydDisplay, CydTouch,
     display::{CydFrame, DrawItem, Image565View},
     touch::TouchEvent,
 };
@@ -32,7 +32,7 @@ fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
             Rgb888::WHITE,
             &FONT_9X15_BOLD,
         );
-        let display = Cyd::display(&mut cyd_memory);
+        let (display, _) = cyd_memory.parts();
         let mut frame = display.full_frame_mut();
 
         frame.write_text("Hello CYD");
@@ -66,8 +66,8 @@ fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
         cyd_memory.push_touch_event(TouchEvent::Down {
             point: Point::new(160, 120),
         });
-        let touch_event = cyd_memory.read_touch()?;
-        let mut display = cyd_memory.display();
+        let (display, touch) = cyd_memory.parts();
+        let touch_event = touch.read()?;
         let mut frame = display.full_frame_mut();
 
         frame.write_text("Hello CYD");

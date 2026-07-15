@@ -32,7 +32,8 @@ use device_envoy_rp::{
     Result,
     button::{ButtonRp, PressedTo},
     cyd::{
-        Cyd, CydDisplay as _, CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation,
+        Cyd, CydDisplay as _, CydRp, CydStaticRp, CydTouch as _, DEFAULT_DISPLAY_SPI_HZ,
+        DEFAULT_FONT, Orientation,
     },
     flash_block::FlashBlockRp,
 };
@@ -90,17 +91,18 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     info!("CYD display and touch initialized");
     info!("Touch calibrated; tap the panel to paint");
 
-    cyd.display().full_frame_mut().flush()?;
+    let (display, touch) = cyd.parts();
+    display.full_frame_mut().flush()?;
 
     loop {
-        if let Some(touch_event) = cyd.read_touch()? {
+        if let Some(touch_event) = touch.read()? {
             let point = match touch_event {
                 device_envoy_rp::cyd::touch::TouchEvent::Down { point }
                 | device_envoy_rp::cyd::touch::TouchEvent::Move { point } => Some(point),
                 device_envoy_rp::cyd::touch::TouchEvent::Up => None,
             };
             if let Some(point) = point {
-                let mut frame = cyd.display().full_frame_mut();
+                let mut frame = display.full_frame_mut();
                 Circle::with_center(Point::new(point.x, point.y), TOUCH_DOT_RADIUS * 2)
                     .into_styled(PrimitiveStyle::with_fill(Rgb565::new(28, 50, 12)))
                     .draw(&mut frame)

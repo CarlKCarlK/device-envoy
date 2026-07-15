@@ -568,13 +568,10 @@ impl CydRp {
 impl Cyd for CydRp {
     type Error = CydError;
     type Display = CydDisplayRp;
+    type Touch = CydTouchRp;
 
-    fn display(&mut self) -> &mut Self::Display {
-        &mut self.display
-    }
-
-    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
-        self.touch.read()
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch) {
+        (&mut self.display, &mut self.touch)
     }
 
     fn orientation(&self) -> Orientation {

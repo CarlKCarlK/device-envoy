@@ -43,9 +43,9 @@ extern crate panic_probe as _;
 
 use core::convert::Infallible;
 
-use defmt::{info, warn};
+use defmt::info;
 use device_envoy_core::cyd::display::Orientation;
-use device_envoy_core::dns::{DnsResult, DnsRuntime};
+use device_envoy_core::dns::DnsWithStack;
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester::{
@@ -59,10 +59,8 @@ use device_envoy_rp::{
     wifi_auto::WifiAutoRp,
 };
 use embassy_executor::Spawner;
-use embassy_net::dns::DnsQueryType;
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::{Duration, Timer};
 
-const DNS_HOSTNAME: &str = "example.com";
 const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
 const STATUS_PIXEL_COUNT: usize = device_envoy_examples_core::dns_tester::FRAME_PIXEL_COUNT;
 
@@ -142,36 +140,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     }
     info!("Wi-Fi up with DHCP");
 
-    let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
-        let query_start = Instant::now();
-        let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
-        let latency_millis = query_start.elapsed().as_millis();
-        let succeeded = match dns_result {
-            Ok(addresses) if !addresses.is_empty() => {
-                info!("DNS ok in {}ms: {:?}", latency_millis, addresses.first());
-                true
-            }
-            Ok(_) => {
-                warn!("DNS query returned no addresses");
-                false
-            }
-            Err(_) => {
-                warn!("DNS query failed");
-                false
-            }
-        };
-        Ok::<DnsResult, Infallible>(DnsResult {
-            succeeded,
-            latency_millis,
-        })
-    });
+    let mut dns = DnsWithStack::new(*stack);
     let exit = run(&mut cyd, &mut button, &mut dns)
         .await
-        .map_err(|error| match error {
-            CoreError::Display(error) => map_ui_error(error),
-            CoreError::Touch(error) => error.into(),
-            CoreError::Dns(error) => match error {},
-        })?;
+        .map_err(map_dns_core_error)?;
     match exit {
         CoreExit::Calibrate => calibration_flash_block.clear()?,
         CoreExit::ResetWifi => wifi_auto.reset_to_captive_portal()?,
@@ -194,5 +166,15 @@ fn map_core_error(error: CoreError<device_envoy_rp::cyd::CydError, Infallible>) 
         CoreError::Display(error) => map_ui_error(error),
         CoreError::Touch(error) => error.into(),
         CoreError::Dns(error) => match error {},
+    }
+}
+
+fn map_dns_core_error(
+    error: CoreError<device_envoy_rp::cyd::CydError, embassy_net::dns::Error>,
+) -> Error {
+    match error {
+        CoreError::Display(error) => map_ui_error(error),
+        CoreError::Touch(error) => error.into(),
+        CoreError::Dns(error) => Error::Dns(error),
     }
 }

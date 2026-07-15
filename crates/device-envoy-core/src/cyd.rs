@@ -70,8 +70,8 @@ use embedded_graphics::pixelcolor::Rgb888;
 # );
 # cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
 // Create a pixel-buffer covering the whole screen that starts filled with background color.
-let touch_event = cyd.read_touch()?;
-let mut display = cyd.display();
+let (display, touch) = cyd.parts();
+let touch_event = touch.read()?;
 let mut frame = display.full_frame_mut();
 
 frame.write_text("Hello CYD");
@@ -102,16 +102,14 @@ frame.flush().await?;
 "#
 )]
 pub trait Cyd: Sized {
-    /// Error returned by display operations and calibrated touch reads.
+    /// Error returned by both the display and calibrated touch parts.
     type Error;
 
     type Display: CydDisplay<Error = Self::Error>;
+    type Touch: CydTouch<Error = Self::Error>;
 
-    /// Borrow the display for the duration of a draw.
-    fn display(&mut self) -> &mut Self::Display;
-
-    /// Read the next calibrated touch event, if one is pending.
-    fn read_touch(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
+    /// Borrow both calibrated halves at once.
+    fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
 
     /// Return the logical orientation of this complete device.
     fn orientation(&self) -> Orientation;

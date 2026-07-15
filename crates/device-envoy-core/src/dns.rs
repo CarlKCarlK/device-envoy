@@ -1,52 +1,47 @@
-//! A device abstraction for one measured DNS lookup.
+//! A device abstraction for resolving hostnames.
 
 use core::future::Future;
 
-/// Result of one DNS lookup, including the adapter's measured duration.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct DnsResult {
-    /// Whether the lookup returned at least one address.
-    pub succeeded: bool,
-    /// Measured lookup duration in milliseconds.
-    pub latency_millis: u64,
-}
+use embassy_net::{Stack, dns::DnsQueryType};
 
-/// Platform-independent contract for the DNS operation used by examples.
+/// One resolved address (embassy-net's address type re-exported for callers).
+pub use embassy_net::IpAddress;
+
+/// Addresses returned by a single lookup.
+pub type Addresses = heapless::Vec<IpAddress, 4>;
+
+/// Platform-independent contract for resolving a hostname.
 pub trait Dns {
     /// Error returned by the platform DNS implementation.
     type Error;
 
-    /// Hostname used by the lookup operation.
-    fn hostname(&self) -> &'static str;
-
-    /// Look up the configured hostname and measure the operation duration.
-    fn lookup(&mut self) -> impl Future<Output = Result<DnsResult, Self::Error>>;
+    /// Resolve `hostname` to zero or more addresses.
+    fn resolve(&mut self, hostname: &str) -> impl Future<Output = Result<Addresses, Self::Error>>;
 }
 
-/// Adapter for an async DNS lookup function.
-pub struct DnsRuntime<F> {
-    hostname: &'static str,
-    lookup: F,
+/// A DNS resolver backed by an embassy-net stack.
+pub struct DnsWithStack<'a> {
+    stack: Stack<'a>,
 }
 
-impl<F> DnsRuntime<F> {
-    /// Create a lookup adapter for `hostname`.
-    pub const fn new(hostname: &'static str, lookup: F) -> Self {
-        Self { hostname, lookup }
+impl<'a> DnsWithStack<'a> {
+    /// Create a resolver backed by `stack`.
+    pub const fn new(stack: Stack<'a>) -> Self {
+        Self { stack }
     }
 }
 
-impl<F, Error> Dns for DnsRuntime<F>
-where
-    F: AsyncFnMut() -> Result<DnsResult, Error>,
-{
-    type Error = Error;
+impl Dns for DnsWithStack<'_> {
+    type Error = embassy_net::dns::Error;
 
-    fn hostname(&self) -> &'static str {
-        self.hostname
-    }
-
-    fn lookup(&mut self) -> impl Future<Output = Result<DnsResult, Self::Error>> {
-        (self.lookup)()
+    async fn resolve(&mut self, hostname: &str) -> Result<Addresses, Self::Error> {
+        let resolved_addresses = self.stack.dns_query(hostname, DnsQueryType::A).await?;
+        let mut addresses = Addresses::new();
+        for address in resolved_addresses {
+            if addresses.push(address).is_err() {
+                break;
+            }
+        }
+        Ok(addresses)
     }
 }

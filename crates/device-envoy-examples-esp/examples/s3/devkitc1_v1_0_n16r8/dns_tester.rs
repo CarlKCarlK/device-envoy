@@ -14,7 +14,7 @@
 //! SPI-capable GPIOs (see `device_envoy_esp::cyd` module docs for the CYD
 //! abstraction):
 //!
-//! - Display SPI SCK  -> GPIO1
+//! - Display/touch SPI SCK  -> GPIO1
 //! - Display SPI MOSI -> GPIO2
 //! - Display SPI MISO -> GPIO3
 //! - Display CS       -> GPIO4
@@ -91,6 +91,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
 
     static CYD_STATIC: CydStaticEsp<{ dns_tester::FRAME_PIXEL_COUNT }> = CydEsp::new_static();
     let button = ButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+
     let mut cyd = CydEsp::new(
         &CYD_STATIC,                // statics
         p.SPI2,                     // display_spi
@@ -116,6 +117,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
         &mut *button,
     )
     .await?;
+
     info!("CYD display and touch initialized and calibrated");
     dns_tester::splash(&mut cyd).await?;
 

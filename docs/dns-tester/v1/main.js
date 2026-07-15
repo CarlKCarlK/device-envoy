@@ -15,18 +15,6 @@ async function rebootAndSyncStage(syncPresentation) {
 }
 
 const SIMULATOR_NOTICES = {
-  "wifi-setup": {
-    severity: "warning",
-    message: "Wi-Fi setup is simulated; reconnecting from the captive-portal state.",
-  },
-  "wifi-connecting": {
-    severity: "info",
-    message: "Wi-Fi connection is simulated.",
-  },
-  "wifi-unavailable": {
-    severity: "warning",
-    message: "Wi-Fi is unavailable in this simulation.",
-  },
   "runtime-error": {
     severity: "fatal",
     message: "The DNS Tester simulator stopped because of a runtime error.",
@@ -37,31 +25,12 @@ const SIMULATOR_NOTICES = {
 async function monitorRuntime(syncPresentation, showNotice) {
   while (true) {
     await nextFrame();
-    const noticeId = tester.take_notice();
-    if (noticeId) {
-      const notice = SIMULATOR_NOTICES[noticeId];
-      if (!notice) {
-        throw new Error(`unknown simulator notice: ${noticeId}`);
-      }
-      showNotice(notice);
-    }
     const result = tester.take_exit();
-    if (result === "recalibrate") {
-      // A browser pointer can remain down while the async reset begins. A
-      // physical reset starts with a fresh button sample, so release it here.
-      tester.clear_calibration();
-      tester.boot_up();
-      tester.prepare_calibration_landscape();
-      syncPresentation();
-      await rebootAndSyncStage(syncPresentation);
-    } else if (result === "orientation") {
+    if (result === "orientation") {
       // take_exit() has already advanced the saved orientation and intrinsic
       // canvas dimensions. Apply that presentation before reboot draws the
       // splash in the new orientation.
       syncPresentation();
-      await rebootAndSyncStage(syncPresentation);
-    } else if (result === "wifi") {
-      tester.boot_up();
       await rebootAndSyncStage(syncPresentation);
     } else if (result === "runtime error") {
       return;
@@ -83,9 +52,9 @@ try {
       title: "DNS Tester",
       orientation: "landscape",
       touchDownSamples: 9,
-      previewLine: "Exercise CYD touch, calibration, orientation, and reset behavior in your browser.",
+      previewLine: "Exercise CYD touch, DNS queries, and orientation behavior in your browser.",
       descriptionHtml: "<p>A browser companion to the Device Envoy hardware DNS tester. It uses a deterministic DNS result because browsers cannot issue arbitrary DNS requests directly.</p>",
-      controlsHtml: "<p>Tap the screen to run a test. ROT cycles orientation, CAL clears calibration, WiFi restarts the simulated captive-portal connection, and boot provides the physical-button recalibration path.</p>",
+      controlsHtml: "<p>Tap the screen to run a test. ROT changes orientation.</p>",
       coreCodeUrl: "https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-core/src/dns_tester.rs",
     },
   });

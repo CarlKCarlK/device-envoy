@@ -1,8 +1,8 @@
 # DNS Tester Web Preview
 
 This page is the browser companion to the hardware DNS tester. It uses the
-`CydWasm` display/touch implementation, the shared four-target calibration
-flow, and three independent `FlashBlockWasm` local-storage records.
+`CydWasm` display/touch implementation, orientation controls, and an
+independent `FlashBlockWasm` local-storage record.
 
 ## Build
 
@@ -27,16 +27,6 @@ The copied presentation resources are from Linkage Blaze skeleton-clock `v3`:
 `demo-ux.js`. The stage, case, cord, BOOT, scaling, gallery card, and device
 mode settings follow the Linkage Blaze landscape CYD examples.
 
-## Browser calibration test
-
-With Chrome and `wasm-bindgen-test-runner` available, run the actual
-canvas-backed calibration test with:
-
-```bash
-CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER=wasm-bindgen-test-runner \
-  cargo test -p device-envoy-dns-tester-wasm \
-    --target wasm32-unknown-unknown --test wasm_calibration
-```
 They are checked into this version directory so future Linkage Blaze changes
 cannot alter this historical Device Envoy page. The copied CSS retains the
 Linkage Blaze attribution comment and project licensing applies to these

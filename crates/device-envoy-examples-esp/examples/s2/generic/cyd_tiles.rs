@@ -21,6 +21,10 @@ use core::{convert::Infallible, fmt::Write};
 
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
+use embedded_graphics::{
+    geometry::{Point, Size},
+    pixelcolor::{Rgb565, Rgb888},
+};
 use esp_backtrace as _;
 use log::info;
 
@@ -65,23 +69,15 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO8,
         DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,
-        embedded_graphics::pixelcolor::Rgb888::new(10, 10, 12),
-        embedded_graphics::pixelcolor::Rgb888::new(230, 230, 230),
+        Rgb888::new(10, 10, 12),
+        Rgb888::new(230, 230, 230),
         &DEFAULT_FONT,
     )?;
     info!("CYD display initialized");
 
-    let palette = [
-        embedded_graphics::pixelcolor::Rgb565::new(6, 20, 10),
-        embedded_graphics::pixelcolor::Rgb565::new(2, 10, 25),
-    ];
+    let palette = [Rgb565::new(6, 20, 10), Rgb565::new(2, 10, 25)];
 
-    let grid = TileGrid::new(
-        embedded_graphics::geometry::Point::zero(),
-        embedded_graphics::geometry::Size::new(320, 240),
-        TILE_COLUMNS,
-        TILE_ROWS,
-    );
+    let grid = TileGrid::new(Point::zero(), Size::new(320, 240), TILE_COLUMNS, TILE_ROWS);
 
     loop {
         let mut tiles = display.tiles(grid);

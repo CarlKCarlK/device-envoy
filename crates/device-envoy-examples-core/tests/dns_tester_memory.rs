@@ -5,7 +5,7 @@ use device_envoy_core::{
     dns::{Addresses, Dns, IpAddress},
     memory::{CydMemory, assert_framebuffer_matches_expected_png},
 };
-use device_envoy_examples_core::dns_tester::{Exit, UiNotice, render_notice, run};
+use device_envoy_examples_core::dns_tester::{UiNotice, render_notice, run_without_controls};
 use embedded_graphics::{
     geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888, prelude::Size,
 };
@@ -41,21 +41,21 @@ impl Dns for CountingDns {
 }
 
 #[test]
-fn scripted_runtime_owns_startup_input_dns_and_rendering() -> Result<(), Box<dyn std::error::Error>>
-{
+fn scripted_runtime_owns_dns_and_rendering() -> Result<(), Box<dyn std::error::Error>> {
     let mut cyd_memory = CydMemory::new(
         Size::new(320, 240),
         Rgb888::new(10, 10, 12),
         Rgb888::new(230, 230, 230),
         &FONT_6X10,
     );
-    let mut button = cyd_memory.button_memory();
-    button.set_pressed(true);
+    cyd_memory.push_touch_event(TouchEvent::Down {
+        point: Point::new(260, 216),
+    });
     let mut dns = SuccessfulDns;
     assert_eq!(
-        block_on(run(&mut cyd_memory, &mut button, &mut dns))
+        block_on(run_without_controls(&mut cyd_memory, &mut dns))
             .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-        Exit::Calibrate
+        Orientation::Portrait
     );
     assert!(cyd_memory.flush_count() > 0);
     Ok(())
@@ -91,15 +91,17 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
                 orientation.height() as i32 / 2,
             ),
         });
-        let mut button = cyd_memory.button_memory();
-        for frame_index in 7..100 {
-            button.set_pressed_for_frame(frame_index, true);
-        }
+        cyd_memory.push_touch_event(TouchEvent::Down {
+            point: physical_point_for_logical_point(
+                orientation,
+                orientation_control_point(orientation),
+            ),
+        });
         let mut dns = SuccessfulDns;
         assert_eq!(
-            block_on(run(&mut cyd_memory, &mut button, &mut dns,))
+            block_on(run_without_controls(&mut cyd_memory, &mut dns))
                 .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-            Exit::Calibrate
+            orientation.next()
         );
         if matches!(
             orientation,
@@ -137,55 +139,6 @@ fn portrait_splash_golden() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn cyd_memory_routes_controls_in_each_orientation() -> Result<(), Box<dyn std::error::Error>> {
-    for orientation in [
-        Orientation::Landscape,
-        Orientation::Portrait,
-        Orientation::LandscapeInverted,
-        Orientation::PortraitInverted,
-    ] {
-        let logical_points = match orientation {
-            Orientation::Landscape | Orientation::LandscapeInverted => [
-                Point::new(60, 216),
-                Point::new(160, 216),
-                Point::new(260, 216),
-            ],
-            Orientation::Portrait | Orientation::PortraitInverted => [
-                Point::new(46, 294),
-                Point::new(120, 294),
-                Point::new(193, 294),
-            ],
-        };
-        let expected_exits = [
-            Exit::Calibrate,
-            Exit::ResetWifi,
-            Exit::Reorientate(orientation.next()),
-        ];
-
-        for (logical_point, expected_exit) in logical_points.into_iter().zip(expected_exits) {
-            let mut cyd_memory = CydMemory::new_with_orientation(
-                orientation,
-                Rgb888::new(10, 10, 12),
-                Rgb888::new(230, 230, 230),
-                &FONT_6X10,
-            );
-            cyd_memory.push_touch_event(TouchEvent::Down {
-                point: physical_point_for_logical_point(orientation, logical_point),
-            });
-            let mut button = cyd_memory.button_memory();
-            let mut dns = SuccessfulDns;
-
-            assert_eq!(
-                block_on(run(&mut cyd_memory, &mut button, &mut dns))
-                    .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-                expected_exit
-            );
-        }
-    }
-    Ok(())
-}
-
-#[test]
 fn ordinary_touch_runs_dns_once_and_ignores_move_up() -> Result<(), Box<dyn std::error::Error>> {
     let mut cyd_memory = CydMemory::new_with_orientation(
         Orientation::Landscape,
@@ -200,19 +153,21 @@ fn ordinary_touch_runs_dns_once_and_ignores_move_up() -> Result<(), Box<dyn std:
         point: Point::new(161, 121),
     });
     cyd_memory.push_touch_event(TouchEvent::Up);
-    let mut button = cyd_memory.button_memory();
-    for frame_index in 7..100 {
-        button.set_pressed_for_frame(frame_index, true);
-    }
+    cyd_memory.push_touch_event(TouchEvent::Down {
+        point: physical_point_for_logical_point(
+            Orientation::Landscape,
+            orientation_control_point(Orientation::Landscape),
+        ),
+    });
     let lookup_count = Rc::new(Cell::new(0));
     let mut dns = CountingDns {
         lookup_count: lookup_count.clone(),
     };
 
     assert_eq!(
-        block_on(run(&mut cyd_memory, &mut button, &mut dns))
+        block_on(run_without_controls(&mut cyd_memory, &mut dns))
             .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
-        Exit::Calibrate
+        Orientation::Portrait
     );
     assert_eq!(lookup_count.get(), 1);
     Ok(())
@@ -224,5 +179,12 @@ fn physical_point_for_logical_point(orientation: Orientation, point: Point) -> P
         Orientation::Portrait => Point::new(319 - point.y, point.x),
         Orientation::LandscapeInverted => Point::new(319 - point.x, 239 - point.y),
         Orientation::PortraitInverted => Point::new(point.y, 239 - point.x),
+    }
+}
+
+fn orientation_control_point(orientation: Orientation) -> Point {
+    match orientation {
+        Orientation::Landscape | Orientation::LandscapeInverted => Point::new(260, 216),
+        Orientation::Portrait | Orientation::PortraitInverted => Point::new(193, 294),
     }
 }

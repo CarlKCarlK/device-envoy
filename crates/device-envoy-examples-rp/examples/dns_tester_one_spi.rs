@@ -1,37 +1,8 @@
 #![allow(missing_docs)]
-//! Touch-triggered Wi-Fi/DNS reliability tester for a CYD-style touchscreen
-//! wired to a Pico W / Pico 2 W.
+//! Touch-triggered Wi-Fi/DNS reliability tester using one shared CYD SPI bus.
 //!
-//! Tap anywhere on the panel to fire one DNS query and update a running tally
-//! of hits/misses and the last round-trip latency on a single status line.
-//! Meant to run for hours unattended on hardware with no reachable physical
-//! reset button, repeatedly exercising the touch driver and the Wi-Fi stack
-//! together so long-run failures (socket exhaustion, dropped connections,
-//! stuck touch reads) show up on screen instead of silently wedging the
-//! board. The status line stays deliberately small rather than using a
-//! full-screen frame buffer, mirroring the ESP32 port of this example, where
-//! a full-screen buffer plus the Wi-Fi stack's own heap overflowed DRAM.
-//!
-//! Wiring: a standalone 320x240 ILI9341 + XPT2046 module wired to spare
-//! SPI-capable GPIOs (see `device_envoy_rp::cyd` module docs for the CYD
-//! abstraction). The CYW43 Wi-Fi pins are fixed by the Pico W / Pico 2 W
-//! module itself.
-//!
-//! - Display SPI0 SCK  -> PIN_18
-//! - Display SPI0 MOSI -> PIN_19
-//! - Display SPI0 MISO -> PIN_16
-//! - Display CS        -> PIN_17
-//! - Display DC        -> PIN_20
-//! - Display RST       -> PIN_21
-//! - Display backlight -> PIN_22
-//! - Touch SPI1 SCK    -> PIN_10
-//! - Touch SPI1 MOSI   -> PIN_11
-//! - Touch SPI1 MISO   -> PIN_12
-//! - Touch CS          -> PIN_13
-//! - Touch IRQ         -> PIN_14
-//! - Button (Wi-Fi reset while connecting; calibration backup afterward) -> PIN_15 to GND
-//!   (`PressedTo::Ground`)
-//! - Plus 3.3V and GND
+//! The display and touch controller share SPI0. The CYW43 Wi-Fi connection uses
+//! the Pico W / Pico 2 W radio pins separately.
 
 #![cfg(feature = "wifi")]
 #![no_std]
@@ -52,7 +23,7 @@ use device_envoy_examples_core::dns_tester;
 use device_envoy_rp::{
     Error, Result,
     button::{ButtonRp, PressedTo},
-    cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
+    cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockRp,
     wifi_auto::WifiAutoRp,
 };
@@ -74,7 +45,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible, MainError> {
     let p = embassy_rp::init(Default::default());
-    info!("Starting CYD DNS tester");
+    info!("Starting one-SPI CYD DNS tester");
 
     let [
         wifi_flash_block,
@@ -86,8 +57,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible, MainError> {
         .unwrap_or(Orientation::Landscape);
     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
 
-    static CYD_STATIC: CydStaticRp<STATUS_PIXEL_COUNT> = CydRp::new_static();
-    let mut cyd = CydRp::new(
+    static CYD_STATIC: CydRpOneSpiStatic<embassy_rp::peripherals::SPI0, STATUS_PIXEL_COUNT> =
+        CydRpOneSpi::new_static();
+    let mut cyd = CydRpOneSpi::new(
         &CYD_STATIC,
         p.SPI0,
         p.PIN_18,
@@ -98,31 +70,26 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible, MainError> {
         p.PIN_21,
         p.PIN_22,
         DEFAULT_DISPLAY_SPI_HZ,
-        orientation,
-        Rgb888::new(10, 10, 12),    // near-black
-        Rgb888::new(230, 230, 230), // near-white
-        &DEFAULT_FONT,
-        p.SPI1,
-        p.PIN_10,
-        p.PIN_11,
-        p.PIN_12,
         p.PIN_13,
         p.PIN_14,
+        orientation,
+        Rgb888::new(10, 10, 12),
+        Rgb888::new(230, 230, 230),
+        &DEFAULT_FONT,
         &mut calibration_flash_block,
         &mut button,
     )
     .await?;
-    info!("CYD display and touch initialized");
-    info!("Touch calibrated");
+    info!("CYD display and touch initialized and calibrated");
     dns_tester::splash(&mut cyd).await?;
 
     let wifi_auto = WifiAutoRp::new(
-        p.PIN_23,  // CYW43 power
-        p.PIN_24,  // CYW43 data
-        p.PIN_25,  // CYW43 chip select
-        p.PIN_29,  // CYW43 clock
-        p.PIO0,    // WiFi PIO
-        p.DMA_CH0, // WiFi DMA
+        p.PIN_23,
+        p.PIN_24,
+        p.PIN_25,
+        p.PIN_29,
+        p.PIO0,
+        p.DMA_CH0,
         wifi_flash_block,
         CAPTIVE_PORTAL_SSID,
         [],

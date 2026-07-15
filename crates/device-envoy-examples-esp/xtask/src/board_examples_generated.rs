@@ -36,6 +36,7 @@ const BOARD_TEMPLATE_CONTEXT_KEYS: &[&str] = &[
     "board_slug",
     "chip_name",
     "chip_feature",
+    "spi_count",
     "blinky_kind",
     "led_pin",
     "built_in_led",
@@ -458,6 +459,7 @@ fn generate_board_template_files(
                         board_slug => board_profile.board_slug(),
                         chip_name => board_profile.chip_name(),
                         chip_feature => board_profile.chip_feature(),
+                        spi_count => board_profile.spi_count,
                         blinky_kind => match blinky_kind(*board_profile) {
                             BlinkyKind::Plain => "plain",
                             BlinkyKind::SmartRmt => "smart_rmt",

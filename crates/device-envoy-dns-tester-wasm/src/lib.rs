@@ -7,14 +7,11 @@ use device_envoy_core::{
     cyd::display::Orientation,
     dns::{Addresses, Dns, IpAddress},
     flash_block::FlashBlock as _,
-    wasm::{
-        CydSimulatorControlWasm, CydSimulatorWasm, FlashBlockWasm, SimulatorNoticeDisposition,
-        SimulatorNoticeRequest, WifiConnectEvent, WifiConnectOutcome, next_animation_frame,
-        simulate_wifi_connect, simulator_notice_disposition,
-    },
+    wasm::{CydSimulatorControlWasm, CydSimulatorWasm, FlashBlockWasm, next_animation_frame},
 };
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice, render_notice, run,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice, render_notice,
+    run_without_controls,
 };
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::*;
@@ -28,15 +25,12 @@ pub struct DnsTesterWeb {
     canvas: HtmlCanvasElement,
     exit: Rc<Cell<Option<CoreExit>>>,
     failed: Rc<Cell<bool>>,
-    pending_notice: Cell<Option<SimulatorNoticeRequest>>,
     orientation: Cell<Orientation>,
     simulator_control: RefCell<Option<CydSimulatorControlWasm>>,
     state: RefCell<DnsTesterState>,
 }
 
 struct DnsTesterState {
-    wifi_flash_block: FlashBlockWasm,
-    calibration_flash_block: FlashBlockWasm,
     orientation_flash_block: FlashBlockWasm,
     orientation: Orientation,
 }
@@ -61,14 +55,9 @@ impl DnsTesterWeb {
             canvas,
             exit: Rc::new(Cell::new(None)),
             failed: Rc::new(Cell::new(false)),
-            pending_notice: Cell::new(None),
             orientation: Cell::new(Orientation::Landscape),
             simulator_control: RefCell::new(None),
             state: RefCell::new(DnsTesterState {
-                wifi_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/wifi")
-                    .map_err(|error| JsValue::from_str(&format!("Wi-Fi flash: {error:?}")))?,
-                calibration_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/calibration")
-                    .map_err(|error| JsValue::from_str(&format!("Calibration flash: {error:?}")))?,
                 orientation_flash_block: FlashBlockWasm::new("device-envoy/dns-tester/orientation")
                     .map_err(|error| JsValue::from_str(&format!("Orientation flash: {error:?}")))?,
                 orientation: Orientation::Landscape,
@@ -99,7 +88,7 @@ impl DnsTesterWeb {
             FOREGROUND,
             &FONT_6X10,
         )?;
-        let (mut device, mut button, simulator_control) = simulator.into_parts();
+        let (mut device, _button, simulator_control) = simulator.into_parts();
         *self.simulator_control.borrow_mut() = Some(simulator_control);
         // TODO0000 Consider using the core CYD splash helper here too.
         let mut display = device.display();
@@ -111,45 +100,15 @@ impl DnsTesterWeb {
             next_animation_frame().await;
         }
 
-        let wifi_outcome = simulate_wifi_connect(&mut button, async |event| {
-            let (notice_request, notice) = match event {
-                WifiConnectEvent::CaptivePortalReady => {
-                    (SimulatorNoticeRequest::wifi_setup(), UiNotice::WifiSetup)
-                }
-                WifiConnectEvent::Connecting { .. } => (
-                    SimulatorNoticeRequest::wifi_connecting(),
-                    UiNotice::WifiConnecting,
-                ),
-                WifiConnectEvent::ConnectionFailed => (
-                    SimulatorNoticeRequest::wifi_unavailable(),
-                    UiNotice::WifiUnavailable,
-                ),
-            };
-            if matches!(
-                self.request_notice(notice_request),
-                SimulatorNoticeDisposition::Terminate
-            ) {
-                return Ok(());
-            }
-            // TODO0000 Consider adding a core helper for this notice too.
-            let mut display = device.display();
-            render_notice(&mut display, state.orientation, notice)
-                .await
-                .map_err(|error| JsValue::from_str(&format!("Wi-Fi notice: {error:?}")))
-        })
-        .await?;
-        if matches!(wifi_outcome, WifiConnectOutcome::ResetRequested) {
-            self.exit.set(Some(CoreExit::ResetWifi));
-            return Ok(());
-        }
-
         let exit = self.exit.clone();
         let failed = self.failed.clone();
         let mut dns = MockDns;
         drop(state);
         wasm_bindgen_futures::spawn_local(async move {
-            match run(&mut device, &mut button, &mut dns).await {
-                Ok(exit_value) => exit.set(Some(exit_value)),
+            match run_without_controls(&mut device, &mut dns).await {
+                Ok(next_orientation) => {
+                    exit.set(Some(CoreExit::Reorientate(next_orientation)));
+                }
                 Err(CoreError::Display(CoreUiError::Text(_))) => failed.set(true),
                 Err(CoreError::Display(CoreUiError::Display(error))) => match error {},
                 Err(CoreError::Touch(error)) => match error {},
@@ -191,8 +150,7 @@ impl DnsTesterWeb {
 
     pub fn take_exit(&self) -> String {
         match self.exit.take() {
-            Some(CoreExit::Calibrate) => "recalibrate".into(),
-            Some(CoreExit::ResetWifi) => "wifi".into(),
+            Some(CoreExit::Calibrate | CoreExit::ResetWifi) => "unsupported".into(),
             Some(CoreExit::Reorientate(next_orientation)) => {
                 let save_result = self
                     .state
@@ -218,27 +176,8 @@ impl DnsTesterWeb {
         }
     }
 
-    /// Take the next typed browser notice identifier, if one was requested.
-    pub fn take_notice(&self) -> String {
-        self.pending_notice
-            .take()
-            .map(|request| request.id.into())
-            .unwrap_or_default()
-    }
-
     pub async fn reboot(&self) -> Result<(), JsValue> {
         self.start().await
-    }
-
-    /// Present the simulated CYD in landscape while touch calibration runs.
-    pub fn prepare_calibration_landscape(&self) {
-        if let Some(control) = self.simulator_control.borrow().as_ref() {
-            control.reset_transient_state();
-        }
-        self.state.borrow_mut().orientation = Orientation::Landscape;
-        self.orientation.set(Orientation::Landscape);
-        self.canvas.set_width(Orientation::Landscape.width());
-        self.canvas.set_height(Orientation::Landscape.height());
     }
 
     /// Whether the current simulated display orientation is upside down.
@@ -252,41 +191,15 @@ impl DnsTesterWeb {
     pub async fn clear_storage(&self) -> Result<(), JsValue> {
         let mut state = self.state.borrow_mut();
         state
-            .wifi_flash_block
-            .clear()
-            .map_err(|error| JsValue::from_str(&format!("Wi-Fi clear: {error:?}")))?;
-        state
-            .calibration_flash_block
-            .clear()
-            .map_err(|error| JsValue::from_str(&format!("Calibration clear: {error:?}")))?;
-        state
             .orientation_flash_block
             .clear()
             .map_err(|error| JsValue::from_str(&format!("Orientation clear: {error:?}")))?;
         drop(state);
         self.start().await
     }
-
-    /// Clear only touch calibration storage before a recalibration restart.
-    pub fn clear_calibration(&self) -> Result<(), JsValue> {
-        self.state
-            .borrow_mut()
-            .calibration_flash_block
-            .clear()
-            .map_err(|error| JsValue::from_str(&format!("Calibration clear: {error:?}")))
-    }
 }
 
 impl DnsTesterWeb {
-    fn request_notice(&self, request: SimulatorNoticeRequest) -> SimulatorNoticeDisposition {
-        let disposition = simulator_notice_disposition(request);
-        self.pending_notice.set(Some(request));
-        if matches!(disposition, SimulatorNoticeDisposition::Terminate) {
-            self.failed.set(true);
-        }
-        disposition
-    }
-
     fn orientation(&self) -> Orientation {
         self.orientation.get()
     }

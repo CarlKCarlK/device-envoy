@@ -5,7 +5,7 @@ use device_envoy_core::{
     dns::{Dns, DnsResult},
     memory::{CydMemory, assert_framebuffer_matches_expected_png},
 };
-use device_envoy_examples_core::dns_tester::{Exit, UiNotice, dns_tester, render_notice};
+use device_envoy_examples_core::dns_tester::{Exit, UiNotice, render_notice, run};
 use embedded_graphics::{
     geometry::Point, mono_font::ascii::FONT_6X10, pixelcolor::Rgb888, prelude::Size,
 };
@@ -63,7 +63,7 @@ fn scripted_runtime_owns_startup_input_dns_and_rendering() -> Result<(), Box<dyn
     button.set_pressed(true);
     let mut dns = SuccessfulDns;
     assert_eq!(
-        block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns))
+        block_on(run(&mut cyd_memory, &mut button, &mut dns))
             .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
         Exit::Calibrate
     );
@@ -107,7 +107,7 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
         }
         let mut dns = SuccessfulDns;
         assert_eq!(
-            block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns,))
+            block_on(run(&mut cyd_memory, &mut button, &mut dns,))
                 .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
             Exit::Calibrate
         );
@@ -186,7 +186,7 @@ fn cyd_memory_routes_controls_in_each_orientation() -> Result<(), Box<dyn std::e
             let mut dns = SuccessfulDns;
 
             assert_eq!(
-                block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns))
+                block_on(run(&mut cyd_memory, &mut button, &mut dns))
                     .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
                 expected_exit
             );
@@ -220,7 +220,7 @@ fn ordinary_touch_runs_dns_once_and_ignores_move_up() -> Result<(), Box<dyn std:
     };
 
     assert_eq!(
-        block_on(dns_tester(&mut cyd_memory, &mut button, &mut dns))
+        block_on(run(&mut cyd_memory, &mut button, &mut dns))
             .map_err(|error| std::io::Error::other(format!("{error:?}")))?,
         Exit::Calibrate
     );

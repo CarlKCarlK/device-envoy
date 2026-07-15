@@ -1,6 +1,6 @@
 //! A shared CYD DNS tester game loop and UI.
 //!
-//! [`dns_tester`] is the platform-neutral game loop: ESP, RP, WASM, and
+//! [`run`] is the platform-neutral game loop: ESP, RP, WASM, and
 //! [`CydMemory`](device_envoy_core::memory::CydMemory)
 //! provide resources and events while it owns state transitions, commands,
 //! rendering, and the redraw schedule. All platforms consume the same
@@ -53,10 +53,10 @@ const ARTWORK_PANEL_FILL: Rgb888 = Rgb888::new(10, 82, 120); // deep blue panel
 /// Platform setup follows the Linkage Blaze pattern: construct and calibrate
 /// the display and touch resources, show the splash, connect Wi-Fi, then call
 /// this function. The loop owns input policy, application state, DNS result
-/// accounting, and rendering. Call [`dns_tester_splash`] during platform setup
+/// accounting, and rendering. Call [`splash`] during platform setup
 /// before entering this loop. The loop returns platform control
 /// requests instead of knowing how persistence or reboot works.
-pub async fn dns_tester<CydDevice, ButtonDevice, DnsDevice>(
+pub async fn run<CydDevice, ButtonDevice, DnsDevice>(
     cyd: &mut CydDevice,
     button: &mut ButtonDevice,
     dns: &mut DnsDevice,
@@ -327,6 +327,12 @@ const PORTRAIT_LAYOUT: Layout = Layout {
     ],
 };
 
+/// Largest buffered frame used by the DNS tester UI.
+///
+/// Full-screen artwork is streamed directly; buffered fills are split into
+/// twenty-pixel rows, with the landscape panel being the widest such frame.
+pub const FRAME_PIXEL_COUNT: usize = 240 * 20;
+
 struct Ui<'a, Display, const TEXT_CAPACITY: usize> {
     display: &'a mut Display,
     bitmap: Image565View,
@@ -475,7 +481,7 @@ impl Layout {
 }
 
 /// Show the DNS Tester splash on a calibrated CYD.
-pub async fn dns_tester_splash<CydDevice>(
+pub async fn splash<CydDevice>(
     cyd: &mut CydDevice,
 ) -> Result<(), Error<CydDevice::Error, Infallible>>
 where
@@ -488,7 +494,7 @@ where
 }
 
 /// Show the DNS Tester Wi-Fi status for a connection event.
-pub async fn dns_tester_wifi_status<CydDevice>(
+pub async fn wifi_status<CydDevice>(
     cyd: &mut CydDevice,
     wifi_auto_event: WifiAutoEvent,
 ) -> Result<(), Error<CydDevice::Error, Infallible>>

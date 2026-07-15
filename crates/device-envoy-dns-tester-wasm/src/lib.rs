@@ -14,8 +14,7 @@ use device_envoy_core::{
     },
 };
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice, dns_tester,
-    render_notice,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice, render_notice, run,
 };
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::*;
@@ -146,7 +145,7 @@ impl DnsTesterWeb {
         });
         drop(state);
         wasm_bindgen_futures::spawn_local(async move {
-            match dns_tester(&mut device, &mut button, &mut dns).await {
+            match run(&mut device, &mut button, &mut dns).await {
                 Ok(exit_value) => exit.set(Some(exit_value)),
                 Err(CoreError::Display(CoreUiError::Text(_))) => failed.set(true),
                 Err(CoreError::Display(CoreUiError::Display(error))) => match error {},

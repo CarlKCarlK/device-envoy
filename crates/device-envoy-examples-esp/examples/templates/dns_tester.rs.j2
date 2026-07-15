@@ -45,25 +45,27 @@ use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
 use embassy_time::Instant;
 use embedded_graphics::pixelcolor::Rgb888;
+use derive_more::From;
+use esp_hal::system::software_reset;
 use esp_backtrace as _;
 use log::{info, warn};
 
-use device_envoy_core::cyd::{Cyd as _, display::Orientation};
+use device_envoy_core::cyd::display::Orientation;
 use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, dns_tester, dns_tester_splash, dns_tester_wifi_status, render_notice,
+    self as dns_tester, Error as CoreError, Exit as CoreExit,
 };
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_esp::{
-    Error, Result, init_and_start,
-    button::{Button as _, PressedTo},
+    Error, init_and_start,
+    button::PressedTo,
     button_watch,
     cyd::{
         CydError, CydEsp, CydStaticEsp,
         DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
     },
     flash_block::FlashBlockEsp,
-    wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+    wifi_auto::{WifiAuto as _, WifiAutoEsp},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -74,29 +76,25 @@ button_watch! {
     }
 }
 
-// todo000 need all these?
-const DNS_HOSTNAME: &str = "example.com";
-const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
-const STATUS_PIXEL_COUNT: usize = 1024;
-
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
     panic!("{err:?}");
 }
 
-async fn inner_main(spawner: Spawner) -> Result<Infallible> {
+async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainError> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("Starting CYD DNS tester on {{ chip_name }} / {{ board_slug }}");
-
+    // configuration or are required by the compile-time display storage.
     let [wifi_auto_flash_block, mut calibration_flash_block, mut orientation_flash_block] =
         FlashBlockEsp::new_array::<3>(p.FLASH)?;
     let orientation = orientation_flash_block
         .load::<Orientation>()?
         .unwrap_or(Orientation::Landscape);
 
-    static CYD_STATIC: CydStaticEsp<STATUS_PIXEL_COUNT> = CydEsp::new_static();
+    static CYD_STATIC: CydStaticEsp<{ dns_tester::FRAME_PIXEL_COUNT }> =
+        CydEsp::new_static();
     let mut button = ButtonWatch::new(p.GPIO{{ button_pin }}, PressedTo::Ground, spawner).await?;
     let mut cyd = CydEsp::new(
         &CYD_STATIC, // statics
@@ -124,25 +122,19 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )
     .await?;
     info!("CYD display and touch initialized and calibrated");
-     //todo000 let's call this dns_tester::splash(...)
-    //todo000 can we improve the error to just "?"
-    dns_tester_splash(&mut cyd)
-        .await
-        .map_err(map_dns_tester_error)?;
+    dns_tester::splash(&mut cyd).await?;
 
     let wifi_auto = WifiAutoEsp::new(
         p.WIFI,
         wifi_auto_flash_block,
-        CAPTIVE_PORTAL_SSID,
+        "DnsTesterSetup",
         [],
         spawner,
     )?;
+
     let stack = wifi_auto
-        .connect(&mut *button, async |wifi_auto_event| -> Result<(), Error> {
-            //todo000 let's call this dns_tester::wifi_status(...)
-            dns_tester_wifi_status(&mut cyd, wifi_auto_event)
-                .await
-                .map_err(map_dns_tester_error)?;
+        .connect(&mut *button, async |wifi_auto_event| -> core::result::Result<(), MainError> {
+            dns_tester::wifi_status(&mut cyd, wifi_auto_event).await?;
             info!("Wi-Fi: {wifi_auto_event:?}");
             Ok(())
         })
@@ -150,7 +142,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
 
-    // todo000 is this nice?
+    // TODO000 [addressed] is this nice? Keep the platform-specific DNS query
+    // closure here so it can measure the real network latency.
+    // TODO000 why listed twice?
+    const DNS_HOSTNAME: &str = "example.com";
     let mut dns = DnsRuntime::new(DNS_HOSTNAME, async || {
         let query_start = Instant::now();
         let dns_result = stack.dns_query(DNS_HOSTNAME, DnsQueryType::A).await;
@@ -174,38 +169,22 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             latency_millis,
         })
     });
-    let exit = dns_tester(&mut cyd, &mut *button, &mut dns)
-    .await
-    .map_err(map_dns_tester_error)?;
-    match exit {
-        //todo0000 import away device_envoy_examples_core::dns_tester::
-        device_envoy_examples_core::dns_tester::Exit::Calibrate => {
+    match dns_tester::run(&mut cyd, &mut *button, &mut dns).await? {
+        CoreExit::Calibrate => {
             calibration_flash_block.clear()?;
         }
-        device_envoy_examples_core::dns_tester::Exit::ResetWifi => {
+        CoreExit::ResetWifi => {
             wifi_auto.reset_to_captive_portal()?;
         }
-        device_envoy_examples_core::dns_tester::Exit::Reorientate(next_orientation) => {
+        CoreExit::Reorientate(next_orientation) => {
             orientation_flash_block.save(&next_orientation)?;
         }
     }
-    //todo0000 import away this prefix
-    device_envoy_esp::esp_hal::system::software_reset();
+    software_reset();
 }
 
-fn map_ui_error(error: device_envoy_examples_core::dns_tester::UiError<CydError>) -> Error {
-    match error {
-        device_envoy_examples_core::dns_tester::UiError::Text(_) => Error::FormatError,
-        device_envoy_examples_core::dns_tester::UiError::Display(error) => error.into(),
-    }
-}
-
-fn map_dns_tester_error(
-    error: CoreError<CydError, Infallible>,
-) -> Error {
-    match error {
-        CoreError::Display(error) => map_ui_error(error),
-        CoreError::Touch(error) => error.into(),
-        CoreError::Dns(error) => match error {},
-    }
+#[derive(Debug, From)]
+enum MainError {
+    Platform(Error),
+    DnsTester(CoreError<CydError, Infallible>),
 }

@@ -44,20 +44,19 @@ extern crate panic_probe as _;
 use core::convert::Infallible;
 
 use defmt::{info, warn};
-use device_envoy_core::cyd::{Cyd as _, display::Orientation};
+use device_envoy_core::cyd::display::Orientation;
 use device_envoy_core::dns::{DnsResult, DnsRuntime};
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice as CoreUiNotice,
-    dns_tester, dns_tester_splash, render_notice,
+    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, run, splash, wifi_status,
 };
 use device_envoy_rp::{
     Error, Result,
     button::{ButtonRp, PressedTo},
     cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockRp,
-    wifi_auto::{WifiAutoEvent, WifiAutoRp},
+    wifi_auto::WifiAutoRp,
 };
 use embassy_executor::Spawner;
 use embassy_net::dns::DnsQueryType;
@@ -65,12 +64,7 @@ use embassy_time::{Duration, Instant, Timer};
 
 const DNS_HOSTNAME: &str = "example.com";
 const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoySetup";
-/// One text line across the top of the panel. Kept small on purpose: this
-/// example runs alongside the Wi-Fi stack, and a full-screen frame buffer
-/// risks overflowing RAM once Wi-Fi's own heap is added in (this bit ESP32
-/// in practice; no RP board has been verified against a full-screen buffer
-/// plus Wi-Fi, so the same small-buffer discipline is applied here too).
-const STATUS_PIXEL_COUNT: usize = 1024;
+const STATUS_PIXEL_COUNT: usize = device_envoy_examples_core::dns_tester::FRAME_PIXEL_COUNT;
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -120,7 +114,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     .await?;
     info!("CYD display and touch initialized");
     info!("Touch calibrated");
-    dns_tester_splash(&mut cyd).await.map_err(map_core_error)?;
+    splash(&mut cyd).await.map_err(map_core_error)?;
 
     let wifi_auto = WifiAutoRp::new(
         p.PIN_23,  // CYW43 power
@@ -136,15 +130,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
     let stack = wifi_auto
         .connect(&mut button, async |wifi_auto_event| -> Result<(), Error> {
-            match wifi_auto_event {
-                WifiAutoEvent::CaptivePortalReady => {
-                    // TODO0000 Consider using the shared DNS tester Wi-Fi status helper here.
-                    render_notice(cyd.display(), orientation, CoreUiNotice::WifiSetup)
-                        .await
-                        .map_err(map_ui_error)?
-                }
-                WifiAutoEvent::Connecting { .. } | WifiAutoEvent::ConnectionFailed => {}
-            };
+            wifi_status(&mut cyd, wifi_auto_event)
+                .await
+                .map_err(map_core_error)?;
             Ok(())
         })
         .await?;
@@ -177,7 +165,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
             latency_millis,
         })
     });
-    let exit = dns_tester(&mut cyd, &mut button, &mut dns)
+    let exit = run(&mut cyd, &mut button, &mut dns)
         .await
         .map_err(|error| match error {
             CoreError::Display(error) => map_ui_error(error),

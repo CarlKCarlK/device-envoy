@@ -7,10 +7,15 @@
 //! blits the frame to the canvas, then resolves.
 
 mod animation_frame;
+pub mod app;
 pub mod clock;
-pub mod cyd_web;
 pub mod dns;
 pub mod simulator;
+
+pub use app::{
+    CydWebAppConfig, CydWebAppHandle, CydWebAppWasm, CydWebCommand, CydWebNotice,
+    CydWebNoticeSeverity, CydWebPageInfo, start_cyd_web_app,
+};
 
 use core::{
     cell::{Cell, RefCell},

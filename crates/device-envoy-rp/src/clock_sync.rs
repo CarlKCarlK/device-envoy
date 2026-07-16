@@ -56,7 +56,7 @@
 //!     )?;
 //!
 //!     let stack = wifi_auto
-//!         .connect(&mut *button_watch13, async |event| -> Result<(), device_envoy_rp::Error> {
+//!         .connect(&mut *button_watch13, |event| async move {
 //!             match event {
 //!                 WifiAutoEvent::CaptivePortalReady => {
 //!                     info!("WifiAutoRp: setup mode ready");

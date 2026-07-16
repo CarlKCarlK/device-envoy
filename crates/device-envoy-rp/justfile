@@ -52,7 +52,8 @@ pngs-check-all:
         cargo test --features host -p device-envoy-core --test pngs
 
 # Generate video frames data (uses SANTA_VIDEO_PATH or SANTA_FRAMES_DIR)
-# The checked-in generated data lives under device-envoy-examples-rp/examples/data/frame-data/.
+# After regenerating, copy to device-envoy-core/tests/data/frame-data/ as well:
+#   cp examples/data/frame-data/video_frames_data.rs ../device-envoy-core/tests/data/frame-data/
 
 # Build an example for Pico 2 (ARM)
 example name:

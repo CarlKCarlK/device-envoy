@@ -6,8 +6,6 @@
 #![cfg(feature = "wifi")]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-// TODO00 consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
-
 use core::{convert::Infallible, fmt::Write, panic};
 use device_envoy_rp::{
     Result,
@@ -75,19 +73,16 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     // Borrow `led8x12` outside closure so the event handler can use it without owning it.
     let led8x12_ref = &led8x12;
     let stack = wifi_auto
-        .connect(
-            &mut button15,
-            async |event| -> Result<(), device_envoy_rp::Error> {
-                match event {
-                    WifiAutoEvent::CaptivePortalReady => {
-                        led8x12_ref.write_text("JO\nIN", COLORS); // Join setup network
-                    }
-                    WifiAutoEvent::Connecting { .. } => show_animated_dots(led8x12_ref).await?,
-                    WifiAutoEvent::ConnectionFailed => led8x12_ref.write_text("FA\nIL", COLORS),
+        .connect(&mut button15, |event| async move {
+            match event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    led8x12_ref.write_text("JO\nIN", COLORS); // Join setup network
                 }
-                Ok(())
-            },
-        )
+                WifiAutoEvent::Connecting { .. } => show_animated_dots(led8x12_ref).await?,
+                WifiAutoEvent::ConnectionFailed => led8x12_ref.write_text("FA\nIL", COLORS),
+            }
+            Ok(())
+        })
         .await?;
 
     // Show initial state with dashes until DNS is fetched.

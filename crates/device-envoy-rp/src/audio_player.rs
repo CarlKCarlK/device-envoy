@@ -152,7 +152,7 @@
 //! // If unused, it adds nothing to the firmware image.
 //! pcm_clip! {
 //!     Nasa {
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/../device-envoy-examples-rp/examples/data/audio/nasa_22k.s16"),
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!     }
 //! }
@@ -257,7 +257,7 @@
 //! // We resample each clip from the original 22KHz to the 8KHz sample rate of our audio player.
 //! pcm_clip! {
 //!     Digit0 {
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/../device-envoy-examples-rp/examples/data/audio/0_22050.s16"),
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/0_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
@@ -265,7 +265,7 @@
 //!
 //! pcm_clip! {
 //!     Digit1 {
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/../device-envoy-examples-rp/examples/data/audio/1_22050.s16"),
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/1_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
@@ -273,7 +273,7 @@
 //!
 //! pcm_clip! {
 //!     Digit2 {
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/../device-envoy-examples-rp/examples/data/audio/2_22050.s16"),
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/2_22050.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
@@ -281,7 +281,7 @@
 //!
 //! pcm_clip! {
 //!     Nasa {
-//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/../device-envoy-examples-rp/examples/data/audio/nasa_22k.s16"),
+//!         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
 //!         source_sample_rate_hz: VOICE_22050_HZ,
 //!         target_sample_rate_hz: AudioPlayer8::SAMPLE_RATE_HZ,
 //!     }
@@ -435,13 +435,13 @@ pub async fn device_loop<
     bit_clock_pin: Peri<'static, BitClockPin>,
     word_select_pin: Peri<'static, WordSelectPin>,
 ) -> ! {
-    let mut pio = Pio::new(pio, PIO::irqs());
+    let mut pio = Pio::new(pio, <PIO as PioIrqMap>::irqs());
     let pio_i2s_out_program = PioI2sOutProgram::new(&mut pio.common);
     let mut pio_i2s_out = PioI2sOut::new(
         &mut pio.common,
         pio.sm0,
         dma,
-        DMA::irqs(),
+        <DMA as DmaIrqMap>::irqs(),
         data_pin,
         bit_clock_pin,
         word_select_pin,

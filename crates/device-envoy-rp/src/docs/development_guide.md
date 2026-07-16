@@ -31,7 +31,7 @@ Xtensa ESP chips (ESP32 / ESP32-S2 / ESP32-S3) require the ESP Rust toolchain/ru
 
 - Install/use the `+esp` toolchain as needed for Xtensa builds.
 - Load your ESP environment before S3 commands (for this repo that is usually `source "$HOME/export-esp.sh"`).
-- Use `just run/check/build` commands in `crates/device-envoy-examples-esp/justfile`.
+- Use `just run/check/build` commands in `crates/device-envoy-esp/justfile`.
 
 ## Run Examples
 
@@ -71,7 +71,7 @@ just check f1 2w
 From the workspace root:
 
 ```bash
-cargo check-all
+just check-all
 ```
 
 Equivalent command:
@@ -120,6 +120,6 @@ ESP defaults are chip- and board-dependent.
 
 For current source-of-truth pin/capability mappings, see:
 
-- `crates/device-envoy-examples-esp/xtask/src/boards.rs` (`BOARD_PROFILES`)
-- `crates/device-envoy-examples-esp/xtask/src/main.rs` (capability-based example/test gating)
-- Generated board examples under `crates/device-envoy-examples-esp/examples/<chip>/<board>/`
+- `crates/device-envoy-esp/xtask/src/boards.rs` (`BOARD_PROFILES`)
+- `crates/device-envoy-esp/xtask/src/main.rs` (capability-based example/test gating)
+- Generated board examples under `crates/device-envoy-esp/examples/<chip>/<board>/`

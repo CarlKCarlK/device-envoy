@@ -20,9 +20,11 @@ macro_rules! __impl_wifi_auto_fields {
 
         fn wifi_auto_format_error() -> $error
         where
-            $error: From<$crate::Error>,
+            $error: From<$crate::wifi_auto::WifiAutoError>,
         {
-            <$error as From<$crate::Error>>::from($crate::Error::WifiAutoFormat)
+            <$error as From<$crate::wifi_auto::WifiAutoError>>::from(
+                $crate::wifi_auto::WifiAutoError::FormatError,
+            )
         }
 
         enum TimezoneFieldStorage {

@@ -51,23 +51,20 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     )?;
 
     let stack = wifi_auto
-        .connect(
-            &mut button13,
-            async |event| -> Result<(), device_envoy_rp::Error> {
-                match event {
-                    WifiAutoEvent::CaptivePortalReady => {
-                        info!("WifiAutoRp: setup mode ready");
-                    }
-                    WifiAutoEvent::Connecting { .. } => {
-                        info!("WifiAutoRp: connecting");
-                    }
-                    WifiAutoEvent::ConnectionFailed => {
-                        info!("WifiAutoRp: connection failed");
-                    }
+        .connect(&mut button13, |event| async move {
+            match event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    info!("WifiAutoRp: setup mode ready");
                 }
-                Ok(())
-            },
-        )
+                WifiAutoEvent::Connecting { .. } => {
+                    info!("WifiAutoRp: connecting");
+                }
+                WifiAutoEvent::ConnectionFailed => {
+                    info!("WifiAutoRp: connection failed");
+                }
+            }
+            Ok(())
+        })
         .await?;
 
     // Extract the timezone offset (in minutes) from the timezone field.

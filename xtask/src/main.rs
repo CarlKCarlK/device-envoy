@@ -43,41 +43,11 @@ fn check_all() -> ExitCode {
             Command::new("cargo")
                 .current_dir(core_workspace_root.join("crates/device-envoy-core"))
                 .env("RUSTDOCFLAGS", "-D warnings")
-                // `wasm` is added here (docs-only) so intra-doc links to
-                // `CydWasm` resolve; it must stay out of the test/check steps
-                // above and below, which mirror real firmware feature sets.
-                .args(["doc", "--no-deps", "--features", "host,wasm"]),
+                .args(["doc", "--no-deps", "--features", "host"]),
         ) && run_command(
             Command::new("cargo")
                 .current_dir(core_workspace_root.join("crates/device-envoy-core"))
                 .args(["check", "--features", "host", "--examples"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args([
-                    "test",
-                    "-p",
-                    "device-envoy-examples-core",
-                    "--features",
-                    "host",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args([
-                    "check",
-                    "-p",
-                    "device-envoy-examples-core",
-                    "--no-default-features",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args(["check", "-p", "device-envoy-dns-tester-wasm", "--tests"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args(["check", "-p", "device-envoy-conway-wasm"]),
         )
     });
 
@@ -94,96 +64,18 @@ fn check_all() -> ExitCode {
     let esp_handle = thread::spawn(move || -> bool {
         run_command(
             Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args(["check", "-p", "device-envoy-esp", "--lib"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args([
-                    "run",
-                    "--manifest-path",
-                    "crates/device-envoy-examples-esp/xtask/Cargo.toml",
-                    "--",
-                    "check-board-examples",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args([
-                    "run",
-                    "--manifest-path",
-                    "crates/device-envoy-examples-esp/xtask/Cargo.toml",
-                    "--",
-                    "check-examples-all-processors",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args([
-                    "check",
-                    "-p",
-                    "device-envoy-examples-esp",
-                    "--example",
-                    "conway_esp32c6_generic",
-                    "--target",
-                    "riscv32imac-unknown-none-elf",
-                    "--no-default-features",
-                    "--features",
-                    "esp32c6",
-                ]),
+                .current_dir(esp_workspace_root.join("crates/device-envoy-esp"))
+                .args(["check-all"]),
         )
     });
 
     let rp_workspace_root = workspace_root;
     let rp_handle = thread::spawn(move || -> bool {
-        run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-rp",
-            "--lib",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--examples",
-            "--target",
-            "thumbv6m-none-eabi",
-            "--no-default-features",
-            "--features",
-            "embedded,pico1,wifi",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--examples",
-            "--target",
-            "thumbv8m.main-none-eabihf",
-            "--no-default-features",
-            "--features",
-            "embedded-pico2,wifi",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--example",
-            "conway",
-            "--target",
-            "thumbv6m-none-eabi",
-            "--no-default-features",
-            "--features",
-            "embedded,pico1",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--example",
-            "dns_tester",
-            "--target",
-            "thumbv6m-none-eabi",
-            "--no-default-features",
-            "--features",
-            "embedded,pico1,wifi",
-        ]))
+        run_command(
+            Command::new("cargo")
+                .current_dir(rp_workspace_root.join("crates/device-envoy-rp"))
+                .args(["check-all"]),
+        )
     });
 
     let mut failed = false;

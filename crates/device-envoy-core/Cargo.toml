@@ -15,35 +15,20 @@ name = "device_envoy_core"
 path = "src/lib.rs"
 
 [features]
-host = ["dep:png", "embassy-time/std"]
+host = ["dep:png"]
 defmt = ["dep:defmt"]
-wifi = ["dep:embassy-executor"]
+wifi = []
 doc-images = ["dep:embed-doc-image"]
-# Scoped to exactly the CYD browser simulation surface (`CydWasm`, `ButtonWasm`
-# / `ButtonWasmSource`, `FlashDeviceWasm`) — a simulation surface for examples,
-# not a general browser platform. Must stay strictly opt-in for leaf binaries
-# and never become a default or transitive feature: `embassy-time/wasm` swaps
-# the global time driver and would break an MCU build if feature unification
-# enabled it.
-wasm = [
-    "dep:wasm-bindgen",
-    "dep:wasm-bindgen-futures",
-    "dep:js-sys",
-    "dep:web-sys",
-    "embassy-time/wasm",
-    "embassy-time/generic-queue-64",
-]
 
 [dependencies]
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }
-embassy-executor = { version = "0.10.0", default-features = false, optional = true }
+embassy-executor = { version = "0.10.0", default-features = false }
 embassy-futures = "0.1.2"
 embassy-sync = "0.8.0"
 embassy-time = { version = "0.5.1" }
 embassy-net = { version = "0.9.1", features = ["dns", "udp", "proto-ipv4", "medium-ip"] }
 heapless = { version = "0.9.2", features = ["serde"] }
-micromath = "2.1"
 paste = { version = "1.0" }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 postcard = { version = "1.1", default-features = false }
@@ -52,25 +37,12 @@ critical-section = { version = "1.2.0", default-features = false }
 defmt = { version = "1.0", optional = true }
 png = { version = "0.18", optional = true }
 portable-atomic = { version = "1.13.1" }
-profont = "0.7"
 static_cell = "2.1.1"
 time = { version = "0.3", default-features = false }
 embed-doc-image = { version = "0.1.4", optional = true }
-wasm-bindgen = { version = "0.2", optional = true }
-wasm-bindgen-futures = { version = "0.4", optional = true }
-js-sys = { version = "0.3", optional = true }
-web-sys = { version = "0.3", optional = true, features = [
-    "Window",
-    "CanvasRenderingContext2d",
-    "HtmlCanvasElement",
-    "ImageData",
-    "Storage",
-    "Document",
-] }
 
 [dev-dependencies]
 critical-section = { version = "1.2.0", features = ["std"] }
-futures-executor = "0.3"
 
 [[test]]
 name = "led2d_text_render"

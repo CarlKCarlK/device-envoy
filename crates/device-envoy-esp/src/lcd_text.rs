@@ -99,7 +99,7 @@
 //! }
 //! ```
 
-use device_envoy_core::lcd_text::{LcdTextDriver, LcdTextFrame, LcdTextWrite};
+use device_envoy_core::lcd_text::{LcdTextDriver, LcdTextError, LcdTextFrame, LcdTextWrite};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use heapless::Vec;
@@ -295,10 +295,10 @@ impl EspLcdTextWrite {
 }
 
 impl LcdTextWrite for EspLcdTextWrite {
-    fn write(&mut self, address: u8, data: u8) -> device_envoy_core::Result<()> {
+    fn write(&mut self, address: u8, data: u8) -> core::result::Result<(), LcdTextError> {
         self.i2c
             .write(address, &[data])
-            .map_err(|_| device_envoy_core::Error::LcdI2cWrite { address })
+            .map_err(|_| LcdTextError::I2cWrite { address })
     }
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Extract hand frames from ../device-envoy-examples-rp/examples/data/frame-data/hand_frames_data.rs and create a video with ffmpeg.
+Extract hand frames from examples/data/frame-data/hand_frames_data.rs and create a video with ffmpeg.
 """
 
 import re

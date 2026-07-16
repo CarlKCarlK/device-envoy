@@ -1,0 +1,26 @@
+set shell := ["bash", "-cu"]
+
+# ESP docs only
+update-docs-esp:
+    ./scripts/update-docs.sh
+
+# ESP docs fast path (no extra validation/generation steps)
+update-docs-esp-fast:
+    source "$HOME/export-esp.sh" && cargo doc --no-deps --release --target riscv32imac-unknown-none-elf --features doc-images --no-default-features
+
+# Build docs and open them in a browser
+show-docs-esp:
+    just update-docs-esp
+    ./scripts/open-docs-esp.sh
+
+attach-esp:
+    source "$HOME/export-esp.sh" && espflash monitor
+
+run name chip="" port="":
+    ./scripts/device-action.sh run "{{name}}" "{{chip}}" "{{port}}" "{{invocation_directory()}}"
+
+check name chip="":
+    ./scripts/device-action.sh check "{{name}}" "{{chip}}" "" "{{invocation_directory()}}"
+
+build name chip="":
+    ./scripts/device-action.sh build "{{name}}" "{{chip}}" "" "{{invocation_directory()}}"

@@ -17,7 +17,7 @@ use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use portable_atomic::{AtomicBool, Ordering};
 
-use crate::clock_sync::UnixSeconds;
+use crate::clock::UnixSeconds;
 use crate::{Error, Result};
 
 // ============================================================================

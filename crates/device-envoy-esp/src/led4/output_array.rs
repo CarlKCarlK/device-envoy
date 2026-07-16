@@ -48,7 +48,7 @@ impl OutputArray<'_, { u8::BITS as usize }> {
     #[expect(clippy::shadow_reuse, reason = "Converting NonZeroU8 to u8")]
     #[inline]
     pub(crate) fn set_from_nonzero_bits(&mut self, bits: NonZeroU8) {
-        let mut bits: u8 = bits.get();
+        let mut bits = bits.get();
         for output in &mut self.0 {
             let level: Level = ((bits & 1) == 1).into();
             output.set_level(level);

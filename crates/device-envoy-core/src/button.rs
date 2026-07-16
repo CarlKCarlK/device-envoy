@@ -95,14 +95,6 @@ pub trait __ButtonMonitor {
 /// #     let _future = log_button_presses(&mut button);
 /// # }
 /// ```
-#[cfg_attr(
-    feature = "host",
-    doc = "\nHost-side test double: [`crate::memory::ButtonMemory`]."
-)]
-#[cfg_attr(
-    feature = "wasm",
-    doc = "\nBrowser-simulated device: [`crate::wasm::ButtonWasm`]."
-)]
 #[allow(async_fn_in_trait)]
 pub trait Button: __ButtonMonitor {
     /// Returns whether the button is currently pressed.

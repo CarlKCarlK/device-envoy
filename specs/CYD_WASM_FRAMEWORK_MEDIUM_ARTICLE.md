@@ -161,10 +161,17 @@ const WEB_APP: CydWebAppConfig = CydWebAppConfig::new(
     FOREGROUND,
     &FONT_6X10,
 );
+const PAGE_INFO: CydWebPageInfo = CydWebPageInfo::new(
+    "DNS Tester",
+    "Measure a deterministic simulated DNS lookup on a CYD.",
+    "The DNS tester exercises the shared device abstraction and reports a fixed browser simulation result.",
+    "Touch the panel and press BOOT to interact with the tester.",
+    "https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-core/src/dns_tester.rs",
+);
 
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<CydWebAppHandle, wasm_bindgen::JsValue> {
-    start_cyd_web_app(canvas_id, WEB_APP, inner_main)
+    start_cyd_web_app(canvas_id, WEB_APP, PAGE_INFO, inner_main)
 }
 ```
 
@@ -176,16 +183,15 @@ The app-specific constructor is just as direct:
 
 ```rust,no_run
 async fn inner_main(
-    cyd: &mut CydWasm,
-    button: &mut ButtonWasm,
+    mut cyd_web_app_wasm: CydWebAppWasm,
 ) -> Result<CydWebCommand, CoreError<Infallible, Infallible>> {
-    dns_tester::splash(cyd).await?;
+    dns_tester::splash(&mut cyd_web_app_wasm.cyd).await?;
 
-    let wifi_simulator = WifiSimulatorWasm::new(WEB_APP.storage_namespace);
     if matches!(
-        wifi_simulator
-            .connect(button, async |wifi_auto_event| {
-                dns_tester::wifi_status(cyd, wifi_auto_event).await
+        cyd_web_app_wasm
+            .wifi_simulator
+            .connect(&mut cyd_web_app_wasm.button, async |wifi_auto_event| {
+                dns_tester::wifi_status(&mut cyd_web_app_wasm.cyd, wifi_auto_event).await
             })
             .await?,
         WifiConnectOutcome::ResetRequested
@@ -193,8 +199,13 @@ async fn inner_main(
         return Ok(CydWebCommand::ResetWifi);
     }
 
-    let mut dns = DnsFixedWasm::new([IpAddress::Ipv4([127, 0, 0, 1].into())]);
-    match dns_tester::run(cyd, button, &mut dns).await? {
+    match dns_tester::run(
+        &mut cyd_web_app_wasm.cyd,
+        &mut cyd_web_app_wasm.button,
+        &mut cyd_web_app_wasm.dns_simulator,
+    )
+    .await?
+    {
         CoreExit::Calibrate => Ok(CydWebCommand::CalibrationNotNeeded),
         CoreExit::ResetWifi => Ok(CydWebCommand::ResetWifi),
         CoreExit::Reorientate(orientation) => Ok(CydWebCommand::Reorientate(orientation)),
@@ -207,12 +218,12 @@ already requested:
 
 | Core need | Browser construction |
 | --- | --- |
-| `Cyd + Button` | `CydWasm` and `ButtonWasm`, supplied by `start_cyd_web_app` |
-| Wi-Fi setup progression | `WifiSimulatorWasm` |
-| `Dns` | `DnsFixedWasm` |
+| `Cyd + Button` | `CydWasm` and `ButtonWasm`, selected from `CydWebAppWasm` |
+| Wi-Fi setup progression | `cyd_web_app_wasm.wifi_simulator` |
+| `Dns` | `DnsSimulatorWasm` |
 | Platform exit policy | `CydWebCommand` |
 
-There is one deliberate simulation detail: `DnsFixedWasm` waits 12 ms before
+There is one deliberate simulation detail: `DnsSimulatorWasm` waits 12 ms before
 returning a deterministic loopback address. Browsers cannot ask their operating
 system for raw DNS timing, but they can honestly simulate the resolver
 capability and give the shared core a measured, non-zero latency.
@@ -241,8 +252,9 @@ orientation and reconstructs the canvas. Neither decision leaks into the core.
 
 ## A display-only app should say so
 
-The nicest part of this approach is that it does not force every app through a
-touch-capable CYD constructor.
+The container always owns the complete browser session, including the CYD
+touch capability. A display-only launcher simply narrows that capability before
+calling its core function, so the core still receives only what it requested.
 
 Ballet needs a display and BOOT input, not touch. Its launcher says exactly
 that:
@@ -258,34 +270,53 @@ const WEB_APP: CydWebAppConfig = CydWebAppConfig::new(
 
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<CydWebAppHandle, wasm_bindgen::JsValue> {
-    start_cyd_display_web_app(canvas_id, WEB_APP, inner_main)
+    start_cyd_web_app(canvas_id, WEB_APP, PAGE_INFO, inner_main)
 }
 
 async fn inner_main(
-    display: &mut CydDisplayWasm,
-    button: &mut ButtonWasm,
+    mut cyd_web_app_wasm: CydWebAppWasm,
 ) -> Result<
     CydWebCommand,
     linkage_blaze_core::examples::ballet::Error<core::convert::Infallible>,
 > {
-    match ballet(display, button).await {
+    let mut display = cyd_web_app_wasm.cyd.display();
+    match ballet(&mut display, &mut cyd_web_app_wasm.button).await {
         Ok(never) => match never {},
         Err(error) => Err(error),
     }
 }
 ```
 
-`start_cyd_display_web_app` constructs a display-only simulator session. It
-does not construct touch, touch calibration, or calibration storage merely
-because the simulated device resembles a CYD.
+The unified supervisor constructs the complete `CydWebAppWasm` session. The
+launcher narrows its display capability with `cyd_web_app_wasm.cyd.display()`;
+it does not pass the broader CYD to display-only core code.
 
 Clock and Skeleton Clock use this same display-only path. Their `inner_main`
-functions visibly add just the capabilities their core needs: `ClockSyncWasm`
-and `WifiSimulatorWasm`, alongside `CydDisplayWasm` and `ButtonWasm`.
+functions narrow the container to `CydDisplayWasm` and `ButtonWasm`, then pass
+the container's `ClockSyncWasm` and `WifiSimulatorWasm` to the core. Clock pages
+also call `cyd_web_app_wasm.clock_sync.show()` so the shared shell exposes the
+time control only for those applications.
+
+For example, the important clock-specific part is:
+
+```rust,no_run
+async fn inner_main(mut cyd_web_app_wasm: CydWebAppWasm) -> Result<CydWebCommand, MainError> {
+    cyd_web_app_wasm.clock_sync.show();
+    let mut display = cyd_web_app_wasm.cyd.display();
+    match clock(
+        &mut display,
+        &cyd_web_app_wasm.clock_sync,
+        &mut cyd_web_app_wasm.button,
+    )
+    .await? {
+        Exit::ResetWifi => Ok(CydWebCommand::ResetWifi),
+    }
+}
+```
 
 That distinction is not an optimization hidden in the framework. It is part of
 the explanation. A core signature that asks for `CydDisplay` should result in a
-launcher that constructs `CydDisplay`.
+launcher that narrows the framework-constructed `CydWasm` to `CydDisplay`.
 
 ## The framework is boring on purpose
 
@@ -294,7 +325,7 @@ The exported JavaScript surface stays small:
 ```rust,no_run
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<CydWebAppHandle, wasm_bindgen::JsValue> {
-    start_cyd_web_app(canvas_id, WEB_APP, inner_main)
+    start_cyd_web_app(canvas_id, WEB_APP, PAGE_INFO, inner_main)
 }
 ```
 
@@ -312,10 +343,12 @@ application-specific construction and policy.
 To put another CYD-related app on a web page:
 
 1. Keep the core generic over the narrow capabilities it actually uses.
-2. Choose `start_cyd_web_app` when the core needs `Cyd` touch and display.
-3. Choose `start_cyd_display_web_app` when the core needs only `CydDisplay`.
-4. Construct browser-only adapters—DNS, clock, or simulated Wi-Fi—inside
-   `inner_main` where readers can see them.
+2. Always choose `start_cyd_web_app`; it supplies one complete
+   `CydWebAppWasm` environment.
+3. Narrow `CydWasm` to `CydDisplayWasm` with `.display()` when the core needs
+   only display capability.
+4. Select browser-only adapters—DNS, clock, or simulated Wi-Fi—from the
+   container inside `inner_main`.
 5. Translate the core’s returned `Exit` variants into adjacent,
    platform-specific `CydWebCommand` variants.
 

@@ -38,9 +38,28 @@ export async function mountCydSimulator({ wasm, app }) {
   });
   const unbindInput = bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 9);
   syncPresentation();
-  const demoUx = setupDemoUx({ ...app, orientation: app.orientation ?? "landscape" });
+  const pageInfo = {
+    title: handle.page_title(),
+    previewLine: handle.page_preview(),
+    description: handle.page_description(),
+    controls: handle.page_controls(),
+    coreCodeUrl: handle.page_core_code_url(),
+  };
+  const demoUx = setupDemoUx({ ...app, ...pageInfo, handle, orientation: app.orientation ?? "landscape" });
+  monitorClockControl(handle, demoUx.showTimeControl);
   void monitorTypedNotices(handle, demoUx.showNotice, app.noticeMessages);
   return { handle, syncPresentation, showNotice: demoUx.showNotice };
+}
+
+async function monitorClockControl(handle, showTimeControl) {
+  while (true) {
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    if (typeof handle.clock_control_is_visible !== "function") return;
+    if (handle.clock_control_is_visible()) {
+      showTimeControl();
+      return;
+    }
+  }
 }
 
 async function monitorTypedNotices(handle, showNotice, noticeMessages = {}) {
@@ -227,10 +246,6 @@ export function setupDemoUx(config) {
   const body = document.body;
 
   body.classList.add("demo-ux-page", `demo-ux-page--${config.orientation}`);
-  if (config.timeSetter) {
-    body.classList.add("demo-ux-page--has-time-setter");
-  }
-
   const galleryTag = buildGalleryTag(config.galleryUrl);
   const sceneCard = buildSceneCard(config);
   const deviceMode = buildDeviceMode({
@@ -252,13 +267,19 @@ export function setupDemoUx(config) {
     notice.element,
   );
 
-  if (config.timeSetter) {
+  let timeControlBuilt = false;
+  const showTimeControl = () => {
+    if (timeControlBuilt) return;
+    timeControlBuilt = true;
+    body.classList.add("demo-ux-page--has-time-setter");
     buildTimeSetter({
       body,
-      setTimeOfDay: config.timeSetter.setTimeOfDay,
+      setTimeOfDay: (secondsOfDay) => secondsOfDay === -1
+        ? config.handle.use_live_clock()
+        : config.handle.set_clock_time_of_day(secondsOfDay),
       openDeviceMode: () => deviceMode.isActive(),
     });
-  }
+  };
 
   let userZoom = 1;
   const updateSceneScale = () => {
@@ -321,7 +342,7 @@ export function setupDemoUx(config) {
     }
   });
 
-  return { showNotice: notice.show };
+  return { showNotice: notice.show, showTimeControl };
 }
 
 function buildSimulatorNotice() {
@@ -396,16 +417,16 @@ function buildSceneCard(config) {
     <h2 id="demo-ux-card-title">${escapeHtml(config.title)}</h2>
     <section class="demo-ux-card-section">
       <h3>What is this</h3>
-      ${config.descriptionHtml}
+      <p>${escapeHtml(config.description)}</p>
     </section>
     <section class="demo-ux-card-section">
       <h3>Controls</h3>
-      ${config.controlsHtml}
+      <p>${escapeHtml(config.controls)}</p>
     </section>
     <section class="demo-ux-card-section">
       <h3>Links</h3>
       <div class="demo-ux-card-links">
-        <a href="${config.coreCodeUrl}" target="_blank" rel="noopener">Core code</a>
+        <a href="${escapeHtml(config.coreCodeUrl)}" target="_blank" rel="noopener">Core code</a>
         <a href="${config.galleryUrl ?? "../../"}">Gallery</a>
         <a href="https://github.com/CarlKCarlK/linkage-blaze" target="_blank" rel="noopener">GitHub repo</a>
         <a href="https://medium.com/@carlmkadie" target="_blank" rel="noopener">Medium</a>

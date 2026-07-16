@@ -27,7 +27,7 @@ The teaching story must be:
    and calls the same core function.
 3. Translate the core function's returned `Exit` into a small framework command.
 4. Export one `start` function that gives the framework the canvas ID,
-   presentation configuration, and a capability-specific `inner_main`.
+   presentation configuration, page metadata, and `inner_main`.
 5. Mount the returned standard handle with the shared JavaScript CYD shell.
 
 For example, the complete application shape should be recognizable as:
@@ -43,14 +43,13 @@ const WEB_APP: CydWebAppConfig = CydWebAppConfig::new(
 
 #[wasm_bindgen]
 pub fn start(canvas_id: &str) -> Result<CydWebAppHandle, JsValue> {
-    start_cyd_web_app(canvas_id, WEB_APP, inner_main)
+    start_cyd_web_app(canvas_id, WEB_APP, PAGE_INFO, inner_main)
 }
 
 async fn inner_main(
-    cyd: &mut CydWasm,
-    button: &mut ButtonWasm,
+    mut application: CydWebAppWasm,
 ) -> Result<CydWebCommand, ArmatronError<Infallible>> {
-    match armatron(cyd, button).await? {
+    match armatron(&mut application.cyd, &mut application.button).await? {
         ArmatronExit::CalibrationRequested => Ok(CydWebCommand::CalibrationNotNeeded),
     }
 }
@@ -102,12 +101,10 @@ The platform-neutral functions remain independently generic:
 `inner_main` is construction and platform policy, not a second application
 abstraction.
 
-The framework has two typed construction paths. Touch-capable applications
-use `start_cyd_web_app` and receive `&mut CydWasm`; display-only applications
-use `start_cyd_display_web_app` and receive `&mut CydDisplayWasm`. The latter
-path must never open, inspect, or create touch-calibration storage. A core that
-asks only for `CydDisplay` must not be upgraded to a calibrated `Cyd` by its
-WASM launcher.
+The framework has one typed construction path. Every application receives a
+`CydWebAppWasm`; display-only applications narrow its owned CYD with
+`.display()`. A core that asks only for `CydDisplay` therefore does not expose
+touch behavior through its launcher.
 
 ### Put lifecycle mechanics in the framework
 
@@ -148,7 +145,7 @@ generic core function
                          |
                          v
                 app-specific inner_main
-       construct ClockSyncWasm, DnsFixedWasm, etc.
+       select ClockSyncWasm, DnsSimulatorWasm, etc. from CydWebAppWasm.
        call core and map Exit -> CydWebCommand
                          |
                          v
@@ -244,47 +241,27 @@ contains the short, exhaustive mapping from that enum to `CydWebCommand`.
 
 ### `start_cyd_web_app`
 
-Provide a generic calibrated start function with the conceptual contract:
+Provide one standard start function with the conceptual contract:
 
 ```rust,no_run
 pub fn start_cyd_web_app<Run, Error>(
     canvas_id: &str,
     config: CydWebAppConfig,
+    page_info: CydWebPageInfo,
     inner_main: Run,
 ) -> Result<CydWebAppHandle, JsValue>
 where
-    for<'a> Run: AsyncFnMut(
-            &'a mut CydWasm,
-            &'a mut ButtonWasm,
-        ) -> Result<CydWebCommand, Error>
-        + 'static,
+    Run: AsyncFnMut(CydWebAppWasm) -> Result<CydWebCommand, Error> + 'static,
     Error: Debug + 'static;
 ```
 
-Provide a separate display-only entry point for applications whose core needs
-`CydDisplay` but not calibrated touch:
+The callback obtains `let mut display = application.cyd.display()`. This is a
+non-consuming capability narrowing operation that preserves the shared CYD
+state.
 
-```rust,no_run
-pub fn start_cyd_display_web_app<Run, Error>(
-    canvas_id: &str,
-    config: CydWebAppConfig,
-    inner_main: Run,
-) -> Result<CydWebAppHandle, JsValue>
-where
-    for<'a> Run: AsyncFnMut(
-            &'a mut CydDisplayWasm,
-            &'a mut ButtonWasm,
-        ) -> Result<CydWebCommand, Error>
-        + 'static,
-    Error: Debug + 'static;
-```
-
-This path loads orientation and constructs the display session directly. It
-must not open, inspect, or run touch calibration.
-
-The calibrated entry point also constructs the `CydWasm` session directly in
-the saved orientation. `CydWasm` uses the simulator's intrinsic identity
-touch mapping; it does not open or participate in physical calibration.
+The supervisor constructs the complete `CydWebAppWasm` session directly in the
+saved orientation. `CydWasm` uses the simulator's intrinsic identity touch
+mapping; it does not open or participate in physical calibration.
 
 This signature is illustrative where compiler syntax requires adjustment. Its
 observable contract is mandatory:
@@ -358,17 +335,19 @@ For a display-only application, the supervisor performs this sequence:
 2. Select the saved orientation or `initial_orientation`.
 3. Construct `CydSimulatorWasm` with the configured style.
 4. Atomically replace the live input-control target in `CydWebAppHandle`.
-5. Call the application's `inner_main(&mut display, &mut button)`.
+5. Call the application's `inner_main(application)` with the owned
+   `CydWebAppWasm` container.
 6. Select the application future against host lifecycle requests.
 7. Release transient input and remove the old live target.
 8. Apply the returned command or host request.
 9. Reconstruct and run again, stop normally, or report a fatal error.
 
-The calibrated application path follows the same lifecycle with
-`inner_main(&mut cyd, &mut button)`. If shared core code requests calibration,
-the supervisor releases transient input, queues one informational notice with
-ID `calibration-not-needed`, and restarts in the current orientation without
-touching browser storage.
+Every application follows that same lifecycle and receives an owned
+`CydWebAppWasm`. Display-only code narrows `application.cyd` with `.display()`;
+touch-capable code uses `application.cyd` directly. If shared core code
+requests calibration, the supervisor releases transient input, queues one
+informational notice with ID `calibration-not-needed`, and restarts in the
+current orientation without touching browser storage.
 
 There must never be two live application tasks for one handle. Restart must not
 be implemented by recursively calling exported `start`, and JavaScript must not
@@ -421,12 +400,12 @@ be used to resolve ownership or restart races.
 
 The browser cannot perform arbitrary DNS resolution through the ordinary web
 platform. Provide an explicitly named deterministic `Dns` implementation for
-demos and tests, such as `DnsFixedWasm`. Its constructor receives the addresses
+demos and tests, such as `DnsSimulatorWasm`. Its constructor receives addresses
 it will return.
 
-Do not call it a real browser DNS resolver and do not hide the substitution in
-the framework. DNS Tester's `inner_main` should visibly construct it, making the
-capability substitution honest and easy to explain.
+Do not call it a real browser DNS resolver. The supervisor constructs the
+`DnsSimulatorWasm` capability in the container, making the substitution
+explicit while keeping ownership and restart behavior in the framework.
 
 ## Target application launchers
 
@@ -440,10 +419,9 @@ Armatron constructs no additional browser capability:
 
 ```rust,no_run
 async fn inner_main(
-    cyd: &mut CydWasm,
-    button: &mut ButtonWasm,
+    mut application: CydWebAppWasm,
 ) -> Result<CydWebCommand, ArmatronError<Infallible>> {
-    match armatron(cyd, button).await? {
+    match armatron(&mut application.cyd, &mut application.button).await? {
         ArmatronExit::CalibrationRequested => Ok(CydWebCommand::CalibrationNotNeeded),
     }
 }
@@ -458,11 +436,10 @@ Ballet asks the CYD only for its display capability:
 
 ```rust,no_run
 async fn inner_main(
-    cyd: &mut CydWasm,
-    button: &mut ButtonWasm,
+    mut application: CydWebAppWasm,
 ) -> Result<CydWebCommand, BalletError<Infallible>> {
-    let mut display = cyd.display();
-    match ballet(&mut display, button).await {
+    let mut display = application.cyd.display();
+    match ballet(&mut display, &mut application.button).await {
         Ok(never) => match never {},
         Err(error) => Err(error),
     }
@@ -474,31 +451,30 @@ forcing the generic application to consume touch.
 
 ### Clock and Skeleton Clock
 
-Each clock launcher explicitly constructs `ClockSyncWasm`, renders its shared
-splash, performs the browser Wi-Fi simulation, and calls its existing core
-loop. The two launchers may share a small Linkage Blaze helper for their truly
-identical startup policy, but the framework must not contain Linkage
-Blaze-specific status rectangles or text.
+Each clock launcher uses the `ClockSyncWasm` and `WifiSimulatorWasm` already in
+the container, renders its shared splash, and calls its existing core loop. The
+two launchers may share a small Linkage Blaze helper for their truly identical
+startup policy, but the framework must not contain Linkage Blaze-specific
+status rectangles or text.
 
 The final flow should read approximately:
 
 ```rust,no_run
 async fn inner_main(
-    cyd: &mut CydWasm,
-    button: &mut ButtonWasm,
+    mut application: CydWebAppWasm,
 ) -> Result<CydWebCommand, MainError> {
-    let mut display = cyd.display();
-    let clock_sync = ClockSyncWasm::new();
+    application.clock_sync.show();
+    let mut display = application.cyd.display();
     clock_splash(&mut display).await?;
 
-    let wifi_simulator = WifiSimulatorWasm::new();
-    wifi_simulator
-        .connect(button, async |wifi_auto_event| {
+    application
+        .wifi_simulator
+        .connect(&mut application.button, async |wifi_auto_event| {
             render_wifi_status(&mut display, wifi_auto_event).await
         })
         .await?;
 
-    match clock(&mut display, &clock_sync, button).await? {
+    match clock(&mut display, &application.clock_sync, &mut application.button).await? {
         ClockExit::ResetWifi => Ok(CydWebCommand::ResetWifi),
     }
 }
@@ -514,21 +490,25 @@ custom `DnsTesterWeb` state machine:
 
 ```rust,no_run
 async fn inner_main(
-    cyd: &mut CydWasm,
-    button: &mut ButtonWasm,
+    mut application: CydWebAppWasm,
 ) -> Result<CydWebCommand, MainError> {
-    dns_tester::splash(cyd).await?;
+    dns_tester::splash(&mut application.cyd).await?;
 
-    let wifi_simulator = WifiSimulatorWasm::new();
-    wifi_simulator
-        .connect(button, async |wifi_auto_event| {
-            dns_tester::wifi_status(cyd, wifi_auto_event).await?;
+    application
+        .wifi_simulator
+        .connect(&mut application.button, async |wifi_auto_event| {
+            dns_tester::wifi_status(&mut application.cyd, wifi_auto_event).await?;
             Ok(())
         })
         .await?;
 
-    let mut dns = DnsFixedWasm::new([IpAddress::Ipv4([127, 0, 0, 1].into())]);
-    match dns_tester::run(cyd, button, &mut dns).await? {
+    match dns_tester::run(
+        &mut application.cyd,
+        &mut application.button,
+        &mut application.dns_simulator,
+    )
+    .await?
+    {
         DnsTesterExit::Calibrate => Ok(CydWebCommand::CalibrationNotNeeded),
         DnsTesterExit::ResetWifi => Ok(CydWebCommand::ResetWifi),
         DnsTesterExit::Reorientate(orientation) => {
@@ -550,17 +530,7 @@ import init, { start } from "./pkg/application.js";
 import { mountCydSimulator } from "./cyd-simulator.js";
 
 await init();
-await mountCydSimulator({
-  start,
-  app: {
-    title: "Armatron",
-    previewLine: "Control a simulated linkage on a CYD.",
-    descriptionHtml: "<p>...</p>",
-    controlsHtml: "<p>...</p>",
-    coreCodeUrl: "https://github.com/...",
-    galleryUrl: "../../",
-  },
-});
+await mountCydSimulator({ wasm: { start }, app: { galleryUrl: "../../" } });
 ```
 
 `mountCydSimulator` calls `start("screen")`, binds the returned standard handle
@@ -576,9 +546,10 @@ The page must not:
 - decide whether browser-policy, Wi-Fi reset, or orientation requires restart;
 - know whether the current Rust session has been reconstructed.
 
-Optional page-only controls such as the clock time setter remain declarative
-extensions in the shared shell. They call a narrow application export and do
-not change the standard CYD lifecycle protocol.
+The shared shell discovers the clock control through the standard handle. A
+clock launcher calls `application.clock_sync.show()` on the supplied container;
+non-clock applications do not, so no application-specific time-setter export
+is needed.
 
 ## Error model
 
@@ -634,7 +605,7 @@ startup phase to catch stale tasks and stale input targets.
 - Extract `ClockSyncWasm` from the duplicated Linkage Blaze implementations.
 - Replace the loose Wi-Fi helper and WASM-only event vocabulary with the
   constructed browser Wi-Fi adapter.
-- Add the explicitly deterministic `DnsFixedWasm` implementation.
+- Add the explicitly deterministic `DnsSimulatorWasm` implementation.
 - Test each adapter independently through its canonical capability trait where
   one exists.
 

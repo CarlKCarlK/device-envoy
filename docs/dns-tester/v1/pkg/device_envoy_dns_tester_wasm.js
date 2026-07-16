@@ -66,7 +66,7 @@ export class CydSimulatorControlWasm {
 if (Symbol.dispose) CydSimulatorControlWasm.prototype[Symbol.dispose] = CydSimulatorControlWasm.prototype.free;
 
 /**
- * Stable browser handle shared by every CYD web application.
+ * Stable browser control handle returned by [`start_cyd_web_app`].
  */
 export class CydWebAppHandle {
     static __wrap(ptr) {
@@ -87,25 +87,33 @@ export class CydWebAppHandle {
         wasm.__wbg_cydwebapphandle_free(ptr, 0);
     }
     /**
-     * Forward a physical BOOT-button press.
+     * Press the simulated BOOT button.
      */
     boot_down() {
         wasm.cydwebapphandle_boot_down(this.__wbg_ptr);
     }
     /**
-     * Forward a physical BOOT-button release.
+     * Release the simulated BOOT button.
      */
     boot_up() {
         wasm.cydwebapphandle_boot_up(this.__wbg_ptr);
     }
     /**
-     * Clear framework storage and request an orderly supervisor restart.
+     * Clear framework storage and restart the application.
      */
     clear_storage_and_restart() {
         wasm.cydwebapphandle_clear_storage_and_restart(this.__wbg_ptr);
     }
     /**
-     * Return whether the current presentation is inverted.
+     * Return whether the application has requested the clock control.
+     * @returns {boolean}
+     */
+    clock_control_is_visible() {
+        const ret = wasm.cydwebapphandle_clock_control_is_visible(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * Return whether the current orientation is inverted.
      * @returns {boolean}
      */
     orientation_is_inverted() {
@@ -113,13 +121,103 @@ export class CydWebAppHandle {
         return ret !== 0;
     }
     /**
-     * Request an orderly supervisor restart.
+     * Return the configured interaction instructions.
+     * @returns {string}
+     */
+    page_controls() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.cydwebapphandle_page_controls(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Return the configured platform-neutral source URL.
+     * @returns {string}
+     */
+    page_core_code_url() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.cydwebapphandle_page_core_code_url(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Return the configured page description.
+     * @returns {string}
+     */
+    page_description() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.cydwebapphandle_page_description(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Return the configured preview text.
+     * @returns {string}
+     */
+    page_preview() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.cydwebapphandle_page_preview(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Return the configured page title.
+     * @returns {string}
+     */
+    page_title() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.cydwebapphandle_page_title(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * Request an application restart.
      */
     request_restart() {
         wasm.cydwebapphandle_request_restart(this.__wbg_ptr);
     }
     /**
-     * Take the oldest pending typed notice.
+     * Set the simulated local time, in seconds after midnight.
+     * @param {number} seconds_of_day
+     */
+    set_clock_time_of_day(seconds_of_day) {
+        const ret = wasm.cydwebapphandle_set_clock_time_of_day(this.__wbg_ptr, seconds_of_day);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Remove and return the oldest pending framework notice.
      * @returns {CydWebNotice | undefined}
      */
     take_notice() {
@@ -127,7 +225,7 @@ export class CydWebAppHandle {
         return ret === 0 ? undefined : CydWebNotice.__wrap(ret);
     }
     /**
-     * Forward a pointer-down position in logical canvas coordinates.
+     * Press the simulated touch panel at canvas coordinates.
      * @param {number} position_x
      * @param {number} position_y
      */
@@ -135,7 +233,7 @@ export class CydWebAppHandle {
         wasm.cydwebapphandle_touch_down(this.__wbg_ptr, position_x, position_y);
     }
     /**
-     * Forward a pointer-move position in logical canvas coordinates.
+     * Move the simulated touch point.
      * @param {number} position_x
      * @param {number} position_y
      */
@@ -143,16 +241,22 @@ export class CydWebAppHandle {
         wasm.cydwebapphandle_touch_move(this.__wbg_ptr, position_x, position_y);
     }
     /**
-     * Forward a pointer-up or pointer-cancel event.
+     * Release the simulated touch panel.
      */
     touch_up() {
         wasm.cydwebapphandle_touch_up(this.__wbg_ptr);
+    }
+    /**
+     * Restore the browser's live local clock.
+     */
+    use_live_clock() {
+        wasm.cydwebapphandle_use_live_clock(this.__wbg_ptr);
     }
 }
 if (Symbol.dispose) CydWebAppHandle.prototype[Symbol.dispose] = CydWebAppHandle.prototype.free;
 
 /**
- * A typed browser notice with a stable, localizable identifier.
+ * Typed notice emitted by the framework for the shared browser shell.
  */
 export class CydWebNotice {
     static __wrap(ptr) {
@@ -173,7 +277,7 @@ export class CydWebNotice {
         wasm.__wbg_cydwebnotice_free(ptr, 0);
     }
     /**
-     * Return the formatted diagnostic, when this is a fatal runtime notice.
+     * Return optional diagnostic detail.
      * @returns {string | undefined}
      */
     detail() {
@@ -213,7 +317,6 @@ export class CydWebNotice {
 if (Symbol.dispose) CydWebNotice.prototype[Symbol.dispose] = CydWebNotice.prototype.free;
 
 /**
- * Severity for a notice consumed by the shared browser shell.
  * @enum {0 | 1 | 2}
  */
 export const CydWebNoticeSeverity = Object.freeze({
@@ -226,7 +329,7 @@ export const CydWebNoticeSeverity = Object.freeze({
      */
     Warning: 1, "1": "Warning",
     /**
-     * Fatal runtime failure.
+     * Terminal runtime failure.
      */
     Fatal: 2, "2": "Fatal",
 });
@@ -293,6 +396,10 @@ function __wbg_get_imports() {
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         }, arguments); },
+        __wbg_getTimezoneOffset_31f57a5389d0d57c: function(arg0) {
+            const ret = arg0.getTimezoneOffset();
+            return ret;
+        },
         __wbg_instanceof_CanvasRenderingContext2d_24a3fe06e62b98d7: function(arg0) {
             let result;
             try {
@@ -327,6 +434,10 @@ function __wbg_get_imports() {
             const ret = arg0.localStorage;
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         }, arguments); },
+        __wbg_new_0_4d657201ced14de3: function() {
+            const ret = new Date();
+            return ret;
+        },
         __wbg_new_with_u8_clamped_array_and_sh_fe957411824b5158: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
             return ret;

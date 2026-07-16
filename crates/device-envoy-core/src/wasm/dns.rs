@@ -9,13 +9,14 @@ use crate::dns::{Addresses, Dns, IpAddress};
 const SIMULATED_DNS_LATENCY: Duration = Duration::from_millis(12);
 
 /// A fixed-address DNS implementation for environments without browser DNS.
-pub struct DnsFixedWasm {
+pub struct DnsSimulatorWasm {
     addresses: Addresses,
+    latency: Duration,
 }
 
-impl DnsFixedWasm {
+impl DnsSimulatorWasm {
     /// Construct a resolver that returns `addresses` for every hostname.
-    pub fn new<const COUNT: usize>(addresses: [IpAddress; COUNT]) -> Self {
+    pub fn new<const COUNT: usize>(addresses: [IpAddress; COUNT], latency: Duration) -> Self {
         assert!(
             COUNT <= 4,
             "DNS address list cannot contain more than four addresses"
@@ -28,15 +29,24 @@ impl DnsFixedWasm {
         }
         Self {
             addresses: fixed_addresses,
+            latency,
         }
+    }
+
+    /// Construct the standard browser resolver, which returns IPv4 loopback.
+    pub fn standard() -> Self {
+        Self::new(
+            [IpAddress::Ipv4([127, 0, 0, 1].into())],
+            SIMULATED_DNS_LATENCY,
+        )
     }
 }
 
-impl Dns for DnsFixedWasm {
+impl Dns for DnsSimulatorWasm {
     type Error = Infallible;
 
     async fn resolve(&mut self, _hostname: &str) -> Result<Addresses, Self::Error> {
-        Timer::after(SIMULATED_DNS_LATENCY).await;
+        Timer::after(self.latency).await;
         Ok(self.addresses.clone())
     }
 }

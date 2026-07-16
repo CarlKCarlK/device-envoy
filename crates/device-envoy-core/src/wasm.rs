@@ -8,14 +8,13 @@
 
 mod animation_frame;
 pub mod app;
-#[cfg(feature = "wifi")]
 pub mod clock;
 pub mod dns;
 pub mod simulator;
 
 pub use app::{
-    CydWebAppConfig, CydWebAppHandle, CydWebCommand, CydWebNotice, CydWebNoticeSeverity,
-    start_cyd_display_web_app, start_cyd_web_app,
+    CydWebAppConfig, CydWebAppHandle, CydWebAppWasm, CydWebCommand, CydWebNotice,
+    CydWebNoticeSeverity, CydWebPageInfo, start_cyd_web_app,
 };
 
 use core::{
@@ -50,7 +49,8 @@ use wasm_bindgen::Clamped;
 use web_sys::{CanvasRenderingContext2d, ImageData, Storage};
 
 pub use animation_frame::next_animation_frame;
-pub use dns::DnsFixedWasm;
+pub use clock::ClockSyncWasm;
+pub use dns::DnsSimulatorWasm;
 pub use simulator::{
     CydSimulatorControlWasm, CydSimulatorWasm, WifiConnectOutcome, WifiSimulatorWasm,
 };
@@ -185,27 +185,6 @@ impl CydWasm {
     #[must_use]
     pub fn owned_parts(&self) -> (CydDisplayWasm, CydTouchWasm) {
         (self.display.clone(), self.touch.clone())
-    }
-}
-
-impl CydDisplayWasm {
-    pub(crate) fn new(
-        context: CanvasRenderingContext2d,
-        orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
-        font: &'static MonoFont<'static>,
-    ) -> Self {
-        Self {
-            context,
-            size: orientation.size(),
-            orientation,
-            background,
-            foreground,
-            background565: Rgb565::from(background),
-            foreground565: Rgb565::from(foreground),
-            font,
-        }
     }
 }
 

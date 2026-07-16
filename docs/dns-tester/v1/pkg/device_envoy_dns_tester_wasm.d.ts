@@ -39,59 +39,91 @@ export class CydSimulatorControlWasm {
 }
 
 /**
- * Stable browser handle shared by every CYD web application.
+ * Stable browser control handle returned by [`start_cyd_web_app`].
  */
 export class CydWebAppHandle {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
     /**
-     * Forward a physical BOOT-button press.
+     * Press the simulated BOOT button.
      */
     boot_down(): void;
     /**
-     * Forward a physical BOOT-button release.
+     * Release the simulated BOOT button.
      */
     boot_up(): void;
     /**
-     * Clear framework storage and request an orderly supervisor restart.
+     * Clear framework storage and restart the application.
      */
     clear_storage_and_restart(): void;
     /**
-     * Return whether the current presentation is inverted.
+     * Return whether the application has requested the clock control.
+     */
+    clock_control_is_visible(): boolean;
+    /**
+     * Return whether the current orientation is inverted.
      */
     orientation_is_inverted(): boolean;
     /**
-     * Request an orderly supervisor restart.
+     * Return the configured interaction instructions.
+     */
+    page_controls(): string;
+    /**
+     * Return the configured platform-neutral source URL.
+     */
+    page_core_code_url(): string;
+    /**
+     * Return the configured page description.
+     */
+    page_description(): string;
+    /**
+     * Return the configured preview text.
+     */
+    page_preview(): string;
+    /**
+     * Return the configured page title.
+     */
+    page_title(): string;
+    /**
+     * Request an application restart.
      */
     request_restart(): void;
     /**
-     * Take the oldest pending typed notice.
+     * Set the simulated local time, in seconds after midnight.
+     */
+    set_clock_time_of_day(seconds_of_day: number): void;
+    /**
+     * Remove and return the oldest pending framework notice.
      */
     take_notice(): CydWebNotice | undefined;
     /**
-     * Forward a pointer-down position in logical canvas coordinates.
+     * Press the simulated touch panel at canvas coordinates.
      */
     touch_down(position_x: number, position_y: number): void;
     /**
-     * Forward a pointer-move position in logical canvas coordinates.
+     * Move the simulated touch point.
      */
     touch_move(position_x: number, position_y: number): void;
     /**
-     * Forward a pointer-up or pointer-cancel event.
+     * Release the simulated touch panel.
      */
     touch_up(): void;
+    /**
+     * Restore the browser's live local clock.
+     */
+    use_live_clock(): void;
 }
 
 /**
- * A typed browser notice with a stable, localizable identifier.
+ * Typed notice emitted by the framework for the shared browser shell.
  */
 export class CydWebNotice {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
     /**
-     * Return the formatted diagnostic, when this is a fatal runtime notice.
+     * Return optional diagnostic detail.
      */
     detail(): string | undefined;
     /**
@@ -104,9 +136,6 @@ export class CydWebNotice {
     severity(): CydWebNoticeSeverity;
 }
 
-/**
- * Severity for a notice consumed by the shared browser shell.
- */
 export enum CydWebNoticeSeverity {
     /**
      * Informational notice.
@@ -117,7 +146,7 @@ export enum CydWebNoticeSeverity {
      */
     Warning = 1,
     /**
-     * Fatal runtime failure.
+     * Terminal runtime failure.
      */
     Fatal = 2,
 }
@@ -143,12 +172,20 @@ export interface InitOutput {
     readonly cydwebapphandle_boot_down: (a: number) => void;
     readonly cydwebapphandle_boot_up: (a: number) => void;
     readonly cydwebapphandle_clear_storage_and_restart: (a: number) => void;
+    readonly cydwebapphandle_clock_control_is_visible: (a: number) => number;
     readonly cydwebapphandle_orientation_is_inverted: (a: number) => number;
+    readonly cydwebapphandle_page_controls: (a: number) => [number, number];
+    readonly cydwebapphandle_page_core_code_url: (a: number) => [number, number];
+    readonly cydwebapphandle_page_description: (a: number) => [number, number];
+    readonly cydwebapphandle_page_preview: (a: number) => [number, number];
+    readonly cydwebapphandle_page_title: (a: number) => [number, number];
     readonly cydwebapphandle_request_restart: (a: number) => void;
+    readonly cydwebapphandle_set_clock_time_of_day: (a: number, b: number) => [number, number];
     readonly cydwebapphandle_take_notice: (a: number) => number;
     readonly cydwebapphandle_touch_down: (a: number, b: number, c: number) => void;
     readonly cydwebapphandle_touch_move: (a: number, b: number, c: number) => void;
     readonly cydwebapphandle_touch_up: (a: number) => void;
+    readonly cydwebapphandle_use_live_clock: (a: number) => void;
     readonly cydwebnotice_detail: (a: number) => [number, number];
     readonly cydwebnotice_id: (a: number) => [number, number];
     readonly cydwebnotice_severity: (a: number) => number;

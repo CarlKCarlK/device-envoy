@@ -8,9 +8,7 @@ use std::{cell::RefCell, thread_local, vec::Vec};
 use wasm_bindgen::{JsCast, JsValue, prelude::wasm_bindgen};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
-use super::{
-    ButtonWasm, ButtonWasmSource, CydDisplayWasm, CydTouchWasmSource, CydWasm, next_animation_frame,
-};
+use super::{ButtonWasm, ButtonWasmSource, CydTouchWasmSource, CydWasm, next_animation_frame};
 use crate::button::Button;
 use crate::cyd::display::Orientation;
 use crate::wifi_auto::WifiAutoEvent;
@@ -24,12 +22,6 @@ const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
 /// The reusable resources and input protocol for one browser CYD instance.
 pub struct CydSimulatorWasm {
     cyd: CydWasm,
-    button_source: ButtonWasmSource,
-    control: CydSimulatorControlWasm,
-}
-
-pub(crate) struct CydDisplaySimulatorWasm {
-    display: CydDisplayWasm,
     button_source: ButtonWasmSource,
     control: CydSimulatorControlWasm,
 }
@@ -183,32 +175,6 @@ impl CydSimulatorWasm {
         })
     }
 
-    pub(crate) fn new_display_with_style(
-        canvas: HtmlCanvasElement,
-        orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
-        font: &'static MonoFont<'static>,
-    ) -> Result<CydDisplaySimulatorWasm, JsValue> {
-        let context = canvas
-            .get_context("2d")?
-            .ok_or_else(|| JsValue::from_str("2D canvas context unavailable"))?
-            .dyn_into::<CanvasRenderingContext2d>()?;
-        canvas.set_width(orientation.width());
-        canvas.set_height(orientation.height());
-        let button_source = ButtonWasmSource::new();
-        let control = CydSimulatorControlWasm {
-            touch_source: None,
-            button_source: button_source.clone(),
-            orientation,
-        };
-        Ok(CydDisplaySimulatorWasm {
-            display: CydDisplayWasm::new(context, orientation, background, foreground, font),
-            button_source,
-            control,
-        })
-    }
-
     /// Split the simulator into application device resources and browser control.
     pub fn into_parts(self) -> (CydWasm, ButtonWasm, CydSimulatorControlWasm) {
         let Self {
@@ -217,17 +183,6 @@ impl CydSimulatorWasm {
             control,
         } = self;
         (cyd, button_source.button(), control)
-    }
-}
-
-impl CydDisplaySimulatorWasm {
-    pub(crate) fn into_parts(self) -> (CydDisplayWasm, ButtonWasm, CydSimulatorControlWasm) {
-        let Self {
-            display,
-            button_source,
-            control,
-        } = self;
-        (display, button_source.button(), control)
     }
 }
 

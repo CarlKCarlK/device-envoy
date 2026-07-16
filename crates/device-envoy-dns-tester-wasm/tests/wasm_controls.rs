@@ -1,10 +1,11 @@
 use device_envoy_core::{
+    clock_sync::ClockSync as _,
     cyd::display::Orientation,
-    dns::{Dns as _, IpAddress},
+    dns::Dns as _,
     flash_block::FlashBlock as _,
     wasm::{
-        CydDisplayWasm, CydSimulatorWasm, CydWebAppConfig, CydWebCommand, DnsFixedWasm,
-        FlashBlockWasm, next_animation_frame, start_cyd_display_web_app, start_cyd_web_app,
+        ClockSyncWasm, CydSimulatorWasm, CydWebAppConfig, CydWebAppWasm, CydWebCommand,
+        CydWebPageInfo, DnsSimulatorWasm, FlashBlockWasm, next_animation_frame, start_cyd_web_app,
     },
 };
 use device_envoy_dns_tester_wasm::start;
@@ -96,15 +97,21 @@ async fn calibration_not_needed_queues_notice_and_restarts_stably() -> Result<()
     );
     let invocation_count = std::rc::Rc::new(std::cell::Cell::new(0));
     let callback_invocation_count = invocation_count.clone();
-    let handle = start_cyd_web_app("screen-calibration-policy", config, async move |_, _| {
-        let invocation = callback_invocation_count.get();
-        callback_invocation_count.set(invocation + 1);
-        Ok::<CydWebCommand, core::convert::Infallible>(if invocation == 0 {
-            CydWebCommand::CalibrationNotNeeded
-        } else {
-            CydWebCommand::Stop
-        })
-    })?;
+    let page_info = CydWebPageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
+    let handle = start_cyd_web_app(
+        "screen-calibration-policy",
+        config,
+        page_info,
+        async move |_application: CydWebAppWasm| {
+            let invocation = callback_invocation_count.get();
+            callback_invocation_count.set(invocation + 1);
+            Ok::<CydWebCommand, core::convert::Infallible>(if invocation == 0 {
+                CydWebCommand::CalibrationNotNeeded
+            } else {
+                CydWebCommand::Stop
+            })
+        },
+    )?;
     for _ in 0..5 {
         next_animation_frame().await;
     }
@@ -139,10 +146,13 @@ async fn display_app_uses_only_orientation_storage() -> Result<(), JsValue> {
         Rgb888::new(230, 230, 230), // near-white
         &FONT_6X10,
     );
-    let _handle = start_cyd_display_web_app(
+    let page_info = CydWebPageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
+    let _handle = start_cyd_web_app(
         "screen-display-only",
         config,
-        async |_: &mut CydDisplayWasm, _| {
+        page_info,
+        async |application: CydWebAppWasm| {
+            let _display = application.cyd.display();
             Ok::<CydWebCommand, core::convert::Infallible>(CydWebCommand::Stop)
         },
     )?;
@@ -164,7 +174,7 @@ async fn display_app_uses_only_orientation_storage() -> Result<(), JsValue> {
 
 #[wasm_bindgen_test]
 async fn fixed_dns_waits_for_simulated_latency() -> Result<(), JsValue> {
-    let mut dns = DnsFixedWasm::new([IpAddress::Ipv4([127, 0, 0, 1].into())]);
+    let mut dns = DnsSimulatorWasm::standard();
     let started = embassy_time::Instant::now();
     let addresses = match dns.resolve("example.com").await {
         Ok(addresses) => addresses,
@@ -186,9 +196,13 @@ async fn framework_fatal_notice_stops_and_preserves_diagnostic() -> Result<(), J
         Rgb888::new(230, 230, 230), // near-white
         &FONT_6X10,
     );
-    let handle = start_cyd_web_app("screen-fatal", config, async |_, _| {
-        Err::<CydWebCommand, _>("intentional fatal test error")
-    })?;
+    let page_info = CydWebPageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
+    let handle = start_cyd_web_app(
+        "screen-fatal",
+        config,
+        page_info,
+        async |_application: CydWebAppWasm| Err::<CydWebCommand, _>("intentional fatal test error"),
+    )?;
     for _ in 0..5 {
         next_animation_frame().await;
     }
@@ -201,5 +215,97 @@ async fn framework_fatal_notice_stops_and_preserves_diagnostic() -> Result<(), J
         Some("application failed: \"intentional fatal test error\"")
     );
     assert_eq!(canvas.width(), Orientation::Landscape.width());
+    Ok(())
+}
+
+#[wasm_bindgen_test]
+fn clock_control_is_instance_local_and_validates_time() -> Result<(), JsValue> {
+    let first = ClockSyncWasm::new();
+    let second = ClockSyncWasm::new();
+    assert!(!first.control_is_visible());
+    first.show();
+    first.show();
+    assert!(first.control_is_visible());
+    assert!(!second.control_is_visible());
+    assert!(first.now_local().time().hour() <= 23);
+    Ok(())
+}
+
+#[wasm_bindgen_test]
+async fn handle_clock_state_and_page_info_survive_restart() -> Result<(), JsValue> {
+    let document = document()?;
+    let _canvas = canvas(&document, "screen-clock-state")?;
+    let config = CydWebAppConfig::new(
+        "device-envoy/clock-state-test",
+        Orientation::Landscape,
+        Rgb888::new(10, 10, 12),    // near-black
+        Rgb888::new(230, 230, 230), // near-white
+        &FONT_6X10,
+    );
+    let page_info = CydWebPageInfo::new(
+        "Clock test",
+        "Preview",
+        "Description",
+        "Controls",
+        "https://example.com/core.rs",
+    );
+    let second_run_time = std::rc::Rc::new(std::cell::Cell::new(None));
+    let second_run_time_ref = second_run_time.clone();
+    let live_run_time = std::rc::Rc::new(std::cell::Cell::new(None));
+    let live_run_time_ref = live_run_time.clone();
+    let invocation_count = std::rc::Rc::new(std::cell::Cell::new(0));
+    let invocation_count_ref = invocation_count.clone();
+    let handle = start_cyd_web_app(
+        "screen-clock-state",
+        config,
+        page_info,
+        async move |application: CydWebAppWasm| {
+            let invocation = invocation_count_ref.get();
+            invocation_count_ref.set(invocation + 1);
+            if invocation == 0 {
+                application.clock_sync.show();
+                core::future::pending::<()>().await;
+                unreachable!()
+            }
+            if invocation == 1 {
+                second_run_time_ref.set(Some(application.clock_sync.now_local().time()));
+                core::future::pending::<()>().await;
+                unreachable!()
+            }
+            live_run_time_ref.set(Some(application.clock_sync.now_local().time()));
+            Ok::<CydWebCommand, core::convert::Infallible>(CydWebCommand::Stop)
+        },
+    )?;
+    for _ in 0..3 {
+        next_animation_frame().await;
+    }
+    assert!(handle.clock_control_is_visible());
+    handle.set_clock_time_of_day(43_200)?;
+    assert!(handle.set_clock_time_of_day(86_400).is_err());
+    assert_eq!(handle.page_title(), "Clock test");
+    assert_eq!(handle.page_preview(), "Preview");
+    assert_eq!(handle.page_description(), "Description");
+    assert_eq!(handle.page_controls(), "Controls");
+    assert_eq!(handle.page_core_code_url(), "https://example.com/core.rs");
+    handle.request_restart();
+    for _ in 0..6 {
+        next_animation_frame().await;
+    }
+    assert_eq!(invocation_count.get(), 2);
+    let time = second_run_time
+        .get()
+        .ok_or_else(|| JsValue::from_str("second run did not start"))?;
+    assert_eq!(time.hour(), 12);
+    assert_eq!(time.minute(), 0);
+    assert!(handle.clock_control_is_visible());
+    handle.use_live_clock();
+    handle.request_restart();
+    for _ in 0..6 {
+        next_animation_frame().await;
+    }
+    let live_time = live_run_time
+        .get()
+        .ok_or_else(|| JsValue::from_str("live-clock run did not start"))?;
+    assert!(live_time != time);
     Ok(())
 }

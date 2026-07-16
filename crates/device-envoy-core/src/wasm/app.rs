@@ -5,7 +5,11 @@ use core::{
     pin::Pin,
     task::{Context, Poll, Waker},
 };
-use std::{cell::RefCell, fmt::Debug, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    fmt::Debug,
+    rc::Rc,
+};
 
 use embassy_futures::select::{Either, select};
 use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
@@ -13,28 +17,30 @@ use wasm_bindgen::{JsCast, JsValue, prelude::wasm_bindgen};
 use web_sys::{HtmlCanvasElement, window};
 
 use super::{
-    ButtonWasm, CydDisplayWasm, CydSimulatorControlWasm, CydSimulatorWasm, FlashBlockWasm,
+    ButtonWasm, ClockSyncWasm, CydSimulatorControlWasm, CydSimulatorWasm, CydWasm,
+    DnsSimulatorWasm, FlashBlockWasm, WifiSimulatorWasm,
 };
 use crate::cyd::display::Orientation;
 use crate::flash_block::FlashBlock as _;
 
-/// Configuration shared by the CYD web supervisor and one application.
 #[derive(Clone, Copy)]
+/// Presentation and persistent-storage settings for a [`CydWebAppWasm`]
+/// session. See [`start_cyd_web_app`] for the complete launcher example.
 pub struct CydWebAppConfig {
-    /// Stable prefix for framework-owned browser storage.
+    /// Namespace used for orientation and simulated Wi-Fi state.
     pub storage_namespace: &'static str,
     /// Orientation used when no saved orientation exists.
     pub initial_orientation: Orientation,
-    /// Application display background.
+    /// Canvas background color.
     pub background: Rgb888,
-    /// Application display foreground.
+    /// Canvas foreground color.
     pub foreground: Rgb888,
-    /// Application display font.
+    /// Font used by the simulated display.
     pub font: &'static MonoFont<'static>,
 }
 
 impl CydWebAppConfig {
-    /// Construct a CYD web application configuration.
+    /// Construct presentation settings for [`start_cyd_web_app`].
     pub const fn new(
         storage_namespace: &'static str,
         initial_orientation: Orientation,
@@ -52,21 +58,68 @@ impl CydWebAppConfig {
     }
 }
 
-/// A typed request from an application to the CYD web supervisor.
+#[derive(Clone, Copy)]
+/// Browser-facing metadata displayed by the shared CYD simulator shell.
+pub struct CydWebPageInfo {
+    /// Page title.
+    pub title: &'static str,
+    /// Short preview text.
+    pub preview: &'static str,
+    /// Longer application description.
+    pub description: &'static str,
+    /// Human-readable interaction instructions.
+    pub controls: &'static str,
+    /// Link to the platform-neutral application source.
+    pub core_code_url: &'static str,
+}
+
+impl CydWebPageInfo {
+    /// Construct page metadata for [`start_cyd_web_app`].
+    pub const fn new(
+        title: &'static str,
+        preview: &'static str,
+        description: &'static str,
+        controls: &'static str,
+        core_code_url: &'static str,
+    ) -> Self {
+        Self {
+            title,
+            preview,
+            description,
+            controls,
+            core_code_url,
+        }
+    }
+}
+
+/// Complete capability container supplied to each application run.
+pub struct CydWebAppWasm {
+    /// CYD display and touch capability.
+    pub cyd: CydWasm,
+    /// BOOT-button capability.
+    pub button: ButtonWasm,
+    /// Browser-backed clock capability.
+    pub clock_sync: ClockSyncWasm,
+    /// Simulated Wi-Fi capability.
+    pub wifi_simulator: WifiSimulatorWasm,
+    /// Deterministic simulated DNS capability.
+    pub dns_simulator: DnsSimulatorWasm,
+}
+
+/// Result requested by an application after one run.
 pub enum CydWebCommand {
-    /// Reconstruct the current virtual device.
+    /// Restart the current session.
     Restart,
-    /// Explain that browser touch calibration is unnecessary and restart.
+    /// Report that physical calibration is unnecessary in the browser.
     CalibrationNotNeeded,
-    /// Reset simulated Wi-Fi state and reconstruct the virtual device.
+    /// Clear simulated Wi-Fi state and restart.
     ResetWifi,
-    /// Persist an orientation and reconstruct the virtual device.
+    /// Persist and apply a new display orientation.
     Reorientate(Orientation),
-    /// Stop the supervisor without a fatal notice.
+    /// Stop the supervisor.
     Stop,
 }
 
-/// Severity for a notice consumed by the shared browser shell.
 #[wasm_bindgen]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CydWebNoticeSeverity {
@@ -74,13 +127,13 @@ pub enum CydWebNoticeSeverity {
     Info,
     /// Recoverable warning.
     Warning,
-    /// Fatal runtime failure.
+    /// Terminal runtime failure.
     Fatal,
 }
 
-/// A typed browser notice with a stable, localizable identifier.
 #[wasm_bindgen]
 #[derive(Clone, Debug)]
+/// Typed notice emitted by the framework for the shared browser shell.
 pub struct CydWebNotice {
     id: String,
     severity: CydWebNoticeSeverity,
@@ -95,7 +148,6 @@ impl CydWebNotice {
             detail: None,
         }
     }
-
     fn fatal(detail: String) -> Self {
         Self {
             id: "runtime-error".into(),
@@ -108,19 +160,14 @@ impl CydWebNotice {
 #[wasm_bindgen]
 impl CydWebNotice {
     /// Return the stable notice identifier.
-    #[wasm_bindgen(js_name = id)]
     pub fn id(&self) -> String {
         self.id.clone()
     }
-
     /// Return the notice severity.
-    #[wasm_bindgen(js_name = severity)]
     pub fn severity(&self) -> CydWebNoticeSeverity {
         self.severity
     }
-
-    /// Return the formatted diagnostic, when this is a fatal runtime notice.
-    #[wasm_bindgen(js_name = detail)]
+    /// Return optional diagnostic detail.
     pub fn detail(&self) -> Option<String> {
         self.detail.clone()
     }
@@ -131,12 +178,10 @@ enum HostRequest {
     Restart,
     ClearStorage,
 }
-
 struct LifecycleState {
     request: Option<HostRequest>,
     waker: Option<Waker>,
 }
-
 #[derive(Clone)]
 struct LifecycleSignal {
     state: Rc<RefCell<LifecycleState>>,
@@ -151,7 +196,6 @@ impl LifecycleSignal {
             })),
         }
     }
-
     fn request(&self, request: HostRequest) {
         let waker = {
             let mut state = self.state.borrow_mut();
@@ -162,7 +206,6 @@ impl LifecycleSignal {
             waker.wake();
         }
     }
-
     async fn wait(&self) -> HostRequest {
         LifecycleRequestFuture {
             signal: self.clone(),
@@ -170,21 +213,19 @@ impl LifecycleSignal {
         .await
     }
 }
-
 struct LifecycleRequestFuture {
     signal: LifecycleSignal,
 }
-
 impl Future for LifecycleRequestFuture {
     type Output = HostRequest;
-
     fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
         let mut state = self.signal.state.borrow_mut();
         if let Some(request) = state.request.take() {
-            return Poll::Ready(request);
+            Poll::Ready(request)
+        } else {
+            state.waker = Some(context.waker().clone());
+            Poll::Pending
         }
-        state.waker = Some(context.waker().clone());
-        Poll::Pending
     }
 }
 
@@ -193,10 +234,13 @@ struct SupervisorState {
     notices: std::collections::VecDeque<CydWebNotice>,
     orientation: Orientation,
     stopped: bool,
+    page_info: CydWebPageInfo,
+    clock_time_of_day: Rc<Cell<Option<u32>>>,
+    clock_control_visible: Rc<Cell<bool>>,
 }
 
-/// Stable browser handle shared by every CYD web application.
 #[wasm_bindgen]
+/// Stable browser control handle returned by [`start_cyd_web_app`].
 pub struct CydWebAppHandle {
     state: Rc<RefCell<SupervisorState>>,
     lifecycle_signal: LifecycleSignal,
@@ -209,7 +253,6 @@ impl CydWebAppHandle {
             lifecycle_signal,
         }
     }
-
     fn with_control(&self, action: impl FnOnce(&CydSimulatorControlWasm)) {
         let state = self.state.borrow();
         if !state.stopped {
@@ -222,32 +265,27 @@ impl CydWebAppHandle {
 
 #[wasm_bindgen]
 impl CydWebAppHandle {
-    /// Forward a pointer-down position in logical canvas coordinates.
+    /// Press the simulated touch panel at canvas coordinates.
     pub fn touch_down(&self, position_x: f32, position_y: f32) {
         self.with_control(|control| control.touch_down(position_x, position_y));
     }
-
-    /// Forward a pointer-move position in logical canvas coordinates.
+    /// Move the simulated touch point.
     pub fn touch_move(&self, position_x: f32, position_y: f32) {
         self.with_control(|control| control.touch_move(position_x, position_y));
     }
-
-    /// Forward a pointer-up or pointer-cancel event.
+    /// Release the simulated touch panel.
     pub fn touch_up(&self) {
         self.with_control(CydSimulatorControlWasm::touch_up);
     }
-
-    /// Forward a physical BOOT-button press.
+    /// Press the simulated BOOT button.
     pub fn boot_down(&self) {
         self.with_control(CydSimulatorControlWasm::boot_down);
     }
-
-    /// Forward a physical BOOT-button release.
+    /// Release the simulated BOOT button.
     pub fn boot_up(&self) {
         self.with_control(CydSimulatorControlWasm::boot_up);
     }
-
-    /// Return whether the current presentation is inverted.
+    /// Return whether the current orientation is inverted.
     pub fn orientation_is_inverted(&self) -> bool {
         self.state
             .borrow()
@@ -255,35 +293,69 @@ impl CydWebAppHandle {
             .as_ref()
             .is_some_and(CydSimulatorControlWasm::orientation_is_inverted)
     }
-
-    /// Take the oldest pending typed notice.
+    /// Remove and return the oldest pending framework notice.
     pub fn take_notice(&self) -> Option<CydWebNotice> {
         self.state.borrow_mut().notices.pop_front()
     }
-
-    /// Request an orderly supervisor restart.
+    /// Request an application restart.
     pub fn request_restart(&self) {
         self.lifecycle_signal.request(HostRequest::Restart);
     }
-
-    /// Clear framework storage and request an orderly supervisor restart.
+    /// Clear framework storage and restart the application.
     pub fn clear_storage_and_restart(&self) {
         self.lifecycle_signal.request(HostRequest::ClearStorage);
     }
+    /// Return whether the application has requested the clock control.
+    pub fn clock_control_is_visible(&self) -> bool {
+        self.state.borrow().clock_control_visible.get()
+    }
+    /// Set the simulated local time, in seconds after midnight.
+    pub fn set_clock_time_of_day(&self, seconds_of_day: u32) -> Result<(), JsValue> {
+        if seconds_of_day >= 86_400 {
+            return Err(JsValue::from_str(
+                "time of day must be between 0 and 86399 seconds",
+            ));
+        }
+        self.state
+            .borrow()
+            .clock_time_of_day
+            .set(Some(seconds_of_day));
+        Ok(())
+    }
+    /// Restore the browser's live local clock.
+    pub fn use_live_clock(&self) {
+        self.state.borrow().clock_time_of_day.set(None);
+    }
+    /// Return the configured page title.
+    pub fn page_title(&self) -> String {
+        self.state.borrow().page_info.title.into()
+    }
+    /// Return the configured preview text.
+    pub fn page_preview(&self) -> String {
+        self.state.borrow().page_info.preview.into()
+    }
+    /// Return the configured page description.
+    pub fn page_description(&self) -> String {
+        self.state.borrow().page_info.description.into()
+    }
+    /// Return the configured interaction instructions.
+    pub fn page_controls(&self) -> String {
+        self.state.borrow().page_info.controls.into()
+    }
+    /// Return the configured platform-neutral source URL.
+    pub fn page_core_code_url(&self) -> String {
+        self.state.borrow().page_info.core_code_url.into()
+    }
 }
 
-/// Start a complete CYD web application under the shared supervisor.
 pub fn start_cyd_web_app<Run, Error>(
     canvas_id: &str,
     config: CydWebAppConfig,
+    page_info: CydWebPageInfo,
     inner_main: Run,
 ) -> Result<CydWebAppHandle, JsValue>
 where
-    Run: for<'a> AsyncFnMut(
-            &'a mut super::CydWasm,
-            &'a mut ButtonWasm,
-        ) -> Result<CydWebCommand, Error>
-        + 'static,
+    Run: AsyncFnMut(CydWebAppWasm) -> Result<CydWebCommand, Error> + 'static,
     Error: Debug + 'static,
 {
     let canvas = canvas(canvas_id)?;
@@ -307,6 +379,9 @@ where
         notices: std::collections::VecDeque::new(),
         orientation,
         stopped: false,
+        page_info,
+        clock_time_of_day: Rc::new(Cell::new(None)),
+        clock_control_visible: Rc::new(Cell::new(false)),
     }));
     let lifecycle_signal = LifecycleSignal::new();
     let handle = CydWebAppHandle::new(state.clone(), lifecycle_signal.clone());
@@ -318,56 +393,6 @@ where
         lifecycle_signal,
         inner_main,
         Some((cyd, button)),
-    ));
-    Ok(handle)
-}
-
-/// Start a CYD web application that requires only a display and button input.
-pub fn start_cyd_display_web_app<Run, Error>(
-    canvas_id: &str,
-    config: CydWebAppConfig,
-    inner_main: Run,
-) -> Result<CydWebAppHandle, JsValue>
-where
-    Run: for<'a> AsyncFnMut(
-            &'a mut CydDisplayWasm,
-            &'a mut ButtonWasm,
-        ) -> Result<CydWebCommand, Error>
-        + 'static,
-    Error: Debug + 'static,
-{
-    let canvas = canvas(canvas_id)?;
-    let mut orientation_flash_block =
-        FlashBlockWasm::new(&format!("{}/orientation", config.storage_namespace))
-            .map_err(|error| JsValue::from_str(&format!("orientation storage: {error:?}")))?;
-    let orientation = orientation_flash_block
-        .load::<Orientation>()
-        .map_err(|error| JsValue::from_str(&format!("orientation load: {error:?}")))?
-        .unwrap_or(config.initial_orientation);
-    let simulator = CydSimulatorWasm::new_display_with_style(
-        canvas.clone(),
-        orientation,
-        config.background,
-        config.foreground,
-        config.font,
-    )?;
-    let (display, button, control) = simulator.into_parts();
-    let state = Rc::new(RefCell::new(SupervisorState {
-        live_control: Some(control),
-        notices: std::collections::VecDeque::new(),
-        orientation,
-        stopped: false,
-    }));
-    let lifecycle_signal = LifecycleSignal::new();
-    let handle = CydWebAppHandle::new(state.clone(), lifecycle_signal.clone());
-    wasm_bindgen_futures::spawn_local(supervise_display(
-        canvas,
-        config,
-        orientation_flash_block,
-        state,
-        lifecycle_signal,
-        inner_main,
-        Some((display, button)),
     ));
     Ok(handle)
 }
@@ -391,18 +416,14 @@ async fn supervise<Run, Error>(
     state: Rc<RefCell<SupervisorState>>,
     lifecycle_signal: LifecycleSignal,
     mut inner_main: Run,
-    initial_session: Option<(super::CydWasm, ButtonWasm)>,
+    initial_session: Option<(CydWasm, ButtonWasm)>,
 ) where
-    Run: for<'a> AsyncFnMut(
-            &'a mut super::CydWasm,
-            &'a mut ButtonWasm,
-        ) -> Result<CydWebCommand, Error>
-        + 'static,
+    Run: AsyncFnMut(CydWebAppWasm) -> Result<CydWebCommand, Error> + 'static,
     Error: Debug + 'static,
 {
     let mut session = initial_session;
     loop {
-        let (mut cyd, mut button) = match session.take() {
+        let (cyd, button) = match session.take() {
             Some(session) => session,
             None => {
                 let orientation = state.borrow().orientation;
@@ -415,7 +436,7 @@ async fn supervise<Run, Error>(
                 ) {
                     Ok(simulator) => {
                         let (cyd, button, control) = simulator.into_parts();
-                        replace_control(&state, control);
+                        state.borrow_mut().live_control = Some(control);
                         (cyd, button)
                     }
                     Err(error) => {
@@ -425,9 +446,23 @@ async fn supervise<Run, Error>(
                 }
             }
         };
-
-        let command = match select(inner_main(&mut cyd, &mut button), lifecycle_signal.wait()).await
-        {
+        let (clock_time_of_day, clock_control_visible) = {
+            let state_ref = state.borrow();
+            (
+                state_ref.clock_time_of_day.clone(),
+                state_ref.clock_control_visible.clone(),
+            )
+        };
+        let clock_sync =
+            ClockSyncWasm::new_with_control_state(clock_time_of_day, clock_control_visible);
+        let application = CydWebAppWasm {
+            cyd,
+            button,
+            clock_sync,
+            wifi_simulator: WifiSimulatorWasm::new(config.storage_namespace),
+            dns_simulator: DnsSimulatorWasm::standard(),
+        };
+        let command = match select(inner_main(application), lifecycle_signal.wait()).await {
             Either::First(result) => match result {
                 Ok(command) => command,
                 Err(error) => {
@@ -445,24 +480,20 @@ async fn supervise<Run, Error>(
                 }
             }
         };
-
         release_control(&state);
         match command {
             CydWebCommand::Stop => break,
             CydWebCommand::Restart => {}
             CydWebCommand::ResetWifi => {
-                super::WifiSimulatorWasm::new(config.storage_namespace).reset();
+                WifiSimulatorWasm::new(config.storage_namespace).reset();
                 state.borrow_mut().notices.push_back(CydWebNotice::new(
                     "wifi-simulated",
                     CydWebNoticeSeverity::Info,
                 ));
             }
-            CydWebCommand::CalibrationNotNeeded => {
-                state.borrow_mut().notices.push_back(CydWebNotice::new(
-                    "calibration-not-needed",
-                    CydWebNoticeSeverity::Info,
-                ));
-            }
+            CydWebCommand::CalibrationNotNeeded => state.borrow_mut().notices.push_back(
+                CydWebNotice::new("calibration-not-needed", CydWebNoticeSeverity::Info),
+            ),
             CydWebCommand::Reorientate(orientation) => {
                 if let Err(error) = orientation_flash_block.save(&orientation) {
                     fatal(&state, format!("orientation save failed: {error:?}"));
@@ -474,146 +505,28 @@ async fn supervise<Run, Error>(
     }
     release_control(&state);
     state.borrow_mut().stopped = true;
-}
-
-async fn supervise_display<Run, Error>(
-    canvas: HtmlCanvasElement,
-    config: CydWebAppConfig,
-    mut orientation_flash_block: FlashBlockWasm,
-    state: Rc<RefCell<SupervisorState>>,
-    lifecycle_signal: LifecycleSignal,
-    mut inner_main: Run,
-    initial_session: Option<(CydDisplayWasm, ButtonWasm)>,
-) where
-    Run: for<'a> AsyncFnMut(
-            &'a mut CydDisplayWasm,
-            &'a mut ButtonWasm,
-        ) -> Result<CydWebCommand, Error>
-        + 'static,
-    Error: Debug + 'static,
-{
-    let mut session = initial_session;
-    loop {
-        let (mut display, mut button) = match session.take() {
-            Some(session) => session,
-            None => {
-                let orientation = state.borrow().orientation;
-                match CydSimulatorWasm::new_display_with_style(
-                    canvas.clone(),
-                    orientation,
-                    config.background,
-                    config.foreground,
-                    config.font,
-                ) {
-                    Ok(simulator) => {
-                        let (display, button, control) = simulator.into_parts();
-                        replace_control(&state, control);
-                        (display, button)
-                    }
-                    Err(error) => {
-                        fatal(&state, format!("simulator construction failed: {error:?}"));
-                        break;
-                    }
-                }
-            }
-        };
-
-        let command = match select(
-            inner_main(&mut display, &mut button),
-            lifecycle_signal.wait(),
-        )
-        .await
-        {
-            Either::First(result) => match result {
-                Ok(command) => command,
-                Err(error) => {
-                    fatal(&state, format!("application failed: {error:?}"));
-                    break;
-                }
-            },
-            Either::Second(request) => match apply_display_host_request(
-                request,
-                &config,
-                &mut orientation_flash_block,
-                &state,
-            ) {
-                Ok(()) => CydWebCommand::Restart,
-                Err(error) => {
-                    fatal(&state, error);
-                    break;
-                }
-            },
-        };
-
-        release_control(&state);
-        match command {
-            CydWebCommand::Stop => break,
-            CydWebCommand::Restart => {}
-            CydWebCommand::ResetWifi => {
-                super::WifiSimulatorWasm::new(config.storage_namespace).reset();
-                state.borrow_mut().notices.push_back(CydWebNotice::new(
-                    "wifi-simulated",
-                    CydWebNoticeSeverity::Info,
-                ));
-            }
-            CydWebCommand::CalibrationNotNeeded => {
-                state.borrow_mut().notices.push_back(CydWebNotice::new(
-                    "calibration-not-needed",
-                    CydWebNoticeSeverity::Info,
-                ));
-            }
-            CydWebCommand::Reorientate(orientation) => {
-                if let Err(error) = orientation_flash_block.save(&orientation) {
-                    fatal(&state, format!("orientation save failed: {error:?}"));
-                    break;
-                }
-                state.borrow_mut().orientation = orientation;
-            }
-        }
-    }
-    release_control(&state);
-    state.borrow_mut().stopped = true;
-}
-
-fn replace_control(state: &Rc<RefCell<SupervisorState>>, control: CydSimulatorControlWasm) {
-    let mut state = state.borrow_mut();
-    state.live_control = Some(control);
 }
 
 fn release_control(state: &Rc<RefCell<SupervisorState>>) {
-    if let Some(control) = state.borrow_mut().live_control.take() {
+    let control = state.borrow_mut().live_control.take();
+    if let Some(control) = control {
         control.reset_transient_state();
     }
 }
-
 fn fatal(state: &Rc<RefCell<SupervisorState>>, message: String) {
-    let mut state = state.borrow_mut();
-    state.notices.push_back(CydWebNotice::fatal(message));
+    state
+        .borrow_mut()
+        .notices
+        .push_back(CydWebNotice::fatal(message));
 }
-
 fn apply_host_request(
     request: HostRequest,
     config: &CydWebAppConfig,
-    orientation_flash_block: &mut FlashBlockWasm,
+    flash: &mut FlashBlockWasm,
     state: &Rc<RefCell<SupervisorState>>,
 ) -> Result<(), String> {
     if matches!(request, HostRequest::ClearStorage) {
-        orientation_flash_block
-            .clear()
-            .map_err(|error| format!("storage clear failed: {error:?}"))?;
-        state.borrow_mut().orientation = config.initial_orientation;
-    }
-    Ok(())
-}
-
-fn apply_display_host_request(
-    request: HostRequest,
-    config: &CydWebAppConfig,
-    orientation_flash_block: &mut FlashBlockWasm,
-    state: &Rc<RefCell<SupervisorState>>,
-) -> Result<(), String> {
-    if matches!(request, HostRequest::ClearStorage) {
-        orientation_flash_block
+        flash
             .clear()
             .map_err(|error| format!("storage clear failed: {error:?}"))?;
         state.borrow_mut().orientation = config.initial_orientation;

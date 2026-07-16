@@ -5,7 +5,6 @@ pub mod audio_player;
 pub mod button;
 #[cfg(feature = "wifi")]
 pub(crate) mod clock;
-#[cfg(feature = "wifi")]
 pub mod clock_sync;
 pub mod cyd;
 pub mod dns;

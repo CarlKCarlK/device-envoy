@@ -69,34 +69,13 @@ where
     ButtonDevice: Button,
     DnsDevice: Dns,
 {
-    run_inner(cyd, button, dns, true).await
-}
-
-/// Run the DNS Tester loop without platform control inputs.
-///
-/// This variant is for simulated or host environments that do not model
-/// calibration or Wi-Fi reset. It returns when the orientation control is
-/// activated.
-pub async fn run_without_controls<CydDevice, DnsDevice>(
-    cyd: &mut CydDevice,
-    dns: &mut DnsDevice,
-) -> Result<Orientation, Error<CydDevice::Error, DnsDevice::Error>>
-where
-    CydDevice: Cyd,
-    DnsDevice: Dns,
-{
-    let mut button = NeverPressedButton;
-    match run_inner(cyd, &mut button, dns, false).await? {
-        Exit::Reorientate(orientation) => Ok(orientation),
-        Exit::Calibrate | Exit::ResetWifi => unreachable!(),
-    }
+    run_inner(cyd, button, dns).await
 }
 
 async fn run_inner<CydDevice, ButtonDevice, DnsDevice>(
     cyd: &mut CydDevice,
     button: &mut ButtonDevice,
     dns: &mut DnsDevice,
-    controls_enabled: bool,
 ) -> Result<Exit, Error<CydDevice::Error, DnsDevice::Error>>
 where
     CydDevice: Cyd,
@@ -121,7 +100,7 @@ where
     loop {
         yield_now().await;
 
-        if controls_enabled && button.is_pressed() {
+        if button.is_pressed() {
             return Ok(Exit::Calibrate);
         }
 
@@ -162,14 +141,10 @@ where
                 }
             }
             TouchAction::Control(Control::Calibration) => {
-                if controls_enabled {
-                    return Ok(Exit::Calibrate);
-                }
+                return Ok(Exit::Calibrate);
             }
             TouchAction::Control(Control::Wifi) => {
-                if controls_enabled {
-                    return Ok(Exit::ResetWifi);
-                }
+                return Ok(Exit::ResetWifi);
             }
             TouchAction::Control(Control::Orientation) => {
                 return Ok(Exit::Reorientate(orientation.next()));
@@ -177,18 +152,6 @@ where
         }
     }
 }
-
-struct NeverPressedButton;
-
-impl device_envoy_core::button::__ButtonMonitor for NeverPressedButton {
-    fn is_pressed_raw(&self) -> bool {
-        false
-    }
-
-    async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
-}
-
-impl Button for NeverPressedButton {}
 
 #[derive(Clone, Copy)]
 struct Layout {

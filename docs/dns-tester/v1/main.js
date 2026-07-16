@@ -15,6 +15,16 @@ async function rebootAndSyncStage(syncPresentation) {
 }
 
 const SIMULATOR_NOTICES = {
+  "calibration-unavailable": {
+    severity: "info",
+    message: "Touch calibration is available on physical CYD hardware only.",
+    durationMs: 3500,
+  },
+  "wifi-reset-unavailable": {
+    severity: "info",
+    message: "Wi-Fi reset is available on physical CYD hardware only.",
+    durationMs: 3500,
+  },
   "runtime-error": {
     severity: "fatal",
     message: "The DNS Tester simulator stopped because of a runtime error.",
@@ -32,6 +42,12 @@ async function monitorRuntime(syncPresentation, showNotice) {
       // splash in the new orientation.
       syncPresentation();
       await rebootAndSyncStage(syncPresentation);
+    } else if (result === "calibration unavailable") {
+      await rebootAndSyncStage(syncPresentation);
+      showNotice(SIMULATOR_NOTICES["calibration-unavailable"]);
+    } else if (result === "wifi reset unavailable") {
+      await rebootAndSyncStage(syncPresentation);
+      showNotice(SIMULATOR_NOTICES["wifi-reset-unavailable"]);
     } else if (result === "runtime error") {
       return;
     }

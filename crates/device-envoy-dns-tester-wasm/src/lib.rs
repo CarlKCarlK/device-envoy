@@ -10,8 +10,8 @@ use device_envoy_core::{
     wasm::{CydSimulatorControlWasm, CydSimulatorWasm, FlashBlockWasm, next_animation_frame},
 };
 use device_envoy_examples_core::dns_tester::{
-    Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice, render_notice,
-    run_without_controls,
+    self as dns_tester, Error as CoreError, Exit as CoreExit, UiError as CoreUiError, UiNotice,
+    render_notice,
 };
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::*;
@@ -88,7 +88,7 @@ impl DnsTesterWeb {
             FOREGROUND,
             &FONT_6X10,
         )?;
-        let (mut device, _button, simulator_control) = simulator.into_parts();
+        let (mut device, mut button, simulator_control) = simulator.into_parts();
         *self.simulator_control.borrow_mut() = Some(simulator_control);
         // TODO0000 Consider using the core CYD splash helper here too.
         let mut display = device.display();
@@ -105,10 +105,8 @@ impl DnsTesterWeb {
         let mut dns = MockDns;
         drop(state);
         wasm_bindgen_futures::spawn_local(async move {
-            match run_without_controls(&mut device, &mut dns).await {
-                Ok(next_orientation) => {
-                    exit.set(Some(CoreExit::Reorientate(next_orientation)));
-                }
+            match dns_tester::run(&mut device, &mut button, &mut dns).await {
+                Ok(exit_value) => exit.set(Some(exit_value)),
                 Err(CoreError::Display(CoreUiError::Text(_))) => failed.set(true),
                 Err(CoreError::Display(CoreUiError::Display(error))) => match error {},
                 Err(CoreError::Touch(error)) => match error {},
@@ -150,7 +148,8 @@ impl DnsTesterWeb {
 
     pub fn take_exit(&self) -> String {
         match self.exit.take() {
-            Some(CoreExit::Calibrate | CoreExit::ResetWifi) => "unsupported".into(),
+            Some(CoreExit::Calibrate) => "calibration unavailable".into(),
+            Some(CoreExit::ResetWifi) => "wifi reset unavailable".into(),
             Some(CoreExit::Reorientate(next_orientation)) => {
                 let save_result = self
                     .state

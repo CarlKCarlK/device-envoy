@@ -43,27 +43,15 @@ export class DnsTesterWeb {
     [Symbol.dispose](): void;
     boot_down(): void;
     boot_up(): void;
-    /**
-     * Clear only touch calibration storage before a recalibration restart.
-     */
-    clear_calibration(): void;
     clear_storage(): Promise<void>;
     constructor(canvas: HTMLCanvasElement);
     /**
      * Whether the current simulated display orientation is upside down.
      */
     orientation_is_inverted(): boolean;
-    /**
-     * Present the simulated CYD in landscape while touch calibration runs.
-     */
-    prepare_calibration_landscape(): void;
     reboot(): Promise<void>;
     start(): Promise<void>;
     take_exit(): string;
-    /**
-     * Take the next typed browser notice identifier, if one was requested.
-     */
-    take_notice(): string;
     touch_down(x: number, y: number): void;
     touch_move(x: number, y: number): void;
     touch_up(): void;
@@ -73,18 +61,16 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly _embassy_time_now: () => bigint;
     readonly __wbg_dnstesterweb_free: (a: number, b: number) => void;
     readonly dnstesterweb_boot_down: (a: number) => void;
     readonly dnstesterweb_boot_up: (a: number) => void;
-    readonly dnstesterweb_clear_calibration: (a: number) => [number, number];
     readonly dnstesterweb_clear_storage: (a: number) => any;
     readonly dnstesterweb_new: (a: any) => [number, number, number];
     readonly dnstesterweb_orientation_is_inverted: (a: number) => number;
-    readonly dnstesterweb_prepare_calibration_landscape: (a: number) => void;
     readonly dnstesterweb_reboot: (a: number) => any;
     readonly dnstesterweb_start: (a: number) => any;
     readonly dnstesterweb_take_exit: (a: number) => [number, number];
-    readonly dnstesterweb_take_notice: (a: number) => [number, number];
     readonly dnstesterweb_touch_down: (a: number, b: number, c: number) => void;
     readonly dnstesterweb_touch_move: (a: number, b: number, c: number) => void;
     readonly dnstesterweb_touch_up: (a: number) => void;
@@ -96,7 +82,6 @@ export interface InitOutput {
     readonly cydsimulatorcontrolwasm_touch_down: (a: number, b: number, c: number) => void;
     readonly cydsimulatorcontrolwasm_touch_move: (a: number, b: number, c: number) => void;
     readonly cydsimulatorcontrolwasm_touch_up: (a: number) => void;
-    readonly _embassy_time_now: () => bigint;
     readonly _embassy_time_schedule_wake: (a: bigint, b: number) => void;
     readonly wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_: (a: number, b: number, c: number) => void;
     readonly wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___wasm_bindgen_c4636c65afc58f47___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_c4636c65afc58f47___JsError___true_: (a: number, b: number, c: any) => [number, number];

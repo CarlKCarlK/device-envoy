@@ -83,15 +83,6 @@ export class DnsTesterWeb {
         wasm.dnstesterweb_boot_up(this.__wbg_ptr);
     }
     /**
-     * Clear only touch calibration storage before a recalibration restart.
-     */
-    clear_calibration() {
-        const ret = wasm.dnstesterweb_clear_calibration(this.__wbg_ptr);
-        if (ret[1]) {
-            throw takeFromExternrefTable0(ret[0]);
-        }
-    }
-    /**
      * @returns {Promise<void>}
      */
     clear_storage() {
@@ -119,12 +110,6 @@ export class DnsTesterWeb {
         return ret !== 0;
     }
     /**
-     * Present the simulated CYD in landscape while touch calibration runs.
-     */
-    prepare_calibration_landscape() {
-        wasm.dnstesterweb_prepare_calibration_landscape(this.__wbg_ptr);
-    }
-    /**
      * @returns {Promise<void>}
      */
     reboot() {
@@ -146,22 +131,6 @@ export class DnsTesterWeb {
         let deferred1_1;
         try {
             const ret = wasm.dnstesterweb_take_exit(this.__wbg_ptr);
-            deferred1_0 = ret[0];
-            deferred1_1 = ret[1];
-            return getStringFromWasm0(ret[0], ret[1]);
-        } finally {
-            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
-        }
-    }
-    /**
-     * Take the next typed browser notice identifier, if one was requested.
-     * @returns {string}
-     */
-    take_notice() {
-        let deferred1_0;
-        let deferred1_1;
-        try {
-            const ret = wasm.dnstesterweb_take_notice(this.__wbg_ptr);
             deferred1_0 = ret[0];
             deferred1_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -339,17 +308,17 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 76, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 44, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___wasm_bindgen_c4636c65afc58f47___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_c4636c65afc58f47___JsError___true_);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 61, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 30, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 74, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 42, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke_______true_);
             return ret;
         },

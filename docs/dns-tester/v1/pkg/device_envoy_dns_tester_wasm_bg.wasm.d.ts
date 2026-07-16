@@ -1,18 +1,16 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const _embassy_time_now: () => bigint;
 export const __wbg_dnstesterweb_free: (a: number, b: number) => void;
 export const dnstesterweb_boot_down: (a: number) => void;
 export const dnstesterweb_boot_up: (a: number) => void;
-export const dnstesterweb_clear_calibration: (a: number) => [number, number];
 export const dnstesterweb_clear_storage: (a: number) => any;
 export const dnstesterweb_new: (a: any) => [number, number, number];
 export const dnstesterweb_orientation_is_inverted: (a: number) => number;
-export const dnstesterweb_prepare_calibration_landscape: (a: number) => void;
 export const dnstesterweb_reboot: (a: number) => any;
 export const dnstesterweb_start: (a: number) => any;
 export const dnstesterweb_take_exit: (a: number) => [number, number];
-export const dnstesterweb_take_notice: (a: number) => [number, number];
 export const dnstesterweb_touch_down: (a: number, b: number, c: number) => void;
 export const dnstesterweb_touch_move: (a: number, b: number, c: number) => void;
 export const dnstesterweb_touch_up: (a: number) => void;
@@ -24,7 +22,6 @@ export const cydsimulatorcontrolwasm_reset_transient_state: (a: number) => void;
 export const cydsimulatorcontrolwasm_touch_down: (a: number, b: number, c: number) => void;
 export const cydsimulatorcontrolwasm_touch_move: (a: number, b: number, c: number) => void;
 export const cydsimulatorcontrolwasm_touch_up: (a: number) => void;
-export const _embassy_time_now: () => bigint;
 export const _embassy_time_schedule_wake: (a: bigint, b: number) => void;
 export const wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_: (a: number, b: number, c: number) => void;
 export const wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___wasm_bindgen_c4636c65afc58f47___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_c4636c65afc58f47___JsError___true_: (a: number, b: number, c: any) => [number, number];

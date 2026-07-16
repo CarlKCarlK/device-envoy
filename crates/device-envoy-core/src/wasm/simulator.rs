@@ -4,12 +4,16 @@ use embedded_graphics::{
     mono_font::{MonoFont, ascii::FONT_6X10},
     pixelcolor::Rgb888,
 };
+use std::{cell::RefCell, thread_local, vec::Vec};
 use wasm_bindgen::{JsCast, JsValue, prelude::wasm_bindgen};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
-use super::{ButtonWasm, ButtonWasmSource, CydTouchWasmSource, CydWasm, next_animation_frame};
+use super::{
+    ButtonWasm, ButtonWasmSource, CydDisplayWasm, CydTouchWasmSource, CydWasm, next_animation_frame,
+};
 use crate::button::Button;
 use crate::cyd::display::Orientation;
+use crate::wifi_auto::WifiAutoEvent;
 
 const WIFI_CAPTIVE_PORTAL_WAIT_FRAMES: usize = 15;
 const WIFI_CONNECT_WAIT_FRAMES: usize = 90;
@@ -24,107 +28,19 @@ pub struct CydSimulatorWasm {
     control: CydSimulatorControlWasm,
 }
 
+pub(crate) struct CydDisplaySimulatorWasm {
+    display: CydDisplayWasm,
+    button_source: ButtonWasmSource,
+    control: CydSimulatorControlWasm,
+}
+
 /// Browser input and lifecycle control shared by an application launcher.
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct CydSimulatorControlWasm {
-    touch_source: CydTouchWasmSource,
+    touch_source: Option<CydTouchWasmSource>,
     button_source: ButtonWasmSource,
     orientation: Orientation,
-}
-
-/// Severity assigned to a browser simulator notice.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum SimulatorNoticeSeverity {
-    /// A recoverable informational message.
-    Info,
-    /// A recoverable warning that needs user attention.
-    Warning,
-    /// An unrecoverable application error.
-    Fatal,
-}
-
-/// A typed request for the shared browser notice facility.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SimulatorNoticeRequest {
-    /// Stable identifier interpreted by the application shell.
-    pub id: &'static str,
-    /// Severity controls accessibility presentation and loop behavior.
-    pub severity: SimulatorNoticeSeverity,
-}
-
-impl SimulatorNoticeRequest {
-    /// Request the recoverable simulated Wi-Fi setup notice.
-    pub const fn wifi_setup() -> Self {
-        Self {
-            id: "wifi-setup",
-            severity: SimulatorNoticeSeverity::Warning,
-        }
-    }
-
-    /// Request the recoverable simulated Wi-Fi connecting notice.
-    pub const fn wifi_connecting() -> Self {
-        Self {
-            id: "wifi-connecting",
-            severity: SimulatorNoticeSeverity::Info,
-        }
-    }
-
-    /// Request the recoverable simulated Wi-Fi unavailable notice.
-    pub const fn wifi_unavailable() -> Self {
-        Self {
-            id: "wifi-unavailable",
-            severity: SimulatorNoticeSeverity::Warning,
-        }
-    }
-
-    /// Request an unrecoverable simulator runtime notice.
-    pub const fn runtime_error() -> Self {
-        Self {
-            id: "runtime-error",
-            severity: SimulatorNoticeSeverity::Fatal,
-        }
-    }
-
-    /// Return whether this request must stop the application loop.
-    #[must_use]
-    pub const fn is_fatal(self) -> bool {
-        matches!(self.severity, SimulatorNoticeSeverity::Fatal)
-    }
-}
-
-/// Result of submitting a notice to the application-facing simulator queue.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum SimulatorNoticeDisposition {
-    /// Keep the application input loop running.
-    Continue,
-    /// Stop the application input loop after reporting the notice.
-    Terminate,
-}
-
-/// Classify a notice request according to its typed severity.
-#[must_use]
-pub const fn simulator_notice_disposition(
-    request: SimulatorNoticeRequest,
-) -> SimulatorNoticeDisposition {
-    if request.is_fatal() {
-        SimulatorNoticeDisposition::Terminate
-    } else {
-        SimulatorNoticeDisposition::Continue
-    }
-}
-
-/// Events emitted by the shared browser Wi-Fi connection simulation.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum WifiConnectEvent {
-    /// The simulated captive-portal setup phase is ready.
-    CaptivePortalReady,
-    /// The simulated client connection has begun.
-    Connecting { try_index: u8, try_count: u8 },
-    /// An explicitly injected simulated connection failure.
-    ///
-    /// The normal deterministic browser path does not emit this event.
-    ConnectionFailed,
 }
 
 /// Result of the shared browser Wi-Fi connection simulation.
@@ -134,6 +50,94 @@ pub enum WifiConnectOutcome {
     Connected,
     /// BOOT interrupted the connection and requests a reset.
     ResetRequested,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum WifiSimulatorPhase {
+    Disconnected,
+    CaptivePortal,
+    Connecting,
+    Connected,
+}
+
+thread_local! {
+    static WIFI_SIMULATOR_PHASES: RefCell<Vec<(&'static str, WifiSimulatorPhase)>> =
+        const { RefCell::new(Vec::new()) };
+}
+
+/// A deterministic browser substitute for the platform Wi-Fi auto-provisioner.
+pub struct WifiSimulatorWasm {
+    storage_namespace: &'static str,
+}
+
+impl WifiSimulatorWasm {
+    /// Construct a simulated Wi-Fi resource scoped to an application namespace.
+    #[must_use]
+    pub const fn new(storage_namespace: &'static str) -> Self {
+        Self { storage_namespace }
+    }
+
+    /// Reset this application's simulated Wi-Fi resource to its disconnected state.
+    pub fn reset(&self) {
+        set_phase(self.storage_namespace, WifiSimulatorPhase::Disconnected);
+    }
+
+    fn phase(&self) -> WifiSimulatorPhase {
+        WIFI_SIMULATOR_PHASES.with(|phases| {
+            phases
+                .borrow()
+                .iter()
+                .find(|(namespace, _)| *namespace == self.storage_namespace)
+                .map_or(WifiSimulatorPhase::Disconnected, |(_, phase)| *phase)
+        })
+    }
+
+    /// Run the deterministic browser connection sequence.
+    pub async fn connect<OnEvent, Error>(
+        &self,
+        button: &mut ButtonWasm,
+        mut on_event: OnEvent,
+    ) -> Result<WifiConnectOutcome, Error>
+    where
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), Error>,
+    {
+        if self.phase() == WifiSimulatorPhase::Connected {
+            return Ok(WifiConnectOutcome::Connected);
+        }
+
+        set_phase(self.storage_namespace, WifiSimulatorPhase::CaptivePortal);
+        on_event(WifiAutoEvent::CaptivePortalReady).await?;
+        if wait_for_wifi_frames(button, WIFI_CAPTIVE_PORTAL_WAIT_FRAMES).await {
+            return Ok(WifiConnectOutcome::ResetRequested);
+        }
+
+        set_phase(self.storage_namespace, WifiSimulatorPhase::Connecting);
+        on_event(WifiAutoEvent::Connecting {
+            try_index: 0,
+            try_count: 1,
+        })
+        .await?;
+        if wait_for_wifi_frames(button, WIFI_CONNECT_WAIT_FRAMES).await {
+            return Ok(WifiConnectOutcome::ResetRequested);
+        }
+
+        set_phase(self.storage_namespace, WifiSimulatorPhase::Connected);
+        Ok(WifiConnectOutcome::Connected)
+    }
+}
+
+fn set_phase(storage_namespace: &'static str, phase: WifiSimulatorPhase) {
+    WIFI_SIMULATOR_PHASES.with(|phases| {
+        let mut phases = phases.borrow_mut();
+        if let Some((_, current_phase)) = phases
+            .iter_mut()
+            .find(|(namespace, _)| *namespace == storage_namespace)
+        {
+            *current_phase = phase;
+        } else {
+            phases.push((storage_namespace, phase));
+        }
+    });
 }
 
 impl CydSimulatorWasm {
@@ -168,12 +172,38 @@ impl CydSimulatorWasm {
             touch_source.clone(),
         );
         let control = CydSimulatorControlWasm {
-            touch_source,
+            touch_source: Some(touch_source),
             button_source: button_source.clone(),
             orientation,
         };
         Ok(Self {
             cyd,
+            button_source,
+            control,
+        })
+    }
+
+    pub(crate) fn new_display_with_style(
+        canvas: HtmlCanvasElement,
+        orientation: Orientation,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+    ) -> Result<CydDisplaySimulatorWasm, JsValue> {
+        let context = canvas
+            .get_context("2d")?
+            .ok_or_else(|| JsValue::from_str("2D canvas context unavailable"))?
+            .dyn_into::<CanvasRenderingContext2d>()?;
+        canvas.set_width(orientation.width());
+        canvas.set_height(orientation.height());
+        let button_source = ButtonWasmSource::new();
+        let control = CydSimulatorControlWasm {
+            touch_source: None,
+            button_source: button_source.clone(),
+            orientation,
+        };
+        Ok(CydDisplaySimulatorWasm {
+            display: CydDisplayWasm::new(context, orientation, background, foreground, font),
             button_source,
             control,
         })
@@ -190,44 +220,23 @@ impl CydSimulatorWasm {
     }
 }
 
+impl CydDisplaySimulatorWasm {
+    pub(crate) fn into_parts(self) -> (CydDisplayWasm, ButtonWasm, CydSimulatorControlWasm) {
+        let Self {
+            display,
+            button_source,
+            control,
+        } = self;
+        (display, button_source.button(), control)
+    }
+}
+
 impl CydSimulatorControlWasm {
     /// Return the display orientation used by this simulator instance.
     #[must_use]
     pub const fn orientation(&self) -> Orientation {
         self.orientation
     }
-}
-
-/// Simulate the Wi-Fi connection phase used by applications with real Wi-Fi.
-pub async fn simulate_wifi_connect<OnEvent, Error>(
-    button: &mut ButtonWasm,
-    mut on_event: OnEvent,
-) -> Result<WifiConnectOutcome, Error>
-where
-    OnEvent: AsyncFnMut(WifiConnectEvent) -> Result<(), Error>,
-{
-    let [captive_portal_ready, connecting] = normal_wifi_connect_events();
-    on_event(captive_portal_ready).await?;
-    if wait_for_wifi_frames(button, WIFI_CAPTIVE_PORTAL_WAIT_FRAMES).await {
-        return Ok(WifiConnectOutcome::ResetRequested);
-    }
-
-    on_event(connecting).await?;
-    if wait_for_wifi_frames(button, WIFI_CONNECT_WAIT_FRAMES).await {
-        return Ok(WifiConnectOutcome::ResetRequested);
-    }
-
-    Ok(WifiConnectOutcome::Connected)
-}
-
-const fn normal_wifi_connect_events() -> [WifiConnectEvent; 2] {
-    [
-        WifiConnectEvent::CaptivePortalReady,
-        WifiConnectEvent::Connecting {
-            try_index: 0,
-            try_count: 1,
-        },
-    ]
 }
 
 async fn wait_for_wifi_frames(button: &ButtonWasm, frame_count: usize) -> bool {
@@ -255,20 +264,26 @@ impl CydSimulatorControlWasm {
     #[wasm_bindgen(js_name = touch_down)]
     pub fn touch_down(&self, x: f32, y: f32) {
         let point = map_to_landscape(self.orientation, x, y);
-        self.touch_source.touch_down(point.0, point.1);
+        if let Some(touch_source) = &self.touch_source {
+            touch_source.touch_down(point.0, point.1);
+        }
     }
 
     /// Forward a browser pointer-move position in logical canvas coordinates.
     #[wasm_bindgen(js_name = touch_move)]
     pub fn touch_move(&self, x: f32, y: f32) {
         let point = map_to_landscape(self.orientation, x, y);
-        self.touch_source.touch_move(point.0, point.1);
+        if let Some(touch_source) = &self.touch_source {
+            touch_source.touch_move(point.0, point.1);
+        }
     }
 
     /// Forward a browser pointer-up or pointer-cancel event.
     #[wasm_bindgen(js_name = touch_up)]
     pub fn touch_up(&self) {
-        self.touch_source.touch_up();
+        if let Some(touch_source) = &self.touch_source {
+            touch_source.touch_up();
+        }
     }
 
     /// Forward a physical BOOT-button press.
@@ -285,7 +300,9 @@ impl CydSimulatorControlWasm {
 
     /// Clear transient browser input after a simulated reset.
     pub fn reset_transient_state(&self) {
-        self.touch_source.touch_up();
+        if let Some(touch_source) = &self.touch_source {
+            touch_source.touch_up();
+        }
         self.button_source.release();
     }
 }
@@ -302,40 +319,6 @@ fn map_to_landscape(orientation: Orientation, x: f32, y: f32) -> (f32, f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn recoverable_notices_continue_the_application_loop() {
-        assert_eq!(
-            simulator_notice_disposition(SimulatorNoticeRequest::wifi_setup()),
-            SimulatorNoticeDisposition::Continue
-        );
-        assert_eq!(
-            simulator_notice_disposition(SimulatorNoticeRequest::wifi_connecting()),
-            SimulatorNoticeDisposition::Continue
-        );
-    }
-
-    #[test]
-    fn fatal_notices_terminate_the_application_loop() {
-        assert_eq!(
-            simulator_notice_disposition(SimulatorNoticeRequest::runtime_error()),
-            SimulatorNoticeDisposition::Terminate
-        );
-    }
-
-    #[test]
-    fn normal_wifi_connect_path_does_not_inject_failure() {
-        let events = normal_wifi_connect_events();
-        assert_eq!(events[0], WifiConnectEvent::CaptivePortalReady);
-        assert_eq!(
-            events[1],
-            WifiConnectEvent::Connecting {
-                try_index: 0,
-                try_count: 1,
-            }
-        );
-        assert!(!events.contains(&WifiConnectEvent::ConnectionFailed));
-    }
 
     #[test]
     fn orientation_mapping_round_trips() {
@@ -356,5 +339,28 @@ mod tests {
             };
             assert_eq!(logical_point, (37.0, 83.0));
         }
+    }
+
+    #[test]
+    fn wifi_state_is_scoped_by_storage_namespace() {
+        set_phase("app-a", WifiSimulatorPhase::Connected);
+        assert_eq!(
+            WifiSimulatorWasm::new("app-a").phase(),
+            WifiSimulatorPhase::Connected
+        );
+        assert_eq!(
+            WifiSimulatorWasm::new("app-b").phase(),
+            WifiSimulatorPhase::Disconnected
+        );
+
+        WifiSimulatorWasm::new("app-a").reset();
+        assert_eq!(
+            WifiSimulatorWasm::new("app-a").phase(),
+            WifiSimulatorPhase::Disconnected
+        );
+        assert_eq!(
+            WifiSimulatorWasm::new("app-b").phase(),
+            WifiSimulatorPhase::Disconnected
+        );
     }
 }

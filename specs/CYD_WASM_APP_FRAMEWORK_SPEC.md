@@ -27,7 +27,7 @@ The teaching story must be:
    and calls the same core function.
 3. Translate the core function's returned `Exit` into a small framework command.
 4. Export one `start` function that gives the framework the canvas ID,
-   presentation configuration, and `inner_main`.
+   presentation configuration, and a capability-specific `inner_main`.
 5. Mount the returned standard handle with the shared JavaScript CYD shell.
 
 For example, the complete application shape should be recognizable as:
@@ -51,7 +51,7 @@ async fn inner_main(
     button: &mut ButtonWasm,
 ) -> Result<CydWebCommand, ArmatronError<Infallible>> {
     match armatron(cyd, button).await? {
-        ArmatronExit::CalibrationRequested => Ok(CydWebCommand::Recalibrate),
+        ArmatronExit::CalibrationRequested => Ok(CydWebCommand::CalibrationNotNeeded),
     }
 }
 ```
@@ -102,11 +102,18 @@ The platform-neutral functions remain independently generic:
 `inner_main` is construction and platform policy, not a second application
 abstraction.
 
+The framework has two typed construction paths. Touch-capable applications
+use `start_cyd_web_app` and receive `&mut CydWasm`; display-only applications
+use `start_cyd_display_web_app` and receive `&mut CydDisplayWasm`. The latter
+path must never open, inspect, or create touch-calibration storage. A core that
+asks only for `CydDisplay` must not be upgraded to a calibrated `Cyd` by its
+WASM launcher.
+
 ### Put lifecycle mechanics in the framework
 
 The framework owns canvas lookup, simulator construction, task spawning,
 stable browser input control, restarts, transient input release, framework
-storage, orientation persistence, calibration restart, simulated Wi-Fi reset,
+storage, orientation persistence, simulated Wi-Fi reset,
 fatal reporting, and host-request coordination.
 
 An application crate must not need `Rc`, `Cell`, `RefCell`, `spawn_local`, a
@@ -129,7 +136,7 @@ interpret an application's `Exit` enum or decide how to restart it.
 
 ### Keep a stable JavaScript handle
 
-Reorientation, calibration, and reset may replace the underlying `CydWasm` and
+Reorientation and reset may replace the underlying `CydWasm` and
 input sources. The handle returned to JavaScript must remain stable across all
 such replacements. The shared shell binds input once.
 
@@ -190,8 +197,10 @@ impl CydWebAppConfig {
 }
 ```
 
-The namespace isolates framework-owned orientation, calibration, and simulated
-platform state. It must be stable and unique per deployed application.
+The namespace isolates framework-owned orientation and simulated platform state.
+It must be stable and unique per deployed application. Browser touch
+coordinates are intrinsically usable, so no WASM application calibration
+storage is involved.
 
 Do not add optional application services to this type. A clock setter, DNS
 response, startup artwork, or application notice text is not CYD construction
@@ -205,7 +214,7 @@ browser lifecycle itself:
 ```rust,no_run
 pub enum CydWebCommand {
     Restart,
-    Recalibrate,
+    CalibrationNotNeeded,
     ResetWifi,
     Reorientate(Orientation),
     Stop,
@@ -217,8 +226,9 @@ typed and application-neutral.
 
 - `Restart` reconstructs the current virtual device without clearing persistent
   state.
-- `Recalibrate` clears only touch calibration state, releases transient input,
-  runs the standard browser calibration flow, and restarts the application.
+- `CalibrationNotNeeded` releases transient input, queues the shared
+  informational browser-policy notice, and restarts the application without
+  modifying storage.
 - `ResetWifi` resets the shared simulated Wi-Fi state and restarts the
   application at its connection phase.
 - `Reorientate` persists the requested orientation, reconstructs the canvas and
@@ -234,7 +244,7 @@ contains the short, exhaustive mapping from that enum to `CydWebCommand`.
 
 ### `start_cyd_web_app`
 
-Provide a generic start function with the conceptual contract:
+Provide a generic calibrated start function with the conceptual contract:
 
 ```rust,no_run
 pub fn start_cyd_web_app<Run, Error>(
@@ -250,6 +260,31 @@ where
         + 'static,
     Error: Debug + 'static;
 ```
+
+Provide a separate display-only entry point for applications whose core needs
+`CydDisplay` but not calibrated touch:
+
+```rust,no_run
+pub fn start_cyd_display_web_app<Run, Error>(
+    canvas_id: &str,
+    config: CydWebAppConfig,
+    inner_main: Run,
+) -> Result<CydWebAppHandle, JsValue>
+where
+    for<'a> Run: AsyncFnMut(
+            &'a mut CydDisplayWasm,
+            &'a mut ButtonWasm,
+        ) -> Result<CydWebCommand, Error>
+        + 'static,
+    Error: Debug + 'static;
+```
+
+This path loads orientation and constructs the display session directly. It
+must not open, inspect, or run touch calibration.
+
+The calibrated entry point also constructs the `CydWasm` session directly in
+the saved orientation. `CydWasm` uses the simulator's intrinsic identity
+touch mapping; it does not open or participate in physical calibration.
 
 This signature is illustrative where compiler syntax requires adjustment. Its
 observable contract is mandatory:
@@ -317,18 +352,23 @@ must be centralized. Application crates must not own their own notice slots.
 
 ## Supervisor lifecycle
 
-For each application session, the supervisor performs this sequence:
+For a display-only application, the supervisor performs this sequence:
 
 1. Load the framework state for the configured namespace.
 2. Select the saved orientation or `initial_orientation`.
 3. Construct `CydSimulatorWasm` with the configured style.
 4. Atomically replace the live input-control target in `CydWebAppHandle`.
-5. Complete calibration when calibration state is absent.
-6. Call the application's `inner_main(&mut cyd, &mut button)`.
-7. Select the application future against host lifecycle requests.
-8. Release transient input and remove the old live target.
-9. Apply the returned command or host request.
-10. Reconstruct and run again, stop normally, or report a fatal error.
+5. Call the application's `inner_main(&mut display, &mut button)`.
+6. Select the application future against host lifecycle requests.
+7. Release transient input and remove the old live target.
+8. Apply the returned command or host request.
+9. Reconstruct and run again, stop normally, or report a fatal error.
+
+The calibrated application path follows the same lifecycle with
+`inner_main(&mut cyd, &mut button)`. If shared core code requests calibration,
+the supervisor releases transient input, queues one informational notice with
+ID `calibration-not-needed`, and restarts in the current orientation without
+touching browser storage.
 
 There must never be two live application tasks for one handle. Restart must not
 be implemented by recursively calling exported `start`, and JavaScript must not
@@ -404,7 +444,7 @@ async fn inner_main(
     button: &mut ButtonWasm,
 ) -> Result<CydWebCommand, ArmatronError<Infallible>> {
     match armatron(cyd, button).await? {
-        ArmatronExit::CalibrationRequested => Ok(CydWebCommand::Recalibrate),
+        ArmatronExit::CalibrationRequested => Ok(CydWebCommand::CalibrationNotNeeded),
     }
 }
 ```
@@ -489,7 +529,7 @@ async fn inner_main(
 
     let mut dns = DnsFixedWasm::new([IpAddress::Ipv4([127, 0, 0, 1].into())]);
     match dns_tester::run(cyd, button, &mut dns).await? {
-        DnsTesterExit::Calibrate => Ok(CydWebCommand::Recalibrate),
+        DnsTesterExit::Calibrate => Ok(CydWebCommand::CalibrationNotNeeded),
         DnsTesterExit::ResetWifi => Ok(CydWebCommand::ResetWifi),
         DnsTesterExit::Reorientate(orientation) => {
             Ok(CydWebCommand::Reorientate(orientation))
@@ -533,7 +573,7 @@ The page must not:
 - translate Rust exit strings;
 - rebind input after an ordinary application restart;
 - resize the canvas in response to application policy;
-- decide whether calibration, Wi-Fi reset, or orientation requires restart;
+- decide whether browser-policy, Wi-Fi reset, or orientation requires restart;
 - know whether the current Rust session has been reconstructed.
 
 Optional page-only controls such as the clock time setter remain declarative
@@ -613,7 +653,7 @@ startup phase to catch stale tasks and stale input targets.
 - Use the shared DNS Tester splash and Wi-Fi status helpers.
 - Map all three DNS Tester exit variants exhaustively to framework commands.
 - Remove the JavaScript exit-string polling and page-owned restart policy.
-- Preserve orientation, calibration, BOOT, Wi-Fi simulation, and storage
+- Preserve orientation, BOOT, Wi-Fi simulation, and storage
   behavior covered by the current Playwright test.
 
 ### Phase 5: documentation and cleanup
@@ -649,8 +689,8 @@ startup phase to catch stale tasks and stale input targets.
 - Touch and BOOT remain usable during startup and after any number of restarts.
 - A held BOOT button cannot cause repeated exits.
 - Orientation changes persist across restart and browser reload.
-- Recalibration clears only calibration state and follows the standard browser
-  calibration flow.
+- A core calibration request produces the `calibration-not-needed` informational
+  notice and restarts without browser calibration storage.
 - Wi-Fi reset follows one shared simulated policy.
 - Fatal errors produce one typed fatal notice and leave no live application
   task.

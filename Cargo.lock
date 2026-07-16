@@ -828,6 +828,7 @@ dependencies = [
  "static_cell",
  "time",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
@@ -858,6 +859,7 @@ version = "0.0.0"
 dependencies = [
  "device-envoy-core",
  "device-envoy-examples-core",
+ "embassy-time",
  "embedded-graphics",
  "wasm-bindgen",
  "wasm-bindgen-futures",

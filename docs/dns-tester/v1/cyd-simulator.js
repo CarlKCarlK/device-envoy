@@ -13,7 +13,13 @@ export async function mountCydSimulator({ wasm, app }) {
   const canvas = requireElement("#screen", HTMLCanvasElement);
   const { boot, stage } = ensurePhysicalShell(canvas);
 
+  if (wasm.init) {
+    await wasm.init();
+  }
   let handle = wasm.handle ?? wasm;
+  if (wasm.start) {
+    handle = await wasm.start("screen");
+  }
   const syncPresentation = () => {
     const isPortrait = canvas.height > canvas.width;
     const isInverted = typeof handle.orientation_is_inverted === "function"
@@ -30,28 +36,55 @@ export async function mountCydSimulator({ wasm, app }) {
     attributes: true,
     attributeFilter: ["width", "height"],
   });
-  let unbindInput = bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
+  const unbindInput = bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 9);
   syncPresentation();
-
-  if (wasm.init) {
-    await wasm.init();
-  }
-  if (wasm.start) {
-    const started = wasm.start("screen");
-    // Applications set intrinsic canvas dimensions before their first await.
-    // Present that orientation immediately so a persisted portrait splash is
-    // never laid out in the default landscape shell.
-    syncPresentation();
-    const startedHandle = await started;
-    if (startedHandle !== undefined) {
-      unbindInput();
-      handle = startedHandle;
-      unbindInput = bindInputProtocol(canvas, boot, handle, app.touchDownSamples ?? 1);
-    }
-    syncPresentation();
-  }
   const demoUx = setupDemoUx({ ...app, orientation: app.orientation ?? "landscape" });
+  void monitorTypedNotices(handle, demoUx.showNotice, app.noticeMessages);
   return { handle, syncPresentation, showNotice: demoUx.showNotice };
+}
+
+async function monitorTypedNotices(handle, showNotice, noticeMessages = {}) {
+  while (true) {
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    if (typeof handle.take_notice !== "function") {
+      return;
+    }
+    let notice = handle.take_notice();
+    while (notice) {
+      const id = notice.id();
+      const severityName = ["info", "warning", "fatal"][notice.severity()] ?? "fatal";
+      const detail = typeof notice.detail === "function" ? notice.detail() : undefined;
+      if (detail) {
+        console.error(detail);
+      }
+      const message = noticeMessages[id] ?? defaultNoticeMessage(id);
+      showNotice({
+        severity: severityName,
+        message,
+        durationMs: id === "wifi-simulated" || severityName === "fatal" ? 0 : 3500,
+      });
+      notice = handle.take_notice();
+    }
+  }
+}
+
+function defaultNoticeMessage(id) {
+  switch (id) {
+    case "wifi-simulated":
+      return "Wi-Fi connection is simulated in the browser.";
+    case "wifi-setup":
+      return "Wi-Fi setup is ready.";
+    case "wifi-connecting":
+      return "Connecting to Wi-Fi.";
+    case "wifi-unavailable":
+      return "Wi-Fi is unavailable.";
+    case "runtime-error":
+      return "The CYD simulator stopped because of a runtime error.";
+    case "calibration-not-needed":
+      return "Calibration is not needed in the browser.";
+    default:
+      return `CYD notice: ${id}`;
+  }
 }
 
 function ensurePhysicalShell(canvas) {

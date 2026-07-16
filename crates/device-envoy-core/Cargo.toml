@@ -27,6 +27,7 @@ doc-images = ["dep:embed-doc-image"]
 # enabled it.
 wasm = [
     "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
     "dep:js-sys",
     "dep:web-sys",
     "embassy-time/wasm",
@@ -56,6 +57,7 @@ static_cell = "2.1.1"
 time = { version = "0.3", default-features = false }
 embed-doc-image = { version = "0.1.4", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
 js-sys = { version = "0.3", optional = true }
 web-sys = { version = "0.3", optional = true, features = [
     "Window",
@@ -63,6 +65,7 @@ web-sys = { version = "0.3", optional = true, features = [
     "HtmlCanvasElement",
     "ImageData",
     "Storage",
+    "Document",
 ] }
 
 [dev-dependencies]

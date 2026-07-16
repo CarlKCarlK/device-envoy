@@ -177,6 +177,7 @@ struct CydMemoryShared {
 #[derive(Clone)]
 pub struct CydDisplayMemory {
     size: Size,
+    // todo00 Everywhere we refer to these colors without _color. That seems confusing because they could be bitmaps. Fix everywhere!
     background: Rgb888,
     foreground: Rgb888,
     background565: Rgb565,

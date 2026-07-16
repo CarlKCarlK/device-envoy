@@ -65,72 +65,135 @@ export class CydSimulatorControlWasm {
 }
 if (Symbol.dispose) CydSimulatorControlWasm.prototype[Symbol.dispose] = CydSimulatorControlWasm.prototype.free;
 
-export class DnsTesterWeb {
+/**
+ * Stable browser handle shared by every CYD web application.
+ */
+export class CydWebAppHandle {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(CydWebAppHandle.prototype);
+        obj.__wbg_ptr = ptr;
+        CydWebAppHandleFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
         this.__wbg_ptr = 0;
-        DnsTesterWebFinalization.unregister(this);
+        CydWebAppHandleFinalization.unregister(this);
         return ptr;
     }
     free() {
         const ptr = this.__destroy_into_raw();
-        wasm.__wbg_dnstesterweb_free(ptr, 0);
+        wasm.__wbg_cydwebapphandle_free(ptr, 0);
     }
+    /**
+     * Forward a physical BOOT-button press.
+     */
     boot_down() {
-        wasm.dnstesterweb_boot_down(this.__wbg_ptr);
+        wasm.cydwebapphandle_boot_down(this.__wbg_ptr);
     }
+    /**
+     * Forward a physical BOOT-button release.
+     */
     boot_up() {
-        wasm.dnstesterweb_boot_up(this.__wbg_ptr);
+        wasm.cydwebapphandle_boot_up(this.__wbg_ptr);
     }
     /**
-     * @returns {Promise<void>}
+     * Clear framework storage and request an orderly supervisor restart.
      */
-    clear_storage() {
-        const ret = wasm.dnstesterweb_clear_storage(this.__wbg_ptr);
-        return ret;
+    clear_storage_and_restart() {
+        wasm.cydwebapphandle_clear_storage_and_restart(this.__wbg_ptr);
     }
     /**
-     * @param {HTMLCanvasElement} canvas
-     */
-    constructor(canvas) {
-        const ret = wasm.dnstesterweb_new(canvas);
-        if (ret[2]) {
-            throw takeFromExternrefTable0(ret[1]);
-        }
-        this.__wbg_ptr = ret[0] >>> 0;
-        DnsTesterWebFinalization.register(this, this.__wbg_ptr, this);
-        return this;
-    }
-    /**
-     * Whether the current simulated display orientation is upside down.
+     * Return whether the current presentation is inverted.
      * @returns {boolean}
      */
     orientation_is_inverted() {
-        const ret = wasm.dnstesterweb_orientation_is_inverted(this.__wbg_ptr);
+        const ret = wasm.cydwebapphandle_orientation_is_inverted(this.__wbg_ptr);
         return ret !== 0;
     }
     /**
-     * @returns {Promise<void>}
+     * Request an orderly supervisor restart.
      */
-    reboot() {
-        const ret = wasm.dnstesterweb_reboot(this.__wbg_ptr);
-        return ret;
+    request_restart() {
+        wasm.cydwebapphandle_request_restart(this.__wbg_ptr);
     }
     /**
-     * @returns {Promise<void>}
+     * Take the oldest pending typed notice.
+     * @returns {CydWebNotice | undefined}
      */
-    start() {
-        const ret = wasm.dnstesterweb_start(this.__wbg_ptr);
-        return ret;
+    take_notice() {
+        const ret = wasm.cydwebapphandle_take_notice(this.__wbg_ptr);
+        return ret === 0 ? undefined : CydWebNotice.__wrap(ret);
     }
     /**
+     * Forward a pointer-down position in logical canvas coordinates.
+     * @param {number} position_x
+     * @param {number} position_y
+     */
+    touch_down(position_x, position_y) {
+        wasm.cydwebapphandle_touch_down(this.__wbg_ptr, position_x, position_y);
+    }
+    /**
+     * Forward a pointer-move position in logical canvas coordinates.
+     * @param {number} position_x
+     * @param {number} position_y
+     */
+    touch_move(position_x, position_y) {
+        wasm.cydwebapphandle_touch_move(this.__wbg_ptr, position_x, position_y);
+    }
+    /**
+     * Forward a pointer-up or pointer-cancel event.
+     */
+    touch_up() {
+        wasm.cydwebapphandle_touch_up(this.__wbg_ptr);
+    }
+}
+if (Symbol.dispose) CydWebAppHandle.prototype[Symbol.dispose] = CydWebAppHandle.prototype.free;
+
+/**
+ * A typed browser notice with a stable, localizable identifier.
+ */
+export class CydWebNotice {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(CydWebNotice.prototype);
+        obj.__wbg_ptr = ptr;
+        CydWebNoticeFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        CydWebNoticeFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_cydwebnotice_free(ptr, 0);
+    }
+    /**
+     * Return the formatted diagnostic, when this is a fatal runtime notice.
+     * @returns {string | undefined}
+     */
+    detail() {
+        const ret = wasm.cydwebnotice_detail(this.__wbg_ptr);
+        let v1;
+        if (ret[0] !== 0) {
+            v1 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v1;
+    }
+    /**
+     * Return the stable notice identifier.
      * @returns {string}
      */
-    take_exit() {
+    id() {
         let deferred1_0;
         let deferred1_1;
         try {
-            const ret = wasm.dnstesterweb_take_exit(this.__wbg_ptr);
+            const ret = wasm.cydwebnotice_id(this.__wbg_ptr);
             deferred1_0 = ret[0];
             deferred1_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -139,24 +202,48 @@ export class DnsTesterWeb {
         }
     }
     /**
-     * @param {number} x
-     * @param {number} y
+     * Return the notice severity.
+     * @returns {CydWebNoticeSeverity}
      */
-    touch_down(x, y) {
-        wasm.dnstesterweb_touch_down(this.__wbg_ptr, x, y);
-    }
-    /**
-     * @param {number} x
-     * @param {number} y
-     */
-    touch_move(x, y) {
-        wasm.dnstesterweb_touch_move(this.__wbg_ptr, x, y);
-    }
-    touch_up() {
-        wasm.dnstesterweb_touch_up(this.__wbg_ptr);
+    severity() {
+        const ret = wasm.cydwebnotice_severity(this.__wbg_ptr);
+        return ret;
     }
 }
-if (Symbol.dispose) DnsTesterWeb.prototype[Symbol.dispose] = DnsTesterWeb.prototype.free;
+if (Symbol.dispose) CydWebNotice.prototype[Symbol.dispose] = CydWebNotice.prototype.free;
+
+/**
+ * Severity for a notice consumed by the shared browser shell.
+ * @enum {0 | 1 | 2}
+ */
+export const CydWebNoticeSeverity = Object.freeze({
+    /**
+     * Informational notice.
+     */
+    Info: 0, "0": "Info",
+    /**
+     * Recoverable warning.
+     */
+    Warning: 1, "1": "Warning",
+    /**
+     * Fatal runtime failure.
+     */
+    Fatal: 2, "2": "Fatal",
+});
+
+/**
+ * @param {string} canvas_id
+ * @returns {CydWebAppHandle}
+ */
+export function start(canvas_id) {
+    const ptr0 = passStringToWasm0(canvas_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.start(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return CydWebAppHandle.__wrap(ret[0]);
+}
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
@@ -181,20 +268,24 @@ function __wbg_get_imports() {
         __wbg__wbg_cb_unref_b46c9b5a9f08ec37: function(arg0) {
             arg0._wbg_cb_unref();
         },
-        __wbg_call_a24592a6f349a97e: function() { return handleError(function (arg0, arg1, arg2) {
-            const ret = arg0.call(arg1, arg2);
-            return ret;
-        }, arguments); },
         __wbg_cancelAnimationFrame_3fe3db137219c343: function() { return handleError(function (arg0, arg1) {
             arg0.cancelAnimationFrame(arg1);
         }, arguments); },
         __wbg_clearTimeout_b386a9dd32f7e5e5: function(arg0) {
             clearTimeout(arg0);
         },
+        __wbg_document_7a41071f2f439323: function(arg0) {
+            const ret = arg0.document;
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
         __wbg_getContext_fc146f8ec021d074: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = arg0.getContext(getStringFromWasm0(arg1, arg2));
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         }, arguments); },
+        __wbg_getElementById_0b5a508c91194690: function(arg0, arg1, arg2) {
+            const ret = arg0.getElementById(getStringFromWasm0(arg1, arg2));
+            return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+        },
         __wbg_getItem_7fe1351b9ea3b2f3: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             const ret = arg1.getItem(getStringFromWasm0(arg2, arg3));
             var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -206,6 +297,16 @@ function __wbg_get_imports() {
             let result;
             try {
                 result = arg0 instanceof CanvasRenderingContext2D;
+            } catch (_) {
+                result = false;
+            }
+            const ret = result;
+            return ret;
+        },
+        __wbg_instanceof_HtmlCanvasElement_ea4dfc3bb77c734b: function(arg0) {
+            let result;
+            try {
+                result = arg0 instanceof HTMLCanvasElement;
             } catch (_) {
                 result = false;
             }
@@ -226,24 +327,6 @@ function __wbg_get_imports() {
             const ret = arg0.localStorage;
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         }, arguments); },
-        __wbg_new_typed_323f37fd55ab048d: function(arg0, arg1) {
-            try {
-                var state0 = {a: arg0, b: arg1};
-                var cb0 = (arg0, arg1) => {
-                    const a = state0.a;
-                    state0.a = 0;
-                    try {
-                        return wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___js_sys_649ec69cc13967a8___Function_fn_wasm_bindgen_c4636c65afc58f47___JsValue_____wasm_bindgen_c4636c65afc58f47___sys__Undefined___js_sys_649ec69cc13967a8___Function_fn_wasm_bindgen_c4636c65afc58f47___JsValue_____wasm_bindgen_c4636c65afc58f47___sys__Undefined_______true_(a, state0.b, arg0, arg1);
-                    } finally {
-                        state0.a = a;
-                    }
-                };
-                const ret = new Promise(cb0);
-                return ret;
-            } finally {
-                state0.a = 0;
-            }
-        },
         __wbg_new_with_u8_clamped_array_and_sh_fe957411824b5158: function() { return handleError(function (arg0, arg1, arg2, arg3) {
             const ret = new ImageData(getClampedArrayU8FromWasm0(arg0, arg1), arg2 >>> 0, arg3 >>> 0);
             return ret;
@@ -308,17 +391,17 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 44, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 33, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___wasm_bindgen_c4636c65afc58f47___JsValue__core_7d5f0a2ba6a62c33___result__Result_____wasm_bindgen_c4636c65afc58f47___JsError___true_);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 30, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [F64], shim_idx: 18, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 42, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 31, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke_______true_);
             return ret;
         },
@@ -354,10 +437,6 @@ function wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___wasm_bin
     }
 }
 
-function wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___js_sys_649ec69cc13967a8___Function_fn_wasm_bindgen_c4636c65afc58f47___JsValue_____wasm_bindgen_c4636c65afc58f47___sys__Undefined___js_sys_649ec69cc13967a8___Function_fn_wasm_bindgen_c4636c65afc58f47___JsValue_____wasm_bindgen_c4636c65afc58f47___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___js_sys_649ec69cc13967a8___Function_fn_wasm_bindgen_c4636c65afc58f47___JsValue_____wasm_bindgen_c4636c65afc58f47___sys__Undefined___js_sys_649ec69cc13967a8___Function_fn_wasm_bindgen_c4636c65afc58f47___JsValue_____wasm_bindgen_c4636c65afc58f47___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
-}
-
 function wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_(arg0, arg1, arg2) {
     wasm.wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64______true_(arg0, arg1, arg2);
 }
@@ -365,9 +444,12 @@ function wasm_bindgen_c4636c65afc58f47___convert__closures_____invoke___f64_____
 const CydSimulatorControlWasmFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_cydsimulatorcontrolwasm_free(ptr >>> 0, 1));
-const DnsTesterWebFinalization = (typeof FinalizationRegistry === 'undefined')
+const CydWebAppHandleFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_dnstesterweb_free(ptr >>> 0, 1));
+    : new FinalizationRegistry(ptr => wasm.__wbg_cydwebapphandle_free(ptr >>> 0, 1));
+const CydWebNoticeFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_cydwebnotice_free(ptr >>> 0, 1));
 
 function addToExternrefTable0(obj) {
     const idx = wasm.__externref_table_alloc();

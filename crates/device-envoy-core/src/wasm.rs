@@ -7,7 +7,16 @@
 //! blits the frame to the canvas, then resolves.
 
 mod animation_frame;
+pub mod app;
+#[cfg(feature = "wifi")]
+pub mod clock;
+pub mod dns;
 pub mod simulator;
+
+pub use app::{
+    CydWebAppConfig, CydWebAppHandle, CydWebCommand, CydWebNotice, CydWebNoticeSeverity,
+    start_cyd_display_web_app, start_cyd_web_app,
+};
 
 use core::{
     cell::{Cell, RefCell},
@@ -41,10 +50,9 @@ use wasm_bindgen::Clamped;
 use web_sys::{CanvasRenderingContext2d, ImageData, Storage};
 
 pub use animation_frame::next_animation_frame;
+pub use dns::DnsFixedWasm;
 pub use simulator::{
-    CydSimulatorControlWasm, CydSimulatorWasm, SimulatorNoticeDisposition, SimulatorNoticeRequest,
-    SimulatorNoticeSeverity, WifiConnectEvent, WifiConnectOutcome, simulate_wifi_connect,
-    simulator_notice_disposition,
+    CydSimulatorControlWasm, CydSimulatorWasm, WifiConnectOutcome, WifiSimulatorWasm,
 };
 
 const FLASH_BLOCK_SIZE: usize = 4096;
@@ -178,10 +186,26 @@ impl CydWasm {
     pub fn owned_parts(&self) -> (CydDisplayWasm, CydTouchWasm) {
         (self.display.clone(), self.touch.clone())
     }
+}
 
-    #[must_use]
-    pub fn parts_uncalibrated(&self) -> (CydDisplayWasm, CydTouchUncalibratedWasm) {
-        (self.display.clone(), self.touch.clone().decalibrate())
+impl CydDisplayWasm {
+    pub(crate) fn new(
+        context: CanvasRenderingContext2d,
+        orientation: Orientation,
+        background: Rgb888,
+        foreground: Rgb888,
+        font: &'static MonoFont<'static>,
+    ) -> Self {
+        Self {
+            context,
+            size: orientation.size(),
+            orientation,
+            background,
+            foreground,
+            background565: Rgb565::from(background),
+            foreground565: Rgb565::from(foreground),
+            font,
+        }
     }
 }
 

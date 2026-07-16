@@ -21,4 +21,5 @@ web-sys = { version = "0.3", features = [
 ] }
 
 [dev-dependencies]
+embassy-time = { version = "0.5.1", features = ["wasm"] }
 wasm-bindgen-test = "0.3"

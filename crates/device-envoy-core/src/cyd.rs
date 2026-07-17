@@ -27,7 +27,6 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
-use crate::{button::Button, flash_block::FlashBlock};
 use display::Orientation;
 use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 
@@ -113,32 +112,6 @@ pub trait Cyd: Sized {
 
     /// Return the logical orientation of this complete device.
     fn orientation(&self) -> Orientation;
-}
-
-/// A complete CYD bundle whose touch half has not yet been calibrated.
-///
-/// Bundle implementations own the calibration lifecycle and return a ready-to-use
-/// [`Cyd`] in one operation. This keeps display orientation, calibration persistence,
-/// retry behavior, and button handling out of application startup code.
-// TODO0000 Keep this implementation-only trait private once all platform
-// constructors have moved their calibration orchestration below the API.
-#[doc(hidden)]
-pub trait CydUncalibrated: Sized {
-    /// The calibrated bundle produced by [`CydUncalibrated::into_calibrated`].
-    type Calibrated: Cyd;
-    /// Errors that prevent the bundle from becoming ready for application use.
-    type Error;
-
-    /// Consume this bundle and complete its saved-or-interactive calibration flow.
-    fn into_calibrated<F, B>(
-        self,
-        calibration_flash_block: &mut F,
-        recalibration_button: &mut B,
-    ) -> impl core::future::Future<Output = Result<Self::Calibrated, Self::Error>>
-    where
-        F: FlashBlock,
-        B: Button,
-        Self::Error: From<F::Error>;
 }
 
 /// A raw-touch source that can run the shared calibration flow and become calibrated.

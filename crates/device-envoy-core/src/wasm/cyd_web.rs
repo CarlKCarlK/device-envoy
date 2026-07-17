@@ -180,7 +180,7 @@ impl Notice {
     }
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_class = CydWebNotice)]
 impl Notice {
     /// Return the stable notice identifier.
     pub fn id(&self) -> String {
@@ -286,7 +286,7 @@ impl Handle {
     }
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_class = CydWebAppHandle)]
 impl Handle {
     /// Press the simulated touch panel at canvas coordinates.
     pub fn touch_down(&self, position_x: f32, position_y: f32) {

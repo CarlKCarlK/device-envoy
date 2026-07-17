@@ -147,7 +147,7 @@ pub trait FlashBlock {
 /// Implement this trait in the platform crate to connect the shared block
 /// protocol to the hardware driver.
 // Public for cross-crate platform plumbing; hidden from end-user docs.
-#[doc(hidden)]
+#[doc(hidden)] // todo000 too much hidden?
 pub trait FlashDevice {
     /// The error type returned by I/O operations.
     type Error;

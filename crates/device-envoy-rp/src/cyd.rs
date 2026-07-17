@@ -28,7 +28,7 @@ use device_envoy_core::pixel_target::PixelTarget;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated, CydUncalibrated,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
@@ -658,24 +658,6 @@ impl CydRpUncalibrated {
                 touch_irq_pin,
             )?,
         })
-    }
-}
-
-impl CydUncalibrated for CydRpUncalibrated {
-    type Calibrated = CydRp;
-    type Error = CydError;
-
-    fn into_calibrated<F, B>(
-        self,
-        _calibration_flash_block: &mut F,
-        _recalibration_button: &mut B,
-    ) -> impl core::future::Future<Output = Result<Self::Calibrated, Self::Error>>
-    where
-        F: device_envoy_core::flash_block::FlashBlock,
-        B: Button,
-        Self::Error: From<F::Error>,
-    {
-        async { todo!("todo0000 fix this up") }
     }
 }
 

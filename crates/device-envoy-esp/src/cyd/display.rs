@@ -92,17 +92,6 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         self.screen_size
     }
 
-    pub(crate) fn set_orientation(
-        &mut self,
-        orientation: Orientation,
-    ) -> Result<(), CydDisplayEspFlushError> {
-        self.display
-            .set_orientation(orientation_to_mipi(orientation))
-            .map_err(|_| CydDisplayEspFlushError::SetOrientation)?;
-        self.screen_size = orientation.size();
-        Ok(())
-    }
-
     #[must_use]
     fn screen_rectangle(&self) -> Rectangle {
         Rectangle::new(Point::new(0, 0), self.screen_size)

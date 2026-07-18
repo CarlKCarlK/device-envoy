@@ -807,6 +807,7 @@ dependencies = [
  "crc32fast",
  "critical-section",
  "defmt 1.0.1",
+ "derive_more",
  "embassy-executor",
  "embassy-futures",
  "embassy-net",

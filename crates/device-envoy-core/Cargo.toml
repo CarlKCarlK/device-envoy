@@ -35,6 +35,7 @@ wasm = [
 ]
 
 [dependencies]
+derive_more = { version = "2.1.1", default-features = false, features = ["from"] }
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }
 embassy-executor = { version = "0.10.0", default-features = false, optional = true }

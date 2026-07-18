@@ -1,4 +1,3 @@
-
 //! Wiring:
 //! - 16x16 NeoPixel-style (WS2812) panel data input -> GPIO2
 //!
@@ -16,10 +15,10 @@ use esp_backtrace as _;
 use log::info;
 
 use device_envoy_esp::{
-    init_and_start, led2d,
-    led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
-    led_strip::{colors, Current},
-    Result,
+    Result, init_and_start,
+    led_strip::{Current, colors},
+    led2d,
+    led2d::{Frame2d, Led2d, Led2dFont, layout::LedLayout},
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();

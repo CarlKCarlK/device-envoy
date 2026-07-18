@@ -110,6 +110,11 @@ pub trait Cyd: Sized {
     /// Borrow both calibrated halves at once.
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
 
+    /// Borrow the calibrated display half.
+    fn display(&mut self) -> &mut Self::Display {
+        self.parts().0
+    }
+
     /// Return the logical orientation of this complete device.
     fn orientation(&self) -> Orientation;
 }

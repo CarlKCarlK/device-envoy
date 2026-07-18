@@ -81,13 +81,7 @@ fn touch_app_starts_in_saved_orientation_without_calibration_storage() -> Result
         Rgb888::new(230, 230, 230), // near-white
         &FONT_6X10,
     );
-    let page_info = cyd_web::PageInfo::new(
-        "Test",
-        "Test",
-        "Test",
-        "Test",
-        "https://example.com",
-    );
+    let page_info = cyd_web::PageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
     let handle = cyd_web::start(
         "screen-orientation",
         config,

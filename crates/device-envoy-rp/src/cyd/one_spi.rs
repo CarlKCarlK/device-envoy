@@ -28,8 +28,7 @@ use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
 use static_cell::StaticCell;
 
 use super::{
-    CydDisplayRp, CydError, CydTouchRp, CydTouchUncalibratedRp, Orientation, PixelBuffer,
-    TOUCH_SPI_HZ,
+    CydDisplayRp, CydTouchRp, CydTouchUncalibratedRp, Error, Orientation, PixelBuffer, TOUCH_SPI_HZ,
 };
 use crate::flash_block::FlashBlockRp;
 
@@ -253,7 +252,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
 }
 
 impl<T: spi::Instance + 'static> Cyd for CydRpOneSpi<T> {
-    type Error = CydError;
+    type Error = Error;
     type Display = CydDisplayRp<SharedSpiDevice<T>>;
     type Touch = CydTouchRp<SharedSpiDevice<T>>;
 

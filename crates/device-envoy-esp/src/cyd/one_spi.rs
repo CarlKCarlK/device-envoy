@@ -23,7 +23,7 @@ use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{Cyd, touch::calibration::ensure_calibration};
 
 use super::{
-    CydDisplayEsp, CydError, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, Orientation,
+    CydDisplayEsp, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, Error, Orientation,
     TOUCH_SPI_HZ, buffer::PixelBuffer,
 };
 use crate::flash_block::FlashBlockEsp;
@@ -189,7 +189,7 @@ impl CydEspOneSpi {
 }
 
 impl Cyd for CydEspOneSpi {
-    type Error = CydError;
+    type Error = Error;
     type Display = CydDisplayEsp<SharedSpiDevice>;
     type Touch = CydTouchEsp<SharedSpiDevice>;
 

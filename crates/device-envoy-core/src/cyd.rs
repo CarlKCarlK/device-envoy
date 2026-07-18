@@ -92,9 +92,9 @@ frame.flush().await?;
 # ) {
 #     panic!("{error}");
 # }
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 # })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
 ![CYD trait preview][cyd_trait_preview]
@@ -206,7 +206,7 @@ let display = CydMemory::new(
 assert_eq!(display.screen_size(), Size::new(320, 240));
 assert_eq!(display.background_565(), display.to_rgb565(display.background()));
 assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground()));
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 "#
     )]
@@ -297,9 +297,9 @@ frame.flush().await?;
 # ) {
 #     panic!("{error}");
 # }
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 # })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
 ![CYD tiled frame preview][cyd_frame_mut_with_tile_top_left_preview]
@@ -354,9 +354,9 @@ frame.flush().await?;
 # ) {
 #     panic!("{error}");
 # }
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 # })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
 ![CYD frame preview][cyd_frame_mut_preview]

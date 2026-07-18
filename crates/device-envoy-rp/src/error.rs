@@ -81,12 +81,12 @@ pub enum Error {
 }
 
 #[cfg(target_os = "none")]
-impl From<crate::cyd::CydError> for Error {
-    fn from(error: crate::cyd::CydError) -> Self {
+impl From<crate::cyd::Error> for Error {
+    fn from(error: crate::cyd::Error) -> Self {
         match error {
-            crate::cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
-            crate::cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
-            crate::cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            crate::cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
+            crate::cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
+            crate::cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
         }
     }
 }

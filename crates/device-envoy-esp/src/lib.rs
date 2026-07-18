@@ -328,13 +328,13 @@ pub enum Error {
 }
 
 #[cfg(target_os = "none")]
-impl From<cyd::CydError> for Error {
-    fn from(error: cyd::CydError) -> Self {
+impl From<cyd::Error> for Error {
+    fn from(error: cyd::Error) -> Self {
         match error {
-            cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
-            cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
-            cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
-            cyd::CydError::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
+            cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
+            cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
+            cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            cyd::Error::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
         }
     }
 }

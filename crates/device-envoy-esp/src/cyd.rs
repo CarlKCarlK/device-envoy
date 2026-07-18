@@ -178,7 +178,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameEsp<'a, D> {
 
     /// Present this frame's pixels at its rectangle's top-left (set by
     /// [`CydDisplay::frame_mut`]).
-    pub fn flush(&mut self) -> Result<(), CydError> {
+    pub fn flush(&mut self) -> Result<(), Error> {
         Ok(self
             .display
             .flush_buffer(&self.view, self.rectangle.top_left)?)
@@ -276,7 +276,7 @@ impl<D: SpiDevice<u8>> PixelTarget for CydFrameEsp<'_, D> {
 
 /// Error from a CYD ESP display or touch operation.
 #[derive(Debug)]
-pub enum CydError {
+pub enum Error {
     /// Initializing the display over SPI failed.
     DisplayInit(CydDisplayEspInitError),
     /// Initializing the touch controller over SPI failed.
@@ -287,19 +287,19 @@ pub enum CydError {
     DisplaySetOrientation(CydDisplayEspFlushError),
 }
 
-impl From<CydDisplayEspInitError> for CydError {
+impl From<CydDisplayEspInitError> for Error {
     fn from(error: CydDisplayEspInitError) -> Self {
         Self::DisplayInit(error)
     }
 }
 
-impl From<CydTouchEspInitError> for CydError {
+impl From<CydTouchEspInitError> for Error {
     fn from(error: CydTouchEspInitError) -> Self {
         Self::TouchInit(error)
     }
 }
 
-impl From<CydDisplayEspFlushError> for CydError {
+impl From<CydDisplayEspFlushError> for Error {
     fn from(error: CydDisplayEspFlushError) -> Self {
         Self::DisplayFlush(error)
     }
@@ -313,7 +313,7 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
         pixel_buffer: &'static mut dyn DynPixelBuffer,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         let background565 = rgb565(background);
         display.fill(background565)?;
 
@@ -343,7 +343,7 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
         pixel_buffer: &'static mut dyn DynPixelBuffer,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         let display = CydDisplayEspDevice::new_from_device(
             spi_device,
             dc_pin,
@@ -379,7 +379,7 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
         background: Rgb888,
         foreground: Rgb888,
         font: &'static MonoFont<'static>,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         let pixel_buffer = PixelBuffer::init_static(&statics.pixel_buffer);
         let display = CydDisplayEspDevice::new(
             display_spi,
@@ -428,7 +428,7 @@ impl CydTouchUncalibratedEsp<touch_driver::CydTouchSpiDevice> {
         touch_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             touch: CydTouchEspDevice::new(
                 touch_spi,
@@ -520,7 +520,7 @@ impl CydEsp {
 }
 
 impl Cyd for CydEsp {
-    type Error = CydError;
+    type Error = Error;
     type Display = CydDisplayEsp;
     type Touch = CydTouchEsp;
 
@@ -555,7 +555,7 @@ impl CydEspUncalibrated {
         touch_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             display: CydDisplayEsp::new(
                 statics,
@@ -629,7 +629,7 @@ impl fmt::Debug for CydEspUncalibrated {
 }
 
 impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
-    type Error = CydError;
+    type Error = Error;
     type Frame<'a>
         = CydFrameEsp<'a, D>
     where
@@ -672,12 +672,12 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     }
 
     #[inline]
-    fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), CydError> {
+    fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Error> {
         Ok(self.display.fill_rectangle(rectangle, color)?)
     }
 
     #[inline]
-    fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), CydError>
+    fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), Error>
     where
         I: IntoIterator<Item = Rgb565>,
     {
@@ -685,13 +685,13 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     }
 
     #[inline]
-    fn flush_at(&mut self, buffer: &impl RectanglePixels, top_left: Point) -> Result<(), CydError> {
+    fn flush_at(&mut self, buffer: &impl RectanglePixels, top_left: Point) -> Result<(), Error> {
         Ok(self.display.flush_buffer(buffer, top_left)?)
     }
 }
 
 impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
-    type Error = CydError;
+    type Error = Error;
     type Calibrated = CydTouchEsp<D>;
 
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
@@ -707,10 +707,10 @@ impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
 }
 
 impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
-    type Error = CydError;
+    type Error = Error;
     type Uncalibrated = CydTouchUncalibratedEsp<D>;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, CydError> {
+    fn read(&mut self) -> Result<Option<TouchEvent>, Error> {
         Ok(self
             .raw
             .touch
@@ -742,7 +742,7 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
 }
 
 impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
-    type Error = CydError;
+    type Error = Error;
 
     fn tile_top_left(&self) -> Point {
         self.tile_top_left
@@ -779,7 +779,7 @@ impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
     // Flushing the panel over SPI is synchronous, so this future resolves on its
     // first poll. The `async fn` is the device-agnostic frame boundary the
     // render loop awaits; on the MCU it adds no suspension.
-    async fn flush(&mut self) -> Result<(), CydError> {
+    async fn flush(&mut self) -> Result<(), Error> {
         CydFrameEsp::flush(self)
     }
 }

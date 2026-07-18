@@ -20,17 +20,15 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 #[esp_rtos::main]
 async fn main(spawner: Spawner) -> ! {
-    let err = inner_main(spawner).await.unwrap_err();
-    panic!("{err:?}");
+let err = inner_main(spawner).await.unwrap_err();
+panic!("{err:?}");
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p);
-    esp_println::logger::init_logger(log::LevelFilter::Info);
+init_and_start!(p);
+esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    let _ = spawner;
-    info!(
-        "cyd_tiles_esp32c6_generic: this example requires 2 SPI resources, and ESP32-C6 offers 1 SPI resource"
-    );
-    pending().await
+let _ = spawner;
+info!("cyd_tiles_esp32c6_generic: this example requires 2 SPI resources, and ESP32-C6 offers 1 SPI resource");
+pending().await
 }

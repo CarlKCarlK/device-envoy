@@ -1,3 +1,4 @@
+
 //! Wiring:
 //! - 12x4 NeoPixel-style (WS2812) panel data input -> GPIO18
 //!
@@ -12,10 +13,10 @@ use log::info;
 
 use device_envoy_core::led2d::Led2d as _;
 use device_envoy_esp::{
-    Result, init_and_start,
+    init_and_start, led2d,
+    led2d::{layout::LedLayout, Led2dFont},
     led_strip::Current,
-    led2d,
-    led2d::{Led2dFont, layout::LedLayout},
+    Result,
 };
 use smart_leds::RGB8;
 

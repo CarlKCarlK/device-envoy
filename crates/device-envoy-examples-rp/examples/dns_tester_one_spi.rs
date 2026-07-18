@@ -21,7 +21,7 @@ use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester;
 use device_envoy_rp::{
-    Error, Result,
+    Error as DeviceEnvoyError, Result,
     button::{ButtonRp, PressedTo},
     cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockRp,
@@ -117,7 +117,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible, Error> {
 
 #[derive(Debug, derive_more::From)]
 enum Error {
-    Platform(Error),
+    Platform(DeviceEnvoyError),
     Core(dns_tester::Error<device_envoy_rp::cyd::Error, Infallible>),
     DnsTester(dns_tester::Error<device_envoy_rp::cyd::Error, embassy_net::dns::Error>),
 }

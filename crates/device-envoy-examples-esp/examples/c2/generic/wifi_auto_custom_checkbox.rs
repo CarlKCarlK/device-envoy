@@ -1,3 +1,4 @@
+
 //! This example shows how to define a general checkbox field that can prompt the user for a boolean choice.
 //!
 //! Wiring:
@@ -8,18 +9,18 @@
 #![no_main]
 
 use core::cell::RefCell;
-use core::fmt::Write;
 use core::{convert::Infallible, future::pending};
+use core::fmt::Write;
 
 use esp_backtrace as _;
 
 use device_envoy_core::wifi_auto::{FormData, HtmlBuffer};
 use device_envoy_esp::{
-    Error, Result,
     button::{ButtonEsp, PressedTo},
     flash_block::{FlashBlock as _, FlashBlockEsp},
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent, WifiAutoField},
+    Error, Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -129,17 +130,14 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     )?;
 
     let _stack = wifi_auto
-        .connect(
-            &mut button,
-            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
-                match wifi_auto_event {
-                    WifiAutoEvent::CaptivePortalReady => log::info!("Captive portal ready"),
-                    WifiAutoEvent::Connecting { .. } => log::info!("Connecting"),
-                    WifiAutoEvent::ConnectionFailed => log::warn!("Connection failed"),
-                }
-                Ok(())
-            },
-        )
+        .connect(&mut button, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => log::info!("Captive portal ready"),
+                WifiAutoEvent::Connecting { .. } => log::info!("Connecting"),
+                WifiAutoEvent::ConnectionFailed => log::warn!("Connection failed"),
+            }
+            Ok(())
+        })
         .await?;
 
     log::info!("share_telemetry: {:?}", checkbox_field.checked()?);

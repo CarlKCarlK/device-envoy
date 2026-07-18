@@ -1,3 +1,4 @@
+
 // TODO00 consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
 //! Wiring:
 //! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO18
@@ -25,15 +26,14 @@ use esp_backtrace as _;
 use log::{info, warn};
 
 use device_envoy_esp::{
-    Result,
     button::{ButtonEsp, PressedTo},
     flash_block::FlashBlockEsp,
-    init_and_start,
-    led_strip::{Current, Gamma, colors},
-    led2d,
+    init_and_start, led2d,
     led2d::Led2d as _,
-    led2d::{Led2dFont, layout::LedLayout},
+    led2d::{layout::LedLayout, Led2dFont},
+    led_strip::{colors, Current, Gamma},
     wifi_auto::{WifiAuto as _, WifiAutoEsp, WifiAutoEvent},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -81,28 +81,25 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let led12x8_dns_ref = &led12x8_dns;
     let stack = wifi_auto
-        .connect(
-            &mut button,
-            async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
-                match wifi_auto_event {
-                    WifiAutoEvent::CaptivePortalReady => {
-                        led12x8_dns_ref.write_text("JO\nIN", COLORS);
-                    }
-                    WifiAutoEvent::Connecting {
-                        try_index,
-                        try_count: _,
-                    } => {
-                        info!("connect try {}", try_index + 1);
-                        led12x8_dns_ref.write_text("CO\nNN", COLORS);
-                    }
-                    WifiAutoEvent::ConnectionFailed => {
-                        warn!("wifi_auto connection failed");
-                        led12x8_dns_ref.write_text("FA\nIL", COLORS);
-                    }
+        .connect(&mut button, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    led12x8_dns_ref.write_text("JO\nIN", COLORS);
                 }
-                Ok(())
-            },
-        )
+                WifiAutoEvent::Connecting {
+                    try_index,
+                    try_count: _,
+                } => {
+                    info!("connect try {}", try_index + 1);
+                    led12x8_dns_ref.write_text("CO\nNN", COLORS);
+                }
+                WifiAutoEvent::ConnectionFailed => {
+                    warn!("wifi_auto connection failed");
+                    led12x8_dns_ref.write_text("FA\nIL", COLORS);
+                }
+            }
+            Ok(())
+        })
         .await?;
 
     while !stack.is_link_up() {

@@ -1,3 +1,4 @@
+
 //! Dual-servo calibration helper.
 //!
 //! Behavior:
@@ -29,10 +30,11 @@ use log::info;
 
 use device_envoy_core::button::{Button, PressDuration};
 use device_envoy_esp::{
-    Result,
     button::{ButtonEsp, PressedTo},
-    init_and_start, servo,
+    init_and_start,
+    servo,
     servo::{Servo as _, ServoEsp},
+    Result,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -66,7 +68,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     info!("servos_calibrate: starting");
     info!(
         "servos_calibrate: button=GPIO{}, servo_a=GPIO{}, servo_b=GPIO{}",
-        0, 10, 1
+        0,
+        10,
+        1
     );
 
     let servo_a = ServoA::new(&ledc, p.GPIO10)?;

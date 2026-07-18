@@ -8,7 +8,6 @@ use device_envoy_core::{
         ClockSyncWasm, CydSimulatorWasm, DnsSimulatorWasm, FlashBlockWasm, next_animation_frame,
     },
 };
-use device_envoy_dns_tester_wasm::start;
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
@@ -75,7 +74,28 @@ fn touch_app_starts_in_saved_orientation_without_calibration_storage() -> Result
         .save(&Orientation::Portrait)
         .map_err(|error| JsValue::from_str(&format!("orientation save: {error:?}")))?;
 
-    let handle = cyd_web::start("screen-orientation")?;
+    let config = cyd_web::Config::new(
+        "device-envoy/dns-tester",
+        Orientation::Portrait,
+        Rgb888::new(10, 10, 12),    // near-black
+        Rgb888::new(230, 230, 230), // near-white
+        &FONT_6X10,
+    );
+    let page_info = cyd_web::PageInfo::new(
+        "Test",
+        "Test",
+        "Test",
+        "Test",
+        "https://example.com",
+    );
+    let handle = cyd_web::start(
+        "screen-orientation",
+        config,
+        page_info,
+        async |_application: cyd_web::Capabilities| {
+            Ok::<cyd_web::Command, core::convert::Infallible>(cyd_web::Command::Stop)
+        },
+    )?;
     assert_eq!(canvas.width(), Orientation::Portrait.width());
     assert_eq!(canvas.height(), Orientation::Portrait.height());
     handle.touch_down(160.0, 216.0);

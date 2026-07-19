@@ -1212,8 +1212,8 @@ mod tests {
         touch::{
             RawPoint, RawTouchEvent,
             calibration::{
-                CalibrationConfig, CalibrationCorner, EnsureCalibrationErrorKind,
-                EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
+                CalibrationConfig, CalibrationCorner, EnsureCalibrationOutcome, ErrorKind,
+                VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
                 calibration_verify_target_center, distort_demo_screen_to_raw, ensure_calibration,
             },
         },
@@ -1273,7 +1273,7 @@ mod tests {
         confirmed_message: Option<&str>,
     ) -> Result<
         (CydTouchMemory, EnsureCalibrationOutcome),
-        crate::cyd::touch::calibration::EnsureCalibrationError<
+        crate::cyd::touch::calibration::Error<
             CydTouchUncalibratedMemory,
             <FlashBlockMemory as FlashBlock>::Error,
         >,
@@ -1554,10 +1554,7 @@ mod tests {
         )
         .expect_err("empty input should stop at the frame budget");
 
-        assert!(matches!(
-            error.kind,
-            EnsureCalibrationErrorKind::Device(Error::OutOfFrames)
-        ));
+        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
         assert_eq!(memory_cyd.flush_count(), 3);
     }
 
@@ -1578,10 +1575,7 @@ mod tests {
         )
         .expect_err("single-frame budget should stop after the first drawn frame");
 
-        assert!(matches!(
-            error.kind,
-            EnsureCalibrationErrorKind::Device(Error::OutOfFrames)
-        ));
+        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);
         assert_eq!(
@@ -1835,10 +1829,7 @@ mod tests {
         )
         .expect_err("oversized hold should stop at the frame budget");
 
-        assert!(matches!(
-            error.kind,
-            EnsureCalibrationErrorKind::Device(Error::OutOfFrames)
-        ));
+        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
         assert_eq!(memory_cyd.flush_count(), 2);
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);

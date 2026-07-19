@@ -340,27 +340,20 @@ impl From<cyd::Error> for Error {
 }
 
 #[cfg(target_os = "none")]
-impl
-    From<
-        device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            cyd::CydTouchUncalibratedEsp,
-            Error,
-        >,
-    > for Error
+impl From<device_envoy_core::cyd::touch::calibration::Error<cyd::CydTouchUncalibratedEsp, Error>>
+    for Error
 {
     fn from(
-        error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+        error: device_envoy_core::cyd::touch::calibration::Error<
             cyd::CydTouchUncalibratedEsp,
             Error,
         >,
     ) -> Self {
         match error.kind {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
-                error,
-            ) => Self::from(error),
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
-                error,
-            ) => error,
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
+                Self::from(error)
+            }
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
         }
     }
 }

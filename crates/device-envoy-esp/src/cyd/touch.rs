@@ -16,6 +16,7 @@ type CydTouchSpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
 /// The SPI device type used when touch owns an exclusive SPI peripheral.
 pub(crate) type CydTouchSpiDevice = ExclusiveDevice<CydTouchSpiBus, Output<'static>, NoDelay>;
 
+// TODO Revisit the remaining platform-specific CYD error names as one API cleanup.
 /// Error initializing the touch controller over SPI.
 #[derive(Clone, Copy, Debug)]
 pub enum CydTouchEspInitError {

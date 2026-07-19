@@ -17,8 +17,8 @@ use crate::cyd::display::DrawItem;
 use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 pub use super::driver::{
-    EnsureCalibrationError, EnsureCalibrationErrorKind, EnsureCalibrationOutcome,
-    EnsureCalibrationSettings, ensure_calibration, ensure_calibration_with_settings,
+    EnsureCalibrationOutcome, EnsureCalibrationSettings, Error, ErrorKind, ensure_calibration,
+    ensure_calibration_with_settings,
 };
 pub use super::flow::CalibrationFlow;
 

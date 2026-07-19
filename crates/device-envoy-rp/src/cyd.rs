@@ -554,12 +554,12 @@ impl CydRp {
         )
         .await
         .map_err(|error| match error.kind {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
-                cyd_error,
-            ) => crate::Error::from(cyd_error),
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
-                flash_error,
-            ) => flash_error,
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(cyd_error) => {
+                crate::Error::from(cyd_error)
+            }
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(flash_error) => {
+                flash_error
+            }
         })?;
         Ok(Self { display, touch })
     }

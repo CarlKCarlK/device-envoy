@@ -1,4 +1,4 @@
-// TODO00 consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
+// 00 consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
 //! Wiring:
 //! - 12x8 NeoPixel-style (WS2812) panel data input -> GPIO18
 //! - Force-portal button -> GPIO6 to GND (`PressedTo::Ground`)

@@ -124,10 +124,8 @@ fn portrait_splash_golden() -> Result<(), Box<dyn std::error::Error>> {
         Rgb888::new(230, 230, 230),
         &FONT_6X10,
     );
-    let mut display = cyd_memory.display();
-    // TODO0000 Consider using the core CYD splash helper here too.
     block_on(render_notice(
-        &mut display,
+        &mut cyd_memory.display(),
         Orientation::Portrait,
         UiNotice::Splash,
     ))

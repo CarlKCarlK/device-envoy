@@ -90,7 +90,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error>
         .unwrap_or(Orientation::Landscape);
 
     static CYD_STATIC: CydStaticEsp<{ dns_tester::FRAME_PIXEL_COUNT }> = CydEsp::new_static();
-    let button = ButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
+    let button_watch = ButtonWatch::new(p.GPIO6, PressedTo::Ground, spawner).await?;
 
     let mut cyd = CydEsp::new(
         &CYD_STATIC,                // statics
@@ -114,7 +114,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error>
         p.GPIO12,                   // touch_cs_pin
         p.GPIO13,                   // touch_irq_pin
         &mut calibration_flash_block,
-        &mut *button,
+        &mut *button_watch,
     )
     .await?;
 
@@ -125,7 +125,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error>
 
     let stack = wifi_auto
         .connect(
-            &mut *button,
+            &mut *button_watch,
             async |wifi_auto_event| -> core::result::Result<(), Error> {
                 dns_tester::wifi_status(&mut cyd, wifi_auto_event).await?;
                 info!("Wi-Fi: {wifi_auto_event:?}");
@@ -137,7 +137,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error>
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
 
     let mut dns = DnsWithStack::new(*stack);
-    match dns_tester::run(&mut cyd, &mut *button, &mut dns).await? {
+    match dns_tester::run(&mut cyd, &mut *button_watch, &mut dns).await? {
         CoreExit::Calibrate => {
             calibration_flash_block.clear()?;
         }

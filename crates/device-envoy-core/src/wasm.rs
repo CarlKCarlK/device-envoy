@@ -71,8 +71,8 @@ pub struct CydDisplayWasm {
     context: CanvasRenderingContext2d,
     size: Size,
     orientation: Orientation,
-    background: Rgb888,
-    foreground: Rgb888,
+    background_color: Rgb888,
+    foreground_color: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -140,8 +140,8 @@ impl CydWasm {
     pub fn new(
         context: CanvasRenderingContext2d,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         touch_source: CydTouchWasmSource,
     ) -> Self {
@@ -149,10 +149,10 @@ impl CydWasm {
             context: context.clone(),
             size: orientation.size(),
             orientation,
-            background,
-            foreground,
-            background565: Rgb565::from(background),
-            foreground565: Rgb565::from(foreground),
+            background_color,
+            foreground_color,
+            background565: Rgb565::from(background_color),
+            foreground565: Rgb565::from(foreground_color),
             font,
         };
         let touch = CydTouchWasm {
@@ -485,12 +485,12 @@ impl CydDisplay for CydDisplayWasm {
         self.size
     }
 
-    fn background(&self) -> Rgb888 {
-        self.background
+    fn background_color(&self) -> Rgb888 {
+        self.background_color
     }
 
-    fn foreground(&self) -> Rgb888 {
-        self.foreground
+    fn foreground_color(&self) -> Rgb888 {
+        self.foreground_color
     }
 
     fn background_565(&self) -> Rgb565 {
@@ -508,7 +508,7 @@ impl CydDisplay for CydDisplayWasm {
     ) -> CydFrameWasm<'_> {
         let size = rectangle.size;
         let pixel_count = size.width as usize * size.height as usize;
-        // Every new frame starts cleared to the device background so callers
+        // Every new frame starts cleared to the device background color so callers
         // never have to clear it themselves.
         let pixels = vec![self.background565.into_storage(); pixel_count];
         CydFrameWasm {

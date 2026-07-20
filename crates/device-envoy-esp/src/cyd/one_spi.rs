@@ -77,8 +77,8 @@ impl CydEspOneSpi {
     /// * `touch_cs_pin` - Touch chip-select pin (active low)
     /// * `touch_irq_pin` - Touch interrupt pin
     /// * `orientation` - Screen orientation
-    /// * `background` - Default background color
-    /// * `foreground` - Default foreground/text color
+    /// * `background_color` - Default background color
+    /// * `foreground_color` - Default foreground/text color
     /// * `font` - Default monospace font for text drawing
     /// * `calibration_flash_block` - Flash block used to load/save the touch calibration
     /// * `recalibration_button` - Button that restarts the interactive calibration flow
@@ -99,8 +99,8 @@ impl CydEspOneSpi {
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         calibration_flash_block: &mut FlashBlockEsp,
         recalibration_button: &mut R,
@@ -160,8 +160,8 @@ impl CydEspOneSpi {
             lcd_rst_pin,
             lcd_backlight_pin,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             pixel_buffer,
         )?;

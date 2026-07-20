@@ -177,9 +177,8 @@ struct CydMemoryShared {
 #[derive(Clone)]
 pub struct CydDisplayMemory {
     size: Size,
-    // todo00 Everywhere we refer to these colors without _color. That seems confusing because they could be bitmaps. Fix everywhere!
-    background: Rgb888,
-    foreground: Rgb888,
+    background_color: Rgb888,
+    foreground_color: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -239,8 +238,8 @@ impl CydMemory {
     #[must_use]
     pub fn new(
         size: Size,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
         let orientation = if size.width > size.height {
@@ -248,22 +247,22 @@ impl CydMemory {
         } else {
             Orientation::Portrait
         };
-        Self::new_inner(size, orientation, background, foreground, font)
+        Self::new_inner(size, orientation, background_color, foreground_color, font)
     }
 
     /// Construct an in-memory CYD surface with an oriented logical screen.
     #[must_use]
     pub fn new_with_orientation(
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
         Self::new_inner(
             orientation.size(),
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
         )
     }
@@ -271,11 +270,11 @@ impl CydMemory {
     fn new_inner(
         size: Size,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
-        let background565 = Rgb565::from(background);
+        let background565 = Rgb565::from(background_color);
         let pixel_count = size.width as usize * size.height as usize;
         let shared = Rc::new(RefCell::new(CydMemoryShared {
             framebuffer: vec![background565.into_storage(); pixel_count],
@@ -290,10 +289,10 @@ impl CydMemory {
         }));
         let display = CydDisplayMemory {
             size,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             background565,
-            foreground565: Rgb565::from(foreground),
+            foreground565: Rgb565::from(foreground_color),
             font,
             shared: shared.clone(),
         };
@@ -612,12 +611,12 @@ impl CydDisplay for CydDisplayMemory {
         self.size
     }
 
-    fn background(&self) -> Rgb888 {
-        self.background
+    fn background_color(&self) -> Rgb888 {
+        self.background_color
     }
 
-    fn foreground(&self) -> Rgb888 {
-        self.foreground
+    fn foreground_color(&self) -> Rgb888 {
+        self.foreground_color
     }
 
     fn background_565(&self) -> Rgb565 {

@@ -209,8 +209,8 @@ let display = CydMemory::new(
 )
 .display();
 assert_eq!(display.screen_size(), Size::new(320, 240));
-assert_eq!(display.background_565(), display.to_rgb565(display.background()));
-assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground()));
+assert_eq!(display.background_565(), display.to_rgb565(display.background_color()));
+assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground_color()));
 # Ok::<(), device_envoy_core::memory::Error>(())
 ```
 "#
@@ -220,12 +220,12 @@ assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground()));
     /// The device default background color.
     ///
     /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
-    fn background(&self) -> Rgb888;
+    fn background_color(&self) -> Rgb888;
 
     /// The device default foreground/text color.
     ///
     /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
-    fn foreground(&self) -> Rgb888;
+    fn foreground_color(&self) -> Rgb888;
 
     /// The device default background color in the native `Rgb565` format.
     ///
@@ -437,12 +437,15 @@ frame.flush().await?;
     fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,
-        background: Rgb565,
+        background_color: Rgb565,
         items: impl IntoIterator<Item = display::DrawItem>,
     ) -> Result<(), Self::Error> {
         let bounds = bounds.intersection(&Rectangle::new(Point::zero(), self.screen_size()));
-        let pixel_sources =
-            ContiguousPixels::<PIXEL_SOURCE_COUNT>::from_draw_items(bounds, background, items);
+        let pixel_sources = ContiguousPixels::<PIXEL_SOURCE_COUNT>::from_draw_items(
+            bounds,
+            background_color,
+            items,
+        );
         self.fill_contiguous(pixel_sources.bounds(), pixel_sources.iter())
     }
 
@@ -523,20 +526,20 @@ mod tests {
             Size::new(320, 240)
         }
 
-        fn background(&self) -> Rgb888 {
+        fn background_color(&self) -> Rgb888 {
             Rgb888::CSS_BLACK
         }
 
-        fn foreground(&self) -> Rgb888 {
+        fn foreground_color(&self) -> Rgb888 {
             Rgb888::CSS_WHITE
         }
 
         fn background_565(&self) -> Rgb565 {
-            self.to_rgb565(self.background())
+            self.to_rgb565(self.background_color())
         }
 
         fn foreground_565(&self) -> Rgb565 {
-            self.to_rgb565(self.foreground())
+            self.to_rgb565(self.foreground_color())
         }
 
         fn frame_mut_with_tile_top_left(

@@ -527,7 +527,6 @@ where
         WifiAutoEvent::Connecting { .. } => UiNotice::WifiConnecting,
         WifiAutoEvent::ConnectionFailed => UiNotice::WifiFailed,
     };
-    //todo000 devolve this and the UiNotice enum
     render_notice(cyd.display(), orientation, notice).await?;
     Ok(())
 }

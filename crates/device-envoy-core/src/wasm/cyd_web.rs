@@ -37,9 +37,9 @@ pub struct Config {
     /// Orientation used when no saved orientation exists.
     pub initial_orientation: Orientation,
     /// Canvas background color.
-    pub background: Rgb888,
+    pub background_color: Rgb888,
     /// Canvas foreground color.
-    pub foreground: Rgb888,
+    pub foreground_color: Rgb888,
     /// Font used by the simulated display.
     pub font: &'static MonoFont<'static>,
 }
@@ -49,15 +49,15 @@ impl Config {
     pub const fn new(
         storage_namespace: &'static str,
         initial_orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
         Self {
             storage_namespace,
             initial_orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
         }
     }
@@ -392,8 +392,8 @@ where
     let simulator = CydSimulatorWasm::new_with_style(
         canvas.clone(),
         orientation,
-        config.background,
-        config.foreground,
+        config.background_color,
+        config.foreground_color,
         config.font,
     )?;
     let (cyd, button, control) = simulator.into_parts();
@@ -453,8 +453,8 @@ async fn supervise<Run, Error>(
                 match CydSimulatorWasm::new_with_style(
                     canvas.clone(),
                     orientation,
-                    config.background,
-                    config.foreground,
+                    config.background_color,
+                    config.foreground_color,
                     config.font,
                 ) {
                     Ok(simulator) => {

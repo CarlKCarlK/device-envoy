@@ -200,8 +200,8 @@ enum CalibrationShape {
 /// #     type Error = Infallible;
 /// #     type Frame<'a> = DemoFrame;
 /// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
-/// #     fn background(&self) -> Rgb888 { Rgb888::BLACK }
-/// #     fn foreground(&self) -> Rgb888 { Rgb888::WHITE }
+/// #     fn background_color(&self) -> Rgb888 { Rgb888::BLACK }
+/// #     fn foreground_color(&self) -> Rgb888 { Rgb888::WHITE }
 /// #     fn background_565(&self) -> Rgb565 { Rgb565::BLACK }
 /// #     fn foreground_565(&self) -> Rgb565 { Rgb565::WHITE }
 /// #     fn frame_mut_with_tile_top_left(

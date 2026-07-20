@@ -221,7 +221,7 @@ pub(crate) struct ContiguousPixels<const PIXEL_SOURCE_COUNT: usize> {
     top: i32,
     right_exclusive: i32,
     bottom_exclusive: i32,
-    background: Rgb565,
+    background_color: Rgb565,
     pixel_sources: heapless::Vec<PreparedPixelSource, PIXEL_SOURCE_COUNT>,
 }
 
@@ -230,7 +230,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
     #[must_use]
     pub(crate) fn from_draw_items(
         bounds: Rectangle,
-        background: Rgb565,
+        background_color: Rgb565,
         draw_items: impl IntoIterator<Item = DrawItem>,
     ) -> Self {
         let mut pixel_sources = heapless::Vec::<PreparedPixelSource, PIXEL_SOURCE_COUNT>::new();
@@ -242,12 +242,12 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
             }
         }
 
-        Self::new(bounds, background, pixel_sources)
+        Self::new(bounds, background_color, pixel_sources)
     }
 
     fn new(
         bounds: Rectangle,
-        background: Rgb565,
+        background_color: Rgb565,
         pixel_sources: heapless::Vec<PreparedPixelSource, PIXEL_SOURCE_COUNT>,
     ) -> Self {
         let left = bounds.top_left.x;
@@ -265,7 +265,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
             top,
             right_exclusive,
             bottom_exclusive,
-            background,
+            background_color,
             pixel_sources,
         }
     }
@@ -284,7 +284,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
             }
         }
 
-        self.background
+        self.background_color
     }
 
     #[must_use]
@@ -391,7 +391,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> Iterator for ContiguousPixelsIter<'_, PIXE
             return None;
         }
 
-        let mut color = self.pixels.background;
+        let mut color = self.pixels.background_color;
         for pixel_source in &self.active {
             if !pixel_source.bounds.contains_x(self.x) {
                 continue;

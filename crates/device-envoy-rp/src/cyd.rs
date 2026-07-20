@@ -69,11 +69,11 @@ pub struct CydDisplayRp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     // pass a zero-sized buffer (e.g. `CydStaticRp<0>`).
     pixel_buffer: &'static mut dyn DynPixelBuffer,
     // Default drawing style. Background clears the device at construction and
-    // fills every new frame; foreground and font drive `CydFrameRp::write_text`.
+    // fills every new frame; foreground color and font drive `CydFrameRp::write_text`.
     // The `Rgb565` versions are precomputed so the hot drawing paths skip the
     // per-call conversion.
-    background: Rgb888,
-    foreground: Rgb888,
+    background_color: Rgb888,
+    foreground_color: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -299,22 +299,22 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
     fn from_display_device(
         mut display: CydDisplayRpDevice<D>,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         pixel_buffer: &'static mut dyn DynPixelBuffer,
     ) -> Result<Self, Error> {
-        let background565 = rgb565(background);
+        let background565 = rgb565(background_color);
         display.fill(background565)?;
 
         Ok(Self {
             display,
             orientation,
             pixel_buffer,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             background565,
-            foreground565: rgb565(foreground),
+            foreground565: rgb565(foreground_color),
             font,
         })
     }
@@ -330,8 +330,8 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
         rst_pin: Peri<'static, Rst>,
         backlight_pin: Peri<'static, Backlight>,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         pixel_buffer: &'static mut dyn DynPixelBuffer,
     ) -> Result<Self, Error>
@@ -350,8 +350,8 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
         Self::from_display_device(
             display,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             pixel_buffer,
         )
@@ -376,8 +376,8 @@ impl CydDisplayRp<display::CydDisplaySpiDevice> {
         display_backlight_pin: Peri<'static, Backlight>,
         display_spi_hz: u32,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Result<Self, Error>
     where
@@ -405,8 +405,8 @@ impl CydDisplayRp<display::CydDisplaySpiDevice> {
         Self::from_display_device(
             display,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             pixel_buffer,
         )
@@ -497,8 +497,8 @@ impl CydRp {
         display_backlight_pin: Peri<'static, Backlight>,
         display_spi_hz: u32,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         touch_spi: Peri<'static, SPI1>,
         touch_sck_pin: Peri<'static, TouchSck>,
@@ -535,8 +535,8 @@ impl CydRp {
             display_backlight_pin,
             display_spi_hz,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             touch_spi,
             touch_sck_pin,
@@ -608,8 +608,8 @@ impl CydRpUncalibrated {
         display_backlight_pin: Peri<'static, Backlight>,
         display_spi_hz: u32,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         touch_spi: Peri<'static, SPI1>,
         touch_sck_pin: Peri<'static, TouchSck>,
@@ -645,8 +645,8 @@ impl CydRpUncalibrated {
                 display_backlight_pin,
                 display_spi_hz,
                 orientation,
-                background,
-                foreground,
+                background_color,
+                foreground_color,
                 font,
             )?,
             touch: CydTouchUncalibratedRp::new(
@@ -716,12 +716,12 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayRp<D> {
         self.display.size()
     }
 
-    fn background(&self) -> Rgb888 {
-        self.background
+    fn background_color(&self) -> Rgb888 {
+        self.background_color
     }
 
-    fn foreground(&self) -> Rgb888 {
-        self.foreground
+    fn foreground_color(&self) -> Rgb888 {
+        self.foreground_color
     }
 
     fn background_565(&self) -> Rgb565 {

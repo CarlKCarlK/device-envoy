@@ -16,8 +16,8 @@ use crate::wifi_auto::WifiAutoEvent;
 const WIFI_CAPTIVE_PORTAL_WAIT_FRAMES: usize = 15;
 const WIFI_CONNECT_WAIT_FRAMES: usize = 90;
 
-const BACKGROUND: Rgb888 = Rgb888::new(10, 10, 12); // near-black
-const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
+const BACKGROUND_COLOR: Rgb888 = Rgb888::new(10, 10, 12); // near-black
+const FOREGROUND_COLOR: Rgb888 = Rgb888::new(230, 230, 230); // near-white
 
 /// The reusable resources and input protocol for one browser CYD instance.
 pub struct CydSimulatorWasm {
@@ -135,15 +135,21 @@ fn set_phase(storage_namespace: &'static str, phase: WifiSimulatorPhase) {
 impl CydSimulatorWasm {
     /// Construct a simulated CYD using the standard CYD browser palette.
     pub fn new(canvas: HtmlCanvasElement, orientation: Orientation) -> Result<Self, JsValue> {
-        Self::new_with_style(canvas, orientation, BACKGROUND, FOREGROUND, &FONT_6X10)
+        Self::new_with_style(
+            canvas,
+            orientation,
+            BACKGROUND_COLOR,
+            FOREGROUND_COLOR,
+            &FONT_6X10,
+        )
     }
 
     /// Construct a simulated CYD with an application-specific display style.
     pub fn new_with_style(
         canvas: HtmlCanvasElement,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Result<Self, JsValue> {
         let context = canvas
@@ -158,8 +164,8 @@ impl CydSimulatorWasm {
         let cyd = CydWasm::new(
             context,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             touch_source.clone(),
         );

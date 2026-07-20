@@ -1142,6 +1142,9 @@ impl SilenceClip {
 ///
 /// This trait is object-safe, so mixed clips are passed as:
 /// `&'static dyn Playable<SAMPLE_RATE_HZ>`.
+// TODO Consider exposing `PlaybackClip` as an audio-clip view and having fixed
+// PCM/ADPCM clips produce it with const `view` methods. Callers could then pass
+// heterogeneous view arrays directly instead of converting through this trait.
 #[allow(private_bounds)]
 pub trait Playable<const SAMPLE_RATE_HZ: u32>: sealed::PlayableSealed<SAMPLE_RATE_HZ> {}
 

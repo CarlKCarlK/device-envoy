@@ -6,7 +6,7 @@
 #![no_main]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-// TODO00 consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
+// TODO consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
 
 extern crate defmt_rtt as _;
 extern crate panic_probe as _;

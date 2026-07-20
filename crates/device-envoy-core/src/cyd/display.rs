@@ -29,6 +29,9 @@ pub use crate::__cyd_tga as tga;
 /// A borrowed or owned rectangular RGB565 pixel buffer.
 ///
 /// See [`super::CydDisplay::flush_at`] for the primary consumer.
+// TODO Consider introducing a concrete `RectanglePixelsView` containing the
+// dimensions and pixel slice, then reducing this trait to only `view`. Buffer
+// inspection and iteration could live on that common borrowed representation.
 pub trait RectanglePixels {
     /// Buffer width in pixels.
     ///

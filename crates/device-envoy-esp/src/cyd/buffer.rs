@@ -154,6 +154,9 @@ impl<const PIXEL_COUNT: usize> Default for PixelBuffer<PIXEL_COUNT> {
 /// [`RegionView`]s. It works with any [`PixelBuffer<PIXEL_COUNT>`] size, while
 /// the app chooses the capacity through `PIXEL_COUNT` on its
 /// [`CydStaticEsp`](super::CydStaticEsp).
+// TODO Consider replacing this trait-object capacity erasure with a concrete
+// `PixelBufferView` over `&mut [u16]`, produced by `PixelBuffer::view`. Region
+// borrowing can then live on the view without dynamic dispatch.
 pub(crate) trait DynPixelBuffer: 'static {
     /// Borrow a `width`×`height` view out of the buffer (must fit the capacity).
     fn view_mut(&mut self, width: usize, height: usize) -> RegionView<'_>;

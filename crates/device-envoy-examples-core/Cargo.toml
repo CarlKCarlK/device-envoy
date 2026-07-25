@@ -24,6 +24,8 @@ profont = "0.7"
 
 [build-dependencies]
 resvg = "0.45"
+roxmltree = "0.20"
+simplecss = "0.2"
 
 [[test]]
 name = "dns_tester_memory"
@@ -47,3 +49,5 @@ path = "tests/build_assets.rs"
 [dev-dependencies]
 futures-executor = "0.3"
 resvg = "0.45"
+roxmltree = "0.20"
+simplecss = "0.2"

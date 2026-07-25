@@ -6,6 +6,30 @@ use std::{env, fs, path::PathBuf};
 use resvg::{tiny_skia, usvg};
 
 #[cfg(not(test))]
+const FONT_DIRECTORY: &str = "docs/assets/fonts/liberation-2.1.5";
+#[cfg(not(test))]
+const FONT_FILES: &[&str] = &[
+    "LiberationSans-Regular.ttf",
+    "LiberationSans-Bold.ttf",
+    "LiberationSans-Italic.ttf",
+    "LiberationSans-BoldItalic.ttf",
+    "LiberationMono-Regular.ttf",
+    "LiberationMono-Bold.ttf",
+    "LiberationMono-Italic.ttf",
+    "LiberationMono-BoldItalic.ttf",
+];
+const VENDORED_FONTS: &[&[u8]] = &[
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationSans-Regular.ttf"),
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationSans-Bold.ttf"),
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationSans-Italic.ttf"),
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationSans-BoldItalic.ttf"),
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationMono-Regular.ttf"),
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationMono-Bold.ttf"),
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationMono-Italic.ttf"),
+    include_bytes!("docs/assets/fonts/liberation-2.1.5/LiberationMono-BoldItalic.ttf"),
+];
+
+#[cfg(not(test))]
 fn main() {
     let manifest_directory =
         PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("manifest directory"));
@@ -16,6 +40,15 @@ fn main() {
         println!(
             "cargo:rerun-if-changed={}",
             asset_directory.join(asset).display()
+        );
+    }
+    for font_file in FONT_FILES {
+        println!(
+            "cargo:rerun-if-changed={}",
+            manifest_directory
+                .join(FONT_DIRECTORY)
+                .join(font_file)
+                .display()
         );
     }
 
@@ -33,6 +66,7 @@ fn main() {
 }
 
 pub fn rasterize_svg(svg: &str, source: &Path, width: u32, height: u32) -> Vec<u8> {
+    validate_font_families(svg, source);
     let (svg, removed_preview_group_count) = remove_preview_groups(svg, source);
     assert_eq!(
         removed_preview_group_count,
@@ -41,8 +75,7 @@ pub fn rasterize_svg(svg: &str, source: &Path, width: u32, height: u32) -> Vec<u
         source.display()
     );
     let mut options = usvg::Options::default();
-    options.fontdb_mut().load_system_fonts();
-    configure_font_families(options.fontdb_mut(), source);
+    configure_font_families(options.fontdb_mut());
     let tree = usvg::Tree::from_data(svg.as_bytes(), &options)
         .unwrap_or_else(|error| panic!("parse {}: {error}", source.display()));
     assert_eq!(
@@ -67,28 +100,64 @@ pub fn rasterize_svg(svg: &str, source: &Path, width: u32, height: u32) -> Vec<u
     encode_tga(width, height, pixmap.data())
 }
 
-fn configure_font_families(fontdb: &mut usvg::fontdb::Database, source: &Path) {
-    let sans_serif_family = ["Arial", "Liberation Sans", "DejaVu Sans", "Ubuntu"]
-        .into_iter()
-        .find(|family| fontdb_has_family(fontdb, family))
-        .unwrap_or_else(|| panic!("no sans-serif font is installed for {}", source.display()));
-    let monospace_family = [
-        "Courier New",
-        "Liberation Mono",
-        "DejaVu Sans Mono",
-        "Ubuntu Mono",
-    ]
-    .into_iter()
-    .find(|family| fontdb_has_family(fontdb, family))
-    .unwrap_or_else(|| panic!("no monospace font is installed for {}", source.display()));
-    fontdb.set_sans_serif_family(sans_serif_family);
-    fontdb.set_monospace_family(monospace_family);
+fn configure_font_families(fontdb: &mut usvg::fontdb::Database) {
+    for font in VENDORED_FONTS {
+        fontdb.load_font_data(font.to_vec());
+    }
+    assert!(fontdb_has_family(fontdb, "Liberation Sans"));
+    assert!(fontdb_has_family(fontdb, "Liberation Mono"));
+    fontdb.set_sans_serif_family("Liberation Sans");
+    fontdb.set_monospace_family("Liberation Mono");
 }
 
 fn fontdb_has_family(fontdb: &usvg::fontdb::Database, family: &str) -> bool {
     fontdb
         .faces()
         .any(|face| face.families.iter().any(|(name, _)| name == family))
+}
+
+fn validate_font_families(svg: &str, source: &Path) {
+    let document = roxmltree::Document::parse(svg)
+        .unwrap_or_else(|error| panic!("parse {} for font validation: {error}", source.display()));
+    for node in document.descendants().filter(|node| node.is_element()) {
+        if node.tag_name().name() == "style" {
+            let style_sheet = simplecss::StyleSheet::parse(node.text().unwrap_or_default());
+            for rule in style_sheet.rules {
+                validate_font_declarations(&rule.declarations, source);
+            }
+        }
+        if let Some(style) = node.attribute("style") {
+            let declarations = simplecss::DeclarationTokenizer::from(style).collect::<Vec<_>>();
+            validate_font_declarations(&declarations, source);
+        }
+        if let Some(font_family) = node.attribute("font-family") {
+            validate_font_family(font_family, source);
+        }
+    }
+}
+
+fn validate_font_declarations(declarations: &[simplecss::Declaration<'_>], source: &Path) {
+    for declaration in declarations {
+        match declaration.name {
+            "font-family" => validate_font_family(declaration.value, source),
+            "font" => panic!(
+                "{} uses the `font` shorthand; use explicit font-family, font-size, \
+                 font-style, and font-weight declarations so font selection is validated",
+                source.display()
+            ),
+            _ => {}
+        }
+    }
+}
+
+fn validate_font_family(font_family: &str, source: &Path) {
+    assert!(
+        matches!(font_family.trim(), "sans-serif" | "monospace"),
+        "{} requests unsupported font family `{}`; only vendored `sans-serif` \
+         (Liberation Sans) and `monospace` (Liberation Mono) are allowed",
+        source.display(),
+        font_family.trim()
+    );
 }
 
 pub fn remove_preview_groups(svg: &str, source: &Path) -> (String, usize) {

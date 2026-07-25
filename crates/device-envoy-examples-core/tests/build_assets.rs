@@ -24,6 +24,32 @@ fn build_helpers_reject_wrong_dimensions() {
 }
 
 #[test]
+fn build_helpers_reject_unvendored_font_families() {
+    let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="2" height="1">
+        <style>text { font-family: Comic Sans MS; }</style>
+        <text>test</text>
+        <g id="preview-values"><rect width="1" height="1"/></g>
+    </svg>"#;
+    let result = std::panic::catch_unwind(|| {
+        build_script::rasterize_svg(svg, Path::new("unvendored-font.svg"), 2, 1);
+    });
+    assert!(result.is_err());
+}
+
+#[test]
+fn build_helpers_reject_font_shorthand() {
+    let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="2" height="1">
+        <style>text { font: 700 10px sans-serif; }</style>
+        <text>test</text>
+        <g id="preview-values"><rect width="1" height="1"/></g>
+    </svg>"#;
+    let result = std::panic::catch_unwind(|| {
+        build_script::rasterize_svg(svg, Path::new("font-shorthand.svg"), 2, 1);
+    });
+    assert!(result.is_err());
+}
+
+#[test]
 fn build_helpers_emit_deterministic_tga_bytes() {
     let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="2" height="1">
         <rect width="2" height="1" fill="red"/>

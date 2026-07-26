@@ -134,3 +134,15 @@ name = "demo_g1_clock_sync"
 path = "g_clock/g1_clock_sync.rs"
 test = false
 required-features = ["arm", "wifi"]
+
+[[bin]]
+name = "demo_a1_audio"
+path = "const_fn/a1_audio.rs"
+test = false
+required-features = ["arm"]
+
+[[bin]]
+name = "demo_a2_audio"
+path = "const_fn/a2_audio.rs"
+test = false
+required-features = ["arm"]

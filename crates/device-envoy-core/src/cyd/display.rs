@@ -22,7 +22,7 @@ use crate::pixel_target::PixelTarget;
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
-pub use tga::{Image565Fixed, MaskFixed, TgaImageFixed, mask_byte_count};
+pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, mask_byte_count};
 
 pub use crate::__cyd_tga as tga;
 

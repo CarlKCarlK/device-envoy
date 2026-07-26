@@ -1,5 +1,18 @@
 # Demos
 
+## `const fn` article
+
+### A1 – Compile-time audio processing with helper macros
+
+Uses `pcm_clip!` to derive clip sizes, parse signed 16-bit PCM, resample from
+22.05 kHz to 8 kHz, apply gain, and retain ADPCM in the firmware.
+
+### A2 – Compile-time audio processing without helper macros
+
+Expands the same core process into explicit constants and constant functions.
+It also constructs the audio runtime directly so the example uses no Device
+Envoy audio helper macros.
+
 ## A1 – 8-LED strip, blue/white alternating
 
 Verifies wiring, PIO, DMA, and the LED strip device abstraction.

@@ -2396,6 +2396,8 @@ macro_rules! __adpcm_clip_parse {
             #[allow(non_snake_case)]
             #[allow(missing_docs)]
             $vis mod $name {
+                // TODO Parse each included WAV header only once. Reuse this metadata in
+                // source_adpcm_clip, adpcm_clip, and default sample-rate selection.
                 const PARSED_WAV: $crate::audio_player::ParsedAdpcmWavHeader =
                     $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file));
                 const SOURCE_SAMPLE_RATE_HZ: u32 = PARSED_WAV.sample_rate_hz;

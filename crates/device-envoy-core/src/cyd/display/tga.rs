@@ -1,7 +1,6 @@
 //! Compile-time decoding and drawing of the supported subset of TGA images.
 
 use crate::cyd::display::CydFrame;
-use crate::pixel_target::rgb565_raw_from_rgb888_components;
 use embedded_graphics::{
     Drawable, Pixel,
     pixelcolor::{Rgb565, raw::RawU16},
@@ -14,10 +13,10 @@ pub const fn mask_byte_count(width: usize, height: usize) -> usize {
     (width * height + 7) / 8
 }
 
-/// A decoded, row-major RGBA8888 image. Pixels are packed as `0xRRGGBBAA`.
-pub struct TgaImageFixed<const W: usize, const H: usize, const N: usize> {
-    /// Row-major top-left-origin RGBA8888 pixels.
-    pub pixels: [u32; N],
+/// A decoded, row-major RGB888 image.
+pub struct Image888Fixed<const W: usize, const H: usize, const N: usize> {
+    /// Row-major top-left-origin pixels stored as `[red, green, blue]`.
+    pub pixels: [[u8; 3]; N],
 }
 
 /// An opaque RGB565 image.
@@ -77,39 +76,22 @@ const fn parse_header(bytes: &[u8], width: usize, height: usize) -> (usize, usiz
     (pixel_start, bytes_per_pixel, bytes[17] & 0x20 != 0)
 }
 
-const fn source_offset(
-    pixel_start: usize,
-    bytes_per_pixel: usize,
-    top_origin: bool,
-    width: usize,
-    height: usize,
-    x: usize,
-    y: usize,
-) -> usize {
-    let source_y = if top_origin { y } else { height - 1 - y };
-    pixel_start + (source_y * width + x) * bytes_per_pixel
-}
-
-impl<const W: usize, const H: usize, const N: usize> TgaImageFixed<W, H, N> {
-    /// Decodes a supported TGA at compile time, preserving RGB and alpha.
+impl<const W: usize, const H: usize, const N: usize> Image888Fixed<W, H, N> {
+    /// Decodes a supported TGA at compile time, preserving RGB and discarding alpha.
     pub const fn from_tga(bytes: &[u8]) -> Self {
-        assert!(N == W * H, "TgaImage: N must equal W * H");
+        assert!(N == W * H, "Image888Fixed: N must equal W * H");
         let (pixel_start, bytes_per_pixel, top_origin) = parse_header(bytes, W, H);
-        let mut pixels = [0u32; N];
+        let mut pixels = [[0u8; 3]; N];
         let mut y = 0;
         while y < H {
             let mut x = 0;
             while x < W {
-                let offset = source_offset(pixel_start, bytes_per_pixel, top_origin, W, H, x, y);
-                let red = bytes[offset + 2] as u32;
-                let green = bytes[offset + 1] as u32;
-                let blue = bytes[offset] as u32;
-                let alpha = if bytes_per_pixel == 4 {
-                    bytes[offset + 3]
-                } else {
-                    255
-                } as u32;
-                pixels[y * W + x] = (red << 24) | (green << 16) | (blue << 8) | alpha;
+                let source_y = if top_origin { y } else { H - 1 - y };
+                let offset = pixel_start + (source_y * W + x) * bytes_per_pixel;
+                let red = bytes[offset + 2];
+                let green = bytes[offset + 1];
+                let blue = bytes[offset];
+                pixels[y * W + x] = [red, green, blue];
                 x += 1;
             }
             y += 1;
@@ -122,12 +104,9 @@ impl<const W: usize, const H: usize, const N: usize> TgaImageFixed<W, H, N> {
         let mut pixels = [0u16; N];
         let mut index = 0;
         while index < N {
-            let pixel = self.pixels[index];
-            pixels[index] = rgb565_raw_from_rgb888_components(
-                (pixel >> 24) as u8,
-                (pixel >> 16) as u8,
-                (pixel >> 8) as u8,
-            );
+            let [red, green, blue] = self.pixels[index];
+            pixels[index] =
+                ((red as u16 >> 3) << 11) | ((green as u16 >> 2) << 5) | (blue as u16 >> 3);
             index += 1;
         }
         Image565Fixed { pixels }
@@ -143,9 +122,9 @@ impl<const W: usize, const H: usize, const N: usize> TgaImageFixed<W, H, N> {
         let mut index = 0;
         while index < N {
             let pixel = self.pixels[index];
-            let red = (pixel >> 24) as u8;
-            let green = (pixel >> 16) as u8;
-            let blue = (pixel >> 8) as u8;
+            let red = pixel[0];
+            let green = pixel[1];
+            let blue = pixel[2];
             if !(red >= 200 && blue >= 200 && green <= 60) {
                 bits[index / 8] |= 1 << (index % 8);
             }
@@ -268,10 +247,10 @@ impl<const W: usize, const H: usize, const N: usize> Drawable for Image565Fixed<
 #[macro_export]
 macro_rules! __cyd_tga {
     ($path:expr) => {
-        $crate::cyd::display::TgaImageFixed::<_, _, _>::from_tga(include_bytes!($path))
+        $crate::cyd::display::Image888Fixed::from_tga(include_bytes!($path))
     };
     ($path:expr, $width:expr, $height:expr) => {
-        $crate::cyd::display::TgaImageFixed::<$width, $height, { $width * $height }>::from_tga(
+        $crate::cyd::display::Image888Fixed::<$width, $height, { $width * $height }>::from_tga(
             include_bytes!($path),
         )
     };

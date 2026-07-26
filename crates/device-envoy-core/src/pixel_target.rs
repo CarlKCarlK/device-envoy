@@ -75,14 +75,6 @@ pub const fn rgb565_from_rgb888_components(red: u8, green: u8, blue: u8) -> Rgb5
     Rgb565::new(red >> 3, green >> 2, blue >> 3)
 }
 
-/// Packs 8-bit RGB components into a raw RGB565 `u16` by keeping each channel's high bits.
-pub const fn rgb565_raw_from_rgb888_components(red: u8, green: u8, blue: u8) -> u16 {
-    let red5 = (red >> 3) as u16;
-    let green6 = (green >> 2) as u16;
-    let blue5 = (blue >> 3) as u16;
-    (red5 << 11) | (green6 << 5) | blue5
-}
-
 /// Converts [`Rgb888`] to [`Rgb565`].
 pub fn rgb565_from_rgb888(color: Rgb888) -> Rgb565 {
     rgb565_from_rgb888_components(color.r(), color.g(), color.b())

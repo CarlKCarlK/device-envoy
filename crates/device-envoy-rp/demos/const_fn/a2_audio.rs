@@ -1,9 +1,8 @@
 //! Compile raw audio without Device Envoy's audio helper macros.
 //!
 //! This is the expanded counterpart to `a1_audio`. It reads the source length,
-//! derives the PCM and ADPCM storage sizes, parses signed 16-bit samples,
-//! resamples them, applies gain, and compresses them entirely in const
-//! evaluation.
+//! validates the input, derives the exact PCM storage size, and parses signed
+//! 16-bit samples entirely in const evaluation.
 //!
 //! Press the button to hear the NASA clip.
 //!
@@ -22,9 +21,8 @@ use defmt::info;
 use device_envoy_rp::{
     Result,
     audio_player::{
-        __adpcm_data_len_for_pcm_samples, __audio_player_play, __pcm_clip_from_samples,
-        __resample_pcm_clip, __resampled_sample_count, AtEnd, AudioPlayerRp, AudioPlayerStatic,
-        Gain, NARROWBAND_8000_HZ, PcmClipBuf, Playable, VOICE_22050_HZ, Volume, device_loop,
+        __audio_player_play, __pcm_clip_from_samples, AtEnd, AudioPlayerRp, AudioPlayerStatic,
+        PcmClipBuf, Playable, Volume, device_loop,
     },
     button::{Button as _, ButtonRp, PressedTo},
 };
@@ -36,26 +34,20 @@ use embassy_rp::{
 use {defmt_rtt as _, panic_probe as _};
 
 const MAX_CLIPS: usize = 1;
-const SAMPLE_RATE_HZ: u32 = NARROWBAND_8000_HZ;
+const SAMPLE_RATE_HZ: u32 = 22_050;
 
 static AUDIO_PLAYER_STATIC: AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> =
     AudioPlayerRp::new_static_with_max_volume(Volume::percent(50));
 
 const NASA_BYTES: &[u8] =
     include_bytes!("../../../device-envoy-examples-rp/examples/data/audio/nasa_22k.s16");
-const NASA_SOURCE_SAMPLE_COUNT: usize = NASA_BYTES.len() / 2;
-const NASA_SAMPLE_COUNT: usize =
-    __resampled_sample_count(NASA_SOURCE_SAMPLE_COUNT, VOICE_22050_HZ, SAMPLE_RATE_HZ);
-const NASA_ADPCM_DATA_LEN: usize = __adpcm_data_len_for_pcm_samples(NASA_SAMPLE_COUNT);
-
-const NASA: &dyn Playable<SAMPLE_RATE_HZ> = &__resample_pcm_clip::<
-    VOICE_22050_HZ,
-    NASA_SOURCE_SAMPLE_COUNT,
-    SAMPLE_RATE_HZ,
-    NASA_SAMPLE_COUNT,
->(read_s16le::<NASA_SOURCE_SAMPLE_COUNT>(NASA_BYTES))
-.with_gain(Gain::percent(25))
-.with_adpcm::<NASA_ADPCM_DATA_LEN>();
+const _: () = assert!(
+    NASA_BYTES.len() % 2 == 0,
+    "s16le requires exactly two bytes per sample"
+);
+const NASA_SAMPLE_COUNT: usize = NASA_BYTES.len() / 2;
+const NASA: PcmClipBuf<SAMPLE_RATE_HZ, NASA_SAMPLE_COUNT> =
+    read_s16le::<NASA_SAMPLE_COUNT>(NASA_BYTES);
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -80,18 +72,17 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     loop {
         button.wait_for_press().await;
-        __audio_player_play(&AUDIO_PLAYER_STATIC, [NASA], AtEnd::Stop);
+        __audio_player_play(
+            &AUDIO_PLAYER_STATIC,
+            [&NASA as &dyn Playable<SAMPLE_RATE_HZ>],
+            AtEnd::Stop,
+        );
     }
 }
 
 const fn read_s16le<const SAMPLE_COUNT: usize>(
     bytes: &[u8],
-) -> PcmClipBuf<VOICE_22050_HZ, SAMPLE_COUNT> {
-    assert!(
-        bytes.len() == SAMPLE_COUNT * 2,
-        "s16le requires exactly two bytes per sample"
-    );
-
+) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
     let mut samples = [0_i16; SAMPLE_COUNT];
     let mut sample_index = 0;
     while sample_index < SAMPLE_COUNT {

@@ -1,9 +1,8 @@
-//! Compile raw audio into compact, playback-ready clips with `const fn` and macros.
+//! Compile raw audio into playback-ready PCM with `const fn` and macros.
 //!
 //! Each `pcm_clip!` invocation includes signed 16-bit PCM, derives its sample
-//! count from the file length, resamples it from 22.05 kHz to 8 kHz, and
-//! derives the corresponding ADPCM storage size. The `const` declarations
-//! below materialize only the compressed clips used by the firmware.
+//! count from the file length, validates the input, and constructs exactly
+//! sized clip storage.
 //!
 //! Press the button to hear the NASA clip.
 //!
@@ -22,21 +21,18 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy_rp::{
     Result,
-    audio_player::{
-        AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, VOICE_22050_HZ, Volume, audio_player,
-        pcm_clip,
-    },
+    audio_player::{AtEnd, AudioPlayer as _, PcmClipBuf, Playable, Volume, audio_player, pcm_clip},
     button::{Button as _, ButtonRp, PressedTo},
 };
 use embassy_executor::Spawner;
 use {defmt_rtt as _, panic_probe as _};
 
 audio_player! {
-    AudioPlayer8K {
+    AudioPlayer22K {
         data_pin: PIN_8,
         bit_clock_pin: PIN_9,
         word_select_pin: PIN_10,
-        sample_rate_hz: NARROWBAND_8000_HZ,
+        sample_rate_hz: 22_050,
         max_volume: Volume::percent(50),
     }
 }
@@ -44,10 +40,11 @@ audio_player! {
 pcm_clip! {
     Nasa {
         file: "../../../device-envoy-examples-rp/examples/data/audio/nasa_22k.s16",
-        source_sample_rate_hz: VOICE_22050_HZ,
-        target_sample_rate_hz: AudioPlayer8K::SAMPLE_RATE_HZ,
+        source_sample_rate_hz: 22_050,
     }
 }
+
+use Nasa::{PCM_SAMPLE_COUNT, SAMPLE_RATE_HZ};
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -56,13 +53,11 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    const NASA: &AudioPlayer8KPlayable = &Nasa::pcm_clip()
-        .with_gain(Gain::percent(25))
-        .with_adpcm::<{ Nasa::ADPCM_DATA_LEN }>();
+    const NASA: PcmClipBuf<SAMPLE_RATE_HZ, PCM_SAMPLE_COUNT> = Nasa::pcm_clip();
 
     let peripherals = embassy_rp::init(Default::default());
     let mut button = ButtonRp::new(peripherals.PIN_13, PressedTo::Ground);
-    let audio_player8k = AudioPlayer8K::new(
+    let audio_player22k = AudioPlayer22K::new(
         peripherals.PIN_8,
         peripherals.PIN_9,
         peripherals.PIN_10,
@@ -75,6 +70,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     loop {
         button.wait_for_press().await;
-        audio_player8k.play([NASA], AtEnd::Stop);
+        audio_player22k.play([&NASA as &dyn Playable<SAMPLE_RATE_HZ>], AtEnd::Stop);
     }
 }

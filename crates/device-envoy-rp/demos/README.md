@@ -4,14 +4,14 @@
 
 ### A1 – Compile-time audio processing with helper macros
 
-Uses `pcm_clip!` to derive clip sizes, parse signed 16-bit PCM, resample from
-22.05 kHz to 8 kHz, apply gain, and retain ADPCM in the firmware.
+Uses `pcm_clip!` to validate signed 16-bit PCM, derive its sample count, and
+construct exactly sized clip storage.
 
 ### A2 – Compile-time audio processing without helper macros
 
-Expands the same core process into explicit constants and constant functions.
-It also constructs the audio runtime directly so the example uses no Device
-Envoy audio helper macros.
+Expands the same validation, size derivation, and PCM parsing into explicit
+constants and constant functions. It also constructs the audio runtime directly
+so the example uses no Device Envoy audio helper macros.
 
 ## A1 – 8-LED strip, blue/white alternating
 

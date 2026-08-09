@@ -82,3 +82,8 @@ required-features = ["host"]
 name = "pngs"
 path = "tests/pngs.rs"
 required-features = ["host"]
+
+[[test]]
+name = "svg_layouts"
+path = "tests/svg_layouts.rs"
+required-features = ["host"]

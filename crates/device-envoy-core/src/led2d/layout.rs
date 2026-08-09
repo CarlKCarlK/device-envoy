@@ -215,6 +215,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// ```
     #[must_use]
     pub const fn new(map: [(u16, u16); N]) -> Self {
+        // TODO Consider allowing zero-sized layouts as identity values for composition.
         assert!(W > 0 && H > 0, "W and H must be positive");
         assert!(W * H == N, "W*H must equal N");
 

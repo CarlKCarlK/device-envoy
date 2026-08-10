@@ -63,6 +63,7 @@ fn render_led_layout_svg<const N: usize, const W: usize, const H: usize>(
     const LED_RADIUS: usize = 21;
     const OUTER_PADDING: usize = 58;
     const CABLE_GUTTER: usize = 34;
+    const CONTENT_PADDING: usize = 8;
 
     let panel_left = OUTER_PADDING + CABLE_GUTTER;
     let panel_top = OUTER_PADDING;
@@ -72,11 +73,15 @@ fn render_led_layout_svg<const N: usize, const W: usize, const H: usize>(
     let panel_height = led_layout.height() * CELL_SIZE;
     let svg_width = panel_width + (OUTER_PADDING + CABLE_GUTTER) * 2;
     let svg_height = panel_height + OUTER_PADDING * 2;
+    let viewbox_left = panel_left - CABLE_GUTTER - CONTENT_PADDING;
+    let viewbox_top = panel_top + PANEL_PADDING / 2 - CONTENT_PADDING;
+    let viewbox_width = panel_width + CABLE_GUTTER * 2 + CONTENT_PADDING * 2;
+    let viewbox_height = panel_height - PANEL_PADDING + CONTENT_PADDING * 2;
 
     let mut svg = String::new();
     writeln!(
         svg,
-        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {svg_width} {svg_height}" role="img" aria-labelledby="title description">"#
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{viewbox_width}" height="{viewbox_height}" viewBox="{viewbox_left} {viewbox_top} {viewbox_width} {viewbox_height}" role="img" aria-labelledby="title description">"#
     )?;
     writeln!(
         svg,

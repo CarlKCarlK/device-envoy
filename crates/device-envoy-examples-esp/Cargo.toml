@@ -206,6 +206,10 @@ name = "audio_example3_esp32_generic"
 path = "examples/esp32/generic/audio_example3.rs"
 
 [[example]]
+name = "audio_playlist_esp32_generic"
+path = "examples/esp32/generic/audio_playlist.rs"
+
+[[example]]
 name = "blinky_esp32_generic"
 path = "examples/esp32/generic/blinky.rs"
 
@@ -428,6 +432,10 @@ path = "examples/c2/generic/audio_example2.rs"
 [[example]]
 name = "audio_example3_esp32c2_generic"
 path = "examples/c2/generic/audio_example3.rs"
+
+[[example]]
+name = "audio_playlist_esp32c2_generic"
+path = "examples/c2/generic/audio_playlist.rs"
 
 [[example]]
 name = "blinky_esp32c2_generic"
@@ -654,6 +662,10 @@ name = "audio_example3_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/audio_example3.rs"
 
 [[example]]
+name = "audio_playlist_esp32c2_devkitm1_v1_0"
+path = "examples/c2/devkitm1_v1_0/audio_playlist.rs"
+
+[[example]]
 name = "blinky_esp32c2_devkitm1_v1_0"
 path = "examples/c2/devkitm1_v1_0/blinky.rs"
 
@@ -876,6 +888,10 @@ path = "examples/c3/generic/audio_example2.rs"
 [[example]]
 name = "audio_example3_esp32c3_generic"
 path = "examples/c3/generic/audio_example3.rs"
+
+[[example]]
+name = "audio_playlist_esp32c3_generic"
+path = "examples/c3/generic/audio_playlist.rs"
 
 [[example]]
 name = "blinky_esp32c3_generic"
@@ -1102,6 +1118,10 @@ name = "audio_example3_esp32c3_luatos"
 path = "examples/c3/luatos/audio_example3.rs"
 
 [[example]]
+name = "audio_playlist_esp32c3_luatos"
+path = "examples/c3/luatos/audio_playlist.rs"
+
+[[example]]
 name = "blinky_esp32c3_luatos"
 path = "examples/c3/luatos/blinky.rs"
 
@@ -1324,6 +1344,10 @@ path = "examples/c5/generic/audio_example2.rs"
 [[example]]
 name = "audio_example3_esp32c5_generic"
 path = "examples/c5/generic/audio_example3.rs"
+
+[[example]]
+name = "audio_playlist_esp32c5_generic"
+path = "examples/c5/generic/audio_playlist.rs"
 
 [[example]]
 name = "blinky_esp32c5_generic"
@@ -1550,6 +1574,10 @@ name = "audio_example3_esp32c6_generic"
 path = "examples/c6/generic/audio_example3.rs"
 
 [[example]]
+name = "audio_playlist_esp32c6_generic"
+path = "examples/c6/generic/audio_playlist.rs"
+
+[[example]]
 name = "blinky_esp32c6_generic"
 path = "examples/c6/generic/blinky.rs"
 
@@ -1772,6 +1800,10 @@ path = "examples/c61/generic/audio_example2.rs"
 [[example]]
 name = "audio_example3_esp32c61_generic"
 path = "examples/c61/generic/audio_example3.rs"
+
+[[example]]
+name = "audio_playlist_esp32c61_generic"
+path = "examples/c61/generic/audio_playlist.rs"
 
 [[example]]
 name = "blinky_esp32c61_generic"
@@ -1998,6 +2030,10 @@ name = "audio_example3_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/audio_example3.rs"
 
 [[example]]
+name = "audio_playlist_esp32c6_devkitc1_n8"
+path = "examples/c6/devkitc1_n8/audio_playlist.rs"
+
+[[example]]
 name = "blinky_esp32c6_devkitc1_n8"
 path = "examples/c6/devkitc1_n8/blinky.rs"
 
@@ -2220,6 +2256,10 @@ path = "examples/h2/generic/audio_example2.rs"
 [[example]]
 name = "audio_example3_esp32h2_generic"
 path = "examples/h2/generic/audio_example3.rs"
+
+[[example]]
+name = "audio_playlist_esp32h2_generic"
+path = "examples/h2/generic/audio_playlist.rs"
 
 [[example]]
 name = "blinky_esp32h2_generic"
@@ -2446,6 +2486,10 @@ name = "audio_example3_esp32s2_generic"
 path = "examples/s2/generic/audio_example3.rs"
 
 [[example]]
+name = "audio_playlist_esp32s2_generic"
+path = "examples/s2/generic/audio_playlist.rs"
+
+[[example]]
 name = "blinky_esp32s2_generic"
 path = "examples/s2/generic/blinky.rs"
 
@@ -2668,6 +2712,10 @@ path = "examples/s3/generic/audio_example2.rs"
 [[example]]
 name = "audio_example3_esp32s3_generic"
 path = "examples/s3/generic/audio_example3.rs"
+
+[[example]]
+name = "audio_playlist_esp32s3_generic"
+path = "examples/s3/generic/audio_playlist.rs"
 
 [[example]]
 name = "blinky_esp32s3_generic"
@@ -2894,6 +2942,10 @@ name = "audio_example3_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/audio_example3.rs"
 
 [[example]]
+name = "audio_playlist_esp32s3_devkitc1_v1_1_n16r8"
+path = "examples/s3/devkitc1_v1_1_n16r8/audio_playlist.rs"
+
+[[example]]
 name = "blinky_esp32s3_devkitc1_v1_1_n16r8"
 path = "examples/s3/devkitc1_v1_1_n16r8/blinky.rs"
 
@@ -3116,6 +3168,10 @@ path = "examples/s3/devkitc1_v1_0_n16r8/audio_example2.rs"
 [[example]]
 name = "audio_example3_esp32s3_devkitc1_v1_0_n16r8"
 path = "examples/s3/devkitc1_v1_0_n16r8/audio_example3.rs"
+
+[[example]]
+name = "audio_playlist_esp32s3_devkitc1_v1_0_n16r8"
+path = "examples/s3/devkitc1_v1_0_n16r8/audio_playlist.rs"
 
 [[example]]
 name = "blinky_esp32s3_devkitc1_v1_0_n16r8"

@@ -15,7 +15,9 @@ use core::convert::Infallible;
 use core::time::Duration as StdDuration;
 
 use device_envoy_core::{
-    audio_player::{AtEnd, AudioPlayer as _, Gain, Playable, SilenceClip, VOICE_22050_HZ},
+    audio_player::{
+        AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, SilenceClip, VOICE_22050_HZ,
+    },
     button::Button as _,
 };
 use device_envoy_esp::{
@@ -26,6 +28,7 @@ use device_envoy_esp::{
 
 use embassy_executor::Spawner;
 use esp_backtrace as _;
+use log::info;
 
 use device_envoy_esp::{Result, init_and_start};
 
@@ -36,9 +39,8 @@ audio_player! {
         data_pin: GPIO21,
         bit_clock_pin: GPIO3,
         word_select_pin: GPIO4,
-        sample_rate_hz: VOICE_22050_HZ,
+        sample_rate_hz: NARROWBAND_8000_HZ,
         dma: DMA_CH0,
-        max_clips: 8,
     }
 }
 
@@ -46,6 +48,7 @@ pcm_clip! {
     Nasa {
         file: concat!(env!("CARGO_MANIFEST_DIR"), "/examples/data/audio/nasa_22k.s16"),
         source_sample_rate_hz: VOICE_22050_HZ,
+        target_sample_rate_hz: AudioPlayerBoard::SAMPLE_RATE_HZ,
     }
 }
 
@@ -60,19 +63,21 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         StdDuration::from_millis(milliseconds)
     }
 
-    type PlayableRef = &'static dyn Playable<VOICE_22050_HZ>;
-    const NASA: PlayableRef = &Nasa::adpcm_clip();
-    const GAP: PlayableRef = &SilenceClip::new(ms(80));
-    const CHIME: PlayableRef = &tone!(880, VOICE_22050_HZ, ms(100)).with_gain(Gain::percent(20));
-
     init_and_start!(p);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
+
+    const CHIME: &AudioPlayerBoardPlayable =
+        &tone!(880, AudioPlayerBoard::SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
+    const GAP: &AudioPlayerBoardPlayable = &SilenceClip::new(ms(500));
+    const NASA: &AudioPlayerBoardPlayable = &Nasa::adpcm_clip();
+
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let audio_player_board =
         AudioPlayerBoard::new(p.GPIO21, p.GPIO3, p.GPIO4, p.I2S0, p.DMA_CH0, spawner)?;
 
     loop {
         button.wait_for_press().await;
-        audio_player_board.play([CHIME, NASA, GAP], AtEnd::Stop);
-        audio_player_board.wait_until_stopped().await;
+        info!("Button pressed; playing playlist in background");
+        audio_player_board.play([CHIME, GAP, NASA], AtEnd::Stop);
     }
 }

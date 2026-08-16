@@ -57,7 +57,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     loop {
         button.wait_for_press().await;
-        info!("Button pressed; playing playlist");
+        info!("Button pressed; playing playlist in background");
         audio_player_pin8.play([CHIME, GAP, NASA], AtEnd::Stop);
     }
 }

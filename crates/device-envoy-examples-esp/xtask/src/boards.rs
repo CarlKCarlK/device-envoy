@@ -1023,18 +1023,17 @@ pub(crate) fn validate_board_profiles() -> Result<(), Box<dyn Error>> {
             )
             .into());
         }
-        if let Some(audio_wiring) = board_profile.audio_wiring {
-            if audio_wiring.data_pin_num == audio_wiring.bit_clock_pin_num
+        if let Some(audio_wiring) = board_profile.audio_wiring
+            && (audio_wiring.data_pin_num == audio_wiring.bit_clock_pin_num
                 || audio_wiring.data_pin_num == audio_wiring.word_select_pin_num
-                || audio_wiring.bit_clock_pin_num == audio_wiring.word_select_pin_num
-            {
-                return Err(format!(
-                    "invalid board profile {} {}: audio data/bit_clock/word_select pins must be distinct",
-                    board_profile.chip_feature(),
-                    board_profile.board_dir()
-                )
-                .into());
-            }
+                || audio_wiring.bit_clock_pin_num == audio_wiring.word_select_pin_num)
+        {
+            return Err(format!(
+                "invalid board profile {} {}: audio data/bit_clock/word_select pins must be distinct",
+                board_profile.chip_feature(),
+                board_profile.board_dir()
+            )
+            .into());
         }
     }
     Ok(())

@@ -2,6 +2,7 @@
 name = "device-envoy-esp"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.93"
 description = "Build ESP32 applications with composable device abstractions"
 keywords = ["embedded", "esp32", "esp32c6", "esp32s3", "ws2812"]
 categories = ["embedded", "asynchronous", "no-std", "hardware-support"]

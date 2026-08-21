@@ -2,6 +2,7 @@
 name = "device-envoy-core"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.93"
 description = "Shared traits and data types for device-envoy platform crates"
 keywords = ["embedded", "no-std", "embassy", "ws2812", "device-abstraction"]
 categories = ["embedded", "asynchronous", "no-std", "hardware-support"]

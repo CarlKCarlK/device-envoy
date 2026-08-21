@@ -1,5 +1,6 @@
 [package]
 edition = "2024"
+rust-version = "1.93"
 # if this changes, update .vscode/launch.json and .cargo/config.toml
 name = "device-envoy-rp"
 version = "0.1.0"

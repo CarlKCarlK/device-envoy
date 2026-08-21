@@ -2,6 +2,7 @@
 name = "device-envoy-examples-esp"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.93"
 description = "ESP32 application launchers for Device Envoy examples"
 keywords = ["embedded", "esp32", "esp32c6", "esp32s3", "ws2812"]
 categories = ["embedded", "asynchronous", "no-std", "hardware-support"]

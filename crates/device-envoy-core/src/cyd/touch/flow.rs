@@ -68,16 +68,11 @@ impl CalibrationFlow {
         &mut self,
         raw_touch_event: Option<RawTouchEvent>,
     ) -> Option<CalibrationFlowEvent> {
-        let Some(calibration_corner) = self.next_corner() else {
-            return None;
-        };
+        let calibration_corner = self.next_corner()?;
 
-        let Some(release_touch_capture_event) = self
+        let release_touch_capture_event = self
             .release_touch_capture
-            .handle_raw_touch_event(raw_touch_event)
-        else {
-            return None;
-        };
+            .handle_raw_touch_event(raw_touch_event)?;
 
         let ReleaseTouchCaptureEvent::Captured {
             raw_point,

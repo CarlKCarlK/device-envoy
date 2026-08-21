@@ -458,15 +458,14 @@ where
                     let (mapped_x, mapped_y) =
                         candidate_config.map_raw_to_screen(raw_point.x, raw_point.y);
                     if hit_verify_target(mapped_x, mapped_y) {
-                        if let Some(confirmed_message) = confirmed_message {
-                            if let Err(error) =
+                        if let Some(confirmed_message) = confirmed_message
+                            && let Err(error) =
                                 draw_message_screen(display, confirmed_message).await
-                            {
-                                return Err(Error {
-                                    touch,
-                                    kind: ErrorKind::Device(error),
-                                });
-                            }
+                        {
+                            return Err(Error {
+                                touch,
+                                kind: ErrorKind::Device(error),
+                            });
                         }
                         if let Err(error) = calibration_flash_block.save(candidate_config) {
                             return Err(Error {

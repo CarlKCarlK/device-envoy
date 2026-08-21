@@ -687,7 +687,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(samples_per_block > 0, "samples_per_block must be > 0");
         assert!(
-            DATA_LEN % block_align as usize == 0,
+            DATA_LEN.is_multiple_of(block_align as usize),
             "adpcm data length must be block aligned"
         );
         let max_decoded_sample_count =
@@ -720,7 +720,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         let block_align = self.block_align as usize;
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(
-            DATA_LEN % block_align == 0,
+            DATA_LEN.is_multiple_of(block_align),
             "adpcm data length must be block aligned"
         );
 
@@ -805,7 +805,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         let block_align = self.block_align as usize;
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(
-            DATA_LEN % block_align == 0,
+            DATA_LEN.is_multiple_of(block_align),
             "adpcm data length must be block aligned"
         );
 
@@ -997,7 +997,7 @@ pub const fn __parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader 
         panic!("Missing data chunk");
     }
     let data_chunk_len = data_chunk_end - data_chunk_start;
-    if data_chunk_len % block_align != 0 {
+    if !data_chunk_len.is_multiple_of(block_align) {
         panic!("data chunk is not block aligned");
     }
 

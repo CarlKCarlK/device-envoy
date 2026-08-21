@@ -83,20 +83,15 @@ impl ToRgb888 for Rgb888 {
 /// Gamma correction configuration for LED strips.
 ///
 /// See the platform crate's `led_strip!` macro documentation for usage and context.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Gamma {
     /// No correction; raw LED PWM values.
     Linear,
     /// Perceptual sRGB semantics (gamma 2.2). Preserves named color intent.
+    #[default]
     Srgb,
     /// Compatibility with historical `smart_leds::gamma()` curve (2.8).
     SmartLeds,
-}
-
-impl Default for Gamma {
-    fn default() -> Self {
-        Self::Srgb
-    }
 }
 
 /// Default gamma used by the `led_strip!` macro.

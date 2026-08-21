@@ -641,21 +641,23 @@ mod tests {
         let grid = display::tiling::TileGrid::new(Point::new(10, 20), Size::new(8, 6), 2, 2);
         let mut tiles = cyd.tiles(grid);
 
-        let first = tiles.next().expect("first tile exists");
-        assert_eq!(
-            first.rectangle(),
-            Rectangle::new(Point::new(10, 20), Size::new(4, 3))
-        );
-        assert_eq!(first.tile_top_left(), Point::new(10, 20));
-        drop(first);
+        {
+            let first = tiles.next().expect("first tile exists");
+            assert_eq!(
+                first.rectangle(),
+                Rectangle::new(Point::new(10, 20), Size::new(4, 3))
+            );
+            assert_eq!(first.tile_top_left(), Point::new(10, 20));
+        }
 
-        let second = tiles.next().expect("second tile exists");
-        assert_eq!(
-            second.rectangle(),
-            Rectangle::new(Point::new(14, 20), Size::new(4, 3))
-        );
-        assert_eq!(second.tile_top_left(), Point::new(14, 20));
-        drop(second);
+        {
+            let second = tiles.next().expect("second tile exists");
+            assert_eq!(
+                second.rectangle(),
+                Rectangle::new(Point::new(14, 20), Size::new(4, 3))
+            );
+            assert_eq!(second.tile_top_left(), Point::new(14, 20));
+        }
 
         let third = tiles.next().expect("third tile exists");
         assert_eq!(

@@ -107,6 +107,12 @@ impl IrStatic {
     }
 }
 
+impl Default for IrStatic {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Decode and validate a 32-bit NEC frame.
 ///
 /// NEC protocol structure (32 bits, LSB first):

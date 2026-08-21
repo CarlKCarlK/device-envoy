@@ -116,6 +116,12 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         N
     }
 
+    /// Return whether this layout contains no LEDs.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        N == 0
+    }
+
     /// Return the borrowed inverse mapping from `(x, y)` coordinates to LED wiring index.
     ///
     /// The array directions are `index_to_xy[physical_led_index] = (x, y)` and

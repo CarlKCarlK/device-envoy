@@ -10,7 +10,7 @@ use embedded_graphics::{
 
 /// Returns the number of bytes required for a packed one-bit mask.
 pub const fn mask_byte_count(width: usize, height: usize) -> usize {
-    (width * height + 7) / 8
+    (width * height).div_ceil(8)
 }
 
 /// A decoded, row-major RGB888 image.

@@ -20,46 +20,6 @@ pub use portal::parse_post;
 /// Canonical network stack type returned by [`WifiAuto::connect`].
 pub type WifiStack = &'static embassy_net::Stack<'static>;
 
-// This helper macro must be `pub` because downstream crates expand it in impl blocks.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __impl_wifi_auto_connect {
-    (
-        $(#[$meta:meta])*
-        fn $name:ident (&self as $self_ident:ident, $on_event:ident) -> $ok_ty:ty $body:block
-    ) => {
-        $(#[$meta])*
-        pub async fn $name<OnEvent, OnError>(
-            &self,
-            mut $on_event: OnEvent,
-        ) -> core::result::Result<$ok_ty, OnError>
-        where
-            OnEvent: core::ops::AsyncFnMut($crate::wifi_auto::WifiAutoEvent) -> core::result::Result<(), OnError>,
-            OnError: core::convert::From<crate::Error>,
-        {
-            let $self_ident = self;
-            $body
-        }
-    };
-    (
-        $(#[$meta:meta])*
-        fn $name:ident (self as $self_ident:ident, $on_event:ident) -> $ok_ty:ty $body:block
-    ) => {
-        $(#[$meta])*
-        pub async fn $name<OnEvent, OnError>(
-            self,
-            mut $on_event: OnEvent,
-        ) -> core::result::Result<$ok_ty, OnError>
-        where
-            OnEvent: core::ops::AsyncFnMut($crate::wifi_auto::WifiAutoEvent) -> core::result::Result<(), OnError>,
-            OnError: core::convert::From<crate::Error>,
-        {
-            let $self_ident = self;
-            $body
-        }
-    };
-}
-
 /// Events emitted while connecting.
 ///
 /// See [`WifiAuto::connect`] for usage examples.
@@ -79,19 +39,14 @@ pub enum WifiAutoEvent {
 }
 
 /// Preferred Wi-Fi startup mode.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[doc(hidden)] // Startup-policy plumbing used by platform wifi_auto state machines.
 pub enum WifiStartMode {
     /// Start directly in Wi-Fi client mode using saved credentials.
+    #[default]
     Client,
     /// Start in captive-portal mode for reconfiguration.
     CaptivePortal,
-}
-
-impl Default for WifiStartMode {
-    fn default() -> Self {
-        Self::Client
-    }
 }
 
 /// Return whether startup should enter captive-portal mode.

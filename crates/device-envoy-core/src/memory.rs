@@ -530,10 +530,10 @@ pub fn assert_framebuffer_matches_expected_png(
 
     let expected_bytes = fs::read(&expected_path)?;
     let actual_bytes = fs::read(&temp_path)?;
-    if let Err(error) = fs::remove_file(&temp_path) {
-        if error.kind() != std::io::ErrorKind::NotFound {
-            return Err(error.into());
-        }
+    if let Err(error) = fs::remove_file(&temp_path)
+        && error.kind() != std::io::ErrorKind::NotFound
+    {
+        return Err(error.into());
     }
 
     if expected_bytes != actual_bytes {
@@ -1199,7 +1199,7 @@ fn blit_frame_to_screen(
 mod tests {
     use super::{
         ButtonMemory, CydMemory, CydTouchMemory, CydTouchUncalibratedMemory, Error,
-        FlashBlockMemory,
+        FlashBlockMemory, MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN,
     };
     use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
@@ -1873,7 +1873,25 @@ mod tests {
     }
 
     fn tap_events(raw_point: RawPoint) -> Vec<RawTouchEvent> {
-        super::tap_events(raw_point)
+        let mut raw_touch_events = Vec::new();
+        raw_touch_events.push(RawTouchEvent::Down {
+            raw_x: raw_point.x,
+            raw_y: raw_point.y,
+        });
+        for _discarded_sample_index in 0..SAMPLES_DISCARDED_AFTER_DOWN {
+            raw_touch_events.push(RawTouchEvent::Move {
+                raw_x: raw_point.x,
+                raw_y: raw_point.y,
+            });
+        }
+        for _usable_sample_index in 0..MIN_SAMPLES_PER_POINT {
+            raw_touch_events.push(RawTouchEvent::Move {
+                raw_x: raw_point.x,
+                raw_y: raw_point.y,
+            });
+        }
+        raw_touch_events.push(RawTouchEvent::Up);
+        raw_touch_events
     }
 
     fn dropout_tap_events(raw_point: RawPoint) -> Vec<RawTouchEvent> {
@@ -1972,27 +1990,4 @@ mod tests {
     const fn verify_timeout_extra_idle_frames() -> usize {
         VERIFY_TIMEOUT_FRAMES.saturating_sub(1)
     }
-}
-
-#[cfg(test)]
-fn tap_events(raw_point: crate::cyd::touch::RawPoint) -> Vec<RawTouchEvent> {
-    let mut raw_touch_events = Vec::new();
-    raw_touch_events.push(RawTouchEvent::Down {
-        raw_x: raw_point.x,
-        raw_y: raw_point.y,
-    });
-    for _discarded_sample_index in 0..SAMPLES_DISCARDED_AFTER_DOWN {
-        raw_touch_events.push(RawTouchEvent::Move {
-            raw_x: raw_point.x,
-            raw_y: raw_point.y,
-        });
-    }
-    for _usable_sample_index in 0..MIN_SAMPLES_PER_POINT {
-        raw_touch_events.push(RawTouchEvent::Move {
-            raw_x: raw_point.x,
-            raw_y: raw_point.y,
-        });
-    }
-    raw_touch_events.push(RawTouchEvent::Up);
-    raw_touch_events
 }

@@ -260,15 +260,14 @@ impl ConwayApp {
         if !self.display_powered {
             return Frame2d::new();
         }
-        if let Some(search) = &mut self.search {
-            if let SearchStep::Progress {
+        if let Some(search) = &mut self.search
+            && let SearchStep::Progress {
                 candidate,
                 assigned,
                 target,
             } = search.advance(1)
-            {
-                return search_frame(&candidate, &assigned, &target);
-            }
+        {
+            return search_frame(&candidate, &assigned, &target);
         }
         self.board.to_frame(self.alive_color)
     }

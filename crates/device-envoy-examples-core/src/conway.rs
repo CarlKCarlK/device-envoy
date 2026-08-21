@@ -58,7 +58,12 @@ impl RandomSymmetryMode {
     const fn should_use_plain_random<const H: usize, const W: usize>(self) -> bool {
         // Symmetry modes are defined only for even square boards. Rectangles and any
         // odd dimension intentionally fall back to the same random generation as `None`.
-        matches!(self, Self::None) || W == 0 || H == 0 || W % 2 != 0 || H % 2 != 0 || W != H
+        matches!(self, Self::None)
+            || W == 0
+            || H == 0
+            || !W.is_multiple_of(2)
+            || !H.is_multiple_of(2)
+            || W != H
     }
 }
 
@@ -164,16 +169,15 @@ impl<const H: usize, const W: usize> Board<H, W> {
     pub fn step(&mut self) {
         let mut next_cells = [[false; W]; H];
 
-        for row_index in 0..H {
-            for col_index in 0..W {
+        for (row_index, next_row) in next_cells.iter_mut().enumerate() {
+            for (col_index, next_cell) in next_row.iter_mut().enumerate() {
                 let live_neighbors = self.count_live_neighbors(row_index, col_index);
                 let is_alive = self.cells[row_index][col_index];
 
-                next_cells[row_index][col_index] = match (is_alive, live_neighbors) {
-                    (true, 2) | (true, 3) => true,
-                    (false, 3) => true,
-                    _ => false,
-                };
+                *next_cell = matches!(
+                    (is_alive, live_neighbors),
+                    (true, 2) | (true, 3) | (false, 3)
+                );
             }
         }
 

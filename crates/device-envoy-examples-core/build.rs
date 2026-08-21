@@ -216,8 +216,8 @@ pub fn encode_tga(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
     tga.extend_from_slice(&(width as u16).to_le_bytes());
     tga.extend_from_slice(&(height as u16).to_le_bytes());
     tga.extend_from_slice(&[24, 0x20]);
-    for pixel in rgba.chunks_exact(4) {
-        tga.extend_from_slice(&[pixel[2], pixel[1], pixel[0]]);
+    for &[red, green, blue, _alpha] in rgba.as_chunks::<4>().0 {
+        tga.extend_from_slice(&[blue, green, red]);
     }
     tga
 }
@@ -267,7 +267,7 @@ mod tests {
             .downcast_ref::<String>()
             .map(String::as_str)
             .or_else(|| panic.downcast_ref::<&str>().copied())
-            .unwrap_or_else(|| "panic did not contain a string message");
+            .unwrap_or("panic did not contain a string message");
         assert!(message.contains("missing-metadata.svg"));
         assert!(message.contains("exactly one preview-values group"));
     }
@@ -288,7 +288,7 @@ mod tests {
             .downcast_ref::<String>()
             .map(String::as_str)
             .or_else(|| panic.downcast_ref::<&str>().copied())
-            .unwrap_or_else(|| "panic did not contain a string message");
+            .unwrap_or("panic did not contain a string message");
         assert!(message.contains("wrong-size.svg has the wrong SVG width; expected 3"));
     }
 }

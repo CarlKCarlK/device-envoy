@@ -52,7 +52,7 @@ fn render_led_layout_svg<const N: usize, const W: usize, const H: usize>(
 ) -> Result<String, fmt::Error> {
     assert!(led_layout.width() > 0, "layout width must be positive");
     assert!(led_layout.height() > 0, "layout height must be positive");
-    assert!(led_layout.len() > 0, "layout must contain LEDs");
+    assert!(!led_layout.is_empty(), "layout must contain LEDs");
     for &seam_row in horizontal_seams {
         assert!(
             (1..led_layout.height()).contains(&seam_row),

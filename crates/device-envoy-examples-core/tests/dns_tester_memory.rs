@@ -83,7 +83,7 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
             &FONT_6X10,
         );
         assert_eq!(
-            device_envoy_core::cyd::Cyd::orientation(&mut cyd_memory),
+            device_envoy_core::cyd::Cyd::orientation(&cyd_memory),
             orientation
         );
         cyd_memory.push_touch_event(TouchEvent::Down {

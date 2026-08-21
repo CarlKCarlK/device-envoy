@@ -9,7 +9,7 @@ const SANTA_FRAME_DURATION: Duration = Duration::from_millis(100);
 const SANTA_FRAME_COUNT: usize = 65;
 
 #[allow(dead_code)]
-const SANTA_FRAMES: [([[RGB8; 12]; 8], Duration); SANTA_FRAME_COUNT] = [
+static SANTA_FRAMES: [([[RGB8; 12]; 8], Duration); SANTA_FRAME_COUNT] = [
     // Frame 1
     (
         [

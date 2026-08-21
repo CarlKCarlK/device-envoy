@@ -546,10 +546,10 @@ fn write_strip_png_with_gamma<const N: usize>(
     let led_margin = (cell_size / 8).max(1);
     let (width, height, pixels) = strip_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
 
-    if let Some(parent) = output_path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
 
     let file = File::create(output_path)?;
@@ -592,10 +592,10 @@ fn write_strip_apng_with_gamma<const N: usize>(
         pixels.push(frame_pixels);
     }
 
-    if let Some(parent) = output_path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
 
     let file = File::create(output_path)?;

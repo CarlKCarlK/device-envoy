@@ -1,4 +1,4 @@
-//! Panel orientation for the fixed 320x240 CYD display.
+//! Panel orientation for the fixed 320×240 CYD display.
 
 use embedded_graphics::geometry::Point;
 use embedded_graphics::prelude::Size;
@@ -57,7 +57,7 @@ impl Orientation {
 
     /// Map a calibrated landscape point into this orientation's screen space.
     ///
-    /// Touch calibration always describes the fixed 320x240 landscape panel.
+    /// Touch calibration always describes the fixed 320×240 landscape panel.
     /// A calibrated [`TouchEvent`](crate::cyd::touch::TouchEvent) must be
     /// converted with this method exactly once before logical UI hit testing.
     #[must_use]

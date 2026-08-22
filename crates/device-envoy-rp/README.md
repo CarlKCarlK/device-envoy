@@ -24,7 +24,7 @@ Want a minimal starting project?
 
 ## Features
 
-- **[CYD Display & Touch](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/cyd/)** - Drive standalone 320x240 ILI9341/XPT2046 display and touch modules from Pico 1 or Pico 2, with calibration, orientation, memory-efficient tiled rendering, and one- or two-SPI wiring.
+- **[CYD Display & Touch](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/cyd/)** - Drive standalone 320×240 ILI9341/XPT2046 display and touch modules from Pico 1 or Pico 2, with calibration, orientation, memory-efficient tiled rendering, and one- or two-SPI wiring.
 - **[LED Strips](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/led_strip/) & [Panels](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/led2d/)**  - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, embedded-graphics support. Provides efficient options for power limiting and color correction.
 - **[WiFi (Pico W)](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/wifi_auto/)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to a stored network. Requires Pico W; WiFi is not supported on non-W boards.
 - **[Audio Player](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/audio_player/)** - Play audio clips over I²S hardware with runtime sequencing, volume control, and compression.

@@ -3,7 +3,7 @@
 //! Tested on so far:
 //!
 //! - an integrated ESP32 Cheap Yellow Display board
-//! - the same standalone CYD 320x240 SPI display/touch board, driven
+//! - the same standalone CYD 320×240 SPI display/touch board, driven
 //!   externally by both ESP32 and Raspberry Pi Pico 2 setups
 //!
 //! See [`Cyd`] for the primary trait and usage example.
@@ -142,7 +142,6 @@ pub trait CydTouchUncalibrated: Sized {
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
 /// the same screen coordinates as the display, or `None` when there is no
 /// touch.
-#[doc(hidden)]
 pub trait CydTouch: Sized {
     /// Error returned when reading touch fails.
     type Error;
@@ -150,7 +149,7 @@ pub trait CydTouch: Sized {
 
     /// Read the next calibrated touch event, if any.
     ///
-    /// Returned points use fixed landscape-panel coordinates (`320x240`),
+    /// Returned points use fixed landscape-panel coordinates (`320×240`),
     /// regardless of display orientation. Consumers that render an oriented
     /// screen must apply [`Orientation::map_landscape_point`] exactly once
     /// before hit testing. Returns `Ok(None)` when there is no pending touch.
@@ -166,7 +165,7 @@ pub trait CydTouch: Sized {
 
 /// A CYD display.
 ///
-/// The screen is a fixed 320x240 RGB565 panel. `CydDisplay` offers three
+/// The screen is a fixed 320×240 RGB565 panel. `CydDisplay` offers three
 /// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
 /// drawn into and flushed to any rectangle on screen; tiled frames (see
 /// [`CydDisplay::tiles`]) that cover the screen (or a rectangle) in smaller pieces when memory

@@ -1,9 +1,11 @@
 //! A device abstraction for the "Cheap Yellow Display" (CYD) family of
-//! 320x240 ILI9341 + XPT2046 resistive-touch ESP32 boards.
+//! 320×240 ILI9341 + XPT2046 resistive-touch ESP32 boards.
 //!
 //! See [`CydEsp`] and [`CydDisplayEsp`] for the public constructors; the
 //! device-agnostic [`CydDisplay`] and [`CydTouch`] traits live in
 //! [`device_envoy_core::cyd`].
+
+// TODO0 Reduce CYD's public API surface; see specs/CYD_PUBLIC_API_CLEANUP.md.
 
 mod buffer;
 mod display;

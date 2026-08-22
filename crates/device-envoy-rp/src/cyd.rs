@@ -1,10 +1,12 @@
-//! A device abstraction for a standalone 320x240 CYD-style SPI display/touch
+//! A device abstraction for a standalone 320×240 CYD-style SPI display/touch
 //! module wired over SPI to a Raspberry Pi Pico (1 or 2).
 //!
 //! See [`CydRp`], [`CydRpOneSpi`], and [`CydDisplayRp`] for the public
 //! constructors; the device-agnostic [`CydDisplay`] and [`CydTouch`] traits live in
 //! [`device_envoy_core::cyd`]. [`CydRp`] uses `SPI0` for the display and `SPI1`
 //! for touch; [`CydRpOneSpi`] shares a single SPI peripheral between the two.
+
+// TODO0 Reduce CYD's public API surface; see specs/CYD_PUBLIC_API_CLEANUP.md.
 
 mod buffer;
 mod display;

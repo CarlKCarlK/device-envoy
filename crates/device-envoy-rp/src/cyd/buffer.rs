@@ -8,7 +8,7 @@ use embedded_graphics::{
 };
 use static_cell::StaticCell;
 
-/// A fixed `WIDTH`x`HEIGHT` RGB565 pixel buffer, usable directly as an
+/// A fixed `WIDTH`×`HEIGHT` RGB565 pixel buffer, usable directly as an
 /// [`embedded_graphics::draw_target::DrawTarget`].
 pub struct RegionBuffer<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> {
     pixels: [u16; PIXEL_COUNT],
@@ -21,7 +21,7 @@ pub struct PixelBuffer<const PIXEL_COUNT: usize> {
     pixels: [u16; PIXEL_COUNT],
 }
 
-/// A borrowed `width`x`height` view into a [`PixelBuffer`].
+/// A borrowed `width`×`height` view into a [`PixelBuffer`].
 pub struct RegionView<'a> {
     width: usize,
     height: usize,
@@ -132,7 +132,7 @@ impl<const PIXEL_COUNT: usize> PixelBuffer<PIXEL_COUNT> {
         storage.init_with(Self::new)
     }
 
-    /// Borrow a `width`x`height` view out of the workspace (must fit the capacity).
+    /// Borrow a `width`×`height` view out of the workspace (must fit the capacity).
     pub fn view_mut(&mut self, width: usize, height: usize) -> RegionView<'_> {
         let pixel_count = width * height;
         assert!(pixel_count <= PIXEL_COUNT, "view must fit in workspace");

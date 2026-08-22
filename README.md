@@ -25,7 +25,7 @@ Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, 
 
 ## Features
 
-- CYD 320x240 display and touch support with calibration, orientation, memory-efficient tiled rendering, and an optional browser simulator
+- CYD 320×240 display and touch support with calibration, orientation, memory-efficient tiled rendering, and an optional browser simulator
 - LED strips and panels for NeoPixel-style (WS2812) hardware
 - WiFi auto-connect and credential management
 - Audio player over I2S

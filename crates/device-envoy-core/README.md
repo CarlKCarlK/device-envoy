@@ -14,12 +14,6 @@
 
 For most users, start with one of those platform crates. Their docs include constructors, board-specific setup, and re-exported trait APIs from `device-envoy-core`.
 
-## Status
-
-⚠️ **Alpha / Experimental**
-
-APIs are actively evolving.
-
 ## License
 
 Licensed under either:

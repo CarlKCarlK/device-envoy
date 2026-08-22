@@ -23,16 +23,9 @@ Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, 
 - `crates/device-envoy-esp`: ESP crate (ESP32, ESP32-C2, ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2, ESP32-S2, ESP32-S3) [![crates.io - esp](https://img.shields.io/crates/v/device-envoy-esp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-esp) [![docs.rs - esp](https://img.shields.io/docsrs/device-envoy-esp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-esp)
 - `crates/device-envoy-core`: shared core APIs used across platform crates [![crates.io - core](https://img.shields.io/crates/v/device-envoy-core?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-core) [![docs.rs - core](https://img.shields.io/docsrs/device-envoy-core?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-core)
 
-## Status
-
-⚠️ **Alpha / Experimental**
-
-The API is actively evolving. Not recommended for production use, but good for experimentation, learning, and exploratory projects.
-
-This workspace is also in active migration as shared functionality moves into `device-envoy-core` while platform crates remain usable.
-
 ## Features
 
+- CYD 320x240 display and touch support with calibration, orientation, memory-efficient tiled rendering, and an optional browser simulator
 - LED strips and panels for NeoPixel-style (WS2812) hardware
 - WiFi auto-connect and credential management
 - Audio player over I2S

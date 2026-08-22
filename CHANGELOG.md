@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 (unreleased)
+
+- Added CYD display and touch support to the README feature lists.
+- Removed the experimental-status warnings from the public READMEs.
+
 ## 0.1.2
 
 - Fixed the `device-envoy-rp` package so its generated PCM and ADPCM sample

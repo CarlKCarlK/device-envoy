@@ -15,12 +15,6 @@ Do not start a new project with `device-envoy` itself. Choose one of the platfor
 - [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/) for Raspberry Pi Pico targets
 - [`device-envoy-esp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/) for ESP32 targets
 
-## Status
-
-⚠️ **Alpha / Experimental**
-
-APIs are actively evolving.
-
 ## License
 
 Licensed under either:

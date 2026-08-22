@@ -1,9 +1,0 @@
-[package]
-name = "device-envoy-conway-core"
-version = "0.0.0"
-edition = "2024"
-publish = false
-
-[dependencies]
-device-envoy-core = { path = "../device-envoy-core" }
-smart-leds = "0.4.0"

@@ -3,16 +3,18 @@ resolver = "2"
 members = [
     "xtask",
     "crates/device-envoy",
-    "crates/device-envoy-conway-core",
     "crates/device-envoy-conway-wasm",
+    "crates/device-envoy-dns-tester-wasm",
     "crates/device-envoy-core",
-    "crates/device-envoy-example-common",
+    "crates/device-envoy-examples-core",
+    "crates/device-envoy-examples-esp",
+    "crates/device-envoy-examples-esp/xtask",
     "crates/device-envoy-rp",
+    "crates/device-envoy-examples-rp",
     "crates/device-envoy-rp/demos",
     "crates/device-envoy-rp/tests-compile-only",
     "crates/device-envoy-rp/xtask",
     "crates/device-envoy-esp",
-    "crates/device-envoy-esp/xtask",
 ]
 
 [profile.dev]

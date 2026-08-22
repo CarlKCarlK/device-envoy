@@ -196,10 +196,10 @@ fn write_frames_apng_with_gamma<const W: usize, const H: usize>(
         pixels.push(frame_pixels);
     }
 
-    if let Some(parent) = output_path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
 
     let file = File::create(output_path)?;
@@ -246,10 +246,10 @@ fn write_panel_png<const W: usize, const H: usize>(
     preview_inverse_gamma: f32,
 ) -> Result<(), Box<dyn Error>> {
     let (width, height, pixels) = panel_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
-    if let Some(parent) = output_path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
 
     let file = File::create(output_path)?;

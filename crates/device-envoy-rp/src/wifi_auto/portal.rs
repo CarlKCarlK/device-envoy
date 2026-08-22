@@ -16,6 +16,8 @@ use device_envoy_core::wifi_auto::{
 };
 
 static CREDENTIAL_CHANNEL: Channel<CriticalSectionRawMutex, WifiCredentials, 1> = Channel::new();
+static PORTAL_SUBMITTED: Mutex<CriticalSectionRawMutex, RefCell<bool>> =
+    Mutex::new(RefCell::new(false));
 
 #[derive(Clone)]
 struct FormState {
@@ -46,6 +48,9 @@ pub async fn collect_credentials(
     FORM_FIELDS.lock(|slot| {
         *slot.borrow_mut() = fields;
     });
+    PORTAL_SUBMITTED.lock(|submitted| {
+        *submitted.borrow_mut() = false;
+    });
 
     let http_server_token = unwrap!(http_server_task(stack));
     spawner.spawn(http_server_token);
@@ -67,6 +72,15 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
     let request = REQUEST_BUFFER.init([0; 1024]);
 
     loop {
+        let portal_submitted = PORTAL_SUBMITTED.lock(|submitted| *submitted.borrow());
+        if portal_submitted {
+            // The caller will persist credentials and reset shortly. Stop serving
+            // new requests rather than re-entering embassy-net accept() during teardown.
+            loop {
+                Timer::after_secs(1).await;
+            }
+        }
+
         let mut socket = TcpSocket::new(*stack, rx_buffer, tx_buffer);
         socket.set_timeout(Some(Duration::from_secs(30)));
 
@@ -99,6 +113,7 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
         let mut parts = request_line.split_whitespace();
         let method = parts.next().unwrap_or("");
 
+        let mut portal_submitted = false;
         let response = match method {
             "GET" => {
                 let state_snapshot = FORM_STATE.lock(|state| state.borrow().clone());
@@ -115,6 +130,10 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
                     fields_snapshot,
                 ) {
                     CREDENTIAL_CHANNEL.send(credentials).await;
+                    PORTAL_SUBMITTED.lock(|submitted| {
+                        *submitted.borrow_mut() = true;
+                    });
+                    portal_submitted = true;
                     static_page(generate_success_page())
                 } else {
                     warn!("WifiAutoRp portal failed to parse POST");
@@ -130,6 +149,11 @@ async fn http_server_task(stack: &'static Stack<'static>) -> ! {
 
         socket.flush().await.ok();
         socket.close();
+        if portal_submitted {
+            loop {
+                Timer::after_secs(1).await;
+            }
+        }
         Timer::after_millis(100).await;
     }
 }

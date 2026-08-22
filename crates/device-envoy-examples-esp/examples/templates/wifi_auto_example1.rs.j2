@@ -1,0 +1,72 @@
+{# @board-example wifi #}
+//! Wiring:
+//! - Force-portal button -> GPIO{{ button_pin }} to GND (`PressedTo::Ground`)
+//!
+#![no_std]
+#![no_main]
+
+use core::{convert::Infallible, future::pending};
+
+use esp_backtrace as _;
+use log::info;
+
+use device_envoy_esp::{
+    button::{Button, ButtonEsp, PressedTo},
+    flash_block::FlashBlockEsp,
+    init_and_start,
+    wifi_auto::{WifiAuto, WifiAutoEsp, WifiAutoEvent, WifiStack},
+    Error, Result,
+};
+
+esp_bootloader_esp_idf::esp_app_desc!();
+
+async fn connect_with_status(
+    wifi_auto: impl WifiAuto<Error = Error>,
+    button: &mut impl Button,
+) -> Result<WifiStack> {
+    wifi_auto
+        .connect(button, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
+            match wifi_auto_event {
+                WifiAutoEvent::CaptivePortalReady => {
+                    info!("wifi_auto_example1: captive portal ready");
+                }
+                WifiAutoEvent::Connecting { .. } => {
+                    info!("wifi_auto_example1: connecting");
+                }
+                WifiAutoEvent::ConnectionFailed => {
+                    info!("wifi_auto_example1: connection failed");
+                }
+            }
+            Ok(())
+        })
+        .await
+}
+
+#[esp_rtos::main]
+async fn main(spawner: embassy_executor::Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    panic!("{err:?}");
+}
+
+async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+    init_and_start!(p);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
+
+    info!("wifi_auto_example1: starting");
+    info!("wifi_auto_example1: press button on GPIO{{ button_pin }} to force captive portal");
+
+    let [wifi_auto_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    let mut button = ButtonEsp::new(p.GPIO{{ button_pin }}, PressedTo::Ground);
+    let wifi_auto = WifiAutoEsp::new(
+        p.WIFI,
+        wifi_auto_flash_block,
+        "DeviceEnvoySetup",
+        [],
+        spawner,
+    )?;
+
+    let _stack = connect_with_status(wifi_auto, &mut button).await?;
+    info!("wifi_auto_example1: connected");
+
+    pending().await
+}

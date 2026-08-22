@@ -42,6 +42,8 @@ pub mod audio_player;
 pub mod button;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
+#[cfg(target_os = "none")]
+pub mod cyd;
 mod error;
 #[cfg(target_os = "none")]
 pub mod flash_block;

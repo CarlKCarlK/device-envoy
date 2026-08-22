@@ -687,7 +687,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(samples_per_block > 0, "samples_per_block must be > 0");
         assert!(
-            DATA_LEN % block_align as usize == 0,
+            DATA_LEN.is_multiple_of(block_align as usize),
             "adpcm data length must be block aligned"
         );
         let max_decoded_sample_count =
@@ -720,7 +720,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         let block_align = self.block_align as usize;
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(
-            DATA_LEN % block_align == 0,
+            DATA_LEN.is_multiple_of(block_align),
             "adpcm data length must be block aligned"
         );
 
@@ -805,7 +805,7 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         let block_align = self.block_align as usize;
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(
-            DATA_LEN % block_align == 0,
+            DATA_LEN.is_multiple_of(block_align),
             "adpcm data length must be block aligned"
         );
 
@@ -997,7 +997,7 @@ pub const fn __parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader 
         panic!("Missing data chunk");
     }
     let data_chunk_len = data_chunk_end - data_chunk_start;
-    if data_chunk_len % block_align != 0 {
+    if !data_chunk_len.is_multiple_of(block_align) {
         panic!("data chunk is not block aligned");
     }
 
@@ -1142,6 +1142,9 @@ impl SilenceClip {
 ///
 /// This trait is object-safe, so mixed clips are passed as:
 /// `&'static dyn Playable<SAMPLE_RATE_HZ>`.
+// TODO Consider exposing `PlaybackClip` as an audio-clip view and having fixed
+// PCM/ADPCM clips produce it with const `view` methods. Callers could then pass
+// heterogeneous view arrays directly instead of converting through this trait.
 #[allow(private_bounds)]
 pub trait Playable<const SAMPLE_RATE_HZ: u32>: sealed::PlayableSealed<SAMPLE_RATE_HZ> {}
 
@@ -2393,6 +2396,8 @@ macro_rules! __adpcm_clip_parse {
             #[allow(non_snake_case)]
             #[allow(missing_docs)]
             $vis mod $name {
+                // TODO Parse each included WAV header only once. Reuse this metadata in
+                // source_adpcm_clip, adpcm_clip, and default sample-rate selection.
                 const PARSED_WAV: $crate::audio_player::ParsedAdpcmWavHeader =
                     $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file));
                 const SOURCE_SAMPLE_RATE_HZ: u32 = PARSED_WAV.sample_rate_hz;

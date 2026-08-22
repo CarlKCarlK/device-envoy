@@ -371,7 +371,7 @@ where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
 {
-    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let pio_instance = embassy_rp::pio::Pio::new(pio, PIO::irqs());
     let embassy_rp::pio::Pio {
         mut common, sm0, ..
     } = pio_instance;
@@ -392,7 +392,7 @@ where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
 {
-    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let pio_instance = embassy_rp::pio::Pio::new(pio, PIO::irqs());
     let embassy_rp::pio::Pio {
         mut common, sm1, ..
     } = pio_instance;
@@ -413,7 +413,7 @@ where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
 {
-    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let pio_instance = embassy_rp::pio::Pio::new(pio, PIO::irqs());
     let embassy_rp::pio::Pio {
         mut common, sm2, ..
     } = pio_instance;
@@ -434,7 +434,7 @@ where
     P: Pin + PioPin,
     PIO: IrPioPeripheral,
 {
-    let pio_instance = embassy_rp::pio::Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let pio_instance = embassy_rp::pio::Pio::new(pio, PIO::irqs());
     let embassy_rp::pio::Pio {
         mut common, sm3, ..
     } = pio_instance;

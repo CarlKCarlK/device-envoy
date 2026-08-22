@@ -2,8 +2,6 @@
 use core::convert::Infallible;
 
 use derive_more::derive::{Display, Error};
-use device_envoy_core::lcd_text::LcdTextError;
-use device_envoy_core::wifi_auto::WifiAutoError;
 use esp_hal_mfrc522::consts::PCDErrorCode;
 
 /// A specialized `Result` where the error is this crate's `Error` type.
@@ -11,7 +9,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// Define a unified error type for this crate.
 #[expect(missing_docs, reason = "The variants are self-explanatory.")]
-#[derive(Debug, Display, Error)]
+#[derive(Debug, Display, Error, derive_more::From)]
 pub enum Error {
     // `#[error(not(source))]` below tells `derive_more` that `embassy_executor::SpawnError` does
     // not implement Rust's `core::error::Error` trait.  `SpawnError` should, but Rust's `Error`
@@ -34,22 +32,25 @@ pub enum Error {
     IndexOutOfBounds,
 
     #[display("MFRC522 initialization failed: {_0:?}")]
+    #[from(ignore)]
     Mfrc522Init(#[error(not(source))] PCDErrorCode),
 
     #[display("MFRC522 version read failed: {_0:?}")]
+    #[from(ignore)]
     Mfrc522Version(#[error(not(source))] PCDErrorCode),
 
     #[display("Format error")]
     FormatError,
-
-    #[display("Character LCD operation failed: {_0:?}")]
-    LcdText(#[error(not(source))] LcdTextError),
 
     #[display("Custom WiFi Auto field missing")]
     MissingCustomWifiAutoField,
 
     #[display("Network Time Protocol (NTP) error: {_0}")]
     Ntp(#[error(not(source))] &'static str),
+
+    #[cfg(feature = "wifi")]
+    #[display("DNS error: {_0:?}")]
+    Dns(#[error(not(source))] embassy_net::dns::Error),
 
     #[cfg(not(feature = "host"))]
     #[display("Flash operation failed: {_0:?}")]
@@ -59,7 +60,59 @@ pub enum Error {
     StorageCorrupted,
 
     #[display("{_0:?}")]
+    #[from(ignore)]
     Core(#[error(not(source))] device_envoy_core::Error),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD display init failed: {_0:?}")]
+    CydDisplayInit(#[error(not(source))] crate::cyd::CydDisplayRpInitError),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD touch init failed: {_0:?}")]
+    CydTouchInit(#[error(not(source))] crate::cyd::CydTouchRpInitError),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD display flush failed: {_0:?}")]
+    CydDisplayFlush(#[error(not(source))] crate::cyd::CydDisplayRpFlushError),
+
+    #[cfg(target_os = "none")]
+    #[display("CYD touch unavailable")]
+    CydTouchUnavailable,
+}
+
+#[cfg(target_os = "none")]
+impl From<crate::cyd::Error> for Error {
+    fn from(error: crate::cyd::Error) -> Self {
+        match error {
+            crate::cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
+            crate::cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
+            crate::cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
+        }
+    }
+}
+
+#[cfg(target_os = "none")]
+impl
+    From<
+        device_envoy_core::cyd::touch::calibration::Error<
+            crate::cyd::CydTouchUncalibratedRp,
+            Error,
+        >,
+    > for Error
+{
+    fn from(
+        error: device_envoy_core::cyd::touch::calibration::Error<
+            crate::cyd::CydTouchUncalibratedRp,
+            Error,
+        >,
+    ) -> Self {
+        match error.kind {
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
+                Self::from(error)
+            }
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
+        }
+    }
 }
 
 impl From<()> for Error {
@@ -75,18 +128,14 @@ impl From<Infallible> for Error {
     }
 }
 
-impl From<embassy_executor::SpawnError> for Error {
-    fn from(err: embassy_executor::SpawnError) -> Self {
-        Self::TaskSpawn(err)
-    }
-}
-
 impl From<device_envoy_core::Error> for Error {
     fn from(error: device_envoy_core::Error) -> Self {
-        match error {
-            device_envoy_core::Error::TaskSpawn(spawn_error) => Self::TaskSpawn(spawn_error),
-            core_error => Self::Core(core_error),
+        #[cfg(feature = "wifi")]
+        if let device_envoy_core::Error::TaskSpawn(spawn_error) = error {
+            return Self::TaskSpawn(spawn_error);
         }
+
+        Self::Core(error)
     }
 }
 
@@ -95,21 +144,5 @@ impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
         match error {
             device_envoy_core::led4::Led4BitsToIndexesError::Full => Self::BitsToIndexesFull,
         }
-    }
-}
-
-impl From<WifiAutoError> for Error {
-    fn from(error: WifiAutoError) -> Self {
-        match error {
-            WifiAutoError::FormatError => Self::FormatError,
-            WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
-            WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
-        }
-    }
-}
-
-impl From<LcdTextError> for Error {
-    fn from(error: LcdTextError) -> Self {
-        Self::LcdText(error)
     }
 }

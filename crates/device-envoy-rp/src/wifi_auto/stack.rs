@@ -343,6 +343,14 @@ impl Wifi {
         })
     }
 
+    /// Clear saved credentials and select captive-portal startup mode.
+    pub fn reset_to_captive_portal(&self) -> Result<(), &'static str> {
+        self.update_state(|state| {
+            state.credentials = None;
+            state.start_mode = WifiStartMode::CaptivePortal;
+        })
+    }
+
     /// Update the start mode flag in a raw flash block before WiFi initialization.
     pub fn prepare_start_mode(
         block: &mut FlashBlockRp,
@@ -463,7 +471,7 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
 
     let pwr = Output::new(pin_23, Level::Low);
     let cs = Output::new(pin_25, Level::High);
-    let mut pio = Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let mut pio = Pio::new(pio, PIO::irqs());
     let spi = PioSpi::new(
         &mut pio.common,
         pio.sm0,
@@ -615,7 +623,7 @@ async fn wifi_device_loop_client_impl<PIO: WifiPio>(
 
     let pwr = Output::new(pin_23, Level::Low);
     let cs = Output::new(pin_25, Level::High);
-    let mut pio = Pio::new(pio, <PIO as crate::pio_irqs::PioIrqMap>::irqs());
+    let mut pio = Pio::new(pio, PIO::irqs());
     let spi = PioSpi::new(
         &mut pio.common,
         pio.sm0,

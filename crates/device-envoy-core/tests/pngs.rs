@@ -23,16 +23,10 @@ include!(concat!(
     "/tests/data/frame-data/video_frames_data.rs"
 ));
 
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/tests/data/conway_board.rs"
-));
-
 type Frame = Frame2d<12, 8>;
 type Led1x1Frame = Frame2d<1, 1>;
 type Led12x4Frame = Frame2d<12, 4>;
 type Led8x12Frame = Frame2d<8, 12>;
-type ConwayFrame = Frame2d<16, 16>;
 type LedStripGpio0Frame = Frame1d<8>;
 type LedStripSimpleFrame = Frame1d<48>;
 type LedStripAnimatedFrame = Frame1d<96>;
@@ -91,12 +85,6 @@ fn santa_linear_apng_matches_expected() -> Result<(), Box<dyn Error>> {
 #[test]
 fn santa_gamma_apng_matches_expected() -> Result<(), Box<dyn Error>> {
     assert_santa_apng_matches_expected("santa.png", Some(2.2), 2.2)
-}
-
-#[test]
-fn conway_custom9_apng_matches_expected() -> Result<(), Box<dyn Error>> {
-    let conway_frames = build_conway_custom9_frames();
-    assert_apng_matches_expected_for_frames("conway_custom9.png", 400, 250, &conway_frames)
 }
 
 fn build_frame() -> Frame {
@@ -222,37 +210,6 @@ fn build_led_strip_animated_frames() -> [LedStripAnimatedFrame; 3] {
         Frame1d::filled(colors::GREEN),
         Frame1d::filled(colors::BLUE),
     ]
-}
-
-fn build_conway_custom9_frames() -> Vec<ConwayFrame> {
-    const CONWAY_FRAME_COUNT: usize = 240;
-    const CONWAY_CUSTOM9_ROWS: [&str; 16] = [
-        "................",
-        "...##.....##....",
-        "....##...##.....",
-        ".#..#.#.#.#..#..",
-        ".###.##.##.###..",
-        "..#.#.#.#.#.#...",
-        "...###...###....",
-        "................",
-        "...###...###....",
-        "..#.#.#.#.#.#...",
-        ".###.##.##.###..",
-        ".#..#.#.#.#..#..",
-        "....##...##.....",
-        "...##.....##....",
-        "................",
-        "................",
-    ];
-
-    let mut board = Board::<16, 16>::new();
-    board.load_rows(CONWAY_CUSTOM9_ROWS);
-    let mut conway_frames = Vec::with_capacity(CONWAY_FRAME_COUNT);
-    for _frame_index in 0..CONWAY_FRAME_COUNT {
-        conway_frames.push(board.to_frame(colors::LIME));
-        board.step();
-    }
-    conway_frames
 }
 
 fn assert_santa_apng_matches_expected(
@@ -589,10 +546,10 @@ fn write_strip_png_with_gamma<const N: usize>(
     let led_margin = (cell_size / 8).max(1);
     let (width, height, pixels) = strip_pixels(frame, cell_size, led_margin, preview_inverse_gamma);
 
-    if let Some(parent) = output_path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
 
     let file = File::create(output_path)?;
@@ -635,10 +592,10 @@ fn write_strip_apng_with_gamma<const N: usize>(
         pixels.push(frame_pixels);
     }
 
-    if let Some(parent) = output_path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = output_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
     }
 
     let file = File::create(output_path)?;

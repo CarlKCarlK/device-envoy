@@ -70,7 +70,7 @@ impl<'d, const LEDS: usize, const BYTES: usize> SpiWs2812<'d, LEDS, BYTES> {
     }
 
     /// Encode `frame` and transmit synchronously over SPI.
-    pub fn write(&mut self, frame: &Frame1d<LEDS>) -> Result<(), SpiWritingError> {
+    pub fn write(&mut self, frame: &Frame1d<LEDS>) -> Result<(), Error> {
         self.tx_buf.fill(0);
 
         let mut byte_index = 0usize;
@@ -96,16 +96,14 @@ impl<'d, const LEDS: usize, const BYTES: usize> SpiWs2812<'d, LEDS, BYTES> {
             }
         }
 
-        self.spi
-            .write(&self.tx_buf)
-            .map_err(SpiWritingError::Transmit)?;
+        self.spi.write(&self.tx_buf).map_err(Error::Transmit)?;
         Ok(())
     }
 }
 
 /// Errors returned by [`SpiWs2812::write`].
 #[derive(Debug)]
-pub enum SpiWritingError {
+pub enum Error {
     /// SPI transmit failed.
     Transmit(esp_hal::spi::Error),
 }

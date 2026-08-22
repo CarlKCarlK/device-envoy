@@ -207,24 +207,22 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
     is_pressed: &'static AtomicBool,
     initialized: &'static AtomicBool,
 ) -> ! {
-    let initial_pressed = <B as device_envoy_core::button::__ButtonMonitor>::is_pressed_raw(button);
+    let initial_pressed = B::is_pressed_raw(button);
     is_pressed.store(initial_pressed, Ordering::Relaxed);
     state_signal.signal(initial_pressed);
     initialized.store(true, Ordering::Release);
     initialized_signal.signal(());
 
     loop {
-        <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(button, false)
-            .await;
+        B::wait_until_pressed_state(button, false).await;
 
-        <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(button, true)
-            .await;
+        B::wait_until_pressed_state(button, true).await;
         is_pressed.store(true, Ordering::Relaxed);
         state_signal.signal(true);
         state_changed_signal.signal(());
 
         Timer::after(device_envoy_core::button::BUTTON_DEBOUNCE_DELAY).await;
-        if !<B as device_envoy_core::button::__ButtonMonitor>::is_pressed_raw(button) {
+        if !B::is_pressed_raw(button) {
             is_pressed.store(false, Ordering::Relaxed);
             state_signal.signal(false);
             state_changed_signal.signal(());
@@ -232,9 +230,7 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
         }
 
         let press_duration = embassy_futures::select::select(
-            <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(
-                button, false,
-            ),
+            B::wait_until_pressed_state(button, false),
             Timer::after(device_envoy_core::button::LONG_PRESS_DURATION),
         )
         .await;
@@ -248,10 +244,7 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
             }
             embassy_futures::select::Either::Second(()) => {
                 signal.signal(PressDuration::Long);
-                <B as device_envoy_core::button::__ButtonMonitor>::wait_until_pressed_state(
-                    button, false,
-                )
-                .await;
+                B::wait_until_pressed_state(button, false).await;
                 is_pressed.store(false, Ordering::Relaxed);
                 state_signal.signal(false);
                 state_changed_signal.signal(());

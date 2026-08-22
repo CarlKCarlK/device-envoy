@@ -10,7 +10,7 @@ use crate::audio_player::adpcm_clip;
 #[cfg(all(not(doc), not(feature = "host")))]
 adpcm_clip! {
     pub AdpcmClipGenerated {
-        file: "../../examples/data/audio/nasa_22k_adpcm.wav",
+        file: "data/audio/nasa_22k_adpcm.wav",
     }
 }
 

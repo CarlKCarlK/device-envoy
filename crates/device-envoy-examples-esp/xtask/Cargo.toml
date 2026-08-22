@@ -1,0 +1,15 @@
+[package]
+name = "xtask-esp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.93"
+publish = false
+
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+bitflags = "2.11"
+owo-colors = "4.3"
+flate2 = "1.1"
+tar = "0.4"
+minijinja = "2.19"
+rayon = "1.12"

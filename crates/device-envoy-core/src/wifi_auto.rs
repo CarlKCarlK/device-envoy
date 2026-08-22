@@ -20,46 +20,6 @@ pub use portal::parse_post;
 /// Canonical network stack type returned by [`WifiAuto::connect`].
 pub type WifiStack = &'static embassy_net::Stack<'static>;
 
-// This helper macro must be `pub` because downstream crates expand it in impl blocks.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __impl_wifi_auto_connect {
-    (
-        $(#[$meta:meta])*
-        fn $name:ident (&self as $self_ident:ident, $on_event:ident) -> $return_ty:ty $body:block
-    ) => {
-        $(#[$meta])*
-        pub async fn $name<OnEvent, OnEventFuture>(
-            &self,
-            mut $on_event: OnEvent,
-        ) -> $return_ty
-        where
-            OnEvent: FnMut($crate::wifi_auto::WifiAutoEvent) -> OnEventFuture,
-            OnEventFuture: core::future::Future<Output = crate::Result<()>>,
-        {
-            let $self_ident = self;
-            $body
-        }
-    };
-    (
-        $(#[$meta:meta])*
-        fn $name:ident (self as $self_ident:ident, $on_event:ident) -> $return_ty:ty $body:block
-    ) => {
-        $(#[$meta])*
-        pub async fn $name<OnEvent, OnEventFuture>(
-            self,
-            mut $on_event: OnEvent,
-        ) -> $return_ty
-        where
-            OnEvent: FnMut($crate::wifi_auto::WifiAutoEvent) -> OnEventFuture,
-            OnEventFuture: core::future::Future<Output = crate::Result<()>>,
-        {
-            let $self_ident = self;
-            $body
-        }
-    };
-}
-
 /// Events emitted while connecting.
 ///
 /// See [`WifiAuto::connect`] for usage examples.
@@ -78,31 +38,15 @@ pub enum WifiAutoEvent {
     ConnectionFailed,
 }
 
-/// Shared Wi-Fi auto-provisioning error variants used across platform ports.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum WifiAutoError {
-    /// Captive-portal data or rendering format was invalid.
-    FormatError,
-    /// Stored Wi-Fi auto state is invalid for expected runtime flow.
-    StorageCorrupted,
-    /// A required custom field is missing from the Wi-Fi auto setup.
-    MissingCustomWifiAutoField,
-}
-
 /// Preferred Wi-Fi startup mode.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[doc(hidden)] // Startup-policy plumbing used by platform wifi_auto state machines.
 pub enum WifiStartMode {
     /// Start directly in Wi-Fi client mode using saved credentials.
+    #[default]
     Client,
     /// Start in captive-portal mode for reconfiguration.
     CaptivePortal,
-}
-
-impl Default for WifiStartMode {
-    fn default() -> Self {
-        Self::Client
-    }
 }
 
 /// Return whether startup should enter captive-portal mode.
@@ -187,7 +131,6 @@ impl Default for WifiAutoPersistedState {
 /// # Example
 ///
 /// ```rust,no_run
-/// use core::future::Future;
 /// use core::convert::Infallible;
 /// use device_envoy_core::{
 ///     button::Button,
@@ -198,7 +141,7 @@ impl Default for WifiAutoPersistedState {
 ///     wifi_auto: impl WifiAuto<Error = Infallible>,
 /// ) -> Result<WifiStack, Infallible> {
 ///     wifi_auto
-///         .connect(&mut ButtonMock, |wifi_auto_event| async move {
+///         .connect(&mut ButtonMock, async |wifi_auto_event| {
 ///             match wifi_auto_event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     // Captive portal is ready for Wi-Fi credential entry.
@@ -225,13 +168,13 @@ impl Default for WifiAutoPersistedState {
 /// # impl WifiAuto for DemoWifiAuto {
 /// #     type Error = Infallible;
 /// #     async fn connect<
-/// #         OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-/// #         OnEventFuture: Future<Output = Result<(), Self::Error>>,
+/// #         OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+/// #         OnError: From<Self::Error>,
 /// #     >(
-/// #         self,
+/// #         &self,
 /// #         button: &mut impl Button,
 /// #         mut on_event: OnEvent,
-/// #     ) -> Result<WifiStack, Self::Error>
+/// #     ) -> Result<WifiStack, OnError>
 /// #     {
 /// #         on_event(WifiAutoEvent::Connecting {
 /// #             try_index: 0,
@@ -240,6 +183,7 @@ impl Default for WifiAutoPersistedState {
 /// #         .await?;
 /// #         panic!("DemoWifiAuto::connect is not implemented in this doctest")
 /// #     }
+/// #     fn reset_to_captive_portal(&self) -> Result<(), Self::Error> { Ok(()) }
 /// # }
 /// # fn main() {
 /// #     let wifi_auto = DemoWifiAuto;
@@ -254,14 +198,22 @@ pub trait WifiAuto {
     /// Connect to Wi-Fi, emitting progress events to `on_event`.
     ///
     /// See the [WifiAuto trait documentation](Self) for usage examples.
-    async fn connect<OnEvent, OnEventFuture>(
-        self,
+    /// The callback chooses its own error type `OnError`; the platform error
+    /// converts into it (`OnError: From<Self::Error>`), so a handler can fail with
+    /// a richer error (e.g. a display error) and still use `?`. Returning the
+    /// platform error itself is the `OnError = Self::Error` case.
+    async fn connect<OnEvent, OnError>(
+        &self,
         button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<WifiStack, Self::Error>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<(), Self::Error>>;
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<Self::Error>;
+
+    /// Clear saved credentials, select captive-portal startup, and leave the
+    /// device ready for the caller to reboot.
+    fn reset_to_captive_portal(&self) -> Result<(), Self::Error>;
 }
 
 /// Backend contract for platform-specific Wi-Fi auto-connect operations.
@@ -311,14 +263,14 @@ pub trait WifiAutoBackend {
 
 /// Run the shared Wi-Fi auto-connect flow through a platform backend.
 #[doc(hidden)] // Backend-plumbing helper used by platform crates.
-pub async fn connect_with_backend<Backend, OnEvent, OnEventFuture>(
+pub async fn connect_with_backend<Backend, OnEvent, OnError>(
     backend: &mut Backend,
     on_event: &mut OnEvent,
-) -> Result<bool, Backend::Error>
+) -> Result<bool, OnError>
 where
     Backend: WifiAutoBackend,
-    OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-    OnEventFuture: Future<Output = Result<(), Backend::Error>>,
+    OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+    OnError: From<Backend::Error>,
 {
     let wifi_start_mode = backend.load_start_mode()?;
     let custom_fields_satisfied = backend.custom_fields_satisfied()?;

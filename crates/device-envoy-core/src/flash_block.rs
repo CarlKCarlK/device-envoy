@@ -20,7 +20,7 @@ pub(crate) const CRC_SIZE: usize = 4;
 
 /// Errors returned by [`save_block`], [`load_block`], and [`clear_block`].
 #[derive(Debug)]
-pub enum FlashBlockError<E> {
+pub enum Error<E> {
     /// An I/O operation on the underlying flash device failed.
     Io(E),
     /// Serialization or deserialization failed.
@@ -112,6 +112,10 @@ pub enum FlashBlockError<E> {
 /// #     );
 /// # }
 /// ```
+#[cfg_attr(
+    feature = "wasm",
+    doc = "\nBrowser-simulated device: [`crate::wasm::FlashBlockWasm`]."
+)]
 pub trait FlashBlock {
     /// Error returned by block operations.
     type Error;
@@ -177,7 +181,7 @@ pub fn save_block<const BLOCK_SIZE: usize, T, F>(
     flash: &mut F,
     block_offset: u32,
     value: &T,
-) -> Result<(), FlashBlockError<F::Error>>
+) -> Result<(), Error<F::Error>>
 where
     T: Serialize + for<'de> Deserialize<'de>,
     F: FlashDevice,
@@ -185,7 +189,7 @@ where
     let max_payload_size = max_payload_size(BLOCK_SIZE);
     let mut payload_buffer = [0u8; BLOCK_SIZE];
     let payload = postcard::to_slice(value, &mut payload_buffer[..max_payload_size])
-        .map_err(|_| FlashBlockError::FormatError)?;
+        .map_err(|_| Error::FormatError)?;
     let payload_len = payload.len();
 
     let mut block_bytes = [0xFFu8; BLOCK_SIZE];
@@ -201,10 +205,8 @@ where
     let block_size_u32 = u32::try_from(BLOCK_SIZE).expect("block size must fit in u32");
     flash
         .erase(block_offset, block_offset + block_size_u32)
-        .map_err(FlashBlockError::Io)?;
-    flash
-        .write(block_offset, &block_bytes)
-        .map_err(FlashBlockError::Io)?;
+        .map_err(Error::Io)?;
+    flash.write(block_offset, &block_bytes).map_err(Error::Io)?;
     Ok(())
 }
 
@@ -217,7 +219,7 @@ where
 pub fn load_block<const BLOCK_SIZE: usize, T, F>(
     flash: &mut F,
     block_offset: u32,
-) -> Result<Option<T>, FlashBlockError<F::Error>>
+) -> Result<Option<T>, Error<F::Error>>
 where
     T: Serialize + for<'de> Deserialize<'de>,
     F: FlashDevice,
@@ -225,7 +227,7 @@ where
     let mut block_bytes = [0u8; BLOCK_SIZE];
     flash
         .read(block_offset, &mut block_bytes)
-        .map_err(FlashBlockError::Io)?;
+        .map_err(Error::Io)?;
 
     let magic = u32::from_le_bytes(block_bytes[0..4].try_into().expect("4-byte slice"));
     if magic != MAGIC {
@@ -240,7 +242,7 @@ where
     let payload_len =
         u16::from_le_bytes(block_bytes[8..10].try_into().expect("2-byte slice")) as usize;
     if payload_len > max_payload_size(BLOCK_SIZE) {
-        return Err(FlashBlockError::StorageCorrupted);
+        return Err(Error::StorageCorrupted);
     }
 
     let crc_offset = HEADER_SIZE + payload_len;
@@ -250,13 +252,13 @@ where
             .expect("4-byte slice"),
     );
     if stored_crc != compute_crc(&block_bytes[..crc_offset]) {
-        return Err(FlashBlockError::StorageCorrupted);
+        return Err(Error::StorageCorrupted);
     }
 
     let payload = &block_bytes[HEADER_SIZE..HEADER_SIZE + payload_len];
     postcard::from_bytes(payload)
         .map(Some)
-        .map_err(|_| FlashBlockError::StorageCorrupted)
+        .map_err(|_| Error::StorageCorrupted)
 }
 
 /// Erase the block at `block_offset`.
@@ -265,11 +267,11 @@ where
 pub fn clear_block<const BLOCK_SIZE: usize, F: FlashDevice>(
     flash: &mut F,
     block_offset: u32,
-) -> Result<(), FlashBlockError<F::Error>> {
+) -> Result<(), Error<F::Error>> {
     let block_size_u32 = u32::try_from(BLOCK_SIZE).expect("block size must fit in u32");
     flash
         .erase(block_offset, block_offset + block_size_u32)
-        .map_err(FlashBlockError::Io)
+        .map_err(Error::Io)
 }
 
 /// FNV-1a hash of `T`'s fully-qualified type name.
@@ -298,8 +300,7 @@ pub(crate) fn compute_crc(bytes: &[u8]) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        FlashBlockError, FlashDevice, HEADER_SIZE, clear_block, load_block, max_payload_size,
-        save_block,
+        Error, FlashDevice, HEADER_SIZE, clear_block, load_block, max_payload_size, save_block,
     };
 
     const TEST_FLASH_BLOCK_SIZE: usize = 4096;
@@ -396,7 +397,7 @@ mod tests {
 
         let error = load_block::<TEST_FLASH_BLOCK_SIZE, WifiPersistedState, _>(&mut device, 0)
             .expect_err("crc mismatch should fail");
-        assert!(matches!(error, FlashBlockError::<()>::StorageCorrupted));
+        assert!(matches!(error, Error::<()>::StorageCorrupted));
     }
 
     #[test]

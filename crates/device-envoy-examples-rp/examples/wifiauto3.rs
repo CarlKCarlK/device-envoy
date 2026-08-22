@@ -1,0 +1,107 @@
+#![allow(missing_docs)]
+//! WifiAutoRp example with a custom website field for DNS lookups.
+
+#![cfg(feature = "wifi")]
+#![no_std]
+#![no_main]
+#![allow(clippy::future_not_send, reason = "single-threaded")]
+
+// TODO consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
+
+extern crate defmt_rtt as _;
+extern crate panic_probe as _;
+
+use core::convert::Infallible;
+use device_envoy_rp::{
+    Error, Result,
+    button::{ButtonRp, PressedTo},
+    flash_block::FlashBlockRp,
+    wifi_auto::fields::{TextField, TextFieldStatic, TimezoneField, TimezoneFieldStatic},
+    wifi_auto::{WifiAutoEvent, WifiAutoRp},
+};
+
+#[embassy_executor::main]
+async fn main(spawner: embassy_executor::Spawner) -> ! {
+    let err = inner_main(spawner).await.unwrap_err();
+    core::panic!("{err}");
+}
+
+async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+    let p = embassy_rp::init(Default::default());
+
+    let [wifi_flash, website_flash, timezone_flash] = FlashBlockRp::new_array::<3>(p.FLASH)?;
+
+    static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
+    let website_field = TextField::new(
+        &WEBSITE_STATIC,
+        website_flash,
+        "website",
+        "Website",
+        "google.com",
+    );
+
+    // Create timezone field
+    static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
+    let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
+
+    let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
+    let wifi_auto = WifiAutoRp::new(
+        p.PIN_23,  // CYW43 power
+        p.PIN_24,  // CYW43 data
+        p.PIN_25,  // CYW43 chip select
+        p.PIN_29,  // CYW43 clock
+        p.PIO0,    // WiFi PIO
+        p.DMA_CH0, // WiFi DMA
+        wifi_flash,
+        "DeviceEnvoySetup",              // Captive-portal SSID
+        [website_field, timezone_field], // Custom fields
+        spawner,
+    )?;
+
+    let stack = wifi_auto
+        .connect(
+            &mut button,
+            async |event| -> Result<(), device_envoy_rp::Error> {
+                match event {
+                    WifiAutoEvent::CaptivePortalReady => {
+                        defmt::info!("Captive portal ready");
+                    }
+                    WifiAutoEvent::Connecting {
+                        try_index,
+                        try_count,
+                    } => {
+                        defmt::info!(
+                            "Connecting to WiFi (attempt {} of {})...",
+                            try_index + 1,
+                            try_count
+                        );
+                    }
+                    WifiAutoEvent::ConnectionFailed => {
+                        defmt::info!("WiFi connection failed");
+                    }
+                }
+                Ok(())
+            },
+        )
+        .await?;
+
+    let website = website_field.text()?.unwrap_or_default();
+    let offset_minutes = timezone_field
+        .offset_minutes()?
+        .ok_or(Error::MissingCustomWifiAutoField)?;
+    defmt::info!("Timezone offset minutes: {}", offset_minutes);
+
+    loop {
+        let query_name = website.as_str();
+        if let Ok(addresses) = stack
+            .dns_query(query_name, embassy_net::dns::DnsQueryType::A)
+            .await
+        {
+            defmt::info!("{}: {:?}", query_name, addresses);
+        } else {
+            defmt::info!("{}: lookup failed", query_name);
+        }
+
+        embassy_time::Timer::after(embassy_time::Duration::from_secs(15)).await;
+    }
+}

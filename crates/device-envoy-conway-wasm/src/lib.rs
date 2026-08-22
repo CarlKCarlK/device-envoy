@@ -1,121 +1,55 @@
-use device_envoy_conway_core::{Board, Pattern, PredecessorSearch, SearchOutcome, SearchStep};
-use smart_leds::colors;
+use device_envoy_examples_core::conway_app::{ConwayApp, ConwayInput, ConwayStatus, HEIGHT, WIDTH};
 use wasm_bindgen::prelude::*;
 
-const WIDTH: usize = 16;
-const HEIGHT: usize = 16;
 const DEFAULT_MAX_DIMENSION: u32 = 640;
-const SEARCH_ITERATIONS_PER_COMMAND: u32 = 256;
-const PATTERNS: [Pattern; 10] = [
-    Pattern::Glider,
-    Pattern::Random,
-    Pattern::Blinker,
-    Pattern::Toad,
-    Pattern::Beacon,
-    Pattern::Lwss,
-    Pattern::Block,
-    Pattern::Pentadecathlon,
-    Pattern::Cross,
-    Pattern::Custom9,
-];
 
+/// Browser adapter for the shared Conway application.
 #[wasm_bindgen]
 pub struct ConwayWeb {
-    board: Board<HEIGHT, WIDTH>,
-    pattern_index: usize,
-    search: Option<PredecessorSearch<HEIGHT, WIDTH>>,
-    paused: bool,
+    app: ConwayApp,
 }
 
 #[wasm_bindgen]
 impl ConwayWeb {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        let mut board = Board::new();
-        let pattern_index = 1usize;
-        board.add_pattern(PATTERNS[pattern_index]);
         Self {
-            board,
-            pattern_index,
-            search: None,
-            paused: false,
+            app: ConwayApp::new(),
         }
     }
 
+    /// Forward one browser control key to the shared application.
     pub fn press_key(&mut self, key: &str) -> String {
-        match key {
-            "prev" => {
-                self.search = Some(PredecessorSearch::new(self.board));
-                "searching".into()
-            }
-            "next" => {
-                if self.paused {
-                    self.board.step();
-                }
-                "ok".into()
-            }
-            "play_pause" => {
-                self.paused = !self.paused;
-                "ok".into()
-            }
-            "cancel" => {
-                self.search = None;
-                "cancelled".into()
-            }
-            "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" => {
-                let pattern_index = key.as_bytes()[0] - b'0';
-                self.set_pattern(pattern_index as usize);
-                "ok".into()
-            }
-            _ => "unknown".into(),
-        }
+        let Some(input) = input_for_key(key) else {
+            return status_text(ConwayStatus::Unknown);
+        };
+        status_text(self.app.input(input))
     }
 
+    /// Advance the shared application by one browser tick.
     pub fn tick(&mut self) -> String {
-        if let Some(search) = &mut self.search {
-            match search.advance(SEARCH_ITERATIONS_PER_COMMAND) {
-                SearchStep::Progress { .. } => "searching".into(),
-                SearchStep::Outcome(SearchOutcome::Found(predecessor)) => {
-                    self.board = predecessor;
-                    self.search = None;
-                    "found".into()
-                }
-                SearchStep::Outcome(SearchOutcome::NotFound) => {
-                    self.search = None;
-                    "not_found".into()
-                }
-                SearchStep::Outcome(SearchOutcome::Cancelled) => {
-                    self.search = None;
-                    "cancelled".into()
-                }
-            }
-        } else if self.paused {
-            "paused".into()
-        } else {
-            self.board.step();
-            "ok".into()
-        }
+        status_text(self.app.tick())
     }
 
+    /// Render the shared application as a PNG.
     pub fn render_png(&mut self) -> Result<Vec<u8>, JsValue> {
         self.render_png_with_max_dimension(DEFAULT_MAX_DIMENSION)
     }
 
+    /// Render the shared application as a PNG with a maximum dimension.
     pub fn render_png_with_max_dimension(
         &mut self,
         max_dimension: u32,
     ) -> Result<Vec<u8>, JsValue> {
-        let frame = if self.search.is_some() {
-            match self.search_preview() {
-                Some(frame) => frame,
-                None => self.board.to_frame(colors::CYAN),
-            }
-        } else {
-            self.board.to_frame(colors::CYAN)
-        };
-        frame
+        self.app
+            .frame()
             .to_png_bytes(max_dimension)
-            .map_err(|err| JsValue::from_str(&err.to_string()))
+            .map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    /// Return the shared simulation's current animation interval.
+    pub fn tick_interval_ms(&self) -> u32 {
+        self.app.tick_interval_ms()
     }
 }
 
@@ -125,48 +59,56 @@ impl Default for ConwayWeb {
     }
 }
 
-impl ConwayWeb {
-    fn set_pattern(&mut self, pattern_index: usize) {
-        if pattern_index < PATTERNS.len() {
-            self.pattern_index = pattern_index;
-            self.board = Board::new();
-            self.board.add_pattern(PATTERNS[pattern_index]);
-            self.search = None;
-        }
-    }
-    fn search_preview(&mut self) -> Option<device_envoy_core::led2d::Frame2d<WIDTH, HEIGHT>> {
-        let search = self.search.as_mut()?;
-        match search.advance(1) {
-            SearchStep::Progress {
-                candidate,
-                assigned,
-                target,
-            } => Some(search_frame(&candidate, &assigned, &target)),
-            SearchStep::Outcome(_) => None,
-        }
-    }
+fn input_for_key(key: &str) -> Option<ConwayInput> {
+    Some(match key {
+        "prev" => ConwayInput::Previous,
+        "next" => ConwayInput::Next,
+        "play_pause" => ConwayInput::PlayPause,
+        "cancel" => ConwayInput::Cancel,
+        "speed_up" => ConwayInput::SpeedUp,
+        "speed_down" => ConwayInput::SpeedDown,
+        "mode" => ConwayInput::Mode,
+        "power" => ConwayInput::Power,
+        "repeat" => ConwayInput::Repeat,
+        "usd" => ConwayInput::UndoSymmetry,
+        "0" => ConwayInput::Pattern(0),
+        "1" => ConwayInput::Pattern(1),
+        "2" => ConwayInput::Pattern(2),
+        "3" => ConwayInput::Pattern(3),
+        "4" => ConwayInput::Pattern(4),
+        "5" => ConwayInput::Pattern(5),
+        "6" => ConwayInput::Pattern(6),
+        "7" => ConwayInput::Pattern(7),
+        "8" => ConwayInput::Pattern(8),
+        "9" => ConwayInput::Pattern(9),
+        _ => return None,
+    })
 }
 
-fn search_frame(
-    candidate: &Board<HEIGHT, WIDTH>,
-    assigned: &[[bool; WIDTH]; HEIGHT],
-    target: &Board<HEIGHT, WIDTH>,
-) -> device_envoy_core::led2d::Frame2d<WIDTH, HEIGHT> {
-    let mut frame = device_envoy_core::led2d::Frame2d::<WIDTH, HEIGHT>::new();
-    for row_index in 0..HEIGHT {
-        for col_index in 0..WIDTH {
-            if target.cells[row_index][col_index] {
-                frame[(col_index, row_index)] = smart_leds::RGB8 { r: 0, g: 10, b: 0 };
-            }
-
-            if assigned[row_index][col_index] {
-                frame[(col_index, row_index)] = if candidate.cells[row_index][col_index] {
-                    colors::RED
-                } else {
-                    smart_leds::RGB8 { r: 0, g: 0, b: 12 }
-                };
-            }
-        }
+fn status_text(status: ConwayStatus) -> String {
+    match status {
+        ConwayStatus::Ok => "ok",
+        ConwayStatus::Searching => "searching",
+        ConwayStatus::Found => "found",
+        ConwayStatus::NotFound => "not_found",
+        ConwayStatus::Cancelled => "cancelled",
+        ConwayStatus::Paused => "paused",
+        ConwayStatus::Unknown => "unknown",
     }
-    frame
+    .into()
+}
+
+const _: (usize, usize) = (WIDTH, HEIGHT);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn browser_controls_forward_all_shared_display_inputs() {
+        let mut conway = ConwayWeb::new();
+        assert_eq!(conway.press_key("mode"), "ok");
+        assert_eq!(conway.press_key("power"), "ok");
+        assert_eq!(conway.press_key("not-a-control"), "unknown");
+    }
 }

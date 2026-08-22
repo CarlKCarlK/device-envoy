@@ -65,10 +65,11 @@ cargo check-all
 ## 7. Validate Sample Projects
 
 - Update `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to the new release version.
-- Temporarily patch their `device-envoy-*` dependencies to this local workspace.
+- Temporarily replace their `device-envoy-*` dependencies with direct path
+  dependencies to this local workspace.
 - Run the sample/template projects that depend on this workspace (including `device-envoy-rp-blinky` and `device-envoy-esp-blinky`).
 - Confirm they build and run with the new versions.
-- Remove the temporary local patches; do not commit machine-specific paths.
+- Restore the registry dependencies; do not commit machine-specific paths.
 
 ## 8. Publish Dry Run
 

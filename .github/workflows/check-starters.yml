@@ -1,0 +1,75 @@
+name: Check Starters
+
+"on":
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 1 * *"
+
+concurrency:
+  group: check-starters-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-rp-blinky:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout device-envoy
+        uses: actions/checkout@v4
+        with:
+          path: device-envoy
+
+      - name: Clone device-envoy-rp-blinky
+        run: git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-rp-blinky.git device-envoy-rp-blinky
+
+      - name: Use local device-envoy-rp
+        working-directory: device-envoy-rp-blinky
+        run: cargo add device-envoy-rp --path ../device-envoy/crates/device-envoy-rp --no-default-features --features arm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf
+
+      - name: Check all RP starter boards
+        working-directory: device-envoy-rp-blinky
+        run: |
+          cargo xtask check --board pico1
+          cargo xtask check --board pico2
+          cargo xtask check --board pico1w
+          cargo xtask check --board pico2w
+
+  check-esp-blinky:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout device-envoy
+        uses: actions/checkout@v4
+        with:
+          path: device-envoy
+
+      - name: Clone device-envoy-esp-blinky
+        run: git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-esp-blinky.git device-envoy-esp-blinky
+
+      - name: Use local device-envoy-esp
+        working-directory: device-envoy-esp-blinky
+        run: cargo add device-envoy-esp --path ../device-envoy/crates/device-envoy-esp --no-default-features
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: riscv32imac-unknown-none-elf
+
+      - name: Install ESP toolchain
+        run: |
+          cargo install espup --locked
+          espup install \
+            --targets esp32c6,esp32s3 \
+            --export-file "$HOME/export-esp.sh"
+
+      - name: Check ESP32-C6 and ESP32-S3
+        working-directory: device-envoy-esp-blinky
+        run: |
+          source "$HOME/export-esp.sh"
+          ./scripts/device-action.sh check c6
+          ./scripts/device-action.sh check s3

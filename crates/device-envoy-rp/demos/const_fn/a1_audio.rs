@@ -11,7 +11,7 @@
 //! - Bit clock pin (`BCLK`) -> GP9
 //! - Word select pin (`LRC` / `LRCLK`) -> GP10
 //! - Button -> GP13 to GND
-//todo0 add to Esp?
+//todo add to Esp?
 
 #![no_std]
 #![no_main]

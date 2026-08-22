@@ -280,7 +280,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         },
         // Rewired from the ESP8684-DevKitM-1 v1.1 header table (J1/J3), avoiding GPIO8/GPIO9
         // (strapping pins) and GPIO19/GPIO20 (UART0, kept free for logging). Previously this and
-        // cyd_touch_wiring/button_pin collided on three GPIOs (see removed todo0 below), which
+        // cyd_touch_wiring/button_pin collided on three GPIOs, which
         // both broke clock/skeleton_clock compilation on this board and forced armatron_one_spi
         // to placeholder-stub via NoCydOneSpiPinConflict. All ten display+touch+button roles
         // used by a one-SPI CYD example are now on distinct GPIOs; verified by
@@ -353,7 +353,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
         },
         // Rewired from the ESP8684-DevKitM-1 v1.1 header table (J1/J3), avoiding GPIO8/GPIO9
         // (strapping pins) and GPIO19/GPIO20 (UART0, kept free for logging). Previously this and
-        // cyd_touch_wiring/button_pin collided on three GPIOs (see removed todo0 below), which
+        // cyd_touch_wiring/button_pin collided on three GPIOs, which
         // both broke clock/skeleton_clock compilation on this board and forced armatron_one_spi
         // to placeholder-stub via NoCydOneSpiPinConflict. All ten display+touch+button roles
         // used by a one-SPI CYD example are now on distinct GPIOs; verified by

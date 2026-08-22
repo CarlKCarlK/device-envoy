@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Fixed the `device-envoy-rp` package so its generated PCM and ADPCM sample
+  modules use audio assets included in the crate rather than files from a
+  sibling workspace crate.
+- This is an RP-only corrective release; `device-envoy-core` and
+  `device-envoy-esp` remain at `0.1.1`.
+
 ## 0.1.1
 
 - Expanded shared CYD display, touch, calibration, memory, and browser-simulator support.

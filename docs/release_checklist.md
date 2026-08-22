@@ -77,10 +77,13 @@ cargo check-all
 
 ## 8. Publish Dry Run
 
+- Use a fresh Cargo target directory for each dry run. This prevents files from
+  an earlier workspace package from accidentally satisfying a package's
+  references to files that were not included in its own archive.
 - Dry-run the core crate first:
 
 ```bash
-cargo publish --dry-run --locked -p device-envoy-core
+CARGO_TARGET_DIR="$(mktemp -d)" cargo publish --dry-run --locked -p device-envoy-core
 ```
 
 - The RP and ESP dry-runs resolve `device-envoy-core` from crates.io, so run
@@ -99,8 +102,8 @@ cargo publish --locked -p device-envoy-core
 - Dry-run the platform crates:
 
 ```bash
-cargo publish --dry-run --locked -p device-envoy-rp
-cargo publish --dry-run --locked -p device-envoy-esp
+CARGO_TARGET_DIR="$(mktemp -d)" cargo publish --dry-run --locked -p device-envoy-rp
+CARGO_TARGET_DIR="$(mktemp -d)" cargo publish --dry-run --locked -p device-envoy-esp
 ```
 
 - Publish the platform crates; neither depends on the other:
@@ -131,8 +134,17 @@ git push origin vX.Y.Z
 - Verify crate pages on crates.io for all published crates.
 - Verify docs.rs builds for `device-envoy-rp` and `device-envoy-esp`.
 - Confirm the top-level README version badges reflect the new release.
-- Refresh the blinky repositories' lockfiles from crates.io, validate every
-  supported starter configuration, and push their dependency updates:
+- Refresh only the Device Envoy entries in each blinky repository's lockfile;
+  review the diff to avoid unrelated dependency upgrades.
+- Confirm every Device Envoy lockfile entry has a crates.io `source` and
+  `checksum`, and verify that Cargo accepts the lockfile without changing it:
+
+```bash
+cargo metadata --locked --format-version 1 > /dev/null
+```
+
+- Validate every supported starter configuration against the published crates,
+  then push the dependency and lockfile updates:
 
 ```bash
 # in device-envoy-rp-blinky

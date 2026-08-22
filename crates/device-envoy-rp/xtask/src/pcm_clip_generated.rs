@@ -14,7 +14,7 @@ use crate::audio_player::pcm_clip;
 #[cfg(all(not(doc), not(feature = "host")))]
 pcm_clip! {
     pub PcmClipGenerated {
-        file: "../../../device-envoy-examples-rp/examples/data/audio/nasa_22k.s16",
+        file: "data/audio/nasa_22k.s16",
         source_sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
     }
 }

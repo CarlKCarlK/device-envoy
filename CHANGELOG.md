@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1
+
+- Expanded shared CYD display, touch, calibration, memory, and browser-simulator support.
+- Reorganized shared Conway and DNS tester applications across host, WASM, RP, and ESP targets.
+- Improved error propagation and diagnostics across the core and platform crates.
+- Added audio playlist examples and strengthened audio wiring validation.
+- Added pinned MSRV and Clippy CI checks.
+- Updated `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to depend on the new platform crate versions.
+
 ## 0.1.0
 
 - Bumped published workspace crate versions to `0.1.0`.

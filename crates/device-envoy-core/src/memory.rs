@@ -76,7 +76,7 @@
 //! # ) {
 //! #     panic!("{error}");
 //! # }
-//! # Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+//! # Ok::<(), device_envoy_core::memory::Error>(())
 //! ```
 //!
 //! ![CydMemory framebuffer preview][cyd_memory_bitmap]
@@ -107,7 +107,7 @@ use crate::cyd::{
 };
 #[cfg(test)]
 use crate::flash_block::{
-    FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block,
+    Error as FlashBlockError, FlashBlock, FlashDevice, clear_block, load_block, save_block,
 };
 use crate::{
     UnwrapInfallible,
@@ -152,7 +152,7 @@ impl FrameClockMemory {
 
 /// Error from the in-memory CYD test surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CydMemoryError {
+pub enum Error {
     OutOfFrames,
 }
 /// In-memory CYD device for host-side tests and screenshots.
@@ -177,9 +177,8 @@ struct CydMemoryShared {
 #[derive(Clone)]
 pub struct CydDisplayMemory {
     size: Size,
-    // todo00 Everywhere we refer to these colors without _color. That seems confusing because they could be bitmaps. Fix everywhere!
-    background: Rgb888,
-    foreground: Rgb888,
+    background_color: Rgb888,
+    foreground_color: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -239,8 +238,8 @@ impl CydMemory {
     #[must_use]
     pub fn new(
         size: Size,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
         let orientation = if size.width > size.height {
@@ -248,22 +247,22 @@ impl CydMemory {
         } else {
             Orientation::Portrait
         };
-        Self::new_inner(size, orientation, background, foreground, font)
+        Self::new_inner(size, orientation, background_color, foreground_color, font)
     }
 
     /// Construct an in-memory CYD surface with an oriented logical screen.
     #[must_use]
     pub fn new_with_orientation(
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
         Self::new_inner(
             orientation.size(),
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
         )
     }
@@ -271,11 +270,11 @@ impl CydMemory {
     fn new_inner(
         size: Size,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
     ) -> Self {
-        let background565 = Rgb565::from(background);
+        let background565 = Rgb565::from(background_color);
         let pixel_count = size.width as usize * size.height as usize;
         let shared = Rc::new(RefCell::new(CydMemoryShared {
             framebuffer: vec![background565.into_storage(); pixel_count],
@@ -290,10 +289,10 @@ impl CydMemory {
         }));
         let display = CydDisplayMemory {
             size,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             background565,
-            foreground565: Rgb565::from(foreground),
+            foreground565: Rgb565::from(foreground_color),
             font,
             shared: shared.clone(),
         };
@@ -327,7 +326,7 @@ impl CydMemory {
 }
 
 impl Cyd for CydMemory {
-    type Error = CydMemoryError;
+    type Error = Error;
     type Display = CydDisplayMemory;
     type Touch = CydTouchMemory;
 
@@ -341,7 +340,7 @@ impl Cyd for CydMemory {
 }
 
 impl CydMemory {
-    /// Limit how many frames may flush before [`CydMemoryError::OutOfFrames`].
+    /// Limit how many frames may flush before [`Error::OutOfFrames`].
     pub fn set_frame_budget(&mut self, frame_budget: usize) {
         self.shared.borrow_mut().frame_budget = frame_budget;
     }
@@ -531,10 +530,10 @@ pub fn assert_framebuffer_matches_expected_png(
 
     let expected_bytes = fs::read(&expected_path)?;
     let actual_bytes = fs::read(&temp_path)?;
-    if let Err(error) = fs::remove_file(&temp_path) {
-        if error.kind() != std::io::ErrorKind::NotFound {
-            return Err(error.into());
-        }
+    if let Err(error) = fs::remove_file(&temp_path)
+        && error.kind() != std::io::ErrorKind::NotFound
+    {
+        return Err(error.into());
     }
 
     if expected_bytes != actual_bytes {
@@ -582,7 +581,7 @@ impl core::fmt::Debug for CydTouchUncalibratedMemory {
 }
 
 impl CydTouchUncalibrated for CydTouchUncalibratedMemory {
-    type Error = CydMemoryError;
+    type Error = Error;
     type Calibrated = CydTouchMemory;
 
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
@@ -602,7 +601,7 @@ impl CydTouchUncalibrated for CydTouchUncalibratedMemory {
 }
 
 impl CydDisplay for CydDisplayMemory {
-    type Error = CydMemoryError;
+    type Error = Error;
     type Frame<'a>
         = CydFrameMemory
     where
@@ -612,12 +611,12 @@ impl CydDisplay for CydDisplayMemory {
         self.size
     }
 
-    fn background(&self) -> Rgb888 {
-        self.background
+    fn background_color(&self) -> Rgb888 {
+        self.background_color
     }
 
-    fn foreground(&self) -> Rgb888 {
-        self.foreground
+    fn foreground_color(&self) -> Rgb888 {
+        self.foreground_color
     }
 
     fn background_565(&self) -> Rgb565 {
@@ -671,7 +670,7 @@ impl CydDisplay for CydDisplayMemory {
 }
 
 impl CydTouch for CydTouchMemory {
-    type Error = CydMemoryError;
+    type Error = Error;
     type Uncalibrated = CydTouchUncalibratedMemory;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
@@ -710,10 +709,10 @@ impl CydFrameMemory {
         usize::try_from(position_y.checked_sub(self.tile_top_left.y)?).ok()
     }
 
-    fn flush_now(&mut self) -> Result<(), CydMemoryError> {
+    fn flush_now(&mut self) -> Result<(), Error> {
         let mut shared = self.shared.borrow_mut();
         if shared.flush_count >= shared.frame_budget {
-            return Err(CydMemoryError::OutOfFrames);
+            return Err(Error::OutOfFrames);
         }
 
         blit_frame_to_screen(
@@ -819,7 +818,7 @@ impl RectanglePixels for CydFrameMemory {
 }
 
 impl CydFrame for CydFrameMemory {
-    type Error = CydMemoryError;
+    type Error = Error;
 
     fn tile_top_left(&self) -> Point {
         self.tile_top_left
@@ -1199,8 +1198,8 @@ fn blit_frame_to_screen(
 #[cfg(test)]
 mod tests {
     use super::{
-        ButtonMemory, CydMemory, CydMemoryError, CydTouchMemory, CydTouchUncalibratedMemory,
-        FlashBlockMemory,
+        ButtonMemory, CydMemory, CydTouchMemory, CydTouchUncalibratedMemory, Error,
+        FlashBlockMemory, MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN,
     };
     use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
@@ -1212,8 +1211,8 @@ mod tests {
         touch::{
             RawPoint, RawTouchEvent,
             calibration::{
-                CalibrationConfig, CalibrationCorner, EnsureCalibrationErrorKind,
-                EnsureCalibrationOutcome, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
+                CalibrationConfig, CalibrationCorner, EnsureCalibrationOutcome, ErrorKind,
+                VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
                 calibration_verify_target_center, distort_demo_screen_to_raw, ensure_calibration,
             },
         },
@@ -1261,9 +1260,7 @@ mod tests {
         }
     }
 
-    fn read_next_raw_touch_event(
-        memory_cyd: &CydMemory,
-    ) -> Result<Option<RawTouchEvent>, CydMemoryError> {
+    fn read_next_raw_touch_event(memory_cyd: &CydMemory) -> Result<Option<RawTouchEvent>, Error> {
         let (_display, mut touch) = memory_cyd.parts_uncalibrated();
         touch.read_raw_touch_event()
     }
@@ -1275,7 +1272,7 @@ mod tests {
         confirmed_message: Option<&str>,
     ) -> Result<
         (CydTouchMemory, EnsureCalibrationOutcome),
-        crate::cyd::touch::calibration::EnsureCalibrationError<
+        crate::cyd::touch::calibration::Error<
             CydTouchUncalibratedMemory,
             <FlashBlockMemory as FlashBlock>::Error,
         >,
@@ -1396,7 +1393,7 @@ mod tests {
             let mut display = memory_cyd.display();
             let mut frame = display.full_frame_mut();
             let error = block_on(frame.flush()).expect_err("second flush should hit frame budget");
-            assert_eq!(error, CydMemoryError::OutOfFrames);
+            assert_eq!(error, Error::OutOfFrames);
         }
         assert_eq!(memory_cyd.flush_count(), 1);
     }
@@ -1556,10 +1553,7 @@ mod tests {
         )
         .expect_err("empty input should stop at the frame budget");
 
-        assert!(matches!(
-            error.kind,
-            EnsureCalibrationErrorKind::Device(CydMemoryError::OutOfFrames)
-        ));
+        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
         assert_eq!(memory_cyd.flush_count(), 3);
     }
 
@@ -1580,10 +1574,7 @@ mod tests {
         )
         .expect_err("single-frame budget should stop after the first drawn frame");
 
-        assert!(matches!(
-            error.kind,
-            EnsureCalibrationErrorKind::Device(CydMemoryError::OutOfFrames)
-        ));
+        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);
         assert_eq!(
@@ -1837,10 +1828,7 @@ mod tests {
         )
         .expect_err("oversized hold should stop at the frame budget");
 
-        assert!(matches!(
-            error.kind,
-            EnsureCalibrationErrorKind::Device(CydMemoryError::OutOfFrames)
-        ));
+        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
         assert_eq!(memory_cyd.flush_count(), 2);
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);
@@ -1885,7 +1873,25 @@ mod tests {
     }
 
     fn tap_events(raw_point: RawPoint) -> Vec<RawTouchEvent> {
-        super::tap_events(raw_point)
+        let mut raw_touch_events = Vec::new();
+        raw_touch_events.push(RawTouchEvent::Down {
+            raw_x: raw_point.x,
+            raw_y: raw_point.y,
+        });
+        for _discarded_sample_index in 0..SAMPLES_DISCARDED_AFTER_DOWN {
+            raw_touch_events.push(RawTouchEvent::Move {
+                raw_x: raw_point.x,
+                raw_y: raw_point.y,
+            });
+        }
+        for _usable_sample_index in 0..MIN_SAMPLES_PER_POINT {
+            raw_touch_events.push(RawTouchEvent::Move {
+                raw_x: raw_point.x,
+                raw_y: raw_point.y,
+            });
+        }
+        raw_touch_events.push(RawTouchEvent::Up);
+        raw_touch_events
     }
 
     fn dropout_tap_events(raw_point: RawPoint) -> Vec<RawTouchEvent> {
@@ -1984,27 +1990,4 @@ mod tests {
     const fn verify_timeout_extra_idle_frames() -> usize {
         VERIFY_TIMEOUT_FRAMES.saturating_sub(1)
     }
-}
-
-#[cfg(test)]
-fn tap_events(raw_point: crate::cyd::touch::RawPoint) -> Vec<RawTouchEvent> {
-    let mut raw_touch_events = Vec::new();
-    raw_touch_events.push(RawTouchEvent::Down {
-        raw_x: raw_point.x,
-        raw_y: raw_point.y,
-    });
-    for _discarded_sample_index in 0..SAMPLES_DISCARDED_AFTER_DOWN {
-        raw_touch_events.push(RawTouchEvent::Move {
-            raw_x: raw_point.x,
-            raw_y: raw_point.y,
-        });
-    }
-    for _usable_sample_index in 0..MIN_SAMPLES_PER_POINT {
-        raw_touch_events.push(RawTouchEvent::Move {
-            raw_x: raw_point.x,
-            raw_y: raw_point.y,
-        });
-    }
-    raw_touch_events.push(RawTouchEvent::Up);
-    raw_touch_events
 }

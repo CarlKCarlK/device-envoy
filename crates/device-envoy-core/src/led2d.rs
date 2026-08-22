@@ -301,7 +301,7 @@ where
     S: LedStripTrait<N> + ?Sized,
 {
     led_strip: &'a S,
-    mapping_by_xy: [u16; N],
+    mapping_by_xy: &'static [u16; N],
     width: usize,
 }
 
@@ -313,7 +313,7 @@ where
     #[must_use]
     pub fn new<const W: usize, const H: usize>(
         led_strip: &'a S,
-        led_layout: &LedLayout<N, W, H>,
+        led_layout: &'static LedLayout<N, W, H>,
     ) -> Self {
         assert_eq!(
             W.checked_mul(H).expect("width * height must fit in usize"),
@@ -339,7 +339,7 @@ where
     }
 
     fn mapping_by_xy(&self) -> &[u16; N] {
-        &self.mapping_by_xy
+        self.mapping_by_xy
     }
 
     fn width(&self) -> usize {

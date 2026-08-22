@@ -9,7 +9,7 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// Define a unified error type for this crate.
 #[expect(missing_docs, reason = "The variants are self-explanatory.")]
-#[derive(Debug, Display, Error)]
+#[derive(Debug, Display, Error, derive_more::From)]
 pub enum Error {
     // `#[error(not(source))]` below tells `derive_more` that `embassy_executor::SpawnError` does
     // not implement Rust's `core::error::Error` trait.  `SpawnError` should, but Rust's `Error`
@@ -32,9 +32,11 @@ pub enum Error {
     IndexOutOfBounds,
 
     #[display("MFRC522 initialization failed: {_0:?}")]
+    #[from(ignore)]
     Mfrc522Init(#[error(not(source))] PCDErrorCode),
 
     #[display("MFRC522 version read failed: {_0:?}")]
+    #[from(ignore)]
     Mfrc522Version(#[error(not(source))] PCDErrorCode),
 
     #[display("Format error")]
@@ -58,6 +60,7 @@ pub enum Error {
     StorageCorrupted,
 
     #[display("{_0:?}")]
+    #[from(ignore)]
     Core(#[error(not(source))] device_envoy_core::Error),
 
     #[cfg(target_os = "none")]
@@ -78,12 +81,12 @@ pub enum Error {
 }
 
 #[cfg(target_os = "none")]
-impl From<crate::cyd::CydError> for Error {
-    fn from(error: crate::cyd::CydError) -> Self {
+impl From<crate::cyd::Error> for Error {
+    fn from(error: crate::cyd::Error) -> Self {
         match error {
-            crate::cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
-            crate::cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
-            crate::cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            crate::cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
+            crate::cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
+            crate::cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
         }
     }
 }
@@ -91,25 +94,23 @@ impl From<crate::cyd::CydError> for Error {
 #[cfg(target_os = "none")]
 impl
     From<
-        device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+        device_envoy_core::cyd::touch::calibration::Error<
             crate::cyd::CydTouchUncalibratedRp,
             Error,
         >,
     > for Error
 {
     fn from(
-        error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+        error: device_envoy_core::cyd::touch::calibration::Error<
             crate::cyd::CydTouchUncalibratedRp,
             Error,
         >,
     ) -> Self {
         match error.kind {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
-                error,
-            ) => Self::from(error),
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
-                error,
-            ) => error,
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
+                Self::from(error)
+            }
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
         }
     }
 }
@@ -124,12 +125,6 @@ impl From<()> for Error {
 impl From<Infallible> for Error {
     fn from(value: Infallible) -> Self {
         match value {}
-    }
-}
-
-impl From<embassy_executor::SpawnError> for Error {
-    fn from(err: embassy_executor::SpawnError) -> Self {
-        Self::TaskSpawn(err)
     }
 }
 

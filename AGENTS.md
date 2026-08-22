@@ -27,6 +27,13 @@ This file contains both shared workspace rules and crate-specific rules for this
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 - For `cargo` aliases that target embedded triples, include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
 
+## Error Handling
+
+- Prefer one primary module error type named `Error`, with a module-level `Result` alias when it improves readability.
+- Preserve useful diagnostics by storing the original source error in wrapper variants. Use `#[derive(Debug, derive_more::From)]` for direct variant conversions and propagate them with plain `?`.
+- Keep `map_err`, handwritten `From` implementations, and error flattening only for intentional semantic translation, contextual diagnostics, platform boundaries, or coherence exceptions. Document those exceptions nearby.
+- Never replace a useful source error with a label-only or unit variant. Unit and infallible conversions are appropriate only when the source carries no meaningful information.
+
 ## Dependency Upgrade Guardrails
 
 - Treat embedded HAL/driver dependency upgrades as behavior migrations, not just compile fixes. When an upgraded API adds a required parameter, trace the previous behavior/default before choosing a placeholder value.
@@ -72,6 +79,21 @@ pub mod portal;
 ```
 
 ## Variable Naming Conventions
+
+### Module Context and Prefixes
+
+Prefer concise names when the containing module already supplies the context.
+Use the module path to disambiguate related items instead of repeating the
+module name in every item. For example, prefer `dns_tester::run`,
+`dns_tester::splash`, and `dns_tester::Exit` over redundant names such as
+`dns_tester::dns_tester`, `dns_tester::dns_tester_splash`, and
+`DnsTesterExit`.
+
+Add a prefix only when the item is commonly used outside that module, when it
+would otherwise be ambiguous in the same scope, or when the prefix conveys
+meaning that the module path cannot. Do not add redundant prefixes or retain
+example-, module-, or platform-prefixed compatibility aliases merely to
+preserve an older naming scheme.
 
 Variables should generally match their type names converted to snake_case. This improves predictability and encourages better type names.
 

@@ -67,13 +67,13 @@ impl EnsureCalibrationOutcome {
 }
 
 /// Error from the shared calibration driver.
-pub struct EnsureCalibrationError<T: CydTouchUncalibrated, FlashError> {
+pub struct Error<T: CydTouchUncalibrated, FlashError> {
     pub touch: T,
-    pub kind: EnsureCalibrationErrorKind<T::Error, FlashError>,
+    pub kind: ErrorKind<T::Error, FlashError>,
 }
 
 // Manual impl: the returned device is not `Debug`, so only `kind` is shown.
-impl<T, FlashError> core::fmt::Debug for EnsureCalibrationError<T, FlashError>
+impl<T, FlashError> core::fmt::Debug for Error<T, FlashError>
 where
     T: CydTouchUncalibrated,
     T::Error: core::fmt::Debug,
@@ -81,14 +81,14 @@ where
 {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         formatter
-            .debug_struct("EnsureCalibrationError")
+            .debug_struct("Error")
             .field("kind", &self.kind)
             .finish_non_exhaustive()
     }
 }
 
 #[derive(Debug)]
-pub enum EnsureCalibrationErrorKind<DeviceError, FlashError> {
+pub enum ErrorKind<DeviceError, FlashError> {
     Device(DeviceError),
     Flash(FlashError),
 }
@@ -200,8 +200,8 @@ enum CalibrationShape {
 /// #     type Error = Infallible;
 /// #     type Frame<'a> = DemoFrame;
 /// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
-/// #     fn background(&self) -> Rgb888 { Rgb888::BLACK }
-/// #     fn foreground(&self) -> Rgb888 { Rgb888::WHITE }
+/// #     fn background_color(&self) -> Rgb888 { Rgb888::BLACK }
+/// #     fn foreground_color(&self) -> Rgb888 { Rgb888::WHITE }
 /// #     fn background_565(&self) -> Rgb565 { Rgb565::BLACK }
 /// #     fn foreground_565(&self) -> Rgb565 { Rgb565::WHITE }
 /// #     fn frame_mut_with_tile_top_left(
@@ -288,7 +288,7 @@ enum CalibrationShape {
 /// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
 /// # }
 /// # impl Button for DemoButton {}
-/// # async fn demo() -> Result<(), device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<DemoTouchUncalibrated, Infallible>> {
+/// # async fn demo() -> Result<(), device_envoy_core::cyd::touch::calibration::Error<DemoTouchUncalibrated, Infallible>> {
 /// let mut display = DemoDisplay;
 /// let touch = DemoTouchUncalibrated;
 /// let mut calibration_flash_block = DemoFlashBlock {
@@ -311,7 +311,7 @@ pub async fn ensure_calibration<D, T, F, R>(
     calibration_flash_block: &mut F,
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
-) -> Result<(T::Calibrated, EnsureCalibrationOutcome), EnsureCalibrationError<T, F::Error>>
+) -> Result<(T::Calibrated, EnsureCalibrationOutcome), Error<T, F::Error>>
 where
     D: CydDisplay,
     T: CydTouchUncalibrated<Error = D::Error>,
@@ -337,7 +337,7 @@ pub async fn ensure_calibration_with_settings<D, T, F, R>(
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
     ensure_calibration_settings: EnsureCalibrationSettings,
-) -> Result<(T::Calibrated, EnsureCalibrationOutcome), EnsureCalibrationError<T, F::Error>>
+) -> Result<(T::Calibrated, EnsureCalibrationOutcome), Error<T, F::Error>>
 where
     D: CydDisplay,
     T: CydTouchUncalibrated<Error = D::Error>,
@@ -375,9 +375,9 @@ where
             let raw_touch_event = match touch.read_raw_touch_event() {
                 Ok(raw_touch_event) => raw_touch_event,
                 Err(error) => {
-                    return Err(EnsureCalibrationError {
+                    return Err(Error {
                         touch,
-                        kind: EnsureCalibrationErrorKind::Device(error),
+                        kind: ErrorKind::Device(error),
                     });
                 }
             };
@@ -458,20 +458,19 @@ where
                     let (mapped_x, mapped_y) =
                         candidate_config.map_raw_to_screen(raw_point.x, raw_point.y);
                     if hit_verify_target(mapped_x, mapped_y) {
-                        if let Some(confirmed_message) = confirmed_message {
-                            if let Err(error) =
+                        if let Some(confirmed_message) = confirmed_message
+                            && let Err(error) =
                                 draw_message_screen(display, confirmed_message).await
-                            {
-                                return Err(EnsureCalibrationError {
-                                    touch,
-                                    kind: EnsureCalibrationErrorKind::Device(error),
-                                });
-                            }
+                        {
+                            return Err(Error {
+                                touch,
+                                kind: ErrorKind::Device(error),
+                            });
                         }
                         if let Err(error) = calibration_flash_block.save(candidate_config) {
-                            return Err(EnsureCalibrationError {
+                            return Err(Error {
                                 touch,
-                                kind: EnsureCalibrationErrorKind::Flash(error),
+                                kind: ErrorKind::Flash(error),
                             });
                         }
                         let calibration_config = *candidate_config;
@@ -504,9 +503,9 @@ where
         )
         .await
         {
-            return Err(EnsureCalibrationError {
+            return Err(Error {
                 touch,
-                kind: EnsureCalibrationErrorKind::Device(error),
+                kind: ErrorKind::Device(error),
             });
         }
 

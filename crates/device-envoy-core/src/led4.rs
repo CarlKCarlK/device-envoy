@@ -103,6 +103,10 @@ pub fn circular_outline_animation(clockwise: bool) -> Animation {
 
 /// Commands sent to the shared led4 command loop.
 #[derive(Clone)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "the bounded inline animation keeps this no-alloc command signal last-command-wins"
+)]
 #[doc(hidden)] // Platform plumbing command type; not part of trait-facing API.
 pub enum Led4Command {
     /// Display static text with selected blink behavior.

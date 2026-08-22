@@ -40,7 +40,7 @@ pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DEFAULT_DISPL
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated, CydUncalibrated,
+    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
     display::{Orientation, tiling},
     touch,
 };
@@ -65,11 +65,11 @@ pub struct CydDisplayEsp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     // pass a zero-sized buffer (e.g. `CydStaticEsp<0>`).
     pixel_buffer: &'static mut dyn DynPixelBuffer,
     // Default drawing style. Background clears the device at construction and
-    // fills every new frame; foreground and font drive `CydFrameEsp::write_text`.
+    // fills every new frame; foreground color and font drive `CydFrameEsp::write_text`.
     // The `Rgb565` versions are precomputed so the hot drawing paths skip the
     // per-call conversion.
-    background: Rgb888,
-    foreground: Rgb888,
+    background_color: Rgb888,
+    foreground_color: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -178,7 +178,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameEsp<'a, D> {
 
     /// Present this frame's pixels at its rectangle's top-left (set by
     /// [`CydDisplay::frame_mut`]).
-    pub fn flush(&mut self) -> Result<(), CydError> {
+    pub fn flush(&mut self) -> Result<(), Error> {
         Ok(self
             .display
             .flush_buffer(&self.view, self.rectangle.top_left)?)
@@ -276,7 +276,7 @@ impl<D: SpiDevice<u8>> PixelTarget for CydFrameEsp<'_, D> {
 
 /// Error from a CYD ESP display or touch operation.
 #[derive(Debug)]
-pub enum CydError {
+pub enum Error {
     /// Initializing the display over SPI failed.
     DisplayInit(CydDisplayEspInitError),
     /// Initializing the touch controller over SPI failed.
@@ -287,50 +287,44 @@ pub enum CydError {
     DisplaySetOrientation(CydDisplayEspFlushError),
 }
 
-impl From<CydDisplayEspInitError> for CydError {
+impl From<CydDisplayEspInitError> for Error {
     fn from(error: CydDisplayEspInitError) -> Self {
         Self::DisplayInit(error)
     }
 }
 
-impl From<CydTouchEspInitError> for CydError {
+impl From<CydTouchEspInitError> for Error {
     fn from(error: CydTouchEspInitError) -> Self {
         Self::TouchInit(error)
     }
 }
 
-impl From<CydDisplayEspFlushError> for CydError {
+impl From<CydDisplayEspFlushError> for Error {
     fn from(error: CydDisplayEspFlushError) -> Self {
         Self::DisplayFlush(error)
     }
 }
 
 impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
-    fn set_orientation(&mut self, orientation: Orientation) -> Result<(), CydError> {
-        self.display
-            .set_orientation(orientation)
-            .map_err(CydError::DisplaySetOrientation)
-    }
-
     fn from_display_device(
         mut display: CydDisplayEspDevice<D>,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         pixel_buffer: &'static mut dyn DynPixelBuffer,
-    ) -> Result<Self, CydError> {
-        let background565 = rgb565(background);
+    ) -> Result<Self, Error> {
+        let background565 = rgb565(background_color);
         display.fill(background565)?;
 
         Ok(Self {
             display,
             orientation,
             pixel_buffer,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             background565,
-            foreground565: rgb565(foreground),
+            foreground565: rgb565(foreground_color),
             font,
         })
     }
@@ -345,11 +339,11 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         rst_pin: impl esp_hal::gpio::OutputPin + 'static,
         backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         pixel_buffer: &'static mut dyn DynPixelBuffer,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         let display = CydDisplayEspDevice::new_from_device(
             spi_device,
             dc_pin,
@@ -360,8 +354,8 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         Self::from_display_device(
             display,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             pixel_buffer,
         )
@@ -382,10 +376,10 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         let pixel_buffer = PixelBuffer::init_static(&statics.pixel_buffer);
         let display = CydDisplayEspDevice::new(
             display_spi,
@@ -402,8 +396,8 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
         Self::from_display_device(
             display,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             pixel_buffer,
         )
@@ -434,7 +428,7 @@ impl CydTouchUncalibratedEsp<touch_driver::CydTouchSpiDevice> {
         touch_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             touch: CydTouchEspDevice::new(
                 touch_spi,
@@ -471,8 +465,8 @@ impl CydEsp {
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         touch_spi: impl esp_hal::spi::master::Instance + 'static,
         touch_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
@@ -495,8 +489,8 @@ impl CydEsp {
             display_backlight_pin,
             display_spi_hz,
             orientation,
-            background,
-            foreground,
+            background_color,
+            foreground_color,
             font,
             touch_spi,
             touch_sck_pin,
@@ -514,19 +508,19 @@ impl CydEsp {
         )
         .await
         .map_err(|error| match error.kind {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
-                cyd_error,
-            ) => crate::Error::from(cyd_error),
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
-                flash_error,
-            ) => flash_error,
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(cyd_error) => {
+                crate::Error::from(cyd_error)
+            }
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(flash_error) => {
+                flash_error
+            }
         })?;
         Ok(Self { display, touch })
     }
 }
 
 impl Cyd for CydEsp {
-    type Error = CydError;
+    type Error = Error;
     type Display = CydDisplayEsp;
     type Touch = CydTouchEsp;
 
@@ -552,8 +546,8 @@ impl CydEspUncalibrated {
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         touch_spi: impl esp_hal::spi::master::Instance + 'static,
         touch_sck_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
@@ -561,7 +555,7 @@ impl CydEspUncalibrated {
         touch_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         touch_irq_pin: impl esp_hal::gpio::InputPin + 'static,
-    ) -> Result<Self, CydError> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             display: CydDisplayEsp::new(
                 statics,
@@ -575,8 +569,8 @@ impl CydEspUncalibrated {
                 display_backlight_pin,
                 display_spi_hz,
                 orientation,
-                background,
-                foreground,
+                background_color,
+                foreground_color,
                 font,
             )?,
             touch: CydTouchUncalibratedEsp::new(
@@ -587,83 +581,6 @@ impl CydEspUncalibrated {
                 touch_cs_pin,
                 touch_irq_pin,
             )?,
-        })
-    }
-}
-
-impl CydUncalibrated for CydEspUncalibrated {
-    type Calibrated = CydEsp;
-    type Error = crate::Error;
-
-    async fn into_calibrated<F, B>(
-        mut self,
-        calibration_flash_block: &mut F,
-        recalibration_button: &mut B,
-    ) -> Result<Self::Calibrated, Self::Error>
-    where
-        F: device_envoy_core::flash_block::FlashBlock,
-        B: Button,
-        Self::Error: From<F::Error>,
-    {
-        let application_orientation = self.display.orientation;
-        let calibration_is_available = calibration_flash_block
-            .load::<CalibrationConfig>()
-            .unwrap_or(None)
-            .is_some();
-
-        if !calibration_is_available {
-            self.display
-                .set_orientation(Orientation::Landscape)
-                .map_err(|error| match error {
-                    CydError::DisplaySetOrientation(error) => {
-                        crate::Error::CydDisplaySetOrientation(error)
-                    }
-                    CydError::DisplayFlush(error) => crate::Error::CydDisplayFlush(error),
-                    CydError::DisplayInit(error) => crate::Error::CydDisplayInit(error),
-                    CydError::TouchInit(error) => crate::Error::CydTouchInit(error),
-                })?;
-        }
-
-        let (touch, _calibration_outcome) = ensure_calibration(
-            &mut self.display,
-            self.touch,
-            calibration_flash_block,
-            recalibration_button,
-            Some("Touch calibrated"),
-        )
-        .await
-        .map_err(|error| match error.kind {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
-                cyd_error,
-            ) => match cyd_error {
-                CydError::DisplaySetOrientation(error) => {
-                    crate::Error::CydDisplaySetOrientation(error)
-                }
-                CydError::DisplayFlush(error) => crate::Error::CydDisplayFlush(error),
-                CydError::DisplayInit(error) => crate::Error::CydDisplayInit(error),
-                CydError::TouchInit(error) => crate::Error::CydTouchInit(error),
-            },
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
-                flash_error,
-            ) => crate::Error::from(flash_error),
-        })?;
-
-        if !calibration_is_available {
-            self.display
-                .set_orientation(application_orientation)
-                .map_err(|error| match error {
-                    CydError::DisplaySetOrientation(error) => {
-                        crate::Error::CydDisplaySetOrientation(error)
-                    }
-                    CydError::DisplayFlush(error) => crate::Error::CydDisplayFlush(error),
-                    CydError::DisplayInit(error) => crate::Error::CydDisplayInit(error),
-                    CydError::TouchInit(error) => crate::Error::CydTouchInit(error),
-                })?;
-        }
-
-        Ok(CydEsp {
-            display: self.display,
-            touch,
         })
     }
 }
@@ -712,7 +629,7 @@ impl fmt::Debug for CydEspUncalibrated {
 }
 
 impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
-    type Error = CydError;
+    type Error = Error;
     type Frame<'a>
         = CydFrameEsp<'a, D>
     where
@@ -723,12 +640,12 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
         self.display.size()
     }
 
-    fn background(&self) -> Rgb888 {
-        self.background
+    fn background_color(&self) -> Rgb888 {
+        self.background_color
     }
 
-    fn foreground(&self) -> Rgb888 {
-        self.foreground
+    fn foreground_color(&self) -> Rgb888 {
+        self.foreground_color
     }
 
     fn background_565(&self) -> Rgb565 {
@@ -755,12 +672,12 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     }
 
     #[inline]
-    fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), CydError> {
+    fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Error> {
         Ok(self.display.fill_rectangle(rectangle, color)?)
     }
 
     #[inline]
-    fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), CydError>
+    fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), Error>
     where
         I: IntoIterator<Item = Rgb565>,
     {
@@ -768,13 +685,13 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     }
 
     #[inline]
-    fn flush_at(&mut self, buffer: &impl RectanglePixels, top_left: Point) -> Result<(), CydError> {
+    fn flush_at(&mut self, buffer: &impl RectanglePixels, top_left: Point) -> Result<(), Error> {
         Ok(self.display.flush_buffer(buffer, top_left)?)
     }
 }
 
 impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
-    type Error = CydError;
+    type Error = Error;
     type Calibrated = CydTouchEsp<D>;
 
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
@@ -790,10 +707,10 @@ impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
 }
 
 impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
-    type Error = CydError;
+    type Error = Error;
     type Uncalibrated = CydTouchUncalibratedEsp<D>;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, CydError> {
+    fn read(&mut self) -> Result<Option<TouchEvent>, Error> {
         Ok(self
             .raw
             .touch
@@ -825,7 +742,7 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
 }
 
 impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
-    type Error = CydError;
+    type Error = Error;
 
     fn tile_top_left(&self) -> Point {
         self.tile_top_left
@@ -862,7 +779,7 @@ impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
     // Flushing the panel over SPI is synchronous, so this future resolves on its
     // first poll. The `async fn` is the device-agnostic frame boundary the
     // render loop awaits; on the MCU it adds no suspension.
-    async fn flush(&mut self) -> Result<(), CydError> {
+    async fn flush(&mut self) -> Result<(), Error> {
         CydFrameEsp::flush(self)
     }
 }

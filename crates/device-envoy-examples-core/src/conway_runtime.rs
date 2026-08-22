@@ -17,12 +17,9 @@ where
     let mut app = ConwayApp::new();
     loop {
         if !app.display_powered() {
-            match ir_kepler.wait_for_press().await {
-                KeplerKeys::Power => {
-                    app.input(ConwayInput::Power);
-                    led2d.write_frame(app.frame());
-                }
-                _ => {}
+            if ir_kepler.wait_for_press().await == KeplerKeys::Power {
+                app.input(ConwayInput::Power);
+                led2d.write_frame(app.frame());
             }
             continue;
         }

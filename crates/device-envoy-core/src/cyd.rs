@@ -27,7 +27,6 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
-use crate::{button::Button, flash_block::FlashBlock};
 use display::Orientation;
 use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
 
@@ -93,9 +92,9 @@ frame.flush().await?;
 # ) {
 #     panic!("{error}");
 # }
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 # })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
 ![CYD trait preview][cyd_trait_preview]
@@ -111,34 +110,13 @@ pub trait Cyd: Sized {
     /// Borrow both calibrated halves at once.
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
 
+    /// Borrow the calibrated display half.
+    fn display(&mut self) -> &mut Self::Display {
+        self.parts().0
+    }
+
     /// Return the logical orientation of this complete device.
     fn orientation(&self) -> Orientation;
-}
-
-/// A complete CYD bundle whose touch half has not yet been calibrated.
-///
-/// Bundle implementations own the calibration lifecycle and return a ready-to-use
-/// [`Cyd`] in one operation. This keeps display orientation, calibration persistence,
-/// retry behavior, and button handling out of application startup code.
-// TODO0000 Keep this implementation-only trait private once all platform
-// constructors have moved their calibration orchestration below the API.
-#[doc(hidden)]
-pub trait CydUncalibrated: Sized {
-    /// The calibrated bundle produced by [`CydUncalibrated::into_calibrated`].
-    type Calibrated: Cyd;
-    /// Errors that prevent the bundle from becoming ready for application use.
-    type Error;
-
-    /// Consume this bundle and complete its saved-or-interactive calibration flow.
-    fn into_calibrated<F, B>(
-        self,
-        calibration_flash_block: &mut F,
-        recalibration_button: &mut B,
-    ) -> impl core::future::Future<Output = Result<Self::Calibrated, Self::Error>>
-    where
-        F: FlashBlock,
-        B: Button,
-        Self::Error: From<F::Error>;
 }
 
 /// A raw-touch source that can run the shared calibration flow and become calibrated.
@@ -231,9 +209,9 @@ let display = CydMemory::new(
 )
 .display();
 assert_eq!(display.screen_size(), Size::new(320, 240));
-assert_eq!(display.background_565(), display.to_rgb565(display.background()));
-assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground()));
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+assert_eq!(display.background_565(), display.to_rgb565(display.background_color()));
+assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground_color()));
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 "#
     )]
@@ -242,12 +220,12 @@ assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground()));
     /// The device default background color.
     ///
     /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
-    fn background(&self) -> Rgb888;
+    fn background_color(&self) -> Rgb888;
 
     /// The device default foreground/text color.
     ///
     /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
-    fn foreground(&self) -> Rgb888;
+    fn foreground_color(&self) -> Rgb888;
 
     /// The device default background color in the native `Rgb565` format.
     ///
@@ -324,9 +302,9 @@ frame.flush().await?;
 # ) {
 #     panic!("{error}");
 # }
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 # })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
 ![CYD tiled frame preview][cyd_frame_mut_with_tile_top_left_preview]
@@ -381,9 +359,9 @@ frame.flush().await?;
 # ) {
 #     panic!("{error}");
 # }
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 # })?;
-# Ok::<(), device_envoy_core::memory::CydMemoryError>(())
+# Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
 ![CYD frame preview][cyd_frame_mut_preview]
@@ -459,12 +437,15 @@ frame.flush().await?;
     fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,
-        background: Rgb565,
+        background_color: Rgb565,
         items: impl IntoIterator<Item = display::DrawItem>,
     ) -> Result<(), Self::Error> {
         let bounds = bounds.intersection(&Rectangle::new(Point::zero(), self.screen_size()));
-        let pixel_sources =
-            ContiguousPixels::<PIXEL_SOURCE_COUNT>::from_draw_items(bounds, background, items);
+        let pixel_sources = ContiguousPixels::<PIXEL_SOURCE_COUNT>::from_draw_items(
+            bounds,
+            background_color,
+            items,
+        );
         self.fill_contiguous(pixel_sources.bounds(), pixel_sources.iter())
     }
 
@@ -545,20 +526,20 @@ mod tests {
             Size::new(320, 240)
         }
 
-        fn background(&self) -> Rgb888 {
+        fn background_color(&self) -> Rgb888 {
             Rgb888::CSS_BLACK
         }
 
-        fn foreground(&self) -> Rgb888 {
+        fn foreground_color(&self) -> Rgb888 {
             Rgb888::CSS_WHITE
         }
 
         fn background_565(&self) -> Rgb565 {
-            self.to_rgb565(self.background())
+            self.to_rgb565(self.background_color())
         }
 
         fn foreground_565(&self) -> Rgb565 {
-            self.to_rgb565(self.foreground())
+            self.to_rgb565(self.foreground_color())
         }
 
         fn frame_mut_with_tile_top_left(
@@ -660,21 +641,23 @@ mod tests {
         let grid = display::tiling::TileGrid::new(Point::new(10, 20), Size::new(8, 6), 2, 2);
         let mut tiles = cyd.tiles(grid);
 
-        let first = tiles.next().expect("first tile exists");
-        assert_eq!(
-            first.rectangle(),
-            Rectangle::new(Point::new(10, 20), Size::new(4, 3))
-        );
-        assert_eq!(first.tile_top_left(), Point::new(10, 20));
-        drop(first);
+        {
+            let first = tiles.next().expect("first tile exists");
+            assert_eq!(
+                first.rectangle(),
+                Rectangle::new(Point::new(10, 20), Size::new(4, 3))
+            );
+            assert_eq!(first.tile_top_left(), Point::new(10, 20));
+        }
 
-        let second = tiles.next().expect("second tile exists");
-        assert_eq!(
-            second.rectangle(),
-            Rectangle::new(Point::new(14, 20), Size::new(4, 3))
-        );
-        assert_eq!(second.tile_top_left(), Point::new(14, 20));
-        drop(second);
+        {
+            let second = tiles.next().expect("second tile exists");
+            assert_eq!(
+                second.rectangle(),
+                Rectangle::new(Point::new(14, 20), Size::new(4, 3))
+            );
+            assert_eq!(second.tile_top_left(), Point::new(14, 20));
+        }
 
         let third = tiles.next().expect("third tile exists");
         assert_eq!(

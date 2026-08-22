@@ -43,7 +43,7 @@ fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
         .draw(&mut frame);
         frame.flush().await?;
 
-        Ok::<CydMemory, device_envoy_core::memory::CydMemoryError>(cyd_memory)
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)
     })
     .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
 
@@ -81,7 +81,7 @@ fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
         }
         frame.flush().await?;
 
-        Ok::<CydMemory, device_envoy_core::memory::CydMemoryError>(cyd_memory)
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)
     })
     .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
 
@@ -117,7 +117,7 @@ fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box
             .unwrap_infallible();
         frame.flush().await?;
 
-        Ok::<CydMemory, device_envoy_core::memory::CydMemoryError>(cyd_memory)
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)
     })
     .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
 
@@ -142,7 +142,7 @@ fn cyd_frame_mut_preview_matches_expected() -> Result<(), Box<dyn Error>> {
         frame.fill(Rgb565::RED);
         frame.flush().await?;
 
-        Ok::<CydMemory, device_envoy_core::memory::CydMemoryError>(cyd_memory)
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)
     })
     .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
 

@@ -8,14 +8,14 @@ use device_envoy_examples_core::dns_tester::{
 use embedded_graphics::{mono_font::ascii::FONT_6X10, pixelcolor::Rgb888};
 use wasm_bindgen::prelude::wasm_bindgen;
 
-const BACKGROUND: Rgb888 = Rgb888::new(10, 10, 12); // near-black
-const FOREGROUND: Rgb888 = Rgb888::new(230, 230, 230); // near-white
+const BACKGROUND_COLOR: Rgb888 = Rgb888::new(10, 10, 12); // near-black
+const FOREGROUND_COLOR: Rgb888 = Rgb888::new(230, 230, 230); // near-white
 
 const WEB_APP: cyd_web::Config = cyd_web::Config::new(
     "device-envoy/dns-tester",
     Orientation::Landscape,
-    BACKGROUND,
-    FOREGROUND,
+    BACKGROUND_COLOR,
+    FOREGROUND_COLOR,
     &FONT_6X10,
 );
 const PAGE_INFO: cyd_web::PageInfo = cyd_web::PageInfo::new(

@@ -242,7 +242,7 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
     ///
     /// GRB byte order (required by WS2812) is applied here. Gamma/brightness
     /// correction must be applied to the frame before calling this method.
-    pub fn write(&mut self, frame: &Frame1d<LEDS>) -> Result<(), WritingError> {
+    pub fn write(&mut self, frame: &Frame1d<LEDS>) -> Result<(), Error> {
         // Encode each pixel as 24 bits in GRB MSB-first order.
         for (led_index, pixel) in frame.iter().enumerate() {
             let grb: u32 = ((pixel.g as u32) << 16) | ((pixel.r as u32) << 8) | (pixel.b as u32);
@@ -255,10 +255,10 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
         // transmit to guard against future refactoring.
         self.pulse_buf[LEDS * 24] = PulseCode::end_marker();
 
-        let channel = self.channel.take().ok_or(WritingError::ChannelMissing)?;
+        let channel = self.channel.take().ok_or(Error::ChannelMissing)?;
         let transfer = channel
             .transmit(&self.pulse_buf)
-            .map_err(|_| WritingError::TransmitStart)?;
+            .map_err(|_| Error::TransmitStart)?;
         match transfer.wait() {
             Ok(channel) => {
                 self.channel = Some(channel);
@@ -266,7 +266,7 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
             }
             Err((err, channel)) => {
                 self.channel = Some(channel);
-                Err(WritingError::Transmit(err))
+                Err(Error::Transmit(err))
             }
         }
     }
@@ -276,7 +276,7 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
 #[doc(hidden)]
 /// Errors returned by [`RmtWs2812::write`].
 #[derive(Debug)]
-pub enum WritingError {
+pub enum Error {
     /// Channel was already consumed and not recovered (internal logic error).
     ChannelMissing,
     /// RMT peripheral could not start the transfer.

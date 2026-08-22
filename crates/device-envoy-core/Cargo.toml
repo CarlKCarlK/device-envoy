@@ -1,7 +1,8 @@
 [package]
 name = "device-envoy-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
+rust-version = "1.93"
 description = "Shared traits and data types for device-envoy platform crates"
 keywords = ["embedded", "no-std", "embassy", "ws2812", "device-abstraction"]
 categories = ["embedded", "asynchronous", "no-std", "hardware-support"]
@@ -35,6 +36,7 @@ wasm = [
 ]
 
 [dependencies]
+derive_more = { version = "2.1.1", default-features = false, features = ["from"] }
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }
 embassy-executor = { version = "0.10.0", default-features = false, optional = true }
@@ -80,4 +82,9 @@ required-features = ["host"]
 [[test]]
 name = "pngs"
 path = "tests/pngs.rs"
+required-features = ["host"]
+
+[[test]]
+name = "svg_layouts"
+path = "tests/svg_layouts.rs"
 required-features = ["host"]

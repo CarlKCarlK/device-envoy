@@ -26,7 +26,7 @@ impl<T> UnwrapInfallible for core::result::Result<T, Infallible> {
 }
 
 /// Unified error type for `device-envoy-core`.
-#[derive(Debug)]
+#[derive(Debug, derive_more::From)]
 #[non_exhaustive]
 pub enum Error {
     /// Spawning an Embassy task failed.
@@ -70,11 +70,4 @@ pub enum Error {
 
     /// A required custom field is missing from the Wi-Fi auto setup.
     WifiAutoMissingCustomField,
-}
-
-#[cfg(feature = "wifi")]
-impl From<embassy_executor::SpawnError> for Error {
-    fn from(err: embassy_executor::SpawnError) -> Self {
-        Self::TaskSpawn(err)
-    }
 }

@@ -207,7 +207,6 @@ impl LcdTextDriver {
         Ok(())
     }
 
-    #[expect(clippy::arithmetic_side_effects, reason = "Bit operations")]
     async fn write_nibble(
         &mut self,
         lcd_text_write: &mut impl LcdTextWrite,

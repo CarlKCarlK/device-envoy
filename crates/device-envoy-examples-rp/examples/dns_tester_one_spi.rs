@@ -21,7 +21,7 @@ use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_core::wifi_auto::WifiAuto as _;
 use device_envoy_examples_core::dns_tester;
 use device_envoy_rp::{
-    Error, Result,
+    Error as DeviceEnvoyError, Result,
     button::{ButtonRp, PressedTo},
     cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT},
     flash_block::FlashBlockRp,
@@ -37,13 +37,13 @@ const STATUS_PIXEL_COUNT: usize = device_envoy_examples_core::dns_tester::FRAME_
 async fn main(spawner: Spawner) -> ! {
     match inner_main(spawner).await {
         Ok(never) => match never {},
-        Err(MainError::Platform(error)) => panic!("{error:?}"),
-        Err(MainError::Core(error)) => panic!("{error:?}"),
-        Err(MainError::DnsTester(error)) => panic!("{error:?}"),
+        Err(Error::Platform(error)) => panic!("{error:?}"),
+        Err(Error::Core(error)) => panic!("{error:?}"),
+        Err(Error::DnsTester(error)) => panic!("{error:?}"),
     }
 }
 
-async fn inner_main(spawner: Spawner) -> Result<Infallible, MainError> {
+async fn inner_main(spawner: Spawner) -> Result<Infallible, Error> {
     let p = embassy_rp::init(Default::default());
     info!("Starting one-SPI CYD DNS tester");
 
@@ -96,13 +96,10 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible, MainError> {
         spawner,
     )?;
     let stack = wifi_auto
-        .connect(
-            &mut button,
-            async |wifi_auto_event| -> Result<(), MainError> {
-                dns_tester::wifi_status(&mut cyd, wifi_auto_event).await?;
-                Ok(())
-            },
-        )
+        .connect(&mut button, async |wifi_auto_event| -> Result<(), Error> {
+            dns_tester::wifi_status(&mut cyd, wifi_auto_event).await?;
+            Ok(())
+        })
         .await?;
 
     info!("Wi-Fi up with DHCP");
@@ -119,8 +116,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible, MainError> {
 }
 
 #[derive(Debug, derive_more::From)]
-enum MainError {
-    Platform(Error),
-    Core(dns_tester::Error<device_envoy_rp::cyd::CydError, Infallible>),
-    DnsTester(dns_tester::Error<device_envoy_rp::cyd::CydError, embassy_net::dns::Error>),
+enum Error {
+    Platform(DeviceEnvoyError),
+    Core(dns_tester::Error<device_envoy_rp::cyd::Error, Infallible>),
+    DnsTester(dns_tester::Error<device_envoy_rp::cyd::Error, embassy_net::dns::Error>),
 }

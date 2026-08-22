@@ -1,0 +1,399 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="948" height="566" viewBox="50 63 948 566" role="img" aria-labelledby="title description">
+  <title id="title">12×8 LED panel serial order</title>
+  <desc id="description">96 LEDs labeled 0 through 95, connected in serial order. Horizontal rules show stacked panel seams.</desc>
+  <rect width="1048" height="692" fill="#fbfcfe"/>
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#db806c"/>
+    </marker>
+  </defs>
+  <rect x="92" y="71" width="864" height="262" rx="12" fill="#f4f7fa" stroke="#d9e0e7" stroke-width="2"/>
+  <rect x="92" y="359" width="864" height="262" rx="12" fill="#f4f7fa" stroke="#d9e0e7" stroke-width="2"/>
+  <line x1="92" y1="346" x2="956" y2="346" stroke="#b8c2cc" stroke-width="1.5" stroke-dasharray="7 7"/>
+  <g fill="none" stroke="#db806c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.58">
+    <line x1="128" y1="94" x2="128" y2="166"/>
+    <line x1="128" y1="124" x2="128" y2="135" marker-end="url(#arrow)"/>
+    <line x1="128" y1="166" x2="128" y2="238"/>
+    <line x1="128" y1="196" x2="128" y2="207" marker-end="url(#arrow)"/>
+    <line x1="128" y1="238" x2="128" y2="310"/>
+    <line x1="128" y1="268" x2="128" y2="279" marker-end="url(#arrow)"/>
+    <line x1="128" y1="310" x2="200" y2="310"/>
+    <line x1="158" y1="310" x2="169" y2="310" marker-end="url(#arrow)"/>
+    <line x1="200" y1="310" x2="200" y2="238"/>
+    <line x1="200" y1="279" x2="200" y2="268" marker-end="url(#arrow)"/>
+    <line x1="200" y1="238" x2="200" y2="166"/>
+    <line x1="200" y1="207" x2="200" y2="196" marker-end="url(#arrow)"/>
+    <line x1="200" y1="166" x2="200" y2="94"/>
+    <line x1="200" y1="135" x2="200" y2="124" marker-end="url(#arrow)"/>
+    <line x1="200" y1="94" x2="272" y2="94"/>
+    <line x1="230" y1="94" x2="241" y2="94" marker-end="url(#arrow)"/>
+    <line x1="272" y1="94" x2="272" y2="166"/>
+    <line x1="272" y1="124" x2="272" y2="135" marker-end="url(#arrow)"/>
+    <line x1="272" y1="166" x2="272" y2="238"/>
+    <line x1="272" y1="196" x2="272" y2="207" marker-end="url(#arrow)"/>
+    <line x1="272" y1="238" x2="272" y2="310"/>
+    <line x1="272" y1="268" x2="272" y2="279" marker-end="url(#arrow)"/>
+    <line x1="272" y1="310" x2="344" y2="310"/>
+    <line x1="302" y1="310" x2="313" y2="310" marker-end="url(#arrow)"/>
+    <line x1="344" y1="310" x2="344" y2="238"/>
+    <line x1="344" y1="279" x2="344" y2="268" marker-end="url(#arrow)"/>
+    <line x1="344" y1="238" x2="344" y2="166"/>
+    <line x1="344" y1="207" x2="344" y2="196" marker-end="url(#arrow)"/>
+    <line x1="344" y1="166" x2="344" y2="94"/>
+    <line x1="344" y1="135" x2="344" y2="124" marker-end="url(#arrow)"/>
+    <line x1="344" y1="94" x2="416" y2="94"/>
+    <line x1="374" y1="94" x2="385" y2="94" marker-end="url(#arrow)"/>
+    <line x1="416" y1="94" x2="416" y2="166"/>
+    <line x1="416" y1="124" x2="416" y2="135" marker-end="url(#arrow)"/>
+    <line x1="416" y1="166" x2="416" y2="238"/>
+    <line x1="416" y1="196" x2="416" y2="207" marker-end="url(#arrow)"/>
+    <line x1="416" y1="238" x2="416" y2="310"/>
+    <line x1="416" y1="268" x2="416" y2="279" marker-end="url(#arrow)"/>
+    <line x1="416" y1="310" x2="488" y2="310"/>
+    <line x1="446" y1="310" x2="457" y2="310" marker-end="url(#arrow)"/>
+    <line x1="488" y1="310" x2="488" y2="238"/>
+    <line x1="488" y1="279" x2="488" y2="268" marker-end="url(#arrow)"/>
+    <line x1="488" y1="238" x2="488" y2="166"/>
+    <line x1="488" y1="207" x2="488" y2="196" marker-end="url(#arrow)"/>
+    <line x1="488" y1="166" x2="488" y2="94"/>
+    <line x1="488" y1="135" x2="488" y2="124" marker-end="url(#arrow)"/>
+    <line x1="488" y1="94" x2="560" y2="94"/>
+    <line x1="518" y1="94" x2="529" y2="94" marker-end="url(#arrow)"/>
+    <line x1="560" y1="94" x2="560" y2="166"/>
+    <line x1="560" y1="124" x2="560" y2="135" marker-end="url(#arrow)"/>
+    <line x1="560" y1="166" x2="560" y2="238"/>
+    <line x1="560" y1="196" x2="560" y2="207" marker-end="url(#arrow)"/>
+    <line x1="560" y1="238" x2="560" y2="310"/>
+    <line x1="560" y1="268" x2="560" y2="279" marker-end="url(#arrow)"/>
+    <line x1="560" y1="310" x2="632" y2="310"/>
+    <line x1="590" y1="310" x2="601" y2="310" marker-end="url(#arrow)"/>
+    <line x1="632" y1="310" x2="632" y2="238"/>
+    <line x1="632" y1="279" x2="632" y2="268" marker-end="url(#arrow)"/>
+    <line x1="632" y1="238" x2="632" y2="166"/>
+    <line x1="632" y1="207" x2="632" y2="196" marker-end="url(#arrow)"/>
+    <line x1="632" y1="166" x2="632" y2="94"/>
+    <line x1="632" y1="135" x2="632" y2="124" marker-end="url(#arrow)"/>
+    <line x1="632" y1="94" x2="704" y2="94"/>
+    <line x1="662" y1="94" x2="673" y2="94" marker-end="url(#arrow)"/>
+    <line x1="704" y1="94" x2="704" y2="166"/>
+    <line x1="704" y1="124" x2="704" y2="135" marker-end="url(#arrow)"/>
+    <line x1="704" y1="166" x2="704" y2="238"/>
+    <line x1="704" y1="196" x2="704" y2="207" marker-end="url(#arrow)"/>
+    <line x1="704" y1="238" x2="704" y2="310"/>
+    <line x1="704" y1="268" x2="704" y2="279" marker-end="url(#arrow)"/>
+    <line x1="704" y1="310" x2="776" y2="310"/>
+    <line x1="734" y1="310" x2="745" y2="310" marker-end="url(#arrow)"/>
+    <line x1="776" y1="310" x2="776" y2="238"/>
+    <line x1="776" y1="279" x2="776" y2="268" marker-end="url(#arrow)"/>
+    <line x1="776" y1="238" x2="776" y2="166"/>
+    <line x1="776" y1="207" x2="776" y2="196" marker-end="url(#arrow)"/>
+    <line x1="776" y1="166" x2="776" y2="94"/>
+    <line x1="776" y1="135" x2="776" y2="124" marker-end="url(#arrow)"/>
+    <line x1="776" y1="94" x2="848" y2="94"/>
+    <line x1="806" y1="94" x2="817" y2="94" marker-end="url(#arrow)"/>
+    <line x1="848" y1="94" x2="848" y2="166"/>
+    <line x1="848" y1="124" x2="848" y2="135" marker-end="url(#arrow)"/>
+    <line x1="848" y1="166" x2="848" y2="238"/>
+    <line x1="848" y1="196" x2="848" y2="207" marker-end="url(#arrow)"/>
+    <line x1="848" y1="238" x2="848" y2="310"/>
+    <line x1="848" y1="268" x2="848" y2="279" marker-end="url(#arrow)"/>
+    <line x1="848" y1="310" x2="920" y2="310"/>
+    <line x1="878" y1="310" x2="889" y2="310" marker-end="url(#arrow)"/>
+    <line x1="920" y1="310" x2="920" y2="238"/>
+    <line x1="920" y1="279" x2="920" y2="268" marker-end="url(#arrow)"/>
+    <line x1="920" y1="238" x2="920" y2="166"/>
+    <line x1="920" y1="207" x2="920" y2="196" marker-end="url(#arrow)"/>
+    <line x1="920" y1="166" x2="920" y2="94"/>
+    <line x1="920" y1="135" x2="920" y2="124" marker-end="url(#arrow)"/>
+    <path d="M 920 94 H 990 V 346 H 58 V 382 H 128"/>
+    <line x1="576" y1="346" x2="540" y2="346" marker-end="url(#arrow)"/>
+    <line x1="128" y1="382" x2="128" y2="454"/>
+    <line x1="128" y1="412" x2="128" y2="423" marker-end="url(#arrow)"/>
+    <line x1="128" y1="454" x2="128" y2="526"/>
+    <line x1="128" y1="484" x2="128" y2="495" marker-end="url(#arrow)"/>
+    <line x1="128" y1="526" x2="128" y2="598"/>
+    <line x1="128" y1="556" x2="128" y2="567" marker-end="url(#arrow)"/>
+    <line x1="128" y1="598" x2="200" y2="598"/>
+    <line x1="158" y1="598" x2="169" y2="598" marker-end="url(#arrow)"/>
+    <line x1="200" y1="598" x2="200" y2="526"/>
+    <line x1="200" y1="567" x2="200" y2="556" marker-end="url(#arrow)"/>
+    <line x1="200" y1="526" x2="200" y2="454"/>
+    <line x1="200" y1="495" x2="200" y2="484" marker-end="url(#arrow)"/>
+    <line x1="200" y1="454" x2="200" y2="382"/>
+    <line x1="200" y1="423" x2="200" y2="412" marker-end="url(#arrow)"/>
+    <line x1="200" y1="382" x2="272" y2="382"/>
+    <line x1="230" y1="382" x2="241" y2="382" marker-end="url(#arrow)"/>
+    <line x1="272" y1="382" x2="272" y2="454"/>
+    <line x1="272" y1="412" x2="272" y2="423" marker-end="url(#arrow)"/>
+    <line x1="272" y1="454" x2="272" y2="526"/>
+    <line x1="272" y1="484" x2="272" y2="495" marker-end="url(#arrow)"/>
+    <line x1="272" y1="526" x2="272" y2="598"/>
+    <line x1="272" y1="556" x2="272" y2="567" marker-end="url(#arrow)"/>
+    <line x1="272" y1="598" x2="344" y2="598"/>
+    <line x1="302" y1="598" x2="313" y2="598" marker-end="url(#arrow)"/>
+    <line x1="344" y1="598" x2="344" y2="526"/>
+    <line x1="344" y1="567" x2="344" y2="556" marker-end="url(#arrow)"/>
+    <line x1="344" y1="526" x2="344" y2="454"/>
+    <line x1="344" y1="495" x2="344" y2="484" marker-end="url(#arrow)"/>
+    <line x1="344" y1="454" x2="344" y2="382"/>
+    <line x1="344" y1="423" x2="344" y2="412" marker-end="url(#arrow)"/>
+    <line x1="344" y1="382" x2="416" y2="382"/>
+    <line x1="374" y1="382" x2="385" y2="382" marker-end="url(#arrow)"/>
+    <line x1="416" y1="382" x2="416" y2="454"/>
+    <line x1="416" y1="412" x2="416" y2="423" marker-end="url(#arrow)"/>
+    <line x1="416" y1="454" x2="416" y2="526"/>
+    <line x1="416" y1="484" x2="416" y2="495" marker-end="url(#arrow)"/>
+    <line x1="416" y1="526" x2="416" y2="598"/>
+    <line x1="416" y1="556" x2="416" y2="567" marker-end="url(#arrow)"/>
+    <line x1="416" y1="598" x2="488" y2="598"/>
+    <line x1="446" y1="598" x2="457" y2="598" marker-end="url(#arrow)"/>
+    <line x1="488" y1="598" x2="488" y2="526"/>
+    <line x1="488" y1="567" x2="488" y2="556" marker-end="url(#arrow)"/>
+    <line x1="488" y1="526" x2="488" y2="454"/>
+    <line x1="488" y1="495" x2="488" y2="484" marker-end="url(#arrow)"/>
+    <line x1="488" y1="454" x2="488" y2="382"/>
+    <line x1="488" y1="423" x2="488" y2="412" marker-end="url(#arrow)"/>
+    <line x1="488" y1="382" x2="560" y2="382"/>
+    <line x1="518" y1="382" x2="529" y2="382" marker-end="url(#arrow)"/>
+    <line x1="560" y1="382" x2="560" y2="454"/>
+    <line x1="560" y1="412" x2="560" y2="423" marker-end="url(#arrow)"/>
+    <line x1="560" y1="454" x2="560" y2="526"/>
+    <line x1="560" y1="484" x2="560" y2="495" marker-end="url(#arrow)"/>
+    <line x1="560" y1="526" x2="560" y2="598"/>
+    <line x1="560" y1="556" x2="560" y2="567" marker-end="url(#arrow)"/>
+    <line x1="560" y1="598" x2="632" y2="598"/>
+    <line x1="590" y1="598" x2="601" y2="598" marker-end="url(#arrow)"/>
+    <line x1="632" y1="598" x2="632" y2="526"/>
+    <line x1="632" y1="567" x2="632" y2="556" marker-end="url(#arrow)"/>
+    <line x1="632" y1="526" x2="632" y2="454"/>
+    <line x1="632" y1="495" x2="632" y2="484" marker-end="url(#arrow)"/>
+    <line x1="632" y1="454" x2="632" y2="382"/>
+    <line x1="632" y1="423" x2="632" y2="412" marker-end="url(#arrow)"/>
+    <line x1="632" y1="382" x2="704" y2="382"/>
+    <line x1="662" y1="382" x2="673" y2="382" marker-end="url(#arrow)"/>
+    <line x1="704" y1="382" x2="704" y2="454"/>
+    <line x1="704" y1="412" x2="704" y2="423" marker-end="url(#arrow)"/>
+    <line x1="704" y1="454" x2="704" y2="526"/>
+    <line x1="704" y1="484" x2="704" y2="495" marker-end="url(#arrow)"/>
+    <line x1="704" y1="526" x2="704" y2="598"/>
+    <line x1="704" y1="556" x2="704" y2="567" marker-end="url(#arrow)"/>
+    <line x1="704" y1="598" x2="776" y2="598"/>
+    <line x1="734" y1="598" x2="745" y2="598" marker-end="url(#arrow)"/>
+    <line x1="776" y1="598" x2="776" y2="526"/>
+    <line x1="776" y1="567" x2="776" y2="556" marker-end="url(#arrow)"/>
+    <line x1="776" y1="526" x2="776" y2="454"/>
+    <line x1="776" y1="495" x2="776" y2="484" marker-end="url(#arrow)"/>
+    <line x1="776" y1="454" x2="776" y2="382"/>
+    <line x1="776" y1="423" x2="776" y2="412" marker-end="url(#arrow)"/>
+    <line x1="776" y1="382" x2="848" y2="382"/>
+    <line x1="806" y1="382" x2="817" y2="382" marker-end="url(#arrow)"/>
+    <line x1="848" y1="382" x2="848" y2="454"/>
+    <line x1="848" y1="412" x2="848" y2="423" marker-end="url(#arrow)"/>
+    <line x1="848" y1="454" x2="848" y2="526"/>
+    <line x1="848" y1="484" x2="848" y2="495" marker-end="url(#arrow)"/>
+    <line x1="848" y1="526" x2="848" y2="598"/>
+    <line x1="848" y1="556" x2="848" y2="567" marker-end="url(#arrow)"/>
+    <line x1="848" y1="598" x2="920" y2="598"/>
+    <line x1="878" y1="598" x2="889" y2="598" marker-end="url(#arrow)"/>
+    <line x1="920" y1="598" x2="920" y2="526"/>
+    <line x1="920" y1="567" x2="920" y2="556" marker-end="url(#arrow)"/>
+    <line x1="920" y1="526" x2="920" y2="454"/>
+    <line x1="920" y1="495" x2="920" y2="484" marker-end="url(#arrow)"/>
+    <line x1="920" y1="454" x2="920" y2="382"/>
+    <line x1="920" y1="423" x2="920" y2="412" marker-end="url(#arrow)"/>
+  </g>
+  <g text-anchor="middle">
+    <circle cx="128" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">0</text>
+    <circle cx="128" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">1</text>
+    <circle cx="128" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">2</text>
+    <circle cx="128" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">3</text>
+    <circle cx="200" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">4</text>
+    <circle cx="200" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">5</text>
+    <circle cx="200" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">6</text>
+    <circle cx="200" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">7</text>
+    <circle cx="272" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">8</text>
+    <circle cx="272" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">9</text>
+    <circle cx="272" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">10</text>
+    <circle cx="272" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">11</text>
+    <circle cx="344" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">12</text>
+    <circle cx="344" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">13</text>
+    <circle cx="344" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">14</text>
+    <circle cx="344" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">15</text>
+    <circle cx="416" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">16</text>
+    <circle cx="416" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">17</text>
+    <circle cx="416" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">18</text>
+    <circle cx="416" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">19</text>
+    <circle cx="488" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">20</text>
+    <circle cx="488" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">21</text>
+    <circle cx="488" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">22</text>
+    <circle cx="488" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">23</text>
+    <circle cx="560" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">24</text>
+    <circle cx="560" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">25</text>
+    <circle cx="560" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">26</text>
+    <circle cx="560" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">27</text>
+    <circle cx="632" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">28</text>
+    <circle cx="632" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">29</text>
+    <circle cx="632" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">30</text>
+    <circle cx="632" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">31</text>
+    <circle cx="704" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">32</text>
+    <circle cx="704" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">33</text>
+    <circle cx="704" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">34</text>
+    <circle cx="704" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">35</text>
+    <circle cx="776" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">36</text>
+    <circle cx="776" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">37</text>
+    <circle cx="776" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">38</text>
+    <circle cx="776" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">39</text>
+    <circle cx="848" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">40</text>
+    <circle cx="848" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">41</text>
+    <circle cx="848" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">42</text>
+    <circle cx="848" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">43</text>
+    <circle cx="920" cy="310" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="315" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">44</text>
+    <circle cx="920" cy="238" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="243" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">45</text>
+    <circle cx="920" cy="166" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="171" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">46</text>
+    <circle cx="920" cy="94" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="99" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">47</text>
+    <circle cx="128" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">48</text>
+    <circle cx="128" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">49</text>
+    <circle cx="128" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">50</text>
+    <circle cx="128" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="128" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">51</text>
+    <circle cx="200" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">52</text>
+    <circle cx="200" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">53</text>
+    <circle cx="200" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">54</text>
+    <circle cx="200" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="200" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">55</text>
+    <circle cx="272" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">56</text>
+    <circle cx="272" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">57</text>
+    <circle cx="272" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">58</text>
+    <circle cx="272" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="272" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">59</text>
+    <circle cx="344" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">60</text>
+    <circle cx="344" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">61</text>
+    <circle cx="344" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">62</text>
+    <circle cx="344" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="344" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">63</text>
+    <circle cx="416" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">64</text>
+    <circle cx="416" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">65</text>
+    <circle cx="416" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">66</text>
+    <circle cx="416" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="416" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">67</text>
+    <circle cx="488" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">68</text>
+    <circle cx="488" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">69</text>
+    <circle cx="488" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">70</text>
+    <circle cx="488" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="488" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">71</text>
+    <circle cx="560" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">72</text>
+    <circle cx="560" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">73</text>
+    <circle cx="560" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">74</text>
+    <circle cx="560" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="560" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">75</text>
+    <circle cx="632" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">76</text>
+    <circle cx="632" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">77</text>
+    <circle cx="632" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">78</text>
+    <circle cx="632" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="632" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">79</text>
+    <circle cx="704" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">80</text>
+    <circle cx="704" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">81</text>
+    <circle cx="704" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">82</text>
+    <circle cx="704" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="704" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">83</text>
+    <circle cx="776" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">84</text>
+    <circle cx="776" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">85</text>
+    <circle cx="776" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">86</text>
+    <circle cx="776" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="776" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">87</text>
+    <circle cx="848" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">88</text>
+    <circle cx="848" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">89</text>
+    <circle cx="848" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">90</text>
+    <circle cx="848" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="848" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">91</text>
+    <circle cx="920" cy="598" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="603" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">92</text>
+    <circle cx="920" cy="526" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="531" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">93</text>
+    <circle cx="920" cy="454" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="459" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">94</text>
+    <circle cx="920" cy="382" r="21" fill="#ffffff" stroke="#9aa8b5" stroke-width="2"/>
+    <text x="920" y="387" fill="#33424f" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" font-weight="500">95</text>
+  </g>
+</svg>

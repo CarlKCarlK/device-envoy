@@ -1,0 +1,41 @@
+name: Check Clippy
+
+"on":
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: check-clippy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Device Envoy
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.98.0 with Clippy
+        uses: dtolnay/rust-toolchain@1.98.0
+        with:
+          components: clippy
+
+      - name: Clippy device-envoy-core without optional features
+        run: cargo clippy -p device-envoy-core --all-targets --no-default-features -- -D warnings
+
+      - name: Clippy device-envoy-core with host
+        run: cargo clippy -p device-envoy-core --all-targets --no-default-features --features host -- -D warnings
+
+      - name: Clippy device-envoy-core with Wi-Fi
+        run: cargo clippy -p device-envoy-core --all-targets --no-default-features --features wifi -- -D warnings
+
+      - name: Clippy device-envoy landing crate
+        run: cargo clippy -p device-envoy --all-targets --no-default-features -- -D warnings
+
+      - name: Clippy shared examples without optional features
+        run: cargo clippy -p device-envoy-examples-core --all-targets --no-default-features -- -D warnings
+
+      - name: Clippy shared examples with host and default Wi-Fi
+        run: cargo clippy -p device-envoy-examples-core --all-targets --features host -- -D warnings

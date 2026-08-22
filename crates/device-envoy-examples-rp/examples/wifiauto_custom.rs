@@ -6,7 +6,7 @@
 #![cfg(feature = "wifi")]
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
-// TODO00 consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
+// TODO consider migrating this legacy DNS example to device_envoy_core::dns::{Dns, DnsRuntime}.
 
 use core::{convert::Infallible, panic};
 use defmt::{info, warn};

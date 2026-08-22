@@ -383,7 +383,7 @@ where
         }
     }
 
-    fn fill_contiguous_full(&mut self) -> Result<(), UiError<Display::Error>> {
+    fn fill_contiguous_full(&mut self) -> Result<(), render::Error<Display::Error>> {
         self.display
             .fill_contiguous_full(self.layout.bitmap.rgb565_iter())?;
         Ok(())
@@ -393,7 +393,7 @@ where
         &mut self,
         slot: TextSlot,
         text: impl AsRef<str>,
-    ) -> Result<(), UiError<Display::Error>> {
+    ) -> Result<(), render::Error<Display::Error>> {
         draw_text(
             self.display,
             self.layout.bitmap,
@@ -408,10 +408,10 @@ where
         &mut self,
         slot: TextSlot,
         arguments: fmt::Arguments<'_>,
-    ) -> Result<(), UiError<Display::Error>> {
+    ) -> Result<(), render::Error<Display::Error>> {
         self.text.clear();
         if self.text.write_fmt(arguments).is_err() {
-            return Err(UiError::Text(fmt::Error));
+            return Err(render::Error::Text(fmt::Error));
         }
         draw_text(
             self.display,
@@ -428,7 +428,7 @@ where
         slot: StatusSlot,
         text: impl AsRef<str>,
         is_good: bool,
-    ) -> Result<(), UiError<Display::Error>> {
+    ) -> Result<(), render::Error<Display::Error>> {
         let text = text.as_ref();
         draw_text(
             self.display,
@@ -451,7 +451,7 @@ async fn draw_text<Display>(
     slot: TextSlot,
     text: &str,
     color: Rgb888,
-) -> Result<(), UiError<Display::Error>>
+) -> Result<(), render::Error<Display::Error>>
 where
     Display: CydDisplay,
 {
@@ -509,8 +509,7 @@ where
     CydDevice: Cyd,
 {
     let orientation = cyd.orientation();
-    let (display, _) = cyd.parts();
-    render_notice(display, orientation, UiNotice::Splash).await?;
+    render_notice(cyd.display(), orientation, UiNotice::Splash).await?;
     Ok(())
 }
 
@@ -528,19 +527,17 @@ where
         WifiAutoEvent::Connecting { .. } => UiNotice::WifiConnecting,
         WifiAutoEvent::ConnectionFailed => UiNotice::WifiFailed,
     };
-    //todo000 devolve this and the UiNotice enum
-    let (display, _) = cyd.parts();
-    render_notice(display, orientation, notice).await?;
+    render_notice(cyd.display(), orientation, notice).await?;
     Ok(())
 }
 
 /// Errors returned by the shared DNS Tester loop.
-// `Dns` and `UiError::Display` remain explicit because blanket conversions for
+// `Dns` and `render::Error::Display` remain explicit because blanket conversions for
 // their generic error types would collide with the other generic conversions.
 #[derive(Debug, derive_more::From)]
 pub enum Error<CydError, DnsError> {
     /// Rendering failed.
-    Display(UiError<CydError>),
+    Display(render::Error<CydError>),
     /// Reading calibrated touch failed.
     Touch(CydError),
     /// The DNS lookup failed at the platform boundary.
@@ -637,13 +634,15 @@ pub enum UiNotice {
 /// Errors from rendering the shared DNS tester UI.
 // The generic display error is explicit for the same coherence reason as the
 // generic device and DNS errors in [`Error`].
-#[derive(Debug, derive_more::From)]
-pub enum UiError<F> {
-    /// The fixed-size text buffer was too small.
-    #[from(ignore)]
-    Text(fmt::Error),
-    /// The display failed to flush.
-    Display(F),
+pub mod render {
+    #[derive(Debug, derive_more::From)]
+    pub enum Error<F> {
+        /// The fixed-size text buffer was too small.
+        #[from(ignore)]
+        Text(core::fmt::Error),
+        /// The display failed to flush.
+        Display(F),
+    }
 }
 
 /// Render a full-screen operational notice over the DNS tester artwork.
@@ -651,7 +650,7 @@ pub async fn render_notice<D>(
     display: &mut D,
     orientation: Orientation,
     notice: UiNotice,
-) -> Result<(), UiError<D::Error>>
+) -> Result<(), render::Error<D::Error>>
 where
     D: CydDisplay,
 {
@@ -728,7 +727,7 @@ where
     .await
 }
 
-async fn fill_panel<D>(display: &mut D, rectangle: Rectangle) -> Result<(), UiError<D::Error>>
+async fn fill_panel<D>(display: &mut D, rectangle: Rectangle) -> Result<(), render::Error<D::Error>>
 where
     D: CydDisplay,
 {
@@ -749,7 +748,7 @@ where
 async fn fill_artwork_panel<D>(
     display: &mut D,
     rectangle: Rectangle,
-) -> Result<(), UiError<D::Error>>
+) -> Result<(), render::Error<D::Error>>
 where
     D: CydDisplay,
 {
@@ -772,7 +771,7 @@ async fn draw_notice_text<D>(
     rectangle: Rectangle,
     text: &str,
     font: &MonoFont<'_>,
-) -> Result<(), UiError<D::Error>>
+) -> Result<(), render::Error<D::Error>>
 where
     D: CydDisplay,
 {
@@ -940,5 +939,3 @@ mod tests {
         }
     }
 }
-
-// todo0000 understand the nested error story.

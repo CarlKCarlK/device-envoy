@@ -83,7 +83,7 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
             &FONT_6X10,
         );
         assert_eq!(
-            device_envoy_core::cyd::Cyd::orientation(&mut cyd_memory),
+            device_envoy_core::cyd::Cyd::orientation(&cyd_memory),
             orientation
         );
         cyd_memory.push_touch_event(TouchEvent::Down {
@@ -124,10 +124,8 @@ fn portrait_splash_golden() -> Result<(), Box<dyn std::error::Error>> {
         Rgb888::new(230, 230, 230),
         &FONT_6X10,
     );
-    let mut display = cyd_memory.display();
-    // TODO0000 Consider using the core CYD splash helper here too.
     block_on(render_notice(
-        &mut display,
+        &mut cyd_memory.display(),
         Orientation::Portrait,
         UiNotice::Splash,
     ))

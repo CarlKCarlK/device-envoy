@@ -108,7 +108,7 @@ fn generate_frames_from_directory(
     println!("const {}: usize = {};", frame_count_name, frame_count);
     println!();
     println!(
-        "#[allow(dead_code)]\nconst {}: [([[RGB8; 12]; 8], Duration); {}] = [",
+        "#[allow(dead_code)]\nstatic {}: [([[RGB8; 12]; 8], Duration); {}] = [",
         frames_name, frame_count_name
     );
 

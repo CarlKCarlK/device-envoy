@@ -6,7 +6,9 @@
 /// Compile-time description of panel geometry and wiring, including dimensions (with examples).
 ///
 /// `LedLayout` defines how a rectangular `(x, y)` panel of LEDs maps to the linear
-/// wiring order of LEDs on a NeoPixel-style (WS2812) panel.
+/// wiring order of LEDs on a NeoPixel-style (WS2812) panel. It stores both the
+/// wiring-order mapping and its inverse, so runtime adapters can borrow the
+/// checked inverse from compile-time layout data.
 ///
 /// For examples of `LedLayout` in use, see the [`led2d`](mod@crate::led2d) module,
 /// [`Frame2d`](crate::led2d::Frame2d), and the example below.
@@ -51,7 +53,16 @@
 /// - coordinates must be in-bounds
 /// - every `(x, y)` cell must appear exactly once
 ///
-/// If you want the final mapping, use [`index_to_xy`](Self::index_to_xy).
+/// The [`new`](Self::new) constructor proves that the mapping is one-to-one and
+/// constructs both directions. The stored directions are:
+///
+/// ```text
+/// index_to_xy[physical_led_index] = (x, y)
+/// xy_to_index[y * W + x] = physical_led_index
+/// ```
+///
+/// Drawing uses [`xy_to_index`](Self::xy_to_index), while layout composition,
+/// transformations, and inspection use [`index_to_xy`](Self::index_to_xy).
 ///
 /// # Example
 ///
@@ -76,14 +87,15 @@
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LedLayout<const N: usize, const W: usize, const H: usize> {
-    map: [(u16, u16); N],
+    index_to_xy: [(u16, u16); N],
+    xy_to_index: [u16; N],
 }
 
 impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Return the array mapping LED wiring order to `(x, y)` coordinates.
     #[must_use]
     pub const fn index_to_xy(&self) -> &[(u16, u16); N] {
-        &self.map
+        &self.index_to_xy
     }
 
     /// The width of the layout.
@@ -104,48 +116,20 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         N
     }
 
-    /// Return the inverse mapping: `(x, y)` coordinates to LED wiring index.
-    ///
-    /// The returned array is indexed by `y * W + x` and contains the LED wiring
-    /// index for each pixel position. This is the inverse of [`index_to_xy`](Self::index_to_xy).
+    /// Return whether this layout contains no LEDs.
     #[must_use]
-    pub const fn xy_to_index(&self) -> [u16; N] {
-        assert!(
-            N <= u16::MAX as usize,
-            "total LEDs must fit in u16 for xy_to_index"
-        );
+    pub const fn is_empty(&self) -> bool {
+        N == 0
+    }
 
-        let mut mapping = [None; N];
-
-        let mut led_index = 0;
-        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
-        while led_index < N {
-            let (col, row) = self.map[led_index];
-            let col = col as usize;
-            let row = row as usize;
-            assert!(col < W, "column out of bounds in xy_to_index");
-            assert!(row < H, "row out of bounds in xy_to_index");
-            let target_index = row * W + col;
-
-            let slot = &mut mapping[target_index];
-            assert!(
-                slot.is_none(),
-                "duplicate (col,row) in xy_to_index inversion"
-            );
-            *slot = Some(led_index as u16);
-
-            led_index += 1;
-        }
-
-        let mut finalized = [0u16; N];
-        let mut i = 0;
-        // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
-        while i < N {
-            finalized[i] = mapping[i].expect("xy_to_index requires every (col,row) to be covered");
-            i += 1;
-        }
-
-        finalized
+    /// Return the borrowed inverse mapping from `(x, y)` coordinates to LED wiring index.
+    ///
+    /// The array directions are `index_to_xy[physical_led_index] = (x, y)` and
+    /// `xy_to_index[y * W + x] = physical_led_index`. See the
+    /// [`LedLayout`] example for both directions in use.
+    #[must_use]
+    pub const fn xy_to_index(&self) -> &[u16; N] {
+        &self.xy_to_index
     }
 
     /// Const equality helper for doctests/examples.
@@ -169,7 +153,9 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let mut i = 0;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
-            if self.map[i].0 != other.map[i].0 || self.map[i].1 != other.map[i].1 {
+            if self.index_to_xy[i].0 != other.index_to_xy[i].0
+                || self.index_to_xy[i].1 != other.index_to_xy[i].1
+            {
                 return false;
             }
             i += 1;
@@ -182,7 +168,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     /// Use this constructor when your panel wiring does not match one of the
     /// built-in patterns (linear, serpentine, etc.). You provide the `(x, y)`
     /// coordinate for **each LED in strip order**, and `LedLayout` derives the
-    /// panel geometry from that mapping.
+    /// inverse mapping from it.
     ///
     /// This constructor is `const` and is intended to be used in a `const`
     /// definition, so layout errors are caught at **compile time**, not at runtime.
@@ -214,27 +200,31 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
     ///   LED5  LED4
     /// ```
     #[must_use]
-    pub const fn new(map: [(u16, u16); N]) -> Self {
+    pub const fn new(index_to_xy: [(u16, u16); N]) -> Self {
+        // TODO Consider allowing zero-sized layouts as identity values for composition.
         assert!(W > 0 && H > 0, "W and H must be positive");
         assert!(W * H == N, "W*H must equal N");
+        assert!(N <= u16::MAX as usize, "total LEDs must fit in u16");
 
         let mut seen = [false; N];
+        let mut xy_to_index = [0_u16; N];
 
-        let mut i = 0;
+        let mut led_index = 0;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
-        while i < N {
-            let (c, r) = map[i];
-            let c = c as usize;
-            let r = r as usize;
+        while led_index < N {
+            let (x, y) = index_to_xy[led_index];
+            let x = x as usize;
+            let y = y as usize;
 
-            assert!(c < W, "column out of bounds");
-            assert!(r < H, "row out of bounds");
+            assert!(x < W, "column out of bounds");
+            assert!(y < H, "row out of bounds");
 
-            let cell = r * W + c;
-            assert!(!seen[cell], "duplicate (col,row) in mapping");
-            seen[cell] = true;
+            let cell_index = y * W + x;
+            assert!(!seen[cell_index], "duplicate (col,row) in mapping");
+            seen[cell_index] = true;
+            xy_to_index[cell_index] = led_index as u16;
 
-            i += 1;
+            led_index += 1;
         }
 
         let mut k = 0;
@@ -244,7 +234,10 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
             k += 1;
         }
 
-        Self { map }
+        Self {
+            index_to_xy,
+            xy_to_index,
+        }
     }
 
     /// Linear row-major mapping for a single-row strip (cols increase left-to-right).
@@ -417,7 +410,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let mut i = 0;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
-            let (c, r) = self.map[i];
+            let (c, r) = self.index_to_xy[i];
             let c = c as usize;
             let r = r as usize;
             out[i] = ((H - 1 - r) as u16, c as u16);
@@ -448,7 +441,7 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let mut i = 0;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
         while i < N {
-            let (c, r) = self.map[i];
+            let (c, r) = self.index_to_xy[i];
             let c = c as usize;
             out[i] = ((W - 1 - c) as u16, r);
             i += 1;
@@ -561,13 +554,13 @@ impl<const N: usize, const W: usize, const H: usize> LedLayout<N, W, H> {
         let mut i = 0;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while i < N {
-            out[i] = self.map[i];
+            out[i] = self.index_to_xy[i];
             i += 1;
         }
 
         let mut j = 0;
         while j < N2 {
-            let (c, r) = right.map[j];
+            let (c, r) = right.index_to_xy[j];
             out[N + j] = ((c as usize + W) as u16, r);
             j += 1;
         }

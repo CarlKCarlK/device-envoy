@@ -23,6 +23,12 @@ impl HtmlBuffer {
     }
 }
 
+impl Default for HtmlBuffer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Write for HtmlBuffer {
     fn write_str(&mut self, text: &str) -> core::fmt::Result {
         self.0.write_str(text)
@@ -280,7 +286,7 @@ pub fn generate_config_page<E>(
     let ssid = defaults
         .as_ref()
         .map(|wifi_credentials| escape_html::<160>(wifi_credentials.ssid.as_str()))
-        .unwrap_or_else(heapless::String::new);
+        .unwrap_or_default();
     let has_saved_password = defaults
         .as_ref()
         .map(|wifi_credentials| !wifi_credentials.password.is_empty())
@@ -401,15 +407,15 @@ fn url_decode<const N: usize>(input: &str) -> heapless::String<N> {
         if character == '+' {
             output.push(' ').expect("decoded URL exceeds capacity");
         } else if character == '%' {
-            if let (Some(high), Some(low)) = (chars.next(), chars.next()) {
-                if let (Some(high_digit), Some(low_digit)) = (high.to_digit(16), low.to_digit(16)) {
-                    #[allow(clippy::cast_possible_truncation)]
-                    let byte = ((high_digit << 4) | low_digit) as u8;
-                    if let Ok(decoded) = core::str::from_utf8(&[byte]) {
-                        output
-                            .push_str(decoded)
-                            .expect("decoded URL exceeds capacity");
-                    }
+            if let (Some(high), Some(low)) = (chars.next(), chars.next())
+                && let (Some(high_digit), Some(low_digit)) = (high.to_digit(16), low.to_digit(16))
+            {
+                #[allow(clippy::cast_possible_truncation)]
+                let byte = ((high_digit << 4) | low_digit) as u8;
+                if let Ok(decoded) = core::str::from_utf8(&[byte]) {
+                    output
+                        .push_str(decoded)
+                        .expect("decoded URL exceeds capacity");
                 }
             }
         } else {

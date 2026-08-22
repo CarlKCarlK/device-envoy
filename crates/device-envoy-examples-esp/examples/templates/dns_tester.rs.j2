@@ -57,11 +57,11 @@ use device_envoy_examples_core::dns_tester::{
 };
 use device_envoy_core::flash_block::FlashBlock as _;
 use device_envoy_esp::{
-    Error, init_and_start,
+    Error as DeviceEnvoyError, init_and_start,
     button::PressedTo,
     button_watch,
     cyd::{
-        CydError,
+        Error as CydError,
         {% if spi_count == 1 %}CydEspOneSpi, CydStaticEsp,{% else %}CydEsp, CydStaticEsp,{% endif %}
         DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
     },
@@ -81,13 +81,13 @@ button_watch! {
 async fn main(spawner: Spawner) -> ! {
     match inner_main(spawner).await {
         Ok(never) => match never {},
-        Err(MainError::Platform(error)) => panic!("{error:?}"),
-        Err(MainError::WifiStatus(error)) => panic!("{error:?}"),
-        Err(MainError::DnsTester(error)) => panic!("{error:?}"),
+        Err(Error::Platform(error)) => panic!("{error:?}"),
+        Err(Error::WifiStatus(error)) => panic!("{error:?}"),
+        Err(Error::DnsTester(error)) => panic!("{error:?}"),
     }
 }
 
-async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainError> {
+async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("Starting CYD DNS tester on {{ chip_name }} / {{ board_slug }}");
@@ -100,7 +100,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
 
     static CYD_STATIC: CydStaticEsp<{ dns_tester::FRAME_PIXEL_COUNT }> =
         {% if spi_count == 1 %}CydEspOneSpi::new_static(){% else %}CydEsp::new_static(){% endif %};
-    let button = ButtonWatch::new(p.GPIO{{ button_pin }}, PressedTo::Ground, spawner).await?;
+    let button_watch = ButtonWatch::new(p.GPIO{{ button_pin }}, PressedTo::Ground, spawner).await?;
     {% if spi_count == 1 %}
     let mut cyd = CydEspOneSpi::new(
         &CYD_STATIC,
@@ -120,7 +120,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
         Rgb888::new(230, 230, 230),
         &DEFAULT_FONT,
         &mut calibration_flash_block,
-        &mut *button,
+        &mut *button_watch,
     )
     .await?;
     {% else %}
@@ -146,7 +146,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
         p.GPIO{{ cyd_touch_cs_pin }}, // touch_cs_pin
         p.GPIO{{ cyd_touch_irq_pin }}, // touch_irq_pin
         &mut calibration_flash_block,
-        &mut *button,
+        &mut *button_watch,
     )
     .await?;
     {% endif %}
@@ -162,7 +162,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
     )?;
 
     let stack = wifi_auto
-        .connect(&mut *button, async |wifi_auto_event| -> core::result::Result<(), MainError> {
+        .connect(&mut *button_watch, async |wifi_auto_event| -> core::result::Result<(), Error> {
             dns_tester::wifi_status(&mut cyd, wifi_auto_event).await?;
             info!("Wi-Fi: {wifi_auto_event:?}");
             Ok(())
@@ -172,7 +172,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
     info!("Wi-Fi up with DHCP: {:?}", stack.config_v4());
 
     let mut dns = DnsWithStack::new(*stack);
-    match dns_tester::run(&mut cyd, &mut *button, &mut dns).await? {
+    match dns_tester::run(&mut cyd, &mut *button_watch, &mut dns).await? {
         CoreExit::Calibrate => {
             calibration_flash_block.clear()?;
         }
@@ -187,8 +187,8 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, MainEr
 }
 
 #[derive(Debug, From)]
-enum MainError {
-    Platform(Error),
+enum Error {
+    Platform(DeviceEnvoyError),
     WifiStatus(CoreError<CydError, Infallible>),
     DnsTester(CoreError<CydError, embassy_net::dns::Error>),
 }

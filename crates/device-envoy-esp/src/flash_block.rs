@@ -23,7 +23,7 @@ use static_cell::StaticCell;
 use crate::{Error, Result};
 #[cfg(target_os = "none")]
 use device_envoy_core::flash_block::{
-    self as core_flash, FlashBlock as CoreFlashBlock, FlashBlockError, FlashDevice,
+    self as core_flash, Error as FlashBlockError, FlashBlock as CoreFlashBlock, FlashDevice,
 };
 
 pub use device_envoy_core::flash_block::FlashBlock;

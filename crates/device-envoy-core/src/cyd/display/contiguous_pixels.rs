@@ -221,7 +221,7 @@ pub(crate) struct ContiguousPixels<const PIXEL_SOURCE_COUNT: usize> {
     top: i32,
     right_exclusive: i32,
     bottom_exclusive: i32,
-    background: Rgb565,
+    background_color: Rgb565,
     pixel_sources: heapless::Vec<PreparedPixelSource, PIXEL_SOURCE_COUNT>,
 }
 
@@ -230,7 +230,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
     #[must_use]
     pub(crate) fn from_draw_items(
         bounds: Rectangle,
-        background: Rgb565,
+        background_color: Rgb565,
         draw_items: impl IntoIterator<Item = DrawItem>,
     ) -> Self {
         let mut pixel_sources = heapless::Vec::<PreparedPixelSource, PIXEL_SOURCE_COUNT>::new();
@@ -242,12 +242,12 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
             }
         }
 
-        Self::new(bounds, background, pixel_sources)
+        Self::new(bounds, background_color, pixel_sources)
     }
 
     fn new(
         bounds: Rectangle,
-        background: Rgb565,
+        background_color: Rgb565,
         pixel_sources: heapless::Vec<PreparedPixelSource, PIXEL_SOURCE_COUNT>,
     ) -> Self {
         let left = bounds.top_left.x;
@@ -265,7 +265,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
             top,
             right_exclusive,
             bottom_exclusive,
-            background,
+            background_color,
             pixel_sources,
         }
     }
@@ -284,7 +284,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
             }
         }
 
-        self.background
+        self.background_color
     }
 
     #[must_use]
@@ -321,34 +321,37 @@ impl PreparedPrimitive {
 
 impl PreparedLine {
     fn covers(&self, point_x: i32, point_y: i32) -> bool {
-        point_covered_by_prepared_segment_fast(
-            point_x,
-            point_y,
-            self.start_x,
-            self.start_y,
-            self.end_x,
-            self.end_y,
-            self.segment_x,
-            self.segment_y,
-            self.segment_len_squared,
-            self.radius_squared,
-            self.radius_squared_times_len_squared,
-        )
+        let point_x = i64::from(point_x);
+        let point_y = i64::from(point_y);
+        let point_from_start_x = point_x - self.start_x;
+        let point_from_start_y = point_y - self.start_y;
+
+        let dot = point_from_start_x * self.segment_x + point_from_start_y * self.segment_y;
+        if dot <= 0 {
+            return point_from_start_x * point_from_start_x
+                + point_from_start_y * point_from_start_y
+                <= self.radius_squared;
+        }
+
+        if dot >= self.segment_len_squared {
+            let distance_x = point_x - self.end_x;
+            let distance_y = point_y - self.end_y;
+            return distance_x * distance_x + distance_y * distance_y <= self.radius_squared;
+        }
+
+        let cross = point_from_start_x * self.segment_y - point_from_start_y * self.segment_x;
+        cross * cross <= self.radius_squared_times_len_squared
     }
 }
 
 impl PreparedEllipse {
     fn covers(&self, point_x: i32, point_y: i32) -> bool {
-        point_covered_by_prepared_ellipse(
-            point_x,
-            point_y,
-            self.center_x,
-            self.center_y,
-            self.quadratic_xx,
-            self.quadratic_xy,
-            self.quadratic_yy,
-            self.outer_limit,
-        )
+        let dx = (point_x - self.center_x) as f32;
+        let dy = (point_y - self.center_y) as f32;
+        let distance_squared =
+            self.quadratic_xx * dx * dx + self.quadratic_xy * dx * dy + self.quadratic_yy * dy * dy;
+
+        distance_squared <= self.outer_limit
     }
 }
 
@@ -391,7 +394,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> Iterator for ContiguousPixelsIter<'_, PIXE
             return None;
         }
 
-        let mut color = self.pixels.background;
+        let mut color = self.pixels.background_color;
         for pixel_source in &self.active {
             if !pixel_source.bounds.contains_x(self.x) {
                 continue;
@@ -413,57 +416,6 @@ impl<const PIXEL_SOURCE_COUNT: usize> Iterator for ContiguousPixelsIter<'_, PIXE
 
         Some(color)
     }
-}
-
-fn point_covered_by_prepared_segment_fast(
-    point_x: i32,
-    point_y: i32,
-    start_x: i64,
-    start_y: i64,
-    end_x: i64,
-    end_y: i64,
-    segment_x: i64,
-    segment_y: i64,
-    segment_len_squared: i64,
-    radius_squared: i64,
-    radius_squared_times_len_squared: i64,
-) -> bool {
-    let point_x = i64::from(point_x);
-    let point_y = i64::from(point_y);
-    let point_from_start_x = point_x - start_x;
-    let point_from_start_y = point_y - start_y;
-
-    let dot = point_from_start_x * segment_x + point_from_start_y * segment_y;
-    if dot <= 0 {
-        return point_from_start_x * point_from_start_x + point_from_start_y * point_from_start_y
-            <= radius_squared;
-    }
-
-    if dot >= segment_len_squared {
-        let distance_x = point_x - end_x;
-        let distance_y = point_y - end_y;
-        return distance_x * distance_x + distance_y * distance_y <= radius_squared;
-    }
-
-    let cross = point_from_start_x * segment_y - point_from_start_y * segment_x;
-    cross * cross <= radius_squared_times_len_squared
-}
-
-fn point_covered_by_prepared_ellipse(
-    point_x: i32,
-    point_y: i32,
-    center_x: i32,
-    center_y: i32,
-    quadratic_xx: f32,
-    quadratic_xy: f32,
-    quadratic_yy: f32,
-    outer_limit: f32,
-) -> bool {
-    let dx = (point_x - center_x) as f32;
-    let dy = (point_y - center_y) as f32;
-    let distance_squared = quadratic_xx * dx * dx + quadratic_xy * dx * dy + quadratic_yy * dy * dy;
-
-    distance_squared <= outer_limit
 }
 
 fn point_from_f32((x, y): (f32, f32)) -> Point {

@@ -26,7 +26,9 @@ use crate::cyd::{
 };
 use crate::{
     button::{__ButtonMonitor, BUTTON_POLL_INTERVAL, Button},
-    flash_block::{FlashBlock, FlashBlockError, FlashDevice, clear_block, load_block, save_block},
+    flash_block::{
+        Error as FlashBlockError, FlashBlock, FlashDevice, clear_block, load_block, save_block,
+    },
     pixel_target::{PixelTarget, rgb888_from_rgb565},
 };
 use embassy_time::Timer;
@@ -69,8 +71,8 @@ pub struct CydDisplayWasm {
     context: CanvasRenderingContext2d,
     size: Size,
     orientation: Orientation,
-    background: Rgb888,
-    foreground: Rgb888,
+    background_color: Rgb888,
+    foreground_color: Rgb888,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -120,7 +122,7 @@ struct FlashDeviceWasm {
 }
 
 #[derive(Debug)]
-pub enum FlashDeviceWasmError {
+pub enum Error {
     StorageUnavailable,
     StorageAccess,
 }
@@ -138,8 +140,8 @@ impl CydWasm {
     pub fn new(
         context: CanvasRenderingContext2d,
         orientation: Orientation,
-        background: Rgb888,
-        foreground: Rgb888,
+        background_color: Rgb888,
+        foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
         touch_source: CydTouchWasmSource,
     ) -> Self {
@@ -147,10 +149,10 @@ impl CydWasm {
             context: context.clone(),
             size: orientation.size(),
             orientation,
-            background,
-            foreground,
-            background565: Rgb565::from(background),
-            foreground565: Rgb565::from(foreground),
+            background_color,
+            foreground_color,
+            background565: Rgb565::from(background_color),
+            foreground565: Rgb565::from(foreground_color),
             font,
         };
         let touch = CydTouchWasm {
@@ -324,7 +326,7 @@ impl __ButtonMonitor for ButtonWasm {
 impl Button for ButtonWasm {}
 
 impl FlashBlockWasm {
-    pub fn new(storage_key: &str) -> Result<Self, FlashDeviceWasmError> {
+    pub fn new(storage_key: &str) -> Result<Self, Error> {
         Ok(Self {
             flash_device: FlashDeviceWasm::new(storage_key)?,
         })
@@ -332,12 +334,12 @@ impl FlashBlockWasm {
 }
 
 impl FlashDeviceWasm {
-    fn new(storage_key: &str) -> Result<Self, FlashDeviceWasmError> {
-        let window = web_sys::window().ok_or(FlashDeviceWasmError::StorageUnavailable)?;
+    fn new(storage_key: &str) -> Result<Self, Error> {
+        let window = web_sys::window().ok_or(Error::StorageUnavailable)?;
         let storage = window
             .local_storage()
-            .map_err(|_error| FlashDeviceWasmError::StorageAccess)?
-            .ok_or(FlashDeviceWasmError::StorageUnavailable)?;
+            .map_err(|_error| Error::StorageAccess)?
+            .ok_or(Error::StorageUnavailable)?;
         let mut flash_device = Self {
             storage,
             storage_key: storage_key.to_owned(),
@@ -347,11 +349,11 @@ impl FlashDeviceWasm {
         Ok(flash_device)
     }
 
-    fn load_from_storage(&mut self) -> Result<(), FlashDeviceWasmError> {
+    fn load_from_storage(&mut self) -> Result<(), Error> {
         let Some(encoded_bytes) = self
             .storage
             .get_item(&self.storage_key)
-            .map_err(|_error| FlashDeviceWasmError::StorageAccess)?
+            .map_err(|_error| Error::StorageAccess)?
         else {
             return Ok(());
         };
@@ -368,11 +370,11 @@ impl FlashDeviceWasm {
         Ok(())
     }
 
-    fn persist(&self) -> Result<(), FlashDeviceWasmError> {
+    fn persist(&self) -> Result<(), Error> {
         let encoded_bytes = encode_hex(&self.bytes);
         self.storage
             .set_item(&self.storage_key, &encoded_bytes)
-            .map_err(|_error| FlashDeviceWasmError::StorageAccess)
+            .map_err(|_error| Error::StorageAccess)
     }
 
     fn checked_range(&self, offset: u32, len: usize) -> Range<usize> {
@@ -389,7 +391,7 @@ impl FlashDeviceWasm {
 }
 
 impl FlashDevice for FlashDeviceWasm {
-    type Error = FlashDeviceWasmError;
+    type Error = Error;
 
     fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), Self::Error> {
         let checked_range = self.checked_range(offset, bytes.len());
@@ -412,7 +414,7 @@ impl FlashDevice for FlashDeviceWasm {
 }
 
 impl FlashBlock for FlashBlockWasm {
-    type Error = FlashBlockError<FlashDeviceWasmError>;
+    type Error = FlashBlockError<Error>;
 
     fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
     where
@@ -483,12 +485,12 @@ impl CydDisplay for CydDisplayWasm {
         self.size
     }
 
-    fn background(&self) -> Rgb888 {
-        self.background
+    fn background_color(&self) -> Rgb888 {
+        self.background_color
     }
 
-    fn foreground(&self) -> Rgb888 {
-        self.foreground
+    fn foreground_color(&self) -> Rgb888 {
+        self.foreground_color
     }
 
     fn background_565(&self) -> Rgb565 {
@@ -506,7 +508,7 @@ impl CydDisplay for CydDisplayWasm {
     ) -> CydFrameWasm<'_> {
         let size = rectangle.size;
         let pixel_count = size.width as usize * size.height as usize;
-        // Every new frame starts cleared to the device background so callers
+        // Every new frame starts cleared to the device background color so callers
         // never have to clear it themselves.
         let pixels = vec![self.background565.into_storage(); pixel_count];
         CydFrameWasm {

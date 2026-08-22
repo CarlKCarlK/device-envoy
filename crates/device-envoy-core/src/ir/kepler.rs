@@ -113,6 +113,12 @@ impl IrKeplerStatic {
     }
 }
 
+impl Default for IrKeplerStatic {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Button mapping for the SunFounder Kepler Kit remote (ordered to match physical layout).
 // Public for cross-crate platform plumbing; hidden from end-user docs.
 #[doc(hidden)]

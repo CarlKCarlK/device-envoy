@@ -275,10 +275,11 @@ pub use esp_rtos;
 
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
-#[derive(Debug)]
+#[derive(Debug, derive_more::From)]
 #[non_exhaustive]
 pub enum Error {
     TaskSpawn(embassy_executor::SpawnError),
+    #[from(ignore)]
     Core(device_envoy_core::Error),
     #[cfg(target_os = "none")]
     FlashStorage(esp_storage::FlashStorageError),
@@ -299,8 +300,10 @@ pub enum Error {
     #[cfg(target_os = "none")]
     Spi(esp_hal::spi::Error),
     #[cfg(target_os = "none")]
+    #[from(ignore)]
     Mfrc522Init(esp_hal_mfrc522::consts::PCDErrorCode),
     #[cfg(target_os = "none")]
+    #[from(ignore)]
     Mfrc522Version(esp_hal_mfrc522::consts::PCDErrorCode),
     #[cfg(target_os = "none")]
     I2cConfig(esp_hal::i2c::master::ConfigError),
@@ -315,53 +318,42 @@ pub enum Error {
     #[cfg(target_os = "none")]
     CydTouchInit(cyd::CydTouchEspInitError),
     #[cfg(target_os = "none")]
+    #[from(ignore)]
     CydDisplayFlush(cyd::CydDisplayEspFlushError),
     #[cfg(target_os = "none")]
+    #[from(ignore)]
     CydDisplaySetOrientation(cyd::CydDisplayEspFlushError),
     #[cfg(target_os = "none")]
     CydTouchUnavailable,
 }
 
-impl From<embassy_executor::SpawnError> for Error {
-    fn from(e: embassy_executor::SpawnError) -> Self {
-        Self::TaskSpawn(e)
-    }
-}
-
 #[cfg(target_os = "none")]
-impl From<cyd::CydError> for Error {
-    fn from(error: cyd::CydError) -> Self {
+impl From<cyd::Error> for Error {
+    fn from(error: cyd::Error) -> Self {
         match error {
-            cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
-            cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
-            cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
-            cyd::CydError::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
+            cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
+            cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
+            cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            cyd::Error::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
         }
     }
 }
 
 #[cfg(target_os = "none")]
-impl
-    From<
-        device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
-            cyd::CydTouchUncalibratedEsp,
-            Error,
-        >,
-    > for Error
+impl From<device_envoy_core::cyd::touch::calibration::Error<cyd::CydTouchUncalibratedEsp, Error>>
+    for Error
 {
     fn from(
-        error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+        error: device_envoy_core::cyd::touch::calibration::Error<
             cyd::CydTouchUncalibratedEsp,
             Error,
         >,
     ) -> Self {
         match error.kind {
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
-                error,
-            ) => Self::from(error),
-            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
-                error,
-            ) => error,
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
+                Self::from(error)
+            }
+            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
         }
     }
 }
@@ -380,68 +372,5 @@ impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
         match error {
             device_envoy_core::led4::Led4BitsToIndexesError::Full => Self::Led4BitsToIndexesFull,
         }
-    }
-}
-
-#[cfg(target_os = "none")]
-impl From<esp_storage::FlashStorageError> for Error {
-    fn from(error: esp_storage::FlashStorageError) -> Self {
-        Self::FlashStorage(error)
-    }
-}
-
-#[cfg(all(target_os = "none", esp_has_rmt))]
-impl From<esp_hal::rmt::ConfigError> for Error {
-    fn from(error: esp_hal::rmt::ConfigError) -> Self {
-        Self::RmtConfig(error)
-    }
-}
-
-#[cfg(all(target_os = "none", esp_has_rmt))]
-impl From<esp_hal::rmt::Error> for Error {
-    fn from(error: esp_hal::rmt::Error) -> Self {
-        Self::Rmt(error)
-    }
-}
-
-#[cfg(target_os = "none")]
-impl From<esp_hal::spi::master::ConfigError> for Error {
-    fn from(error: esp_hal::spi::master::ConfigError) -> Self {
-        Self::SpiConfig(error)
-    }
-}
-
-#[cfg(target_os = "none")]
-impl From<esp_hal::i2c::master::ConfigError> for Error {
-    fn from(error: esp_hal::i2c::master::ConfigError) -> Self {
-        Self::I2cConfig(error)
-    }
-}
-
-#[cfg(target_os = "none")]
-impl From<esp_hal::spi::Error> for Error {
-    fn from(error: esp_hal::spi::Error) -> Self {
-        Self::Spi(error)
-    }
-}
-
-#[cfg(all(target_os = "none", esp_has_ledc))]
-impl From<esp_hal::ledc::timer::Error> for Error {
-    fn from(error: esp_hal::ledc::timer::Error) -> Self {
-        Self::LedcTimer(error)
-    }
-}
-
-#[cfg(all(target_os = "none", esp_has_ledc))]
-impl From<esp_hal::ledc::channel::Error> for Error {
-    fn from(error: esp_hal::ledc::channel::Error) -> Self {
-        Self::LedcChannel(error)
-    }
-}
-
-#[cfg(all(target_os = "none", esp_has_wifi))]
-impl From<esp_radio::wifi::WifiError> for Error {
-    fn from(error: esp_radio::wifi::WifiError) -> Self {
-        Self::Wifi(error)
     }
 }

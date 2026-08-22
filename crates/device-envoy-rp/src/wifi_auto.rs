@@ -551,12 +551,13 @@ impl WifiAutoInner {
         Ok(true)
     }
 
-    device_envoy_core::__impl_wifi_auto_connect! {
-    fn connect(&self as wifi_auto_inner, on_event) -> WifiStack {
-        wifi_auto_inner.ensure_connected_with(&mut on_event).await?;
-        // todo000 Audit whether this implementation should wait for IP configuration too.
-        Ok(wifi_auto_inner.wifi.wait_for_stack().await)
-    }
+    async fn connect<OnEvent, OnError>(&self, mut on_event: OnEvent) -> Result<WifiStack, OnError>
+    where
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<Error>,
+    {
+        self.ensure_connected_with(&mut on_event).await?;
+        Ok(self.wifi.wait_for_stack().await)
     }
 
     async fn ensure_connected_with<F, OnError>(&self, on_event: &mut F) -> Result<(), OnError>

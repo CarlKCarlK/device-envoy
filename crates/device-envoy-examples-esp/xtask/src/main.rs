@@ -162,6 +162,7 @@ const EXAMPLE_REQUIREMENTS_TABLE: &[(&str, &[Capability])] = &[
     ("audio_example1", &[Capability::I2S, Capability::AUDIO_GPIO]),
     ("audio_example2", &[Capability::I2S, Capability::AUDIO_GPIO]),
     ("audio_example3", &[Capability::I2S, Capability::AUDIO_GPIO]),
+    ("audio_playlist", &[Capability::I2S, Capability::AUDIO_GPIO]),
     ("blinky", &[]),
     ("button_example1", &[Capability::BUTTON_GPIO]),
     (

@@ -22,13 +22,16 @@ use crate::pixel_target::PixelTarget;
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
-pub use tga::{Image565Fixed, MaskFixed, TgaImageFixed, mask_byte_count};
+pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, mask_byte_count};
 
 pub use crate::__cyd_tga as tga;
 
 /// A borrowed or owned rectangular RGB565 pixel buffer.
 ///
 /// See [`super::CydDisplay::flush_at`] for the primary consumer.
+// TODO Consider introducing a concrete `RectanglePixelsView` containing the
+// dimensions and pixel slice, then reducing this trait to only `view`. Buffer
+// inspection and iteration could live on that common borrowed representation.
 pub trait RectanglePixels {
     /// Buffer width in pixels.
     ///

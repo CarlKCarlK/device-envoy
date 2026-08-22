@@ -89,3 +89,9 @@ impl IrMappingStatic {
         &self.0
     }
 }
+
+impl Default for IrMappingStatic {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -36,16 +36,6 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
     }
 }
 
-/// `const fn` ceiling division of two `usize` values.
-///
-/// Used to derive a per-tile size that covers a rectangle given a tile count:
-/// `tile_width = div_ceil_usize(rectangle_width, columns)`. Panics if `d == 0`.
-#[must_use]
-const fn div_ceil_usize(n: usize, d: usize) -> usize {
-    assert!(d > 0, "divisor must be non-zero");
-    n / d + if n % d == 0 { 0 } else { 1 }
-}
-
 /// A rectangular body area split into a grid of `columns` × `rows` tiles.
 ///
 /// `top_left` and `size` describe the rectangle in screen coordinates; callers
@@ -102,13 +92,13 @@ impl TileGrid {
     /// Nominal tile width: the rectangle width divided by the column count, rounded up.
     #[must_use]
     pub const fn tile_width(&self) -> usize {
-        div_ceil_usize(self.size.width as usize, self.columns)
+        (self.size.width as usize).div_ceil(self.columns)
     }
 
     /// Nominal tile height: the rectangle height divided by the row count, rounded up.
     #[must_use]
     pub const fn tile_height(&self) -> usize {
-        div_ceil_usize(self.size.height as usize, self.rows)
+        (self.size.height as usize).div_ceil(self.rows)
     }
 
     /// Largest pixel count any single tile can have.
@@ -286,14 +276,6 @@ mod tests {
         // clipped max: a 1×1 grid over 40×50 has a 40×50 tile.
         let small = TileGrid::new(Point::new(0, 0), Size::new(40, 50), 1, 1);
         assert_eq!(small.max_tile_pixel_count(), 40 * 50);
-    }
-
-    #[test]
-    fn div_ceil_rounds_up() {
-        assert_eq!(div_ceil_usize(240, 3), 80);
-        assert_eq!(div_ceil_usize(286, 3), 96);
-        assert_eq!(div_ceil_usize(0, 3), 0);
-        assert_eq!(div_ceil_usize(1, 3), 1);
     }
 
     #[test]

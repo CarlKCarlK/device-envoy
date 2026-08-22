@@ -88,13 +88,13 @@ pub const ONE_DAY: Duration = Duration::from_secs(86_400);
 /// Extract hour (12-hour format), minute, and second from an
 /// [`OffsetDateTime`](https://docs.rs/time/latest/time/struct.OffsetDateTime.html).
 pub fn h12_m_s(dt: &OffsetDateTime) -> (u8, u8, u8) {
-    let hour_24 = dt.hour() as u8;
+    let hour_24 = dt.hour();
     let hour_12 = match hour_24 {
         0 => 12,
         1..=12 => hour_24,
         _ => hour_24 - 12,
     };
-    (hour_12, dt.minute() as u8, dt.second() as u8)
+    (hour_12, dt.minute(), dt.second())
 }
 
 // ============================================================================

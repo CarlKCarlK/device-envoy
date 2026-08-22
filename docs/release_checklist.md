@@ -65,8 +65,11 @@ cargo check-all
 ## 7. Validate Sample Projects
 
 - Update `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to the new release version.
+- Temporarily replace their `device-envoy-*` dependencies with direct path
+  dependencies to this local workspace.
 - Run the sample/template projects that depend on this workspace (including `device-envoy-rp-blinky` and `device-envoy-esp-blinky`).
 - Confirm they build and run with the new versions.
+- Restore the registry dependencies; do not commit machine-specific paths.
 
 ## 8. Publish Dry Run
 
@@ -77,16 +80,6 @@ cargo publish-core-dry-run
 cargo publish-rp-dry-run
 cargo publish-esp-dry-run
 # skip cargo publish-device-envoy-dry-run
-```
-
-- Dry-run both blinky repos after the above versions are published/available:
-
-```bash
-# in device-envoy-rp-blinky
-cargo publish --dry-run
-
-# in device-envoy-esp-blinky
-cargo publish --dry-run
 ```
 
 ## 9. Publish
@@ -101,7 +94,7 @@ cargo publish-esp
 ```
 
 - Wait for crates.io index propagation after publishing `core`/`rp`/`esp`.
-- Publish blinky repos only after their `device-envoy-*` dependency versions resolve from crates.io:
+- The blinky repositories are cloneable templates and are not published to crates.io.
 
 ## 10. Tag and GitHub Release
 
@@ -120,3 +113,17 @@ git push origin vX.Y.Z
 - Verify crate pages on crates.io for all published crates.
 - Verify docs.rs builds for `device-envoy-rp` and `device-envoy-esp`.
 - Confirm the top-level README version badges reflect the new release.
+- Refresh the blinky repositories' lockfiles from crates.io, validate every
+  supported starter configuration, and push their dependency updates:
+
+```bash
+# in device-envoy-rp-blinky
+cargo xtask check --board pico1
+cargo xtask check --board pico2
+cargo xtask check --board pico1w
+cargo xtask check --board pico2w
+
+# in device-envoy-esp-blinky
+cargo xtask check --chip c6
+cargo xtask check --chip s3
+```

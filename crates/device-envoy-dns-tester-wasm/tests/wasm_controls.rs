@@ -1,11 +1,11 @@
+use device_envoy_core::wasm::cyd_web;
 use device_envoy_core::{
     clock_sync::ClockSync as _,
     cyd::display::Orientation,
     dns::Dns as _,
     flash_block::FlashBlock as _,
     wasm::{
-        ClockSyncWasm, CydSimulatorWasm, CydWebAppConfig, CydWebAppWasm, CydWebCommand,
-        CydWebPageInfo, DnsSimulatorWasm, FlashBlockWasm, next_animation_frame, start_cyd_web_app,
+        ClockSyncWasm, CydSimulatorWasm, DnsSimulatorWasm, FlashBlockWasm, next_animation_frame,
     },
 };
 use device_envoy_dns_tester_wasm::start;
@@ -75,7 +75,7 @@ fn touch_app_starts_in_saved_orientation_without_calibration_storage() -> Result
         .save(&Orientation::Portrait)
         .map_err(|error| JsValue::from_str(&format!("orientation save: {error:?}")))?;
 
-    let handle = start("screen-orientation")?;
+    let handle = cyd_web::start("screen-orientation")?;
     assert_eq!(canvas.width(), Orientation::Portrait.width());
     assert_eq!(canvas.height(), Orientation::Portrait.height());
     handle.touch_down(160.0, 216.0);
@@ -88,7 +88,7 @@ fn touch_app_starts_in_saved_orientation_without_calibration_storage() -> Result
 async fn calibration_not_needed_queues_notice_and_restarts_stably() -> Result<(), JsValue> {
     let document = document()?;
     let canvas = canvas(&document, "screen-calibration-policy")?;
-    let config = CydWebAppConfig::new(
+    let config = cyd_web::Config::new(
         "device-envoy/dns-tester/calibration-policy",
         Orientation::Portrait,
         Rgb888::new(10, 10, 12),    // near-black
@@ -97,18 +97,18 @@ async fn calibration_not_needed_queues_notice_and_restarts_stably() -> Result<()
     );
     let invocation_count = std::rc::Rc::new(std::cell::Cell::new(0));
     let callback_invocation_count = invocation_count.clone();
-    let page_info = CydWebPageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
-    let handle = start_cyd_web_app(
+    let page_info = cyd_web::PageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
+    let handle = cyd_web::start(
         "screen-calibration-policy",
         config,
         page_info,
-        async move |_application: CydWebAppWasm| {
+        async move |_application: cyd_web::Capabilities| {
             let invocation = callback_invocation_count.get();
             callback_invocation_count.set(invocation + 1);
-            Ok::<CydWebCommand, core::convert::Infallible>(if invocation == 0 {
-                CydWebCommand::CalibrationNotNeeded
+            Ok::<cyd_web::Command, core::convert::Infallible>(if invocation == 0 {
+                cyd_web::Command::CalibrationNotNeeded
             } else {
-                CydWebCommand::Stop
+                cyd_web::Command::Stop
             })
         },
     )?;
@@ -119,10 +119,7 @@ async fn calibration_not_needed_queues_notice_and_restarts_stably() -> Result<()
         .take_notice()
         .ok_or_else(|| JsValue::from_str("calibration policy notice was not queued"))?;
     assert_eq!(notice.id(), "calibration-not-needed");
-    assert_eq!(
-        notice.severity(),
-        device_envoy_core::wasm::CydWebNoticeSeverity::Info
-    );
+    assert_eq!(notice.severity(), cyd_web::NoticeSeverity::Info);
     assert_eq!(canvas.height(), Orientation::Portrait.height());
     for _ in 0..5 {
         next_animation_frame().await;
@@ -139,21 +136,21 @@ async fn display_app_uses_only_orientation_storage() -> Result<(), JsValue> {
     let document = document()?;
     let canvas = canvas(&document, "screen-display-only")?;
     let namespace = "device-envoy/display-only-storage-test";
-    let config = CydWebAppConfig::new(
+    let config = cyd_web::Config::new(
         namespace,
         Orientation::Landscape,
         Rgb888::new(10, 10, 12),    // near-black
         Rgb888::new(230, 230, 230), // near-white
         &FONT_6X10,
     );
-    let page_info = CydWebPageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
-    let _handle = start_cyd_web_app(
+    let page_info = cyd_web::PageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
+    let _handle = cyd_web::start(
         "screen-display-only",
         config,
         page_info,
-        async |application: CydWebAppWasm| {
+        async |application: cyd_web::Capabilities| {
             let _display = application.cyd.display();
-            Ok::<CydWebCommand, core::convert::Infallible>(CydWebCommand::Stop)
+            Ok::<cyd_web::Command, core::convert::Infallible>(cyd_web::Command::Stop)
         },
     )?;
     for _ in 0..3 {
@@ -189,19 +186,21 @@ async fn fixed_dns_waits_for_simulated_latency() -> Result<(), JsValue> {
 async fn framework_fatal_notice_stops_and_preserves_diagnostic() -> Result<(), JsValue> {
     let document = document()?;
     let canvas = canvas(&document, "screen-fatal")?;
-    let config = CydWebAppConfig::new(
+    let config = cyd_web::Config::new(
         "device-envoy/dns-tester/fatal-test",
         Orientation::Landscape,
         Rgb888::new(10, 10, 12),    // near-black
         Rgb888::new(230, 230, 230), // near-white
         &FONT_6X10,
     );
-    let page_info = CydWebPageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
-    let handle = start_cyd_web_app(
+    let page_info = cyd_web::PageInfo::new("Test", "Test", "Test", "Test", "https://example.com");
+    let handle = cyd_web::start(
         "screen-fatal",
         config,
         page_info,
-        async |_application: CydWebAppWasm| Err::<CydWebCommand, _>("intentional fatal test error"),
+        async |_application: cyd_web::Capabilities| {
+            Err::<cyd_web::Command, _>("intentional fatal test error")
+        },
     )?;
     for _ in 0..5 {
         next_animation_frame().await;
@@ -235,14 +234,14 @@ fn clock_control_is_instance_local_and_validates_time() -> Result<(), JsValue> {
 async fn handle_clock_state_and_page_info_survive_restart() -> Result<(), JsValue> {
     let document = document()?;
     let _canvas = canvas(&document, "screen-clock-state")?;
-    let config = CydWebAppConfig::new(
+    let config = cyd_web::Config::new(
         "device-envoy/clock-state-test",
         Orientation::Landscape,
         Rgb888::new(10, 10, 12),    // near-black
         Rgb888::new(230, 230, 230), // near-white
         &FONT_6X10,
     );
-    let page_info = CydWebPageInfo::new(
+    let page_info = cyd_web::PageInfo::new(
         "Clock test",
         "Preview",
         "Description",
@@ -255,11 +254,11 @@ async fn handle_clock_state_and_page_info_survive_restart() -> Result<(), JsValu
     let live_run_time_ref = live_run_time.clone();
     let invocation_count = std::rc::Rc::new(std::cell::Cell::new(0));
     let invocation_count_ref = invocation_count.clone();
-    let handle = start_cyd_web_app(
+    let handle = cyd_web::start(
         "screen-clock-state",
         config,
         page_info,
-        async move |application: CydWebAppWasm| {
+        async move |application: cyd_web::Capabilities| {
             let invocation = invocation_count_ref.get();
             invocation_count_ref.set(invocation + 1);
             if invocation == 0 {
@@ -273,7 +272,7 @@ async fn handle_clock_state_and_page_info_survive_restart() -> Result<(), JsValu
                 unreachable!()
             }
             live_run_time_ref.set(Some(application.clock_sync.now_local().time()));
-            Ok::<CydWebCommand, core::convert::Infallible>(CydWebCommand::Stop)
+            Ok::<cyd_web::Command, core::convert::Infallible>(cyd_web::Command::Stop)
         },
     )?;
     for _ in 0..3 {

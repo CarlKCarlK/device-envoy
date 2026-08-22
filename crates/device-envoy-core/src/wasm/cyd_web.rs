@@ -1,4 +1,9 @@
 //! A device abstraction for complete CYD browser applications.
+//!
+//! [`start`] creates the stable browser supervisor and returns [`Handle`]. The
+//! supervisor constructs fresh [`Capabilities`] for each run, allowing the
+//! application to select focused capabilities for unchanged generic core code.
+//! [`Command`] communicates application policy back to the supervisor.
 
 use core::{
     future::Future,
@@ -24,9 +29,9 @@ use crate::cyd::display::Orientation;
 use crate::flash_block::FlashBlock as _;
 
 #[derive(Clone, Copy)]
-/// Presentation and persistent-storage settings for a [`CydWebAppWasm`]
-/// session. See [`start_cyd_web_app`] for the complete launcher example.
-pub struct CydWebAppConfig {
+/// Presentation and persistent-storage settings for a [`Capabilities`]
+/// session.
+pub struct Config {
     /// Namespace used for orientation and simulated Wi-Fi state.
     pub storage_namespace: &'static str,
     /// Orientation used when no saved orientation exists.
@@ -39,8 +44,8 @@ pub struct CydWebAppConfig {
     pub font: &'static MonoFont<'static>,
 }
 
-impl CydWebAppConfig {
-    /// Construct presentation settings for [`start_cyd_web_app`].
+impl Config {
+    /// Construct presentation settings for [`start`].
     pub const fn new(
         storage_namespace: &'static str,
         initial_orientation: Orientation,
@@ -60,7 +65,7 @@ impl CydWebAppConfig {
 
 #[derive(Clone, Copy)]
 /// Browser-facing metadata displayed by the shared CYD simulator shell.
-pub struct CydWebPageInfo {
+pub struct PageInfo {
     /// Page title.
     pub title: &'static str,
     /// Short preview text.
@@ -73,8 +78,8 @@ pub struct CydWebPageInfo {
     pub core_code_url: &'static str,
 }
 
-impl CydWebPageInfo {
-    /// Construct page metadata for [`start_cyd_web_app`].
+impl PageInfo {
+    /// Construct page metadata for [`start`].
     pub const fn new(
         title: &'static str,
         preview: &'static str,
@@ -93,7 +98,25 @@ impl CydWebPageInfo {
 }
 
 /// Complete capability container supplied to each application run.
-pub struct CydWebAppWasm {
+///
+/// A launcher receives this value from [`start`], selects focused capabilities,
+/// and returns a [`Command`].
+///
+/// ```rust,no_run
+/// # use core::convert::Infallible;
+/// # use device_envoy_core::wasm::cyd_web;
+/// #
+/// async fn inner_main(
+///     mut capabilities: cyd_web::Capabilities,
+/// ) -> Result<cyd_web::Command, Infallible> {
+///     capabilities.clock_sync.show();
+///     let _display = capabilities.cyd.display();
+///     Ok(cyd_web::Command::Stop)
+/// }
+/// #
+/// # fn receives_capabilities(_capabilities: cyd_web::Capabilities) {}
+/// ```
+pub struct Capabilities {
     /// CYD display and touch capability.
     pub cyd: CydWasm,
     /// BOOT-button capability.
@@ -107,7 +130,7 @@ pub struct CydWebAppWasm {
 }
 
 /// Result requested by an application after one run.
-pub enum CydWebCommand {
+pub enum Command {
     /// Restart the current session.
     Restart,
     /// Report that physical calibration is unnecessary in the browser.
@@ -120,9 +143,9 @@ pub enum CydWebCommand {
     Stop,
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = CydWebNoticeSeverity)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum CydWebNoticeSeverity {
+pub enum NoticeSeverity {
     /// Informational notice.
     Info,
     /// Recoverable warning.
@@ -131,17 +154,17 @@ pub enum CydWebNoticeSeverity {
     Fatal,
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = CydWebNotice)]
 #[derive(Clone, Debug)]
 /// Typed notice emitted by the framework for the shared browser shell.
-pub struct CydWebNotice {
+pub struct Notice {
     id: String,
-    severity: CydWebNoticeSeverity,
+    severity: NoticeSeverity,
     detail: Option<String>,
 }
 
-impl CydWebNotice {
-    fn new(id: impl Into<String>, severity: CydWebNoticeSeverity) -> Self {
+impl Notice {
+    fn new(id: impl Into<String>, severity: NoticeSeverity) -> Self {
         Self {
             id: id.into(),
             severity,
@@ -151,20 +174,20 @@ impl CydWebNotice {
     fn fatal(detail: String) -> Self {
         Self {
             id: "runtime-error".into(),
-            severity: CydWebNoticeSeverity::Fatal,
+            severity: NoticeSeverity::Fatal,
             detail: Some(detail),
         }
     }
 }
 
 #[wasm_bindgen]
-impl CydWebNotice {
+impl Notice {
     /// Return the stable notice identifier.
     pub fn id(&self) -> String {
         self.id.clone()
     }
     /// Return the notice severity.
-    pub fn severity(&self) -> CydWebNoticeSeverity {
+    pub fn severity(&self) -> NoticeSeverity {
         self.severity
     }
     /// Return optional diagnostic detail.
@@ -231,22 +254,22 @@ impl Future for LifecycleRequestFuture {
 
 struct SupervisorState {
     live_control: Option<CydSimulatorControlWasm>,
-    notices: std::collections::VecDeque<CydWebNotice>,
+    notices: std::collections::VecDeque<Notice>,
     orientation: Orientation,
     stopped: bool,
-    page_info: CydWebPageInfo,
+    page_info: PageInfo,
     clock_time_of_day: Rc<Cell<Option<u32>>>,
     clock_control_visible: Rc<Cell<bool>>,
 }
 
-#[wasm_bindgen]
-/// Stable browser control handle returned by [`start_cyd_web_app`].
-pub struct CydWebAppHandle {
+#[wasm_bindgen(js_name = CydWebAppHandle)]
+/// Stable browser control handle returned by [`start`].
+pub struct Handle {
     state: Rc<RefCell<SupervisorState>>,
     lifecycle_signal: LifecycleSignal,
 }
 
-impl CydWebAppHandle {
+impl Handle {
     fn new(state: Rc<RefCell<SupervisorState>>, lifecycle_signal: LifecycleSignal) -> Self {
         Self {
             state,
@@ -264,7 +287,7 @@ impl CydWebAppHandle {
 }
 
 #[wasm_bindgen]
-impl CydWebAppHandle {
+impl Handle {
     /// Press the simulated touch panel at canvas coordinates.
     pub fn touch_down(&self, position_x: f32, position_y: f32) {
         self.with_control(|control| control.touch_down(position_x, position_y));
@@ -294,7 +317,7 @@ impl CydWebAppHandle {
             .is_some_and(CydSimulatorControlWasm::orientation_is_inverted)
     }
     /// Remove and return the oldest pending framework notice.
-    pub fn take_notice(&self) -> Option<CydWebNotice> {
+    pub fn take_notice(&self) -> Option<Notice> {
         self.state.borrow_mut().notices.pop_front()
     }
     /// Request an application restart.
@@ -348,14 +371,14 @@ impl CydWebAppHandle {
     }
 }
 
-pub fn start_cyd_web_app<Run, Error>(
+pub fn start<Run, Error>(
     canvas_id: &str,
-    config: CydWebAppConfig,
-    page_info: CydWebPageInfo,
+    config: Config,
+    page_info: PageInfo,
     inner_main: Run,
-) -> Result<CydWebAppHandle, JsValue>
+) -> Result<Handle, JsValue>
 where
-    Run: AsyncFnMut(CydWebAppWasm) -> Result<CydWebCommand, Error> + 'static,
+    Run: AsyncFnMut(Capabilities) -> Result<Command, Error> + 'static,
     Error: Debug + 'static,
 {
     let canvas = canvas(canvas_id)?;
@@ -384,7 +407,7 @@ where
         clock_control_visible: Rc::new(Cell::new(false)),
     }));
     let lifecycle_signal = LifecycleSignal::new();
-    let handle = CydWebAppHandle::new(state.clone(), lifecycle_signal.clone());
+    let handle = Handle::new(state.clone(), lifecycle_signal.clone());
     wasm_bindgen_futures::spawn_local(supervise(
         canvas,
         config,
@@ -411,14 +434,14 @@ fn canvas(canvas_id: &str) -> Result<HtmlCanvasElement, JsValue> {
 
 async fn supervise<Run, Error>(
     canvas: HtmlCanvasElement,
-    config: CydWebAppConfig,
+    config: Config,
     mut orientation_flash_block: FlashBlockWasm,
     state: Rc<RefCell<SupervisorState>>,
     lifecycle_signal: LifecycleSignal,
     mut inner_main: Run,
     initial_session: Option<(CydWasm, ButtonWasm)>,
 ) where
-    Run: AsyncFnMut(CydWebAppWasm) -> Result<CydWebCommand, Error> + 'static,
+    Run: AsyncFnMut(Capabilities) -> Result<Command, Error> + 'static,
     Error: Debug + 'static,
 {
     let mut session = initial_session;
@@ -455,7 +478,7 @@ async fn supervise<Run, Error>(
         };
         let clock_sync =
             ClockSyncWasm::new_with_control_state(clock_time_of_day, clock_control_visible);
-        let application = CydWebAppWasm {
+        let application = Capabilities {
             cyd,
             button,
             clock_sync,
@@ -472,7 +495,7 @@ async fn supervise<Run, Error>(
             },
             Either::Second(request) => {
                 match apply_host_request(request, &config, &mut orientation_flash_block, &state) {
-                    Ok(()) => CydWebCommand::Restart,
+                    Ok(()) => Command::Restart,
                     Err(error) => {
                         fatal(&state, error);
                         break;
@@ -482,19 +505,20 @@ async fn supervise<Run, Error>(
         };
         release_control(&state);
         match command {
-            CydWebCommand::Stop => break,
-            CydWebCommand::Restart => {}
-            CydWebCommand::ResetWifi => {
+            Command::Stop => break,
+            Command::Restart => {}
+            Command::ResetWifi => {
                 WifiSimulatorWasm::new(config.storage_namespace).reset();
-                state.borrow_mut().notices.push_back(CydWebNotice::new(
-                    "wifi-simulated",
-                    CydWebNoticeSeverity::Info,
-                ));
+                state
+                    .borrow_mut()
+                    .notices
+                    .push_back(Notice::new("wifi-simulated", NoticeSeverity::Info));
             }
-            CydWebCommand::CalibrationNotNeeded => state.borrow_mut().notices.push_back(
-                CydWebNotice::new("calibration-not-needed", CydWebNoticeSeverity::Info),
-            ),
-            CydWebCommand::Reorientate(orientation) => {
+            Command::CalibrationNotNeeded => state
+                .borrow_mut()
+                .notices
+                .push_back(Notice::new("calibration-not-needed", NoticeSeverity::Info)),
+            Command::Reorientate(orientation) => {
                 if let Err(error) = orientation_flash_block.save(&orientation) {
                     fatal(&state, format!("orientation save failed: {error:?}"));
                     break;
@@ -514,14 +538,11 @@ fn release_control(state: &Rc<RefCell<SupervisorState>>) {
     }
 }
 fn fatal(state: &Rc<RefCell<SupervisorState>>, message: String) {
-    state
-        .borrow_mut()
-        .notices
-        .push_back(CydWebNotice::fatal(message));
+    state.borrow_mut().notices.push_back(Notice::fatal(message));
 }
 fn apply_host_request(
     request: HostRequest,
-    config: &CydWebAppConfig,
+    config: &Config,
     flash: &mut FlashBlockWasm,
     state: &Rc<RefCell<SupervisorState>>,
 ) -> Result<(), String> {

@@ -103,7 +103,7 @@
 
 use embassy_rp::i2c;
 
-use device_envoy_core::lcd_text::{LcdTextDriver, LcdTextError, LcdTextFrame, LcdTextWrite};
+use device_envoy_core::lcd_text::{LcdTextDriver, LcdTextFrame, LcdTextWrite};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use heapless::Vec;
@@ -217,10 +217,10 @@ impl<T: i2c::Instance + 'static> RpLcdTextWrite<T> {
 }
 
 impl<T: i2c::Instance + 'static> LcdTextWrite for RpLcdTextWrite<T> {
-    fn write(&mut self, address: u8, data: u8) -> core::result::Result<(), LcdTextError> {
+    fn write(&mut self, address: u8, data: u8) -> device_envoy_core::Result<()> {
         self.i2c
             .blocking_write(address, &[data])
-            .map_err(|_| LcdTextError::I2cWrite { address })
+            .map_err(|_| device_envoy_core::Error::LcdI2cWrite { address })
     }
 }
 

@@ -10,6 +10,7 @@ use core::{cell::RefCell, future::Future};
 use cortex_m::peripheral::SCB;
 use defmt::{info, warn};
 use embassy_executor::Spawner;
+use embassy_futures::select::{Either, select};
 use embassy_net::Ipv4Address;
 use embassy_rp::{
     Peri,
@@ -74,7 +75,7 @@ pub(crate) struct WifiAutoStatic {
 ///
 /// The typical usage pattern is:
 ///
-/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
+/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode or pressed while connecting to reset Wi-Fi setup.
 /// 2. Construct a [`ButtonWatch`](macro@crate::button::button_watch) to control the physical button.
 /// 3. Construct a [`FlashBlockRp`] to store WiFi credentials.
 /// 4. Use [`WifiAutoRp::new`] to construct a `WifiAutoRp`.
@@ -134,7 +135,7 @@ pub(crate) struct WifiAutoStatic {
 ///
 ///     // Connect (logging status as we go)
 ///     let stack = wifi_auto
-///         .connect(&mut *button_watch13, |event| async move {
+///         .connect(&mut *button_watch13, async |event| -> Result<(), device_envoy_rp::Error> {
 ///             match event {
 ///                 WifiAutoEvent::CaptivePortalReady =>
 ///                     info!("Captive portal ready"),
@@ -328,16 +329,16 @@ impl WifiAutoRp {
     }
 
     /// Connect to Wi-Fi using a caller-provided button reference.
-    pub async fn connect<OnEvent, OnEventFuture>(
-        self,
+    pub async fn connect<OnEvent, OnError>(
+        &self,
         button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<WifiStack>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<()>>,
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<Error>,
     {
-        <Self as WifiAuto>::connect(self, button, on_event).await
+        WifiAuto::connect(self, button, on_event).await
     }
 }
 
@@ -345,7 +346,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     type Error = Error;
 
     /// Connects to WiFi (if possible), reports status, and returns the
-    /// network stack, consuming the `WifiAutoRp`.
+    /// network stack while retaining the `WifiAutoRp` reset handle.
     ///
     /// See the [WifiAutoRp struct example](Self) for a usage example.
     ///
@@ -405,7 +406,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     spawner,
     /// # )?;
     /// let _stack = wifi_auto
-    ///     .connect(&mut *button_watch13, |_event| async move { Ok(()) })
+    ///     .connect(&mut *button_watch13, async |_event| -> Result<(), device_envoy_rp::Error> { Ok(()) })
     ///     .await?;
     /// # Ok(())
     /// # }
@@ -458,7 +459,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// // Keep a reference so the handler can reuse the display across events.
     /// let led8x12_ref = &led8x12;
     /// let stack = wifi_auto
-    ///     .connect(&mut *button_watch13, |event| async move {
+    ///     .connect(&mut *button_watch13, async |event| -> Result<(), device_envoy_rp::Error> {
     ///         match event {
     ///             WifiAutoEvent::CaptivePortalReady => {
     ///                 led8x12_ref.write_text("JO\nIN", COLORS);
@@ -477,14 +478,14 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # Ok(())
     /// # }
     /// ```
-    async fn connect<OnEvent, OnEventFuture>(
-        self,
+    async fn connect<OnEvent, OnError>(
+        &self,
         button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<WifiStack>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<()>>,
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<Error>,
     {
         let button_reset_stabilize_cycles: u32 = 300_000;
         cortex_m::asm::delay(button_reset_stabilize_cycles);
@@ -503,7 +504,25 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
                 self.wifi_auto.force_captive_portal();
             }
         }
-        self.wifi_auto.connect(on_event).await
+        match select(self.wifi_auto.connect(on_event), button.wait_for_press()).await {
+            Either::First(result) => result,
+            Either::Second(()) => {
+                while button.is_pressed() {
+                    Timer::after(Duration::from_millis(10)).await;
+                }
+                self.reset_to_captive_portal()?;
+                info!("WifiAutoRp: Wi-Fi reset requested via button press");
+                Timer::after_secs(1).await;
+                SCB::sys_reset();
+            }
+        }
+    }
+
+    fn reset_to_captive_portal(&self) -> Result<()> {
+        self.wifi_auto
+            .wifi
+            .reset_to_captive_portal()
+            .map_err(|_| Error::StorageCorrupted)
     }
 }
 
@@ -533,16 +552,17 @@ impl WifiAutoInner {
     }
 
     device_envoy_core::__impl_wifi_auto_connect! {
-    fn connect(&self as wifi_auto_inner, on_event) -> Result<WifiStack> {
+    fn connect(&self as wifi_auto_inner, on_event) -> WifiStack {
         wifi_auto_inner.ensure_connected_with(&mut on_event).await?;
+        // todo000 Audit whether this implementation should wait for IP configuration too.
         Ok(wifi_auto_inner.wifi.wait_for_stack().await)
     }
     }
 
-    async fn ensure_connected_with<Fut, F>(&self, on_event: &mut F) -> Result<()>
+    async fn ensure_connected_with<F, OnError>(&self, on_event: &mut F) -> Result<(), OnError>
     where
-        F: FnMut(WifiAutoEvent) -> Fut,
-        Fut: Future<Output = Result<()>>,
+        F: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<Error>,
     {
         loop {
             let force_captive_portal = self.force_captive_portal.swap(false, Ordering::AcqRel);

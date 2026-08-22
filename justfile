@@ -1,3 +1,34 @@
+# Build the versioned DNS tester WASM package.
+build-dns-tester version="v1":
+    mkdir -p "docs/dns-tester/{{version}}/pkg"
+    cp crates/device-envoy-core/www/cyd-simulator.js "docs/dns-tester/{{version}}/cyd-simulator.js"
+    cp crates/device-envoy-core/www/cyd-simulator.css "docs/dns-tester/{{version}}/cyd-simulator.css"
+    cp crates/device-envoy-core/www/case.png "docs/dns-tester/{{version}}/case.png"
+    cp crates/device-envoy-core/www/desk.jpg "docs/dns-tester/{{version}}/desk.jpg"
+    cargo build -p device-envoy-dns-tester-wasm --release --target wasm32-unknown-unknown
+    wasm-bindgen target/wasm32-unknown-unknown/release/device_envoy_dns_tester_wasm.wasm --out-dir "docs/dns-tester/{{version}}/pkg" --target web
+    wasm_version=$(sha256sum target/wasm32-unknown-unknown/release/device_envoy_dns_tester_wasm.wasm | cut -c1-12); sed -E -i "s/\\?v=[A-Za-z0-9_-]+/\\?v=$wasm_version/g" "docs/dns-tester/{{version}}/main.js" "docs/dns-tester/{{version}}/index.html"
+
+# Run DNS tester browser-boundary tests. Requires wasm-pack and Chromium/Chrome.
+test-dns-tester-browser:
+    wasm-pack test --headless --chrome crates/device-envoy-dns-tester-wasm
+
+# Build and serve the DNS tester Pages tree for browser review.
+run-dns-tester version="v1" port="8000":
+    just build-dns-tester "{{version}}"
+    python3 -m http.server "{{port}}" --bind 127.0.0.1 --directory "docs/dns-tester/{{version}}"
+
+# Build the versioned Conway WASM package.
+build-conway version="v2":
+    mkdir -p "docs/conway/{{version}}/pkg"
+    cargo build -p device-envoy-conway-wasm --release --target wasm32-unknown-unknown
+    wasm-bindgen target/wasm32-unknown-unknown/release/device_envoy_conway_wasm.wasm --out-dir "docs/conway/{{version}}/pkg" --target web
+
+# Build and serve the Conway Pages tree for browser review.
+run-conway version="v2" port="8000":
+    just build-conway "{{version}}"
+    python3 -m http.server "{{port}}" --bind 127.0.0.1 --directory "docs/conway/{{version}}"
+
 # Build RP docs and open them in a browser
 show-docs-rp:
     cd crates/device-envoy-rp && just show-docs-rp
@@ -13,7 +44,7 @@ show-docs-esp:
 
 # Update core docs only
 update-docs-core:
-    cargo doc -p device-envoy-core --no-deps --features host
+    cargo doc -p device-envoy-core --no-deps --features host,wasm,doc-images
 
 # Update ESP docs only
 update-docs-esp:

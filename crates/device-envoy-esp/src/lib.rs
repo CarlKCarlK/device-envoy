@@ -119,7 +119,7 @@ pub mod clock_sync {
     //!     )?;
     //!
     //!     let stack = wifi_auto
-    //!         .connect(&mut *button_watch6, |event| async move {
+    //!         .connect(&mut *button_watch6, async |event| -> Result<(), device_envoy_esp::Error> {
     //!             match event {
     //!                 WifiAutoEvent::CaptivePortalReady => {
     //!                     info!("WifiAutoEsp: setup mode ready");
@@ -179,6 +179,8 @@ pub mod time_sync {
 }
 #[cfg(esp_has_i2s)]
 pub mod audio_player;
+#[cfg(target_os = "none")]
+pub mod cyd;
 pub mod flash_block;
 pub mod init_and_start;
 #[cfg(esp_has_rmt)]
@@ -213,8 +215,6 @@ pub mod docs {
 }
 
 pub use device_envoy_core::tone;
-#[cfg(any(feature = "host", esp_has_wifi))]
-use device_envoy_core::wifi_auto::WifiAutoError;
 /// Used internally by other macros.
 #[doc(hidden)]
 pub use paste::paste as __paste;
@@ -310,11 +310,59 @@ pub enum Error {
     LedcChannel(esp_hal::ledc::channel::Error),
     #[cfg(all(target_os = "none", esp_has_wifi))]
     Wifi(esp_radio::wifi::WifiError),
+    #[cfg(target_os = "none")]
+    CydDisplayInit(cyd::CydDisplayEspInitError),
+    #[cfg(target_os = "none")]
+    CydTouchInit(cyd::CydTouchEspInitError),
+    #[cfg(target_os = "none")]
+    CydDisplayFlush(cyd::CydDisplayEspFlushError),
+    #[cfg(target_os = "none")]
+    CydDisplaySetOrientation(cyd::CydDisplayEspFlushError),
+    #[cfg(target_os = "none")]
+    CydTouchUnavailable,
 }
 
 impl From<embassy_executor::SpawnError> for Error {
     fn from(e: embassy_executor::SpawnError) -> Self {
         Self::TaskSpawn(e)
+    }
+}
+
+#[cfg(target_os = "none")]
+impl From<cyd::CydError> for Error {
+    fn from(error: cyd::CydError) -> Self {
+        match error {
+            cyd::CydError::DisplayInit(error) => Self::CydDisplayInit(error),
+            cyd::CydError::TouchInit(error) => Self::CydTouchInit(error),
+            cyd::CydError::DisplayFlush(error) => Self::CydDisplayFlush(error),
+            cyd::CydError::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
+        }
+    }
+}
+
+#[cfg(target_os = "none")]
+impl
+    From<
+        device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+            cyd::CydTouchUncalibratedEsp,
+            Error,
+        >,
+    > for Error
+{
+    fn from(
+        error: device_envoy_core::cyd::touch::calibration::EnsureCalibrationError<
+            cyd::CydTouchUncalibratedEsp,
+            Error,
+        >,
+    ) -> Self {
+        match error.kind {
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Device(
+                error,
+            ) => Self::from(error),
+            device_envoy_core::cyd::touch::calibration::EnsureCalibrationErrorKind::Flash(
+                error,
+            ) => error,
+        }
     }
 }
 
@@ -331,17 +379,6 @@ impl From<device_envoy_core::led4::Led4BitsToIndexesError> for Error {
     fn from(error: device_envoy_core::led4::Led4BitsToIndexesError) -> Self {
         match error {
             device_envoy_core::led4::Led4BitsToIndexesError::Full => Self::Led4BitsToIndexesFull,
-        }
-    }
-}
-
-#[cfg(any(feature = "host", esp_has_wifi))]
-impl From<WifiAutoError> for Error {
-    fn from(error: WifiAutoError) -> Self {
-        match error {
-            WifiAutoError::FormatError => Self::FormatError,
-            WifiAutoError::StorageCorrupted => Self::StorageCorrupted,
-            WifiAutoError::MissingCustomWifiAutoField => Self::MissingCustomWifiAutoField,
         }
     }
 }

@@ -5,29 +5,70 @@
 //! For a complete usage example see the platform crate's `clock_sync` module
 //! (for example `device_envoy_rp::clock_sync` or `device_envoy_esp::clock_sync`).
 //!
-//! # WiFi feature required
-//!
-//! This module is only available when the `wifi` feature is enabled.
+//! The shared trait, time types, constants, and helpers are available on every
+//! platform. The NTP-backed runtime implementation is enabled by the `wifi`
+//! feature.
 
 #![allow(clippy::future_not_send, reason = "single-threaded")]
 
+#[cfg(feature = "wifi")]
 use embassy_executor::Spawner;
+#[cfg(feature = "wifi")]
 use embassy_net::Stack;
+#[cfg(feature = "wifi")]
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+#[cfg(feature = "wifi")]
 use embassy_sync::signal::Signal;
-use embassy_time::{Duration, Instant};
+use embassy_time::Duration;
+#[cfg(feature = "wifi")]
+use embassy_time::Instant;
+#[cfg(feature = "wifi")]
 use portable_atomic::{AtomicBool, AtomicU64, Ordering};
 use time::OffsetDateTime;
 
+#[cfg(feature = "wifi")]
 use crate::clock::{Clock, ClockStatic};
+#[cfg(feature = "wifi")]
 use crate::time_sync::{TimeSync, TimeSyncEvent, TimeSyncStatic};
+#[cfg(feature = "wifi")]
 use crate::{Error, Result};
 
 // ============================================================================
 // Re-exports
 // ============================================================================
 
-pub use crate::clock::UnixSeconds;
+/// Units-safe wrapper for Unix timestamps (seconds since 1970-01-01 00:00:00 UTC).
+#[repr(transparent)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct UnixSeconds(pub i64);
+
+impl UnixSeconds {
+    /// Get the underlying `i64` value.
+    #[must_use]
+    pub const fn as_i64(self) -> i64 {
+        self.0
+    }
+
+    /// Convert NTP seconds to Unix seconds.
+    #[must_use]
+    pub const fn from_ntp_seconds(ntp: u32) -> Option<Self> {
+        let seconds = (ntp as i64) - 2_208_988_800;
+        if seconds >= 0 {
+            Some(Self(seconds))
+        } else {
+            None
+        }
+    }
+
+    /// Convert to an [`OffsetDateTime`] with the given timezone offset.
+    #[must_use]
+    pub fn to_offset_datetime(self, offset: time::UtcOffset) -> Option<OffsetDateTime> {
+        OffsetDateTime::from_unix_timestamp(self.0)
+            .ok()
+            .map(|datetime| datetime.to_offset(offset))
+    }
+}
 
 // ============================================================================
 // Constants
@@ -133,8 +174,10 @@ pub trait ClockSync {
     fn set_utc_time(&self, unix_seconds: UnixSeconds);
 }
 
+#[cfg(feature = "wifi")]
 type SyncReadySignal = Signal<CriticalSectionRawMutex, ()>;
 
+#[cfg(feature = "wifi")]
 pub struct ClockSyncStatic {
     clock_static: ClockStatic,
     time_sync_static: TimeSyncStatic,
@@ -144,6 +187,7 @@ pub struct ClockSyncStatic {
     synced: AtomicBool,
 }
 
+#[cfg(feature = "wifi")]
 pub struct ClockSyncRuntime {
     clock: Clock,
     time_sync: TimeSync,
@@ -152,6 +196,7 @@ pub struct ClockSyncRuntime {
     synced: &'static AtomicBool,
 }
 
+#[cfg(feature = "wifi")]
 impl ClockSyncStatic {
     /// Creates static resources for the clock-sync runtime device.
     #[must_use]
@@ -167,6 +212,7 @@ impl ClockSyncStatic {
     }
 }
 
+#[cfg(feature = "wifi")]
 impl ClockSyncRuntime {
     /// Create clock-sync static resources.
     #[must_use]
@@ -251,6 +297,7 @@ impl ClockSyncRuntime {
     }
 }
 
+#[cfg(feature = "wifi")]
 impl ClockSync for ClockSyncRuntime {
     async fn wait_for_tick(&self) -> ClockSyncTick {
         self.wait_for_first_sync().await;
@@ -292,6 +339,7 @@ impl ClockSync for ClockSyncRuntime {
 // ============================================================================
 
 #[embassy_executor::task(pool_size = 2)]
+#[cfg(feature = "wifi")]
 async fn clock_sync_loop(
     clock_static: &'static ClockStatic,
     time_sync_events: &'static crate::time_sync::TimeSyncEvents,

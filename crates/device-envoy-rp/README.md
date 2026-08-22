@@ -60,7 +60,7 @@ Special thanks to [Brad Gibson](https://github.com/U007D/), organizer of the [Se
 
 ## Examples & Demos
 
-The project includes **examples** (single-device tests) in `examples/` and **demo applications** in `demos/` showing integration patterns:
+The reusable platform crate is accompanied by **examples** (single-device tests) in [`device-envoy-examples-rp`](../device-envoy-examples-rp/examples/) and **demo applications** in `demos/` showing integration patterns:
 
 ### Example: animated LED strip
 
@@ -101,7 +101,7 @@ async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 }
 ```
 
-> For complete, runnable examples (including wiring and setup), see the `examples/` and `demos/` directories.
+> For complete, runnable examples (including wiring and setup), see the [`device-envoy-examples-rp`](../device-envoy-examples-rp/examples/) and `demos/` directories.
 
 - **Basic LED Examples**: Simple on/off control with blinky pattern
 - **LED Strip Examples**: Simple animations, color control, text rendering
@@ -115,7 +115,7 @@ async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 - **WiFi Examples**: WiFi setup, time sync, DNS
 - **Flash Examples**: Configuration persistence and data reset
 
-See the `examples/` and `demos/` directories for complete runnable code.
+See the [`device-envoy-examples-rp`](../device-envoy-examples-rp/examples/) and `demos/` directories for complete runnable code.
 
 ## Building & Running
 

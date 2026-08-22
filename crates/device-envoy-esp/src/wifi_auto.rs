@@ -35,10 +35,8 @@ extern crate alloc;
 #[cfg(target_os = "none")]
 use alloc::string::String;
 #[cfg(target_os = "none")]
-use embassy_futures::select::{Either4, select4};
+use embassy_futures::select::{Either, Either4, select, select4};
 
-#[cfg(target_os = "none")]
-use device_envoy_core::wifi_auto::WifiAutoError;
 use device_envoy_core::wifi_auto::{
     HtmlBuffer, WifiAutoPersistedState, WifiCredentials, WifiStartMode,
 };
@@ -65,7 +63,7 @@ enum WifiAutoStorage {
 ///
 /// The typical usage pattern is:
 ///
-/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode.
+/// 1. Ensure your hardware includes a button wired to a GPIO. The button can be used during boot to force captive-portal mode, or pressed while connecting to reset Wi-Fi setup.
 /// 2. Construct a [`ButtonEsp`](crate::button::ButtonEsp) to control the physical button.
 /// 3. Construct a [`FlashBlockEsp`] to store WiFi credentials.
 /// 4. Use [`WifiAutoEsp::new`] to construct a `WifiAutoEsp`.
@@ -112,7 +110,7 @@ enum WifiAutoStorage {
 ///
 ///     // Connect (logging status as we go).
 ///     let stack = wifi_auto
-///         .connect(&mut button6, |wifi_auto_event| async move {
+///         .connect(&mut button6, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
 ///             match wifi_auto_event {
 ///                 WifiAutoEvent::CaptivePortalReady => {
 ///                     info!("Captive portal ready");
@@ -303,6 +301,15 @@ impl<'a> WifiAutoEsp<'a> {
         self.store_persisted_state(&wifi_auto_persisted_state)
     }
 
+    #[cfg(target_os = "none")]
+    /// Clear saved credentials and select captive-portal startup mode.
+    pub fn reset_to_captive_portal(&self) -> Result<()> {
+        let mut wifi_auto_persisted_state = self.load_persisted_state()?;
+        wifi_auto_persisted_state.wifi_credentials = None;
+        wifi_auto_persisted_state.wifi_start_mode = WifiStartMode::CaptivePortal;
+        self.store_persisted_state(&wifi_auto_persisted_state)
+    }
+
     /// Force captive-portal mode when a sampled press state is `true`.
     ///
     /// Returns `true` if startup mode was changed to [`WifiStartMode::CaptivePortal`].
@@ -362,24 +369,25 @@ impl<'a> WifiAutoEsp<'a> {
     }
 
     #[cfg(target_os = "none")]
-    async fn connect_inner<OnEvent, OnEventFuture>(
+    async fn connect_inner<OnEvent, OnError>(
         &self,
         force_captive_portal: bool,
         mut on_event: OnEvent,
-    ) -> Result<WifiStack>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<()>>,
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<crate::Error>,
     {
         Self::initialize_wifi_heap_once();
-        let wifi = self
-            .wifi
-            .borrow_mut()
-            .take()
-            .ok_or_else(|| crate::Error::from(WifiAutoError::StorageCorrupted))?;
+        let wifi = self.wifi.borrow_mut().take().ok_or_else(|| {
+            crate::Error::from(device_envoy_core::Error::WifiAutoStorageCorrupted)
+        })?;
         let spawner = self.spawner;
 
-        let (mut wifi_controller, interfaces) = esp_radio::wifi::new(wifi, Default::default())?;
+        // Foreign error: convert to the platform error explicitly so it reaches
+        // `OnError` via `OnError: From<crate::Error>` (the generic callback error).
+        let (mut wifi_controller, interfaces) =
+            esp_radio::wifi::new(wifi, Default::default()).map_err(crate::Error::from)?;
 
         const TRY_COUNT: u8 = 10;
         struct EspWifiAutoBackend<'a, 'b> {
@@ -530,7 +538,7 @@ impl<'a> WifiAutoEsp<'a> {
         let stack = wifi_auto_backend
             .connected_stack
             .expect("stack should be initialized after successful connect");
-        self.set_start_mode(WifiStartMode::Client)?;
+        stack.wait_config_up().await;
 
         // Keep the Wi-Fi controller alive for the lifetime of the returned stack.
         // Dropping it would shut Wi-Fi down.
@@ -688,7 +696,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     type Error = crate::Error;
 
     /// Connects to WiFi (if possible), reports status, and returns the
-    /// network stack, consuming the `WifiAutoEsp`.
+    /// network stack while retaining the `WifiAutoEsp` reset handle.
     ///
     /// See the [WifiAutoEsp struct example](Self) for a usage example.
     ///
@@ -698,6 +706,9 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     ///
     /// This `connect` method reports progress by calling a user-provided async
     /// handler whenever the WiFi state changes.
+    /// A button press while connecting clears the saved credentials, marks
+    /// captive-portal mode in flash, and resets the ESP. The next boot
+    /// therefore starts in Wi-Fi setup mode.
     /// The handler receives a [`WifiAutoEvent`].
     /// The handler is called sequentially for each event and may `await`.
     ///
@@ -736,7 +747,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     /// #     spawner,
     /// # )?;
     /// let _stack = wifi_auto
-    ///     .connect(&mut button6, |_event| async move { Ok(()) })
+    ///     .connect(&mut button6, async |_event| -> Result<(), device_envoy_esp::Error> { Ok(()) })
     ///     .await?;
     /// # Ok(())
     /// # }
@@ -777,7 +788,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     /// // Keep a reference so the handler can reuse the display across events.
     /// let led8x12_ref = &led8x12;
     /// let stack = wifi_auto
-    ///     .connect(&mut button6, |wifi_auto_event| async move {
+    ///     .connect(&mut button6, async |wifi_auto_event| -> Result<(), device_envoy_esp::Error> {
     ///         match wifi_auto_event {
     ///             WifiAutoEvent::CaptivePortalReady => {
     ///                 led8x12_ref.write_text("JO\nIN", COLORS).await?;
@@ -796,20 +807,46 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoEsp<'_> {
     /// # Ok(())
     /// # }
     /// ```
-    async fn connect<OnEvent, OnEventFuture>(
-        self,
+    async fn connect<OnEvent, OnError>(
+        &self,
         button: &mut impl Button,
         on_event: OnEvent,
-    ) -> Result<WifiStack>
+    ) -> Result<WifiStack, OnError>
     where
-        OnEvent: FnMut(WifiAutoEvent) -> OnEventFuture,
-        OnEventFuture: Future<Output = Result<()>>,
+        OnEvent: AsyncFnMut(WifiAutoEvent) -> Result<(), OnError>,
+        OnError: From<crate::Error>,
     {
         let force_captive_portal = button.is_pressed();
         if self.force_captive_portal_if_pressed_state(force_captive_portal)? {
             info!("wifi_auto force-captive-portal requested via button");
         }
-        self.connect_inner(force_captive_portal, on_event).await
+
+        let wait_for_wifi_reset = async {
+            button.wait_for_press().await;
+        };
+
+        match select(
+            self.connect_inner(force_captive_portal, on_event),
+            wait_for_wifi_reset,
+        )
+        .await
+        {
+            Either::First(result) => result,
+            Either::Second(()) => {
+                while button.is_pressed() {
+                    Timer::after(Duration::from_millis(10)).await;
+                }
+                self.reset_to_captive_portal()?;
+                info!("wifi_auto Wi-Fi reset requested via button press");
+                info!("wifi_auto resetting in 1 second");
+                Timer::after(Duration::from_secs(1)).await;
+                esp_hal::system::software_reset();
+            }
+        }
+    }
+
+    fn reset_to_captive_portal(&self) -> Result<()> {
+        WifiAutoEsp::reset_to_captive_portal(self)
     }
 }
 

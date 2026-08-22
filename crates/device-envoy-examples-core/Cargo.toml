@@ -1,0 +1,49 @@
+[package]
+name = "device-envoy-examples-core"
+version = "0.0.0"
+edition = "2024"
+publish = false
+build = "build.rs"
+
+[features]
+default = ["wifi"]
+host = ["device-envoy-core/host"]
+wasm = ["device-envoy-core/wasm"]
+wifi = ["device-envoy-core/wifi"]
+
+[dependencies]
+device-envoy-core = { path = "../device-envoy-core", default-features = false }
+smart-leds = "0.4.0"
+embassy-futures = "0.1.2"
+embassy-sync = "0.8.0"
+embassy-time = "0.5.1"
+derive_more = { version = "2.1.1", default-features = false, features = ["from"] }
+embedded-graphics = { version = "0.8", default-features = false }
+heapless = "0.9.2"
+profont = "0.7"
+
+[build-dependencies]
+resvg = "0.45"
+
+[[test]]
+name = "dns_tester_memory"
+path = "tests/dns_tester_memory.rs"
+required-features = ["host"]
+
+[[test]]
+name = "conway_memory"
+path = "tests/conway_memory.rs"
+required-features = ["host"]
+
+[[test]]
+name = "generated_assets"
+path = "tests/generated_assets.rs"
+required-features = ["host"]
+
+[[test]]
+name = "build_assets"
+path = "tests/build_assets.rs"
+
+[dev-dependencies]
+futures-executor = "0.3"
+resvg = "0.45"

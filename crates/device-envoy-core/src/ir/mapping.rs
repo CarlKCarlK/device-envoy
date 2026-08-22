@@ -60,6 +60,15 @@ pub trait IrMapping<Button> {
     async fn wait_for_press(&self) -> Button;
 }
 
+impl<T, Button> IrMapping<Button> for &T
+where
+    T: IrMapping<Button> + ?Sized,
+{
+    async fn wait_for_press(&self) -> Button {
+        (*self).wait_for_press().await
+    }
+}
+
 /// Static channel resources for IR mapping events.
 ///
 /// Create with `IrMapping::new_static()` from the platform-specific crate.

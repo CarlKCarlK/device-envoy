@@ -71,6 +71,15 @@ pub trait Ir {
     async fn wait_for_press(&self) -> IrEvent;
 }
 
+impl<T> Ir for &T
+where
+    T: Ir + ?Sized,
+{
+    async fn wait_for_press(&self) -> IrEvent {
+        (*self).wait_for_press().await
+    }
+}
+
 /// Static resources for the [`Ir`] device abstraction.
 ///
 /// See the platform-specific crate for usage examples.

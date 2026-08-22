@@ -19,7 +19,7 @@ case "$action" in
 esac
 
 has_example=0
-if [[ -f "examples/${name}.rs" ]]; then
+if [[ -f "../device-envoy-examples-rp/examples/${name}.rs" ]]; then
   has_example=1
 fi
 
@@ -42,22 +42,27 @@ fi
 
 target=""
 features=""
+example_features=""
 case "$board" in
   1)
     target="thumbv6m-none-eabi"
     features="pico1,arm"
+    example_features="embedded"
     ;;
   2)
     target="thumbv8m.main-none-eabihf"
     features="pico2,arm"
+    example_features="embedded-pico2"
     ;;
   w)
     target="thumbv6m-none-eabi"
     features="pico1,arm,wifi"
+    example_features="embedded,wifi"
     ;;
   2w)
     target="thumbv8m.main-none-eabihf"
     features="pico2,arm,wifi"
+    example_features="embedded-pico2,wifi"
     ;;
   *)
     echo "invalid board '$board' (expected one of: 1, 2, w, 2w)" >&2
@@ -72,10 +77,11 @@ fi
 
 if [[ "$has_example" -eq 1 ]]; then
   cargo "$action" \
+    --package device-envoy-examples-rp \
     --example "$name" \
     --target "$target" \
     "${release_args[@]}" \
-    --features "$features" \
+    --features "$example_features" \
     --no-default-features
 else
   demo_path="$(printf "%s\n" "$demo_candidates" | sed '/^$/d' | head -n1)"

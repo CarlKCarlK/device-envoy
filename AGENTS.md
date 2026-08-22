@@ -4,6 +4,16 @@ This file contains both shared workspace rules and crate-specific rules for this
 
 ## General Policies
 
+- When autonomous work is interrupted or reaches a stopping point, report the
+  current status, what remains, and the recommended next step. If the next
+  step is within the current task and safe to perform, perform it rather than
+  stopping merely to recommend it.
+
+- In this repository, **devolve** means inlining a code element's behavior at
+  its call sites (or into its containing function) and deleting the original
+  struct, enum, helper, or other abstraction. Prefer the clearer term
+  **inline** in prose when there is no need for the project-specific shorthand.
+
 - **Never silently skip required build targets in xtask/CI.** Every supported target (e.g., ESP32-C6, ESP32-S3, Pico 1, Pico 2) must be built on every `check-all` run. If a required toolchain component is missing, fail loudly with a clear error message and instructions to install it — do not skip or silently ignore the missing target. Silent skips hide real breakage.
 - When loading data from flash (or any other storage) into a local variable, name the variable after the concrete type. Example: `DeviceConfig` data should live in variables like `device_config`, not generic `config` or `flash0`.
 - Avoid introducing `unsafe` blocks. If a change truly requires `unsafe`, call it out explicitly and explain the justification so the user can review it carefully.
@@ -129,6 +139,7 @@ Use `TODO0*` for release-priority TODO items (`TODO` + one or more trailing `0`s
 - Start module docs with "A device abstraction ..." and have them point readers to the main struct docs.
 - Put a single compilable example on the primary struct; other public docs should link back to that example instead of duplicating snippets.
 - When linking to module documentation, name the module in the link text (for example, "led_strip module documentation").
+- When linking to items in rustdoc, prefer readable link text such as `MemoryCyd` with an explicit target (`[MemoryCyd](crate::memory::MemoryCyd)`) instead of exposing raw `crate::...` paths in the rendered text.
 - When referring to examples, never say "struct-level example" or "module-level example". Use the name, for example: "WifiAuto struct example" or "led_strip module example".
 
 **Markdown formatting**: When creating or editing markdown files, follow these rules to avoid linter warnings:
@@ -158,7 +169,7 @@ When adding new examples, also add the standard cargo aliases in `.cargo/config.
 
 ### Core-Only Trait Example Workflow
 
-- When creating core-only trait examples for a device abstraction, first extract the canonical struct/module examples from `device-envoy-rp` into `device-envoy-esp/examples` as `*_exampleN_trait.rs` files.
+- When creating core-only trait examples for a device abstraction, first extract the canonical struct/module examples from `device-envoy-rp` into `device-envoy-examples-esp/examples` as `*_exampleN_trait.rs` files.
 - Treat these ESP trait examples as an editable staging area and let the user iterate on them before changing docs.
 - Only after explicit user approval, move the finalized examples into trait documentation and reuse the introductory wording from the RP struct docs where applicable.
 - Before writing or editing any `*_trait.rs` example, review all existing `*_trait.rs` examples in the crate to match the established style and structure.
@@ -166,6 +177,12 @@ When adding new examples, also add the standard cargo aliases in `.cargo/config.
 - When migrating staged examples into a trait's documentation, add `See the FILLIN trait documentation for usage examples.` (with a proper link) on every method or constant doc that is demonstrated by those examples.
 - In trait-migration examples and doctests, prefer inline trait bounds (`impl Trait<...>`) over `where` clauses when readability allows.
 - In trait-migration examples and doctests, avoid placeholder generic type names like `WifiAutoType`; use `impl Trait` or a concrete descriptive type name when a type parameter is required.
+
+### CYD Doctest Previews
+
+- Every CYD-related doctest that renders visible output should have a generated golden PNG and assert against it, typically in hidden doctest lines so the visible example stays focused on API usage.
+- Every CYD-related doctest that renders visible output should also show a preview image in the rendered docs, and that preview should appear after the code example, not before it.
+- For rustdoc-hosted CYD previews, prefer the existing `embed-doc-image` pattern with assets checked into `docs/assets`; place the embedded-image attribute on the same documented item that renders the preview.
 
 Spelling: use American over British spelling.
 
@@ -413,6 +430,19 @@ These tips apply when moving platform-specific code into `device-envoy-core` or 
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 - For `cargo` aliases that target embedded triples (`thumbv6m-none-eabi`, `thumbv8m.main-none-eabihf`, or `riscv32imac-unknown-none-elf`), include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
 
+## Development Tools
+
+Assume the repository's normal development tools are available, including
+Rust/Cargo, `just`, Node.js/npm, Python 3, Playwright, `wasm-pack`, and the
+required embedded and WASM targets. If a required tool is missing, use the
+repository's documented or project-local installation path when available. Do
+not silently install system-wide packages or alter unrelated global
+configuration. For Playwright, install its browser binaries when needed
+before diagnosing browser-test failures.
+
+The full Device Envoy validation command is `cargo check-all`. Run it before
+handing work back; it keeps doctests, examples, and supported targets in sync.
+
 ### Generated Files (RP)
 
 For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `ir_generated`, `lcd_text_generated`, `led_generated`, `led_strip_generated`, and `servo_player_generated`.
@@ -576,9 +606,9 @@ The standard servo pins across examples are **PIN_11** and **PIN_12**.
 
 For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `ir_generated`, and `led_generated`.
 
-- Board examples under `crates/device-envoy-esp/examples/<chip>/<board>/` are generated outputs. Add or change them by editing `crates/device-envoy-esp/examples/templates/*.rs.j2` (or `crates/device-envoy-esp/examples/templates/talk1/*.rs.j2`) and then running `cargo xtask generate-board-examples`.
+- Board examples under `crates/device-envoy-examples-esp/examples/<chip>/<board>/` are generated outputs. Add or change them by editing `crates/device-envoy-examples-esp/examples/templates/*.rs.j2` (or `crates/device-envoy-examples-esp/examples/templates/talk1/*.rs.j2`) and then running `cargo run --manifest-path crates/device-envoy-examples-esp/xtask/Cargo.toml -- generate-board-examples`.
 - Do not hand-edit generated board example files as source-of-truth; template changes should drive regeneration.
-- In `crates/device-envoy-esp/Cargo.toml`, do not manually edit generated example entries. The block between `# BEGIN GENERATED BOARD EXAMPLES` and `# END GENERATED BOARD EXAMPLES` is generated by xtask.
+- In `crates/device-envoy-examples-esp/Cargo.toml`, do not manually edit generated example entries. The block between `# BEGIN GENERATED BOARD EXAMPLES` and `# END GENERATED BOARD EXAMPLES` is generated by xtask.
 - For board-template examples, prefer board-rendered template variables over chip-family `#[cfg(...)]` branching for pin selection so generated files are concrete per board.
 - Generated board example files should start with:
   `// @generated <template-path> by cargo xtask generate-board-examples.`
@@ -610,6 +640,8 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
 
 This pattern keeps `main` free of `?` (which `-> !` forbids) while keeping `inner_main` ergonomic.
 Prefer consuming the `Result<Infallible>` post-condition with `unwrap_err()` in `main` rather than re-matching the unreachable `Ok` branch.
+
+**File layout:** order top-level items as includes/constants, then `main`/`inner_main` (the entry point), then error types, other helper types, and helper functions. Error enums (e.g. `MainError`) and their `From` impls belong after `inner_main`, not before it — readers should see the program flow before its error plumbing.
 
 ### init_and_start! Macro (ESP)
 
@@ -682,7 +714,7 @@ let sos_strip = SosStrip::new(&SOS_STRIP_STATIC, channel, spawner)?;
 
 Use the ESP capability/board-profile system to choose GPIOs; do not assume one fixed pin map across chips.
 
-- For board-generated examples, treat `crates/device-envoy-esp/xtask/src/boards.rs` (`BOARD_PROFILES`) as source of truth.
+- For board-generated examples, treat `crates/device-envoy-examples-esp/xtask/src/boards.rs` (`BOARD_PROFILES`) as source of truth.
 - For runtime chip/feature behavior, rely on the capability system (`Capability`, `EspCurrentCapabilities`, and capability checks) rather than hardcoded chip-name pin assumptions.
 - When writing new examples or docs, describe pins as board/chip dependent and point to board profiles/capability-driven configuration.
 

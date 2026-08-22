@@ -4,14 +4,18 @@ Use this checklist when preparing a new workspace release.
 
 ## 1. Prep
 
-- format all code files
+- Format all code files.
 - Pick the target version (for example `0.0.5-alpha.6`).
 - Create a release branch if needed.
 
 ## 2. Sweep TODO Priorities
 
 - Search for release-blocking TODOs:
-  - `rg -n "\\bTODO00\\b|\\bTODO0\\b" crates xtask`
+
+```bash
+rg -n '(?i)\\btodo0+\\b' crates xtask specs docs --glob '!docs/release_checklist.md'
+```
+
 - Resolve, defer explicitly, or document why each remaining item is not blocking.
 
 ## 3. Update Versions
@@ -73,27 +77,41 @@ cargo check-all
 
 ## 8. Publish Dry Run
 
-- Run dry-runs in publish order:
+- Dry-run the core crate first:
 
 ```bash
-cargo publish-core-dry-run
-cargo publish-rp-dry-run
-cargo publish-esp-dry-run
-# skip cargo publish-device-envoy-dry-run
+cargo publish --dry-run --locked -p device-envoy-core
 ```
+
+- The RP and ESP dry-runs resolve `device-envoy-core` from crates.io, so run
+  them only after the matching core version has been published and propagated.
+- The top-level `device-envoy` landing crate is not published.
 
 ## 9. Publish
 
-- Publish in dependency order:
+- Publish core first:
 
 ```bash
-cargo publish-core
-cargo publish-rp
-cargo publish-esp
-# skip cargo publish-device-envoy
+cargo publish --locked -p device-envoy-core
 ```
 
-- Wait for crates.io index propagation after publishing `core`/`rp`/`esp`.
+- Wait until the new `device-envoy-core` version resolves from crates.io.
+- Dry-run the platform crates:
+
+```bash
+cargo publish --dry-run --locked -p device-envoy-rp
+cargo publish --dry-run --locked -p device-envoy-esp
+```
+
+- Publish the platform crates; neither depends on the other:
+
+```bash
+cargo publish --locked -p device-envoy-rp
+cargo publish --locked -p device-envoy-esp
+```
+
+- Wait for crates.io index propagation after publishing `device-envoy-rp` and
+  `device-envoy-esp`.
 - The blinky repositories are cloneable templates and are not published to crates.io.
 
 ## 10. Tag and GitHub Release

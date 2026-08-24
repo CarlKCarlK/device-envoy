@@ -13,7 +13,7 @@ Use this checklist when preparing a new workspace release.
 - Search for release-blocking TODOs:
 
 ```bash
-rg -n '(?i)\\btodo0+\\b' crates xtask specs docs --glob '!docs/release_checklist.md'
+rg -n '(?i)\btodo''0+\b' crates xtask specs docs --glob '!docs/release_checklist.md'
 ```
 
 - Resolve, defer explicitly, or document why each remaining item is not blocking.

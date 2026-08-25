@@ -40,7 +40,7 @@ show-docs-core:
 
 # Build ESP docs and open them in a browser
 show-docs-esp:
-    cd crates/device-envoy-esp && just show-docs-esp
+    cd crates/device-envoy-examples-esp && just show-docs-esp
 
 # Update core docs only
 update-docs-core:
@@ -48,7 +48,7 @@ update-docs-core:
 
 # Update ESP docs only
 update-docs-esp:
-    cd crates/device-envoy-esp && just update-docs-esp
+    cd crates/device-envoy-examples-esp && just update-docs-esp
 
 # Update RP docs only
 update-docs-rp:
@@ -56,7 +56,7 @@ update-docs-rp:
 
 # Update ESP docs only (fast path)
 update-docs-esp-fast:
-    cd crates/device-envoy-esp && just update-docs-esp-fast
+    cd crates/device-envoy-examples-esp && just update-docs-esp-fast
 
 # Update RP docs only (fast path)
 update-docs-rp-fast:

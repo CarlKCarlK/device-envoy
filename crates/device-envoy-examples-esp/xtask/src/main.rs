@@ -681,42 +681,43 @@ fn xtensa_linker_dir_if_needed(targets: &[BuildTarget]) -> Option<PathBuf> {
 }
 
 fn check_docs() -> ExitCode {
-    let root = workspace_root();
+    let examples_root = workspace_root();
+    let esp_root = device_envoy_esp_root();
     println!("{}", "==> cargo check-docs: device-envoy-esp".cyan().bold());
 
-    if let Err(err) = check_shared_markdown_sync(&root) {
+    if let Err(err) = check_shared_markdown_sync(&esp_root) {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = generate_example_templates(&root) {
+    if let Err(err) = generate_example_templates(&examples_root) {
         eprintln!("Error generating examples from templates: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = ir_generated::generate_ir_generated(&root) {
+    if let Err(err) = ir_generated::generate_ir_generated(&esp_root) {
         eprintln!("Error generating ir_generated.rs: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&root) {
+    if let Err(err) = audio_player_generated::generate_audio_player_generated(&esp_root) {
         eprintln!("Error generating audio_player_generated.rs: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&root) {
+    if let Err(err) = led2d_generated::generate_led2d_generated(&esp_root) {
         eprintln!("Error generating led2d_generated.rs: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = led_generated::generate_led_generated(&root) {
+    if let Err(err) = led_generated::generate_led_generated(&esp_root) {
         eprintln!("Error generating led_generated.rs: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&root) {
+    if let Err(err) = led_strip_generated::generate_led_strip_generated(&esp_root) {
         eprintln!("Error generating led_strip_generated.rs: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&root) {
+    if let Err(err) = servo_player_generated::generate_servo_player_generated(&esp_root) {
         eprintln!("Error generating servo_player_generated.rs: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = check_generated_doc_stubs(&root) {
+    if let Err(err) = check_generated_doc_stubs(&esp_root) {
         eprintln!("Generated doc stub consistency check failed:\n{err}");
         return ExitCode::FAILURE;
     }
@@ -725,7 +726,7 @@ fn check_docs() -> ExitCode {
     }
 
     println!("{}", "--> doc".cyan());
-    if !run(Command::new("cargo").current_dir(&root).args([
+    if !run(Command::new("cargo").current_dir(&esp_root).args([
         "doc",
         "--no-deps",
         "--release",
@@ -1442,7 +1443,7 @@ fn check_host_tests() -> ExitCode {
 
 fn check_readme_example() -> ExitCode {
     let root = workspace_root();
-    let readme_path = root.join("README.md");
+    let readme_path = device_envoy_esp_root().join("README.md");
     println!("{}", "--> README example compile check".cyan());
 
     let readme_source = match fs::read_to_string(&readme_path) {
@@ -1651,6 +1652,13 @@ fn workspace_root() -> PathBuf {
         .parent()
         .expect("xtask must be a subdirectory of the workspace root")
         .to_owned()
+}
+
+fn device_envoy_esp_root() -> PathBuf {
+    workspace_root()
+        .parent()
+        .expect("device-envoy-examples-esp must be inside the crates directory")
+        .join("device-envoy-esp")
 }
 
 fn package_version_from_cargo_toml(crate_root: &Path) -> Result<String, String> {

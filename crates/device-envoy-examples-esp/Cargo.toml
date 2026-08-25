@@ -11,7 +11,8 @@ repository = "https://github.com/CarlKCarlK/device-envoy"
 documentation = "https://docs.rs/device-envoy-examples-esp"
 homepage = "https://github.com/CarlKCarlK/device-envoy"
 autolib = false
-autoexamples = false
+# The docs check creates a temporary top-level example from the ESP README.
+autoexamples = true
 
 [package.metadata.docs.rs]
 all-features = false

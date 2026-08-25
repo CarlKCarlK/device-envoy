@@ -1,4 +1,4 @@
-use device_envoy_core::{UnwrapInfallible, cyd::touch::RawTouchEvent};
+use device_envoy_core::{UnwrapInfallible, cyd::backend::RawTouchEvent};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::SPI1;
@@ -73,8 +73,8 @@ impl CydTouchRp<CydTouchSpiDevice> {
 
         let cs = Output::new(cs_pin, Level::High);
 
-        let touch_spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
-            .unwrap_infallible();
+        let touch_spi_device =
+            ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs).unwrap_infallible();
 
         Ok(Self::from_device(touch_spi_device, irq_pin))
     }

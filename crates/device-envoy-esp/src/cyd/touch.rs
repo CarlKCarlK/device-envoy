@@ -1,4 +1,4 @@
-use device_envoy_core::{UnwrapInfallible, cyd::touch::RawTouchEvent};
+use device_envoy_core::{UnwrapInfallible, cyd::backend::RawTouchEvent};
 use embedded_hal::spi::SpiDevice;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
@@ -66,8 +66,8 @@ impl CydTouchEsp<CydTouchSpiDevice> {
 
         let cs = Output::new(cs_pin, esp_hal::gpio::Level::High, OutputConfig::default());
 
-        let touch_spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
-            .unwrap_infallible();
+        let touch_spi_device =
+            ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs).unwrap_infallible();
 
         Ok(Self::from_device(touch_spi_device, irq_pin))
     }

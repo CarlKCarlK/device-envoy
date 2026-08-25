@@ -1,11 +1,10 @@
 //! Touch-side support types for the CYD's `cyd` device abstraction.
 //!
 //! Apps read calibrated screen-space events via [`TouchEvent`]. Devices also
-//! implement [`super::CydTouchUncalibrated`] so the shared touch-calibration
-//! flow in [`calibration`] can read raw controller samples and transition
-//! into a calibrated [`super::CydTouch`].
+//! Platform backends use [`super::backend`] to connect raw controller samples
+//! to the private calibration workflow.
 
-pub mod calibration;
+pub(crate) mod calibration;
 pub(crate) mod driver;
 pub(crate) mod flow;
 
@@ -21,21 +20,9 @@ pub enum TouchEvent {
     Up,
 }
 
-/// A raw XPT2046 touch sample in controller coordinates.
-///
-/// See the [touch calibration module documentation](calibration) for usage.
+/// A raw XPT2046 touch sample used internally by calibration.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RawPoint {
+pub(crate) struct RawPoint {
     pub x: u16,
     pub y: u16,
-}
-
-/// A raw XPT2046 touch event used by shared calibration flows.
-///
-/// See the [touch calibration module documentation](calibration) for usage.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RawTouchEvent {
-    Down { raw_x: u16, raw_y: u16 },
-    Move { raw_x: u16, raw_y: u16 },
-    Up,
 }

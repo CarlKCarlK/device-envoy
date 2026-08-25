@@ -315,6 +315,7 @@ pub enum Error {
     Wifi(esp_radio::wifi::WifiError),
     #[cfg(target_os = "none")]
     #[from(ignore)]
+    // `cyd::Error` carries the detailed operation/source diagnostics.
     Cyd(cyd::Error),
     #[cfg(target_os = "none")]
     CydTouchUnavailable,
@@ -324,25 +325,6 @@ pub enum Error {
 impl From<cyd::Error> for Error {
     fn from(error: cyd::Error) -> Self {
         Self::Cyd(error)
-    }
-}
-
-#[cfg(target_os = "none")]
-impl From<device_envoy_core::cyd::touch::calibration::Error<cyd::CydTouchUncalibratedEsp, Error>>
-    for Error
-{
-    fn from(
-        error: device_envoy_core::cyd::touch::calibration::Error<
-            cyd::CydTouchUncalibratedEsp,
-            Error,
-        >,
-    ) -> Self {
-        match error.kind {
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
-                Self::from(error)
-            }
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
-        }
     }
 }
 

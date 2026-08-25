@@ -8,6 +8,7 @@
 //!
 //! See [`Cyd`] for the primary trait and usage example.
 
+pub mod backend;
 pub mod display;
 pub mod touch;
 
@@ -28,7 +29,7 @@ use embedded_graphics::{
 };
 
 use display::Orientation;
-use touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig};
+use touch::TouchEvent;
 
 /// A device abstraction for the "Cheap Yellow Display" (CYD) display and touch parts.
 ///
@@ -119,24 +120,6 @@ pub trait Cyd: Sized {
     fn orientation(&self) -> Orientation;
 }
 
-/// A raw-touch source that can run the shared calibration flow and become calibrated.
-#[doc(hidden)]
-pub trait CydTouchUncalibrated: Sized {
-    /// Error returned when reading raw touch fails.
-    type Error;
-    type Calibrated: CydTouch<Error = Self::Error, Uncalibrated = Self>;
-
-    /// Read the next raw touch event, if any.
-    ///
-    /// This bypasses any active [`touch::TouchEvent`] calibration mapping and
-    /// exists specifically for the shared calibration driver. See the
-    /// [touch calibration module documentation](touch::calibration) for usage.
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error>;
-
-    /// Apply `calibration_config`, becoming a calibrated touch source.
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated;
-}
-
 /// A CYD touch source for calibrated, screen-space events that apps read.
 ///
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
@@ -145,7 +128,6 @@ pub trait CydTouchUncalibrated: Sized {
 pub trait CydTouch: Sized {
     /// Error returned when reading touch fails.
     type Error;
-    type Uncalibrated: CydTouchUncalibrated<Error = Self::Error, Calibrated = Self>;
 
     /// Read the next calibrated touch event, if any.
     ///
@@ -156,11 +138,6 @@ pub trait CydTouch: Sized {
     /// Errors only on a hardware/read failure. See the [`Cyd`] trait
     /// documentation for a usage example.
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
-
-    fn calibration_config(&self) -> CalibrationConfig;
-
-    /// Discard the calibration, becoming an uncalibrated touch source.
-    fn decalibrate(self) -> Self::Uncalibrated;
 }
 
 /// A CYD display.

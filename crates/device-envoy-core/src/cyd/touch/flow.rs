@@ -1,7 +1,8 @@
+use super::RawPoint;
 use super::calibration::{
     CALIBRATION_POINT_COUNT, CalibrationCorner, calibration_corner_for_index,
 };
-use super::{RawPoint, RawTouchEvent};
+use crate::cyd::backend::RawTouchEvent;
 
 pub const SAMPLES_DISCARDED_AFTER_DOWN: usize = 4;
 pub const MIN_SAMPLES_PER_POINT: usize = 3;

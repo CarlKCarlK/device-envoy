@@ -16,19 +16,13 @@ use super::RawPoint;
 use crate::cyd::display::DrawItem;
 use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-pub use super::driver::{
-    EnsureCalibrationOutcome, EnsureCalibrationSettings, Error, ErrorKind, ensure_calibration,
-    ensure_calibration_with_settings,
-};
-pub use super::flow::CalibrationFlow;
-
-pub const CALIBRATION_POINT_COUNT: usize = 4;
+pub(crate) const CALIBRATION_POINT_COUNT: usize = 4;
 // Keep the lower target above the bottom 20-pixel calibration message.
-pub const CALIBRATION_TARGET_MARGIN: i32 = 40;
-pub const CALIBRATION_TARGET_HALF_SIZE: i32 = 18;
-pub const CALIBRATION_CENTER_DOT_RADIUS: i32 = 3;
-pub const MAX_RESIDUAL_PIXELS: f32 = 12.0;
-pub const VERIFY_HIT_RADIUS_PIXELS: f32 = 20.0;
+pub(crate) const CALIBRATION_TARGET_MARGIN: i32 = 40;
+pub(crate) const CALIBRATION_TARGET_HALF_SIZE: i32 = 18;
+pub(crate) const CALIBRATION_CENTER_DOT_RADIUS: i32 = 3;
+pub(crate) const MAX_RESIDUAL_PIXELS: f32 = 12.0;
+pub(crate) const VERIFY_HIT_RADIUS_PIXELS: f32 = 20.0;
 
 const CALIBRATION_TARGET_COLOR: Rgb888 = Rgb888::CSS_YELLOW;
 const CALIBRATION_REJECTED_TARGET_COLOR: Rgb888 = Rgb888::CSS_RED;
@@ -59,7 +53,7 @@ pub struct CalibrationConfig {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CalibrationCorner {
+pub(crate) enum CalibrationCorner {
     UpperLeft,
     UpperRight,
     LowerRight,
@@ -67,27 +61,27 @@ pub enum CalibrationCorner {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CalibrationValidation {
+pub(crate) struct CalibrationValidation {
     calibration_config: CalibrationConfig,
     worst_residual_pixels: f32,
 }
 
 impl CalibrationValidation {
     #[must_use]
-    pub const fn calibration_config(self) -> CalibrationConfig {
+    pub(crate) const fn calibration_config(self) -> CalibrationConfig {
         self.calibration_config
     }
 
     #[cfg(test)]
     #[must_use]
-    pub const fn worst_residual_pixels(self) -> f32 {
+    pub(crate) const fn worst_residual_pixels(self) -> f32 {
         self.worst_residual_pixels
     }
 }
 
 impl CalibrationConfig {
     #[must_use]
-    pub const fn new(ax: f32, bx: f32, cx: f32, ay: f32, by: f32, cy: f32) -> Self {
+    pub(crate) const fn new(ax: f32, bx: f32, cx: f32, ay: f32, by: f32, cy: f32) -> Self {
         Self {
             ax,
             bx,
@@ -98,7 +92,7 @@ impl CalibrationConfig {
         }
     }
 
-    pub fn try_from_four_points(
+    pub(crate) fn try_from_four_points(
         points: [RawPoint; CALIBRATION_POINT_COUNT],
     ) -> crate::Result<Self> {
         let screen_targets = [
@@ -112,16 +106,6 @@ impl CalibrationConfig {
         let (ay, by, cy) = solve_affine_axis(points, screen_targets, false)?;
 
         Ok(Self::new(ax, bx, cx, ay, by, cy))
-    }
-
-    #[must_use]
-    pub fn from_four_points(points: [RawPoint; CALIBRATION_POINT_COUNT]) -> Self {
-        match Self::try_from_four_points(points) {
-            Ok(calibration_config) => calibration_config,
-            Err(calibration_solve_error) => {
-                panic!("invalid touch calibration geometry: {calibration_solve_error:?}")
-            }
-        }
     }
 
     #[must_use]
@@ -139,7 +123,7 @@ impl CalibrationConfig {
     }
 }
 
-pub fn validate_calibration_points(
+pub(crate) fn validate_calibration_points(
     points: [RawPoint; CALIBRATION_POINT_COUNT],
 ) -> crate::Result<CalibrationValidation> {
     let calibration_config = CalibrationConfig::try_from_four_points(points)?;
@@ -157,7 +141,9 @@ pub fn validate_calibration_points(
 }
 
 #[must_use]
-pub const fn calibration_corner_for_index(calibration_index: usize) -> Option<CalibrationCorner> {
+pub(crate) const fn calibration_corner_for_index(
+    calibration_index: usize,
+) -> Option<CalibrationCorner> {
     match calibration_index {
         0 => Some(CalibrationCorner::UpperLeft),
         1 => Some(CalibrationCorner::UpperRight),
@@ -168,7 +154,7 @@ pub const fn calibration_corner_for_index(calibration_index: usize) -> Option<Ca
 }
 
 #[must_use]
-pub fn calibration_corner_center(calibration_corner: CalibrationCorner) -> Point {
+pub(crate) fn calibration_corner_center(calibration_corner: CalibrationCorner) -> Point {
     let width = SCREEN_WIDTH as i32;
     let height = SCREEN_HEIGHT as i32;
 
@@ -195,18 +181,6 @@ pub fn calibration_corner_center(calibration_corner: CalibrationCorner) -> Point
 /// its instruction/confirmation messages into.
 const CALIBRATION_TEXT_HEIGHT: usize = 20;
 
-/// Minimum device static-buffer pixel count required for `ensure_calibration`'s
-/// on-screen flow.
-///
-/// The target/dot geometry streams straight to the panel via
-/// [`crate::cyd::CydDisplay::draw_items`] and needs no buffer at all, but the
-/// instruction/confirmation text still needs a small buffered frame. Apps
-/// that also draw their own status content should size their static buffer
-/// to at least `max(CALIBRATION_MIN_PIXEL_COUNT, their_own_needs)` rather
-/// than a full-screen buffer — combining a full-screen buffer with, say, a
-/// Wi-Fi stack's own heap can overflow memory-constrained boards.
-pub const CALIBRATION_MIN_PIXEL_COUNT: usize = SCREEN_WIDTH * CALIBRATION_TEXT_HEIGHT;
-
 /// Rectangle `ensure_calibration` draws its instruction/confirmation text
 /// into: a thin banner across the bottom of the screen.
 pub(super) const CALIBRATION_TEXT_RECTANGLE: Rectangle = Rectangle::new(
@@ -220,7 +194,7 @@ pub(super) const CALIBRATION_MAX_DRAW_ITEMS: usize = 4;
 
 /// Draw items for a calibration target with a center dot at `calibration_corner`.
 #[must_use]
-pub fn calibration_target_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
+pub(crate) fn calibration_target_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
     target_items_at(
         calibration_corner_center(calibration_corner),
         CALIBRATION_TARGET_COLOR,
@@ -229,7 +203,9 @@ pub fn calibration_target_items(calibration_corner: CalibrationCorner) -> [DrawI
 
 /// Like [`calibration_target_items`], colored to indicate a rejected attempt.
 #[must_use]
-pub fn calibration_rejected_target_items(calibration_corner: CalibrationCorner) -> [DrawItem; 3] {
+pub(crate) fn calibration_rejected_target_items(
+    calibration_corner: CalibrationCorner,
+) -> [DrawItem; 3] {
     target_items_at(
         calibration_corner_center(calibration_corner),
         CALIBRATION_REJECTED_TARGET_COLOR,
@@ -237,19 +213,19 @@ pub fn calibration_rejected_target_items(calibration_corner: CalibrationCorner) 
 }
 
 #[must_use]
-pub fn calibration_verify_target_center() -> Point {
+pub(crate) fn calibration_verify_target_center() -> Point {
     Point::new(SCREEN_WIDTH as i32 / 2, SCREEN_HEIGHT as i32 / 2)
 }
 
 /// Draw items for the post-calibration verify target at screen center.
 #[must_use]
-pub fn calibration_verify_target_items() -> [DrawItem; 3] {
+pub(crate) fn calibration_verify_target_items() -> [DrawItem; 3] {
     target_items_at(calibration_verify_target_center(), CALIBRATION_TARGET_COLOR)
 }
 
 /// Draw item for the small dot acknowledging a captured corner.
 #[must_use]
-pub fn calibration_ack_dot_item(calibration_corner: CalibrationCorner) -> DrawItem {
+pub(crate) fn calibration_ack_dot_item(calibration_corner: CalibrationCorner) -> DrawItem {
     dot_item_at(calibration_corner_center(calibration_corner))
 }
 
@@ -283,7 +259,7 @@ fn dot_item_at(center: Point) -> DrawItem {
 
 #[cfg(any(feature = "wasm", test))]
 #[must_use]
-pub fn distort_demo_screen_to_raw(screen_x: f32, screen_y: f32) -> RawPoint {
+pub(crate) fn distort_demo_screen_to_raw(screen_x: f32, screen_y: f32) -> RawPoint {
     let raw_x = DEMO_RAW_SCALE_X * screen_x + DEMO_RAW_SKEW_X_FROM_Y * screen_y + DEMO_RAW_OFFSET_X;
     let raw_y = DEMO_RAW_SKEW_Y_FROM_X * screen_x + DEMO_RAW_SCALE_Y * screen_y + DEMO_RAW_OFFSET_Y;
 

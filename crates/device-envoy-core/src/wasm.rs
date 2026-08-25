@@ -20,9 +20,10 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch,
+    backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
     display::{CydFrame, Orientation},
-    touch::{RawPoint, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
+    touch::{RawPoint, TouchEvent},
 };
 use crate::{
     button::{__ButtonMonitor, BUTTON_POLL_INTERVAL, Button},
@@ -87,7 +88,7 @@ pub struct CydTouchWasm {
 }
 
 #[derive(Clone)]
-pub struct CydTouchUncalibratedWasm {
+pub(crate) struct CydTouchUncalibratedWasm {
     raw_touch_events: RawTouchEvents,
     interaction_state: Rc<Cell<InteractionState>>,
     latest_raw_point: Rc<Cell<Option<RawPoint>>>,
@@ -560,7 +561,6 @@ impl CydDisplay for CydDisplayWasm {
 
 impl CydTouch for CydTouchWasm {
     type Error = Infallible;
-    type Uncalibrated = CydTouchUncalibratedWasm;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
         Ok(self
@@ -583,21 +583,9 @@ impl CydTouch for CydTouchWasm {
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
     }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config
-    }
-
-    fn decalibrate(self) -> Self::Uncalibrated {
-        CydTouchUncalibratedWasm {
-            raw_touch_events: self.raw_touch_events,
-            interaction_state: self.interaction_state,
-            latest_raw_point: self.latest_raw_point,
-        }
-    }
 }
 
-impl CydTouchUncalibrated for CydTouchUncalibratedWasm {
+impl TouchUncalibrated for CydTouchUncalibratedWasm {
     type Error = Infallible;
     type Calibrated = CydTouchWasm;
 

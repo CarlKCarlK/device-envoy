@@ -29,20 +29,19 @@ use static_cell::StaticCell;
 use buffer::DynPixelBuffer;
 use buffer::{PixelBuffer, RegionView};
 use device_envoy_core::button::Button;
+use device_envoy_core::cyd::backend;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
+    backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
     display::{CydFrame, RectanglePixels},
-    touch::{
-        RawTouchEvent, TouchEvent,
-        calibration::{CalibrationConfig, ensure_calibration},
-    },
+    touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;
 pub use display::DEFAULT_DISPLAY_SPI_HZ;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch,
     display::{Orientation, tiling},
     touch,
 };
@@ -81,7 +80,7 @@ pub struct CydDisplayEsp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 ///
 /// `D` is the underlying `embedded-hal` SPI device type; see
 /// [`CydDisplayEsp`] for the shared-bus rationale.
-pub struct CydTouchUncalibratedEsp<D = touch_driver::CydTouchSpiDevice> {
+pub(crate) struct CydTouchUncalibratedEsp<D = touch_driver::CydTouchSpiDevice> {
     touch: CydTouchEspDevice<D>,
 }
 
@@ -480,7 +479,7 @@ impl CydEsp {
             touch_cs_pin,
             touch_irq_pin,
         )?;
-        let (touch, _) = ensure_calibration(
+        let touch = backend::ensure_calibration(
             &mut display,
             touch,
             calibration_flash_block,
@@ -488,13 +487,9 @@ impl CydEsp {
             None,
         )
         .await
-        .map_err(|error| match error.kind {
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(cyd_error) => {
-                crate::Error::from(cyd_error)
-            }
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(flash_error) => {
-                flash_error
-            }
+        .map_err(|error| match error {
+            backend::Error::Device(cyd_error) => crate::Error::from(cyd_error),
+            backend::Error::Flash(flash_error) => flash_error,
         })?;
         Ok(Self { display, touch })
     }
@@ -671,7 +666,7 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     }
 }
 
-impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
+impl<D: SpiDevice<u8>> TouchUncalibrated for CydTouchUncalibratedEsp<D> {
     type Error = Error;
     type Calibrated = CydTouchEsp<D>;
 
@@ -689,7 +684,6 @@ impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
 
 impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
     type Error = Error;
-    type Uncalibrated = CydTouchUncalibratedEsp<D>;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, Error> {
         Ok(self
@@ -711,14 +705,6 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
-    }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config
-    }
-
-    fn decalibrate(self) -> Self::Uncalibrated {
-        self.raw
     }
 }
 

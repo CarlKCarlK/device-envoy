@@ -82,30 +82,6 @@ impl From<crate::cyd::Error> for Error {
     }
 }
 
-#[cfg(target_os = "none")]
-impl
-    From<
-        device_envoy_core::cyd::touch::calibration::Error<
-            crate::cyd::CydTouchUncalibratedRp,
-            Error,
-        >,
-    > for Error
-{
-    fn from(
-        error: device_envoy_core::cyd::touch::calibration::Error<
-            crate::cyd::CydTouchUncalibratedRp,
-            Error,
-        >,
-    ) -> Self {
-        match error.kind {
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
-                Self::from(error)
-            }
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
-        }
-    }
-}
-
 impl From<()> for Error {
     fn from(_: ()) -> Self {
         Self::FormatError

@@ -50,28 +50,42 @@ calibration state machine.
   `Uncalibrated` associated type, `calibration_config`, and `decalibrate` unless
   a supported downstream application demonstrates a need for manual
   calibration ownership.
-- Make `CydTouchUncalibrated`, `RawPoint`, and `RawTouchEvent` private along
-  with the platform `CydTouchUncalibratedEsp` and `CydTouchUncalibratedRp`
-  types. They currently exist to connect the platform implementations to the
-  shared calibration driver, not to support application code.
-- Make `CalibrationConfig`, `CalibrationFlow`, `CalibrationValidation`,
-  `CalibrationCorner`, `EnsureCalibrationOutcome`,
-  `EnsureCalibrationSettings`, the calibration `Error`/`ErrorKind`, and all
-  calibration tuning constants, geometry helpers, drawing helpers, solve and
-  validation functions, and `ensure_calibration*` functions private.
+- Add a deliberately small `device_envoy_core::cyd::backend` module for authors
+  of platform crates. Rust has no cross-crate `pub(crate)` or friend
+  visibility, so ESP and RP require a real public seam to reuse the core
+  calibration implementation. This is a backend-author API, not an
+  application calibration API.
+- Keep only the unavoidable cross-crate items public in `cyd::backend`:
+  `TouchUncalibrated`, `RawTouchEvent`, `CalibrationConfig`,
+  `ensure_calibration`, and one module-scoped `Error`. Use concise names because
+  the `backend` module supplies their context.
+- Simplify `ensure_calibration` to return the calibrated touch value directly.
+  Remove the public `EnsureCalibrationOutcome`; ESP and RP currently discard
+  it. Fold device and flash failure variants directly into `backend::Error`
+  rather than exposing a second `ErrorKind` layer.
+- Keep `RawPoint`, `CalibrationFlow`, `CalibrationValidation`,
+  `CalibrationCorner`, `EnsureCalibrationSettings`, all calibration tuning
+  constants, geometry and drawing helpers, solve and validation functions, and
+  alternative driver entry points private behind `cyd::backend`.
+- Keep the concrete platform uncalibrated touch types private. They implement
+  `backend::TouchUncalibrated` only so the complete-device constructors can
+  call `backend::ensure_calibration`.
+- Do not re-export `cyd::backend` or any of its items from ESP or RP. Their
+  public `touch` modules expose only application-facing calibrated touch items,
+  including `TouchEvent`.
 - Preserve the serialized calibration data and automatic flash-backed behavior
-  behind the complete-device constructors; making its Rust type private must
-  not silently invalidate already stored calibration without an intentional
+  behind the complete-device constructors. Moving `CalibrationConfig` must not
+  silently invalidate already stored calibration without an intentional
   format/version decision.
-- Resolve the core-to-platform crate seam instead of treating it as a public
-  API requirement. Relocate orchestration or otherwise reshape ownership so
-  ESP and RP do not need to import undocumented core implementation items.
-  Do not use `#[doc(hidden)]` as a substitute for that refactor.
+- Do not use generated copies, duplicated calibration engines, a large exported
+  macro, or `#[doc(hidden)]` merely to make the unavoidable backend seam appear
+  private. Prefer the small honest backend API over substantial maintenance
+  machinery for marginal documentation purity.
 
 The workspace examples and the ESP/RP starter projects currently use only the
-complete-device constructors and calibrated touch reads. They do not name any
-of the calibration flow, configuration, validation, geometry, drawing,
-settings, outcome, or error items above. Re-run that downstream audit during
+complete-device constructors and calibrated touch reads. They do not name the
+backend seam or any calibration flow, configuration, validation, geometry,
+drawing, settings, outcome, or error items. Re-run that downstream audit during
 implementation in case usage changes.
 
 ## Consolidate Errors
@@ -80,8 +94,10 @@ Fold the platform-specific display-init, display-flush, and touch-init label
 enums into each platform module's `cyd::Error`. The current nested enums add
 names without retaining underlying source errors, and the crate-wide error
 type wraps them again. Keep enough variant detail to distinguish configuration,
-SPI-device creation, panel initialization, frame flushing, and orientation
-failures.
+panel initialization, frame flushing, and orientation failures. Retain a
+SPI-device-creation failure only where construction is actually fallible; use
+`unwrap_infallible()` instead of inventing an impossible public error variant
+for infallible GPIO chip-select pins.
 
 Every public error type must be named `Error`; use its module path to
 distinguish it from other error types. Do not expose names such as `ErrorKind`,
@@ -96,17 +112,17 @@ name. Use variants on `Error` to distinguish failure categories and store the
 original source errors; do not preserve the current label-only unit enums as
 nested payloads.
 
-The calibration `ErrorKind` is not a useful public error in any form: the
-calibration subsystem is private, and its failures must be translated at the
-constructor boundary into the platform's `cyd::Error` while preserving the
-underlying diagnostic.
+The calibration `ErrorKind` is not useful publicly. Put device and flash
+variants directly on `backend::Error`; the ESP/RP constructors then translate
+that error into the platform's `cyd::Error` while preserving the underlying
+diagnostic.
 
 ## Documentation Rules
 
 - Audit the rendered public items recursively on every ESP, RP, and core CYD
   page and subpage. Each item must have a demonstrated application use or be
-  removed from the public surface; internal cross-crate convenience alone is
-  not sufficient justification.
+  part of the deliberately minimal platform-backend seam; accidental
+  cross-crate convenience alone is not sufficient justification.
 - Do not use `#[doc(hidden)]` to conceal ordinary implementation details; make
   them private or redesign the public signature that leaks them.
 - The only hidden-public exception is a helper that downstream expansion of a
@@ -131,9 +147,14 @@ underlying diagnostic.
   trait re-exported by the platform modules, including `CydTouch`.
 - Do not link public documentation to a `#[doc(hidden)]` item. In particular,
   the ESP, RP, and core touch-module introductions must not render
-  `CydTouchUncalibrated` as bracketed code; redesign the calibration boundary
-  so every type named by public documentation and signatures is either a real
-  documented API or no longer public.
+  the former `CydTouchUncalibrated` as bracketed code. Application-facing docs
+  must link only to the calibrated API; backend docs link to the renamed
+  `backend::TouchUncalibrated` where required.
+- Document `cyd::backend` tersely and honestly: applications should use `Cyd`
+  and `CydTouch`; the module is public because ESP and RP are separate crates
+  that reuse the core implementation. Keep one compiled backend example and
+  make each backend item link directly to it rather than repeating extensive
+  calibration documentation.
 - Keep one canonical compiled `rust,no_run` tiling example, preferably on
   `CydDisplay::tiles`. Make the `tiling` module, `TileGrid`, `Tiles`, their
   public methods, and the public rectangle-size helpers either contain a
@@ -169,8 +190,11 @@ Use this retained-surface checklist:
 - `Cyd`: add one unconditional generic device-loop example. Make `parts`,
   `display`, and `orientation` link directly to it.
 - `CydTouch` and `TouchEvent`: add or link directly to the canonical calibrated
-  touch-read example. Items removed with the private calibration surface need
-  no doctests.
+  touch-read example. They must not lead application readers into `backend`.
+- `backend`, `TouchUncalibrated`, `RawTouchEvent`, `CalibrationConfig`,
+  `ensure_calibration`, and `backend::Error`: share one concise compiled
+  platform-implementation example, with every item linking directly to it.
+  Private calibration machinery needs no doctests.
 - `CydDisplay`: keep focused canonical examples for the getter family, frame
   creation and flushing, contiguous drawing, immediate fill/draw operations,
   and tiling. Every retained method must link to the specific example that
@@ -222,11 +246,13 @@ surface.
 
 ### 2. Calibration Boundary
 
-- Implement the private calibration boundary across core, ESP, and RP.
-- Simplify the public touch traits and remove the raw, uncalibrated,
-  calibration-flow, and calibration-driver surface.
-- Resolve the core-to-platform ownership seam without using `#[doc(hidden)]`
-  for ordinary implementation items.
+- Implement the narrow `device_envoy_core::cyd::backend` boundary specified
+  above and simplify the application-facing touch traits.
+- Move only the five required backend items into that module; privatize the
+  remaining raw-point, flow, validation, geometry, drawing, settings, outcome,
+  and driver machinery.
+- Stop re-exporting backend support from ESP and RP. Keep their concrete
+  uncalibrated types private and their application-facing touch modules clean.
 - Preserve automatic interactive calibration, flash persistence, and stored
   calibration compatibility unless an intentional migration is documented.
 - Run focused core, ESP, and RP checks and review this architectural phase

@@ -20,7 +20,7 @@ use esp_hal::{
 use static_cell::StaticCell;
 
 use device_envoy_core::button::Button;
-use device_envoy_core::cyd::{Cyd, touch::calibration::ensure_calibration};
+use device_envoy_core::cyd::{Cyd, backend};
 
 use super::{
     CydDisplayEsp, CydStaticEsp, CydTouchEsp, CydTouchUncalibratedEsp, Error, Orientation,
@@ -167,7 +167,7 @@ impl CydEspOneSpi {
         )?;
         let touch = CydTouchUncalibratedEsp::from_device(touch_spi_device, touch_irq_pin);
 
-        let (touch, _) = ensure_calibration(
+        let touch = backend::ensure_calibration(
             &mut display,
             touch,
             calibration_flash_block,
@@ -175,13 +175,9 @@ impl CydEspOneSpi {
             None,
         )
         .await
-        .map_err(|error| match error.kind {
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(cyd_error) => {
-                crate::Error::from(cyd_error)
-            }
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(flash_error) => {
-                flash_error
-            }
+        .map_err(|error| match error {
+            backend::Error::Device(cyd_error) => crate::Error::from(cyd_error),
+            backend::Error::Flash(flash_error) => flash_error,
         })?;
 
         Ok(Self { display, touch })

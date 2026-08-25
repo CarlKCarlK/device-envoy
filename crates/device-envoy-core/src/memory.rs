@@ -99,11 +99,14 @@ use std::{
 };
 
 #[cfg(test)]
+use crate::cyd::backend::TouchUncalibrated;
+#[cfg(test)]
 use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN};
 use crate::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch,
+    backend::{CalibrationConfig, RawTouchEvent},
     display::{CydFrame, Orientation, RectanglePixels},
-    touch::{RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
+    touch::TouchEvent,
 };
 #[cfg(test)]
 use crate::flash_block::{
@@ -192,8 +195,9 @@ pub struct CydTouchMemory {
     calibration_config: CalibrationConfig,
 }
 
-/// Owned uncalibrated touch half of [`CydMemory`].
-pub struct CydTouchUncalibratedMemory {
+/// Owned uncalibrated touch half used by calibration tests.
+#[cfg(test)]
+pub(crate) struct CydTouchUncalibratedMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
 }
 
@@ -320,8 +324,14 @@ impl CydMemory {
     }
 
     #[must_use]
-    pub fn parts_uncalibrated(&self) -> (CydDisplayMemory, CydTouchUncalibratedMemory) {
-        (self.display.clone(), self.touch.clone().decalibrate())
+    #[cfg(test)]
+    pub(crate) fn parts_uncalibrated(&self) -> (CydDisplayMemory, CydTouchUncalibratedMemory) {
+        (
+            self.display.clone(),
+            CydTouchUncalibratedMemory {
+                shared: Rc::clone(&self.touch.shared),
+            },
+        )
     }
 }
 
@@ -572,6 +582,7 @@ impl core::fmt::Debug for CydTouchMemory {
     }
 }
 
+#[cfg(test)]
 impl core::fmt::Debug for CydTouchUncalibratedMemory {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         formatter
@@ -580,7 +591,8 @@ impl core::fmt::Debug for CydTouchUncalibratedMemory {
     }
 }
 
-impl CydTouchUncalibrated for CydTouchUncalibratedMemory {
+#[cfg(test)]
+impl TouchUncalibrated for CydTouchUncalibratedMemory {
     type Error = Error;
     type Calibrated = CydTouchMemory;
 
@@ -671,7 +683,6 @@ impl CydDisplay for CydDisplayMemory {
 
 impl CydTouch for CydTouchMemory {
     type Error = Error;
-    type Uncalibrated = CydTouchUncalibratedMemory;
 
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
         Ok(self
@@ -679,16 +690,6 @@ impl CydTouch for CydTouchMemory {
             .borrow_mut()
             .touch_script
             .pop_current_frame_event())
-    }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config
-    }
-
-    fn decalibrate(self) -> Self::Uncalibrated {
-        CydTouchUncalibratedMemory {
-            shared: self.shared,
-        }
     }
 }
 
@@ -1198,22 +1199,25 @@ fn blit_frame_to_screen(
 #[cfg(test)]
 mod tests {
     use super::{
-        ButtonMemory, CydMemory, CydTouchMemory, CydTouchUncalibratedMemory, Error,
-        FlashBlockMemory, MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOWN,
+        ButtonMemory, CydMemory, CydTouchMemory, Error, FlashBlockMemory, MIN_SAMPLES_PER_POINT,
+        SAMPLES_DISCARDED_AFTER_DOWN,
     };
     use crate::cyd::touch::driver::{
         CAPTURE_ACK_FRAME_COUNT, MAX_RAW_EVENTS_PER_FRAME, REJECTED_FRAME_COUNT,
         VERIFY_TIMEOUT_FRAMES,
     };
     use crate::cyd::{
-        Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+        Cyd, CydDisplay,
+        backend::{
+            CalibrationConfig, Error as CalibrationError, RawTouchEvent, TouchUncalibrated,
+            ensure_calibration,
+        },
         display::{CydFrame, RectanglePixels},
         touch::{
-            RawPoint, RawTouchEvent,
+            RawPoint,
             calibration::{
-                CalibrationConfig, CalibrationCorner, EnsureCalibrationOutcome, ErrorKind,
-                VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
-                calibration_verify_target_center, distort_demo_screen_to_raw, ensure_calibration,
+                CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
+                calibration_verify_target_center, distort_demo_screen_to_raw,
             },
         },
     };
@@ -1270,13 +1274,8 @@ mod tests {
         memory_flash_block: &mut FlashBlockMemory,
         memory_button: &mut ButtonMemory,
         confirmed_message: Option<&str>,
-    ) -> Result<
-        (CydTouchMemory, EnsureCalibrationOutcome),
-        crate::cyd::touch::calibration::Error<
-            CydTouchUncalibratedMemory,
-            <FlashBlockMemory as FlashBlock>::Error,
-        >,
-    > {
+    ) -> Result<CydTouchMemory, CalibrationError<Error, <FlashBlockMemory as FlashBlock>::Error>>
+    {
         let (mut display, touch) = memory_cyd.parts_uncalibrated();
         block_on(ensure_calibration(
             &mut display,
@@ -1435,7 +1434,7 @@ mod tests {
         let mut memory_button = memory_cyd.button_memory();
         let raw_points = script_happy_path(&mut memory_cyd);
 
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1443,16 +1442,12 @@ mod tests {
         )
         .expect("happy-path calibration should succeed");
 
-        let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
-            panic!("happy-path calibration should save a new config");
-        };
         assert_eq!(memory_flash_block.save_count(), 1);
 
         let saved_config = memory_flash_block
             .load::<CalibrationConfig>()
             .expect("saved config should deserialize")
             .expect("saved config should exist");
-        assert_eq!(saved_config, calibration_config);
 
         for (raw_point, calibration_corner) in raw_points.into_iter().zip([
             CalibrationCorner::UpperLeft,
@@ -1491,7 +1486,7 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::with_value(&saved_config);
         let mut memory_button = memory_cyd.button_memory();
 
-        let (touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1499,12 +1494,8 @@ mod tests {
         )
         .expect("preloaded calibration should load");
 
-        let EnsureCalibrationOutcome::Loaded(loaded_config) = outcome else {
-            panic!("preloaded flash should skip the calibration flow");
-        };
-        assert_eq!(loaded_config, saved_config);
         assert_eq!(memory_cyd.flush_count(), 0);
-        let mut touch = touch.decalibrate();
+        let (_display, mut touch) = memory_cyd.parts_uncalibrated();
         assert_eq!(
             touch
                 .read_raw_touch_event()
@@ -1520,7 +1511,7 @@ mod tests {
         let mut memory_button = memory_cyd.button_memory();
         script_happy_path(&mut memory_cyd);
 
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1528,7 +1519,6 @@ mod tests {
         )
         .expect("corrupt flash should fall back to calibration");
 
-        assert!(matches!(outcome, EnsureCalibrationOutcome::Saved(_)));
         assert_eq!(memory_flash_block.save_count(), 1);
         assert!(
             memory_flash_block
@@ -1553,7 +1543,10 @@ mod tests {
         )
         .expect_err("empty input should stop at the frame budget");
 
-        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
+        assert!(matches!(
+            error,
+            CalibrationError::Device(Error::OutOfFrames)
+        ));
         assert_eq!(memory_cyd.flush_count(), 3);
     }
 
@@ -1574,7 +1567,10 @@ mod tests {
         )
         .expect_err("single-frame budget should stop after the first drawn frame");
 
-        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
+        assert!(matches!(
+            error,
+            CalibrationError::Device(Error::OutOfFrames)
+        ));
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);
         assert_eq!(
@@ -1601,7 +1597,7 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
 
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1609,7 +1605,6 @@ mod tests {
         )
         .expect("flow should restart after verify timeout and then save");
 
-        assert!(matches!(outcome, EnsureCalibrationOutcome::Saved(_)));
         assert_eq!(memory_flash_block.save_count(), 1);
     }
 
@@ -1633,7 +1628,7 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1641,9 +1636,10 @@ mod tests {
         )
         .expect("dropout sequence should still save a calibration");
 
-        let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
-            panic!("dropout sequence should save a calibration");
-        };
+        let calibration_config = memory_flash_block
+            .load::<CalibrationConfig>()
+            .unwrap()
+            .unwrap();
         assert_maps_near_corner(
             calibration_config,
             lower_right_raw_point,
@@ -1678,7 +1674,7 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1686,9 +1682,10 @@ mod tests {
         )
         .expect("lift-off drift sequence should still save a calibration");
 
-        let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
-            panic!("lift-off drift sequence should save a calibration");
-        };
+        let calibration_config = memory_flash_block
+            .load::<CalibrationConfig>()
+            .unwrap()
+            .unwrap();
         assert_maps_near_corner(
             calibration_config,
             upper_left_raw_point,
@@ -1715,7 +1712,7 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1723,9 +1720,10 @@ mod tests {
         )
         .expect("rejected solve should restart and then save");
 
-        let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
-            panic!("rejected solve should eventually save");
-        };
+        let calibration_config = memory_flash_block
+            .load::<CalibrationConfig>()
+            .unwrap()
+            .unwrap();
         assert_eq!(memory_flash_block.save_count(), 1);
         assert_maps_near_corner(
             calibration_config,
@@ -1755,7 +1753,7 @@ mod tests {
 
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1763,7 +1761,6 @@ mod tests {
         )
         .expect("verify miss should restart and then save");
 
-        assert!(matches!(outcome, EnsureCalibrationOutcome::Saved(_)));
         assert_eq!(memory_flash_block.save_count(), 1);
     }
 
@@ -1780,7 +1777,7 @@ mod tests {
         let mut memory_flash_block = FlashBlockMemory::new();
         let mut memory_button = memory_cyd.button_memory();
         memory_button.set_pressed_for_frame(2, true);
-        let (_touch, outcome) = run_ensure_calibration(
+        let _touch = run_ensure_calibration(
             &memory_cyd,
             &mut memory_flash_block,
             &mut memory_button,
@@ -1788,9 +1785,10 @@ mod tests {
         )
         .expect("button-triggered recalibration should restart and then save");
 
-        let EnsureCalibrationOutcome::Saved(calibration_config) = outcome else {
-            panic!("button-triggered recalibration should save");
-        };
+        let calibration_config = memory_flash_block
+            .load::<CalibrationConfig>()
+            .unwrap()
+            .unwrap();
         assert_eq!(memory_flash_block.save_count(), 1);
         assert_maps_near_corner(
             calibration_config,
@@ -1828,7 +1826,10 @@ mod tests {
         )
         .expect_err("oversized hold should stop at the frame budget");
 
-        assert!(matches!(error.kind, ErrorKind::Device(Error::OutOfFrames)));
+        assert!(matches!(
+            error,
+            CalibrationError::Device(Error::OutOfFrames)
+        ));
         assert_eq!(memory_cyd.flush_count(), 2);
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);

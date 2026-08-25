@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::touch::RawTouchEvent;
+use device_envoy_core::{UnwrapInfallible, cyd::touch::RawTouchEvent};
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Input, Level, Output, Pin, Pull};
 use embassy_rp::peripherals::SPI1;
@@ -9,18 +9,11 @@ use embedded_hal::spi::SpiDevice;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 
 /// SPI clock frequency for the touch bus.
-pub const TOUCH_SPI_HZ: u32 = 2_500_000;
+pub(super) const TOUCH_SPI_HZ: u32 = 2_500_000;
 
 type CydTouchSpiBus = Spi<'static, SPI1, Blocking>;
 /// The SPI device type used when touch owns an exclusive SPI peripheral.
 pub(crate) type CydTouchSpiDevice = ExclusiveDevice<CydTouchSpiBus, Output<'static>, NoDelay>;
-
-/// Error initializing the touch controller over SPI.
-#[derive(Clone, Copy, Debug)]
-pub enum CydTouchRpInitError {
-    /// Wrapping the touch SPI bus with its CS pin failed.
-    CreateTouchSpiDevice,
-}
 
 /// An XPT2046 touch controller driven over `D`, an `embedded-hal` SPI device.
 ///
@@ -61,7 +54,7 @@ impl CydTouchRp<CydTouchSpiDevice> {
         miso_pin: Peri<'static, Miso>,
         cs_pin: Peri<'static, Cs>,
         irq_pin: Peri<'static, Irq>,
-    ) -> Result<CydTouchRp<CydTouchSpiDevice>, CydTouchRpInitError>
+    ) -> Result<CydTouchRp<CydTouchSpiDevice>, super::Error>
     where
         Sck: Pin + ClkPin<SPI1>,
         Mosi: Pin + MosiPin<SPI1>,
@@ -81,7 +74,7 @@ impl CydTouchRp<CydTouchSpiDevice> {
         let cs = Output::new(cs_pin, Level::High);
 
         let touch_spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
-            .map_err(|_| CydTouchRpInitError::CreateTouchSpiDevice)?;
+            .unwrap_infallible();
 
         Ok(Self::from_device(touch_spi_device, irq_pin))
     }

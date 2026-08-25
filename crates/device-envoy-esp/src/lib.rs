@@ -314,15 +314,8 @@ pub enum Error {
     #[cfg(all(target_os = "none", esp_has_wifi))]
     Wifi(esp_radio::wifi::WifiError),
     #[cfg(target_os = "none")]
-    CydDisplayInit(cyd::CydDisplayEspInitError),
-    #[cfg(target_os = "none")]
-    CydTouchInit(cyd::CydTouchEspInitError),
-    #[cfg(target_os = "none")]
     #[from(ignore)]
-    CydDisplayFlush(cyd::CydDisplayEspFlushError),
-    #[cfg(target_os = "none")]
-    #[from(ignore)]
-    CydDisplaySetOrientation(cyd::CydDisplayEspFlushError),
+    Cyd(cyd::Error),
     #[cfg(target_os = "none")]
     CydTouchUnavailable,
 }
@@ -330,12 +323,7 @@ pub enum Error {
 #[cfg(target_os = "none")]
 impl From<cyd::Error> for Error {
     fn from(error: cyd::Error) -> Self {
-        match error {
-            cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
-            cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
-            cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
-            cyd::Error::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
-        }
+        Self::Cyd(error)
     }
 }
 

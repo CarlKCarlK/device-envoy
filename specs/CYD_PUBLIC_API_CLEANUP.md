@@ -206,6 +206,47 @@ constructors and retained component methods likewise lack complete direct
 coverage. Treat this list as the starting audit, then re-inventory the rendered
 pages after visibility changes so newly retained items cannot escape it.
 
+## Implementation Order
+
+Implement this cleanup in the following phases. Complete and review each phase
+before starting the next so documentation work targets only the final public
+surface.
+
+### 1. Platform Surface and Errors
+
+- Apply the non-calibration visibility cleanup to ESP and RP: buffers, frame
+  escape hatches, touch clock policy, and related re-exports.
+- Consolidate the prefixed ESP/RP error types into each platform's
+  module-scoped `cyd::Error`, preserving useful source diagnostics.
+- Keep the ESP and RP public surfaces parallel and run focused platform checks.
+
+### 2. Calibration Boundary
+
+- Implement the private calibration boundary across core, ESP, and RP.
+- Simplify the public touch traits and remove the raw, uncalibrated,
+  calibration-flow, and calibration-driver surface.
+- Resolve the core-to-platform ownership seam without using `#[doc(hidden)]`
+  for ordinary implementation items.
+- Preserve automatic interactive calibration, flash persistence, and stored
+  calibration compatibility unless an intentional migration is documented.
+- Run focused core, ESP, and RP checks and review this architectural phase
+  before proceeding.
+
+### 3. Documentation and Doctests
+
+- Apply the documentation rules and retained-surface doctest checklist only
+  after phases 1 and 2 establish the final API.
+- Build and inspect core, ESP, and RP rustdoc using the publication feature and
+  target combinations.
+- Fix broken, relative, hidden-item, and cross-crate links while keeping the
+  platform documentation parallel.
+
+### 4. Final Audit
+
+- Re-inventory every rendered CYD page and method section against this spec.
+- Fix any remaining visibility, naming, parity, doctest, or link failure.
+- Run the complete validation below, with `cargo check-all` last.
+
 ## Validation
 
 - Search examples and downstream starter projects before removing each item.

@@ -27,7 +27,7 @@ use embedded_hal::spi::SpiDevice;
 use static_cell::StaticCell;
 
 use buffer::DynPixelBuffer;
-pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
+use buffer::{PixelBuffer, RegionView};
 use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
@@ -38,7 +38,7 @@ use device_envoy_core::cyd::{
     },
 };
 use device_envoy_core::pixel_target::PixelTarget;
-pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DEFAULT_DISPLAY_SPI_HZ};
+pub use display::DEFAULT_DISPLAY_SPI_HZ;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
@@ -48,7 +48,7 @@ pub use device_envoy_core::cyd::{
 };
 pub use one_spi::CydEspOneSpi;
 pub use text::DEFAULT_FONT;
-pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
+use touch_driver::TOUCH_SPI_HZ;
 
 use crate::flash_block::FlashBlockEsp;
 use display::CydDisplayEsp as CydDisplayEspDevice;
@@ -150,11 +150,6 @@ pub struct CydFrameEsp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 }
 
 impl<'a, D: SpiDevice<u8>> CydFrameEsp<'a, D> {
-    /// Borrow the frame's underlying pixel view.
-    pub fn view_mut(&mut self) -> &mut RegionView<'a> {
-        &mut self.view
-    }
-
     /// Fill the frame with an explicit color.
     pub fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.view.fill(color);
@@ -279,32 +274,16 @@ impl<D: SpiDevice<u8>> PixelTarget for CydFrameEsp<'_, D> {
 /// Error from a CYD ESP display or touch operation.
 #[derive(Debug)]
 pub enum Error {
-    /// Initializing the display over SPI failed.
-    DisplayInit(CydDisplayEspInitError),
-    /// Initializing the touch controller over SPI failed.
-    TouchInit(CydTouchEspInitError),
-    /// Flushing a frame to the display failed.
-    DisplayFlush(CydDisplayEspFlushError),
+    /// Configuring the display SPI peripheral failed.
+    ConfigureDisplaySpi(esp_hal::spi::master::ConfigError),
+    /// The display panel could not be initialized.
+    InitDisplay,
+    /// Configuring the touch SPI peripheral failed.
+    ConfigureTouchSpi(esp_hal::spi::master::ConfigError),
+    /// A frame could not be flushed to the display.
+    FlushFrameBuffer,
     /// Changing the display orientation failed.
-    DisplaySetOrientation(CydDisplayEspFlushError),
-}
-
-impl From<CydDisplayEspInitError> for Error {
-    fn from(error: CydDisplayEspInitError) -> Self {
-        Self::DisplayInit(error)
-    }
-}
-
-impl From<CydTouchEspInitError> for Error {
-    fn from(error: CydTouchEspInitError) -> Self {
-        Self::TouchInit(error)
-    }
-}
-
-impl From<CydDisplayEspFlushError> for Error {
-    fn from(error: CydDisplayEspFlushError) -> Self {
-        Self::DisplayFlush(error)
-    }
+    SetOrientation,
 }
 
 impl<D: SpiDevice<u8>> CydDisplayEsp<D> {

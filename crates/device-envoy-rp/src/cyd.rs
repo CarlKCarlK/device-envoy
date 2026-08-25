@@ -49,11 +49,11 @@ use embedded_hal::spi::SpiDevice;
 use static_cell::StaticCell;
 
 use buffer::DynPixelBuffer;
-pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
-pub use display::{CydDisplayRpFlushError, CydDisplayRpInitError, DEFAULT_DISPLAY_SPI_HZ};
+use buffer::{PixelBuffer, RegionView};
+pub use display::DEFAULT_DISPLAY_SPI_HZ;
 pub use one_spi::{CydRpOneSpi, CydRpOneSpiStatic};
 pub use text::DEFAULT_FONT;
-pub use touch_driver::{CydTouchRpInitError, TOUCH_SPI_HZ};
+use touch_driver::TOUCH_SPI_HZ;
 
 use crate::flash_block::FlashBlockRp;
 use display::CydDisplayRp as CydDisplayRpDevice;
@@ -160,11 +160,6 @@ pub struct CydFrameRp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 }
 
 impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
-    /// Borrow the frame's underlying pixel view.
-    pub fn view_mut(&mut self) -> &mut RegionView<'a> {
-        &mut self.view
-    }
-
     /// Fill the frame with an explicit color.
     pub fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.view.fill(color);
@@ -286,15 +281,13 @@ impl<D: SpiDevice<u8>> PixelTarget for CydFrameRp<'_, D> {
     }
 }
 
-#[derive(Debug, derive_more::From)]
+#[derive(Debug)]
 /// Error from a CYD RP display or touch operation.
 pub enum Error {
-    /// Initializing the display over SPI failed.
-    DisplayInit(CydDisplayRpInitError),
-    /// Initializing the touch controller over SPI failed.
-    TouchInit(CydTouchRpInitError),
-    /// Flushing a frame to the display failed.
-    DisplayFlush(CydDisplayRpFlushError),
+    /// The display panel could not be initialized.
+    InitDisplay,
+    /// A frame could not be flushed to the display.
+    FlushFrameBuffer,
 }
 
 impl<D: SpiDevice<u8>> CydDisplayRp<D> {

@@ -94,7 +94,7 @@ where
         Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
     };
     let (display, touch) = cyd.parts();
-    let mut ui = Ui::<_, 16>::new(display, layout, orientation);
+    let mut ui = Ui::<_, 16>::new(display, layout);
     ui.fill_bitmap()?;
     ui.text(layout.hostname, DNS_HOSTNAME).await?;
     loop {
@@ -349,7 +349,6 @@ pub const FRAME_PIXEL_COUNT: usize = 240 * 20;
 struct Ui<'a, Display, const TEXT_CAPACITY: usize> {
     display: &'a mut Display,
     layout: Layout,
-    orientation: Orientation,
     text: heapless::String<TEXT_CAPACITY>,
 }
 
@@ -357,23 +356,15 @@ impl<'a, Display, const TEXT_CAPACITY: usize> Ui<'a, Display, TEXT_CAPACITY>
 where
     Display: CydDisplay,
 {
-    fn new(display: &'a mut Display, layout: Layout, orientation: Orientation) -> Self {
+    fn new(display: &'a mut Display, layout: Layout) -> Self {
         Self {
             display,
             layout,
-            orientation,
             text: heapless::String::new(),
         }
     }
 
     fn touch(&self, touch_event: Option<TouchEvent>) -> TouchAction {
-        let touch_event = touch_event.map(|touch_event| match touch_event {
-            TouchEvent::Down { point } => TouchEvent::Down {
-                point: self.orientation.map_landscape_point(point),
-            },
-            touch_event => touch_event,
-        });
-
         match touch_event {
             Some(TouchEvent::Down { point }) => self
                 .layout

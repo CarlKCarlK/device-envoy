@@ -3,7 +3,8 @@
 //!
 //! See [`CydRp`], [`CydRpOneSpi`], and [`CydDisplayRp`] for the public
 //! constructors; the device-agnostic [`CydDisplay`] and [`CydTouch`] traits live in
-//! [`device_envoy_core::cyd`]. [`CydRp`] uses `SPI0` for the display and `SPI1`
+//! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
+//! [`CydRp`] uses `SPI0` for the display and `SPI1`
 //! for touch; [`CydRpOneSpi`] shares a single SPI peripheral between the two.
 
 // TODO0 Reduce CYD's public API surface; see specs/CYD_PUBLIC_API_CLEANUP.md.
@@ -100,6 +101,7 @@ pub(crate) struct CydTouchUncalibratedRp<D = touch_driver::CydTouchSpiDevice> {
 pub struct CydTouchRp<D = touch_driver::CydTouchSpiDevice> {
     raw: CydTouchUncalibratedRp<D>,
     calibration_config: CalibrationConfig,
+    orientation: Orientation,
 }
 
 /// A calibrated CYD RP bundle.
@@ -155,7 +157,8 @@ impl<const PIXEL_COUNT: usize> CydStaticRp<PIXEL_COUNT> {
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
 ///
 /// Frames are returned by [`CydDisplay::frame_mut`] and implement the core
-/// [`CydFrame`] operations.
+/// [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html)
+/// operations.
 ///
 /// ```rust,no_run
 /// #![no_std]
@@ -334,9 +337,17 @@ pub enum Error {
     InitDisplay,
     /// A frame could not be flushed to the display.
     FlushFrameBuffer,
+    /// Changing the display orientation failed.
+    SetOrientation,
 }
 
 impl<D: SpiDevice<u8>> CydDisplayRp<D> {
+    fn set_orientation(&mut self, orientation: Orientation) -> Result<(), Error> {
+        self.display.set_orientation(orientation)?;
+        self.orientation = orientation;
+        Ok(())
+    }
+
     fn from_display_device(
         mut display: CydDisplayRpDevice<D>,
         orientation: Orientation,
@@ -632,12 +643,14 @@ impl CydRp {
             calibration_flash_block,
             recalibration_button,
             None,
+            orientation,
         )
         .await
         .map_err(|error| match error {
             backend::Error::Device(cyd_error) => crate::Error::from(cyd_error),
             backend::Error::Flash(flash_error) => flash_error,
         })?;
+        display.set_orientation(orientation)?;
         Ok(Self { display, touch })
     }
 }
@@ -684,7 +697,7 @@ impl CydRpUncalibrated {
         display_rst_pin: Peri<'static, Rst>,
         display_backlight_pin: Peri<'static, Backlight>,
         display_spi_hz: u32,
-        orientation: Orientation,
+        _orientation: Orientation,
         background_color: Rgb888,
         foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
@@ -721,7 +734,7 @@ impl CydRpUncalibrated {
                 display_rst_pin,
                 display_backlight_pin,
                 display_spi_hz,
-                orientation,
+                Orientation::Landscape,
                 background_color,
                 foreground_color,
                 font,
@@ -848,10 +861,15 @@ impl<D: SpiDevice<u8>> TouchUncalibrated for CydTouchUncalibratedRp<D> {
         Ok(self.touch.read_raw_touch_event())
     }
 
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
+    fn calibrate(
+        self,
+        calibration_config: CalibrationConfig,
+        orientation: Orientation,
+    ) -> Self::Calibrated {
         CydTouchRp {
             raw: self,
             calibration_config,
+            orientation,
         }
     }
 }
@@ -868,13 +886,17 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchRp<D> {
                 RawTouchEvent::Down { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Down {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Move { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Move {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Up => TouchEvent::Up,

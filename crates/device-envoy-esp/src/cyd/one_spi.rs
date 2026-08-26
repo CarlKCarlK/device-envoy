@@ -31,15 +31,15 @@ use crate::flash_block::FlashBlockEsp;
 type SharedSpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
 type SharedSpiMutex = Mutex<NoopRawMutex, RefCell<SharedSpiBus>>;
 /// Both the display and touch device share this same concrete type — each instance just
-/// carries its own [`spi::master::Config`] (clock speed), applied to the shared bus by
-/// [`SpiDeviceWithConfig`] before every transaction it makes.
+/// carries its own `spi::master::Config` (clock speed), applied to the shared bus by
+/// `SpiDeviceWithConfig` before every transaction it makes.
 type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, Output<'static>>;
 
 /// A CYD-family ESP32 bundle using one shared SPI peripheral for display and touch.
 ///
-/// Display and touch each get their own [`SpiDeviceWithConfig`] over the same underlying bus,
-/// with independent chip-select pins *and* independent clock speeds: [`SpiDeviceWithConfig`]
-/// re-applies its device's [`spi::master::Config`] to the shared bus immediately before each of
+/// Display and touch each get their own `SpiDeviceWithConfig` over the same underlying bus,
+/// with independent chip-select pins *and* independent clock speeds: `SpiDeviceWithConfig`
+/// re-applies its device's `spi::master::Config` to the shared bus immediately before each of
 /// its transactions, so the physical SPI clock switches between the display and touch settings as
 /// display and touch take turns using the bus. Because the two halves share
 /// state through that bus, this type keeps shared-bus ownership atomic inside the complete
@@ -182,7 +182,7 @@ impl CydEspOneSpi {
             lcd_dc_pin,
             lcd_rst_pin,
             lcd_backlight_pin,
-            orientation,
+            Orientation::Landscape,
             background_color,
             foreground_color,
             font,
@@ -196,6 +196,7 @@ impl CydEspOneSpi {
             calibration_flash_block,
             recalibration_button,
             None,
+            orientation,
         )
         .await
         .map_err(|error| match error {
@@ -203,6 +204,7 @@ impl CydEspOneSpi {
             backend::Error::Flash(flash_error) => flash_error,
         })?;
 
+        display.set_orientation(orientation)?;
         Ok(Self { display, touch })
     }
 }

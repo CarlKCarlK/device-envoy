@@ -182,8 +182,11 @@ pub enum DrawItem {
 impl DrawItem {
     /// Draw this item onto a [`PixelTarget`].
     ///
-    /// Strokes use the embedded-graphics [`Line`] primitive and circles use
-    /// [`Circle`]; the general projected ellipse is rasterized with
+    /// Strokes use the embedded-graphics
+    /// [`Line`](https://docs.rs/embedded-graphics/latest/embedded_graphics/primitives/struct.Line.html)
+    /// primitive and circles use
+    /// [`Circle`](https://docs.rs/embedded-graphics/latest/embedded_graphics/primitives/struct.Circle.html);
+    /// the general projected ellipse is rasterized with
     /// [`fill_ellipse_pixels`].
     ///
     /// See the [canonical `DrawItem` example](DrawItem).

@@ -1021,6 +1021,8 @@ fn check_docs() -> ExitCode {
             println!("{}", "  [1/3] Doc tests...".bright_black());
             if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                 "test",
+                "-p",
+                "device-envoy-rp",
                 "--doc",
                 "--target",
                 target,
@@ -1037,6 +1039,8 @@ fn check_docs() -> ExitCode {
             println!("{}", "  [2/3] Documentation generation...".bright_black());
             if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                 "doc",
+                "-p",
+                "device-envoy-rp",
                 "--target",
                 target,
                 "--no-deps",
@@ -1056,6 +1060,8 @@ fn check_docs() -> ExitCode {
             );
             if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
                 "doc",
+                "-p",
+                "device-envoy-rp",
                 "--target",
                 arch.target(Board::Pico1),
                 "--no-deps",
@@ -1682,9 +1688,10 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
 }
 
 fn check_shared_markdown_sync(workspace_root: &Path) -> Result<(), String> {
-    let rp_markdown_path = workspace_root.join("src/docs/current_limiting_and_gamma.md");
+    let rp_markdown_path =
+        workspace_root.join("crates/device-envoy-rp/src/docs/current_limiting_and_gamma.md");
     let esp_markdown_path =
-        workspace_root.join("../device-envoy-esp/src/docs/current_limiting_and_gamma.md");
+        workspace_root.join("crates/device-envoy-esp/src/docs/current_limiting_and_gamma.md");
 
     let rp_markdown_source = fs::read_to_string(&rp_markdown_path)
         .map_err(|read_error| format!("{}: {}", rp_markdown_path.display(), read_error))?;
@@ -1846,26 +1853,27 @@ const GENERATED_RUST_FILE_PATHS: [&str; 9] = [
 ];
 
 fn regenerate_generated_sources(workspace_root: &Path) -> Result<(), String> {
-    pcm_clip_generated::generate_pcm_clip_generated(workspace_root)
+    let rp_crate_root = workspace_root.join("crates/device-envoy-rp");
+    pcm_clip_generated::generate_pcm_clip_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating pcm_clip_generated.rs: {error}"))?;
-    adpcm_clip_generated::generate_adpcm_clip_generated(workspace_root)
+    adpcm_clip_generated::generate_adpcm_clip_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating adpcm_clip_generated.rs: {error}"))?;
-    audio_player_generated::generate_audio_player_generated(workspace_root)
+    audio_player_generated::generate_audio_player_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating audio_player_generated.rs: {error}"))?;
-    led2d_generated::generate_led2d_generated(workspace_root)
+    led2d_generated::generate_led2d_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating led2d_generated.rs: {error}"))?;
-    lcd_text_generated::generate_lcd_text_generated(workspace_root)
+    lcd_text_generated::generate_lcd_text_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating lcd_text_generated.rs: {error}"))?;
-    led_strip_generated::generate_led_strip_generated(workspace_root)
+    led_strip_generated::generate_led_strip_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating led_strip_generated.rs: {error}"))?;
-    ir_generated::generate_ir_generated(workspace_root)
+    ir_generated::generate_ir_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating ir_generated.rs: {error}"))?;
-    led_generated::generate_led_generated(workspace_root)
+    led_generated::generate_led_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating led_generated.rs: {error}"))?;
-    servo_player_generated::generate_servo_player_generated(workspace_root)
+    servo_player_generated::generate_servo_player_generated(&rp_crate_root)
         .map_err(|error| format!("Error generating servo_player_generated.rs: {error}"))?;
-    format_generated_rust_sources(workspace_root)?;
-    check_generated_doc_stubs(workspace_root)
+    format_generated_rust_sources(&rp_crate_root)?;
+    check_generated_doc_stubs(&rp_crate_root)
         .map_err(|error| format!("Generated doc stub consistency check failed:\n{error}"))?;
     Ok(())
 }

@@ -19,3 +19,5 @@ cargo doc \
 DOCS_DIR="${WORKSPACE_TARGET}/thumbv8m.main-none-eabihf/doc/device_envoy_rp/docs/assets"
 mkdir -p "${DOCS_DIR}"
 cp "$(dirname "$0")/../../device-envoy-core/docs/assets/"*.png "${DOCS_DIR}/"
+bash "$(dirname "$0")/../../../scripts/check-rendered-cyd-links.sh" \
+  "$WORKSPACE_TARGET/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd"

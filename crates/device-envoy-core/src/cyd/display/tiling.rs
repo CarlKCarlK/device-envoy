@@ -9,9 +9,8 @@
 //! and the number of tile columns and rows; it derives the per-tile size with
 //! ceiling division and clips the final column/row to the rectangle edges. See
 //! [`CydDisplay::for_each_tile`] for the canonical tiled draw loop, and use
-//! [`embedded_graphics::primitives::Rectangle`] plus
-//! [`max_rectangle_pixel_count`] when sizing a shared buffer around fixed
-//! regions.
+//! `embedded_graphics::primitives::Rectangle` plus [`max_rectangle_pixel_count`]
+//! when sizing a shared buffer around fixed regions.
 
 use embedded_graphics::{
     prelude::{Point, Size},

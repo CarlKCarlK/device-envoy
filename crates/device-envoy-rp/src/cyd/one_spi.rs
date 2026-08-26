@@ -36,14 +36,14 @@ type SharedSpiBus<T> = Spi<'static, T, Blocking>;
 type SharedSpiMutex<T> = Mutex<NoopRawMutex, RefCell<SharedSpiBus<T>>>;
 /// Both the display and touch device share this same concrete type — each instance just
 /// carries its own `embassy_rp::spi::Config` (clock speed), applied to the shared bus by
-/// [`SpiDeviceWithConfig`] before every transaction it makes.
+/// `SpiDeviceWithConfig` before every transaction it makes.
 type SharedSpiDevice<T> =
     SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus<T>, Output<'static>>;
 
 /// A CYD-family RP bundle using one shared SPI peripheral for display and touch.
 ///
-/// Display and touch each get their own [`SpiDeviceWithConfig`] over the same underlying bus,
-/// with independent chip-select pins *and* independent clock speeds: [`SpiDeviceWithConfig`]
+/// Display and touch each get their own `SpiDeviceWithConfig` over the same underlying bus,
+/// with independent chip-select pins *and* independent clock speeds: `SpiDeviceWithConfig`
 /// re-applies its device's `embassy_rp::spi::Config` to the shared bus immediately before each of
 /// its transactions, so the physical SPI clock switches between the display and touch settings as
 /// display and touch take turns using the bus. Because the two halves share
@@ -246,7 +246,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
             lcd_dc_pin,
             lcd_rst_pin,
             lcd_backlight_pin,
-            orientation,
+            Orientation::Landscape,
             background_color,
             foreground_color,
             font,
@@ -260,6 +260,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
             calibration_flash_block,
             recalibration_button,
             None,
+            orientation,
         )
         .await
         .map_err(|error| match error {
@@ -267,6 +268,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
             backend::Error::Flash(flash_error) => flash_error,
         })?;
 
+        display.set_orientation(orientation)?;
         Ok(Self { display, touch })
     }
 }

@@ -406,17 +406,38 @@ surface.
 
 #### Phase 5 Correction: Rendered CYD Documentation
 
-Keep the retained public API unchanged while correcting the remaining rendered
-documentation problems found during the final audit:
+Keep the retained application-facing API shape unchanged while correcting the
+remaining behavior and rendered-documentation problems found during the final
+audit:
 
-- State one authoritative touch-coordinate contract everywhere it is relevant:
-  calibrated `TouchEvent` points use the panel's fixed 320x240 landscape
-  coordinates. An application whose UI follows another display orientation
-  maps each point exactly once with `Orientation::map_landscape_point`.
+- Make the public touch-coordinate contract match the display contract:
+  `CydTouch::read` returns calibrated `TouchEvent::Down` and `TouchEvent::Move`
+  points in the configured logical display orientation. Their coordinate bounds
+  must match `CydDisplay::screen_size()`. Applications must not call
+  `Orientation::map_landscape_point` on ordinary touch events.
+- Keep calibration data in the panel's fixed 320x240 landscape coordinate
+  system. Run the interactive calibration and its verification UI in
+  `Orientation::Landscape`; after calibration, apply the requested runtime
+  orientation before returning the complete device. A saved landscape
+  calibration remains reusable in every runtime orientation and its persisted
+  representation must remain compatible.
+- Store or otherwise carry the configured orientation at the calibrated-touch
+  implementation boundary. ESP and RP must apply
+  `Orientation::map_landscape_point` exactly once after raw-to-landscape
+  calibration and before constructing an application-facing `TouchEvent`.
+  Memory and WASM must satisfy the same public output contract without remapping
+  source events that are already in logical display coordinates. Document and
+  test each source boundary. If runtime orientation can change, update display
+  and touch together so they cannot disagree.
+- Audit every caller that currently invokes `map_landscape_point` on a
+  `TouchEvent`, including the shared DNS Tester and its tests, and remove the
+  now-redundant mapping. Retain `map_landscape_point` for calibration/backend
+  work and direct coordinate conversion, not as a required application step.
 - Put one focused, compilable `rust,no_run` calibrated-touch example on the
   primary touch type, and link directly to that example from both `CydTouch`
   and `TouchEvent`. The complete-device loop may remain as broader supporting
-  coverage, but it is not the focused touch example.
+  coverage, but it is not the focused touch example. The example should use
+  `?` to propagate read errors and consume the already-oriented event directly.
 - Make each public `cyd`, `tiling`, and `touch` module page contain either a
   compilable example or a direct, working link to the primary type's compiled
   example. The `tiling` page must visibly direct readers to the canonical
@@ -454,10 +475,19 @@ This correction is complete only when all of the following are true:
   above, and every promised link lands on the stated example.
 - `CydTouch` and `TouchEvent` both lead directly to the focused calibrated-touch
   example, whose coordinate handling agrees with their prose.
+- Tests cover all four orientations and prove that calibrated corner and
+  representative interior points returned by `CydTouch::read` lie in the same
+  logical coordinate system and bounds as the display. Tests also guard against
+  double mapping in migrated consumers.
+- Interactive calibration and verification are performed in landscape, while
+  the complete device returned to the application uses its requested runtime
+  orientation. Existing saved calibration data still loads successfully.
 - The ESP and RP rendered pages describe the same shared API contract and differ
   only where platform construction or hardware requires it.
-- The existing public/private boundary remains unchanged; no compatibility
-  aliases, lint suppressions, or additional drawing APIs are introduced.
+- The existing application public/private boundary remains unchanged; reshape
+  the narrow backend seam only if required to carry orientation cleanly. No
+  compatibility aliases, lint suppressions, or additional drawing APIs are
+  introduced.
 - `just update-docs-core`, `just update-docs-esp`, `just update-docs-rp`, and
   `cargo check-all` pass, with `cargo check-all` run last.
 

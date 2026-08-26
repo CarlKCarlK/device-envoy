@@ -604,7 +604,11 @@ impl TouchUncalibrated for CydTouchUncalibratedMemory {
             .pop_current_frame_event())
     }
 
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
+    fn calibrate(
+        self,
+        calibration_config: CalibrationConfig,
+        _orientation: Orientation,
+    ) -> Self::Calibrated {
         CydTouchMemory {
             shared: self.shared,
             calibration_config,
@@ -1193,14 +1197,14 @@ mod tests {
         VERIFY_TIMEOUT_FRAMES,
     };
     use crate::cyd::{
-        Cyd, CydDisplay,
+        Cyd, CydDisplay, CydTouch,
         backend::{
             CalibrationConfig, Error as CalibrationError, RawTouchEvent, TouchUncalibrated,
             ensure_calibration,
         },
-        display::CydFrame,
+        display::{CydFrame, Orientation},
         touch::{
-            RawPoint,
+            RawPoint, TouchEvent,
             calibration::{
                 CalibrationCorner, VERIFY_HIT_RADIUS_PIXELS, calibration_corner_center,
                 calibration_verify_target_center, distort_demo_screen_to_raw,
@@ -1269,6 +1273,7 @@ mod tests {
             memory_flash_block,
             memory_button,
             confirmed_message,
+            memory_cyd.orientation(),
         ))
     }
 
@@ -1489,6 +1494,44 @@ mod tests {
                 .expect("touch read should succeed"),
             Some(RawTouchEvent::Down { raw_x: 7, raw_y: 9 })
         );
+    }
+
+    #[test]
+    fn preloaded_calibration_preserves_already_oriented_memory_events() {
+        for orientation in [
+            Orientation::Landscape,
+            Orientation::Portrait,
+            Orientation::LandscapeInverted,
+            Orientation::PortraitInverted,
+        ] {
+            let mut memory_cyd = CydMemory::new_with_orientation(
+                orientation,
+                Rgb888::CSS_BLACK,
+                Rgb888::CSS_WHITE,
+                &FONT_9X15_BOLD,
+            );
+            let point = Point::new(
+                orientation.width() as i32 - 1,
+                orientation.height() as i32 - 1,
+            );
+            memory_cyd.push_touch_event(TouchEvent::Down { point });
+            let saved_config = super::identity_calibration_config();
+            let mut memory_flash_block = FlashBlockMemory::with_value(&saved_config);
+            let mut memory_button = memory_cyd.button_memory();
+            let mut touch = run_ensure_calibration(
+                &memory_cyd,
+                &mut memory_flash_block,
+                &mut memory_button,
+                None,
+            )
+            .expect("preloaded calibration should load");
+
+            assert!(matches!(
+                touch.read(),
+                Ok(Some(TouchEvent::Down { point: actual_point }))
+                    if actual_point == point
+            ));
+        }
     }
 
     #[test]

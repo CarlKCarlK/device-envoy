@@ -20,3 +20,5 @@ cargo run \
 DOCS_DIR="${WORKSPACE_TARGET}/riscv32imac-unknown-none-elf/doc/device_envoy_esp/docs/assets"
 mkdir -p "${DOCS_DIR}"
 cp "$WORKSPACE_ROOT/crates/device-envoy-core/docs/assets/"*.png "${DOCS_DIR}/"
+bash "$WORKSPACE_ROOT/scripts/check-rendered-cyd-links.sh" \
+  "$WORKSPACE_TARGET/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd"

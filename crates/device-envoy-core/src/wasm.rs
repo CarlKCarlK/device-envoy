@@ -85,6 +85,7 @@ pub struct CydTouchWasm {
     interaction_state: Rc<Cell<InteractionState>>,
     latest_raw_point: Rc<Cell<Option<RawPoint>>>,
     calibration_config: CalibrationConfig,
+    orientation: Orientation,
 }
 
 #[derive(Clone)]
@@ -154,6 +155,7 @@ impl CydWasm {
             interaction_state: touch_source.interaction_state,
             latest_raw_point: touch_source.latest_raw_point,
             calibration_config: identity_calibration_config(),
+            orientation,
         };
         Self { display, touch }
     }
@@ -203,6 +205,11 @@ impl CydTouchWasmSource {
         }
     }
 
+    /// Queue a calibrated-panel point in fixed landscape coordinates.
+    ///
+    /// The browser control converts logical canvas coordinates to this raw
+    /// calibration boundary before calling the source. `CydTouchWasm::read`
+    /// performs the one runtime-orientation mapping for the application.
     pub fn touch_down(&self, x: f32, y: f32) {
         match self.interaction_state.get() {
             InteractionState::WaitingForFreshPress => return,
@@ -223,6 +230,7 @@ impl CydTouchWasmSource {
         });
     }
 
+    /// Queue a movement point in fixed landscape calibration coordinates.
     pub fn touch_move(&self, x: f32, y: f32) {
         if self.interaction_state.get() != InteractionState::PointerDown {
             return;
@@ -564,13 +572,17 @@ impl CydTouch for CydTouchWasm {
                 RawTouchEvent::Down { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Down {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Move { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Move {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Up => TouchEvent::Up,

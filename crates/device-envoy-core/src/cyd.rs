@@ -6,7 +6,8 @@
 //! - the same standalone CYD 320×240 SPI display/touch board, driven
 //!   externally by both ESP32 and Raspberry Pi Pico 2 setups
 //!
-//! See [`Cyd`] for the primary trait and usage example.
+//! See [`Cyd`] for the primary trait and usage example. The four drawing
+//! strategies are compared together on [`CydDisplay`].
 
 pub mod backend;
 pub mod display;
@@ -152,31 +153,55 @@ pub trait Cyd: Sized {
     fn orientation(&self) -> Orientation;
 }
 
-/// A CYD touch source for calibrated, screen-space events that apps read.
+/// A CYD touch source for calibrated, oriented events that apps read.
 ///
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
 /// the same screen coordinates as the display, or `None` when there is no
-/// touch. See the canonical [`Cyd`] device-loop example; applications should
-/// not need the platform-author-only [`backend`] module.
+/// touch. See the [canonical calibrated-read example](CydTouch::read);
+/// applications should not need the platform-author-only backend module.
 pub trait CydTouch: Sized {
     /// Error returned when reading touch fails.
     type Error;
 
     /// Read the next calibrated touch event, if any.
     ///
-    /// Returned points use fixed landscape-panel coordinates (`320×240`),
-    /// regardless of display orientation. Consumers that render an oriented
-    /// screen must apply [`Orientation::map_landscape_point`] exactly once
-    /// before hit testing. Returns `Ok(None)` when there is no pending touch.
-    /// Errors only on a hardware/read failure. See the [canonical calibrated-read
-    /// example](Cyd).
+    /// Returned points are calibrated and oriented into the same logical
+    /// coordinates as the display's [`CydDisplay::screen_size`]. Returns
+    /// `Ok(None)` when there is no pending touch.
+    /// Errors only on a hardware/read failure.
+    ///
+    /// The canonical calibrated-read example below consumes the already
+    /// oriented point directly; applications must not map it a second time.
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::{CydTouch, touch::TouchEvent};
+    ///
+    /// fn read_calibrated<T: CydTouch>(touch: &mut T) -> Result<(), T::Error> {
+    ///     if let Some(event) = touch.read()? {
+    ///         let point = match event {
+    ///             TouchEvent::Down { point } | TouchEvent::Move { point } => {
+    ///                 // `point` is already in the display's logical coordinates.
+    ///                 point
+    ///             }
+    ///             TouchEvent::Up => return Ok(()),
+    ///         };
+    ///         consume_point(point);
+    ///     }
+    ///     Ok(())
+    /// }
+    ///
+    /// fn consume_point(point: embedded_graphics::prelude::Point) {
+    ///     // Hit testing and drawing use this logical display coordinate directly.
+    ///     assert!(point.x >= 0 && point.y >= 0);
+    /// }
+    /// ```
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
 }
 
 /// A CYD display.
 ///
 /// The screen is a fixed 320×240 RGB565 panel. `CydDisplay` offers three
-/// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
+/// ways to draw, trading memory for flexibility: [`display::CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html)s that can be
 /// drawn into and flushed to any rectangle on screen; callback-tiled frames (see
 /// [`CydDisplay::for_each_tile`]) that cover the screen (or a rectangle) in smaller pieces when
 /// memory is tight; and contiguous-pixel methods (see
@@ -338,7 +363,7 @@ frame.flush().await?;
 
     /// Fill `rectangle` immediately in physical-screen coordinates.
     ///
-    /// Unlike [`display::CydFrame::fill`], this is a device-level operation rather than a
+    /// Unlike [`display::CydFrame::fill`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.fill), this is a device-level operation rather than a
     /// frame-local buffered draw. Implementations clip to the physical screen and
     /// treat an empty intersection as a no-op.
     ///
@@ -398,7 +423,7 @@ frame.flush().await?;
     /// Draw projected draw items immediately inside `bounds`.
     ///
     /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle) and
-    /// the [`display::DrawItem`] documentation for the draw-item types this consumes.
+    /// the [`display::DrawItem`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/enum.DrawItem.html) documentation for the draw-item types this consumes.
     fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,

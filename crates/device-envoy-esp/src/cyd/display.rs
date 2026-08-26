@@ -68,6 +68,14 @@ pub(crate) struct CydDisplayEsp<D: SpiDevice<u8> = CydDisplaySpiDevice> {
 }
 
 impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
+    pub(crate) fn set_orientation(&mut self, orientation: Orientation) -> Result<(), super::Error> {
+        self.display
+            .set_orientation(orientation_to_mipi(orientation))
+            .map_err(|_| super::Error::SetOrientation)?;
+        self.screen_size = orientation.size();
+        Ok(())
+    }
+
     /// Oriented screen size stored at init time.
     #[must_use]
     pub const fn size(&self) -> Size {

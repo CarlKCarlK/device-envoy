@@ -32,12 +32,13 @@
 //! }
 //! ```
 
-use super::display::CydFrame;
+use super::display::{CydFrame, Orientation};
 
 /// The platform-only display construction seam used by ESP and RP backends.
 ///
 /// This is public because those implementations live in separate crates and
-/// cannot implement a private core-only hook. Applications should use
+/// cannot implement a private core-only hook. The platform-author example is
+/// [`crate::cyd::backend`]. Applications should use
 /// [`super::CydDisplay::frame_mut`], [`super::CydDisplay::full_frame_mut`], or
 /// [`super::CydDisplay::for_each_tile`] instead.
 pub trait DisplayBackend {
@@ -83,7 +84,7 @@ pub use super::touch::driver::Error;
 
 /// Load or interactively create calibration for a platform touch backend.
 ///
-/// See the platform-author example on [`super::backend`]. Applications should
+/// See the platform-author example on [`crate::cyd::backend`]. Applications should
 /// use calibrated [`super::CydTouch`] reads instead.
 pub use super::touch::driver::ensure_calibration;
 
@@ -91,20 +92,24 @@ pub use super::touch::driver::ensure_calibration;
 /// constructor workflow. This backend seam is public only because ESP and RP
 /// are separate crates; applications should use [`super::CydTouch`].
 pub trait TouchUncalibrated: Sized {
-    /// See the platform-author example on [`super::backend`].
+    /// See the platform-author example on [`crate::cyd::backend`].
     /// Error returned when reading raw touch events.
     type Error;
-    /// See the platform-author example on [`super::backend`].
+    /// See the platform-author example on [`crate::cyd::backend`].
     /// The calibrated touch implementation produced by this backend.
     type Calibrated: super::CydTouch<Error = Self::Error>;
 
     /// Read the next raw touch event, if any.
     ///
-    /// See the platform-author example on [`super::backend`].
+    /// See the platform-author example on [`crate::cyd::backend`].
     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error>;
 
     /// Apply a saved or newly solved calibration.
     ///
-    /// See the platform-author example on [`super::backend`].
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated;
+    /// See the platform-author example on [`crate::cyd::backend`].
+    fn calibrate(
+        self,
+        calibration_config: CalibrationConfig,
+        orientation: Orientation,
+    ) -> Self::Calibrated;
 }

@@ -1,7 +1,7 @@
 //! Display-only data, asset, and drawing plumbing for the CYD's `cyd` device
 //! abstraction.
 //!
-//! The primary type is [`DrawItem`]; see [`CydDisplay::draw_items`](super::CydDisplay::draw_items)
+//! The primary type is [`DrawItem`]; see [`CydDisplay::draw_items`](crate::cyd::CydDisplay::draw_items)
 //! for the canonical draw loop that consumes them.
 
 mod contiguous_pixels;
@@ -80,7 +80,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
 
     /// Clear this frame with the display's default background color.
     ///
-    /// Unlike [`CydDisplay::clear`](super::CydDisplay::clear), this only
+    /// Unlike [`CydDisplay::clear`](crate::cyd::CydDisplay::clear), this only
     /// updates the frame buffer and does not immediately write to the panel.
     ///
     /// See the [canonical `CydFrame` example](CydFrame).
@@ -95,7 +95,8 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// Bulk-copy a full-frame, row-major RGB565 buffer into this frame.
     ///
     /// This is the fast path for a full-screen background: a single
-    /// `copy_from_slice` instead of the per-pixel [`DrawTarget`] path (on the
+    /// `copy_from_slice` instead of the per-pixel
+    /// [`DrawTarget`](https://docs.rs/embedded-graphics/latest/embedded_graphics/draw_target/trait.DrawTarget.html) path (on the
     /// esp32 the per-pixel path makes the ballet loop ~1/3 slower). `src` must
     /// hold exactly one entry per frame pixel — i.e. the source image's
     /// dimensions must match the frame's. A mismatch returns
@@ -108,7 +109,9 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
 
     /// Present the frame's pixels at its rectangle's top-left (screen coordinates).
     ///
-    /// The frame was created over a [`Rectangle`] by [`super::CydDisplay::frame_mut`],
+    /// The frame was created over a
+    /// [`Rectangle`](https://docs.rs/embedded-graphics/latest/embedded_graphics/primitives/struct.Rectangle.html)
+    /// by [`CydDisplay::frame_mut`](crate::cyd::CydDisplay::frame_mut),
     /// so it already knows where it lives and needs no position argument.
     ///
     /// The returned future is the render loop's frame boundary. On the MCU it

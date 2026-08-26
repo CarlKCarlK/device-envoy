@@ -105,7 +105,10 @@ enum CalibrationShape {
 /// instead of bricking boot. The driver simply reruns the calibration flow and
 /// overwrites the block with a fresh solve after the candidate is validated and
 /// the user confirms it by hitting the center verify target, then returns so
-/// the caller can proceed immediately.
+/// the caller can proceed immediately. The caller supplies the runtime
+/// orientation for the calibrated touch result; platform constructors keep the
+/// display in [`Orientation::Landscape`](crate::cyd::display::Orientation::Landscape)
+/// until this flow has completed.
 ///
 /// ```rust,no_run
 /// # use core::{convert::Infallible, future::ready};
@@ -139,7 +142,7 @@ enum CalibrationShape {
 /// #     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
 /// #         Ok(None)
 /// #     }
-/// #     fn calibrate(self, _calibration_config: CalibrationConfig) -> Self::Calibrated {
+/// #     fn calibrate(self, _calibration_config: CalibrationConfig, _orientation: device_envoy_core::cyd::display::Orientation) -> Self::Calibrated {
 /// #         DemoTouch
 /// #     }
 /// # }
@@ -248,6 +251,7 @@ enum CalibrationShape {
 ///     &mut calibration_flash_block,
 ///     &mut recalibration_button,
 ///     Some("Touch calibrated"),
+///     device_envoy_core::cyd::display::Orientation::Landscape,
 /// ).await?;
 /// # Ok(())
 /// # }
@@ -258,6 +262,7 @@ pub async fn ensure_calibration<D, T, F, R>(
     calibration_flash_block: &mut F,
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
+    orientation: crate::cyd::display::Orientation,
 ) -> Result<T::Calibrated, Error<D::Error, F::Error>>
 where
     D: CydDisplay,
@@ -272,6 +277,7 @@ where
         recalibration_button,
         confirmed_message,
         EnsureCalibrationSettings::DEFAULT,
+        orientation,
     )
     .await
 }
@@ -283,6 +289,7 @@ async fn ensure_calibration_with_settings<D, T, F, R>(
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
     ensure_calibration_settings: EnsureCalibrationSettings,
+    orientation: crate::cyd::display::Orientation,
 ) -> Result<T::Calibrated, Error<D::Error, F::Error>>
 where
     D: CydDisplay,
@@ -294,7 +301,7 @@ where
         .load::<CalibrationConfig>()
         .unwrap_or(None)
     {
-        return Ok(touch.calibrate(calibration_config));
+        return Ok(touch.calibrate(calibration_config, orientation));
     }
 
     let mut calibration_flow = CalibrationFlow::new();
@@ -408,7 +415,7 @@ where
                             return Err(Error::Flash(error));
                         }
                         let calibration_config = *candidate_config;
-                        return Ok(touch.calibrate(calibration_config));
+                        return Ok(touch.calibrate(calibration_config, orientation));
                     } else {
                         calibration_flow.restart();
                         calibration_driver_state = CalibrationDriverState::ShowRejected {

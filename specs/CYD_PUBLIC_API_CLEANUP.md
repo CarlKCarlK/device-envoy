@@ -136,6 +136,52 @@ Audit the existing methods accordingly:
 - Do not add automatic `draw_screen` strategy selection until buffer-capacity
   behavior and repeated-drawing semantics are clearly defined and tested.
 
+### Drawing Strategy Examples
+
+Before finalizing the hierarchy, document one canonical, coordinate-sensitive
+scene rendered through every retained drawing strategy:
+
+1. one full-screen frame;
+2. independently updated regional frames;
+3. callback-based tiled rendering; and
+4. contiguous row-major pixel streaming.
+
+The documentation must explain why a caller chooses each strategy, what buffer
+or replay behavior it requires, which coordinate space its drawing operations
+use, and what it gives up compared with the normal frame workflow. Full-screen
+and regional frames are one coherent frame family, but the examples must still
+show their different whole-scene and independently updated-region use cases.
+Tiling must explain that it replays a synchronous scene once per tile.
+Streaming must be presented as a distinct advanced raster path rather than as a
+general drawing-target replacement.
+
+Use a scene with asymmetric landmarks and content crossing region and tile
+boundaries so incorrect origins, clipping, row order, or incomplete coverage
+cannot accidentally look correct. Keep focused compiled `rust,no_run` doctests
+on the individual APIs, and make them link directly to the applicable section
+of the canonical comparison. The examples should use application-facing APIs
+only. If they require backend plumbing, manual tile-coordinate translation, or
+knowledge of internal buffers, treat that as evidence that the API still needs
+design work rather than hiding it as doctest boilerplate.
+
+Back the documentation with host tests that render each strategy into a
+separate `CydMemory` device and assert that all four final framebuffers are
+identical. Where useful, also assert the full-frame, largest-region, and tile
+buffer sizes so the examples demonstrate the memory tradeoff rather than only
+producing the same pixels. The four call sites need not look artificially
+identical; their genuine tradeoffs should be obvious while their output remains
+equivalent.
+
+Linkage Blaze is a required downstream migration target for this phase, not
+merely an optional compatibility check. Its shared CYD examples exercise each
+important level of the hierarchy: `examples/skeleton_clock.rs` uses explicit
+tiling, `examples/clock.rs` uses `fill_contiguous_full` and `draw_items`, and
+the ballet and armatron examples use full frames. Its ESP, RP, and WASM example
+crates also exercise full-screen and regional-frame construction. Update these
+call sites to the final CYD API in the same change, preserving their intended
+memory use and rendering behavior. Do not retain Device Envoy compatibility
+aliases or redundant drawing paths solely to avoid updating Linkage Blaze.
+
 ## Consolidate Errors
 
 Fold the platform-specific display-init, display-flush, and touch-init label
@@ -319,10 +365,18 @@ surface.
 
 - Audit downstream and example use of `frame_mut_with_tile_top_left`, `Tiles`,
   `tiles`, `fill_contiguous_full`, `flush_at`, and `draw_items` before changing
-  their visibility or removing them.
+  their visibility or removing them. Include the sibling Linkage Blaze
+  workspace and classify its shared and platform-specific CYD examples.
 - Implement and test the smallest callback-based tiled workflow that satisfies
   the hierarchy above. Confirm in Rust that its closure and lending-frame
   lifetimes remain straightforward for application callers.
+- Add the canonical four-strategy documentation comparison and framebuffer
+  equivalence tests specified above. Review the four call sites together for
+  clarity, distinct purpose, coordinate consistency, and honest memory costs.
+- Migrate Linkage Blaze's shared clock, skeleton-clock, ballet, and armatron
+  implementations plus its ESP, RP, and WASM example crates to the resulting
+  API. Prefer changes in shared example code over repeated generated or
+  platform-specific edits where the repository structure permits.
 - Remove or privatize superseded peer-level paths instead of adding another
   redundant way to draw.
 - Update the canonical frame, tiling, and streaming documentation so their
@@ -338,6 +392,9 @@ surface.
 ## Validation
 
 - Search examples and downstream starter projects before removing each item.
+- Treat the sibling Linkage Blaze workspace as a required CYD consumer: search
+  and migrate its shared examples and ESP/RP/WASM wrappers, then run its focused
+  checks during the drawing phase and its `cargo check-all` before release.
 - Build core, RP, and ESP rustdoc and reject unresolved intra-doc links.
 - Run doctests with the same feature combinations used to publish the retained
   documentation. A doctest hidden behind a feature absent from docs.rs does not

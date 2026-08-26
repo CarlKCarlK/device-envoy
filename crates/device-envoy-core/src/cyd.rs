@@ -12,7 +12,7 @@ pub mod backend;
 pub mod display;
 pub mod touch;
 
-use display::ContiguousPixels;
+use display::{ContiguousPixels, CydFrame};
 
 /// Native panel width in pixels (landscape): 320. The CYD panel is fixed hardware.
 pub(crate) const SCREEN_WIDTH: usize = 320;
@@ -538,6 +538,46 @@ frame.flush().await?;
     /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
     fn fill(&mut self, color: Rgb565) -> Result<(), Self::Error> {
         self.fill_rectangle(Rectangle::new(Point::zero(), self.screen_size()), color)
+    }
+
+    /// Draw and flush each tile in `grid` through a synchronous callback.
+    ///
+    /// The callback receives one screen-coordinate frame at a time; this helper owns the
+    /// reusable frame and flush sequence, so callers do not need to handle lending iterator
+    /// lifetimes. See [`CydDisplay::tiles`] for the lower-level advanced API.
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::{cyd::{CydDisplay, display::CydFrame, display::tiling::TileGrid}, UnwrapInfallible};
+    /// use embedded_graphics::{Drawable, pixelcolor::Rgb565, prelude::{Point, Primitive, RgbColor, Size}, primitives::{PrimitiveStyle, Rectangle}};
+    ///
+    /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     let grid = TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3);
+    ///     display.for_each_tile(grid, |frame| {
+    ///         frame.fill(Rgb565::BLUE);
+    ///         Rectangle::new(Point::new(12, 18), Size::new(20, 12))
+    ///             .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
+    ///             .draw(frame)
+    ///             .unwrap_infallible();
+    ///     }).await
+    /// }
+    /// ```
+    fn for_each_tile<'a, F>(
+        &'a mut self,
+        grid: display::tiling::TileGrid,
+        mut draw: F,
+    ) -> impl Future<Output = Result<(), Self::Error>> + 'a
+    where
+        Self: Sized,
+        F: for<'frame> FnMut(&mut Self::Frame<'frame>) + 'a,
+    {
+        async move {
+            let mut tiles = self.tiles(grid);
+            while let Some(mut frame) = tiles.next() {
+                draw(&mut frame);
+                frame.flush().await?;
+            }
+            Ok(())
+        }
     }
 
     /// Drive `grid` as a sequence of low-memory tiles.

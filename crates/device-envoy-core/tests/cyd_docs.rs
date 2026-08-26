@@ -3,18 +3,174 @@
 use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
     Cyd, CydDisplay, CydTouch,
-    display::{CydFrame, DrawItem, Image565View},
+    display::{
+        CydFrame, DrawItem, Image565View,
+        tiling::{TileGrid, max_rectangle_pixel_count},
+    },
     touch::TouchEvent,
 };
 use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
 use embedded_graphics::{
-    Drawable,
+    Drawable, Pixel,
     mono_font::ascii::FONT_9X15_BOLD,
     pixelcolor::{Rgb565, Rgb888},
-    prelude::{Point, Primitive, RgbColor, Size},
+    prelude::{IntoStorage, Point, Primitive, RgbColor, Size},
     primitives::{PrimitiveStyle, Rectangle},
 };
 use std::error::Error;
+
+fn comparison_scene<F: CydFrame>(frame: &mut F) {
+    comparison_scene_local(frame, Point::zero());
+}
+
+fn comparison_scene_local<F: CydFrame>(frame: &mut F, screen_origin: Point) {
+    // `frame_mut` gives a regional frame local to its rectangle, so translate
+    // this screen-coordinate scene explicitly for that strategy. The tiled
+    // callback uses screen coordinates and therefore calls `comparison_scene`.
+    let translate = |point: Point| point - screen_origin;
+    CydFrame::clear(frame);
+    Rectangle::new(translate(Point::new(21, 17)), Size::new(211, 67))
+        .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
+        .draw(frame)
+        .unwrap_infallible();
+    Rectangle::new(translate(Point::new(143, 91)), Size::new(119, 83))
+        .into_styled(PrimitiveStyle::with_fill(Rgb565::GREEN))
+        .draw(frame)
+        .unwrap_infallible();
+    Rectangle::new(translate(Point::new(271, 19)), Size::new(17, 39))
+        .into_styled(PrimitiveStyle::with_fill(Rgb565::BLUE))
+        .draw(frame)
+        .unwrap_infallible();
+    Pixel(translate(Point::new(306, 211)), Rgb565::WHITE)
+        .draw(frame)
+        .unwrap_infallible();
+}
+
+fn comparison_scene_pixel(position_x: usize, position_y: usize) -> Rgb565 {
+    let point = Point::new(position_x as i32, position_y as i32);
+    if point == Point::new(306, 211) {
+        Rgb565::WHITE
+    } else if Rectangle::new(Point::new(271, 19), Size::new(17, 39)).contains(point) {
+        Rgb565::BLUE
+    } else if Rectangle::new(Point::new(143, 91), Size::new(119, 83)).contains(point) {
+        Rgb565::GREEN
+    } else if Rectangle::new(Point::new(21, 17), Size::new(211, 67)).contains(point) {
+        Rgb565::RED
+    } else {
+        Rgb565::BLACK
+    }
+}
+
+fn framebuffer(cyd: &CydMemory) -> Vec<u16> {
+    (0..240)
+        .flat_map(|position_y| {
+            (0..320).map(move |position_x| cyd.pixel(position_x, position_y).into_storage())
+        })
+        .collect()
+}
+
+#[test]
+fn cyd_drawing_strategies_produce_identical_framebuffers()
+-> Result<(), device_envoy_core::memory::Error> {
+    let full_frame = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let mut frame = display.full_frame_mut();
+        let frame_size = frame.rectangle().size;
+        assert_eq!((frame_size.width, frame_size.height), (320, 240));
+        comparison_scene(&mut frame);
+        frame.flush().await?;
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let regional_frames = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let mut actual_dimensions = Vec::new();
+        for top_left in [
+            Point::new(0, 0),
+            Point::new(160, 0),
+            Point::new(0, 120),
+            Point::new(160, 120),
+        ] {
+            let rectangle = Rectangle::new(top_left, Size::new(160, 120));
+            let mut frame = display.frame_mut(rectangle);
+            let frame_size = frame.rectangle().size;
+            actual_dimensions.push((frame_size.width, frame_size.height));
+            comparison_scene_local(&mut frame, top_left);
+            frame.flush().await?;
+        }
+        assert_eq!(actual_dimensions, [(160, 120); 4]);
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let tiled_frames = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let mut maximum_dimensions = (0, 0);
+        display
+            .for_each_tile(
+                TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3),
+                |frame| {
+                    let frame_size = frame.rectangle().size;
+                    maximum_dimensions.0 = maximum_dimensions.0.max(frame_size.width);
+                    maximum_dimensions.1 = maximum_dimensions.1.max(frame_size.height);
+                    comparison_scene(frame);
+                },
+            )
+            .await?;
+        assert_eq!(maximum_dimensions, (80, 80));
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let contiguous = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let pixels = (0..240).flat_map(|position_y| {
+            (0..320).map(move |position_x| comparison_scene_pixel(position_x, position_y))
+        });
+        display.fill_contiguous_full(pixels)?;
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let expected = framebuffer(&full_frame);
+    assert_eq!(framebuffer(&regional_frames), expected);
+    assert_eq!(framebuffer(&tiled_frames), expected);
+    assert_eq!(framebuffer(&contiguous), expected);
+
+    let full_pixels = 320 * 240;
+    let largest_region_pixels = max_rectangle_pixel_count(
+        Rectangle::new(Point::zero(), Size::new(160, 120)),
+        Rectangle::new(Point::new(160, 120), Size::new(160, 120)),
+    );
+    let tile_pixels =
+        TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3).max_tile_pixel_count();
+    assert_eq!(
+        (full_pixels, largest_region_pixels, tile_pixels),
+        (76800, 19200, 6400)
+    );
+    Ok(())
+}
 
 const BITMAP_WIDTH: usize = 64;
 const BITMAP_HEIGHT: usize = 64;

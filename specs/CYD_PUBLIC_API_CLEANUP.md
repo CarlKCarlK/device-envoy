@@ -404,6 +404,63 @@ surface.
 - Fix any remaining visibility, naming, parity, doctest, or link failure.
 - Run the complete validation below, with `cargo check-all` last.
 
+#### Phase 5 Correction: Rendered CYD Documentation
+
+Keep the retained public API unchanged while correcting the remaining rendered
+documentation problems found during the final audit:
+
+- State one authoritative touch-coordinate contract everywhere it is relevant:
+  calibrated `TouchEvent` points use the panel's fixed 320x240 landscape
+  coordinates. An application whose UI follows another display orientation
+  maps each point exactly once with `Orientation::map_landscape_point`.
+- Put one focused, compilable `rust,no_run` calibrated-touch example on the
+  primary touch type, and link directly to that example from both `CydTouch`
+  and `TouchEvent`. The complete-device loop may remain as broader supporting
+  coverage, but it is not the focused touch example.
+- Make each public `cyd`, `tiling`, and `touch` module page contain either a
+  compilable example or a direct, working link to the primary type's compiled
+  example. The `tiling` page must visibly direct readers to the canonical
+  `CydDisplay::for_each_tile` tiled draw loop; prose that merely names the
+  method without landing on its example is insufficient.
+- Give the core, ESP, and RP top-level `cyd` pages a clear start-here path to
+  the complete-device constructor and the device-agnostic `Cyd`, `CydDisplay`,
+  and `CydTouch` traits. Keep the ESP and RP introductions parallel where their
+  hardware permits.
+- Make intra-doc links survive the core module's re-export through the ESP and
+  RP crates. Do not use a relative link such as `super::backend` on an
+  application-facing page when that target is not re-exported there. Mention
+  the backend seam in plain prose or use a link that resolves in every rendered
+  location; do not present it as an application API.
+- Present the four drawing strategies together in one discoverable place so a
+  caller can compare memory use, coordinate handling, and whether drawing must
+  be replayed. Keep the framebuffer-equivalence test as the behavioral check;
+  this is a documentation correction, not a new drawing API.
+
+The `tiling` and `touch` modules remain public. They are not implementation-only
+namespaces: `tiling::TileGrid` and its rectangle-sizing helpers configure the
+public `CydDisplay::for_each_tile` workflow, while `touch::TouchEvent` is the
+public result of `CydTouch::read`. These namespaces keep display layout and
+touch input distinct and give their related public types discoverable homes.
+The internal `Tiles` iterator, calibration state machine, raw-point types, and
+backend implementation details remain private or confined to the deliberately
+narrow `cyd::backend` seam.
+
+This correction is complete only when all of the following are true:
+
+- The rendered core, ESP, and RP `cyd`, `cyd::tiling`, and `cyd::touch` pages
+  contain no unresolved bracketed links or misleading links to unavailable
+  re-exports.
+- All three public module pages provide the direct example coverage described
+  above, and every promised link lands on the stated example.
+- `CydTouch` and `TouchEvent` both lead directly to the focused calibrated-touch
+  example, whose coordinate handling agrees with their prose.
+- The ESP and RP rendered pages describe the same shared API contract and differ
+  only where platform construction or hardware requires it.
+- The existing public/private boundary remains unchanged; no compatibility
+  aliases, lint suppressions, or additional drawing APIs are introduced.
+- `just update-docs-core`, `just update-docs-esp`, `just update-docs-rp`, and
+  `cargo check-all` pass, with `cargo check-all` run last.
+
 ## Validation
 
 - Search examples and downstream starter projects before removing each item.

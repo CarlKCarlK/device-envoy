@@ -415,7 +415,7 @@ audit:
   points in the configured logical display orientation. Their coordinate bounds
   must match `CydDisplay::screen_size()`. Applications must not call
   `Orientation::map_landscape_point` on ordinary touch events.
-- Keep calibration data in the panel's fixed 320x240 landscape coordinate
+- Keep calibration data in the panel's fixed 320×240 landscape coordinate
   system. Run the interactive calibration and its verification UI in
   `Orientation::Landscape`; after calibration, apply the requested runtime
   orientation before returning the complete device. A saved landscape
@@ -490,6 +490,203 @@ This correction is complete only when all of the following are true:
   introduced.
 - `just update-docs-core`, `just update-docs-esp`, `just update-docs-rp`, and
   `cargo check-all` pass, with `cargo check-all` run last.
+
+### 6. Pass 2: Rendered New-User and Public API Review
+
+This pass follows the rendered ESP `cyd` documentation as a competent Rust and
+embedded programmer who has not used Device Envoy before. It is deliberately
+separate from the mechanical link and doctest audit above: a compiled example
+can still be unusable when essential context is hidden, and a public item can
+still be confusing when every link resolves.
+
+Do not restore APIs removed in Phase 4, and do not remove a convenience merely
+because another lower-level operation can express the same behavior. Prefer the
+path that directly expresses ordinary application intent. Apply shared fixes to
+core first and verify that the ESP and RP re-exports render the same contract.
+
+#### Pass 1 Reader Path and Breaks
+
+The natural reader path from the rendered ESP module was:
+
+1. `cyd` module: learned that `CydEsp` is the complete device and
+   `CydDisplayEsp` is display-only, but was not told how to choose among
+   `CydEsp`, `CydEspOneSpi`, and `CydDisplayEsp`.
+2. `CydEsp`: learned that construction owns calibration and requires
+   `CydStaticEsp`, but the rendered `CydEsp::new` example uses an undefined
+   `touch_spi`, so the first complete-device example cannot be copied or
+   understood from visible documentation.
+3. `CydStaticEsp`: learned that the application chooses buffer capacity, but
+   not how full-frame, regional, or tiled drawing determines the required
+   `PIXEL_COUNT`, nor what happens when a frame exceeds it.
+4. `CydDisplayEsp`: learned that a standalone display is possible, but its
+   example allocates `CydStaticEsp<0>` without explaining that choice or what
+   drawing operations remain usable with no frame buffer.
+5. `CydDisplay`: found the intended frame, tile, and streaming hierarchy, but
+   the published page says there are three strategies and then discusses four
+   paths; the four-way comparison exists only as an unlinked host test rather
+   than a visible published example.
+6. `Cyd` and `CydFrame`: learned the generic device loop and asynchronous frame
+   boundary, but then encountered both the generic asynchronous
+   `CydFrame::flush` and the ESP concrete synchronous `CydFrameEsp::flush`
+   without an explanation of which one application code should call.
+7. `CydTouch` and `TouchEvent`: learned that returned points are already in the
+   logical oriented display coordinates and must not be mapped again.
+8. `Orientation`: encountered a direct contradiction: the
+   `map_landscape_point` page says a calibrated `TouchEvent` must be converted
+   exactly once. At this point a reader cannot know which touch contract is
+   correct.
+9. `tiling` and `TileGrid`: learned the replayable low-memory workflow, but the
+   sizing example is not connected to `CydStaticEsp` and uses discarded values
+   instead of demonstrating a real static buffer decision.
+10. `fill_contiguous`, `fill_contiguous_full`, and `draw_items`: learned that
+    streaming is advanced, but the regional method links to an example that
+    calls only the full-screen method, while the immediate-operations example
+    calls `draw_items` with an empty item list and never explains
+    `PIXEL_SOURCE_COUNT`.
+11. `CydEspOneSpi`: finally learned the shared-bus alternative, but only after
+    returning to the module inventory; its documentation leads with bus
+    implementation details instead of when a user should choose it.
+
+The intended reader path should instead be explicit on the module page:
+
+`cyd` → choose complete/two-SPI, complete/one-SPI, or display-only construction
+→ choose buffer capacity from the drawing workflow → construct → use
+`Cyd::parts`/`Cyd::display`/`Cyd::touch` → use full or regional frames by
+default → choose tiling when RAM requires it → choose contiguous streaming only
+when already producing a raster.
+
+#### Pass 2 Required Corrections
+
+Address these concrete problems in severity order.
+
+1. **Make the touch-coordinate contract consistent.**
+   `CydTouch::read` and `TouchEvent` are authoritative: application events are
+   already calibrated and mapped into the configured logical display
+   orientation. Rewrite `Orientation::map_landscape_point` and its example to
+   describe direct conversion of fixed-landscape panel, calibration, or asset
+   coordinates. State explicitly that applications must not apply it to a
+   `TouchEvent`. Search every rendered core, ESP, and RP page for the obsolete
+   instruction.
+
+2. **Add a real start-here constructor decision.**
+   The ESP and RP module introductions must explain when to choose the normal
+   complete-device constructor, the one-SPI complete-device constructor, or the
+   display-only constructor. Lead each one-SPI page with its user-visible reason
+   and tradeoff before explaining bus arbitration. Link to a complete runnable
+   board example where one exists.
+
+3. **Make the primary constructor examples visible and usable.**
+   Essential values such as ESP `touch_spi` must not exist only in hidden
+   doctest scaffolding. A visible example may accept a peripheral as a function
+   parameter when no single chip supplies a universal concrete value, but the
+   reader must see where every argument comes from. Add concise argument
+   documentation to the long two-SPI constructor, including the distinction
+   between the two buses, calibration flash, and recalibration button. Keep the
+   example compile-checked.
+
+4. **Specify the frame-buffer capacity contract.**
+   Document how `CydStaticEsp`/`CydStaticRp` capacity relates to
+   `full_frame_mut`, `frame_mut`, and `for_each_tile`, including the exact
+   failure behavior when a requested frame or tile exceeds capacity. Provide
+   meaningful compile-checked storage examples for:
+   - `SCREEN_PIXELS` full-frame storage;
+   - the largest of fixed regional rectangles; and
+   - `TileGrid::max_tile_pixel_count` tiled storage.
+   Explain any intentional zero-sized display storage and which immediate or
+   streaming operations remain usable with it; otherwise stop using zero in the
+   primary `CydDisplayEsp::new`/`CydDisplayRp::new` examples.
+
+5. **Publish the drawing decision model, not only its host test.**
+   Describe three mechanisms and four common workflows consistently: full
+   frame, regional frame, tiled replay, and contiguous streaming. Put their
+   short call shapes, coordinate space, replay requirement, and buffer cost on
+   the published `CydDisplay` page. Link the host framebuffer-equivalence test
+   only as supplemental evidence. Use “logical display coordinates,”
+   “frame-local coordinates,” and “fixed landscape panel coordinates”
+   consistently; replace ambiguous “physical-screen coordinates.”
+
+6. **Correct weak or misleading drawing examples.**
+   - Point `fill_contiguous` to an example that actually calls regional
+     `fill_contiguous`, and specify the required pixel count and behavior for
+     short or long iterators for both contiguous methods.
+   - Make `draw_items` show at least one real `DrawItem` and explain what
+     `PIXEL_SOURCE_COUNT` counts and how callers choose it.
+   - Replace discarded `TileGrid` sizing values with assertions or a real
+     `CydStaticEsp`/`CydStaticRp` capacity calculation.
+   - Make the generic `Cyd` example respond meaningfully to a touch or draw a
+     visible item rather than only binding underscore-prefixed values.
+
+7. **Explain the concrete/generic frame split.**
+   On `CydFrameEsp` and `CydFrameRp`, explain that the inherent concrete
+   `flush` is synchronous while platform-neutral `CydFrame::flush` is awaited,
+   and show the intended call form for each. Align `write_text` wording around
+   frame-local `(0, 0)` and make creation of the concrete frame discoverable
+   from its example rather than presenting a frame parameter with no origin.
+   Retain useful inherent conveniences; do not remove them merely because the
+   generic trait has related methods.
+
+8. **Finish the public-item explanations.**
+   Add useful one-line descriptions for `Cyd::Display`, `Cyd::Touch`, all
+   `TouchEvent` variants and point fields, all `Orientation` variants, and the
+   public `TileGrid` fields or their replacements. Application-facing `touch`
+   documentation should lead with reading events; move platform-author backend
+   discussion to `cyd::backend`.
+
+#### Public Surface Decisions Requiring Audit
+
+- `TileGrid::top_left` and `TileGrid::size` are publicly mutable while the
+  constructor validates the grid counts. Audit whether mutation can bypass or
+  invalidate those invariants. Prefer private fields plus `top_left`, `size`,
+  or `rectangle` getters unless a demonstrated application needs struct-literal
+  construction or mutation. Also evaluate `TileGrid::new(rectangle, columns,
+  rows)` as the clearer constructor shape.
+- Audit application use of `CydFrame::tile_top_left`. Its rendered semantics are
+  translation plumbing, and ordinary tiled drawing is already translated by
+  `for_each_tile`. Move it to the backend seam or remove it if no supported
+  application needs to inspect it; otherwise document the concrete application
+  use that justifies it.
+- Resolve the asymmetry between `Cyd::display()` and the absence of
+  `Cyd::touch()`. A `touch()` convenience directly expresses common intent and
+  is preferable to forcing generic callers to borrow and discard the display
+  half. Review the public `CydEsp`/`CydRp` component fields at the same time and
+  establish one canonical access story.
+- Keep `DisplayBackend` public because platform implementations are separate
+  crates, but make every description visible through `CydDisplayEsp` and
+  `CydDisplayRp` say immediately that it is a platform-author seam. Strengthen
+  the backend example so it explicitly names or implements `DisplayBackend`;
+  merely using `D: CydDisplay` does not demonstrate the item.
+- Review the long primary constructors against the project's 90/10 goal. The
+  common path currently requires explicit SPI policy, colors, and font even
+  though defaults exist. Before changing signatures, propose one direct,
+  non-builder constructor hierarchy that makes the usual device easy while
+  preserving an explicit advanced configuration path. Review that proposal
+  before implementation.
+
+Do not remove `CydDisplayEsp`, `CydTouchEsp`, `CydFrameEsp`, their RP peers,
+`Error`, `Orientation`, the two default constants, `Cyd`, `CydDisplay`,
+`CydTouch`, `TouchEvent`, `TileGrid`, or the rectangle-sizing helpers merely to
+shrink the sidebar. They all have demonstrated signature, construction,
+drawing, or storage roles. The questions above concern invariants, hierarchy,
+and user intent rather than raw item count.
+
+#### Pass 2 Acceptance
+
+- Repeat the rendered new-user walkthrough without implementation source. The
+  reader must be able to choose a constructor, choose valid storage, construct
+  a device, draw and flush a normal frame, and read oriented touch without
+  guessing or encountering contradictory instructions.
+- Re-run the public-item checklist against every canonical non-redirect core,
+  ESP, and RP CYD page. Record specific coverage for every retained method and
+  variant, not only a page count.
+- Add focused tests for any `TileGrid` visibility/invariant change and for the
+  documented insufficient-buffer and contiguous-iterator behavior.
+- Keep the rendered unresolved-link scan at zero matches and run all published
+  feature/target doctest combinations.
+- Migrate Device Envoy examples, Linkage Blaze, and the ESP/RP starters for any
+  accepted API change. Run `just update-docs-core`, `just update-docs-esp`,
+  `just update-docs-rp`, both workspaces' focused checks, `git diff --check`, and
+  Device Envoy `cargo check-all` last. Stop for review before implementing a
+  constructor redesign or removing a questioned public item.
 
 ## Validation
 

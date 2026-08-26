@@ -7,7 +7,12 @@
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none"))]
 use crate::audio_player;
 
-#[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_pdma_family))]
+#[cfg(all(
+    not(doc),
+    not(feature = "host"),
+    target_os = "none",
+    esp_pdma_family
+))]
 audio_player! {
     pub AudioPlayerGenerated {
         data_pin: GPIO2,
@@ -18,7 +23,12 @@ audio_player! {
     }
 }
 
-#[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_gdma_family))]
+#[cfg(all(
+    not(doc),
+    not(feature = "host"),
+    target_os = "none",
+    esp_gdma_family
+))]
 audio_player! {
     pub AudioPlayerGenerated {
         data_pin: GPIO2,
@@ -52,9 +62,9 @@ pub struct AudioPlayerGenerated;
 pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;
 
 #[cfg(doc)]
-use crate::Result;
+use crate::audio_player::{AtEnd, AudioPlayer, Playable, Volume, VOICE_22050_HZ};
 #[cfg(doc)]
-use crate::audio_player::{AtEnd, AudioPlayer, Playable, VOICE_22050_HZ, Volume};
+use crate::Result;
 
 #[cfg(doc)]
 impl AudioPlayerGenerated {

@@ -108,6 +108,9 @@ impl CalibrationConfig {
         Ok(Self::new(ax, bx, cx, ay, by, cy))
     }
 
+    /// Map one raw controller sample to clamped landscape screen coordinates.
+    ///
+    /// See the [canonical backend-author example](crate::cyd::backend).
     #[must_use]
     pub fn map_raw_to_screen(&self, raw_x: u16, raw_y: u16) -> (f32, f32) {
         let raw_x = raw_x as f32;

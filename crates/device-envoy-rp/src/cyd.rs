@@ -63,6 +63,10 @@ use touch_driver::CydTouchRp as CydTouchRpDevice;
 /// `D` is the underlying `embedded-hal` SPI device type; it defaults to an
 /// exclusively-owned SPI peripheral. Shared-bus backends (see
 /// [`CydRpOneSpi`]) instantiate this with a shared-bus device instead.
+///
+/// The display constructor and static-storage pattern are shown by
+/// [`CydStaticRp`].
+/// The complete-device constructor is shown by [`CydRp::new`].
 pub struct CydDisplayRp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: CydDisplayRpDevice<D>,
     orientation: Orientation,
@@ -89,12 +93,19 @@ pub(crate) struct CydTouchUncalibratedRp<D = touch_driver::CydTouchSpiDevice> {
 }
 
 /// An owned calibrated CYD touch component for RP boards.
+///
+/// Construct it as part of [`CydRp::new`]; applications then call the
+/// calibrated [`CydTouch::read`]
+/// operation.
 pub struct CydTouchRp<D = touch_driver::CydTouchSpiDevice> {
     raw: CydTouchUncalibratedRp<D>,
     calibration_config: CalibrationConfig,
 }
 
 /// A calibrated CYD RP bundle.
+///
+/// Use [`CydRp::new`] after declaring [`CydStaticRp`] storage; construction
+/// performs the saved-or-interactive touch calibration before returning.
 pub struct CydRp {
     /// The owned display component.
     pub display: CydDisplayRp,
@@ -142,6 +153,27 @@ impl<const PIXEL_COUNT: usize> CydStaticRp<PIXEL_COUNT> {
 }
 
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
+///
+/// Frames are returned by [`CydDisplay::frame_mut`] and implement the core
+/// [`CydFrame`] operations.
+///
+/// ```rust,no_run
+/// #![no_std]
+/// #![no_main]
+/// use device_envoy_rp::cyd::{CydFrameRp, Error};
+/// use embedded_hal::spi::SpiDevice;
+/// use embedded_graphics::{pixelcolor::Rgb565, prelude::RgbColor};
+/// # #[panic_handler]
+/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+///
+/// fn use_frame<D: SpiDevice<u8>>(frame: &mut CydFrameRp<'_, D>) -> Result<(), Error> {
+///     let _width = frame.width();
+///     let _height = frame.height();
+///     frame.fill(Rgb565::BLACK).write_text("CYD");
+///     let _pixels = frame.raw_pixels_mut();
+///     frame.flush()
+/// }
+/// ```
 pub struct CydFrameRp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: &'a mut CydDisplayRpDevice<D>,
     view: RegionView<'a>,
@@ -160,30 +192,40 @@ pub struct CydFrameRp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 
 impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     /// Fill the frame with an explicit color.
+    ///
+    /// See the [canonical `CydFrameRp` example](CydFrameRp).
     pub fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.view.fill(color);
         self
     }
 
     /// The frame's width in pixels.
+    ///
+    /// See the [canonical `CydFrameRp` example](CydFrameRp).
     #[must_use]
     pub fn width(&self) -> usize {
         self.view.width()
     }
 
     /// The frame's height in pixels.
+    ///
+    /// See the [canonical `CydFrameRp` example](CydFrameRp).
     #[must_use]
     pub fn height(&self) -> usize {
         self.view.height()
     }
 
     /// Borrow the frame's raw RGB565 pixels, row-major.
+    ///
+    /// See the [canonical `CydFrameRp` example](CydFrameRp).
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
 
     /// Present this frame's pixels at its rectangle's top-left (set by
     /// [`CydDisplay::frame_mut`]).
+    ///
+    /// See the [canonical `CydFrameRp` example](CydFrameRp).
     pub fn flush(&mut self) -> Result<(), Error> {
         Ok(self
             .display
@@ -282,6 +324,8 @@ impl<D: SpiDevice<u8>> PixelTarget for CydFrameRp<'_, D> {
 
 #[derive(Debug)]
 /// Error from a CYD RP display or touch operation.
+///
+/// See the [`CydRp::new`] constructor example, which propagates this error.
 pub enum Error {
     /// The display panel could not be initialized.
     InitDisplay,
@@ -354,6 +398,22 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
 
 impl CydDisplayRp<display::CydDisplaySpiDevice> {
     /// Construct a display-only `CydDisplayRp` that owns its draw buffer.
+    ///
+    /// ```rust,no_run
+    /// #![no_std]
+    /// #![no_main]
+    /// use device_envoy_rp::{Result, cyd::{CydDisplayRp, CydRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}};
+    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #[panic_handler]
+    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+    /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
+    ///     static STORAGE: device_envoy_rp::cyd::CydStaticRp<0> = CydRp::new_static();
+    ///     let _display = CydDisplayRp::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16,
+    ///         p.PIN_17, p.PIN_20, p.PIN_21, p.PIN_22, DEFAULT_DISPLAY_SPI_HZ,
+    ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT)?;
+    ///     Ok(())
+    /// }
+    /// ```
     #[expect(
         clippy::too_many_arguments,
         reason = "mirrors CydEsp's constructor shape"
@@ -455,15 +515,39 @@ impl CydTouchUncalibratedRp<touch_driver::CydTouchSpiDevice> {
 
 impl CydRp {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
+    ///
+    /// Used by the [`CydStaticRp`] storage example.
     pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
 
     /// Create [`CydStaticRp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    ///
+    /// See the [`CydStaticRp`] example.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticRp<PIXEL_COUNT> {
         CydStaticRp::new()
     }
 
     /// Construct a calibrated CYD bundle using the saved-or-interactive calibration flow.
+    ///
+    /// ```rust,no_run
+    /// #![no_std]
+    /// #![no_main]
+    /// use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #[panic_handler]
+    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+    ///
+    /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
+    ///     let [mut flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    ///     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
+    ///     static STORAGE: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
+    ///     let _cyd = CydRp::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17,
+    ///         p.PIN_20, p.PIN_21, p.PIN_22, DEFAULT_DISPLAY_SPI_HZ, Orientation::Landscape,
+    ///         Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT, p.SPI1, p.PIN_10, p.PIN_11,
+    ///         p.PIN_12, p.PIN_13, p.PIN_14, &mut flash, &mut button).await?;
+    ///     Ok(())
+    /// }
+    /// ```
     #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]
     pub async fn new<
         const PIXEL_COUNT: usize,

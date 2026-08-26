@@ -3,13 +3,13 @@
 //! This module provides [`CydRpOneSpi`], which arbitrates a single physical SPI bus between
 //! the ST7789 display and the XPT2046 touch controller using an
 //! `embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig` per peripheral (each
-//! with its own chip-select pin *and* its own SPI clock speed — see [`super::DEFAULT_DISPLAY_SPI_HZ`] vs
-//! [`TOUCH_SPI_HZ`]). It reuses the same display/touch drivers as the two-SPI [`super::CydRp`] —
-//! see [`super::CydDisplayRp::new_from_device`] and [`super::CydTouchUncalibratedRp::from_device`]
+//! with its own chip-select pin and its own fixed touch-bus clock). It reuses
+//! the same display/touch drivers as the two-SPI [`super::CydRp`], while the
+//! uncalibrated touch implementation remains private to this crate
 //! — so the only new code here is building the shared bus itself.
 //!
-//! Unlike [`super::CydEspOneSpi`](../../device_envoy_esp/cyd/struct.CydEspOneSpi.html)'s bus, which
-//! is type-erased over any ESP SPI peripheral, `embassy_rp::spi::Spi` carries its peripheral
+//! Unlike the ESP one-SPI bus, which is type-erased over any ESP SPI peripheral,
+//! `embassy_rp::spi::Spi` carries its peripheral
 //! (`SPI0`/`SPI1`) as a type parameter, so [`CydRpOneSpi`] and its static storage,
 //! [`CydRpOneSpiStatic`], are generic over that peripheral instance `T`.
 
@@ -45,8 +45,8 @@ type SharedSpiDevice<T> =
 /// Display and touch each get their own [`SpiDeviceWithConfig`] over the same underlying bus,
 /// with independent chip-select pins *and* independent clock speeds: [`SpiDeviceWithConfig`]
 /// re-applies its device's `embassy_rp::spi::Config` to the shared bus immediately before each of
-/// its transactions, so the physical SPI clock switches between [`super::DEFAULT_DISPLAY_SPI_HZ`] and
-/// [`TOUCH_SPI_HZ`] as display and touch take turns using the bus. Because the two halves share
+/// its transactions, so the physical SPI clock switches between the display and touch settings as
+/// display and touch take turns using the bus. Because the two halves share
 /// state through that bus, this type keeps shared-bus ownership atomic inside the complete
 /// [`Cyd`] bundle.
 ///
@@ -94,10 +94,14 @@ impl<T: spi::Instance + 'static, const PIXEL_COUNT: usize> CydRpOneSpiStatic<T, 
 
 impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
+    ///
+    /// See the [`CydRpOneSpi::new_static`] storage example.
     pub const SCREEN_PIXELS: usize = device_envoy_core::cyd::SCREEN_PIXELS;
 
     /// Create [`CydRpOneSpiStatic`] storage for a `PIXEL_COUNT`-sized draw buffer and the shared
     /// SPI bus.
+    ///
+    /// See the [`CydRpOneSpi::new`] constructor example.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydRpOneSpiStatic<T, PIXEL_COUNT> {
         CydRpOneSpiStatic::new()
@@ -105,8 +109,28 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
 
     /// Construct a calibrated one-SPI CYD bundle using the saved-or-interactive calibration flow.
     ///
+    /// ```rust,no_run
+    /// #![no_std]
+    /// #![no_main]
+    /// use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// use embassy_rp::peripherals::SPI0;
+    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #[panic_handler]
+    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+    /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
+    ///     let [mut flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    ///     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
+    ///     static STORAGE: CydRpOneSpiStatic<SPI0, { CydRpOneSpi::<SPI0>::SCREEN_PIXELS }> = CydRpOneSpi::new_static();
+    ///     let _cyd = CydRpOneSpi::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17,
+    ///         p.PIN_20, p.PIN_21, p.PIN_22, DEFAULT_DISPLAY_SPI_HZ, p.PIN_13, p.PIN_14,
+    ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT,
+    ///         &mut flash, &mut button).await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
     /// Mirrors [`super::CydRp::new`]'s calibration handling exactly (same
-    /// [`ensure_calibration`] flow, same flash-backed load/save behavior) — the only
+    /// automatic calibration flow and the same flash-backed load/save behavior — the only
     /// difference from the two-SPI bundle is that display and touch share one physical bus.
     ///
     /// # Arguments

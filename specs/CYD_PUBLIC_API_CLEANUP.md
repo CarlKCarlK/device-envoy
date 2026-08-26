@@ -88,6 +88,54 @@ backend seam or any calibration flow, configuration, validation, geometry,
 drawing, settings, outcome, or error items. Re-run that downstream audit during
 implementation in case usage changes.
 
+## Drawing API Hierarchy
+
+The retained drawing API must present a clear hierarchy rather than several
+peer-level buffering strategies. The public mental model should cover the most
+useful application workflows with the least machinery: normal applications
+draw frames, memory-constrained applications use a helper that owns tiling, and
+advanced applications may stream pixels directly.
+
+1. The normal application workflow is frame-based:
+   - `full_frame_mut()` for the whole display
+   - `frame_mut(rectangle)` for a region
+   - draw into the returned frame and flush it
+
+2. The supported low-memory workflow is tiled drawing. Prefer a helper such as
+   `for_each_tile(grid, draw)` that owns tile iteration and flushing:
+
+   ```rust,no_run
+   display
+       .for_each_tile(grid, |frame| {
+           draw_scene(frame);
+       })
+       .await?;
+   ```
+
+   The callback is invoked once per tile and therefore must be synchronous and
+   replayable. Document this explicitly. Do not silently replay one-shot
+   iterators or state-changing application logic.
+
+3. Contiguous-pixel streaming is an advanced fast/low-memory path and must be
+   documented separately from the normal frame workflow rather than presented
+   as an equal starting point.
+
+Audit the existing methods accordingly:
+
+- Move `frame_mut_with_tile_top_left` out of the normal application-facing
+  story; make it backend-only if cross-crate implementation requirements
+  prevent making it private.
+- Prefer `for_each_tile` over requiring applications to operate the `Tiles`
+  lending iterator directly. Remove or privatize `Tiles` and `tiles` if the
+  callback helper covers supported downstream uses.
+- Audit `fill_contiguous_full`, `flush_at`, and `draw_items` for redundancy or
+  backend-only use. Retain them publicly only when a demonstrated application
+  use justifies them.
+- Do not add a callback helper while retaining every existing peer-level path
+  by default. The objective is a smaller mental model and public surface.
+- Do not add automatic `draw_screen` strategy selection until buffer-capacity
+  behavior and repeated-drawing semantics are clearly defined and tested.
+
 ## Consolidate Errors
 
 Fold the platform-specific display-init, display-flush, and touch-init label
@@ -267,7 +315,21 @@ surface.
 - Fix broken, relative, hidden-item, and cross-crate links while keeping the
   platform documentation parallel.
 
-### 4. Final Audit
+### 4. Drawing API Hierarchy
+
+- Audit downstream and example use of `frame_mut_with_tile_top_left`, `Tiles`,
+  `tiles`, `fill_contiguous_full`, `flush_at`, and `draw_items` before changing
+  their visibility or removing them.
+- Implement and test the smallest callback-based tiled workflow that satisfies
+  the hierarchy above. Confirm in Rust that its closure and lending-frame
+  lifetimes remain straightforward for application callers.
+- Remove or privatize superseded peer-level paths instead of adding another
+  redundant way to draw.
+- Update the canonical frame, tiling, and streaming documentation so their
+  relative prominence matches the intended application hierarchy.
+- Review this API phase before proceeding to the final audit.
+
+### 5. Final Audit
 
 - Re-inventory every rendered CYD page and method section against this spec.
 - Fix any remaining visibility, naming, parity, doctest, or link failure.

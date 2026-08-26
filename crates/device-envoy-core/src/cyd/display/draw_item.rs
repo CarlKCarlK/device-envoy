@@ -17,6 +17,17 @@ use embedded_graphics::{
 /// [`Image565Fixed::view_rect`](super::tga::Image565Fixed::view_rect). `stride`
 /// is the full image width (row step in pixels); `source` is the crop
 /// rectangle in image coordinates.
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::Image565View;
+/// use embedded_graphics::prelude::{Point, RgbColor, Size};
+///
+/// static PIXELS: [u16; 4] = [0, 0xffff, 0, 0xffff];
+/// let image = Image565View::new(&PIXELS, Size::new(2, 2));
+/// let _size = image.size();
+/// let _pixel = image.pixel_at(Point::new(0, 0));
+/// let _pixels: heapless::Vec<_, 4> = image.rgb565_iter().collect();
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct Image565View {
     pixels: &'static [u16],
@@ -25,6 +36,7 @@ pub struct Image565View {
 }
 
 impl Image565View {
+    /// See the [canonical `Image565View` example](Image565View).
     /// Full-image view from a raw pixel slice.
     ///
     /// Panics if `pixels.len() != size.width * size.height`.
@@ -56,6 +68,7 @@ impl Image565View {
         }
     }
 
+    /// See the [canonical `Image565View` example](Image565View).
     #[must_use]
     pub const fn size(&self) -> Size {
         self.source.size
@@ -63,6 +76,7 @@ impl Image565View {
 
     /// Returns the pixel at `point`, where `point` is in view-local coordinates
     /// (i.e. `(0, 0)` is the top-left of this view, not of the underlying image).
+    /// See the [canonical `Image565View` example](Image565View).
     #[must_use]
     pub fn pixel_at(&self, point: Point) -> Rgb565 {
         assert!(
@@ -85,6 +99,8 @@ impl Image565View {
     ///
     /// Cropped views skip the pixels outside the view while preserving the
     /// view's local row order.
+    ///
+    /// See the [canonical `Image565View` example](Image565View).
     pub fn rgb565_iter(&self) -> impl Iterator<Item = Rgb565> + '_ {
         Image565ViewPixels {
             view: *self,
@@ -124,6 +140,17 @@ impl Iterator for Image565ViewPixels {
 /// linkage-blaze's CYD 3D adapters when projecting a 3D scene. All coordinates
 /// and sizes are in pixels. The `color` stays [`Rgb888`]; the target performs
 /// any conversion (for example to `Rgb565`) at its pixel boundary.
+///
+/// ```rust,no_run
+/// use device_envoy_core::{cyd::display::{DrawItem, Image565View}, pixel_target::PixelTarget};
+/// use embedded_graphics::prelude::{Point, RgbColor, Size};
+///
+/// static PIXELS: [u16; 1] = [0xffff];
+/// fn draw<T: PixelTarget>(target: &mut T) {
+///     DrawItem::Circle { center: (4.0, 4.0), pixel_radius: 2.0, color: embedded_graphics::pixelcolor::Rgb888::WHITE }.draw(target);
+///     DrawItem::Bitmap { view: Image565View::new(&PIXELS, Size::new(1, 1)), top_left: Point::zero() }.draw(target);
+/// }
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub enum DrawItem {
     /// A line stroke from `start` to `end` with the given pixel width.
@@ -158,6 +185,8 @@ impl DrawItem {
     /// Strokes use the embedded-graphics [`Line`] primitive and circles use
     /// [`Circle`]; the general projected ellipse is rasterized with
     /// [`fill_ellipse_pixels`].
+    ///
+    /// See the [canonical `DrawItem` example](DrawItem).
     pub fn draw<T: PixelTarget>(&self, target: &mut T) {
         match *self {
             DrawItem::Stroke {

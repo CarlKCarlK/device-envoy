@@ -9,6 +9,19 @@ use super::super::{SCREEN_HEIGHT, SCREEN_WIDTH};
 ///
 /// Concrete platforms map this to their display driver's rotation; this enum
 /// only knows the resulting oriented dimensions.
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::Orientation;
+/// use embedded_graphics::prelude::Point;
+///
+/// let orientation = Orientation::Landscape;
+/// let _size = orientation.size();
+/// let _pixels = orientation.pixels();
+/// let _next = orientation.next();
+/// let _point = orientation.map_landscape_point(Point::new(10, 20));
+/// assert_eq!(orientation.width(), 320);
+/// assert_eq!(orientation.height(), 240);
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum Orientation {
     Landscape,
@@ -18,6 +31,7 @@ pub enum Orientation {
 }
 
 impl Orientation {
+    /// See the [canonical `Orientation` example](Orientation).
     #[must_use]
     pub const fn width(self) -> u32 {
         match self {
@@ -26,6 +40,7 @@ impl Orientation {
         }
     }
 
+    /// See the [canonical `Orientation` example](Orientation).
     #[must_use]
     pub const fn height(self) -> u32 {
         match self {
@@ -34,17 +49,20 @@ impl Orientation {
         }
     }
 
+    /// See the [canonical `Orientation` example](Orientation).
     #[must_use]
     pub const fn size(self) -> Size {
         Size::new(self.width(), self.height())
     }
 
+    /// See the [canonical `Orientation` example](Orientation).
     #[must_use]
     pub const fn pixels(self) -> usize {
         self.width() as usize * self.height() as usize
     }
 
     /// Return the next orientation in the four-state display test cycle.
+    /// See the [canonical `Orientation` example](Orientation).
     #[must_use]
     pub const fn next(self) -> Self {
         match self {
@@ -60,6 +78,7 @@ impl Orientation {
     /// Touch calibration always describes the fixed 320×240 landscape panel.
     /// A calibrated [`TouchEvent`](crate::cyd::touch::TouchEvent) must be
     /// converted with this method exactly once before logical UI hit testing.
+    /// See the [canonical `Orientation` example](Orientation).
     #[must_use]
     pub const fn map_landscape_point(self, point: Point) -> Point {
         let landscape_width = SCREEN_WIDTH as i32;

@@ -111,7 +111,7 @@ enum CalibrationShape {
 /// # use core::{convert::Infallible, future::ready};
 /// # use device_envoy_core::{
 /// #     button::{Button, __ButtonMonitor},
-/// #     cyd::{CydDisplay, display::CydFrame, backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated, ensure_calibration}},
+/// #     cyd::{CydDisplay, CydTouch, display::CydFrame, backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated, ensure_calibration}},
 /// #     flash_block::FlashBlock,
 /// #     pixel_target::PixelTarget,
 /// # };

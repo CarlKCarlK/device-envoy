@@ -19,6 +19,13 @@ pub(crate) const SCREEN_WIDTH: usize = 320;
 /// Native panel height in pixels (landscape): 240. The CYD panel is fixed hardware.
 pub(crate) const SCREEN_HEIGHT: usize = 240;
 /// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 76,800).
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::SCREEN_PIXELS;
+/// // Platform static storage uses this exact size for a full-screen buffer.
+/// const PIXEL_BUFFER_SIZE: usize = SCREEN_PIXELS;
+/// assert_eq!(PIXEL_BUFFER_SIZE, 320 * 240);
+/// ```
 pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
 use crate::pixel_target::rgb565_from_rgb888;
@@ -41,11 +48,30 @@ use touch::TouchEvent;
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!("cyd_trait_preview", "docs/assets/cyd_trait_preview.png")
 )]
+#[doc = r#"
+Generic applications can read calibrated touch events and flush a frame without
+depending on a platform crate's concrete component types:
+
+```rust,no_run
+use device_envoy_core::cyd::{Cyd, CydDisplay, CydTouch, display::CydFrame};
+
+async fn draw_once<S: Cyd>(device: &mut S) -> Result<(), S::Error> {
+    let (display, touch) = device.parts();
+    let _touch_event = touch.read()?;
+    let mut frame = display.full_frame_mut();
+    frame.clear().flush().await?;
+    drop(frame);
+    let _display = device.display();
+    let _orientation = device.orientation();
+    Ok(())
+}
+```
+"#]
 #[cfg_attr(
     feature = "host",
     doc = r#"
 
-Implementations include the in-memory mock [`CydMemory`](crate::memory::CydMemory), the browser-simulated [`CydWasm`](crate::wasm::CydWasm), and platform crates for ESP32 and Pico boards.
+Implementations include the in-memory mock [`CydMemory`](crate::memory::CydMemory), the browser-simulated `CydWasm`, and platform crates for ESP32 and Pico boards.
 
 ```rust
 use device_envoy_core::cyd::{
@@ -109,14 +135,20 @@ pub trait Cyd: Sized {
     type Touch: CydTouch<Error = Self::Error>;
 
     /// Borrow both calibrated halves at once.
+    ///
+    /// See the [canonical `Cyd` device-loop example](Cyd).
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
 
     /// Borrow the calibrated display half.
+    ///
+    /// See the [canonical `Cyd` device-loop example](Cyd).
     fn display(&mut self) -> &mut Self::Display {
         self.parts().0
     }
 
     /// Return the logical orientation of this complete device.
+    ///
+    /// See the [canonical `Cyd` device-loop example](Cyd).
     fn orientation(&self) -> Orientation;
 }
 
@@ -124,7 +156,8 @@ pub trait Cyd: Sized {
 ///
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
 /// the same screen coordinates as the display, or `None` when there is no
-/// touch.
+/// touch. See the canonical [`Cyd`] device-loop example; applications should
+/// not need the platform-author-only [`backend`] module.
 pub trait CydTouch: Sized {
     /// Error returned when reading touch fails.
     type Error;
@@ -135,8 +168,8 @@ pub trait CydTouch: Sized {
     /// regardless of display orientation. Consumers that render an oriented
     /// screen must apply [`Orientation::map_landscape_point`] exactly once
     /// before hit testing. Returns `Ok(None)` when there is no pending touch.
-    /// Errors only on a hardware/read failure. See the [`Cyd`] trait
-    /// documentation for a usage example.
+    /// Errors only on a hardware/read failure. See the [canonical calibrated-read
+    /// example](Cyd).
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
 }
 
@@ -164,6 +197,19 @@ pub trait CydDisplay {
         Self: 'a;
 
     /// Oriented screen size for the configured orientation.
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::CydDisplay;
+    ///
+    /// fn inspect<D: CydDisplay>(display: &D) {
+    ///     let _size = display.screen_size();
+    ///     let _background = display.background_color();
+    ///     let foreground = display.foreground_color();
+    ///     let _background565 = display.background_565();
+    ///     let _foreground565 = display.foreground_565();
+    ///     let _native = display.to_rgb565(foreground);
+    /// }
+    /// ```
     ///
     #[cfg_attr(
         feature = "host",
@@ -195,27 +241,27 @@ assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground_color(
 
     /// The device default background color.
     ///
-    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
+    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
     fn background_color(&self) -> Rgb888;
 
     /// The device default foreground/text color.
     ///
-    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
+    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
     fn foreground_color(&self) -> Rgb888;
 
     /// The device default background color in the native `Rgb565` format.
     ///
-    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
+    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
     fn background_565(&self) -> Rgb565;
 
     /// The device default foreground/text color in the native `Rgb565` format.
     ///
-    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
+    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
     fn foreground_565(&self) -> Rgb565;
 
     /// Convert an `Rgb888` color to the device's native `Rgb565` format.
     ///
-    /// See [`CydDisplay::screen_size`] for an example covering the device getter family.
+    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
     fn to_rgb565(&self, color: Rgb888) -> Rgb565 {
         rgb565_from_rgb888(color)
     }
@@ -226,6 +272,18 @@ assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground_color(
     /// `tile_top_left` is subtracted before pixels are written into the
     /// frame-local buffer. Regular, non-tiled frames use `(0, 0)` and therefore
     /// draw in frame-local coordinates.
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
+    /// use embedded_graphics::{prelude::Point, primitives::Rectangle};
+    ///
+    /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     let rectangle = Rectangle::new(Point::new(0, 0), display.screen_size());
+    ///     let mut frame = display.frame_mut_with_tile_top_left(rectangle, rectangle.top_left);
+    ///     frame.clear();
+    ///     frame.flush().await
+    /// }
+    /// ```
     ///
     #[cfg_attr(
         feature = "doc-images",
@@ -297,6 +355,18 @@ frame.flush().await?;
     /// The frame remembers its `rectangle`, so [`display::CydFrame::flush`] presents it
     /// at the rectangle's top-left with no separate position argument.
     ///
+    /// See the [canonical frame example](CydDisplay::frame_mut_with_tile_top_left).
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
+    /// use embedded_graphics::{prelude::Point, primitives::Rectangle};
+    ///
+    /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     let mut frame = display.frame_mut(Rectangle::new(Point::zero(), display.screen_size()));
+    ///     frame.clear().flush().await
+    /// }
+    /// ```
+    ///
     #[cfg_attr(
         feature = "doc-images",
         doc = ::embed_doc_image::embed_image!(
@@ -349,7 +419,7 @@ frame.flush().await?;
 
     /// Borrow a full-screen frame, cleared to the device background color.
     ///
-    /// See the [`Cyd`] trait documentation for a usage example.
+    /// See the [canonical `Cyd` device-loop example](Cyd).
     fn full_frame_mut(&mut self) -> Self::Frame<'_> {
         self.frame_mut(Rectangle::new(Point::zero(), self.screen_size()))
     }
@@ -360,14 +430,39 @@ frame.flush().await?;
     /// frame-local buffered draw. Implementations clip to the physical screen and
     /// treat an empty intersection as a no-op.
     ///
-    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
+    /// This is the canonical example for the immediate and contiguous operations:
+    /// [`CydDisplay::fill_contiguous`], [`CydDisplay::fill_contiguous_full`],
+    /// [`CydDisplay::flush_at`], [`CydDisplay::draw_items`], [`CydDisplay::clear`],
+    /// and [`CydDisplay::fill`].
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::{CydDisplay, display::RectanglePixels};
+    /// use embedded_graphics::{pixelcolor::Rgb565, prelude::{Point, RgbColor, Size}, primitives::Rectangle};
+    ///
+    /// struct Pixels([u16; 4]);
+    /// impl RectanglePixels for Pixels {
+    ///     fn width(&self) -> usize { 2 }
+    ///     fn height(&self) -> usize { 2 }
+    ///     fn raw_pixels(&self) -> &[u16] { &self.0 }
+    /// }
+    /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     let rectangle = Rectangle::new(Point::zero(), Size::new(2, 2));
+    ///     display.fill_rectangle(rectangle, Rgb565::BLACK)?;
+    ///     display.fill_contiguous(rectangle, [Rgb565::RED; 4])?;
+    ///     display.fill_contiguous_full([Rgb565::BLUE; 320 * 240])?;
+    ///     display.flush_at(&Pixels([0; 4]), Point::zero())?;
+    ///     display.draw_items::<1>(rectangle, Rgb565::BLACK, [])?;
+    ///     display.clear()?;
+    ///     display.fill(Rgb565::WHITE)
+    /// }
+    /// ```
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Self::Error>;
 
     /// Fill `rectangle` immediately from row-major native-color pixels.
     ///
     /// Empty rectangles are a no-op.
     ///
-    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
+    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
     fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Rgb565>;
@@ -377,6 +472,8 @@ frame.flush().await?;
     /// This is the full-screen convenience form of [`CydDisplay::fill_contiguous`].
     /// Empty pixel iterators are allowed; implementations retain the same size
     /// validation behavior as [`CydDisplay::fill_contiguous`].
+    ///
+    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
     fn fill_contiguous_full<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Rgb565>,
@@ -386,7 +483,7 @@ frame.flush().await?;
 
     /// Present a native-color rectangle buffer at `top_left`.
     ///
-    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
+    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
     fn flush_at(
         &mut self,
         buffer: &impl display::RectanglePixels,
@@ -408,8 +505,8 @@ frame.flush().await?;
 
     /// Draw projected draw items immediately inside `bounds`.
     ///
-    /// See the [display module documentation](display) for the draw-item types
-    /// this consumes.
+    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle) and
+    /// the [`display::DrawItem`] documentation for the draw-item types this consumes.
     fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,
@@ -431,14 +528,14 @@ frame.flush().await?;
     /// returning the physical screen to the default background between frame
     /// workflows.
     ///
-    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
+    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
     fn clear(&mut self) -> Result<(), Self::Error> {
         self.fill(self.background_565())
     }
 
     /// Fill the whole screen with an explicit color.
     ///
-    /// See the [CydDisplay trait documentation](Self) for related drawing APIs.
+    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
     fn fill(&mut self, color: Rgb565) -> Result<(), Self::Error> {
         self.fill_rectangle(Rectangle::new(Point::zero(), self.screen_size()), color)
     }

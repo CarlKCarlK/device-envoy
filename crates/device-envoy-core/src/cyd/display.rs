@@ -24,26 +24,38 @@ pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
 pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, mask_byte_count};
 
+/// Compile a supported TGA file into an [`Image888Fixed`](tga::Image888Fixed).
+///
+/// See the [canonical TGA family example](tga).
 pub use crate::__cyd_tga as tga;
 
 /// A borrowed or owned rectangular RGB565 pixel buffer.
 ///
-/// See [`super::CydDisplay::flush_at`] for the primary consumer.
+/// See [`super::CydDisplay::flush_at`] for the primary consumer. Implementors
+/// expose the dimensions and row-major pixels used by that operation.
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::RectanglePixels;
+///
+/// fn inspect<P: RectanglePixels>(pixels: &P) {
+///     assert_eq!(pixels.raw_pixels().len(), pixels.width() * pixels.height());
+/// }
+/// ```
 // TODO Consider introducing a concrete `RectanglePixelsView` containing the
 // dimensions and pixel slice, then reducing this trait to only `view`. Buffer
 // inspection and iteration could live on that common borrowed representation.
 pub trait RectanglePixels {
     /// Buffer width in pixels.
     ///
-    /// See the [`RectanglePixels` trait documentation](Self) for usage.
+    /// See the [canonical `RectanglePixels` example](RectanglePixels).
     fn width(&self) -> usize;
     /// Buffer height in pixels.
     ///
-    /// See the [`RectanglePixels` trait documentation](Self) for usage.
+    /// See the [canonical `RectanglePixels` example](RectanglePixels).
     fn height(&self) -> usize;
     /// Row-major RGB565 pixels.
     ///
-    /// See the [`RectanglePixels` trait documentation](Self) for usage.
+    /// See the [canonical `RectanglePixels` example](RectanglePixels).
     fn raw_pixels(&self) -> &[u16];
 }
 
@@ -52,6 +64,25 @@ pub trait RectanglePixels {
 /// Also a [`PixelTarget`] so projected linkage draw items can render into it.
 /// See the [Cyd trait documentation](super::Cyd) for an end-to-end example that
 /// creates, writes, and flushes a frame.
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::CydFrame;
+/// use embedded_graphics::{pixelcolor::Rgb565, prelude::RgbColor};
+///
+/// fn copy_once<F: CydFrame>(frame: &mut F, pixels: &[u16]) -> device_envoy_core::Result<()> {
+///     let _rectangle = frame.rectangle();
+///     let _origin = frame.tile_top_left();
+///     let _width = frame.width();
+///     let _height = frame.height();
+///     frame.fill(Rgb565::BLACK);
+///     CydFrame::clear(frame);
+///     frame.write_text("CYD");
+///     frame.copy_from_565(pixels)
+/// }
+/// async fn flush_once<F: CydFrame>(frame: &mut F) -> Result<(), <F as CydFrame>::Error> {
+///     frame.flush().await
+/// }
+/// ```
 pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
     /// Error returned when flushing this frame to the panel.
     type Error;
@@ -60,6 +91,8 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     ///
     /// This point is subtracted from input drawing commands before pixels reach
     /// this frame's local backing buffer. Regular, non-tiled frames use `(0, 0)`.
+    ///
+    /// See the [canonical `CydFrame` example](CydFrame).
     #[must_use]
     fn tile_top_left(&self) -> Point {
         Point::zero()
@@ -67,24 +100,26 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
 
     /// This frame's rectangle (top-left and size) in physical-screen coordinates.
     ///
-    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
+    /// See the [canonical `CydFrame` example](CydFrame).
     fn rectangle(&self) -> Rectangle;
 
     /// Fill this frame with an explicit color and return `self`.
     ///
-    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
+    /// See the [canonical `CydFrame` example](CydFrame).
     fn fill(&mut self, color: Rgb565) -> &mut Self;
 
     /// Clear this frame with the display's default background color.
     ///
     /// Unlike [`CydDisplay::clear`](super::CydDisplay::clear), this only
     /// updates the frame buffer and does not immediately write to the panel.
+    ///
+    /// See the [canonical `CydFrame` example](CydFrame).
     fn clear(&mut self) -> &mut Self;
 
     /// Draw `text` at the frame's top-left using the device default font and
     /// foreground color. Returns `&mut Self` for chaining.
     ///
-    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
+    /// See the [canonical `CydFrame` example](CydFrame).
     fn write_text(&mut self, text: &str) -> &mut Self;
 
     /// Bulk-copy a full-frame, row-major RGB565 buffer into this frame.
@@ -97,7 +132,8 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// [`crate::Error::CopySize`] rather than panicking or silently corrupting
     /// the buffer.
     ///
-    /// See [`Image565Fixed::copy_to`] for the primary convenience wrapper.
+    /// See the [canonical `CydFrame` example](CydFrame) and
+    /// [`Image565Fixed::copy_to`] for the primary convenience wrapper.
     fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()>;
 
     /// Present the frame's pixels at its rectangle's top-left (screen coordinates).
@@ -112,6 +148,6 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// each device's natural present point without inverting into a state
     /// machine.
     ///
-    /// See the [Cyd trait documentation](super::Cyd) for a usage example.
+    /// See the [canonical `CydFrame` example](CydFrame).
     fn flush(&mut self) -> impl Future<Output = Result<(), <Self as CydFrame>::Error>>;
 }

@@ -21,12 +21,16 @@ use embedded_graphics::{
 use super::super::CydDisplay;
 
 /// Pixel count for a rectangle.
+///
+/// See the [canonical `TileGrid` sizing example](TileGrid).
 #[must_use]
 pub const fn rectangle_pixel_count(rectangle: Rectangle) -> usize {
     (rectangle.size.width * rectangle.size.height) as usize
 }
 
 /// Maximum pixel count of two rectangles.
+///
+/// See the [canonical `TileGrid` sizing example](TileGrid).
 #[must_use]
 pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> usize {
     if rectangle_pixel_count(first) > rectangle_pixel_count(second) {
@@ -43,6 +47,24 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
 /// size is derived with ceiling division ([`tile_width`](Self::tile_width) /
 /// [`tile_height`](Self::tile_height)). The final column and row are clipped to
 /// the rectangle's right and bottom edges.
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::tiling::{
+///     TileGrid, max_rectangle_pixel_count, rectangle_pixel_count,
+/// };
+/// use embedded_graphics::{prelude::{Point, Size}, primitives::Rectangle};
+///
+/// let rectangle = Rectangle::new(Point::zero(), Size::new(320, 240));
+/// let grid = TileGrid::new(rectangle.top_left, rectangle.size, 4, 3);
+/// assert_eq!(grid.columns(), 4);
+/// assert_eq!(grid.rows(), 3);
+/// let _tile_width = grid.tile_width();
+/// let _tile_height = grid.tile_height();
+/// let buffer_pixels = grid.max_tile_pixel_count();
+/// assert_eq!(buffer_pixels, 80 * 80);
+/// let _ = rectangle_pixel_count(rectangle);
+/// let _ = max_rectangle_pixel_count(rectangle, rectangle);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileGrid {
     pub top_left: Point,
@@ -78,24 +100,32 @@ impl TileGrid {
     }
 
     /// Number of tile columns the rectangle is split into.
+    ///
+    /// See the [canonical `TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn columns(&self) -> usize {
         self.columns
     }
 
     /// Number of tile rows the rectangle is split into.
+    ///
+    /// See the [canonical `TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn rows(&self) -> usize {
         self.rows
     }
 
     /// Nominal tile width: the rectangle width divided by the column count, rounded up.
+    ///
+    /// See the [canonical `TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn tile_width(&self) -> usize {
         (self.size.width as usize).div_ceil(self.columns)
     }
 
     /// Nominal tile height: the rectangle height divided by the row count, rounded up.
+    ///
+    /// See the [canonical `TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn tile_height(&self) -> usize {
         (self.size.height as usize).div_ceil(self.rows)
@@ -105,6 +135,8 @@ impl TileGrid {
     ///
     /// The biggest tile is the top-left one, whose dimensions are the derived tile
     /// size clipped to the rectangle (in case the rectangle is smaller than one tile).
+    ///
+    /// See the [canonical `TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn max_tile_pixel_count(&self) -> usize {
         let widest = min_usize(self.tile_width(), self.size.width as usize);
@@ -153,6 +185,7 @@ const fn min_usize(first: usize, second: usize) -> usize {
 /// [`Iterator`]: each yielded frame borrows the device's
 /// single reusable frame buffer, so only one frame can be live at a time.
 /// Iterate with a `while let Some(mut frame) = tiles.next()` loop.
+/// See the [canonical tiled draw loop](CydDisplay::tiles).
 pub struct Tiles<'a, C: CydDisplay> {
     cyd: &'a mut C,
     grid: TileGrid,
@@ -177,6 +210,8 @@ impl<C: CydDisplay> Tiles<'_, C> {
     ///
     /// Tiles are visited in row-major order (each row left-to-right), skipping
     /// any `(column, row)` that falls entirely outside the grid rectangle.
+    ///
+    /// See the [canonical `CydDisplay::tiles` example](CydDisplay::tiles).
     // This is a lending iterator: each yielded frame borrows the device's single
     // reusable frame buffer, so it cannot implement `Iterator` (whose `next`
     // returns an item that outlives the `&mut self` borrow). The `next` name is

@@ -30,6 +30,8 @@ use super::{CydFrameEsp, Orientation, buffer::DynPixelBuffer};
 // was faster in measurement but produced visible corruption on the tested
 // panel.
 /// Default SPI clock for CYD display traffic on ESP boards.
+///
+/// See the [`CydDisplayEsp::new`](super::CydDisplayEsp::new) constructor example.
 pub const DEFAULT_DISPLAY_SPI_HZ: u32 = 60_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 

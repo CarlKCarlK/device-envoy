@@ -3,9 +3,9 @@
 //! This module provides [`CydEspOneSpi`], which arbitrates a single physical SPI bus between
 //! the ILI9341 display and the XPT2046 touch controller using an
 //! `embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig` per peripheral (each
-//! with its own chip-select pin *and* its own SPI clock speed — see [`super::DEFAULT_DISPLAY_SPI_HZ`] vs
-//! [`TOUCH_SPI_HZ`]). It reuses the same display/touch drivers as the two-SPI [`super::CydEsp`] —
-//! see [`super::CydDisplayEsp::new_from_device`] and [`super::CydTouchUncalibratedEsp::from_device`]
+//! with its own chip-select pin and its own fixed touch-bus clock). It reuses
+//! the same display/touch drivers as the two-SPI [`super::CydEsp`], while the
+//! uncalibrated touch implementation remains private to this crate
 //! — so the only new code here is building the shared bus itself.
 
 use core::cell::RefCell;
@@ -40,8 +40,8 @@ type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, 
 /// Display and touch each get their own [`SpiDeviceWithConfig`] over the same underlying bus,
 /// with independent chip-select pins *and* independent clock speeds: [`SpiDeviceWithConfig`]
 /// re-applies its device's [`spi::master::Config`] to the shared bus immediately before each of
-/// its transactions, so the physical SPI clock switches between [`super::DEFAULT_DISPLAY_SPI_HZ`] and
-/// [`TOUCH_SPI_HZ`] as display and touch take turns using the bus. Because the two halves share
+/// its transactions, so the physical SPI clock switches between the display and touch settings as
+/// display and touch take turns using the bus. Because the two halves share
 /// state through that bus, this type keeps shared-bus ownership atomic inside the complete
 /// [`Cyd`] bundle.
 pub struct CydEspOneSpi {
@@ -51,9 +51,13 @@ pub struct CydEspOneSpi {
 
 impl CydEspOneSpi {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
+    ///
+    /// See the [`CydEspOneSpi::new_static`] storage example.
     pub const SCREEN_PIXELS: usize = device_envoy_core::cyd::SCREEN_PIXELS;
 
     /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    ///
+    /// See the [`CydEspOneSpi::new`] constructor example.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
         CydStaticEsp::new()
@@ -61,8 +65,27 @@ impl CydEspOneSpi {
 
     /// Construct a calibrated one-SPI CYD bundle using the saved-or-interactive calibration flow.
     ///
+    /// ```rust,no_run
+    /// #![no_std]
+    /// #![no_main]
+    /// use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{CydEspOneSpi, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
+    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #[panic_handler]
+    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+    /// async fn construct(mut p: esp_hal::peripherals::Peripherals) -> Result<()> {
+    ///     let [mut flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    ///     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    ///     static STORAGE: CydStaticEsp<{ CydEspOneSpi::SCREEN_PIXELS }> = CydEspOneSpi::new_static();
+    ///     let _cyd = CydEspOneSpi::new(&STORAGE, p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3, p.GPIO4,
+    ///         p.GPIO5, p.GPIO7, p.GPIO8, DEFAULT_DISPLAY_SPI_HZ, p.GPIO12, p.GPIO13,
+    ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT,
+    ///         &mut flash, &mut button).await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
     /// Mirrors [`super::CydEsp::new`]'s calibration handling exactly (same
-    /// [`ensure_calibration`] flow, same flash-backed load/save behavior) — the only
+    /// automatic calibration flow and the same flash-backed load/save behavior — the only
     /// difference from the two-SPI bundle is that display and touch share one physical bus.
     ///
     /// # Arguments

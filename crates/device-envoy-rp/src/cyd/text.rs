@@ -21,7 +21,7 @@ use embedded_hal::spi::SpiDevice;
 
 use super::CydFrameRp;
 
-/// Font apps typically pass to [`super::CydDisplayRp::new`] as the device default.
+/// The default font accepted by [`CydDisplayRp::new`](super::CydDisplayRp::new).
 pub const DEFAULT_FONT: MonoFont<'static> = FONT_9X15_BOLD;
 
 impl<D: SpiDevice<u8>> CydFrameRp<'_, D> {
@@ -30,6 +30,8 @@ impl<D: SpiDevice<u8>> CydFrameRp<'_, D> {
     ///
     /// For any other font, color, alignment, or baseline, draw with
     /// embedded-graphics directly against this frame.
+    ///
+    /// See the [canonical `CydFrameRp` example](super::CydFrameRp).
     pub fn write_text(&mut self, text: &str) -> &mut Self {
         Text::with_baseline(
             text,

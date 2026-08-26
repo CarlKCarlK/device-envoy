@@ -28,17 +28,17 @@ const CALIBRATION_TARGET_COLOR: Rgb888 = Rgb888::CSS_YELLOW;
 const CALIBRATION_REJECTED_TARGET_COLOR: Rgb888 = Rgb888::CSS_RED;
 const CALIBRATION_DOT_COLOR: Rgb888 = Rgb888::CSS_WHITE;
 const AFFINE_DETERMINANT_EPSILON: f32 = 0.000_001;
-#[cfg(any(feature = "wasm", test))]
+#[cfg(test)]
 const DEMO_RAW_SCALE_X: f32 = 1.12;
-#[cfg(any(feature = "wasm", test))]
+#[cfg(test)]
 const DEMO_RAW_SCALE_Y: f32 = 0.93;
-#[cfg(any(feature = "wasm", test))]
+#[cfg(test)]
 const DEMO_RAW_SKEW_X_FROM_Y: f32 = 0.041;
-#[cfg(any(feature = "wasm", test))]
+#[cfg(test)]
 const DEMO_RAW_SKEW_Y_FROM_X: f32 = -0.027;
-#[cfg(any(feature = "wasm", test))]
+#[cfg(test)]
 const DEMO_RAW_OFFSET_X: f32 = 186.0;
-#[cfg(any(feature = "wasm", test))]
+#[cfg(test)]
 const DEMO_RAW_OFFSET_Y: f32 = 149.0;
 
 /// Affine mapping from raw controller samples into screen coordinates.
@@ -260,7 +260,7 @@ fn dot_item_at(center: Point) -> DrawItem {
     }
 }
 
-#[cfg(any(feature = "wasm", test))]
+#[cfg(test)]
 #[must_use]
 pub(crate) fn distort_demo_screen_to_raw(screen_x: f32, screen_y: f32) -> RawPoint {
     let raw_x = DEMO_RAW_SCALE_X * screen_x + DEMO_RAW_SKEW_X_FROM_Y * screen_y + DEMO_RAW_OFFSET_X;

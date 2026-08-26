@@ -222,14 +222,12 @@ impl<'a, D: SpiDevice<u8>> CydFrameEsp<'a, D> {
     ///
     /// See the [canonical `CydFrameEsp` example](CydFrameEsp).
     pub fn flush(&mut self) -> Result<(), Error> {
-        Ok(self
-            .display
-            .flush_buffer(
-                self.view.size().width as usize,
-                self.view.size().height as usize,
-                self.view.raw_pixels(),
-                self.rectangle.top_left,
-            )?)
+        Ok(self.display.flush_buffer(
+            self.view.size().width as usize,
+            self.view.size().height as usize,
+            self.view.raw_pixels(),
+            self.rectangle.top_left,
+        )?)
     }
 
     fn local_x(&self, x: i32) -> Option<usize> {
@@ -756,7 +754,6 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     {
         Ok(self.display.fill_contiguous(rectangle, pixels)?)
     }
-
 }
 
 impl<D: SpiDevice<u8>> TouchUncalibrated for CydTouchUncalibratedEsp<D> {

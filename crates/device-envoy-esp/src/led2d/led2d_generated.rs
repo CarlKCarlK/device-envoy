@@ -43,9 +43,9 @@ led2d! {
 pub struct Led2dGenerated;
 
 #[cfg(doc)]
-use crate::led2d::{Frame2d, Led2d, Led2dFont, Point, Size};
-#[cfg(doc)]
 use crate::Result;
+#[cfg(doc)]
+use crate::led2d::{Frame2d, Led2d, Led2dFont, Point, Size};
 
 #[cfg(doc)]
 impl Led2dGenerated {

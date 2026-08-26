@@ -13,6 +13,8 @@ release while keeping the ESP and RP APIs parallel where their hardware allows.
 - The frame and static-storage types returned or required by public APIs.
 - The `Cyd`, `CydDisplay`, and `CydTouch` traits.
 - `Orientation`, `tiling`, `touch`, `DEFAULT_DISPLAY_SPI_HZ`, and `DEFAULT_FONT`.
+- The narrow `cyd::backend::DisplayBackend` seam required by the separate
+  ESP/RP platform crates; it is backend-only and is not re-exported by them.
 - One module-level `Error` type that preserves useful failure diagnostics.
 - Keep display and touch as separate concerns: display owns frames, drawing,
   orientation, and tiling; touch owns input events and calibration. The
@@ -59,6 +61,9 @@ calibration state machine.
   `TouchUncalibrated`, `RawTouchEvent`, `CalibrationConfig`,
   `ensure_calibration`, and one module-scoped `Error`. Use concise names because
   the `backend` module supplies their context.
+- Retain the narrow `backend::DisplayBackend` display-construction seam required
+  by the separate ESP and RP crates. It is backend plumbing, not an
+  application-facing drawing API, and must not be re-exported by those crates.
 - Simplify `ensure_calibration` to return the calibrated touch value directly.
   Remove the public `EnsureCalibrationOutcome`; ESP and RP currently discard
   it. Fold device and flash failure variants directly into `backend::Error`
@@ -127,12 +132,11 @@ advanced applications may stream pixels directly.
 
 Audit the existing methods accordingly:
 
-- Move `frame_mut_with_tile_top_left` out of the normal application-facing
-  story; make it backend-only if cross-crate implementation requirements
-  prevent making it private.
-- Prefer `for_each_tile` over requiring applications to operate the `Tiles`
-  lending iterator directly. Remove or privatize `Tiles` and `tiles` if the
-  callback helper covers supported downstream uses.
+- Keep `frame_mut_with_tile_top_left` out of the application-facing story. It
+  remains only as the narrow `cyd::backend::DisplayBackend` seam required by
+  the separate ESP and RP platform crates.
+- Prefer `for_each_tile`; the lending `Tiles` iterator and `CydDisplay::tiles`
+  are private implementation details and are not part of the application API.
 - Retain `fill_contiguous_full` as the application-facing whole-screen
   streaming convenience. Audit `flush_at` and `draw_items` for redundancy or
   backend-only use, retaining them publicly only when a demonstrated
@@ -255,10 +259,11 @@ diagnostic.
   that reuse the core implementation. Keep one compiled backend example and
   make each backend item link directly to it rather than repeating extensive
   calibration documentation.
-- Keep one canonical compiled `rust,no_run` tiling example, preferably on
-  `CydDisplay::tiles`. Make the `tiling` module, `TileGrid`, `Tiles`, their
-  public methods, and the public rectangle-size helpers either contain a
-  focused compiled example or link directly to that canonical example.
+- Keep one canonical compiled `rust,no_run` tiling example on
+  `CydDisplay::for_each_tile`. Make the `tiling` module, `TileGrid`, and the
+  public rectangle-size helpers either contain a focused compiled example or
+  link directly to that canonical example. The internal `Tiles` iterator is
+  not part of the retained public checklist.
 - Apply the same example-or-direct-link rule to the major public items in
   `touch`; embedded examples may be `rust,no_run`, but they must compile.
 - Keep module introductions and public surfaces parallel between ESP and RP.
@@ -277,11 +282,12 @@ on that page.
 The current `Cyd` example does not satisfy this rule on published embedded
 docs: it is added only by `#[cfg_attr(feature = "host", doc = ...)]`, while
 docs.rs builds the ESP/RP-facing core documentation without `host`. The same
-problem affects the `CydDisplay::screen_size`,
-`CydDisplay::frame_mut_with_tile_top_left`, and `CydDisplay::frame_mut`
+problem affects the `CydDisplay::screen_size` and `CydDisplay::frame_mut`
 examples. Add unconditional, platform-neutral canonical examples for the
-public traits. Host-only framebuffer examples and preview images may remain as
-supplemental documentation, but public documentation must not depend on them.
+public traits. The backend-only frame-construction seam is not an
+application-facing `CydDisplay` item. Host-only framebuffer examples and
+preview images may remain as supplemental documentation, but public
+documentation must not depend on them.
 
 Use this retained-surface checklist:
 
@@ -299,16 +305,18 @@ Use this retained-surface checklist:
   creation and flushing, contiguous drawing, immediate fill/draw operations,
   and tiling. Every retained method must link to the specific example that
   covers it; generic links such as "the trait documentation" do not suffice.
-- `display`, `CydFrame`, and `RectanglePixels`: link to canonical examples that
-  actually exercise their primary types and every retained method.
+- `display` and `CydFrame`: link to canonical examples that actually exercise
+  their primary types and every retained method. `RectanglePixels` was removed
+  during the drawing cleanup and is not a retained public item.
 - `DrawItem`/`Image565View`, `Orientation`, and the retained compile-time TGA
   image/mask types, functions, and macro: provide one focused canonical example
   per coherent family, with every family member and method linked directly to
   it.
-- `tiling`, `TileGrid`, `Tiles`, `rectangle_pixel_count`, and
-  `max_rectangle_pixel_count`: use `CydDisplay::tiles` as the canonical draw
-  loop and add a focused grid/buffer-sizing example where needed. Link every
-  retained getter and `Tiles::next` directly to the applicable example.
+- `tiling`, `TileGrid`, `rectangle_pixel_count`, and
+  `max_rectangle_pixel_count`: use `CydDisplay::for_each_tile` as the
+  canonical draw loop and add a focused grid/buffer-sizing example where
+  needed. The internal `Tiles` iterator and its `next` method need no public
+  documentation audit.
 - On ESP, cover `CydEsp`, `CydEspOneSpi`, `CydDisplayEsp`, `CydStaticEsp`,
   `CydFrameEsp`, `CydTouchEsp`, the retained `cyd::Error`,
   `DEFAULT_DISPLAY_SPI_HZ`, and `DEFAULT_FONT`. Constructor and static-storage
@@ -321,14 +329,9 @@ Use this retained-surface checklist:
 - Audit `SCREEN_PIXELS` and every retained associated constant by linking them
   to the static-storage example that uses them.
 
-The published pages currently fail this audit broadly: the primary `Cyd`
-example is absent, links from `CydTouch`, `TouchEvent`, `CydFrame`, and several
-display methods therefore lead to no compiled example, `Orientation` has none,
-the image/TGA family has none, and the tiling getters and helpers do not all
-link directly to the existing `CydDisplay::tiles` doctest. The ESP/RP concrete
-constructors and retained component methods likewise lack complete direct
-coverage. Treat this list as the starting audit, then re-inventory the rendered
-pages after visibility changes so newly retained items cannot escape it.
+The published pages previously failed this audit broadly. Treat the checklist
+as the starting audit, then re-inventory the rendered pages after visibility
+changes so newly retained items cannot escape it.
 
 ## Implementation Order
 
@@ -369,10 +372,11 @@ surface.
 
 ### 4. Drawing API Hierarchy
 
-- Audit downstream and example use of `frame_mut_with_tile_top_left`, `Tiles`,
-  `tiles`, `fill_contiguous_full`, `flush_at`, and `draw_items` before changing
-  their visibility or removing them. Include the sibling Linkage Blaze
-  workspace and classify its shared and platform-specific CYD examples.
+- Audit downstream and example use of the backend-only
+  `frame_mut_with_tile_top_left`, internal `Tiles`, `for_each_tile`,
+  `fill_contiguous_full`, `flush_at`, and `draw_items`. Include the sibling
+  Linkage Blaze workspace and classify its shared and platform-specific CYD
+  examples.
 - Restore and retain `fill_contiguous_full(pixels)` as the concise full-screen
   streaming operation, and keep Linkage Blaze's clock splash on that method.
   Its implementation may delegate to `fill_contiguous` with the full-screen
@@ -387,8 +391,9 @@ surface.
   implementations plus its ESP, RP, and WASM example crates to the resulting
   API. Prefer changes in shared example code over repeated generated or
   platform-specific edits where the repository structure permits.
-- Remove or privatize superseded peer-level paths instead of adding another
-  redundant way to draw.
+- Keep the approved Phase 4B reductions: `Tiles`, `CydDisplay::tiles`,
+  `RectanglePixels`, and `flush_at` are not application-facing APIs. Do not
+  add another redundant way to draw.
 - Update the canonical frame, tiling, and streaming documentation so their
   relative prominence matches the intended application hierarchy.
 - Review this API phase before proceeding to the final audit.

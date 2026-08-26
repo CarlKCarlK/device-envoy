@@ -21,7 +21,7 @@ use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
     Cyd, CydDisplay, CydTouch,
-    backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
+    backend::{CalibrationConfig, RawTouchEvent},
     display::{CydFrame, Orientation},
     touch::{RawPoint, TouchEvent},
 };
@@ -85,13 +85,6 @@ pub struct CydTouchWasm {
     interaction_state: Rc<Cell<InteractionState>>,
     latest_raw_point: Rc<Cell<Option<RawPoint>>>,
     calibration_config: CalibrationConfig,
-}
-
-#[derive(Clone)]
-pub(crate) struct CydTouchUncalibratedWasm {
-    raw_touch_events: RawTouchEvents,
-    interaction_state: Rc<Cell<InteractionState>>,
-    latest_raw_point: Rc<Cell<Option<RawPoint>>>,
 }
 
 #[derive(Clone)]
@@ -582,39 +575,6 @@ impl CydTouch for CydTouchWasm {
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
-    }
-}
-
-impl TouchUncalibrated for CydTouchUncalibratedWasm {
-    type Error = Infallible;
-    type Calibrated = CydTouchWasm;
-
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Infallible> {
-        if let Some(raw_touch_event) = self.raw_touch_events.borrow_mut().pop_front() {
-            return Ok(Some(raw_touch_event));
-        }
-
-        if self.interaction_state.get() != InteractionState::PointerDown {
-            return Ok(None);
-        }
-
-        let Some(raw_point) = self.latest_raw_point.get() else {
-            return Ok(None);
-        };
-
-        Ok(Some(RawTouchEvent::Move {
-            raw_x: raw_point.x,
-            raw_y: raw_point.y,
-        }))
-    }
-
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
-        CydTouchWasm {
-            raw_touch_events: self.raw_touch_events,
-            interaction_state: self.interaction_state,
-            latest_raw_point: self.latest_raw_point,
-            calibration_config,
-        }
     }
 }
 

@@ -237,8 +237,8 @@ impl CydDisplayRp<CydDisplaySpiDevice> {
 
         let cs = Output::new(cs_pin, Level::High);
 
-        let spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
-            .unwrap_infallible();
+        let spi_device =
+            ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs).unwrap_infallible();
 
         Self::new_from_device(spi_device, dc_pin, rst_pin, backlight_pin, orientation)
     }

@@ -81,16 +81,18 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     loop {
         let mut tile_index: usize = 0;
-        display.for_each_tile(grid, |frame| {
-            frame.fill(palette[tile_index % palette.len()]);
-            let mut label = heapless::String::<8>::new();
-            assert!(
-                write!(label, "{tile_index}").is_ok(),
-                "tile index label exceeds buffer"
-            );
-            frame.write_text(label.as_str());
-            tile_index += 1;
-        }).await?;
+        display
+            .for_each_tile(grid, |frame| {
+                frame.fill(palette[tile_index % palette.len()]);
+                let mut label = heapless::String::<8>::new();
+                assert!(
+                    write!(label, "{tile_index}").is_ok(),
+                    "tile index label exceeds buffer"
+                );
+                frame.write_text(label.as_str());
+                tile_index += 1;
+            })
+            .await?;
         Timer::after(Duration::from_secs(1)).await;
     }
 }

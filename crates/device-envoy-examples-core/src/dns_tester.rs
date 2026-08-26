@@ -656,18 +656,14 @@ where
     D: CydDisplay,
 {
     match orientation {
-        Orientation::Landscape | Orientation::LandscapeInverted => {
-            display.fill_contiguous(
-                Rectangle::new(Point::zero(), LANDSCAPE_BITMAP.size()),
-                LANDSCAPE_BITMAP.rgb565_iter(),
-            )?
-        }
-        Orientation::Portrait | Orientation::PortraitInverted => {
-            display.fill_contiguous(
-                Rectangle::new(Point::zero(), PORTRAIT_BITMAP.size()),
-                PORTRAIT_BITMAP.rgb565_iter(),
-            )?
-        }
+        Orientation::Landscape | Orientation::LandscapeInverted => display.fill_contiguous(
+            Rectangle::new(Point::zero(), LANDSCAPE_BITMAP.size()),
+            LANDSCAPE_BITMAP.rgb565_iter(),
+        )?,
+        Orientation::Portrait | Orientation::PortraitInverted => display.fill_contiguous(
+            Rectangle::new(Point::zero(), PORTRAIT_BITMAP.size()),
+            PORTRAIT_BITMAP.rgb565_iter(),
+        )?,
     }
 
     // READY belongs to the live dashboard, not to a startup or operational

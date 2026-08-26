@@ -118,7 +118,12 @@ advanced applications may stream pixels directly.
 
 3. Contiguous-pixel streaming is an advanced fast/low-memory path and must be
    documented separately from the normal frame workflow rather than presented
-   as an equal starting point.
+   as an equal starting point. Retain both `fill_contiguous(rectangle, pixels)`
+   for regional streams and `fill_contiguous_full(pixels)` for whole-screen
+   streams. The full-screen convenience earns its place by expressing intent
+   directly and avoiding repeated construction of
+   `Rectangle::new(Point::zero(), display.screen_size())`; Linkage Blaze's
+   full-screen clock splash is the demonstrated application use.
 
 Audit the existing methods accordingly:
 
@@ -128,9 +133,10 @@ Audit the existing methods accordingly:
 - Prefer `for_each_tile` over requiring applications to operate the `Tiles`
   lending iterator directly. Remove or privatize `Tiles` and `tiles` if the
   callback helper covers supported downstream uses.
-- Audit `fill_contiguous_full`, `flush_at`, and `draw_items` for redundancy or
-  backend-only use. Retain them publicly only when a demonstrated application
-  use justifies them.
+- Retain `fill_contiguous_full` as the application-facing whole-screen
+  streaming convenience. Audit `flush_at` and `draw_items` for redundancy or
+  backend-only use, retaining them publicly only when a demonstrated
+  application use justifies them.
 - Do not add a callback helper while retaining every existing peer-level path
   by default. The objective is a smaller mental model and public surface.
 - Do not add automatic `draw_screen` strategy selection until buffer-capacity
@@ -367,6 +373,10 @@ surface.
   `tiles`, `fill_contiguous_full`, `flush_at`, and `draw_items` before changing
   their visibility or removing them. Include the sibling Linkage Blaze
   workspace and classify its shared and platform-specific CYD examples.
+- Restore and retain `fill_contiguous_full(pixels)` as the concise full-screen
+  streaming operation, and keep Linkage Blaze's clock splash on that method.
+  Its implementation may delegate to `fill_contiguous` with the full-screen
+  rectangle, but callers should not need to construct that rectangle.
 - Implement and test the smallest callback-based tiled workflow that satisfies
   the hierarchy above. Confirm in Rust that its closure and lending-frame
   lifetimes remain straightforward for application callers.

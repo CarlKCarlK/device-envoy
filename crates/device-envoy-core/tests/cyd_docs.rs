@@ -258,10 +258,12 @@ fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box
             &FONT_9X15_BOLD,
         );
         let mut display = cyd_memory.display();
-        let mut frame = display.frame_mut_with_tile_top_left(
-            Rectangle::new(Point::new(32, 24), Size::new(48, 32)),
-            Point::new(32, 24),
-        );
+        let mut frame =
+            device_envoy_core::cyd::backend::DisplayBackend::frame_mut_with_tile_top_left(
+                &mut display,
+                Rectangle::new(Point::new(32, 24), Size::new(48, 32)),
+                Point::new(32, 24),
+            );
         frame.fill(Rgb565::GREEN);
         Rectangle::new(Point::new(36, 28), Size::new(6, 6))
             .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))

@@ -95,7 +95,7 @@ where
     };
     let (display, touch) = cyd.parts();
     let mut ui = Ui::<_, 16>::new(display, layout, orientation);
-    ui.fill_contiguous_full()?;
+    ui.fill_bitmap()?;
     ui.text(layout.hostname, DNS_HOSTNAME).await?;
     loop {
         yield_now().await;
@@ -383,9 +383,10 @@ where
         }
     }
 
-    fn fill_contiguous_full(&mut self) -> Result<(), render::Error<Display::Error>> {
+    fn fill_bitmap(&mut self) -> Result<(), render::Error<Display::Error>> {
+        let rectangle = Rectangle::new(Point::zero(), self.layout.bitmap.size());
         self.display
-            .fill_contiguous_full(self.layout.bitmap.rgb565_iter())?;
+            .fill_contiguous(rectangle, self.layout.bitmap.rgb565_iter())?;
         Ok(())
     }
 
@@ -656,10 +657,16 @@ where
 {
     match orientation {
         Orientation::Landscape | Orientation::LandscapeInverted => {
-            display.fill_contiguous_full(LANDSCAPE_BITMAP.rgb565_iter())?
+            display.fill_contiguous(
+                Rectangle::new(Point::zero(), LANDSCAPE_BITMAP.size()),
+                LANDSCAPE_BITMAP.rgb565_iter(),
+            )?
         }
         Orientation::Portrait | Orientation::PortraitInverted => {
-            display.fill_contiguous_full(PORTRAIT_BITMAP.rgb565_iter())?
+            display.fill_contiguous(
+                Rectangle::new(Point::zero(), PORTRAIT_BITMAP.size()),
+                PORTRAIT_BITMAP.rgb565_iter(),
+            )?
         }
     }
 

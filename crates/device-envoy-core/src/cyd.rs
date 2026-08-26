@@ -30,7 +30,7 @@ pub const SCREEN_PIXELS: usize = SCREEN_WIDTH * SCREEN_HEIGHT;
 
 use crate::pixel_target::rgb565_from_rgb888;
 use embedded_graphics::{
-    pixelcolor::{Rgb565, Rgb888, raw::RawU16},
+    pixelcolor::{Rgb565, Rgb888},
     prelude::{Point, Size},
     primitives::Rectangle,
 };
@@ -177,25 +177,20 @@ pub trait CydTouch: Sized {
 ///
 /// The screen is a fixed 320×240 RGB565 panel. `CydDisplay` offers three
 /// ways to draw, trading memory for flexibility: [`display::CydFrame`]s that can be
-/// drawn into and flushed to any rectangle on screen; tiled frames (see
-/// [`CydDisplay::tiles`]) that cover the screen (or a rectangle) in smaller pieces when memory
-/// is tight; and contiguous-pixel methods (see
+/// drawn into and flushed to any rectangle on screen; callback-tiled frames (see
+/// [`CydDisplay::for_each_tile`]) that cover the screen (or a rectangle) in smaller pieces when
+/// memory is tight; and contiguous-pixel methods (see
 /// [`CydDisplay::fill_contiguous`]) that stream pixels straight to the screen
 /// with virtually no buffering.
 ///
-pub trait CydDisplay {
-    /// Error returned when flushing a frame fails.
-    type Error;
-
-    /// The per-rectangle frame type this device produces.
-    ///
-    /// Its [`display::CydFrame::Error`] is pinned to this display's [`CydDisplay::Error`], so
-    /// `frame.flush().await?` in generic code propagates a single
-    /// `S::Error`.
-    type Frame<'a>: display::CydFrame<Error = Self::Error>
-    where
-        Self: 'a;
-
+/// The drawing strategies have deliberately different coordinate and replay semantics:
+/// full-screen frames render a complete scene in screen coordinates; regional frames update
+/// independent rectangles and use coordinates local to each rectangle; tiled callbacks replay a
+/// complete scene once per tile while accepting screen coordinates; and streaming generates the
+/// complete row-major raster directly. The host comparison test exercises the same boundary-
+/// crossing scene through all four paths.
+///
+pub trait CydDisplay: backend::DisplayBackend {
     /// Oriented screen size for the configured orientation.
     ///
     /// ```rust,no_run
@@ -268,94 +263,11 @@ assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground_color(
 
     /// Borrow a frame covering `rectangle`, cleared to the device background color.
     ///
-    /// Drawing commands are interpreted in screen coordinates:
-    /// `tile_top_left` is subtracted before pixels are written into the
-    /// frame-local buffer. Regular, non-tiled frames use `(0, 0)` and therefore
-    /// draw in frame-local coordinates.
+    /// Drawing commands use coordinates local to the frame's rectangle. Use
+    /// [`CydDisplay::for_each_tile`] when replaying a complete screen-coordinate
+    /// scene into smaller buffers.
     ///
-    /// ```rust,no_run
-    /// use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
-    /// use embedded_graphics::{prelude::Point, primitives::Rectangle};
-    ///
-    /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
-    ///     let rectangle = Rectangle::new(Point::new(0, 0), display.screen_size());
-    ///     let mut frame = display.frame_mut_with_tile_top_left(rectangle, rectangle.top_left);
-    ///     frame.clear();
-    ///     frame.flush().await
-    /// }
-    /// ```
-    ///
-    #[cfg_attr(
-        feature = "doc-images",
-        doc = ::embed_doc_image::embed_image!(
-            "cyd_frame_mut_with_tile_top_left_preview",
-            "docs/assets/cyd_frame_mut_with_tile_top_left_preview.png"
-        )
-    )]
-    #[cfg_attr(
-        feature = "host",
-        doc = r#"
-
-```rust
-use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
-use device_envoy_core::UnwrapInfallible;
-use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
-use embedded_graphics::{
-    Drawable,
-    pixelcolor::{Rgb565, Rgb888},
-    prelude::{Point, Primitive, RgbColor, Size},
-    primitives::{PrimitiveStyle, Rectangle},
-};
-# use embedded_graphics::mono_font::ascii::FONT_9X15_BOLD;
-# futures_executor::block_on(async {
-# let memory_cyd = CydMemory::new(
-#     Size::new(320, 240),
-#     Rgb888::BLACK,
-#     Rgb888::WHITE,
-#     &FONT_9X15_BOLD,
-# );
-# let mut display = memory_cyd.display();
-let mut frame = display.frame_mut_with_tile_top_left(
-    Rectangle::new(Point::new(32, 24), Size::new(48, 32)),
-    Point::new(32, 24),
-);
-frame.fill(Rgb565::GREEN);
-Rectangle::new(Point::new(36, 28), Size::new(6, 6))
-    .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
-    .draw(&mut frame)
-    .unwrap_infallible();
-Rectangle::new(Point::new(70, 46), Size::new(6, 6))
-    .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
-    .draw(&mut frame)
-    .unwrap_infallible();
-frame.flush().await?;
-# if let Err(error) = assert_framebuffer_matches_expected_png(
-#     &memory_cyd,
-#     env!("CARGO_MANIFEST_DIR"),
-#     "cyd_frame_mut_with_tile_top_left_preview.png",
-# ) {
-#     panic!("{error}");
-# }
-# Ok::<(), device_envoy_core::memory::Error>(())
-# })?;
-# Ok::<(), device_envoy_core::memory::Error>(())
-```
-
-![CYD tiled frame preview][cyd_frame_mut_with_tile_top_left_preview]
-"#
-    )]
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> Self::Frame<'_>;
-
-    /// Borrow a frame covering `rectangle`, cleared to the device background color.
-    ///
-    /// The frame remembers its `rectangle`, so [`display::CydFrame::flush`] presents it
-    /// at the rectangle's top-left with no separate position argument.
-    ///
-    /// See the [canonical frame example](CydDisplay::frame_mut_with_tile_top_left).
+    /// See the [canonical frame example](CydDisplay::frame_mut).
     ///
     /// ```rust,no_run
     /// use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
@@ -414,7 +326,7 @@ frame.flush().await?;
 "#
     )]
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
-        self.frame_mut_with_tile_top_left(rectangle, Point::zero())
+        backend::DisplayBackend::frame_mut_with_tile_top_left(self, rectangle, Point::zero())
     }
 
     /// Borrow a full-screen frame, cleared to the device background color.
@@ -431,26 +343,17 @@ frame.flush().await?;
     /// treat an empty intersection as a no-op.
     ///
     /// This is the canonical example for the immediate and contiguous operations:
-    /// [`CydDisplay::fill_contiguous`], [`CydDisplay::fill_contiguous_full`],
-    /// [`CydDisplay::flush_at`], [`CydDisplay::draw_items`], [`CydDisplay::clear`],
+    /// [`CydDisplay::fill_contiguous`], [`CydDisplay::draw_items`], [`CydDisplay::clear`],
     /// and [`CydDisplay::fill`].
     ///
     /// ```rust,no_run
-    /// use device_envoy_core::cyd::{CydDisplay, display::RectanglePixels};
+    /// use device_envoy_core::cyd::CydDisplay;
     /// use embedded_graphics::{pixelcolor::Rgb565, prelude::{Point, RgbColor, Size}, primitives::Rectangle};
     ///
-    /// struct Pixels([u16; 4]);
-    /// impl RectanglePixels for Pixels {
-    ///     fn width(&self) -> usize { 2 }
-    ///     fn height(&self) -> usize { 2 }
-    ///     fn raw_pixels(&self) -> &[u16] { &self.0 }
-    /// }
     /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     ///     let rectangle = Rectangle::new(Point::zero(), Size::new(2, 2));
     ///     display.fill_rectangle(rectangle, Rgb565::BLACK)?;
     ///     display.fill_contiguous(rectangle, [Rgb565::RED; 4])?;
-    ///     display.fill_contiguous_full([Rgb565::BLUE; 320 * 240])?;
-    ///     display.flush_at(&Pixels([0; 4]), Point::zero())?;
     ///     display.draw_items::<1>(rectangle, Rgb565::BLACK, [])?;
     ///     display.clear()?;
     ///     display.fill(Rgb565::WHITE)
@@ -462,45 +365,34 @@ frame.flush().await?;
     ///
     /// Empty rectangles are a no-op.
     ///
-    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
+    /// See the [canonical streaming example](CydDisplay::fill_contiguous_full).
     fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Rgb565>;
 
-    /// Fill the entire screen immediately from row-major native-color pixels.
+    /// Fill the complete screen immediately from row-major native-color pixels.
     ///
-    /// This is the full-screen convenience form of [`CydDisplay::fill_contiguous`].
-    /// Empty pixel iterators are allowed; implementations retain the same size
-    /// validation behavior as [`CydDisplay::fill_contiguous`].
+    /// This is the whole-screen counterpart to [`CydDisplay::fill_contiguous`].
+    /// It expresses full-screen streaming intent without repeating the complete
+    /// screen rectangle. Streaming is an advanced raster path: the caller
+    /// generates every pixel in row-major order rather than drawing a scene.
     ///
-    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::CydDisplay;
+    /// use embedded_graphics::{pixelcolor::Rgb565, prelude::RgbColor};
+    ///
+    /// fn stream<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     let pixels = (0..320 * 240).map(|pixel_index| {
+    ///         if pixel_index % 320 == 0 { Rgb565::WHITE } else { Rgb565::BLACK }
+    ///     });
+    ///     display.fill_contiguous_full(pixels)
+    /// }
+    /// ```
     fn fill_contiguous_full<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Rgb565>,
     {
         self.fill_contiguous(Rectangle::new(Point::zero(), self.screen_size()), pixels)
-    }
-
-    /// Present a native-color rectangle buffer at `top_left`.
-    ///
-    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
-    fn flush_at(
-        &mut self,
-        buffer: &impl display::RectanglePixels,
-        top_left: Point,
-    ) -> Result<(), Self::Error> {
-        let rectangle = Rectangle::new(
-            top_left,
-            Size::new(buffer.width() as u32, buffer.height() as u32),
-        );
-        self.fill_contiguous(
-            rectangle,
-            buffer
-                .raw_pixels()
-                .iter()
-                .copied()
-                .map(|pixel| Rgb565::from(RawU16::new(pixel))),
-        )
     }
 
     /// Draw projected draw items immediately inside `bounds`.
@@ -544,7 +436,7 @@ frame.flush().await?;
     ///
     /// The callback receives one screen-coordinate frame at a time; this helper owns the
     /// reusable frame and flush sequence, so callers do not need to handle lending iterator
-    /// lifetimes. See [`CydDisplay::tiles`] for the lower-level advanced API.
+    /// lifetimes. This is the primary low-memory drawing workflow.
     ///
     /// ```rust,no_run
     /// use device_envoy_core::{cyd::{CydDisplay, display::CydFrame, display::tiling::TileGrid}, UnwrapInfallible};
@@ -571,39 +463,13 @@ frame.flush().await?;
         F: for<'frame> FnMut(&mut Self::Frame<'frame>) + 'a,
     {
         async move {
-            let mut tiles = self.tiles(grid);
+            let mut tiles = display::tiling::Tiles::new(self, grid);
             while let Some(mut frame) = tiles.next() {
                 draw(&mut frame);
                 frame.flush().await?;
             }
             Ok(())
         }
-    }
-
-    /// Drive `grid` as a sequence of low-memory tiles.
-    ///
-    /// The returned [`Tiles`](display::tiling::Tiles) is a lending/streaming iterator (it does not
-    /// implement [`Iterator`], because each yielded frame borrows the device's
-    /// single reusable frame buffer). Each yielded frame draws in screen
-    /// coordinates via each frame's non-zero [`display::CydFrame::tile_top_left`], and is
-    /// presented with [`display::CydFrame::flush`]:
-    ///
-    /// ```rust,no_run
-    /// # use device_envoy_core::cyd::{CydDisplay, display::{CydFrame, tiling::TileGrid}};
-    /// # async fn draw<D: CydDisplay>(display: &mut D, grid: TileGrid) -> Result<(), D::Error> {
-    /// let mut tiles = display.tiles(grid);
-    /// while let Some(mut frame) = tiles.next() {
-    ///     // draw into `frame` in screen coordinates...
-    ///     frame.flush().await?;
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    fn tiles(&mut self, grid: display::tiling::TileGrid) -> display::tiling::Tiles<'_, Self>
-    where
-        Self: Sized,
-    {
-        display::tiling::Tiles::new(self, grid)
     }
 }
 
@@ -631,10 +497,23 @@ mod tests {
         tile_top_left: Point,
     }
 
-    impl CydDisplay for TestCyd {
+    impl backend::DisplayBackend for TestCyd {
         type Error = Infallible;
         type Frame<'a> = TestFrame;
 
+        fn frame_mut_with_tile_top_left(
+            &mut self,
+            rectangle: Rectangle,
+            tile_top_left: Point,
+        ) -> TestFrame {
+            TestFrame {
+                rectangle,
+                tile_top_left,
+            }
+        }
+    }
+
+    impl CydDisplay for TestCyd {
         fn screen_size(&self) -> Size {
             Size::new(320, 240)
         }
@@ -653,17 +532,6 @@ mod tests {
 
         fn foreground_565(&self) -> Rgb565 {
             self.to_rgb565(self.foreground_color())
-        }
-
-        fn frame_mut_with_tile_top_left(
-            &mut self,
-            rectangle: Rectangle,
-            tile_top_left: Point,
-        ) -> TestFrame {
-            TestFrame {
-                rectangle,
-                tile_top_left,
-            }
         }
 
         fn fill_rectangle(
@@ -752,7 +620,7 @@ mod tests {
     fn tiled_frames_use_screen_tile_top_left() {
         let mut cyd = TestCyd;
         let grid = display::tiling::TileGrid::new(Point::new(10, 20), Size::new(8, 6), 2, 2);
-        let mut tiles = cyd.tiles(grid);
+        let mut tiles = display::tiling::Tiles::new(&mut cyd, grid);
 
         {
             let first = tiles.next().expect("first tile exists");

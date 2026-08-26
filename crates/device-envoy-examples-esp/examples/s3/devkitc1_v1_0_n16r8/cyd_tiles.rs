@@ -80,9 +80,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     let grid = TileGrid::new(Point::zero(), Size::new(320, 240), TILE_COLUMNS, TILE_ROWS);
 
     loop {
-        let mut tiles = display.tiles(grid);
         let mut tile_index: usize = 0;
-        while let Some(mut frame) = tiles.next() {
+        display.for_each_tile(grid, |frame| {
             frame.fill(palette[tile_index % palette.len()]);
             let mut label = heapless::String::<8>::new();
             assert!(
@@ -90,9 +89,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
                 "tile index label exceeds buffer"
             );
             frame.write_text(label.as_str());
-            frame.flush()?;
             tile_index += 1;
-        }
+        }).await?;
         Timer::after(Duration::from_secs(1)).await;
     }
 }

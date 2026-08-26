@@ -29,36 +29,6 @@ pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, mask_byte_count};
 /// See the [canonical TGA family example](tga).
 pub use crate::__cyd_tga as tga;
 
-/// A borrowed or owned rectangular RGB565 pixel buffer.
-///
-/// See [`super::CydDisplay::flush_at`] for the primary consumer. Implementors
-/// expose the dimensions and row-major pixels used by that operation.
-///
-/// ```rust,no_run
-/// use device_envoy_core::cyd::display::RectanglePixels;
-///
-/// fn inspect<P: RectanglePixels>(pixels: &P) {
-///     assert_eq!(pixels.raw_pixels().len(), pixels.width() * pixels.height());
-/// }
-/// ```
-// TODO Consider introducing a concrete `RectanglePixelsView` containing the
-// dimensions and pixel slice, then reducing this trait to only `view`. Buffer
-// inspection and iteration could live on that common borrowed representation.
-pub trait RectanglePixels {
-    /// Buffer width in pixels.
-    ///
-    /// See the [canonical `RectanglePixels` example](RectanglePixels).
-    fn width(&self) -> usize;
-    /// Buffer height in pixels.
-    ///
-    /// See the [canonical `RectanglePixels` example](RectanglePixels).
-    fn height(&self) -> usize;
-    /// Row-major RGB565 pixels.
-    ///
-    /// See the [canonical `RectanglePixels` example](RectanglePixels).
-    fn raw_pixels(&self) -> &[u16];
-}
-
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
 ///
 /// Also a [`PixelTarget`] so projected linkage draw items can render into it.

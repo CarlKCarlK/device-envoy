@@ -475,13 +475,34 @@ const fn decode_hex_nibble(byte: u8) -> Option<u8> {
     }
 }
 
-impl CydDisplay for CydDisplayWasm {
+impl crate::cyd::backend::DisplayBackend for CydDisplayWasm {
     type Error = Infallible;
     type Frame<'a>
         = CydFrameWasm<'a>
     where
         Self: 'a;
 
+    fn frame_mut_with_tile_top_left(
+        &mut self,
+        rectangle: Rectangle,
+        tile_top_left: Point,
+    ) -> Self::Frame<'_> {
+        let size = rectangle.size;
+        let pixel_count = size.width as usize * size.height as usize;
+        let pixels = vec![self.background565.into_storage(); pixel_count];
+        CydFrameWasm {
+            context: &self.context,
+            pixels,
+            rectangle,
+            tile_top_left,
+            background565: self.background565,
+            foreground565: self.foreground565,
+            font: self.font,
+        }
+    }
+}
+
+impl CydDisplay for CydDisplayWasm {
     fn screen_size(&self) -> Size {
         self.size
     }
@@ -500,27 +521,6 @@ impl CydDisplay for CydDisplayWasm {
 
     fn foreground_565(&self) -> Rgb565 {
         self.foreground565
-    }
-
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> CydFrameWasm<'_> {
-        let size = rectangle.size;
-        let pixel_count = size.width as usize * size.height as usize;
-        // Every new frame starts cleared to the device background color so callers
-        // never have to clear it themselves.
-        let pixels = vec![self.background565.into_storage(); pixel_count];
-        CydFrameWasm {
-            context: &self.context,
-            pixels,
-            rectangle,
-            tile_top_left,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-        }
     }
 
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Infallible> {

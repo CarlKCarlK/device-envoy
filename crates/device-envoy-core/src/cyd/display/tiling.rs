@@ -8,7 +8,7 @@
 //! The primary type is [`TileGrid`]: callers give it a rectangular body area
 //! and the number of tile columns and rows; it derives the per-tile size with
 //! ceiling division and clips the final column/row to the rectangle edges. See
-//! [`CydDisplay::tiles`] for the canonical tiled draw loop, and use
+//! [`CydDisplay::for_each_tile`] for the canonical tiled draw loop, and use
 //! [`embedded_graphics::primitives::Rectangle`] plus
 //! [`max_rectangle_pixel_count`] when sizing a shared buffer around fixed
 //! regions.
@@ -78,7 +78,7 @@ impl TileGrid {
     ///
     /// Const-asserts that the counts are positive and do not exceed the rectangle's
     /// pixel dimensions, so an over-fine grid fails to compile. See
-    /// [`CydDisplay::tiles`] for the canonical draw loop that consumes the grid.
+    /// [`CydDisplay::for_each_tile`] for the canonical draw loop that consumes the grid.
     #[must_use]
     pub const fn new(top_left: Point, size: Size, columns: usize, rows: usize) -> Self {
         assert!(columns > 0, "columns must be greater than zero");
@@ -179,14 +179,14 @@ const fn min_usize(first: usize, second: usize) -> usize {
     if first < second { first } else { second }
 }
 
-/// A lending/streaming iterator over a [`TileGrid`]'s tiles.
+/// Internal lending/streaming iterator used by `CydDisplay::for_each_tile`.
 ///
-/// Created by [`CydDisplay::tiles`]. This deliberately does *not* implement
+/// Created internally by [`CydDisplay::for_each_tile`]. This deliberately does *not* implement
 /// [`Iterator`]: each yielded frame borrows the device's
 /// single reusable frame buffer, so only one frame can be live at a time.
 /// Iterate with a `while let Some(mut frame) = tiles.next()` loop.
-/// See the [canonical tiled draw loop](CydDisplay::tiles).
-pub struct Tiles<'a, C: CydDisplay> {
+/// See the [canonical tiled draw loop](CydDisplay::for_each_tile).
+pub(crate) struct Tiles<'a, C: CydDisplay> {
     cyd: &'a mut C,
     grid: TileGrid,
     column: usize,
@@ -211,13 +211,13 @@ impl<C: CydDisplay> Tiles<'_, C> {
     /// Tiles are visited in row-major order (each row left-to-right), skipping
     /// any `(column, row)` that falls entirely outside the grid rectangle.
     ///
-    /// See the [canonical `CydDisplay::tiles` example](CydDisplay::tiles).
+    /// See the [canonical `CydDisplay::for_each_tile` example](CydDisplay::for_each_tile).
     // This is a lending iterator: each yielded frame borrows the device's single
     // reusable frame buffer, so it cannot implement `Iterator` (whose `next`
     // returns an item that outlives the `&mut self` borrow). The `next` name is
     // the intended call shape, so allow the trait-shape lint here.
     #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Option<C::Frame<'_>> {
+    pub(crate) fn next(&mut self) -> Option<C::Frame<'_>> {
         let (columns, rows) = (self.grid.columns(), self.grid.rows());
         loop {
             if self.row >= rows {
@@ -232,8 +232,11 @@ impl<C: CydDisplay> Tiles<'_, C> {
             if let Some(rectangle) = rectangle {
                 let tile_top_left = rectangle.top_left;
                 return Some(
-                    self.cyd
-                        .frame_mut_with_tile_top_left(rectangle, tile_top_left),
+                    super::super::backend::DisplayBackend::frame_mut_with_tile_top_left(
+                        self.cyd,
+                        rectangle,
+                        tile_top_left,
+                    ),
                 );
             }
         }

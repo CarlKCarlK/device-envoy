@@ -105,7 +105,7 @@ use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOW
 use crate::cyd::{
     Cyd, CydDisplay, CydTouch,
     backend::{CalibrationConfig, RawTouchEvent},
-    display::{CydFrame, Orientation, RectanglePixels},
+    display::{CydFrame, Orientation},
     touch::TouchEvent,
 };
 #[cfg(test)]
@@ -612,13 +612,31 @@ impl TouchUncalibrated for CydTouchUncalibratedMemory {
     }
 }
 
-impl CydDisplay for CydDisplayMemory {
+impl crate::cyd::backend::DisplayBackend for CydDisplayMemory {
     type Error = Error;
-    type Frame<'a>
-        = CydFrameMemory
-    where
-        Self: 'a;
 
+    type Frame<'a> = CydFrameMemory;
+
+    fn frame_mut_with_tile_top_left(
+        &mut self,
+        rectangle: Rectangle,
+        tile_top_left: Point,
+    ) -> Self::Frame<'_> {
+        let pixel_count = rectangle.size.width as usize * rectangle.size.height as usize;
+        CydFrameMemory {
+            shared: self.shared.clone(),
+            screen_size: self.size,
+            rectangle,
+            tile_top_left,
+            background565: self.background565,
+            foreground565: self.foreground565,
+            font: self.font,
+            pixels: vec![self.background565.into_storage(); pixel_count],
+        }
+    }
+}
+
+impl CydDisplay for CydDisplayMemory {
     fn screen_size(&self) -> Size {
         self.size
     }
@@ -637,24 +655,6 @@ impl CydDisplay for CydDisplayMemory {
 
     fn foreground_565(&self) -> Rgb565 {
         self.foreground565
-    }
-
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> Self::Frame<'_> {
-        let pixel_count = rectangle.size.width as usize * rectangle.size.height as usize;
-        CydFrameMemory {
-            shared: self.shared.clone(),
-            screen_size: self.size,
-            rectangle,
-            tile_top_left,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-            pixels: vec![self.background565.into_storage(); pixel_count],
-        }
     }
 
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Self::Error> {
@@ -801,20 +801,6 @@ impl PixelTarget for CydFrameMemory {
         }
         let stride = self.width();
         self.pixels[local_y * stride + local_x] = rgb565;
-    }
-}
-
-impl RectanglePixels for CydFrameMemory {
-    fn width(&self) -> usize {
-        self.width()
-    }
-
-    fn height(&self) -> usize {
-        self.height()
-    }
-
-    fn raw_pixels(&self) -> &[u16] {
-        &self.pixels
     }
 }
 
@@ -1212,7 +1198,7 @@ mod tests {
             CalibrationConfig, Error as CalibrationError, RawTouchEvent, TouchUncalibrated,
             ensure_calibration,
         },
-        display::{CydFrame, RectanglePixels},
+        display::CydFrame,
         touch::{
             RawPoint,
             calibration::{
@@ -1291,7 +1277,7 @@ mod tests {
         let memory_cyd = test_cyd_memory();
         let mut display = memory_cyd.display();
         let frame = display.frame_mut(Rectangle::new(Point::new(3, 4), Size::new(2, 2)));
-        assert_eq!(frame.raw_pixels(), &[Rgb565::CSS_BLACK.into_storage(); 4]);
+        assert_eq!(frame.pixels, &[Rgb565::CSS_BLACK.into_storage(); 4]);
     }
 
     #[test]
@@ -1299,7 +1285,8 @@ mod tests {
         let memory_cyd = test_cyd_memory();
         {
             let mut display = memory_cyd.display();
-            let mut frame = display.frame_mut_with_tile_top_left(
+            let mut frame = crate::cyd::backend::DisplayBackend::frame_mut_with_tile_top_left(
+                &mut display,
                 Rectangle::new(Point::new(10, 20), Size::new(4, 3)),
                 Point::new(10, 20),
             );

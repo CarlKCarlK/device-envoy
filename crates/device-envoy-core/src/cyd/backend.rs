@@ -32,6 +32,32 @@
 //! }
 //! ```
 
+use super::display::CydFrame;
+
+/// The platform-only display construction seam used by ESP and RP backends.
+///
+/// This is public because those implementations live in separate crates and
+/// cannot implement a private core-only hook. Applications should use
+/// [`super::CydDisplay::frame_mut`], [`super::CydDisplay::full_frame_mut`], or
+/// [`super::CydDisplay::for_each_tile`] instead.
+pub trait DisplayBackend {
+    /// Error returned when a frame is flushed.
+    type Error;
+
+    /// Frame type produced by this backend.
+    type Frame<'a>: CydFrame<Error = Self::Error>
+    where
+        Self: 'a;
+
+    /// Construct a frame whose drawing coordinates are translated from screen
+    /// coordinates by `tile_top_left`.
+    fn frame_mut_with_tile_top_left(
+        &mut self,
+        rectangle: embedded_graphics::primitives::Rectangle,
+        tile_top_left: embedded_graphics::prelude::Point,
+    ) -> Self::Frame<'_>;
+}
+
 /// A raw XPT2046 touch event used by platform calibration backends.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RawTouchEvent {

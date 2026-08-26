@@ -1,6 +1,5 @@
 use core::convert::Infallible;
 
-use device_envoy_core::cyd::display::RectanglePixels;
 use embedded_graphics::{
     Pixel,
     pixelcolor::{IntoStorage, Rgb565},
@@ -75,6 +74,14 @@ impl<const PIXEL_COUNT: usize> DynPixelBuffer for PixelBuffer<PIXEL_COUNT> {
 }
 
 impl RegionView<'_> {
+    pub(crate) fn width(&self) -> usize {
+        self.width
+    }
+
+    pub(crate) fn height(&self) -> usize {
+        self.height
+    }
+
     /// Fill every pixel with `color`.
     pub fn fill(&mut self, color: Rgb565) {
         self.pixels.fill(color.into_storage());
@@ -84,18 +91,7 @@ impl RegionView<'_> {
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.pixels
     }
-}
-
-impl RectanglePixels for RegionView<'_> {
-    fn width(&self) -> usize {
-        self.width
-    }
-
-    fn height(&self) -> usize {
-        self.height
-    }
-
-    fn raw_pixels(&self) -> &[u16] {
+    pub(crate) fn raw_pixels(&self) -> &[u16] {
         self.pixels
     }
 }

@@ -143,21 +143,21 @@ enum CalibrationShape {
 /// #         DemoTouch
 /// #     }
 /// # }
-/// # impl CydDisplay for DemoDisplay {
+/// # impl device_envoy_core::cyd::backend::DisplayBackend for DemoDisplay {
 /// #     type Error = Infallible;
 /// #     type Frame<'a> = DemoFrame;
+/// #     fn frame_mut_with_tile_top_left(
+/// #         &mut self,
+/// #         _rectangle: Rectangle,
+/// #         _tile_top_left: Point,
+/// #     ) -> Self::Frame<'_> { DemoFrame }
+/// # }
+/// # impl CydDisplay for DemoDisplay {
 /// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
 /// #     fn background_color(&self) -> Rgb888 { Rgb888::BLACK }
 /// #     fn foreground_color(&self) -> Rgb888 { Rgb888::WHITE }
 /// #     fn background_565(&self) -> Rgb565 { Rgb565::BLACK }
 /// #     fn foreground_565(&self) -> Rgb565 { Rgb565::WHITE }
-/// #     fn frame_mut_with_tile_top_left(
-/// #         &mut self,
-/// #         _rectangle: Rectangle,
-/// #         _tile_top_left: Point,
-/// #     ) -> Self::Frame<'_> {
-/// #         DemoFrame
-/// #     }
 /// #     fn fill_rectangle(
 /// #         &mut self,
 /// #         _rectangle: Rectangle,

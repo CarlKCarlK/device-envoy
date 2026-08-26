@@ -1,4 +1,4 @@
-use device_envoy_core::{UnwrapInfallible, cyd::display::RectanglePixels};
+use device_envoy_core::UnwrapInfallible;
 use embassy_rp::Peri;
 use embassy_rp::gpio::{Level, Output, Pin};
 use embassy_rp::peripherals::SPI0;
@@ -125,18 +125,16 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
 
     pub(crate) fn flush_buffer(
         &mut self,
-        buffer: &impl RectanglePixels,
+        width: usize,
+        height: usize,
+        pixels: &[u16],
         top_left: Point,
     ) -> Result<(), super::Error> {
-        let rectangle = Rectangle::new(
-            top_left,
-            Size::new(buffer.width() as u32, buffer.height() as u32),
-        );
+        let rectangle = Rectangle::new(top_left, Size::new(width as u32, height as u32));
         self.display
             .fill_contiguous(
                 &rectangle,
-                buffer
-                    .raw_pixels()
+                pixels
                     .iter()
                     .copied()
                     .map(|pixel| Rgb565::from(RawU16::new(pixel))),

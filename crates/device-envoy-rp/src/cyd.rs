@@ -22,7 +22,7 @@ use device_envoy_core::cyd::backend;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
     backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
-    display::{CydFrame, RectanglePixels},
+    display::CydFrame,
     touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;
@@ -229,7 +229,12 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     pub fn flush(&mut self) -> Result<(), Error> {
         Ok(self
             .display
-            .flush_buffer(&self.view, self.rectangle.top_left)?)
+            .flush_buffer(
+                self.view.size().width as usize,
+                self.view.size().height as usize,
+                self.view.raw_pixels(),
+                self.rectangle.top_left,
+            )?)
     }
 
     fn local_x(&self, x: i32) -> Option<usize> {
@@ -778,13 +783,30 @@ impl fmt::Debug for CydRpUncalibrated {
     }
 }
 
-impl<D: SpiDevice<u8>> CydDisplay for CydDisplayRp<D> {
+impl<D: SpiDevice<u8>> backend::DisplayBackend for CydDisplayRp<D> {
     type Error = Error;
     type Frame<'a>
         = CydFrameRp<'a, D>
     where
         Self: 'a;
 
+    fn frame_mut_with_tile_top_left(
+        &mut self,
+        rectangle: Rectangle,
+        tile_top_left: Point,
+    ) -> Self::Frame<'_> {
+        self.display.make_frame_with_tile_top_left(
+            &mut *self.pixel_buffer,
+            rectangle,
+            tile_top_left,
+            self.background565,
+            self.foreground565,
+            self.font,
+        )
+    }
+}
+
+impl<D: SpiDevice<u8>> CydDisplay for CydDisplayRp<D> {
     #[inline]
     fn screen_size(&self) -> Size {
         self.display.size()
@@ -806,21 +828,6 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayRp<D> {
         self.foreground565
     }
 
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> CydFrameRp<'_, D> {
-        self.display.make_frame_with_tile_top_left(
-            &mut *self.pixel_buffer,
-            rectangle,
-            tile_top_left,
-            self.background565,
-            self.foreground565,
-            self.font,
-        )
-    }
-
     #[inline]
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Error> {
         Ok(self.display.fill_rectangle(rectangle, color)?)
@@ -834,10 +841,6 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayRp<D> {
         Ok(self.display.fill_contiguous(rectangle, pixels)?)
     }
 
-    #[inline]
-    fn flush_at(&mut self, buffer: &impl RectanglePixels, top_left: Point) -> Result<(), Error> {
-        Ok(self.display.flush_buffer(buffer, top_left)?)
-    }
 }
 
 impl<D: SpiDevice<u8>> TouchUncalibrated for CydTouchUncalibratedRp<D> {

@@ -14,6 +14,8 @@ Rather than replacing HALs or drivers, `device-envoy` builds on them and exposes
 
 Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, and ESP via `device-envoy-esp` (supported chips: ESP32, ESP32-C2, ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2, ESP32-S2, ESP32-S3).
 
+For CYD hardware and development implementation choices, see the [canonical CYD overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview), including ESP32 hardware, Raspberry Pi Pico hardware, interactive browser simulation, and native desktop testing.
+
 **Feedback**: If you try this crate, I’d love to hear how it goes, whether it works well, fails to build, needs clearer docs, or does not fit your hardware. Please send feedback to carlk AT msn.com.
 
 ## Workspace Crates

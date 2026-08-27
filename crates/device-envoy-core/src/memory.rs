@@ -2,21 +2,33 @@
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!("cyd_memory_bitmap", "docs/assets/cyd_memory_bitmap.png")
 )]
-//! In-memory [`Button`] mocks and a CYD test harness for host-side tests.
+//! In-memory [`Button`] mocks and a CYD test harness for native desktop tests.
 //!
 //! Requires the `host` feature. Script touch and button input into
 //! [`CydMemory`]/[`ButtonMemory`], then assert on drawn pixels, flush counts,
 //! or compare against golden-image PNGs with
 //! [`assert_framebuffer_matches_expected_png`].
+//! The shared API is documented in [`crate::cyd`]; choose this deterministic
+//! implementation for repeatable tests and framebuffer assertions. For an
+//! interactive alternative, see [`crate::wasm`](https://docs.rs/device-envoy-core/latest/device_envoy_core/wasm/)
+//! (requires the `wasm` feature).
+//!
+//! ## Compiled `CydMemory` example
 //!
 //! ```rust
-//! use device_envoy_core::cyd::{Cyd, CydDisplay};
-//! use device_envoy_core::memory::CydMemory;
+//! use device_envoy_core::{
+//!     button::Button,
+//!     cyd::{CydDisplay, CydTouch, touch::TouchEvent},
+//! };
+//! use device_envoy_core::memory::{
+//!     CydDisplayMemory, CydFrameMemory, CydMemory, CydTouchMemory,
+//! };
 //! use device_envoy_core::cyd::display::{CydFrame, DrawItem, Image565View};
 //! use embedded_graphics::{
 //!     mono_font::ascii::FONT_9X15_BOLD,
-//!     pixelcolor::Rgb888,
+//!     pixelcolor::{Rgb565, Rgb888},
 //!     prelude::{Point, RgbColor, Size},
+//!     primitives::Rectangle,
 //! };
 //! use futures_executor::block_on;
 //!
@@ -57,8 +69,19 @@
 //!     Rgb888::WHITE,
 //!     &FONT_9X15_BOLD,
 //! );
+//! let display_copy: CydDisplayMemory = cyd_memory.display();
+//! assert_eq!(display_copy.screen_size(), Size::new(320, 240));
+//! let (owned_display, mut owned_touch): (CydDisplayMemory, CydTouchMemory) =
+//!     cyd_memory.owned_parts();
+//! assert_eq!(owned_display.screen_size(), Size::new(320, 240));
+//! cyd_memory.push_touch_event(TouchEvent::Up);
+//! assert!(matches!(owned_touch.read()?, Some(TouchEvent::Up)));
+//! let mut button_memory = cyd_memory.button_memory();
+//! button_memory.set_pressed(true);
+//! assert!(button_memory.is_pressed());
+//! button_memory.set_pressed_for_frame(1, false);
 //! let mut display = cyd_memory.display();
-//! let mut frame = display.full_frame_mut();
+//! let mut frame: CydFrameMemory = display.full_frame_mut();
 //! frame.write_text("Hello CYD");
 //! DrawItem::Bitmap {
 //!     view: Image565View::new(
@@ -69,17 +92,77 @@
 //! }
 //! .draw(&mut frame);
 //! block_on(frame.flush())?;
-//! # if let Err(error) = device_envoy_core::memory::assert_framebuffer_matches_expected_png(
-//! #     &cyd_memory,
-//! #     env!("CARGO_MANIFEST_DIR"),
-//! #     "cyd_memory_bitmap.png",
-//! # ) {
-//! #     panic!("{error}");
-//! # }
+//! assert!(!button_memory.is_pressed());
+//! assert_eq!(cyd_memory.flush_count(), 1);
+//! assert_eq!(
+//!     cyd_memory.last_flush_rectangle(),
+//!     Some(Rectangle::new(Point::zero(), Size::new(320, 240))),
+//! );
+//! assert_eq!(cyd_memory.pixel(128, 88), Rgb565::WHITE);
+//! let golden_result = device_envoy_core::memory::assert_framebuffer_matches_expected_png(
+//!     &cyd_memory,
+//!     env!("CARGO_MANIFEST_DIR"),
+//!     "cyd_memory_bitmap.png",
+//! );
+//! assert!(golden_result.is_ok(), "{golden_result:?}");
 //! # Ok::<(), device_envoy_core::memory::Error>(())
 //! ```
 //!
 //! ![CydMemory framebuffer preview][cyd_memory_bitmap]
+//!
+//! ## Orientation and frame-budget example
+//!
+//! ```rust
+//! use device_envoy_core::{
+//!     cyd::{Cyd, CydDisplay, display::{CydFrame, Orientation}},
+//!     memory::{CydMemory, Error},
+//! };
+//! use embedded_graphics::{
+//!     mono_font::ascii::FONT_9X15_BOLD,
+//!     pixelcolor::{Rgb565, Rgb888},
+//!     prelude::{Point, RgbColor, Size},
+//!     primitives::Rectangle,
+//! };
+//! use futures_executor::block_on;
+//!
+//! let mut cyd_memory = CydMemory::new_with_orientation(
+//!     Orientation::Portrait,
+//!     Rgb888::BLACK,
+//!     Rgb888::WHITE,
+//!     &FONT_9X15_BOLD,
+//! );
+//! assert_eq!(cyd_memory.orientation(), Orientation::Portrait);
+//! let mut display = cyd_memory.display();
+//! assert_eq!(display.screen_size(), Size::new(240, 320));
+//! cyd_memory.set_frame_budget(1);
+//!
+//! let pixel = Rectangle::new(Point::zero(), Size::new(1, 1));
+//! let mut first_frame = display.frame_mut(pixel);
+//! first_frame.fill(Rgb565::RED);
+//! block_on(first_frame.flush())?;
+//! drop(first_frame);
+//! assert_eq!(cyd_memory.pixel(0, 0), Rgb565::RED);
+//! assert_eq!(cyd_memory.pixel(239, 319), Rgb565::BLACK);
+//!
+//! cyd_memory.rotate_framebuffer_180();
+//! assert_eq!(cyd_memory.pixel(0, 0), Rgb565::BLACK);
+//! assert_eq!(cyd_memory.pixel(239, 319), Rgb565::RED);
+//!
+//! let mut second_frame = display.frame_mut(pixel);
+//! assert_eq!(block_on(second_frame.flush()), Err(Error::OutOfFrames));
+//! # Ok::<(), Error>(())
+//! ```
+//!
+//! ## Standalone `ButtonMemory` example
+//!
+//! ```rust
+//! use device_envoy_core::{button::Button, memory::ButtonMemory};
+//!
+//! let mut button = ButtonMemory::new();
+//! assert!(!button.is_pressed());
+//! button.set_pressed(true);
+//! assert!(button.is_pressed());
+//! ```
 
 #[cfg(test)]
 use core::ops::Range;
@@ -154,11 +237,21 @@ impl FrameClockMemory {
 }
 
 /// Error from the in-memory CYD test surface.
+///
+/// [`OutOfFrames`](Self::OutOfFrames) means that the configured frame budget
+/// has been exhausted. It is returned by a frame flush instead of silently
+/// dropping a rendered frame.
+/// See the compiled [frame-budget example](crate::memory#orientation-and-frame-budget-example).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
+    /// The configured number of frame flushes has already been used.
+    /// See the compiled [frame-budget example](crate::memory#orientation-and-frame-budget-example).
     OutOfFrames,
 }
-/// In-memory CYD device for host-side tests and screenshots.
+/// In-memory CYD device for fast, deterministic native desktop tests and screenshots in an
+/// ordinary Windows, macOS, or Linux process. Enable the `host` feature.
+/// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example) for construction,
+/// drawing, flushing, input injection, and framebuffer assertions.
 pub struct CydMemory {
     display: CydDisplayMemory,
     touch: CydTouchMemory,
@@ -176,7 +269,7 @@ struct CydMemoryShared {
     frame_clock: FrameClockMemory,
 }
 
-/// Owned display half of [`CydMemory`].
+/// Owned display half of [`CydMemory`]. See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
 #[derive(Clone)]
 pub struct CydDisplayMemory {
     size: Size,
@@ -188,7 +281,7 @@ pub struct CydDisplayMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
 }
 
-/// Owned calibrated touch half of [`CydMemory`].
+/// Owned calibrated touch half of [`CydMemory`]. See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
 #[derive(Clone)]
 pub struct CydTouchMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
@@ -201,7 +294,8 @@ pub(crate) struct CydTouchUncalibratedMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
 }
 
-/// In-progress in-memory frame that flushes into a host framebuffer.
+/// In-progress in-memory frame that flushes into an in-memory framebuffer. See the compiled
+/// [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
 pub struct CydFrameMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
     screen_size: Size,
@@ -230,7 +324,8 @@ struct FlashDeviceMemory {
     bytes: [u8; FLASH_BLOCK_SIZE],
 }
 
-/// Host-side button test double returned by [`CydMemory::button_memory`].
+/// Native desktop button test double returned by [`CydMemory::button_memory`].
+/// See the compiled [standalone button example](crate::memory#standalone-buttonmemory-example).
 pub struct ButtonMemory {
     pressed: bool,
     pressed_frames: Vec<(usize, bool)>,
@@ -239,6 +334,7 @@ pub struct ButtonMemory {
 
 impl CydMemory {
     /// Construct an empty in-memory CYD surface with the given screen style.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     #[must_use]
     pub fn new(
         size: Size,
@@ -255,6 +351,7 @@ impl CydMemory {
     }
 
     /// Construct an in-memory CYD surface with an oriented logical screen.
+    /// See the compiled [orientation example](crate::memory#orientation-and-frame-budget-example).
     #[must_use]
     pub fn new_with_orientation(
         orientation: Orientation,
@@ -313,11 +410,14 @@ impl CydMemory {
     }
 
     #[must_use]
+    /// Clone the device's display component for an independent test task.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     pub fn display(&self) -> CydDisplayMemory {
         self.display.clone()
     }
 
     /// Clone owned calibrated parts that share this harness's backing state.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     #[must_use]
     pub fn owned_parts(&self) -> (CydDisplayMemory, CydTouchMemory) {
         (self.display.clone(), self.touch.clone())
@@ -351,6 +451,7 @@ impl Cyd for CydMemory {
 
 impl CydMemory {
     /// Limit how many frames may flush before [`Error::OutOfFrames`].
+    /// See the compiled [frame-budget example](crate::memory#orientation-and-frame-budget-example).
     pub fn set_frame_budget(&mut self, frame_budget: usize) {
         self.shared.borrow_mut().frame_budget = frame_budget;
     }
@@ -360,8 +461,9 @@ impl CydMemory {
         self.shared.borrow().frame_clock.clone()
     }
 
-    /// Create a host-side button tied to this device's frame clock.
+    /// Create a native desktop test button tied to this device's frame clock.
     #[must_use]
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     pub fn button_memory(&self) -> ButtonMemory {
         ButtonMemory::with_frame_clock(self.frame_clock())
     }
@@ -391,6 +493,7 @@ impl CydMemory {
     }
 
     /// Queue one calibrated touch event for the current frame.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     pub fn push_touch_event(&mut self, touch_event: TouchEvent) {
         self.shared
             .borrow_mut()
@@ -399,18 +502,21 @@ impl CydMemory {
     }
 
     /// Return how many frames have flushed so far.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     #[must_use]
     pub fn flush_count(&self) -> usize {
         self.shared.borrow().flush_count
     }
 
     /// Return the rectangle flushed most recently, if any.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     #[must_use]
     pub fn last_flush_rectangle(&self) -> Option<Rectangle> {
         self.shared.borrow().last_flush_rectangle
     }
 
-    /// Read one pixel from the host framebuffer.
+    /// Read one pixel from the in-memory framebuffer.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     #[must_use]
     pub fn pixel(&self, position_x: usize, position_y: usize) -> Rgb565 {
         assert!(
@@ -429,9 +535,10 @@ impl CydMemory {
     }
 
     /// Apply the physical 180-degree presentation used by an inverted CYD orientation.
+    /// See the compiled [orientation example](crate::memory#orientation-and-frame-budget-example).
     ///
     /// Hardware display drivers and browser shells apply this transform outside the logical
-    /// application framebuffer. Host previews can call this after rendering to compare the
+    /// application framebuffer. Native desktop previews can call this after rendering to compare the
     /// user-facing presentation rather than the untransformed logical buffer.
     #[cfg(feature = "host")]
     pub fn rotate_framebuffer_180(&self) {
@@ -453,7 +560,7 @@ impl CydMemory {
         }
     }
 
-    /// Write the framebuffer as an RGB PNG for host-side previews and assertions.
+    /// Write the framebuffer as an RGB PNG for native desktop previews and assertions.
     pub(crate) fn write_framebuffer_png(
         &self,
         path: impl AsRef<Path>,
@@ -484,7 +591,8 @@ impl CydMemory {
     }
 }
 
-/// Golden-image assertion for a rendered [`CydMemory`] framebuffer.
+/// Golden-image assertion for a rendered [`CydMemory`] in-memory framebuffer.
+/// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
 ///
 /// `manifest_dir` is normally `env!("CARGO_MANIFEST_DIR")` from the calling
 /// crate, so the expected PNG lives at `<crate>/tests/assets/<relative_filename>`.
@@ -1004,7 +1112,7 @@ impl FlashBlock for FlashBlockMemory {
 
 #[cfg(test)]
 impl FlashDeviceMemory {
-    // TODO Consider consolidating this host-side flash test double with the
+    // TODO Consider consolidating this native desktop flash test double with the
     // test-private `FlashDeviceMemory` in device-envoy-core's flash_block.rs tests.
     fn new() -> Self {
         Self {
@@ -1057,6 +1165,7 @@ impl FlashDevice for FlashDeviceMemory {
 
 impl ButtonMemory {
     /// Construct a button test double with no frame scheduling.
+    /// See the compiled [standalone button example](crate::memory#standalone-buttonmemory-example).
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -1076,11 +1185,13 @@ impl ButtonMemory {
     }
 
     /// Set the button's default pressed state.
+    /// See the compiled [standalone button example](crate::memory#standalone-buttonmemory-example).
     pub fn set_pressed(&mut self, pressed: bool) {
         self.pressed = pressed;
     }
 
     /// Override the pressed state for one specific flushed frame index.
+    /// See the compiled [`CydMemory` module example](crate::memory#compiled-cydmemory-example).
     pub fn set_pressed_for_frame(&mut self, frame_index: usize, pressed: bool) {
         if let Some(existing_state) = self
             .pressed_frames
@@ -1283,6 +1394,50 @@ mod tests {
         let mut display = memory_cyd.display();
         let frame = display.frame_mut(Rectangle::new(Point::new(3, 4), Size::new(2, 2)));
         assert_eq!(frame.pixels, &[Rgb565::CSS_BLACK.into_storage(); 4]);
+    }
+
+    #[test]
+    fn short_fill_contiguous_iterator_changes_only_supplied_pixels() {
+        let memory_cyd = test_cyd_memory();
+        let rectangle = Rectangle::new(Point::new(2, 3), Size::new(2, 2));
+        {
+            let mut display = memory_cyd.display();
+            display
+                .fill_contiguous(rectangle, [Rgb565::CSS_RED, Rgb565::CSS_GREEN])
+                .expect("memory streaming should succeed");
+        }
+
+        assert_eq!(memory_cyd.pixel(2, 3), Rgb565::CSS_RED);
+        assert_eq!(memory_cyd.pixel(3, 3), Rgb565::CSS_GREEN);
+        assert_eq!(memory_cyd.pixel(2, 4), Rgb565::CSS_BLACK);
+        assert_eq!(memory_cyd.pixel(3, 4), Rgb565::CSS_BLACK);
+    }
+
+    #[test]
+    fn overlong_fill_contiguous_iterator_ignores_pixels_beyond_rectangle() {
+        let memory_cyd = test_cyd_memory();
+        let rectangle = Rectangle::new(Point::new(2, 3), Size::new(2, 2));
+        {
+            let mut display = memory_cyd.display();
+            display
+                .fill_contiguous(
+                    rectangle,
+                    [
+                        Rgb565::CSS_RED,
+                        Rgb565::CSS_GREEN,
+                        Rgb565::CSS_BLUE,
+                        Rgb565::CSS_WHITE,
+                        Rgb565::CSS_YELLOW,
+                    ],
+                )
+                .expect("memory streaming should succeed");
+        }
+
+        assert_eq!(memory_cyd.pixel(2, 3), Rgb565::CSS_RED);
+        assert_eq!(memory_cyd.pixel(3, 3), Rgb565::CSS_GREEN);
+        assert_eq!(memory_cyd.pixel(2, 4), Rgb565::CSS_BLUE);
+        assert_eq!(memory_cyd.pixel(3, 4), Rgb565::CSS_WHITE);
+        assert_eq!(memory_cyd.pixel(4, 3), Rgb565::CSS_BLACK);
     }
 
     #[test]

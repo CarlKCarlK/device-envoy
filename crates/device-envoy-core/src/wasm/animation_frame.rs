@@ -40,6 +40,13 @@ pub struct NextAnimationFrame {
 }
 
 /// Suspend until the next browser animation frame, resolving with its timestamp.
+///
+/// ```rust,no_run
+/// async fn present_on_next_frame() {
+///     let timestamp = device_envoy_core::wasm::next_animation_frame().await;
+///     assert!(timestamp >= 0.0);
+/// }
+/// ```
 #[must_use]
 pub fn next_animation_frame() -> NextAnimationFrame {
     let window = web_sys::window().expect("a browser window exists");

@@ -11,6 +11,7 @@
 //! [`CydDisplay::for_each_tile`] for the canonical tiled draw loop, and use
 //! `embedded_graphics::primitives::Rectangle` plus [`max_rectangle_pixel_count`]
 //! when sizing a shared buffer around fixed regions.
+//! The compiled [`TileGrid`] example demonstrates all public sizing helpers.
 
 use embedded_graphics::{
     prelude::{Point, Size},
@@ -41,7 +42,7 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
 
 /// A rectangular body area split into a grid of `columns` × `rows` tiles.
 ///
-/// `top_left` and `size` describe the rectangle in screen coordinates; callers
+/// `top_left` and `size` describe the rectangle in logical display coordinates; callers
 /// specify how many tile columns and rows to split it into, and the per-tile
 /// size is derived with ceiling division ([`tile_width`](Self::tile_width) /
 /// [`tile_height`](Self::tile_height)). The final column and row are clipped to
@@ -53,20 +54,38 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
 /// };
 /// use embedded_graphics::{prelude::{Point, Size}, primitives::Rectangle};
 ///
-/// let rectangle = Rectangle::new(Point::zero(), Size::new(320, 240));
-/// let grid = TileGrid::new(rectangle.top_left, rectangle.size, 4, 3);
+/// const RECTANGLE: Rectangle = Rectangle::new(Point::zero(), Size::new(320, 240));
+/// const GRID: TileGrid = TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3);
+/// const FULL_RECTANGLE_PIXELS: usize = rectangle_pixel_count(RECTANGLE);
+/// assert_eq!(FULL_RECTANGLE_PIXELS, 320 * 240);
+/// let grid = GRID;
+/// assert_eq!(grid.top_left, Point::zero());
+/// assert_eq!(grid.size, Size::new(320, 240));
 /// assert_eq!(grid.columns(), 4);
 /// assert_eq!(grid.rows(), 3);
-/// let _tile_width = grid.tile_width();
-/// let _tile_height = grid.tile_height();
+/// assert_eq!(grid.tile_width(), 80);
+/// assert_eq!(grid.tile_height(), 80);
 /// let buffer_pixels = grid.max_tile_pixel_count();
 /// assert_eq!(buffer_pixels, 80 * 80);
-/// let _ = rectangle_pixel_count(rectangle);
-/// let _ = max_rectangle_pixel_count(rectangle, rectangle);
+/// const TILE_BUFFER_PIXELS: usize = GRID.max_tile_pixel_count();
+/// const STATUS_REGION: Rectangle =
+///     Rectangle::new(Point::new(0, 0), Size::new(160, 40));
+/// const REGIONAL_BUFFER_PIXELS: usize = max_rectangle_pixel_count(
+///     STATUS_REGION,
+///     Rectangle::new(Point::new(0, 200), Size::new(320, 40)),
+/// );
+/// assert_eq!(TILE_BUFFER_PIXELS, 6_400);
+/// assert_eq!(REGIONAL_BUFFER_PIXELS, 12_800);
+/// assert_eq!(FULL_RECTANGLE_PIXELS, 76_800);
+/// // Use these constants as the `PIXEL_COUNT` in CydStaticEsp/CydStaticRp.
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileGrid {
+    /// Logical display coordinate of the grid rectangle's top-left corner.
+    /// See the compiled canonical [`TileGrid`] sizing example.
     pub top_left: Point,
+    /// Size of the logical display rectangle covered by the grid.
+    /// See the compiled canonical [`TileGrid`] sizing example.
     pub size: Size,
     columns: usize,
     rows: usize,
@@ -76,8 +95,9 @@ impl TileGrid {
     /// Build a grid splitting `size` into `columns` × `rows` tiles.
     ///
     /// Const-asserts that the counts are positive and do not exceed the rectangle's
-    /// pixel dimensions, so an over-fine grid fails to compile. See
-    /// [`CydDisplay::for_each_tile`] for the canonical draw loop that consumes the grid.
+    /// pixel dimensions, so an over-fine grid fails to compile. See the
+    /// [canonical `TileGrid` sizing example](TileGrid), then
+    /// [`CydDisplay::for_each_tile`] for the draw loop that consumes the grid.
     #[must_use]
     pub const fn new(top_left: Point, size: Size, columns: usize, rows: usize) -> Self {
         assert!(columns > 0, "columns must be greater than zero");
@@ -143,7 +163,7 @@ impl TileGrid {
         widest * tallest
     }
 
-    /// The tile at `(column, row)` as a [`Rectangle`] in physical-screen
+    /// The tile at `(column, row)` as a [`Rectangle`] in logical display
     /// coordinates, or `None` if it lies outside the rectangle.
     ///
     /// The final column/row of a grid may be narrower/shorter than the nominal

@@ -73,6 +73,31 @@ impl<const PIXEL_COUNT: usize> DynPixelBuffer for PixelBuffer<PIXEL_COUNT> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{DynPixelBuffer, PixelBuffer};
+    use static_cell::StaticCell;
+
+    #[test]
+    #[should_panic(expected = "view must fit in workspace")]
+    fn cyd_static_rp_frame_capacity_panics_when_region_is_too_large() {
+        let mut pixel_buffer = PixelBuffer::<3>::new();
+        pixel_buffer.view_mut(2, 2);
+    }
+
+    #[test]
+    fn host_test_exercises_rp_pixel_buffer_path() {
+        static STORAGE: StaticCell<PixelBuffer<1>> = StaticCell::new();
+        let pixel_buffer = PixelBuffer::init_static(&STORAGE);
+        let buffer: &mut dyn DynPixelBuffer = pixel_buffer;
+        let mut view = buffer.view_mut(1, 1);
+        assert_eq!(view.width(), 1);
+        assert_eq!(view.height(), 1);
+        view.raw_pixels_mut()[0] = 0x1234;
+        assert_eq!(view.raw_pixels()[0], 0x1234);
+    }
+}
+
 impl RegionView<'_> {
     pub(crate) fn width(&self) -> usize {
         self.width

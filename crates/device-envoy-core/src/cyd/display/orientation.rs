@@ -7,26 +7,49 @@ use super::super::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 /// How the fixed landscape panel is presented.
 ///
+/// `Landscape`, `Portrait`, `LandscapeInverted`, and `PortraitInverted` name
+/// the four display layouts. A complete device applies the selected layout to
+/// calibrated touch samples before returning them. Applications consume those
+/// logical points directly; they do not map a [`TouchEvent`](crate::cyd::touch::TouchEvent)
+/// again.
+///
 /// Concrete platforms map this to their display driver's rotation; this enum
 /// only knows the resulting oriented dimensions.
 ///
 /// ```rust,no_run
 /// use device_envoy_core::cyd::display::Orientation;
-/// use embedded_graphics::prelude::Point;
+/// use embedded_graphics::prelude::{Point, Size};
 ///
-/// let orientation = Orientation::Landscape;
-/// let _size = orientation.size();
-/// let _pixels = orientation.pixels();
-/// let _next = orientation.next();
-/// let _point = orientation.map_landscape_point(Point::new(10, 20));
-/// assert_eq!(orientation.width(), 320);
-/// assert_eq!(orientation.height(), 240);
+/// for orientation in [
+///     Orientation::Landscape,
+///     Orientation::Portrait,
+///     Orientation::LandscapeInverted,
+///     Orientation::PortraitInverted,
+/// ] {
+///     assert!(orientation.width() > 0 && orientation.height() > 0);
+/// }
+/// let landscape = Orientation::Landscape;
+/// assert_eq!(landscape.size(), Size::new(320, 240));
+/// assert_eq!(landscape.pixels(), 320 * 240);
+/// assert_eq!(landscape.next(), Orientation::Portrait);
+/// assert_eq!(landscape.map_landscape_point(Point::new(10, 20)), Point::new(10, 20));
+/// assert_eq!(Orientation::Portrait.map_landscape_point(Point::new(10, 20)), Point::new(20, 309));
+/// assert_eq!(Orientation::LandscapeInverted.map_landscape_point(Point::new(10, 20)), Point::new(309, 219));
+/// assert_eq!(Orientation::PortraitInverted.map_landscape_point(Point::new(10, 20)), Point::new(219, 10));
 /// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum Orientation {
+    /// Native 320×240 landscape presentation.
+    /// See the compiled canonical [`Orientation`] example.
     Landscape,
+    /// 240×320 portrait presentation, rotated clockwise.
+    /// See the compiled canonical [`Orientation`] example.
     Portrait,
+    /// Native landscape presentation rotated 180°.
+    /// See the compiled canonical [`Orientation`] example.
     LandscapeInverted,
+    /// 240×320 portrait presentation, rotated counterclockwise.
+    /// See the compiled canonical [`Orientation`] example.
     PortraitInverted,
 }
 
@@ -73,11 +96,13 @@ impl Orientation {
         }
     }
 
-    /// Map a calibrated landscape point into this orientation's screen space.
+    /// Map a fixed-landscape panel point into logical display coordinates.
     ///
     /// Touch calibration always describes the fixed 320×240 landscape panel.
-    /// A calibrated [`TouchEvent`](crate::cyd::touch::TouchEvent) must be
-    /// converted with this method exactly once before logical UI hit testing.
+    /// Use this for panel/calibration coordinates or fixed-landscape assets.
+    /// Do not use it on an application-facing [`TouchEvent`](crate::cyd::touch::TouchEvent):
+    /// [`CydTouch::read`](crate::cyd::CydTouch::read) has already applied this
+    /// mapping exactly once.
     /// See the [canonical `Orientation` example](Orientation).
     #[must_use]
     pub const fn map_landscape_point(self, point: Point) -> Point {

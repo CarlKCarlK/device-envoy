@@ -22,6 +22,7 @@ use embedded_hal::spi::SpiDevice;
 use super::CydFrameRp;
 
 /// The default font accepted by [`CydDisplayRp::new`](super::CydDisplayRp::new).
+/// See that method's compiled display-only constructor example.
 pub const DEFAULT_FONT: MonoFont<'static> = FONT_9X15_BOLD;
 
 impl<D: SpiDevice<u8>> CydFrameRp<'_, D> {

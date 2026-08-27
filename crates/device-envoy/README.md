@@ -10,6 +10,8 @@ Top-level landing crate for the device-envoy platform crates.
 
 Do not start a new project with `device-envoy` itself. Choose one of the platform crates below instead.
 
+For CYD implementation choices, see the [canonical overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview), which distinguishes hardware, interactive browser simulation, and native desktop testing.
+
 
 
 - [`device-envoy-rp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/) for Raspberry Pi Pico targets

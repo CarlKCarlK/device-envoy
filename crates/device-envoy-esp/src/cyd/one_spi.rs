@@ -1,3 +1,7 @@
+//! Choose this bundle when the board exposes only one SPI peripheral for both
+//! display and touch. It reduces wiring and peripheral use, at the cost of
+//! arbitration and switching bus configurations between transactions.
+//!
 //! CYD bundle for one-SPI shared-bus designs where display and touch share a single SPI peripheral.
 //!
 //! This module provides [`CydEspOneSpi`], which arbitrates a single physical SPI bus between
@@ -44,6 +48,7 @@ type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, 
 /// display and touch take turns using the bus. Because the two halves share
 /// state through that bus, this type keeps shared-bus ownership atomic inside the complete
 /// [`Cyd`] bundle.
+/// See the compiled [`CydEspOneSpi::new`] constructor example.
 pub struct CydEspOneSpi {
     display: CydDisplayEsp<SharedSpiDevice>,
     touch: CydTouchEsp<SharedSpiDevice>,
@@ -52,7 +57,7 @@ pub struct CydEspOneSpi {
 impl CydEspOneSpi {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
     ///
-    /// See the [`CydEspOneSpi::new_static`] storage example.
+    /// See the compiled [`CydEspOneSpi::new`] constructor example.
     pub const SCREEN_PIXELS: usize = device_envoy_core::cyd::SCREEN_PIXELS;
 
     /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
@@ -68,7 +73,7 @@ impl CydEspOneSpi {
     /// ```rust,no_run
     /// #![no_std]
     /// #![no_main]
-    /// use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{CydEspOneSpi, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
+    /// use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{Cyd, CydEspOneSpi, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
     /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
@@ -76,17 +81,18 @@ impl CydEspOneSpi {
     ///     let [mut flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
     ///     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     ///     static STORAGE: CydStaticEsp<{ CydEspOneSpi::SCREEN_PIXELS }> = CydEspOneSpi::new_static();
-    ///     let _cyd = CydEspOneSpi::new(&STORAGE, p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3, p.GPIO4,
+    ///     let cyd = CydEspOneSpi::new(&STORAGE, p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3, p.GPIO4,
     ///         p.GPIO5, p.GPIO7, p.GPIO8, DEFAULT_DISPLAY_SPI_HZ, p.GPIO12, p.GPIO13,
     ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT,
     ///         &mut flash, &mut button).await?;
+    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
     ///     Ok(())
     /// }
     /// ```
     ///
     /// Mirrors [`super::CydEsp::new`]'s calibration handling exactly (same
     /// automatic calibration flow and the same flash-backed load/save behavior — the only
-    /// difference from the two-SPI bundle is that display and touch share one physical bus.
+    /// difference from the two-SPI bundle is that display and touch share one physical bus).
     ///
     /// # Arguments
     ///

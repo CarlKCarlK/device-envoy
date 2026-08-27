@@ -6,6 +6,36 @@ The ESP and RP CYD modules expose several implementation types alongside the
 device abstractions that applications use. Reduce that surface before the next
 release while keeping the ESP and RP APIs parallel where their hardware allows.
 
+## Judgeable Public Documentation
+
+Write the public documentation so that a competent Rust and embedded programmer
+who is new to Device Envoy can judge the CYD API without reading its
+implementation. Documentation and API design are distinct, but an API review
+is unreliable when missing documentation forces the reviewer to infer the
+intended design or repair gaps from prior expectations.
+
+The rendered documentation must expose enough of the intended mental model,
+normal usage path, important alternatives, constraints, and tradeoffs for a
+fresh human or LLM reviewer to answer:
+
+- What is the normal path from construction through drawing and touch input?
+- What are the main concepts, and why does each exist?
+- Which operations express common application intent, and which are advanced
+  low-memory, streaming, or platform-author mechanisms?
+- Why are there multiple ways to perform related work, and when should each be
+  chosen?
+- What important memory, coordinate, replay, calibration, and platform
+  constraints affect those choices?
+- Which hardware, browser-simulation, and native-desktop-testing
+  implementations are available?
+
+This does not require a separate example or design essay for every trivial
+item. It requires enough accurate explanation and realistic, directly linked
+examples that an outsider can evaluate whether the concepts, hierarchy,
+conveniences, and advanced seams are sensible. Internal integration tests and
+richer examples may provide additional coverage, but they do not substitute
+for a judgeable public story.
+
 ## Keep Public and Documented
 
 - The complete-device types: `CydEsp`/`CydRp` and their one-SPI alternatives.
@@ -632,6 +662,116 @@ Address these concrete problems in severity order.
    documentation should lead with reading events; move platform-author backend
    discussion to `cyd::backend`.
 
+9. **Make every CYD implementation discoverable.**
+   The shared API has two hardware implementations and two development
+   implementations. Publish one canonical implementation overview on the core
+   `cyd` module page:
+
+   - `CydEsp` for ESP32 hardware;
+   - `CydRp` for Raspberry Pi Pico hardware;
+   - `CydWasm` for interactive browser simulation with the `wasm` feature; and
+   - `CydMemory` for deterministic native desktop tests, injected input,
+     framebuffer assertions, and screenshots with the `host` feature.
+
+   Link `Cyd`, `CydDisplay`, and `CydTouch` directly to that overview so a
+   reader landing on any primary trait can find all four implementations. Add
+   a concise development-implementation paragraph to the ESP and RP `cyd`
+   module introductions explaining that the same generic application code can
+   run with `CydWasm` or be tested with `CydMemory`. Because those types are
+   absent from embedded feature builds, use unconditional absolute docs.rs
+   links rather than feature-gated intra-doc links on embedded pages. State the
+   required `host` and `wasm` features.
+
+   In reader-facing prose, call the Memory environment **native desktop
+   testing (an ordinary Windows, macOS, or Linux process)** rather than merely
+   "host." Embedded Rust programmers may understand "host," but application
+   readers should not need that jargon. Reserve `host` for the literal Cargo
+   feature, `cfg` expressions, commands, identifiers, and technical discussion
+   that specifically contrasts host and embedded compilation. Do not describe
+   `CydMemory` simply as a native desktop implementation, which could imply a
+   GUI; it is the in-memory native desktop *testing* implementation. WASM is
+   the interactive browser implementation.
+
+   Make the `memory` and `wasm` module introductions link back to the shared
+   `cyd` abstraction and to each other: Memory is the deterministic testing
+   choice; WASM is the interactive simulation choice. Update the core, ESP,
+   RP, workspace-root, and top-level landing READMEs at their existing CYD or
+   implementation-selection summaries. Keep the README mentions concise and
+   link to the canonical core overview rather than duplicating its details.
+   Do not repeat this material on frame, orientation, touch-event, tiling,
+   constructor, or backend item pages.
+
+   Keep the supporting examples and tests honest while making this overview
+   discoverable:
+
+   - the canonical `TileGrid` example must call and assert all three storage
+     sizing paths: `rectangle_pixel_count`, `max_rectangle_pixel_count`, and
+     `TileGrid::max_tile_pixel_count`, without discarded placeholder values;
+   - the compiled backend-author example must directly exercise
+     `DisplayBackend::frame_mut_with_tile_top_left`; adding a redundant
+     `DisplayBackend` bound to `D: CydDisplay` does not demonstrate the seam;
+     and
+   - the ESP and RP insufficient-buffer regression tests must execute against
+     the actual platform `PixelBuffer` sources through a native desktop test
+     harness. Bare-metal `#[cfg(test)]` code that cannot link Rust's test crate,
+     or a command that selects zero tests, does not count. Embedded compilation
+     remains covered separately by `cargo check-all`.
+
+10. **Make the platform module introductions scan like start pages.**
+    In user-facing documentation, say "constructor," not "public
+    constructor." A constructor documented on a public API page is already
+    public; the extra adjective adds noise. Search all core, ESP, and RP CYD
+    prose, including text split across source lines, and remove this wording.
+
+    Give the ESP and RP `cyd` module pages an actual `## Start here` heading.
+    Under it, use a short list rather than a dense "choose A, B, or C"
+    paragraph:
+
+    - the ordinary complete two-SPI bundle;
+    - the complete one-SPI bundle and its resource tradeoff; and
+    - the display-only component.
+
+    Keep the device-agnostic `Cyd`, `CydDisplay`, and `CydTouch` links near
+    this entry path. Add a parallel `## Other implementations` section, or an
+    equivalently clear short section, that links directly from ESP to the RP
+    hardware implementation and from RP to the ESP hardware implementation,
+    as well as to `CydWasm`, `CydMemory`, and the canonical implementation
+    overview. Do not make readers infer the peer hardware implementation by
+    following the core overview first.
+
+    Every primary concrete implementation type must visibly own a compiled example
+    or contain an explicit link whose prose says that it leads to the exact
+    compiled example. A bare method-name link such as "Use `CydEsp::new`" is
+    not sufficiently recognizable as example coverage. At minimum, audit
+    `CydEsp`, `CydRp`, both one-SPI bundles, both display-only types, both
+    calibrated hardware touch types, both hardware frame types, and their
+    storage types. Apply the same standard to the CYD-related public surface in
+    `device_envoy_core::memory` and `device_envoy_core::wasm`, including
+    `CydMemory`, `CydDisplayMemory`, `CydTouchMemory`, their frame/input/test
+    support, `CydWasm`, `CydDisplayWasm`, `CydTouchWasm`, their frame/input
+    support, and every public method on those types. Prefer wording such as
+    "See the compiled `CydEsp::new` constructor example" and make the link land
+    directly on the method section containing that example.
+
+    Read the rendered prose after assembling conditional and cross-crate
+    documentation. The current ESP/RP text regressed to the ungrammatical
+    phrase "tested deterministically with `CydMemory` is ..."; link checking
+    and successful rustdoc builds do not detect prose defects. Keep the Memory
+    description grammatical and concise, and link to its fuller description
+    rather than splicing that full definition into the middle of another
+    sentence.
+
+    Do not infer example coverage merely because rustdoc places an inherent
+    method farther down a struct page or shows an inherited trait method as
+    "Read more." The rendered module introduction and each primary type's own
+    description must visibly say where a new reader should go for its compiled
+    example. The top-level ESP/RP `cyd` pages must link directly to at least the
+    ordinary complete-device constructor example and the generic `Cyd`
+    application example. `CydTouchEsp` and `CydTouchRp`, for example, must say
+    explicitly that construction is covered by the compiled complete-device
+    constructor example and calibrated reading is covered by the compiled
+    `CydTouch::read` example.
+
 #### Public Surface Decisions Requiring Audit
 
 - `TileGrid::top_left` and `TileGrid::size` are publicly mutable while the
@@ -669,17 +809,196 @@ shrink the sidebar. They all have demonstrated signature, construction,
 drawing, or storage roles. The questions above concern invariants, hierarchy,
 and user intent rather than raw item count.
 
+#### Pass 2 Final Rendered Review
+
+This review was repeated after the corrections using only the rendered pages;
+implementation source was not used to repair the reader's understanding. The
+mechanical evidence is
+[`CYD_PASS2_RENDERED_INVENTORY.md`](CYD_PASS2_RENDERED_INVENTORY.md): 437
+rendered public records reconcile exactly, all have useful one-line purposes,
+54 own a visible compiled example, 383 link directly to one that visibly names
+and exercises the item, and zero remain uncovered. The generator was run twice
+against the same five rendered roots and produced byte-identical output.
+
+##### A. Reader path
+
+The corrected natural path is:
+
+1. ESP or RP `cyd` module: choose the ordinary two-SPI complete device, the
+   bus-sharing one-SPI device, or display-only construction; discover the peer
+   hardware platform, browser simulation, and in-memory native desktop testing.
+2. `CydEsp::new` or `CydRp::new`: see every hardware, style, persistence, and
+   recalibration input and construct a calibrated complete device.
+3. `CydStaticEsp` or `CydStaticRp`: choose full-screen, largest-region, tiled,
+   or zero frame capacity from the intended drawing workflow and see the exact
+   over-capacity failure contract.
+4. `Cyd`: learn the portable device loop and how the display and calibrated
+   touch halves are borrowed.
+5. `CydDisplay::frame_mut` and `CydFrame`: follow the normal buffered path,
+   draw in frame-local coordinates, and await the portable flush boundary.
+6. `CydTouch::read` and `TouchEvent`: consume calibrated, already-oriented
+   logical-display coordinates without remapping them.
+7. `CydDisplay::for_each_tile` and `TileGrid`: choose replayable tiled drawing
+   when RAM is constrained and size the shared buffer from the maximum tile.
+8. `fill_contiguous`/`fill_contiguous_full`: choose row-major streaming only
+   when the application already produces a raster; understand short and long
+   iterator behavior.
+9. `CydMemory` or `CydWasm`: move the same generic application to deterministic
+   native desktop tests or interactive browser simulation.
+
+The path no longer breaks, sends the reader backward, or requires source-level
+guessing. The one remaining early burden is the breadth of the hardware
+constructor itself; that is visible API complexity rather than a documentation
+gap.
+
+##### B. Remaining design problems
+
+These are review proposals, not authorization to change the public API in this
+pass:
+
+1. **API/design — long hardware constructors.** `CydEsp::new`, `CydRp::new`,
+   and the one-SPI peers make the ordinary path specify every pin, SPI policy,
+   color, font, flash block, and recalibration button. Preserve the explicit
+   constructors as the advanced path, but propose a direct, non-builder common
+   constructor that takes the board wiring plus storage and uses documented
+   display/style defaults. Review the proposed signatures before implementation.
+2. **Consistency — complete-device access.** `Cyd` has `display()` but no
+   `touch()`, while concrete ESP/RP bundles also expose public `display` and
+   `touch` fields. Propose `Cyd::touch()` and one canonical component-access
+   story; do not carry two equal paths merely for compatibility.
+3. **Questionable public visibility — `TileGrid` mutation.** Public mutable
+   `top_left` and `size` can change the geometry after constructor validation.
+   Search downstream struct-literal and mutation use, then prefer private fields
+   with getters (and consider `TileGrid::new(rectangle, columns, rows)`) if no
+   demonstrated application requires mutation.
+4. **Implementation machinery — `CydFrame::tile_top_left`.** Ordinary tiled
+   drawing is already translated by `for_each_tile`; no application-shaped
+   example needs to inspect the translation offset. Search downstream uses and
+   move this method to the platform-author seam or remove it if only backends
+   require it.
+5. **Nameability — `PlacedImage565`.** `Image565Fixed::at` returns the public
+   `PlacedImage565` type from a private source module, but the type has no
+   canonical nameable public page. Either re-export and document the type as a
+   supported drawing value, or redesign `at` so its public return contract does
+   not expose an unnameable type. Review this API choice before implementation.
+
+`DisplayBackend` is not a remaining visibility problem: separate platform
+crates require the seam, its page says why it is public, and its compiled
+platform-author example exercises it. Likewise, the frame, streaming, tiling,
+and `draw_items` conveniences are distinct, demonstrated user intents rather
+than redundant surface to remove for its own sake.
+
+##### C. Coverage audit
+
+- Public records lacking a useful one-line description: none of 437.
+- Public records lacking their own visible compiled example or an exact direct
+  link to one that names and exercises them: none of 437.
+- Items still requiring a public-visibility/design decision:
+  `TileGrid::top_left`, `TileGrid::size`, `CydFrame::tile_top_left`, the concrete
+  complete-device component fields/accessors, and the unnameable
+  `PlacedImage565` return type described above.
+
+##### D. Overall assessment
+
+- Getting started: **4/5** — the start pages and compiled constructors are
+  complete, but the ordinary hardware constructor remains parameter-heavy.
+- Discovering the intended path: **5/5** — construction, storage, normal
+  frames, touch, tiling, streaming, and alternate implementations form an
+  explicit forward path.
+- Understanding the mental model: **5/5** — the docs distinguish three drawing
+  mechanisms, four workflows, their coordinate spaces, replay rules, and
+  memory costs.
+- Example coverage: **5/5** — every one of the 437 rendered records has direct,
+  mechanically reconciled visible compiled-example evidence.
+- Public-surface discipline: **4/5** — the backend seam is justified, but tile
+  plumbing/mutability and `PlacedImage565` still require design decisions.
+- Consistency: **4/5** — platform pairs and error naming are parallel, while
+  complete-device component access and constructor hierarchy remain asymmetric
+  or overly broad.
+
 #### Pass 2 Acceptance
 
 - Repeat the rendered new-user walkthrough without implementation source. The
   reader must be able to choose a constructor, choose valid storage, construct
   a device, draw and flush a normal frame, and read oriented touch without
   guessing or encountering contradictory instructions.
+- After that walkthrough, critique the API using only what the rendered
+  documentation revealed. The reviewer must be able to identify the normal
+  path, distinguish conveniences from advanced/backend mechanisms, explain
+  why the drawing alternatives exist and when to choose them, state their
+  important constraints and tradeoffs, and find all four implementations. If
+  any judgment requires reading implementation source or guessing intent, log
+  that as a documentation or design-review failure rather than silently
+  repairing it.
 - Re-run the public-item checklist against every canonical non-redirect core,
   ESP, and RP CYD page. Record specific coverage for every retained method and
   variant, not only a page count.
 - Add focused tests for any `TileGrid` visibility/invariant change and for the
   documented insufficient-buffer and contiguous-iterator behavior.
+- Starting from each rendered core, ESP, and RP `cyd` module page and from the
+  rendered `Cyd`, `CydDisplay`, and `CydTouch` pages, a reader can discover the
+  ESP, RP, WASM, and Memory implementations, understand the role of each, and
+  reach working documentation for the feature-gated development types.
+- User-facing implementation summaries say "native desktop testing" for
+  `CydMemory` and "interactive browser simulation" for `CydWasm`; `host`
+  remains visible only where readers need the literal feature name or where
+  technical build terminology is intentional.
+- Focused test output proves that both platform buffer-overflow tests execute
+  and that the short and overlong contiguous-iterator tests execute; zero-test
+  output is a failure of this acceptance check.
+- The rendered ESP and RP module introductions have visible `Start here` and
+  implementation-choice structure, directly cross-link the peer hardware
+  platform, contain no "public constructor" wording, and read as grammatical
+  prose rather than as source fragments joined around links.
+- From each primary concrete ESP/RP CYD type page, a reader can immediately
+  identify and follow either its own compiled example or a direct link
+  explicitly labeled as the compiled example that covers it.
+- Produce a rendered coverage matrix with one row for every public CYD module,
+  trait, struct, enum, type, constant, free function, associated constant, and
+  method across core, ESP, and RP. "Core" includes the shared `cyd` traits and
+  support modules plus every CYD-related public item in the feature-gated
+  `memory` and `wasm` modules; it does not mean only the `cyd` module tree.
+  Each row records: the exact item; its
+  one-line purpose; its own compiled example or the exact direct example link;
+  the destination item/anchor; whether the visible example actually names and
+  exercises the item; and the command/feature set that compiles it. A page
+  count, doctest total, bare API link, inherited "Read more," or claim that a
+  checklist was retained is not evidence for an individual row.
+- Derive the matrix from a mechanically collected inventory of the actual
+  rendered public pages and reconcile that inventory against the public Rust
+  declarations. Do not fill the table from memory. Every item name and kind
+  must be exact: free functions must not be reported as associated methods,
+  current enum variants must not be replaced by plausible invented names, and
+  a method's purpose must agree with its signature and rendered contract. The
+  audit fails if the inventory contains an item with no matrix row or the
+  matrix contains an item that does not exist.
+- Include public module pages, enum variants, public fields, associated types,
+  associated constants, and inherent methods on concrete frame, storage,
+  complete-device, display, touch, input, and simulator types. Re-exports may
+  point to one canonical row, but they must still be inventoried so platform
+  readers can reach that row. In particular, do not let trait coverage stand
+  in for the inherent methods visible on `CydFrameEsp`, `CydFrameRp`, or
+  `CydFrameWasm`, and do not omit platform `Error` variants or complete-device
+  component fields.
+- Record the literal rendered destination URL or rustdoc anchor and the compile
+  configuration in every row, rather than only listing broad commands after
+  the table. Mark an item uncovered when the destination example does not
+  visibly name or exercise it. An application-facing calibrated-touch example
+  cannot cover raw backend events, and a private source-module doctest is not
+  by itself a discoverable example on a public re-export's rendered page.
+- The matrix may group genuinely inseparable families only when one visible
+  compiled example exercises every grouped item and each item links directly
+  to that example. Enum variants and fields may share their type's example
+  when the example constructs or matches the relevant variants and the field
+  descriptions are independently clear. Do not manufacture trivial examples
+  solely to increase the count; prefer one realistic canonical example with
+  exact incoming links.
+- Build and inspect the core matrix in at least three configurations: the
+  published/shared no-feature `cyd` surface, native desktop documentation with
+  `host`, and browser documentation with `wasm`. Examples for `CydMemory` must
+  execute or compile under `host`; examples for `CydWasm` must compile for
+  `wasm32-unknown-unknown` with `wasm`. An example visible only under a feature
+  combination different from the page being audited does not cover that page.
 - Keep the rendered unresolved-link scan at zero matches and run all published
   feature/target doctest combinations.
 - Migrate Device Envoy examples, Linkage Blaze, and the ESP/RP starters for any

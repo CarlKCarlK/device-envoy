@@ -48,8 +48,10 @@ const CALIBRATION_SHAPES_RECTANGLE: Rectangle = Rectangle::new(
 #[derive(Debug)]
 pub enum Error<DeviceError, FlashError> {
     /// Reading or drawing through the platform touch/display backend failed.
+    /// See the platform-author example on [`crate::cyd::backend`].
     Device(DeviceError),
     /// Loading or saving calibration in persistent storage failed.
+    /// See the platform-author example on [`crate::cyd::backend`].
     Flash(FlashError),
 }
 

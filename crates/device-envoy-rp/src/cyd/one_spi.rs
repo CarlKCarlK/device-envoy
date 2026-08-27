@@ -1,3 +1,7 @@
+//! Choose this bundle when the board exposes only one SPI peripheral for both
+//! display and touch. It reduces wiring and peripheral use, at the cost of
+//! arbitration and switching bus configurations between transactions.
+//!
 //! CYD bundle for one-SPI shared-bus designs where display and touch share a single SPI peripheral.
 //!
 //! This module provides [`CydRpOneSpi`], which arbitrates a single physical SPI bus between
@@ -52,6 +56,7 @@ type SharedSpiDevice<T> =
 ///
 /// `T` is the SPI peripheral instance (`SPI0` or `SPI1`) the shared bus runs on; see
 /// [`CydRpOneSpiStatic`] for why the static storage must name the same `T`.
+/// See the compiled [`CydRpOneSpi::new`] constructor example.
 pub struct CydRpOneSpi<T: spi::Instance + 'static> {
     display: CydDisplayRp<SharedSpiDevice<T>>,
     touch: CydTouchRp<SharedSpiDevice<T>>,
@@ -64,6 +69,7 @@ pub struct CydRpOneSpi<T: spi::Instance + 'static> {
 /// parameter, and a `static` item cannot reference a generic parameter of the function that
 /// creates it — so the caller must declare this storage (naming a concrete `T`) at module scope,
 /// same as any other multi-instance device in this crate.
+/// See the compiled [`CydRpOneSpi::new`] constructor example.
 ///
 /// ```rust,no_run
 /// # #![no_std]
@@ -95,7 +101,7 @@ impl<T: spi::Instance + 'static, const PIXEL_COUNT: usize> CydRpOneSpiStatic<T, 
 impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
     ///
-    /// See the [`CydRpOneSpi::new_static`] storage example.
+    /// See the compiled [`CydRpOneSpi::new`] constructor example.
     pub const SCREEN_PIXELS: usize = device_envoy_core::cyd::SCREEN_PIXELS;
 
     /// Create [`CydRpOneSpiStatic`] storage for a `PIXEL_COUNT`-sized draw buffer and the shared
@@ -112,7 +118,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// ```rust,no_run
     /// #![no_std]
     /// #![no_main]
-    /// use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{Cyd, CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
     /// use embassy_rp::peripherals::SPI0;
     /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
@@ -121,17 +127,18 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     ///     let [mut flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     ///     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
     ///     static STORAGE: CydRpOneSpiStatic<SPI0, { CydRpOneSpi::<SPI0>::SCREEN_PIXELS }> = CydRpOneSpi::new_static();
-    ///     let _cyd = CydRpOneSpi::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17,
+    ///     let cyd = CydRpOneSpi::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17,
     ///         p.PIN_20, p.PIN_21, p.PIN_22, DEFAULT_DISPLAY_SPI_HZ, p.PIN_13, p.PIN_14,
     ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT,
     ///         &mut flash, &mut button).await?;
+    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
     ///     Ok(())
     /// }
     /// ```
     ///
     /// Mirrors [`super::CydRp::new`]'s calibration handling exactly (same
     /// automatic calibration flow and the same flash-backed load/save behavior — the only
-    /// difference from the two-SPI bundle is that display and touch share one physical bus.
+    /// difference from the two-SPI bundle is that display and touch share one physical bus).
     ///
     /// # Arguments
     ///

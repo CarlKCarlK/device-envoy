@@ -4,17 +4,20 @@
 //! use device_envoy_core::cyd::display::{Image565Fixed, Image888Fixed, MaskFixed};
 //! use device_envoy_core::cyd::display::tga;
 //! use device_envoy_core::cyd::display::mask_byte_count;
-//! use embedded_graphics::prelude::Point;
+//! use embedded_graphics::{pixelcolor::Rgb565, prelude::{Point, RgbColor, Size}};
 //!
 //! fn example() {
 //! const IMAGE: Image888Fixed<1, 1, 1> = Image888Fixed { pixels: [[255, 0, 255]] };
 //! const IMAGE565: Image565Fixed<1, 1, 1> = IMAGE.to_565();
 //! const MASK: MaskFixed<1, 1, 1> = IMAGE.to_mask_magenta();
-//! let _view = IMAGE565.view();
-//! let _cropped = IMAGE565.view_rect(embedded_graphics::primitives::Rectangle::new(
-//!     Point::zero(), embedded_graphics::prelude::Size::new(1, 1),
+//! let view = IMAGE565.view();
+//! assert_eq!(view.size(), Size::new(1, 1));
+//! assert_eq!(view.pixel_at(Point::zero()), Rgb565::MAGENTA);
+//! let cropped = IMAGE565.view_rect(embedded_graphics::primitives::Rectangle::new(
+//!     Point::zero(), Size::new(1, 1),
 //! ));
-//! let _placed = IMAGE565.at(Point::zero());
+//! assert_eq!(cropped.size(), Size::new(1, 1));
+//! IMAGE565.at(Point::zero());
 //! assert!(!MASK.is_set(0));
 //! assert_eq!(mask_byte_count(1, 1), 1);
 //! let image_from_file: Image888Fixed<1, 1, 1> =
@@ -42,12 +45,15 @@ use embedded_graphics::{
 /// in the module example above.
 ///
 /// ```rust,no_run
-/// use device_envoy_core::cyd::display::{tga, CydFrame, Image565Fixed, Image888Fixed, MaskFixed};
-/// use embedded_graphics::{pixelcolor::Rgb565, prelude::{DrawTarget, Point, Size}, primitives::Rectangle};
+/// use device_envoy_core::cyd::display::{
+///     CydFrame, Image565Fixed, Image888Fixed, MaskFixed, mask_byte_count, tga,
+/// };
+/// use embedded_graphics::{pixelcolor::Rgb565, prelude::{DrawTarget, Point, RgbColor, Size}, primitives::Rectangle};
 /// const BYTES: [u8; 21] = [0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 24, 0, 255, 0, 255];
 /// const IMAGE: Image888Fixed<1, 1, 1> = Image888Fixed::from_tga(&BYTES);
 /// const IMAGE565: Image565Fixed<1, 1, 1> = IMAGE.to_565();
 /// const MASK: MaskFixed<1, 1, 1> = IMAGE.to_mask_magenta();
+/// assert_eq!(mask_byte_count(1, 1), 1);
 /// let image_from_file: Image888Fixed<1, 1, 1> =
 ///     tga!(concat!(env!("CARGO_MANIFEST_DIR"), "/docs/assets/cyd_1x1.tga"));
 /// assert_eq!(image_from_file.pixels[0], [255, 0, 255]);
@@ -56,10 +62,12 @@ use embedded_graphics::{
 /// }
 /// fn copy<F: CydFrame>(frame: &mut F) -> device_envoy_core::Result<()> { IMAGE565.copy_to(frame) }
 /// let view = IMAGE565.view();
-/// let _crop = IMAGE565.view_rect(Rectangle::new(Point::zero(), Size::new(1, 1)));
-/// let _ = view.pixel_at(Point::zero());
-/// let _ = view.rgb565_iter().next();
+/// let crop = IMAGE565.view_rect(Rectangle::new(Point::zero(), Size::new(1, 1)));
+/// assert_eq!(crop.size(), Size::new(1, 1));
+/// assert_eq!(view.pixel_at(Point::zero()), Rgb565::MAGENTA);
+/// assert_eq!(view.rgb565_iter().next(), Some(Rgb565::MAGENTA));
 /// assert!(!MASK.is_set(0));
+/// assert_eq!(MASK.bits[0], 0);
 /// ```
 pub const fn mask_byte_count(width: usize, height: usize) -> usize {
     (width * height).div_ceil(8)
@@ -70,6 +78,7 @@ pub const fn mask_byte_count(width: usize, height: usize) -> usize {
 /// See the [canonical TGA family example](mask_byte_count).
 pub struct Image888Fixed<const W: usize, const H: usize, const N: usize> {
     /// Row-major top-left-origin pixels stored as `[red, green, blue]`.
+    /// See the [canonical TGA family example](mask_byte_count).
     pub pixels: [[u8; 3]; N],
 }
 
@@ -78,6 +87,7 @@ pub struct Image888Fixed<const W: usize, const H: usize, const N: usize> {
 /// See the [canonical TGA family example](mask_byte_count).
 pub struct Image565Fixed<const W: usize, const H: usize, const N: usize> {
     /// Row-major top-left-origin pixels.
+    /// See the [canonical TGA family example](mask_byte_count).
     pub pixels: [u16; N],
 }
 
@@ -86,6 +96,7 @@ pub struct Image565Fixed<const W: usize, const H: usize, const N: usize> {
 /// See the [canonical TGA family example](mask_byte_count).
 pub struct MaskFixed<const W: usize, const H: usize, const MASK_N: usize> {
     /// Row-major bits, least-significant bit first. Set means visible.
+    /// See the [canonical TGA family example](mask_byte_count).
     pub bits: [u8; MASK_N],
 }
 

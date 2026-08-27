@@ -1,8 +1,12 @@
 //! Display-only data, asset, and drawing plumbing for the CYD's `cyd` device
 //! abstraction.
 //!
-//! The primary type is [`DrawItem`]; see [`CydDisplay::draw_items`](crate::cyd::CydDisplay::draw_items)
-//! for the canonical draw loop that consumes them.
+//! This module contains the buffered-frame, callback-tiling, and contiguous
+//! streaming drawing mechanisms used by [`CydDisplay`](crate::cyd::CydDisplay).
+//! `DrawItem` is a convenience for describing shapes and images inside those
+//! workflows; see [`CydDisplay::draw_items`](crate::cyd::CydDisplay::draw_items)
+//! for its canonical use.
+//! Start with the compiled [`CydFrame`] example for ordinary buffered drawing.
 
 mod contiguous_pixels;
 mod draw_item;
@@ -37,13 +41,21 @@ pub use crate::__cyd_tga as tga;
 ///
 /// ```rust,no_run
 /// use device_envoy_core::cyd::display::CydFrame;
-/// use embedded_graphics::{pixelcolor::Rgb565, prelude::RgbColor};
+/// use embedded_graphics::{
+///     pixelcolor::Rgb565,
+///     prelude::RgbColor,
+///     primitives::Rectangle,
+/// };
 ///
 /// fn copy_once<F: CydFrame>(frame: &mut F, pixels: &[u16]) -> device_envoy_core::Result<()> {
-///     let _rectangle = frame.rectangle();
-///     let _origin = frame.tile_top_left();
-///     let _width = frame.width();
-///     let _height = frame.height();
+///     let rectangle = frame.rectangle();
+///     let tile_top_left = frame.tile_top_left();
+///     let width = frame.width();
+///     let height = frame.height();
+///     assert_eq!(rectangle.size.width as usize, width);
+///     assert_eq!(rectangle.size.height as usize, height);
+///     let local_rectangle = Rectangle::new(rectangle.top_left - tile_top_left, rectangle.size);
+///     assert_eq!(local_rectangle.size, rectangle.size);
 ///     frame.fill(Rgb565::BLACK);
 ///     CydFrame::clear(frame);
 ///     frame.write_text("CYD");
@@ -55,9 +67,11 @@ pub use crate::__cyd_tga as tga;
 /// ```
 pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
     /// Error returned when flushing this frame to the panel.
+    /// See the compiled canonical
+    /// [CydFrame example](trait.CydFrame.html).
     type Error;
 
-    /// This frame's tile top-left in screen coordinates.
+    /// This frame's tile top-left in logical display coordinates.
     ///
     /// This point is subtracted from input drawing commands before pixels reach
     /// this frame's local backing buffer. Regular, non-tiled frames use `(0, 0)`.
@@ -68,7 +82,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
         Point::zero()
     }
 
-    /// This frame's rectangle (top-left and size) in physical-screen coordinates.
+    /// This frame's rectangle (top-left and size) in logical display coordinates.
     ///
     /// See the [canonical `CydFrame` example](CydFrame).
     fn rectangle(&self) -> Rectangle;
@@ -86,7 +100,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// See the [canonical `CydFrame` example](CydFrame).
     fn clear(&mut self) -> &mut Self;
 
-    /// Draw `text` at the frame's top-left using the device default font and
+    /// Draw `text` at frame-local `(0, 0)` using the device default font and
     /// foreground color. Returns `&mut Self` for chaining.
     ///
     /// See the [canonical `CydFrame` example](CydFrame).
@@ -107,7 +121,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// [`Image565Fixed::copy_to`] for the primary convenience wrapper.
     fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()>;
 
-    /// Present the frame's pixels at its rectangle's top-left (screen coordinates).
+    /// Present the frame's pixels at its rectangle's top-left (logical display coordinates).
     ///
     /// The frame was created over a
     /// [`Rectangle`](https://docs.rs/embedded-graphics/latest/embedded_graphics/primitives/struct.Rectangle.html)

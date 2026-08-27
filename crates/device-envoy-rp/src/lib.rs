@@ -44,6 +44,12 @@ pub mod button;
 pub mod clock_sync;
 #[cfg(target_os = "none")]
 pub mod cyd;
+// The buffer implementation is hardware-independent, so exercise the same
+// private storage code in the host test harness even though the full CYD
+// peripheral module is embedded-only.
+#[cfg(all(test, feature = "host"))]
+#[path = "cyd/buffer.rs"]
+mod cyd_buffer_host_tests;
 mod error;
 #[cfg(target_os = "none")]
 pub mod flash_block;

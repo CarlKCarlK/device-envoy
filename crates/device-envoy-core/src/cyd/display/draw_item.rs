@@ -20,13 +20,17 @@ use embedded_graphics::{
 ///
 /// ```rust,no_run
 /// use device_envoy_core::cyd::display::Image565View;
-/// use embedded_graphics::prelude::{Point, RgbColor, Size};
+/// use embedded_graphics::{pixelcolor::Rgb565, prelude::{Point, RgbColor, Size}};
 ///
 /// static PIXELS: [u16; 4] = [0, 0xffff, 0, 0xffff];
 /// let image = Image565View::new(&PIXELS, Size::new(2, 2));
-/// let _size = image.size();
-/// let _pixel = image.pixel_at(Point::new(0, 0));
-/// let _pixels: heapless::Vec<_, 4> = image.rgb565_iter().collect();
+/// assert_eq!(image.size(), Size::new(2, 2));
+/// assert_eq!(image.pixel_at(Point::new(0, 0)), Rgb565::BLACK);
+/// let pixels: heapless::Vec<_, 4> = image.rgb565_iter().collect();
+/// assert_eq!(
+///     pixels.as_slice(),
+///     &[Rgb565::BLACK, Rgb565::WHITE, Rgb565::BLACK, Rgb565::WHITE],
+/// );
 /// ```
 #[derive(Clone, Copy, Debug)]
 pub struct Image565View {
@@ -147,6 +151,8 @@ impl Iterator for Image565ViewPixels {
 ///
 /// static PIXELS: [u16; 1] = [0xffff];
 /// fn draw<T: PixelTarget>(target: &mut T) {
+///     DrawItem::Stroke { start: (0.0, 0.0), end: (8.0, 8.0), color: embedded_graphics::pixelcolor::Rgb888::RED, pixel_width: 1.0 }.draw(target);
+///     DrawItem::Ellipse { center: (4.0, 4.0), axis_a: (3.0, 0.0), axis_b: (0.0, 2.0), color: embedded_graphics::pixelcolor::Rgb888::GREEN }.draw(target);
 ///     DrawItem::Circle { center: (4.0, 4.0), pixel_radius: 2.0, color: embedded_graphics::pixelcolor::Rgb888::WHITE }.draw(target);
 ///     DrawItem::Bitmap { view: Image565View::new(&PIXELS, Size::new(1, 1)), top_left: Point::zero() }.draw(target);
 /// }
@@ -154,29 +160,62 @@ impl Iterator for Image565ViewPixels {
 #[derive(Clone, Copy, Debug)]
 pub enum DrawItem {
     /// A line stroke from `start` to `end` with the given pixel width.
+    /// See the compiled canonical [`DrawItem`] example.
     Stroke {
+        /// Projected start point in logical display coordinates.
+        /// See the compiled canonical [`DrawItem`] example.
         start: (f32, f32),
+        /// Projected end point in logical display coordinates.
+        /// See the compiled canonical [`DrawItem`] example.
         end: (f32, f32),
+        /// Stroke color.
+        /// See the compiled canonical [`DrawItem`] example.
         color: Rgb888,
+        /// Stroke width in pixels.
+        /// See the compiled canonical [`DrawItem`] example.
         pixel_width: f32,
     },
     /// A filled, possibly foreshortened, ellipse (a projected disk).
     ///
     /// The ellipse is the locus of `center + s·axis_a + t·axis_b` with `s²+t² ≤ 1`.
+    /// See the compiled canonical [`DrawItem`] example.
     Ellipse {
+        /// Projected ellipse center in logical display coordinates.
+        /// See the compiled canonical [`DrawItem`] example.
         center: (f32, f32),
+        /// First projected radius vector.
+        /// See the compiled canonical [`DrawItem`] example.
         axis_a: (f32, f32),
+        /// Second projected radius vector.
+        /// See the compiled canonical [`DrawItem`] example.
         axis_b: (f32, f32),
+        /// Fill color.
+        /// See the compiled canonical [`DrawItem`] example.
         color: Rgb888,
     },
     /// A filled circle (a projected sphere).
+    /// See the compiled canonical [`DrawItem`] example.
     Circle {
+        /// Projected center in logical display coordinates.
+        /// See the compiled canonical [`DrawItem`] example.
         center: (f32, f32),
+        /// Radius in pixels.
+        /// See the compiled canonical [`DrawItem`] example.
         pixel_radius: f32,
+        /// Fill color.
+        /// See the compiled canonical [`DrawItem`] example.
         color: Rgb888,
     },
     /// A statically-stored RGB565 bitmap view placed at a screen position.
-    Bitmap { view: Image565View, top_left: Point },
+    /// See the compiled canonical [`DrawItem`] example.
+    Bitmap {
+        /// Bitmap pixels and dimensions.
+        /// See the compiled canonical [`DrawItem`] example.
+        view: Image565View,
+        /// Bitmap top-left in logical display coordinates.
+        /// See the compiled canonical [`DrawItem`] example.
+        top_left: Point,
+    },
 }
 
 impl DrawItem {

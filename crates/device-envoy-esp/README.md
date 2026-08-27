@@ -22,7 +22,7 @@ Want a minimal starting project?
 
 ## Features
 
-- **[CYD Display & Touch](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/cyd/)** - Drive 320×240 ILI9341/XPT2046 Cheap Yellow Display boards with calibrated touch, orientation, and memory-efficient tiled rendering. See the [canonical implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview) for all CYD implementations, including interactive browser simulation and native desktop testing.
+- **[CYD Display & Touch](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/cyd/)** - Drive 320×240 ILI9341/XPT2046 Cheap Yellow Display boards with calibrated touch, orientation, and memory-efficient tiled rendering. See the [implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1) for all CYD implementations, including interactive browser simulation and native desktop testing.
 - **[LED Strips](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/led_strip/) & [Panels](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/led2d/)** - NeoPixel-style (WS2812) LED arrays with 2D text rendering, animation, embedded-graphics support. Provides efficient options for power limiting and color correction.
 - **[WiFi](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/wifi_auto/)** - Connect to the Internet with automatic credentials management. On boot, opens a web form if WiFi credentials aren't saved, then connects seamlessly to a stored network.
 - **[Audio Player](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/audio_player/)** - Play audio clips over I²S hardware with runtime sequencing, volume control, and compression.

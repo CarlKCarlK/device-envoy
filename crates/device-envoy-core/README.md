@@ -14,7 +14,7 @@
 
 For most users, start with one of those platform crates. Their docs include constructors, board-specific setup, and re-exported trait APIs from `device-envoy-core`.
 
-The [canonical CYD implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview) covers ESP32 hardware, Raspberry Pi Pico hardware, interactive browser simulation, and deterministic native desktop testing.
+The [CYD implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1) covers ESP32 hardware, Raspberry Pi Pico hardware, interactive browser simulation, and deterministic native desktop testing.
 
 ## License
 

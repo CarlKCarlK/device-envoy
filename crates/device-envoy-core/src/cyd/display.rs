@@ -5,7 +5,7 @@
 //! streaming drawing mechanisms used by [`CydDisplay`](crate::cyd::CydDisplay).
 //! `DrawItem` is a convenience for describing shapes and images inside those
 //! workflows; see [`CydDisplay::draw_items`](crate::cyd::CydDisplay::draw_items)
-//! for its canonical use.
+//! for an example.
 //! Start with the compiled [`CydFrame`] example for ordinary buffered drawing.
 
 mod contiguous_pixels;
@@ -30,7 +30,7 @@ pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, mask_byte_count};
 
 /// Compile a supported TGA file into an [`Image888Fixed`](tga::Image888Fixed).
 ///
-/// See the [canonical TGA family example](tga).
+/// See the [TGA family example](tga).
 pub use crate::__cyd_tga as tga;
 
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
@@ -67,8 +67,7 @@ pub use crate::__cyd_tga as tga;
 /// ```
 pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
     /// Error returned when flushing this frame to the panel.
-    /// See the compiled canonical
-    /// [CydFrame example](trait.CydFrame.html).
+    /// See the compiled [CydFrame example](trait.CydFrame.html).
     type Error;
 
     /// This frame's tile top-left in logical display coordinates.
@@ -76,7 +75,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// This point is subtracted from input drawing commands before pixels reach
     /// this frame's local backing buffer. Regular, non-tiled frames use `(0, 0)`.
     ///
-    /// See the [canonical `CydFrame` example](CydFrame).
+    /// See the [`CydFrame` example](CydFrame).
     #[must_use]
     fn tile_top_left(&self) -> Point {
         Point::zero()
@@ -84,12 +83,12 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
 
     /// This frame's rectangle (top-left and size) in logical display coordinates.
     ///
-    /// See the [canonical `CydFrame` example](CydFrame).
+    /// See the [`CydFrame` example](CydFrame).
     fn rectangle(&self) -> Rectangle;
 
     /// Fill this frame with an explicit color and return `self`.
     ///
-    /// See the [canonical `CydFrame` example](CydFrame).
+    /// See the [`CydFrame` example](CydFrame).
     fn fill(&mut self, color: Rgb565) -> &mut Self;
 
     /// Clear this frame with the display's default background color.
@@ -97,13 +96,13 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// Unlike [`CydDisplay::clear`](crate::cyd::CydDisplay::clear), this only
     /// updates the frame buffer and does not immediately write to the panel.
     ///
-    /// See the [canonical `CydFrame` example](CydFrame).
+    /// See the [`CydFrame` example](CydFrame).
     fn clear(&mut self) -> &mut Self;
 
     /// Draw `text` at frame-local `(0, 0)` using the device default font and
     /// foreground color. Returns `&mut Self` for chaining.
     ///
-    /// See the [canonical `CydFrame` example](CydFrame).
+    /// See the [`CydFrame` example](CydFrame).
     fn write_text(&mut self, text: &str) -> &mut Self;
 
     /// Bulk-copy a full-frame, row-major RGB565 buffer into this frame.
@@ -117,7 +116,7 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// [`crate::Error::CopySize`] rather than panicking or silently corrupting
     /// the buffer.
     ///
-    /// See the [canonical `CydFrame` example](CydFrame) and
+    /// See the [`CydFrame` example](CydFrame) and
     /// [`Image565Fixed::copy_to`] for the primary convenience wrapper.
     fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()>;
 
@@ -135,6 +134,6 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// each device's natural present point without inverting into a state
     /// machine.
     ///
-    /// See the [canonical `CydFrame` example](CydFrame).
+    /// See the [`CydFrame` example](CydFrame).
     fn flush(&mut self) -> impl Future<Output = Result<(), <Self as CydFrame>::Error>>;
 }

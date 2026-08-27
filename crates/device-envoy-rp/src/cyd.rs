@@ -1,42 +1,43 @@
-//! A device abstraction for a standalone 320×240 CYD-style SPI display/touch
-//! module wired over SPI to a Raspberry Pi Pico (1 or 2).
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "cyd_application_preview",
+        "../device-envoy-core/docs/assets/cyd_application_preview.png"
+    )
+)]
+//! Raspberry Pi Pico support for standalone Cheap Yellow Display (CYD) modules.
 //!
-//! [`CydRp`] uses `SPI0` for the display and `SPI1`
-//! for touch; [`CydRpOneSpi`] shares a single SPI peripheral between the two.
-//!
-//! ## Start here
-//!
-//! Choose the entry point that matches the wiring and whether touch is needed:
-//!
-//! - [`CydRp`] is the ordinary complete two-SPI bundle for separate display
-//!   and touch peripherals; construction runs touch calibration.
-//! - [`CydRpOneSpi`] is the complete one-SPI bundle when both controllers must
-//!   share a peripheral; it uses bus arbitration and gives up independent bus
-//!   wiring.
-//! - [`CydDisplayRp`] is the display-only component when the application does
-//!   not need touch.
-//!
-//! Start with the compiled [`CydRp::new`] constructor example for a complete
-//! two-SPI device, or the generic [`Cyd`] application example for the normal
-//! draw/flush/read loop.
-//!
-//! The device-agnostic [`CydDisplay`] and [`CydTouch`] traits live in
+//! These modules combine a 320×240 ILI9341 display with XPT2046 resistive
+//! touch and connect to a Raspberry Pi Pico 1 or 2 over [SPI](crate#glossary).
+//! After construction, applications use the portable display and
+//! calibrated-touch interfaces from
 //! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
+//! The ESP32, WebAssembly, and in-memory implementations share these interfaces.
+#![doc = include_str!("../../../docs/cyd/application-example.md")]
 //!
-//! ## Other implementations
+//! [Choose a constructor](#choose-a-constructor) explains how to construct a
+//! Raspberry Pi Pico device. The
+//! [Raspberry Pi Pico CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-rp/examples/cyd_touch_paint.rs)
+//! puts both stages together in a complete program.
+#![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]
+//! ## Choose a constructor
 //!
-//! For ESP32 hardware, see
-//! [`CydEsp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/cyd/struct.CydEsp.html).
+//! Construction depends on how many [SPI peripherals](crate#glossary) the CYD
+//! should use and whether the application needs touch:
 //!
-//! For development without Pico hardware, the same generic application code
-//! can run with [`CydWasm`](https://docs.rs/device-envoy-core/latest/device_envoy_core/wasm/struct.CydWasm.html)
-//! using the `wasm` feature, or be tested deterministically with
-//! [`CydMemory`](https://docs.rs/device-envoy-core/latest/device_envoy_core/memory/struct.CydMemory.html),
-//! the in-memory CYD implementation for fast, deterministic native desktop
-//! tests in an ordinary Windows, macOS, or Linux process. Enable the `host`
-//! feature.
-//! See the [canonical CYD implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview)
-//! for the complete four-implementation map.
+//! - [`CydRp`] uses two SPI peripherals: `SPI0` for the display and `SPI1` for
+//!   touch. Choose it when both are available. Construction also loads or runs
+//!   touch calibration.
+//! - [`CydRpOneSpi`] uses one SPI peripheral for both the display and touch.
+//!   Choose it when the wiring or application requires the other peripheral.
+//!   Device Envoy coordinates access internally.
+//! - [`CydDisplayRp`] uses one SPI peripheral for the display and omits touch.
+//!   Choose it when the application does not need touch.
+//!
+//! The [`CydRp::new`], [`CydRpOneSpi::new`], and [`CydDisplayRp::new`] examples
+//! show the constructor arguments for each choice. After construction, shared
+//! application code can use the [`Cyd`] trait without naming an RP type.
+#![doc = include_str!("../../../docs/cyd/implementations.md")]
 
 // TODO0 Reduce CYD's public API surface; see specs/CYD_PUBLIC_API_CLEANUP.md.
 
@@ -96,9 +97,9 @@ use touch_driver::CydTouchRp as CydTouchRpDevice;
 /// exclusively-owned SPI peripheral. Shared-bus backends (see
 /// [`CydRpOneSpi`]) instantiate this with a shared-bus device instead.
 ///
-/// The display constructor and static-storage pattern are shown by the compiled
+/// The display constructor and static-storage pattern are shown by the
 /// [`CydStaticRp`] example. The complete-device constructor is shown by the
-/// compiled [`CydRp::new`] example.
+/// [`CydRp::new`] example.
 pub struct CydDisplayRp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: CydDisplayRpDevice<D>,
     orientation: Orientation,
@@ -126,7 +127,7 @@ pub(crate) struct CydTouchUncalibratedRp<D = touch_driver::CydTouchSpiDevice> {
 
 /// An owned calibrated CYD touch component for RP boards.
 ///
-/// Construction is covered by the compiled [`CydRp::new`] example; applications
+/// Construction is covered by the [`CydRp::new`] example; applications
 /// then call the calibrated [`CydTouch::read`] operation.
 pub struct CydTouchRp<D = touch_driver::CydTouchSpiDevice> {
     raw: CydTouchUncalibratedRp<D>,
@@ -136,15 +137,15 @@ pub struct CydTouchRp<D = touch_driver::CydTouchSpiDevice> {
 
 /// A calibrated CYD RP bundle.
 ///
-/// See the compiled [`CydRp::new`] constructor example after declaring
+/// See the [`CydRp::new`] constructor example after declaring
 /// [`CydStaticRp`] storage; construction performs the saved-or-interactive
 /// touch calibration before returning.
 pub struct CydRp {
     /// The owned display component.
-    /// See the compiled [`CydRp::new`] constructor example.
+    /// See the [`CydRp::new`] constructor example.
     pub display: CydDisplayRp,
     /// The owned calibrated touch component.
-    /// See the compiled [`CydRp::new`] constructor example.
+    /// See the [`CydRp::new`] constructor example.
     pub touch: CydTouchRp,
 }
 
@@ -209,7 +210,7 @@ impl<const PIXEL_COUNT: usize> CydStaticRp<PIXEL_COUNT> {
 ///
 /// Frames are returned by [`CydDisplay::frame_mut`] and implement the core
 /// [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html)
-/// operations. This page contains the compiled `CydFrameRp` example.
+/// operations. This page contains the `CydFrameRp` example.
 ///
 /// ```rust,no_run
 /// #![no_std]
@@ -249,7 +250,7 @@ pub struct CydFrameRp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     /// Fill the frame with an explicit color.
     ///
-    /// See the [canonical `CydFrameRp` example](CydFrameRp).
+    /// See the [`CydFrameRp` example](CydFrameRp).
     pub fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.view.fill(color);
         self
@@ -257,7 +258,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
 
     /// The frame's width in pixels.
     ///
-    /// See the [canonical `CydFrameRp` example](CydFrameRp).
+    /// See the [`CydFrameRp` example](CydFrameRp).
     #[must_use]
     pub fn width(&self) -> usize {
         self.view.width()
@@ -265,7 +266,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
 
     /// The frame's height in pixels.
     ///
-    /// See the [canonical `CydFrameRp` example](CydFrameRp).
+    /// See the [`CydFrameRp` example](CydFrameRp).
     #[must_use]
     pub fn height(&self) -> usize {
         self.view.height()
@@ -273,7 +274,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
 
     /// Borrow the frame's raw RGB565 pixels, row-major.
     ///
-    /// See the [canonical `CydFrameRp` example](CydFrameRp).
+    /// See the [`CydFrameRp` example](CydFrameRp).
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
@@ -281,7 +282,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     /// Present this frame's pixels at its rectangle's top-left (set by
     /// [`CydDisplay::frame_mut`]).
     ///
-    /// See the [canonical `CydFrameRp` example](CydFrameRp).
+    /// See the [`CydFrameRp` example](CydFrameRp).
     /// This inherent method is the synchronous RP-specific call. In generic
     /// code, call [`CydFrame::flush`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.flush)
     /// and await its future instead.
@@ -390,13 +391,13 @@ impl<D: SpiDevice<u8>> PixelTarget for CydFrameRp<'_, D> {
 /// See the [`CydRp::new`] constructor example, which propagates this error.
 pub enum Error {
     /// The display panel could not be initialized.
-    /// See the compiled [`CydRp::new`] constructor example.
+    /// See the [`CydRp::new`] constructor example.
     InitDisplay,
     /// A frame could not be flushed to the display.
-    /// See the compiled [`CydRp::new`] constructor example.
+    /// See the [`CydRp::new`] constructor example.
     FlushFrameBuffer,
     /// Changing the display orientation failed.
-    /// See the compiled [`CydRp::new`] constructor example.
+    /// See the [`CydRp::new`] constructor example.
     SetOrientation,
 }
 

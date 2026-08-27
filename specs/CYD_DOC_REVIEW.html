@@ -16,6 +16,7 @@ button { padding: .45rem .75rem; }
 .page { display: grid; grid-template-columns: 7rem 1fr; gap: .8rem; padding: .8rem 0; border-top: 1px solid color-mix(in srgb, CanvasText 18%, transparent); }
 .page-main { display: grid; gap: .35rem; }
 .page a { font-weight: 650; }
+.page .scope { color: GrayText; font-size: .85rem; }
 .page code { overflow-wrap: anywhere; color: GrayText; }
 .page textarea { box-sizing: border-box; width: 100%; resize: vertical; font: inherit; }
 .page.done { opacity: .68; }
@@ -28,256 +29,36 @@ button { padding: .45rem .75rem; }
 <header>
   <h1>CYD rendered documentation review</h1>
   <p id="progress">0 / 123 pages reviewed</p>
+  <p>Review order follows meaningful public documentation links depth first, starting at the ESP CYD overview. Links are followed in rendered order and stay within the configured Device Envoy scopes. Any scoped page not reached this way appears last under <strong>Orphaned pages</strong>.</p>
   <div class="controls">
     <button id="export" type="button">Download comments as Markdown</button>
     <button id="clear" type="button">Clear saved review</button>
     <label><input id="unfinished" type="checkbox"> show unfinished only</label>
   </div>
 </header>
-<main><section>
-  <h2>Core CYD <span>37 pages</span></h2>
-  <article class="page" data-id="target/doc/device_envoy_core/cyd/backend/enum.Error.html">
+<main><section data-kind="reached">
+  <h2>1. Depth-first traversal <span>105 reached pages</span></h2>
+  <article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/index.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/backend/enum.Error.html" target="_blank">Error in device_envoy_core::cyd::backend - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/backend/enum.Error.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/enum.RawTouchEvent.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/backend/enum.RawTouchEvent.html" target="_blank">RawTouchEvent in device_envoy_core::cyd::backend - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/backend/enum.RawTouchEvent.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/fn.ensure_calibration.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/backend/fn.ensure_calibration.html" target="_blank">ensure_calibration in device_envoy_core::cyd::backend - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/backend/fn.ensure_calibration.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/backend/index.html" target="_blank">device_envoy_core::cyd::backend - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/backend/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/struct.CalibrationConfig.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/backend/struct.CalibrationConfig.html" target="_blank">CalibrationConfig in device_envoy_core::cyd::backend - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/backend/struct.CalibrationConfig.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/trait.DisplayBackend.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/backend/trait.DisplayBackend.html" target="_blank">DisplayBackend in device_envoy_core::cyd::backend - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/backend/trait.DisplayBackend.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/trait.TouchUncalibrated.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/backend/trait.TouchUncalibrated.html" target="_blank">TouchUncalibrated in device_envoy_core::cyd::backend - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/backend/trait.TouchUncalibrated.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/constant.SCREEN_PIXELS.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/constant.SCREEN_PIXELS.html" target="_blank">SCREEN_PIXELS in device_envoy_core::cyd - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/constant.SCREEN_PIXELS.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/draw_item/enum.DrawItem.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/draw_item/enum.DrawItem.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/display/draw_item/enum.DrawItem.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/draw_item/struct.Image565View.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/draw_item/struct.Image565View.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/display/draw_item/struct.Image565View.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/enum.DrawItem.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/enum.DrawItem.html" target="_blank">DrawItem in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/enum.DrawItem.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/enum.Orientation.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/enum.Orientation.html" target="_blank">Orientation in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/enum.Orientation.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/fn.mask_byte_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/fn.mask_byte_count.html" target="_blank">mask_byte_count in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/fn.mask_byte_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/index.html" target="_blank">device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/orientation/enum.Orientation.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/orientation/enum.Orientation.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/display/orientation/enum.Orientation.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.Image565Fixed.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/struct.Image565Fixed.html" target="_blank">Image565Fixed in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/struct.Image565Fixed.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.Image565View.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/struct.Image565View.html" target="_blank">Image565View in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/struct.Image565View.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.Image888Fixed.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/struct.Image888Fixed.html" target="_blank">Image888Fixed in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/struct.Image888Fixed.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.MaskFixed.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/struct.MaskFixed.html" target="_blank">MaskFixed in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/struct.MaskFixed.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/fn.mask_byte_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tga/fn.mask_byte_count.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/display/tga/fn.mask_byte_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/struct.Image565Fixed.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tga/struct.Image565Fixed.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/display/tga/struct.Image565Fixed.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/struct.Image888Fixed.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tga/struct.Image888Fixed.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/display/tga/struct.Image888Fixed.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/struct.MaskFixed.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tga/struct.MaskFixed.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/display/tga/struct.MaskFixed.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/fn.max_rectangle_pixel_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tiling/fn.max_rectangle_pixel_count.html" target="_blank">max_rectangle_pixel_count in device_envoy_core::cyd::display::tiling - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/tiling/fn.max_rectangle_pixel_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/fn.rectangle_pixel_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tiling/fn.rectangle_pixel_count.html" target="_blank">rectangle_pixel_count in device_envoy_core::cyd::display::tiling - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/tiling/fn.rectangle_pixel_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tiling/index.html" target="_blank">device_envoy_core::cyd::display::tiling - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/tiling/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/struct.TileGrid.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/tiling/struct.TileGrid.html" target="_blank">TileGrid in device_envoy_core::cyd::display::tiling - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/tiling/struct.TileGrid.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/trait.CydFrame.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/display/trait.CydFrame.html" target="_blank">CydFrame in device_envoy_core::cyd::display - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/display/trait.CydFrame.html</code>
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/index.html" target="_blank">device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/index.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/doc/device_envoy_core/cyd/index.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/doc/device_envoy_core/cyd/index.html" target="_blank">device_envoy_core::cyd - Rust</a>
+    <span class="scope">Core CYD</span>
     <code>target/doc/device_envoy_core/cyd/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/calibration/struct.CalibrationConfig.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/touch/calibration/struct.CalibrationConfig.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/touch/calibration/struct.CalibrationConfig.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/driver/enum.Error.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/touch/driver/enum.Error.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/touch/driver/enum.Error.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/driver/fn.ensure_calibration.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/touch/driver/fn.ensure_calibration.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/cyd/touch/driver/fn.ensure_calibration.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/enum.TouchEvent.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/touch/enum.TouchEvent.html" target="_blank">TouchEvent in device_envoy_core::cyd::touch - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/touch/enum.TouchEvent.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/cyd/touch/index.html" target="_blank">device_envoy_core::cyd::touch - Rust</a>
-    <code>target/doc/device_envoy_core/cyd/touch/index.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/doc/device_envoy_core/cyd/trait.Cyd.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/doc/device_envoy_core/cyd/trait.Cyd.html" target="_blank">Cyd in device_envoy_core::cyd - Rust</a>
+    <span class="scope">Core CYD</span>
     <code>target/doc/device_envoy_core/cyd/trait.Cyd.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
@@ -285,435 +66,175 @@ button { padding: .45rem .75rem; }
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/doc/device_envoy_core/cyd/trait.CydDisplay.html" target="_blank">CydDisplay in device_envoy_core::cyd - Rust</a>
+    <span class="scope">Core CYD</span>
     <code>target/doc/device_envoy_core/cyd/trait.CydDisplay.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/trait.DisplayBackend.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/backend/trait.DisplayBackend.html" target="_blank">DisplayBackend in device_envoy_core::cyd::backend - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/backend/trait.DisplayBackend.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/trait.CydFrame.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/trait.CydFrame.html" target="_blank">CydFrame in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/trait.CydFrame.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.Image565Fixed.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/struct.Image565Fixed.html" target="_blank">Image565Fixed in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/struct.Image565Fixed.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/fn.mask_byte_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/fn.mask_byte_count.html" target="_blank">mask_byte_count in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/fn.mask_byte_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.Image888Fixed.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/struct.Image888Fixed.html" target="_blank">Image888Fixed in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/struct.Image888Fixed.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/backend/index.html" target="_blank">device_envoy_core::cyd::backend - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/backend/index.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/doc/device_envoy_core/cyd/trait.CydTouch.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/doc/device_envoy_core/cyd/trait.CydTouch.html" target="_blank">CydTouch in device_envoy_core::cyd - Rust</a>
+    <span class="scope">Core CYD</span>
     <code>target/doc/device_envoy_core/cyd/trait.CydTouch.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article>
-</section><section>
-  <h2>Core Memory <span>8 pages</span></h2>
-  <article class="page" data-id="target/doc/device_envoy_core/memory/enum.Error.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/enum.TouchEvent.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/enum.Error.html" target="_blank">Error in device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/enum.Error.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/touch/enum.TouchEvent.html" target="_blank">TouchEvent in device_envoy_core::cyd::touch - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/touch/enum.TouchEvent.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/memory/fn.assert_framebuffer_matches_expected_png.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/fn.ensure_calibration.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/fn.assert_framebuffer_matches_expected_png.html" target="_blank">assert_framebuffer_matches_expected_png in device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/fn.assert_framebuffer_matches_expected_png.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/backend/fn.ensure_calibration.html" target="_blank">ensure_calibration in device_envoy_core::cyd::backend - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/backend/fn.ensure_calibration.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/memory/index.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/enum.Orientation.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/index.html" target="_blank">device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/index.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/display/enum.Orientation.html" target="_blank">Orientation in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/enum.Orientation.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.ButtonMemory.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/trait.TouchUncalibrated.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/struct.ButtonMemory.html" target="_blank">ButtonMemory in device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/struct.ButtonMemory.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/backend/trait.TouchUncalibrated.html" target="_blank">TouchUncalibrated in device_envoy_core::cyd::backend - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/backend/trait.TouchUncalibrated.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydDisplayMemory.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/enum.RawTouchEvent.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/struct.CydDisplayMemory.html" target="_blank">CydDisplayMemory in device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/struct.CydDisplayMemory.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/backend/enum.RawTouchEvent.html" target="_blank">RawTouchEvent in device_envoy_core::cyd::backend - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/backend/enum.RawTouchEvent.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydFrameMemory.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/struct.CalibrationConfig.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/struct.CydFrameMemory.html" target="_blank">CydFrameMemory in device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/struct.CydFrameMemory.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/backend/struct.CalibrationConfig.html" target="_blank">CalibrationConfig in device_envoy_core::cyd::backend - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/backend/struct.CalibrationConfig.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydMemory.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/backend/enum.Error.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/struct.CydMemory.html" target="_blank">CydMemory in device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/struct.CydMemory.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/backend/enum.Error.html" target="_blank">Error in device_envoy_core::cyd::backend - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/backend/enum.Error.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydTouchMemory.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/enum.DrawItem.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/memory/struct.CydTouchMemory.html" target="_blank">CydTouchMemory in device_envoy_core::memory - Rust</a>
-    <code>target/doc/device_envoy_core/memory/struct.CydTouchMemory.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/display/enum.DrawItem.html" target="_blank">DrawItem in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/enum.DrawItem.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article>
-</section><section>
-  <h2>Core WASM <span>30 pages</span></h2>
-  <article class="page" data-id="target/doc/device_envoy_core/wasm/animation_frame/fn.next_animation_frame.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.Image565View.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/animation_frame/fn.next_animation_frame.html" target="_blank">Redirection</a>
-    <code>target/doc/device_envoy_core/wasm/animation_frame/fn.next_animation_frame.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/display/struct.Image565View.html" target="_blank">Image565View in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/struct.Image565View.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/clock/index.html">
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/struct.TileGrid.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/clock/index.html" target="_blank">device_envoy_core::wasm::clock - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/clock/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/clock/struct.ClockSyncWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/clock/struct.ClockSyncWasm.html" target="_blank">ClockSyncWasm in device_envoy_core::wasm::clock - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/clock/struct.ClockSyncWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/enum.Command.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/enum.Command.html" target="_blank">Command in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/enum.Command.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/enum.NoticeSeverity.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/enum.NoticeSeverity.html" target="_blank">NoticeSeverity in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/enum.NoticeSeverity.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/fn.start.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/fn.start.html" target="_blank">start in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/fn.start.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/index.html" target="_blank">device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Capabilities.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Capabilities.html" target="_blank">Capabilities in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Capabilities.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Config.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Config.html" target="_blank">Config in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Config.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Handle.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Handle.html" target="_blank">Handle in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Handle.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Notice.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Notice.html" target="_blank">Notice in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Notice.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.PageInfo.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.PageInfo.html" target="_blank">PageInfo in device_envoy_core::wasm::cyd_web - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.PageInfo.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/dns/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/dns/index.html" target="_blank">device_envoy_core::wasm::dns - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/dns/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/dns/struct.DnsSimulatorWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/dns/struct.DnsSimulatorWasm.html" target="_blank">DnsSimulatorWasm in device_envoy_core::wasm::dns - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/dns/struct.DnsSimulatorWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/enum.Error.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/enum.Error.html" target="_blank">Error in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/enum.Error.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/fn.next_animation_frame.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/fn.next_animation_frame.html" target="_blank">next_animation_frame in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/fn.next_animation_frame.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/index.html" target="_blank">device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/enum.WifiConnectOutcome.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/simulator/enum.WifiConnectOutcome.html" target="_blank">WifiConnectOutcome in device_envoy_core::wasm::simulator - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/simulator/enum.WifiConnectOutcome.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/simulator/index.html" target="_blank">device_envoy_core::wasm::simulator - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/simulator/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorControlWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorControlWasm.html" target="_blank">CydSimulatorControlWasm in device_envoy_core::wasm::simulator - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorControlWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorWasm.html" target="_blank">CydSimulatorWasm in device_envoy_core::wasm::simulator - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/struct.WifiSimulatorWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/simulator/struct.WifiSimulatorWasm.html" target="_blank">WifiSimulatorWasm in device_envoy_core::wasm::simulator - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/simulator/struct.WifiSimulatorWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.ButtonWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.ButtonWasm.html" target="_blank">ButtonWasm in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.ButtonWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.ButtonWasmSource.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.ButtonWasmSource.html" target="_blank">ButtonWasmSource in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.ButtonWasmSource.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydDisplayWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.CydDisplayWasm.html" target="_blank">CydDisplayWasm in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.CydDisplayWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydFrameWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.CydFrameWasm.html" target="_blank">CydFrameWasm in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.CydFrameWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydTouchWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.CydTouchWasm.html" target="_blank">CydTouchWasm in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.CydTouchWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydTouchWasmSource.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.CydTouchWasmSource.html" target="_blank">CydTouchWasmSource in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.CydTouchWasmSource.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.CydWasm.html" target="_blank">CydWasm in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.CydWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.FlashBlockWasm.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/doc/device_envoy_core/wasm/struct.FlashBlockWasm.html" target="_blank">FlashBlockWasm in device_envoy_core::wasm - Rust</a>
-    <code>target/doc/device_envoy_core/wasm/struct.FlashBlockWasm.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article>
-</section><section>
-  <h2>ESP CYD <span>23 pages</span></h2>
-  <article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">DEFAULT_DISPLAY_SPI_HZ in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_FONT.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_FONT.html" target="_blank">DEFAULT_FONT in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_FONT.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">Redirection</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Error.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Error.html" target="_blank">Error in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Error.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Orientation.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Orientation.html" target="_blank">Orientation in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Orientation.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/index.html" target="_blank">device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/one_spi/struct.CydEspOneSpi.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/one_spi/struct.CydEspOneSpi.html" target="_blank">Redirection</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/one_spi/struct.CydEspOneSpi.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydDisplayEsp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydDisplayEsp.html" target="_blank">CydDisplayEsp in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydDisplayEsp.html</code>
+    <a href="../target/doc/device_envoy_core/cyd/display/tiling/struct.TileGrid.html" target="_blank">TileGrid in device_envoy_core::cyd::display::tiling - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tiling/struct.TileGrid.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydEsp.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydEsp.html" target="_blank">CydEsp in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
     <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydEsp.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydDisplayEsp.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydDisplayEsp.html" target="_blank">CydDisplayEsp in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydDisplayEsp.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydEspOneSpi.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydEspOneSpi.html" target="_blank">CydEspOneSpi in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
     <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydEspOneSpi.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydFrameEsp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydFrameEsp.html" target="_blank">CydFrameEsp in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydFrameEsp.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydStaticEsp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydStaticEsp.html" target="_blank">CydStaticEsp in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydStaticEsp.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydTouchEsp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydTouchEsp.html" target="_blank">CydTouchEsp in device_envoy_esp::cyd - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydTouchEsp.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/text/constant.DEFAULT_FONT.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/text/constant.DEFAULT_FONT.html" target="_blank">Redirection</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/text/constant.DEFAULT_FONT.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.max_rectangle_pixel_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.max_rectangle_pixel_count.html" target="_blank">max_rectangle_pixel_count in device_envoy_esp::cyd::tiling - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.max_rectangle_pixel_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.rectangle_pixel_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.rectangle_pixel_count.html" target="_blank">rectangle_pixel_count in device_envoy_esp::cyd::tiling - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.rectangle_pixel_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/index.html" target="_blank">device_envoy_esp::cyd::tiling - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/struct.TileGrid.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/struct.TileGrid.html" target="_blank">TileGrid in device_envoy_esp::cyd::tiling - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/struct.TileGrid.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/enum.TouchEvent.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/enum.TouchEvent.html" target="_blank">TouchEvent in device_envoy_esp::cyd::touch - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/enum.TouchEvent.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/index.html" target="_blank">device_envoy_esp::cyd::touch - Rust</a>
-    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/index.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.Cyd.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.Cyd.html" target="_blank">Cyd in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
     <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.Cyd.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
@@ -721,177 +242,79 @@ button { padding: .45rem .75rem; }
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.CydDisplay.html" target="_blank">CydDisplay in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
     <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.CydDisplay.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/struct.TileGrid.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/struct.TileGrid.html" target="_blank">TileGrid in device_envoy_esp::cyd::tiling - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/struct.TileGrid.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.CydTouch.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.CydTouch.html" target="_blank">CydTouch in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
     <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/trait.CydTouch.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article>
-</section><section>
-  <h2>RP CYD <span>25 pages</span></h2>
-  <article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html">
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/enum.TouchEvent.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">DEFAULT_DISPLAY_SPI_HZ in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/enum.TouchEvent.html" target="_blank">TouchEvent in device_envoy_esp::cyd::touch - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/enum.TouchEvent.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_FONT.html">
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Orientation.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_FONT.html" target="_blank">DEFAULT_FONT in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_FONT.html</code>
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Orientation.html" target="_blank">Orientation in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Orientation.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html">
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydTouchEsp.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">Redirection</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Error.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Error.html" target="_blank">Error in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Error.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Orientation.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Orientation.html" target="_blank">Orientation in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Orientation.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/index.html" target="_blank">device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpi.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpi.html" target="_blank">Redirection</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpi.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpiStatic.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpiStatic.html" target="_blank">Redirection</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpiStatic.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydDisplayRp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydDisplayRp.html" target="_blank">CydDisplayRp in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydDisplayRp.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydFrameRp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydFrameRp.html" target="_blank">CydFrameRp in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydFrameRp.html</code>
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydTouchEsp.html" target="_blank">CydTouchEsp in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydTouchEsp.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRp.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRp.html" target="_blank">CydRp in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
     <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRp.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydDisplayRp.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydDisplayRp.html" target="_blank">CydDisplayRp in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydDisplayRp.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpi.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpi.html" target="_blank">CydRpOneSpi in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
     <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpi.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpiStatic.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpiStatic.html" target="_blank">CydRpOneSpiStatic in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpiStatic.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydStaticRp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydStaticRp.html" target="_blank">CydStaticRp in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydStaticRp.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydTouchRp.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydTouchRp.html" target="_blank">CydTouchRp in device_envoy_rp::cyd - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydTouchRp.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/text/constant.DEFAULT_FONT.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/text/constant.DEFAULT_FONT.html" target="_blank">Redirection</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/text/constant.DEFAULT_FONT.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.max_rectangle_pixel_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.max_rectangle_pixel_count.html" target="_blank">max_rectangle_pixel_count in device_envoy_rp::cyd::tiling - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.max_rectangle_pixel_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.rectangle_pixel_count.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.rectangle_pixel_count.html" target="_blank">rectangle_pixel_count in device_envoy_rp::cyd::tiling - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.rectangle_pixel_count.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/index.html" target="_blank">device_envoy_rp::cyd::tiling - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/index.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/struct.TileGrid.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/struct.TileGrid.html" target="_blank">TileGrid in device_envoy_rp::cyd::tiling - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/struct.TileGrid.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/enum.TouchEvent.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/enum.TouchEvent.html" target="_blank">TouchEvent in device_envoy_rp::cyd::touch - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/enum.TouchEvent.html</code>
-    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
-  </div>
-</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/index.html">
-  <label class="reviewed"><input type="checkbox"> reviewed</label>
-  <div class="page-main">
-    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/index.html" target="_blank">device_envoy_rp::cyd::touch - Rust</a>
-    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/index.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.Cyd.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.Cyd.html" target="_blank">Cyd in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
     <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.Cyd.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
@@ -899,14 +322,708 @@ button { padding: .45rem .75rem; }
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.CydDisplay.html" target="_blank">CydDisplay in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
     <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.CydDisplay.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/struct.TileGrid.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/struct.TileGrid.html" target="_blank">TileGrid in device_envoy_rp::cyd::tiling - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/struct.TileGrid.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.CydTouch.html">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
     <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.CydTouch.html" target="_blank">CydTouch in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
     <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/trait.CydTouch.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/enum.TouchEvent.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/enum.TouchEvent.html" target="_blank">TouchEvent in device_envoy_rp::cyd::touch - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/enum.TouchEvent.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Orientation.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Orientation.html" target="_blank">Orientation in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Orientation.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpiStatic.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpiStatic.html" target="_blank">CydRpOneSpiStatic in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydRpOneSpiStatic.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydStaticRp.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydStaticRp.html" target="_blank">CydStaticRp in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydStaticRp.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydTouchRp.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydTouchRp.html" target="_blank">CydTouchRp in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydTouchRp.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.CydWasm.html" target="_blank">CydWasm in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.CydWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/index.html" target="_blank">device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydFrameWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.CydFrameWasm.html" target="_blank">CydFrameWasm in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.CydFrameWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/index.html" target="_blank">device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydMemory.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/struct.CydMemory.html" target="_blank">CydMemory in device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/struct.CydMemory.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/index.html" target="_blank">device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.ButtonMemory.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/struct.ButtonMemory.html" target="_blank">ButtonMemory in device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/struct.ButtonMemory.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/fn.assert_framebuffer_matches_expected_png.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/fn.assert_framebuffer_matches_expected_png.html" target="_blank">assert_framebuffer_matches_expected_png in device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/fn.assert_framebuffer_matches_expected_png.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydDisplayMemory.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/struct.CydDisplayMemory.html" target="_blank">CydDisplayMemory in device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/struct.CydDisplayMemory.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydFrameMemory.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/struct.CydFrameMemory.html" target="_blank">CydFrameMemory in device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/struct.CydFrameMemory.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/struct.CydTouchMemory.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/struct.CydTouchMemory.html" target="_blank">CydTouchMemory in device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/struct.CydTouchMemory.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/memory/enum.Error.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/memory/enum.Error.html" target="_blank">Error in device_envoy_core::memory - Rust</a>
+    <span class="scope">Core Memory</span>
+    <code>target/doc/device_envoy_core/memory/enum.Error.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/index.html" target="_blank">device_envoy_rp::cyd::tiling - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.max_rectangle_pixel_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.max_rectangle_pixel_count.html" target="_blank">max_rectangle_pixel_count in device_envoy_rp::cyd::tiling - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.max_rectangle_pixel_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.rectangle_pixel_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.rectangle_pixel_count.html" target="_blank">rectangle_pixel_count in device_envoy_rp::cyd::tiling - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/tiling/fn.rectangle_pixel_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/index.html" target="_blank">device_envoy_rp::cyd::touch - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/touch/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydFrameRp.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydFrameRp.html" target="_blank">CydFrameRp in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/struct.CydFrameRp.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Error.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Error.html" target="_blank">Error in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/enum.Error.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">DEFAULT_DISPLAY_SPI_HZ in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_FONT.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_FONT.html" target="_blank">DEFAULT_FONT in device_envoy_rp::cyd - Rust</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/constant.DEFAULT_FONT.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/clock/struct.ClockSyncWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/clock/struct.ClockSyncWasm.html" target="_blank">ClockSyncWasm in device_envoy_core::wasm::clock - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/clock/struct.ClockSyncWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/clock/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/clock/index.html" target="_blank">device_envoy_core::wasm::clock - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/clock/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/dns/struct.DnsSimulatorWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/dns/struct.DnsSimulatorWasm.html" target="_blank">DnsSimulatorWasm in device_envoy_core::wasm::dns - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/dns/struct.DnsSimulatorWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/dns/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/dns/index.html" target="_blank">device_envoy_core::wasm::dns - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/dns/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorControlWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorControlWasm.html" target="_blank">CydSimulatorControlWasm in device_envoy_core::wasm::simulator - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorControlWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/simulator/index.html" target="_blank">device_envoy_core::wasm::simulator - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/simulator/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorWasm.html" target="_blank">CydSimulatorWasm in device_envoy_core::wasm::simulator - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/simulator/struct.CydSimulatorWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/struct.WifiSimulatorWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/simulator/struct.WifiSimulatorWasm.html" target="_blank">WifiSimulatorWasm in device_envoy_core::wasm::simulator - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/simulator/struct.WifiSimulatorWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/simulator/enum.WifiConnectOutcome.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/simulator/enum.WifiConnectOutcome.html" target="_blank">WifiConnectOutcome in device_envoy_core::wasm::simulator - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/simulator/enum.WifiConnectOutcome.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/index.html" target="_blank">device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/fn.start.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/fn.start.html" target="_blank">start in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/fn.start.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Config.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Config.html" target="_blank">Config in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Config.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Capabilities.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Capabilities.html" target="_blank">Capabilities in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Capabilities.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.ButtonWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.ButtonWasm.html" target="_blank">ButtonWasm in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.ButtonWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.ButtonWasmSource.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.ButtonWasmSource.html" target="_blank">ButtonWasmSource in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.ButtonWasmSource.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/enum.Command.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/enum.Command.html" target="_blank">Command in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/enum.Command.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.PageInfo.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.PageInfo.html" target="_blank">PageInfo in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.PageInfo.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Handle.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Handle.html" target="_blank">Handle in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Handle.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/struct.Notice.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/struct.Notice.html" target="_blank">Notice in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/struct.Notice.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/cyd_web/enum.NoticeSeverity.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/cyd_web/enum.NoticeSeverity.html" target="_blank">NoticeSeverity in device_envoy_core::wasm::cyd_web - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/cyd_web/enum.NoticeSeverity.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydDisplayWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.CydDisplayWasm.html" target="_blank">CydDisplayWasm in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.CydDisplayWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydTouchWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.CydTouchWasm.html" target="_blank">CydTouchWasm in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.CydTouchWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.CydTouchWasmSource.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.CydTouchWasmSource.html" target="_blank">CydTouchWasmSource in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.CydTouchWasmSource.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/struct.FlashBlockWasm.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/struct.FlashBlockWasm.html" target="_blank">FlashBlockWasm in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/struct.FlashBlockWasm.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/enum.Error.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/enum.Error.html" target="_blank">Error in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/enum.Error.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/fn.next_animation_frame.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/fn.next_animation_frame.html" target="_blank">next_animation_frame in device_envoy_core::wasm - Rust</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/fn.next_animation_frame.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/index.html" target="_blank">device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/tiling/index.html" target="_blank">device_envoy_core::cyd::display::tiling - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tiling/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/fn.max_rectangle_pixel_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/tiling/fn.max_rectangle_pixel_count.html" target="_blank">max_rectangle_pixel_count in device_envoy_core::cyd::display::tiling - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tiling/fn.max_rectangle_pixel_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tiling/fn.rectangle_pixel_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/tiling/fn.rectangle_pixel_count.html" target="_blank">rectangle_pixel_count in device_envoy_core::cyd::display::tiling - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tiling/fn.rectangle_pixel_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/struct.MaskFixed.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/struct.MaskFixed.html" target="_blank">MaskFixed in device_envoy_core::cyd::display - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/struct.MaskFixed.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/touch/index.html" target="_blank">device_envoy_core::cyd::touch - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/touch/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/constant.SCREEN_PIXELS.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/constant.SCREEN_PIXELS.html" target="_blank">SCREEN_PIXELS in device_envoy_core::cyd - Rust</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/constant.SCREEN_PIXELS.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/index.html" target="_blank">device_envoy_esp::cyd::tiling - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.max_rectangle_pixel_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.max_rectangle_pixel_count.html" target="_blank">max_rectangle_pixel_count in device_envoy_esp::cyd::tiling - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.max_rectangle_pixel_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.rectangle_pixel_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.rectangle_pixel_count.html" target="_blank">rectangle_pixel_count in device_envoy_esp::cyd::tiling - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/tiling/fn.rectangle_pixel_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/index.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/index.html" target="_blank">device_envoy_esp::cyd::touch - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/touch/index.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydFrameEsp.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydFrameEsp.html" target="_blank">CydFrameEsp in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydFrameEsp.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydStaticEsp.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydStaticEsp.html" target="_blank">CydStaticEsp in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/struct.CydStaticEsp.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Error.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Error.html" target="_blank">Error in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/enum.Error.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">DEFAULT_DISPLAY_SPI_HZ in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_FONT.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_FONT.html" target="_blank">DEFAULT_FONT in device_envoy_esp::cyd - Rust</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/constant.DEFAULT_FONT.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article>
+</section>
+<section data-kind="orphaned">
+  <h2>2. Orphaned pages <span>18 pages</span></h2>
+  <article class="page" data-id="target/doc/device_envoy_core/cyd/display/draw_item/enum.DrawItem.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/draw_item/enum.DrawItem.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/draw_item/enum.DrawItem.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/draw_item/struct.Image565View.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/draw_item/struct.Image565View.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/draw_item/struct.Image565View.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/orientation/enum.Orientation.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/orientation/enum.Orientation.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/orientation/enum.Orientation.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/fn.mask_byte_count.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/tga/fn.mask_byte_count.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tga/fn.mask_byte_count.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/struct.Image565Fixed.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/tga/struct.Image565Fixed.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tga/struct.Image565Fixed.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/struct.Image888Fixed.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/tga/struct.Image888Fixed.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tga/struct.Image888Fixed.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/display/tga/struct.MaskFixed.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/display/tga/struct.MaskFixed.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/display/tga/struct.MaskFixed.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/calibration/struct.CalibrationConfig.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/touch/calibration/struct.CalibrationConfig.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/touch/calibration/struct.CalibrationConfig.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/driver/enum.Error.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/touch/driver/enum.Error.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/touch/driver/enum.Error.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/cyd/touch/driver/fn.ensure_calibration.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/cyd/touch/driver/fn.ensure_calibration.html" target="_blank">Redirection</a>
+    <span class="scope">Core CYD</span>
+    <code>target/doc/device_envoy_core/cyd/touch/driver/fn.ensure_calibration.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/doc/device_envoy_core/wasm/animation_frame/fn.next_animation_frame.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/doc/device_envoy_core/wasm/animation_frame/fn.next_animation_frame.html" target="_blank">Redirection</a>
+    <span class="scope">Core WASM</span>
+    <code>target/doc/device_envoy_core/wasm/animation_frame/fn.next_animation_frame.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">Redirection</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/one_spi/struct.CydEspOneSpi.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/one_spi/struct.CydEspOneSpi.html" target="_blank">Redirection</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/one_spi/struct.CydEspOneSpi.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/text/constant.DEFAULT_FONT.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/text/constant.DEFAULT_FONT.html" target="_blank">Redirection</a>
+    <span class="scope">ESP CYD</span>
+    <code>target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/text/constant.DEFAULT_FONT.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html" target="_blank">Redirection</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/display/constant.DEFAULT_DISPLAY_SPI_HZ.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpi.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpi.html" target="_blank">Redirection</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpi.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpiStatic.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpiStatic.html" target="_blank">Redirection</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/one_spi/struct.CydRpOneSpiStatic.html</code>
+    <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
+  </div>
+</article><article class="page" data-id="target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/text/constant.DEFAULT_FONT.html">
+  <label class="reviewed"><input type="checkbox"> reviewed</label>
+  <div class="page-main">
+    <a href="../target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/text/constant.DEFAULT_FONT.html" target="_blank">Redirection</a>
+    <span class="scope">RP CYD</span>
+    <code>target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd/text/constant.DEFAULT_FONT.html</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article>
@@ -962,8 +1079,7 @@ document.querySelector("#export").addEventListener("click", () => {
     }
   }
   if (lines.length === 2) lines.push("No comments recorded.", "");
-  const blob = new Blob([lines.join("
-")], { type: "text/markdown" });
+  const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = "CYD_DOC_REVIEW_COMMENTS.md";

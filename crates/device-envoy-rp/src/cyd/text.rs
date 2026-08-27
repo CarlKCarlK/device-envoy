@@ -32,7 +32,7 @@ impl<D: SpiDevice<u8>> CydFrameRp<'_, D> {
     /// For any other font, color, alignment, or baseline, draw with
     /// embedded-graphics directly against this frame.
     ///
-    /// See the [canonical `CydFrameRp` example](super::CydFrameRp).
+    /// See the [`CydFrameRp` example](super::CydFrameRp).
     pub fn write_text(&mut self, text: &str) -> &mut Self {
         Text::with_baseline(
             text,

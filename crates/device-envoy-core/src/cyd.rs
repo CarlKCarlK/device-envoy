@@ -1,35 +1,20 @@
-//! A device abstraction for the "Cheap Yellow Display" (CYD) display and touch parts.
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "cyd_application_preview",
+        "docs/assets/cyd_application_preview.png"
+    )
+)]
+//! Portable display and touch interfaces for Cheap Yellow Display (CYD)
+//! applications.
 //!
-//! Tested on so far:
-//!
-//! - an integrated ESP32 Cheap Yellow Display board
-//! - the same standalone CYD 320×240 SPI display/touch board, driven
-//!   externally by both ESP32 and Raspberry Pi Pico 2 setups
-//!
-//! Start with [`Cyd`] and choose a platform constructor: a complete two-SPI
-//! bundle, a complete one-SPI bundle, or a display-only component. Then choose
-//! storage for the drawing workflow described by [`CydDisplay`].
-//!
-//! ## Implementation overview
-//!
-//! The shared CYD API has four supported implementations:
-//!
-//! - [`CydEsp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/cyd/struct.CydEsp.html)
-//!   for ESP32 hardware;
-//! - [`CydRp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/cyd/struct.CydRp.html)
-//!   for Raspberry Pi Pico hardware;
-//! - [`CydWasm`](https://docs.rs/device-envoy-core/latest/device_envoy_core/wasm/struct.CydWasm.html)
-//!   for interactive browser simulation, requiring the `wasm` feature; and
-//! - [`CydMemory`](https://docs.rs/device-envoy-core/latest/device_envoy_core/memory/struct.CydMemory.html)
-//!   is an in-memory CYD implementation for fast, deterministic native
-//!   desktop tests in an ordinary Windows, macOS, or Linux process. Enable the
-//!   `host` feature.
-//!
-//! Hardware applications normally choose `CydEsp` or `CydRp`. Use
-//! `CydMemory` for native desktop testing when tests must be repeatable and
-//! inspect pixels directly; use `CydWasm` for interactive browser simulation.
-//! The compiled [`Cyd`] example shows the shared application loop used by all
-//! four implementations.
+//! The [`Cyd`] trait represents a ready-to-use device with a display and
+//! calibrated touch input. Hardware, browser, and in-memory devices all provide
+//! the same [`Cyd`], [`CydDisplay`], [`CydTouch`], and
+//! [`CydFrame`] interfaces.
+#![doc = include_str!("../../../docs/cyd/application-example.md")]
+#![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]
+#![doc = include_str!("../../../docs/cyd/implementations.md")]
 
 pub mod backend;
 pub mod display;
@@ -41,7 +26,7 @@ use display::{ContiguousPixels, CydFrame};
 pub(crate) const SCREEN_WIDTH: usize = 320;
 /// Native panel height in pixels (landscape): 240. The CYD panel is fixed hardware.
 pub(crate) const SCREEN_HEIGHT: usize = 240;
-/// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 76,800).
+/// Total panel pixel count (`SCREEN_WIDTH * SCREEN_HEIGHT` = 320 * 240 = 76,800).
 ///
 /// ```rust,no_run
 /// use device_envoy_core::cyd::SCREEN_PIXELS;
@@ -61,129 +46,70 @@ use embedded_graphics::{
 use display::Orientation;
 use touch::TouchEvent;
 
-/// A device abstraction for the "Cheap Yellow Display" (CYD) display and touch parts.
+/// A ready-to-use CYD device with display and calibrated touch components.
 ///
-/// `Cyd` is the core trait for ready-to-use device bundles. It provides borrowed access
-/// to calibrated display and touch halves. Generic app code should use `Cyd` to remain
-/// compatible with hardware designs where display and touch share underlying resources.
-/// See the [CYD implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview)
-/// for `CydEsp`, `CydRp`, `CydWasm`, and `CydMemory`.
+/// [`Cyd::parts`] borrows both components together. The associated types retain
+/// each implementation's concrete display, touch, and error types, while
+/// generic application code can accept any `C: Cyd`.
 ///
-#[cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!("cyd_trait_preview", "docs/assets/cyd_trait_preview.png")
-)]
-#[doc = r#"
-Generic applications can read calibrated touch events and flush a frame without
-depending on a platform crate's concrete component types:
-
-```rust,no_run
-use device_envoy_core::cyd::{Cyd, CydDisplay, CydTouch, display::CydFrame};
-
-async fn draw_once<S: Cyd>(device: &mut S) -> Result<(), S::Error> {
-    let (display, touch) = device.parts();
-    let touch_is_active = touch.read()?.is_some();
-    let mut frame = display.full_frame_mut();
-    frame.clear();
-    if touch_is_active {
-        frame.write_text("Touch");
-    }
-    frame.flush().await?;
-    drop(frame);
-    let display: &mut S::Display = device.display();
-    let display_size = display.screen_size();
-    assert_eq!(display_size, device.orientation().size());
-    Ok(())
-}
-```
-"#]
-#[cfg_attr(
-    feature = "host",
-    doc = r#"
-
-`CydMemory` is an in-memory CYD implementation for fast, deterministic native desktop tests in an ordinary Windows, macOS, or Linux process. Enable the `host` feature. The interactive browser alternative is `CydWasm` with the `wasm` feature.
-
-```rust
-use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch,
-    display::{CydFrame, DrawItem},
-    touch::TouchEvent,
-};
-use embedded_graphics::pixelcolor::Rgb888;
-# use device_envoy_core::memory::CydMemory;
-# use device_envoy_core::memory::assert_framebuffer_matches_expected_png;
-# use embedded_graphics::{
-#     mono_font::ascii::FONT_9X15_BOLD,
-#     pixelcolor::Rgb565,
-#     prelude::{Point, RgbColor, Size},
-# };
-# futures_executor::block_on(async {
-# let mut cyd = CydMemory::new(
-#     Size::new(320, 240),
-#     Rgb888::BLACK,
-#     Rgb888::WHITE,
-#     &FONT_9X15_BOLD,
-# );
-# cyd.push_touch_event(TouchEvent::Down { point: Point::new(160, 120) });
-// Create a pixel-buffer covering the whole screen that starts filled with background color.
-let (display, touch) = cyd.parts();
-let touch_event = touch.read()?;
-let mut frame = display.full_frame_mut();
-
-frame.write_text("Hello CYD");
-// An app would usually run this in a loop: read touch, draw, flush, repeat.
-if let Some(TouchEvent::Down { point } | TouchEvent::Move { point }) = touch_event {
-    DrawItem::Circle {
-        center: (point.x as f32, point.y as f32),
-        pixel_radius: 24.0,
-        color: Rgb888::RED,
-    }
-    .draw(&mut frame);
-}
-frame.flush().await?;
-# assert_eq!(cyd.pixel(160, 120), Rgb565::RED);
-# if let Err(error) = assert_framebuffer_matches_expected_png(
-#     &cyd,
-#     env!("CARGO_MANIFEST_DIR"),
-#     "cyd_trait_preview.png",
-# ) {
-#     panic!("{error}");
-# }
-# Ok::<(), device_envoy_core::memory::Error>(())
-# })?;
-# Ok::<(), device_envoy_core::memory::Error>(())
-```
-
-![CYD trait preview][cyd_trait_preview]
-"#
-)]
+/// The [module-level example](index.html#application-example) shows how to use
+/// the display and calibrated touch input. To find the device's current
+/// orientation, see [`Cyd::orientation`]. See the
+/// [implementations](index.html#implementations-1) for `CydEsp`, `CydRp`,
+/// `CydWasm`, and `CydMemory`.
 pub trait Cyd: Sized {
     /// Error returned by both the display and calibrated touch parts.
-    /// See the compiled canonical [`Cyd`] example.
+    /// See the [application example](index.html#application-example) for a
+    /// generic operation that returns this error.
     type Error;
 
-    /// The calibrated display component borrowed from the complete device.
-    /// See the compiled canonical [`Cyd`] example.
+    /// The display component borrowed from the complete device.
+    /// See the [application example](index.html#application-example).
     type Display: CydDisplay<Error = Self::Error>;
     /// The calibrated touch component borrowed from the complete device.
-    /// See the compiled canonical [`Cyd`] example.
+    /// See the [application example](index.html#application-example).
     type Touch: CydTouch<Error = Self::Error>;
 
-    /// Borrow both calibrated halves at once.
+    /// Borrow the display and calibrated touch components at once.
     ///
-    /// See the [canonical `Cyd` device-loop example](Cyd).
+    /// The [application example](index.html#application-example) uses `parts`
+    /// because its drawing loop needs both components simultaneously.
     fn parts(&mut self) -> (&mut Self::Display, &mut Self::Touch);
 
-    /// Borrow the calibrated display half.
+    /// Borrow the display component.
     ///
-    /// See the [canonical `Cyd` device-loop example](Cyd).
+    /// See the [application example](index.html#application-example) for drawing
+    /// through a borrowed display component.
     fn display(&mut self) -> &mut Self::Display {
         self.parts().0
     }
 
+    /// Borrow the calibrated touch component.
+    ///
+    /// See the [application example](index.html#application-example) for reading
+    /// calibrated, oriented touch events through a borrowed touch component.
+    fn touch(&mut self) -> &mut Self::Touch {
+        self.parts().1
+    }
+
     /// Return the logical orientation of this complete device.
     ///
-    /// See the [canonical `Cyd` device-loop example](Cyd).
+    /// # Example
+    ///
+    /// For a device constructed in landscape orientation, compare the returned
+    /// value directly and use it to obtain the application's logical display
+    /// dimensions. Portrait orientations instead return 240×320.
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::{display::Orientation, Cyd};
+    /// use embedded_graphics::prelude::Size;
+    ///
+    /// fn check_landscape_orientation<C: Cyd>(device: &C) {
+    ///     let orientation = device.orientation();
+    ///     assert_eq!(orientation, Orientation::Landscape);
+    ///     assert_eq!(orientation.size(), Size::new(320, 240));
+    /// }
+    /// ```
     fn orientation(&self) -> Orientation;
 }
 
@@ -191,13 +117,13 @@ pub trait Cyd: Sized {
 ///
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
 /// the same logical display coordinates as the display, or `None` when there is no
-/// touch. See the [canonical calibrated-read example](CydTouch::read);
+/// touch. See the [calibrated-read example](CydTouch::read);
 /// applications should not need the platform-author-only backend module.
-/// See the [CYD implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview)
+/// See the [CYD implementations](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1)
 /// to find `CydEsp`, `CydRp`, `CydWasm`, and `CydMemory` touch sources.
 pub trait CydTouch: Sized {
     /// Error returned when reading touch fails.
-    /// See the compiled canonical [`CydTouch::read`] example.
+    /// See the [`CydTouch::read`] example.
     type Error;
 
     /// Read the next calibrated touch event, if any.
@@ -207,7 +133,7 @@ pub trait CydTouch: Sized {
     /// `Ok(None)` when there is no pending touch.
     /// Errors only on a hardware/read failure.
     ///
-    /// The canonical calibrated-read example below consumes the already
+    /// The calibrated-read example below consumes the already
     /// oriented point directly; applications must not map it a second time.
     ///
     /// ```rust,no_run
@@ -240,9 +166,9 @@ pub trait CydTouch: Sized {
 /// The screen is a fixed 320×240 RGB565 panel. `CydDisplay` has three drawing
 /// mechanisms and four common workflows: full-screen and regional buffered
 /// frames, callback-based tiled replay, and contiguous-pixel streaming. Start
-/// with the compiled [`CydDisplay::frame_mut`] example, which shows the normal
+/// with the [`CydDisplay::frame_mut`] example, which shows the normal
 /// buffered-frame path. See
-/// the [CYD implementation overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview)
+/// the [CYD implementations](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1)
 /// for `CydEsp`, `CydRp`, `CydWasm`, and `CydMemory`.
 /// Buffered [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html)
 /// values can be drawn into and flushed to any rectangle on screen. Callback-tiled frames (see
@@ -347,7 +273,7 @@ assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground_color(
     /// [`CydDisplay::for_each_tile`] when replaying a complete logical-display-coordinate
     /// scene into smaller buffers.
     ///
-    /// See the [canonical frame example](CydDisplay::frame_mut).
+    /// See the [frame example](CydDisplay::frame_mut).
     ///
     /// ```rust,no_run
     /// use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
@@ -402,8 +328,11 @@ frame.flush().await?;
 # Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
-![CYD frame preview][cyd_frame_mut_preview]
 "#
+    )]
+    #[cfg_attr(
+        all(feature = "host", feature = "doc-images"),
+        doc = "\n![CYD frame preview][cyd_frame_mut_preview]\n"
     )]
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
         backend::DisplayBackend::frame_mut_with_tile_top_left(self, rectangle, Point::zero())
@@ -411,7 +340,7 @@ frame.flush().await?;
 
     /// Borrow a full-screen frame, cleared to the device background color.
     ///
-    /// See the [canonical `Cyd` device-loop example](Cyd).
+    /// See the [`Cyd` device-loop example](Cyd).
     fn full_frame_mut(&mut self) -> Self::Frame<'_> {
         self.frame_mut(Rectangle::new(Point::zero(), self.screen_size()))
     }
@@ -422,7 +351,7 @@ frame.flush().await?;
     /// frame-local buffered draw. Implementations clip to the logical display and
     /// treat an empty intersection as a no-op.
     ///
-    /// This is the canonical example for the immediate and contiguous operations:
+    /// The following example covers the immediate and contiguous operations:
     /// [`CydDisplay::fill_contiguous`], [`CydDisplay::draw_items`], [`CydDisplay::clear`],
     /// and [`CydDisplay::fill`].
     ///
@@ -452,7 +381,54 @@ frame.flush().await?;
     /// remaining pixels untouched, while extra pixels are ignored. This method
     /// does not infer missing pixels or repeat the final value.
     ///
-    /// See the [canonical regional streaming example](CydDisplay::fill_rectangle).
+    /// # Example
+    ///
+    /// Stream an image directly when its RGB565 pixels do not need further
+    /// drawing or transformation:
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::{
+    ///     CydDisplay,
+    ///     display::{Image565Fixed, tga},
+    /// };
+    /// use embedded_graphics::{
+    ///     prelude::Point,
+    ///     primitives::Rectangle,
+    /// };
+    ///
+    /// const BITMAP: Image565Fixed<45, 73, { 45 * 73 }> =
+    ///     tga!(concat!(env!("CARGO_MANIFEST_DIR"),
+    ///         "/docs/assets/cyd_fill_contiguous.tga"))
+    ///     .to_565();
+    ///
+    /// fn stream_bitmap<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     let bitmap = BITMAP.view();
+    ///     let destination = Rectangle::new(Point::new(40, 30), bitmap.size());
+    ///
+    ///     display.fill_contiguous(destination, bitmap.rgb565_iter())
+    /// }
+    /// ```
+    ///
+    /// The `tga!` macro embeds and decodes the file at compile time. The view
+    /// borrows that `const` image, supplies its dimensions, and yields pixels
+    /// in row-major order. The destination can be anywhere on the display, and
+    /// this path requires neither a frame buffer nor heap allocation.
+    ///
+    /// For a whole-screen bitmap, see the
+    /// [`fill_contiguous_full` example](CydDisplay::fill_contiguous_full). See the
+    /// [shared DNS tester's bitmap-streaming code](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-core/src/dns_tester.rs#L377-L381)
+    /// for a complete working example.
+    #[cfg_attr(
+        feature = "doc-images",
+        doc = ::embed_doc_image::embed_image!(
+            "cyd_fill_contiguous_preview",
+            "docs/assets/cyd_fill_contiguous_preview.png"
+        )
+    )]
+    #[cfg_attr(
+        feature = "doc-images",
+        doc = "\n![A bitmap streamed into a region of an in-memory CYD display.][cyd_fill_contiguous_preview]\n"
+    )]
     fn fill_contiguous<I>(&mut self, rectangle: Rectangle, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Rgb565>;
@@ -464,17 +440,43 @@ frame.flush().await?;
     /// screen rectangle. Streaming is an advanced raster path: the caller
     /// generates every pixel in row-major order rather than drawing a scene.
     ///
+    /// # Example
+    ///
     /// ```rust,no_run
     /// use device_envoy_core::cyd::CydDisplay;
     /// use embedded_graphics::{pixelcolor::Rgb565, prelude::RgbColor};
     ///
-    /// fn stream<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
-    ///     let pixels = (0..320 * 240).map(|pixel_index| {
-    ///         if pixel_index % 320 == 0 { Rgb565::WHITE } else { Rgb565::BLACK }
+    /// fn stream_background<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     // A blue-green RGB565 gradient with a warmer lower-right corner.
+    ///     let pixels = (0..240).flat_map(|position_y| {
+    ///         (0..320).map(move |position_x| {
+    ///             Rgb565::new(
+    ///                 (position_x / 10) as u8,
+    ///                 (position_y / 4) as u8,
+    ///                 ((position_x + position_y) / 18) as u8,
+    ///             )
+    ///         })
     ///     });
     ///     display.fill_contiguous_full(pixels)
     /// }
     /// ```
+    ///
+    /// The iterator generates each pixel just before it is sent, without a
+    /// frame buffer or heap allocation. To position a stored bitmap, see the
+    /// [`fill_contiguous` example](CydDisplay::fill_contiguous). The
+    /// [Linkage Blaze clock](https://github.com/CarlKCarlK/linkage-blaze/blob/main/crates/linkage-blaze/src/examples/clock.rs#L148-L151)
+    /// demonstrates full-screen streaming in a complete application.
+    #[cfg_attr(
+        feature = "doc-images",
+        doc = ::embed_doc_image::embed_image!(
+            "cyd_fill_contiguous_full_preview",
+            "docs/assets/cyd_fill_contiguous_full_preview.png"
+        )
+    )]
+    #[cfg_attr(
+        feature = "doc-images",
+        doc = "\n![A numerically generated gradient streamed into an in-memory CYD display.][cyd_fill_contiguous_full_preview]\n"
+    )]
     fn fill_contiguous_full<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
         I: IntoIterator<Item = Rgb565>,
@@ -484,7 +486,7 @@ frame.flush().await?;
 
     /// Draw projected draw items immediately inside `bounds`.
     ///
-    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle) and
+    /// See the [immediate-operations example](CydDisplay::fill_rectangle) and
     /// the [`display::DrawItem`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/enum.DrawItem.html) documentation for the draw-item types this consumes.
     /// `PIXEL_SOURCE_COUNT` is the maximum number of primitive or bitmap
     /// sources retained from `items`; choose it at least as large as the items
@@ -510,14 +512,14 @@ frame.flush().await?;
     /// returning the logical display to the default background between frame
     /// workflows.
     ///
-    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
+    /// See the [immediate-operations example](CydDisplay::fill_rectangle).
     fn clear(&mut self) -> Result<(), Self::Error> {
         self.fill(self.background_565())
     }
 
     /// Fill the whole screen with an explicit color.
     ///
-    /// See the [canonical immediate-operations example](CydDisplay::fill_rectangle).
+    /// See the [immediate-operations example](CydDisplay::fill_rectangle).
     fn fill(&mut self, color: Rgb565) -> Result<(), Self::Error> {
         self.fill_rectangle(Rectangle::new(Point::zero(), self.screen_size()), color)
     }

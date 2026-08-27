@@ -6,16 +6,28 @@ from __future__ import annotations
 import argparse
 import html
 import re
+from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+from bs4 import BeautifulSoup, Tag
 
 
 SCOPES = (
-    ("Core CYD", "target/doc/device_envoy_core/cyd"),
-    ("Core Memory", "target/doc/device_envoy_core/memory"),
-    ("Core WASM", "target/doc/device_envoy_core/wasm"),
     ("ESP CYD", "target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd"),
     ("RP CYD", "target/thumbv8m.main-none-eabihf/doc/device_envoy_rp/cyd"),
+    ("Core CYD", "target/doc/device_envoy_core/cyd"),
+    ("Core WASM", "target/doc/device_envoy_core/wasm"),
+    ("Core Memory", "target/doc/device_envoy_core/memory"),
 )
+
+
+@dataclass(frozen=True)
+class Page:
+    scope: str
+    root: Path
+    path: Path
+    repo_relative: str
 
 
 def page_title(page: Path) -> str:
@@ -27,9 +39,10 @@ def page_title(page: Path) -> str:
     return re.sub(r"\s+", " ", title)
 
 
-def generate(repo: Path, output: Path) -> None:
-    sections: list[str] = []
-    total = 0
+def load_pages(repo: Path) -> tuple[dict[str, Page], dict[Path, str], dict[str, Path]]:
+    pages: dict[str, Page] = {}
+    by_path: dict[Path, str] = {}
+    crate_roots: dict[str, Path] = {}
     for scope_name, relative_root in SCOPES:
         root = repo / relative_root
         if not root.is_dir():
@@ -37,32 +50,180 @@ def generate(repo: Path, output: Path) -> None:
                 f"missing rendered documentation tree: {root}\n"
                 "Build core, ESP, and RP documentation before generating the checklist."
             )
-        pages = sorted(root.rglob("*.html"), key=lambda page: page.relative_to(root).as_posix())
-        if not pages:
+        scope_pages = sorted(root.rglob("*.html"))
+        if not scope_pages:
             raise SystemExit(f"rendered documentation tree contains no HTML pages: {root}")
-        rows = []
-        for page in pages:
-            repo_relative = page.relative_to(repo).as_posix()
-            output_relative = Path("..") / page.relative_to(repo)
-            stable_id = repo_relative
-            title = page_title(page)
-            rows.append(
-                f'''<article class="page" data-id="{html.escape(stable_id)}">
+        crate_roots[root.parent.name] = root.parent.resolve()
+        for path in scope_pages:
+            repo_relative = path.relative_to(repo).as_posix()
+            if repo_relative in pages:
+                raise SystemExit(f"rendered page belongs to multiple scopes: {repo_relative}")
+            page = Page(scope_name, root.resolve(), path.resolve(), repo_relative)
+            pages[repo_relative] = page
+            by_path[page.path] = repo_relative
+    return pages, by_path, crate_roots
+
+
+def skips_traversal(link: Tag) -> bool:
+    if "src" in link.get("class", []):
+        return True
+    for ancestor in link.parents:
+        if not isinstance(ancestor, Tag):
+            continue
+        if ancestor.name in {"nav", "rustdoc-topbar", "rustdoc-toolbar"}:
+            return True
+        identity = " ".join(
+            [str(ancestor.get("id", "")), *[str(value) for value in ancestor.get("class", [])]]
+        ).lower()
+        if any(
+            marker in identity
+            for marker in (
+                "sidebar",
+                "rustdoc-breadcrumbs",
+                "implementors",
+                "trait-implementations",
+                "synthetic-implementations",
+                "blanket-implementations",
+                "impl-items",
+            )
+        ):
+            return True
+    return False
+
+
+def resolve_link(
+    page: Page,
+    href: str,
+    by_path: dict[Path, str],
+    crate_roots: dict[str, Path],
+) -> str | None:
+    parsed = urlsplit(href)
+    if parsed.scheme in {"http", "https"}:
+        if parsed.netloc != "docs.rs":
+            return None
+        parts = [unquote(part) for part in parsed.path.split("/") if part]
+        crate_index = next(
+            (index for index, part in enumerate(parts) if part in crate_roots), None
+        )
+        if crate_index is None:
+            return None
+        candidate = crate_roots[parts[crate_index]].joinpath(*parts[crate_index + 1 :])
+    elif parsed.scheme:
+        return None
+    else:
+        if not parsed.path:
+            return None
+        candidate = page.path.parent / unquote(parsed.path)
+    candidate = candidate.resolve()
+    if candidate.is_dir():
+        candidate = candidate / "index.html"
+    return by_path.get(candidate)
+
+
+def linked_pages(
+    page: Page,
+    by_path: dict[Path, str],
+    crate_roots: dict[str, Path],
+) -> list[str]:
+    soup = BeautifulSoup(page.path.read_text(encoding="utf-8"), "html.parser")
+    linked: list[str] = []
+    seen: set[str] = set()
+    for link in soup.select("a[href]"):
+        if skips_traversal(link):
+            continue
+        target = resolve_link(page, link["href"], by_path, crate_roots)
+        if target is None or target == page.repo_relative or target in seen:
+            continue
+        seen.add(target)
+        linked.append(target)
+    return linked
+
+
+def depth_first_order(
+    start: str,
+    pages: dict[str, Page],
+    by_path: dict[Path, str],
+    crate_roots: dict[str, Path],
+) -> tuple[list[str], list[str]]:
+    reached: list[str] = []
+    visited: set[str] = set()
+
+    def visit(page_id: str) -> None:
+        if page_id in visited:
+            return
+        visited.add(page_id)
+        reached.append(page_id)
+        for linked_page_id in linked_pages(pages[page_id], by_path, crate_roots):
+            visit(linked_page_id)
+
+    visit(start)
+    orphaned = sorted(set(pages) - visited)
+    if len(reached) != len(set(reached)):
+        raise SystemExit("depth-first traversal emitted a duplicate page")
+    if set(reached) | set(orphaned) != set(pages):
+        raise SystemExit("depth-first traversal did not reconcile with the scoped pages")
+    return reached, orphaned
+
+
+def existing_stable_ids(output: Path) -> set[str]:
+    if not output.is_file():
+        return set()
+    soup = BeautifulSoup(output.read_text(encoding="utf-8"), "html.parser")
+    return {article["data-id"] for article in soup.select("article.page[data-id]")}
+
+
+def page_rows(repo: Path, pages: dict[str, Page], page_ids: list[str]) -> str:
+    rows = []
+    for page_id in page_ids:
+        page = pages[page_id]
+        output_relative = Path("..") / page.path.relative_to(repo)
+        rows.append(
+            f'''<article class="page" data-id="{html.escape(page.repo_relative)}">
   <label class="reviewed"><input type="checkbox"> reviewed</label>
   <div class="page-main">
-    <a href="{html.escape(output_relative.as_posix())}" target="_blank">{html.escape(title)}</a>
-    <code>{html.escape(repo_relative)}</code>
+    <a href="{html.escape(output_relative.as_posix())}" target="_blank">{html.escape(page_title(page.path))}</a>
+    <span class="scope">{html.escape(page.scope)}</span>
+    <code>{html.escape(page.repo_relative)}</code>
     <textarea rows="3" placeholder="Comments, problems, or follow-up work…"></textarea>
   </div>
 </article>'''
-            )
-        total += len(rows)
-        sections.append(
-            f'''<section>
-  <h2>{html.escape(scope_name)} <span>{len(rows)} pages</span></h2>
-  {''.join(rows)}
-</section>'''
         )
+    return "".join(rows)
+
+
+def generate(repo: Path, output: Path) -> None:
+    pages, by_path, crate_roots = load_pages(repo)
+    start = "target/riscv32imac-unknown-none-elf/doc/device_envoy_esp/cyd/index.html"
+    if start not in pages:
+        raise SystemExit(f"required first page is missing: {start}")
+    reached, orphaned = depth_first_order(start, pages, by_path, crate_roots)
+    if reached[0] != start:
+        raise SystemExit("ESP CYD overview is not first in the traversal")
+
+    old_ids = existing_stable_ids(output)
+    if old_ids and old_ids != set(pages):
+        removed = sorted(old_ids - set(pages))
+        added = sorted(set(pages) - old_ids)
+        raise SystemExit(
+            "stable review IDs changed\n"
+            f"removed: {removed}\n"
+            f"added: {added}"
+        )
+
+    total = len(pages)
+    orphan_content = (
+        page_rows(repo, pages, orphaned)
+        if orphaned
+        else '<p class="empty">Every scoped page was reached by the traversal.</p>'
+    )
+    sections = f'''<section data-kind="reached">
+  <h2>1. Depth-first traversal <span>{len(reached)} reached pages</span></h2>
+  {page_rows(repo, pages, reached)}
+</section>
+<section data-kind="orphaned">
+  <h2>2. Orphaned pages <span>{len(orphaned)} pages</span></h2>
+  {orphan_content}
+</section>'''
 
     document = f'''<!doctype html>
 <html lang="en">
@@ -82,6 +243,7 @@ button {{ padding: .45rem .75rem; }}
 .page {{ display: grid; grid-template-columns: 7rem 1fr; gap: .8rem; padding: .8rem 0; border-top: 1px solid color-mix(in srgb, CanvasText 18%, transparent); }}
 .page-main {{ display: grid; gap: .35rem; }}
 .page a {{ font-weight: 650; }}
+.page .scope {{ color: GrayText; font-size: .85rem; }}
 .page code {{ overflow-wrap: anywhere; color: GrayText; }}
 .page textarea {{ box-sizing: border-box; width: 100%; resize: vertical; font: inherit; }}
 .page.done {{ opacity: .68; }}
@@ -94,13 +256,14 @@ button {{ padding: .45rem .75rem; }}
 <header>
   <h1>CYD rendered documentation review</h1>
   <p id="progress">0 / {total} pages reviewed</p>
+  <p>Review order follows meaningful public documentation links depth first, starting at the ESP CYD overview. Links are followed in rendered order and stay within the configured Device Envoy scopes. Any scoped page not reached this way appears last under <strong>Orphaned pages</strong>.</p>
   <div class="controls">
     <button id="export" type="button">Download comments as Markdown</button>
     <button id="clear" type="button">Clear saved review</button>
     <label><input id="unfinished" type="checkbox"> show unfinished only</label>
   </div>
 </header>
-<main>{''.join(sections)}</main>
+<main>{sections}</main>
 <script>
 const storageKey = "device-envoy-cyd-doc-review-v1";
 const pages = [...document.querySelectorAll(".page")];
@@ -152,7 +315,7 @@ document.querySelector("#export").addEventListener("click", () => {{
     }}
   }}
   if (lines.length === 2) lines.push("No comments recorded.", "");
-  const blob = new Blob([lines.join("\n")], {{ type: "text/markdown" }});
+  const blob = new Blob([lines.join("\\n")], {{ type: "text/markdown" }});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = "CYD_DOC_REVIEW_COMMENTS.md";
@@ -166,7 +329,10 @@ update();
 '''
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8")
-    print(f"generated {output} with {total} pages")
+    print(
+        f"generated {output} with {total} pages: "
+        f"{len(reached)} reached, {len(orphaned)} orphaned"
+    )
 
 
 def main() -> None:

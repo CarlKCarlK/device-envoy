@@ -51,7 +51,7 @@ host = [
     "critical-section/std",
     "device-envoy-core/host",
 ] # For testing on host platform without hardware dependencies
-doc-images = ["dep:embed-doc-image"]
+doc-images = ["dep:embed-doc-image", "device-envoy-core/doc-images"]
 wifi = ["dep:cyw43", "dep:cyw43-pio", "dep:cyw43-firmware", "dep:embassy-net", "device-envoy-core/wifi"]
 display-trace = []
 

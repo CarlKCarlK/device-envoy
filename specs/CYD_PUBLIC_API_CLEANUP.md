@@ -253,6 +253,10 @@ diagnostic.
 
 ## Documentation Rules
 
+- Do not call an example, overview, path, or item "canonical" in reader-facing
+  prose. That label does not explain why a user should follow the link. Name
+  the concrete purpose instead, such as "frame example," "calibrated-touch
+  example," "implementation overview," or "complete application."
 - Audit the rendered public items recursively on every ESP, RP, and core CYD
   page and subpage. Each item must have a demonstrated application use or be
   part of the deliberately minimal platform-backend seam; accidental
@@ -785,11 +789,11 @@ Address these concrete problems in severity order.
   `for_each_tile`. Move it to the backend seam or remove it if no supported
   application needs to inspect it; otherwise document the concrete application
   use that justifies it.
-- Resolve the asymmetry between `Cyd::display()` and the absence of
-  `Cyd::touch()`. A `touch()` convenience directly expresses common intent and
-  is preferable to forcing generic callers to borrow and discard the display
-  half. Review the public `CydEsp`/`CydRp` component fields at the same time and
-  establish one canonical access story.
+- Resolved: `Cyd` now provides matching `display()` and `touch()` convenience
+  methods. Their documentation points to the application example that shows
+  meaningful display and touch use rather than duplicating their trivial
+  accessor bodies. Continue to review the public `CydEsp`/`CydRp` component
+  fields and establish one component-access story.
 - Keep `DisplayBackend` public because platform implementations are separate
   crates, but make every description visible through `CydDisplayEsp` and
   `CydDisplayRp` say immediately that it is a platform-author seam. Strengthen
@@ -862,10 +866,11 @@ pass:
    constructors as the advanced path, but propose a direct, non-builder common
    constructor that takes the board wiring plus storage and uses documented
    display/style defaults. Review the proposed signatures before implementation.
-2. **Consistency — complete-device access.** `Cyd` has `display()` but no
-   `touch()`, while concrete ESP/RP bundles also expose public `display` and
-   `touch` fields. Propose `Cyd::touch()` and one canonical component-access
-   story; do not carry two equal paths merely for compatibility.
+2. **Consistency — complete-device access.** `Cyd` now has matching `display()`
+   and `touch()` conveniences, while concrete ESP/RP bundles also expose public
+   `display` and `touch` fields. Review the fields and establish one
+   component-access story; do not carry two equal paths merely for
+   compatibility.
 3. **Questionable public visibility — `TileGrid` mutation.** Public mutable
    `top_left` and `size` can change the geometry after constructor validation.
    Search downstream struct-literal and mutation use, then prefer private fields

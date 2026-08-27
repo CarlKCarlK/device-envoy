@@ -40,7 +40,7 @@ pub struct Image565View {
 }
 
 impl Image565View {
-    /// See the [canonical `Image565View` example](Image565View).
+    /// See the [`Image565View` example](Image565View).
     /// Full-image view from a raw pixel slice.
     ///
     /// Panics if `pixels.len() != size.width * size.height`.
@@ -72,7 +72,7 @@ impl Image565View {
         }
     }
 
-    /// See the [canonical `Image565View` example](Image565View).
+    /// See the [`Image565View` example](Image565View).
     #[must_use]
     pub const fn size(&self) -> Size {
         self.source.size
@@ -80,7 +80,7 @@ impl Image565View {
 
     /// Returns the pixel at `point`, where `point` is in view-local coordinates
     /// (i.e. `(0, 0)` is the top-left of this view, not of the underlying image).
-    /// See the [canonical `Image565View` example](Image565View).
+    /// See the [`Image565View` example](Image565View).
     #[must_use]
     pub fn pixel_at(&self, point: Point) -> Rgb565 {
         assert!(
@@ -104,7 +104,7 @@ impl Image565View {
     /// Cropped views skip the pixels outside the view while preserving the
     /// view's local row order.
     ///
-    /// See the [canonical `Image565View` example](Image565View).
+    /// See the [`Image565View` example](Image565View).
     pub fn rgb565_iter(&self) -> impl Iterator<Item = Rgb565> + '_ {
         Image565ViewPixels {
             view: *self,
@@ -160,60 +160,60 @@ impl Iterator for Image565ViewPixels {
 #[derive(Clone, Copy, Debug)]
 pub enum DrawItem {
     /// A line stroke from `start` to `end` with the given pixel width.
-    /// See the compiled canonical [`DrawItem`] example.
+    /// See the compiled [`DrawItem`] example.
     Stroke {
         /// Projected start point in logical display coordinates.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         start: (f32, f32),
         /// Projected end point in logical display coordinates.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         end: (f32, f32),
         /// Stroke color.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         color: Rgb888,
         /// Stroke width in pixels.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         pixel_width: f32,
     },
     /// A filled, possibly foreshortened, ellipse (a projected disk).
     ///
     /// The ellipse is the locus of `center + s·axis_a + t·axis_b` with `s²+t² ≤ 1`.
-    /// See the compiled canonical [`DrawItem`] example.
+    /// See the compiled [`DrawItem`] example.
     Ellipse {
         /// Projected ellipse center in logical display coordinates.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         center: (f32, f32),
         /// First projected radius vector.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         axis_a: (f32, f32),
         /// Second projected radius vector.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         axis_b: (f32, f32),
         /// Fill color.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         color: Rgb888,
     },
     /// A filled circle (a projected sphere).
-    /// See the compiled canonical [`DrawItem`] example.
+    /// See the compiled [`DrawItem`] example.
     Circle {
         /// Projected center in logical display coordinates.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         center: (f32, f32),
         /// Radius in pixels.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         pixel_radius: f32,
         /// Fill color.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         color: Rgb888,
     },
     /// A statically-stored RGB565 bitmap view placed at a screen position.
-    /// See the compiled canonical [`DrawItem`] example.
+    /// See the compiled [`DrawItem`] example.
     Bitmap {
         /// Bitmap pixels and dimensions.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         view: Image565View,
         /// Bitmap top-left in logical display coordinates.
-        /// See the compiled canonical [`DrawItem`] example.
+        /// See the compiled [`DrawItem`] example.
         top_left: Point,
     },
 }
@@ -228,7 +228,7 @@ impl DrawItem {
     /// the general projected ellipse is rasterized with
     /// [`fill_ellipse_pixels`].
     ///
-    /// See the [canonical `DrawItem` example](DrawItem).
+    /// See the [`DrawItem` example](DrawItem).
     pub fn draw<T: PixelTarget>(&self, target: &mut T) {
         match *self {
             DrawItem::Stroke {

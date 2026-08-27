@@ -22,7 +22,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 host = []
 compile-fail-tests = []
-doc-images = ["dep:embed-doc-image"]
+doc-images = ["dep:embed-doc-image", "device-envoy-core/doc-images"]
 esp32 = [
     "esp-hal/esp32",
     "esp-hal/rt",

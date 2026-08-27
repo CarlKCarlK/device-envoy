@@ -40,21 +40,21 @@ use super::super::{SCREEN_HEIGHT, SCREEN_WIDTH};
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum Orientation {
     /// Native 320×240 landscape presentation.
-    /// See the compiled canonical [`Orientation`] example.
+    /// See the compiled [`Orientation`] example.
     Landscape,
     /// 240×320 portrait presentation, rotated clockwise.
-    /// See the compiled canonical [`Orientation`] example.
+    /// See the compiled [`Orientation`] example.
     Portrait,
     /// Native landscape presentation rotated 180°.
-    /// See the compiled canonical [`Orientation`] example.
+    /// See the compiled [`Orientation`] example.
     LandscapeInverted,
     /// 240×320 portrait presentation, rotated counterclockwise.
-    /// See the compiled canonical [`Orientation`] example.
+    /// See the compiled [`Orientation`] example.
     PortraitInverted,
 }
 
 impl Orientation {
-    /// See the [canonical `Orientation` example](Orientation).
+    /// See the [`Orientation` example](Orientation).
     #[must_use]
     pub const fn width(self) -> u32 {
         match self {
@@ -63,7 +63,7 @@ impl Orientation {
         }
     }
 
-    /// See the [canonical `Orientation` example](Orientation).
+    /// See the [`Orientation` example](Orientation).
     #[must_use]
     pub const fn height(self) -> u32 {
         match self {
@@ -72,20 +72,20 @@ impl Orientation {
         }
     }
 
-    /// See the [canonical `Orientation` example](Orientation).
+    /// See the [`Orientation` example](Orientation).
     #[must_use]
     pub const fn size(self) -> Size {
         Size::new(self.width(), self.height())
     }
 
-    /// See the [canonical `Orientation` example](Orientation).
+    /// See the [`Orientation` example](Orientation).
     #[must_use]
     pub const fn pixels(self) -> usize {
         self.width() as usize * self.height() as usize
     }
 
     /// Return the next orientation in the four-state display test cycle.
-    /// See the [canonical `Orientation` example](Orientation).
+    /// See the [`Orientation` example](Orientation).
     #[must_use]
     pub const fn next(self) -> Self {
         match self {
@@ -103,7 +103,7 @@ impl Orientation {
     /// Do not use it on an application-facing [`TouchEvent`](crate::cyd::touch::TouchEvent):
     /// [`CydTouch::read`](crate::cyd::CydTouch::read) has already applied this
     /// mapping exactly once.
-    /// See the [canonical `Orientation` example](Orientation).
+    /// See the [`Orientation` example](Orientation).
     #[must_use]
     pub const fn map_landscape_point(self, point: Point) -> Point {
         let landscape_width = SCREEN_WIDTH as i32;

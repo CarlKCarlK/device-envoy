@@ -4,7 +4,7 @@ use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
     Cyd, CydDisplay, CydTouch,
     display::{
-        CydFrame, DrawItem, Image565View,
+        CydFrame, DrawItem, Image565Fixed, Image565View, tga,
         tiling::{TileGrid, max_rectangle_pixel_count},
     },
     touch::TouchEvent,
@@ -18,6 +18,25 @@ use embedded_graphics::{
     primitives::{PrimitiveStyle, Rectangle},
 };
 use std::error::Error;
+
+const STREAMED_BITMAP: Image565Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/docs/assets/cyd_fill_contiguous.tga"
+))
+.to_565();
+
+fn generated_background_pixels() -> impl Iterator<Item = Rgb565> {
+    // A blue-green RGB565 gradient with a warmer lower-right corner.
+    (0..240).flat_map(|position_y| {
+        (0..320).map(move |position_x| {
+            Rgb565::new(
+                (position_x / 10) as u8,
+                (position_y / 4) as u8,
+                ((position_x + position_y) / 18) as u8,
+            )
+        })
+    })
+}
 
 fn comparison_scene<F: CydFrame>(frame: &mut F) {
     comparison_scene_local(frame, Point::zero());
@@ -172,6 +191,50 @@ fn cyd_drawing_strategies_produce_identical_framebuffers()
     Ok(())
 }
 
+#[test]
+fn cyd_fill_contiguous_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+    let cyd_memory = CydMemory::new(
+        Size::new(320, 240),
+        Rgb888::BLACK,
+        Rgb888::WHITE,
+        &FONT_9X15_BOLD,
+    );
+    let mut display = cyd_memory.display();
+    let bitmap = STREAMED_BITMAP.view();
+    display
+        .fill_contiguous(
+            Rectangle::new(Point::new(40, 30), bitmap.size()),
+            bitmap.rgb565_iter(),
+        )
+        .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
+
+    assert_framebuffer_matches_expected_png(
+        &cyd_memory,
+        env!("CARGO_MANIFEST_DIR"),
+        "cyd_fill_contiguous_preview.png",
+    )
+}
+
+#[test]
+fn cyd_fill_contiguous_full_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+    let cyd_memory = CydMemory::new(
+        Size::new(320, 240),
+        Rgb888::BLACK,
+        Rgb888::WHITE,
+        &FONT_9X15_BOLD,
+    );
+    cyd_memory
+        .display()
+        .fill_contiguous_full(generated_background_pixels())
+        .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
+
+    assert_framebuffer_matches_expected_png(
+        &cyd_memory,
+        env!("CARGO_MANIFEST_DIR"),
+        "cyd_fill_contiguous_full_preview.png",
+    )
+}
+
 const BITMAP_WIDTH: usize = 64;
 const BITMAP_HEIGHT: usize = 64;
 const BITMAP_PIXEL_COUNT: usize = BITMAP_WIDTH * BITMAP_HEIGHT;
@@ -211,7 +274,7 @@ fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+fn cyd_application_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     let cyd_memory = futures_executor::block_on(async {
         let mut cyd_memory = CydMemory::new(
             Size::new(320, 240),
@@ -244,7 +307,7 @@ fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     assert_framebuffer_matches_expected_png(
         &cyd_memory,
         env!("CARGO_MANIFEST_DIR"),
-        "cyd_trait_preview.png",
+        "cyd_application_preview.png",
     )
 }
 

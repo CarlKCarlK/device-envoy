@@ -8,7 +8,7 @@
 //! The primary type is [`TileGrid`]: callers give it a rectangular body area
 //! and the number of tile columns and rows; it derives the per-tile size with
 //! ceiling division and clips the final column/row to the rectangle edges. See
-//! [`CydDisplay::for_each_tile`] for the canonical tiled draw loop, and use
+//! [`CydDisplay::for_each_tile`] for the tiled draw loop, and use
 //! `embedded_graphics::primitives::Rectangle` plus [`max_rectangle_pixel_count`]
 //! when sizing a shared buffer around fixed regions.
 //! The compiled [`TileGrid`] example demonstrates all public sizing helpers.
@@ -22,7 +22,7 @@ use super::super::CydDisplay;
 
 /// Pixel count for a rectangle.
 ///
-/// See the [canonical `TileGrid` sizing example](TileGrid).
+/// See the [`TileGrid` sizing example](TileGrid).
 #[must_use]
 pub const fn rectangle_pixel_count(rectangle: Rectangle) -> usize {
     (rectangle.size.width * rectangle.size.height) as usize
@@ -30,7 +30,7 @@ pub const fn rectangle_pixel_count(rectangle: Rectangle) -> usize {
 
 /// Maximum pixel count of two rectangles.
 ///
-/// See the [canonical `TileGrid` sizing example](TileGrid).
+/// See the [`TileGrid` sizing example](TileGrid).
 #[must_use]
 pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> usize {
     if rectangle_pixel_count(first) > rectangle_pixel_count(second) {
@@ -82,10 +82,10 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileGrid {
     /// Logical display coordinate of the grid rectangle's top-left corner.
-    /// See the compiled canonical [`TileGrid`] sizing example.
+    /// See the compiled [`TileGrid`] sizing example.
     pub top_left: Point,
     /// Size of the logical display rectangle covered by the grid.
-    /// See the compiled canonical [`TileGrid`] sizing example.
+    /// See the compiled [`TileGrid`] sizing example.
     pub size: Size,
     columns: usize,
     rows: usize,
@@ -96,7 +96,7 @@ impl TileGrid {
     ///
     /// Const-asserts that the counts are positive and do not exceed the rectangle's
     /// pixel dimensions, so an over-fine grid fails to compile. See the
-    /// [canonical `TileGrid` sizing example](TileGrid), then
+    /// [`TileGrid` sizing example](TileGrid), then
     /// [`CydDisplay::for_each_tile`] for the draw loop that consumes the grid.
     #[must_use]
     pub const fn new(top_left: Point, size: Size, columns: usize, rows: usize) -> Self {
@@ -120,7 +120,7 @@ impl TileGrid {
 
     /// Number of tile columns the rectangle is split into.
     ///
-    /// See the [canonical `TileGrid` sizing example](TileGrid).
+    /// See the [`TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn columns(&self) -> usize {
         self.columns
@@ -128,7 +128,7 @@ impl TileGrid {
 
     /// Number of tile rows the rectangle is split into.
     ///
-    /// See the [canonical `TileGrid` sizing example](TileGrid).
+    /// See the [`TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn rows(&self) -> usize {
         self.rows
@@ -136,7 +136,7 @@ impl TileGrid {
 
     /// Nominal tile width: the rectangle width divided by the column count, rounded up.
     ///
-    /// See the [canonical `TileGrid` sizing example](TileGrid).
+    /// See the [`TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn tile_width(&self) -> usize {
         (self.size.width as usize).div_ceil(self.columns)
@@ -144,7 +144,7 @@ impl TileGrid {
 
     /// Nominal tile height: the rectangle height divided by the row count, rounded up.
     ///
-    /// See the [canonical `TileGrid` sizing example](TileGrid).
+    /// See the [`TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn tile_height(&self) -> usize {
         (self.size.height as usize).div_ceil(self.rows)
@@ -155,7 +155,7 @@ impl TileGrid {
     /// The biggest tile is the top-left one, whose dimensions are the derived tile
     /// size clipped to the rectangle (in case the rectangle is smaller than one tile).
     ///
-    /// See the [canonical `TileGrid` sizing example](TileGrid).
+    /// See the [`TileGrid` sizing example](TileGrid).
     #[must_use]
     pub const fn max_tile_pixel_count(&self) -> usize {
         let widest = min_usize(self.tile_width(), self.size.width as usize);
@@ -204,7 +204,7 @@ const fn min_usize(first: usize, second: usize) -> usize {
 /// [`Iterator`]: each yielded frame borrows the device's
 /// single reusable frame buffer, so only one frame can be live at a time.
 /// Iterate with a `while let Some(mut frame) = tiles.next()` loop.
-/// See the [canonical tiled draw loop](CydDisplay::for_each_tile).
+/// See the [tiled draw loop](CydDisplay::for_each_tile).
 pub(crate) struct Tiles<'a, C: CydDisplay> {
     cyd: &'a mut C,
     grid: TileGrid,
@@ -230,7 +230,7 @@ impl<C: CydDisplay> Tiles<'_, C> {
     /// Tiles are visited in row-major order (each row left-to-right), skipping
     /// any `(column, row)` that falls entirely outside the grid rectangle.
     ///
-    /// See the [canonical `CydDisplay::for_each_tile` example](CydDisplay::for_each_tile).
+    /// See the [`CydDisplay::for_each_tile` example](CydDisplay::for_each_tile).
     // This is a lending iterator: each yielded frame borrows the device's single
     // reusable frame buffer, so it cannot implement `Iterator` (whose `next`
     // returns an item that outlives the `&mut self` borrow). The `next` name is

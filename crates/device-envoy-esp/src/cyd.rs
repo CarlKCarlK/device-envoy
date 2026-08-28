@@ -658,7 +658,7 @@ impl CydEsp {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-    /// # use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
+    /// # use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{Cyd, CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # use esp_hal::spi::master::AnySpi;
     /// # async fn construct(mut p: esp_hal::peripherals::Peripherals, touch_spi: AnySpi<'static>) -> Result<()> {
@@ -700,7 +700,7 @@ impl CydEsp {
     ///     )
     ///     .await?;
     ///
-    /// #     drop(cyd);
+    /// #     assert_eq!(cyd.orientation(), Orientation::Landscape);
     /// #     Ok(())
     /// # }
     /// ```

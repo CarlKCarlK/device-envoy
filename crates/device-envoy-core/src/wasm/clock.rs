@@ -1,4 +1,4 @@
-//! Browser wall-clock support for CYD applications.
+//! Browser wall-clock support for Device Envoy applications.
 //!
 //! ```rust,no_run
 //! use device_envoy_core::wasm::clock::ClockSyncWasm;

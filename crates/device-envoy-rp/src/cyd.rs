@@ -672,7 +672,7 @@ impl CydRp {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{Cyd, CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
     ///     let [mut calibration_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
@@ -713,7 +713,7 @@ impl CydRp {
     ///     )
     ///     .await?;
     ///
-    ///     drop(cyd);
+    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
     ///     Ok(())
     /// }
     /// ```

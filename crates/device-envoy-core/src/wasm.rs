@@ -1,108 +1,14 @@
-#![cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!(
-        "cyd_application_preview",
-        "docs/assets/cyd_application_preview.png"
-    )
-)]
 //! Browser implementations for CYD, buttons, flash storage, clocks, DNS, and simulators.
 //!
-//! Enable the `wasm` feature when running Device Envoy applications in a
-//! browser. [`CydWasm`] provides an interactive CYD on an HTML canvas: browser
-//! pointer events supply touch input, and [`CydFrameWasm::flush`] presents the
-//! frame and awaits the next browser animation frame. Construct the browser
-//! implementation from a canvas context and touch source, then use it through
-//! the portable interfaces documented in [`crate::cyd`]. Hardware and browser
-//! applications can therefore share the same CYD-facing application logic.
-#![doc = include_str!("../../../docs/cyd/application-example.md")]
-#![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]
-//! ## Browser construction and facilities
+//! [`CydWasm`] simulates a CYD on an HTML canvas. Browser pointer handlers feed
+//! touch input through [`CydTouchWasmSource`], where it is calibrated and
+//! oriented like hardware touch input. [`CydFrameWasm::flush`] presents the
+//! current frame and awaits the next browser animation frame for frame pacing.
 //!
-//! Construct [`CydWasm`] from a canvas context and browser touch source. The
-//! detailed example below also demonstrates pointer-input injection, button
-//! input, persistent flash storage, and the browser-specific display and touch
-//! component types.
-#![doc = include_str!("../../../docs/cyd/implementations.md")]
-//! ## Detailed browser facilities example
-//!
-//! This example constructs [`CydWasm`] and also exercises browser touch
-//! injection, button input, and persistent flash storage:
-//!
-//! ```rust,no_run
-//! use device_envoy_core::{
-//!     button::Button,
-//!     cyd::{CydDisplay, CydTouch, display::{CydFrame, Orientation}},
-//!     flash_block::{Error as FlashBlockError, FlashBlock},
-//!     wasm::{
-//!         ButtonWasm, ButtonWasmSource, CydDisplayWasm, CydFrameWasm,
-//!         CydTouchWasm, CydTouchWasmSource, CydWasm, Error, FlashBlockWasm,
-//!     },
-//!     UnwrapInfallible,
-//! };
-//! use embedded_graphics::{
-//!     mono_font::ascii::FONT_9X15_BOLD,
-//!     pixelcolor::{Rgb888, RgbColor},
-//! };
-//! use web_sys::CanvasRenderingContext2d;
-//!
-//! async fn exercise_browser(
-//!     context: CanvasRenderingContext2d,
-//! ) -> Result<(), device_envoy_core::wasm::Error> {
-//!     let touch_source = CydTouchWasmSource::new();
-//!     let mut cyd = CydWasm::new(
-//!         context,
-//!         Orientation::Landscape,
-//!         Rgb888::BLACK,
-//!         Rgb888::WHITE,
-//!         &FONT_9X15_BOLD,
-//!         touch_source.clone(),
-//!     );
-//!     let injected_touch_source = cyd.touch_source();
-//!     let display_copy = cyd.display();
-//!     assert_eq!(display_copy.screen_size().width, 320);
-//!     let (mut display, mut touch): (CydDisplayWasm, CydTouchWasm) = cyd.owned_parts();
-//!     assert_eq!(display.screen_size().height, 240);
-//!     let mut frame: CydFrameWasm<'_> = display.full_frame_mut();
-//!     frame.fill(Rgb888::BLACK.into());
-//!     frame.flush().await.unwrap_infallible();
-//!     injected_touch_source.touch_down(10.0, 20.0);
-//!     assert!(matches!(
-//!         touch.try_read().unwrap_infallible(),
-//!         Some(device_envoy_core::cyd::touch::TouchEvent::Down { .. }),
-//!     ));
-//!     injected_touch_source.touch_move(12.0, 22.0);
-//!     assert!(matches!(
-//!         touch.try_read().unwrap_infallible(),
-//!         Some(device_envoy_core::cyd::touch::TouchEvent::Move { .. }),
-//!     ));
-//!     injected_touch_source.touch_up();
-//!     assert!(matches!(
-//!         touch.try_read().unwrap_infallible(),
-//!         Some(device_envoy_core::cyd::touch::TouchEvent::Up),
-//!     ));
-//!     injected_touch_source.wait_for_fresh_press();
-//!     injected_touch_source.touch_down(14.0, 24.0);
-//!     assert!(touch.try_read().unwrap_infallible().is_none());
-//!     let button_source = ButtonWasmSource::new();
-//!     let button: ButtonWasm = button_source.button();
-//!     button_source.press();
-//!     assert!(button.is_pressed());
-//!     button_source.release();
-//!     assert!(!button.is_pressed());
-//!     let mut flash_block = FlashBlockWasm::new("cyd-example")?;
-//!     flash_block.clear().map_err(|error| match error {
-//!         FlashBlockError::Io(error) => error,
-//!         FlashBlockError::FormatError | FlashBlockError::StorageCorrupted => Error::StorageAccess,
-//!     })?;
-//!     Ok(())
-//! }
-//!
-//! fn classify_storage_error(error: Error) {
-//!     match error {
-//!         Error::StorageUnavailable | Error::StorageAccess => {}
-//!     }
-//! }
-//! ```
+//! `CydWasm` implements the portable [`crate::cyd::Cyd`] interface used by the
+//! hardware implementations. Write normal application code against
+//! [`crate::cyd`] and its [`crate::cyd::CydDisplay`] drawing APIs; only browser
+//! setup and input plumbing need the WASM-specific types in this module.
 
 mod animation_frame;
 pub mod clock;
@@ -159,15 +65,51 @@ const fn identity_calibration_config() -> CalibrationConfig {
     CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 }
 
-/// A CYD display simulated on an HTML canvas.
-/// See the [`CydWasm` module example](crate::wasm) for construction,
-/// frame drawing, browser input, button input, and flash setup.
+/// A CYD device rendered to an HTML canvas with browser-supplied touch input.
+///
+/// Once constructed, use this through the portable [`Cyd`] interface. Browser
+/// pointer handlers can pass input to the [`CydTouchWasmSource`] used during
+/// construction.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::{
+///     cyd::display::Orientation,
+///     wasm::{CydTouchWasmSource, CydWasm},
+/// };
+/// use embedded_graphics::{
+///     mono_font::ascii::FONT_6X10,
+///     pixelcolor::{Rgb888, RgbColor},
+/// };
+/// use wasm_bindgen::{JsCast, JsValue};
+/// use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+///
+/// fn create_cyd(canvas: HtmlCanvasElement) -> Result<CydWasm, JsValue> {
+///     let orientation = Orientation::Landscape;
+///     canvas.set_width(orientation.width());
+///     canvas.set_height(orientation.height());
+///     let context = canvas
+///         .get_context("2d")?
+///         .ok_or_else(|| JsValue::from_str("2D canvas context unavailable"))?
+///         .dyn_into::<CanvasRenderingContext2d>()?;
+///
+///     Ok(CydWasm::new(
+///         context,
+///         orientation,
+///         Rgb888::BLACK,
+///         Rgb888::WHITE,
+///         &FONT_6X10,
+///         CydTouchWasmSource::new(),
+///     ))
+/// }
+/// ```
 pub struct CydWasm {
     display: CydDisplayWasm,
     touch: CydTouchWasm,
 }
 
-/// Owned display half of [`CydWasm`]. See the [`CydWasm` module example](crate::wasm).
+/// Owned HTML-canvas display half of [`CydWasm`].
 #[derive(Clone)]
 pub struct CydDisplayWasm {
     context: CanvasRenderingContext2d,
@@ -180,7 +122,7 @@ pub struct CydDisplayWasm {
     font: &'static MonoFont<'static>,
 }
 
-/// Owned calibrated touch half of [`CydWasm`]. See the [`CydWasm` module example](crate::wasm).
+/// Owned calibrated and oriented touch half of [`CydWasm`].
 #[derive(Clone)]
 pub struct CydTouchWasm {
     raw_touch_events: RawTouchEvents,
@@ -190,8 +132,7 @@ pub struct CydTouchWasm {
     orientation: Orientation,
 }
 
-/// Browser touch source used to inject pointer input into [`CydWasm`].
-/// See the [`CydWasm` module example](crate::wasm).
+/// Input source used by browser pointer handlers to feed touch events to a [`CydWasm`].
 #[derive(Clone)]
 pub struct CydTouchWasmSource {
     raw_touch_events: RawTouchEvents,
@@ -199,18 +140,18 @@ pub struct CydTouchWasmSource {
     latest_raw_point: Rc<Cell<Option<RawPoint>>>,
 }
 
-/// Browser button state used by [`ButtonWasmSource`]. See the [`CydWasm` module example](crate::wasm).
+/// Browser button state controlled by a [`ButtonWasmSource`].
 pub struct ButtonWasm {
     pressed: Rc<Cell<bool>>,
 }
 
 #[derive(Clone)]
-/// Browser button input source. See the [`CydWasm` module example](crate::wasm).
+/// Input source used by browser controls to update a [`ButtonWasm`].
 pub struct ButtonWasmSource {
     pressed: Rc<Cell<bool>>,
 }
 
-/// Browser-backed calibration storage. See the [`CydWasm` module example](crate::wasm).
+/// Flash-block storage backed by browser local storage.
 pub struct FlashBlockWasm {
     flash_device: FlashDeviceWasm,
 }
@@ -227,14 +168,11 @@ struct FlashDeviceWasm {
 ///
 /// These errors concern persistent browser storage used by [`FlashBlockWasm`];
 /// display drawing and calibrated touch use the in-memory simulator state.
-/// See the [`CydWasm` module example](crate::wasm).
 #[derive(Debug)]
 pub enum Error {
     /// The browser does not provide the requested storage facility.
-    /// See the [`CydWasm` module example](crate::wasm).
     StorageUnavailable,
     /// The browser rejected or failed a storage operation.
-    /// See the [`CydWasm` module example](crate::wasm).
     StorageAccess,
 }
 
@@ -246,8 +184,12 @@ enum InteractionState {
 }
 
 impl CydWasm {
-    /// Build a simulated CYD that presents onto `context`, sized for `orientation`.
-    /// See the [`CydWasm` module example](crate::wasm).
+    /// Construct a simulated CYD that presents frames onto `context`.
+    ///
+    /// `orientation` determines the logical display size and touch mapping. The
+    /// caller should size the context's canvas to match. Colors and `font`
+    /// configure the portable [`CydDisplay`] helpers, and `touch_source`
+    /// receives input from the browser's pointer handlers.
     #[must_use]
     pub fn new(
         context: CanvasRenderingContext2d,
@@ -278,8 +220,7 @@ impl CydWasm {
     }
 
     #[must_use]
-    /// Return an input source that injects browser touch events into this device.
-    /// See the [`CydWasm` module example](crate::wasm).
+    /// Clone the input source that feeds browser pointer events to this device.
     pub fn touch_source(&self) -> CydTouchWasmSource {
         CydTouchWasmSource {
             raw_touch_events: self.touch.raw_touch_events.clone(),
@@ -289,15 +230,16 @@ impl CydWasm {
     }
 
     #[must_use]
-    /// Clone the device's display component.
-    /// See the [`CydWasm` module example](crate::wasm).
+    /// Clone the HTML-canvas display component.
     pub fn display(&self) -> CydDisplayWasm {
         self.display.clone()
     }
 
-    /// Clone owned calibrated parts that share this device's browser state.
+    /// Clone the display and calibrated touch components.
+    ///
+    /// The clones share the same browser canvas and touch-event state as this
+    /// device.
     #[must_use]
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn owned_parts(&self) -> (CydDisplayWasm, CydTouchWasm) {
         (self.display.clone(), self.touch.clone())
     }
@@ -319,7 +261,6 @@ impl Cyd for CydWasm {
 
 impl CydTouchWasmSource {
     /// Construct an empty browser touch-event source.
-    /// See the [`CydWasm` module example](crate::wasm).
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -334,8 +275,6 @@ impl CydTouchWasmSource {
     /// The browser control converts logical canvas coordinates to this raw
     /// calibration boundary before calling the source. `CydTouchWasm::try_read`
     /// performs the one runtime-orientation mapping for the application.
-    /// Queue a touch-release event and allow the next press.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn touch_down(&self, x: f32, y: f32) {
         match self.interaction_state.get() {
             InteractionState::WaitingForFreshPress => return,
@@ -357,7 +296,6 @@ impl CydTouchWasmSource {
     }
 
     /// Queue a movement point in fixed landscape calibration coordinates.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn touch_move(&self, x: f32, y: f32) {
         if self.interaction_state.get() != InteractionState::PointerDown {
             return;
@@ -376,7 +314,6 @@ impl CydTouchWasmSource {
     }
 
     /// Queue a touch-release event and allow the next press.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn touch_up(&self) {
         let interaction_state = self.interaction_state.get();
         self.interaction_state.set(InteractionState::Ready);
@@ -388,7 +325,6 @@ impl CydTouchWasmSource {
     }
 
     /// Discard pending input until the next touch-down event.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn wait_for_fresh_press(&self) {
         self.raw_touch_events.borrow_mut().clear();
         self.latest_raw_point.set(None);
@@ -411,7 +347,6 @@ impl Default for CydTouchWasmSource {
 
 impl ButtonWasmSource {
     /// Construct a released browser button source.
-    /// See the [`CydWasm` module example](crate::wasm).
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -421,7 +356,6 @@ impl ButtonWasmSource {
 
     #[must_use]
     /// Return a button handle backed by this source's current state.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn button(&self) -> ButtonWasm {
         ButtonWasm {
             pressed: self.pressed.clone(),
@@ -429,13 +363,11 @@ impl ButtonWasmSource {
     }
 
     /// Set the browser button state to pressed.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn press(&self) {
         self.pressed.set(true);
     }
 
     /// Set the browser button state to released.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn release(&self) {
         self.pressed.set(false);
     }
@@ -468,7 +400,6 @@ impl Button for ButtonWasm {}
 
 impl FlashBlockWasm {
     /// Create browser-backed storage under `storage_key`.
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn new(storage_key: &str) -> Result<Self, Error> {
         Ok(Self {
             flash_device: FlashDeviceWasm::new(storage_key)?,
@@ -755,8 +686,7 @@ fn push_rgb565_rgba(bytes: &mut Vec<u8>, pixel: u16) {
 /// The frame rectangle and all drawing coordinates use logical display
 /// coordinates. The inherent [`fill`](Self::fill) method
 /// is synchronous; the platform-neutral [`CydFrame::flush`]
-/// method is awaited and presents on the next browser animation frame.
-/// See the [`CydWasm` module example](crate::wasm).
+/// method presents the buffer and then awaits the next browser animation frame.
 pub struct CydFrameWasm<'a> {
     context: &'a CanvasRenderingContext2d,
     pixels: Vec<u16>,
@@ -786,8 +716,6 @@ impl CydFrameWasm<'_> {
     }
 
     /// Fill this browser frame's local RGB565 buffer and return `self`.
-    ///
-    /// See the [`CydWasm` module example](crate::wasm).
     pub fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.pixels.fill(color.into_storage());
         self

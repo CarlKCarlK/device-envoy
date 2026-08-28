@@ -178,7 +178,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// ```rust,no_run
     /// # #![no_std]
     /// # #![no_main]
-    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{Cyd, CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
     /// # use embassy_rp::peripherals::SPI0;
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
@@ -221,7 +221,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     ///     )
     ///     .await?;
     ///
-    ///     drop(cyd);
+    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
     ///     Ok(())
     /// }
     /// ```

@@ -41,7 +41,7 @@ const DEMO_RAW_OFFSET_X: f32 = 186.0;
 #[cfg(test)]
 const DEMO_RAW_OFFSET_Y: f32 = 149.0;
 
-/// Affine mapping from raw controller samples into screen coordinates.
+/// Saved affine mapping from raw controller samples into landscape screen coordinates.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CalibrationConfig {
     ax: f32,
@@ -108,9 +108,7 @@ impl CalibrationConfig {
         Ok(Self::new(ax, bx, cx, ay, by, cy))
     }
 
-    /// Map one raw controller sample to clamped landscape screen coordinates.
-    ///
-    /// See the [backend-author example](crate::cyd::backend).
+    /// Map one raw controller sample to clamped 320×240 landscape coordinates.
     #[must_use]
     pub fn map_raw_to_screen(&self, raw_x: u16, raw_y: u16) -> (f32, f32) {
         let raw_x = raw_x as f32;

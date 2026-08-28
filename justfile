@@ -33,6 +33,13 @@ run-conway version="v2" port="8000":
 show-docs-rp:
     cd crates/device-envoy-rp && just show-docs-rp
 
+# Build all public documentation and open the Core, ESP, and RP indexes
+show-docs:
+    just update-docs
+    bash -lc 'if command -v xdg-open >/dev/null; then xdg-open target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; elif command -v wslview >/dev/null; then wslview target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; else echo "Core docs built at target/doc/device_envoy_core/index.html"; fi'
+    crates/device-envoy-esp/scripts/open-docs-esp.sh
+    crates/device-envoy-rp/scripts/open-docs-rp.sh
+
 # Build core docs and open them in a browser
 show-docs-core:
     just update-docs-core
@@ -53,6 +60,12 @@ update-docs-esp:
 # Update RP docs only
 update-docs-rp:
     cd crates/device-envoy-rp && just update-docs-rp
+
+# Update Core, ESP, and RP documentation
+update-docs:
+    just update-docs-rp
+    just update-docs-esp
+    just update-docs-core
 
 # Update ESP docs only (fast path)
 update-docs-esp-fast:

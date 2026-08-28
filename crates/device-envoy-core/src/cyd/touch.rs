@@ -1,9 +1,10 @@
 //! Touch-side support types for the CYD's `cyd` device abstraction.
 //!
-//! Applications read calibrated, oriented events via [`TouchEvent`]. Platform
-//! authors connect raw controller samples to the private calibration workflow
-//! through the backend seam; applications should use [CydTouch](super::CydTouch). See
-//! the [calibrated-read example](super::CydTouch::read).
+//! Applications read calibrated, oriented events via [`TouchEvent`]. Device
+//! Envoy's platform implementations connect raw controller samples to the
+//! private calibration workflow. Applications use
+//! [`CydTouch`](super::CydTouch); see its
+//! [calibrated-read example](super::CydTouch::read).
 
 pub(crate) mod calibration;
 pub(crate) mod driver;

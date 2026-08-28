@@ -288,11 +288,10 @@ diagnostic.
   the former `CydTouchUncalibrated` as bracketed code. Application-facing docs
   must link only to the calibrated API; backend docs link to the renamed
   `backend::TouchUncalibrated` where required.
-- Document `cyd::backend` tersely and honestly: applications should use `Cyd`
-  and `CydTouch`; the module is public because ESP and RP are separate crates
-  that reuse the core implementation. Keep one compiled backend example and
-  make each backend item link directly to it rather than repeating extensive
-  calibration documentation.
+- Hide `cyd::backend` from normal Rustdoc browsing while keeping it technically
+  public because ESP and RP are separate crates that reuse the core
+  implementation. Document it tersely for Device Envoy maintainers and do not
+  add synthetic backend tutorials or doctests.
 - Keep one canonical compiled `rust,no_run` tiling example on
   `CydDisplay::for_each_tile`. Make the `tiling` module, `TileGrid`, and the
   public rectangle-size helpers either contain a focused compiled example or
@@ -332,9 +331,10 @@ Use this retained-surface checklist:
 - `CydTouch` and `TouchEvent`: add or link directly to the canonical calibrated
   touch-read example. They must not lead application readers into `backend`.
 - `backend`, `TouchUncalibrated`, `RawTouchEvent`, `CalibrationConfig`,
-  `ensure_calibration`, and `backend::Error`: share one concise compiled
-  platform-implementation example, with every item linking directly to it.
-  Private calibration machinery needs no doctests.
+  `ensure_calibration`, and `backend::Error`: keep concise maintainer-facing
+  descriptions but hide this unavoidable cross-crate seam from normal Rustdoc
+  browsing. The real ESP, RP, WASM, and memory implementations compile against
+  it; synthetic backend doctests are unnecessary.
 - `CydDisplay`: keep focused canonical examples for the getter family, frame
   creation and flushing, contiguous drawing, immediate fill/draw operations,
   and tiling. Every retained method must link to the specific example that
@@ -711,10 +711,8 @@ Address these concrete problems in severity order.
    - the canonical `TileGrid` example must call and assert all three storage
      sizing paths: `rectangle_pixel_count`, `max_rectangle_pixel_count`, and
      `TileGrid::max_tile_pixel_count`, without discarded placeholder values;
-   - the compiled backend-author example must directly exercise
-     `DisplayBackend::frame_mut_with_tile_top_left`; adding a redundant
-     `DisplayBackend` bound to `D: CydDisplay` does not demonstrate the seam;
-     and
+   - the hidden backend seam needs concise maintainer documentation rather than
+     a synthetic platform-implementation example; and
    - the ESP and RP insufficient-buffer regression tests must execute against
      the actual platform `PixelBuffer` sources through a native desktop test
      harness. Bare-metal `#[cfg(test)]` code that cannot link Rust's test crate,
@@ -794,11 +792,10 @@ Address these concrete problems in severity order.
   meaningful display and touch use rather than duplicating their trivial
   accessor bodies. Continue to review the public `CydEsp`/`CydRp` component
   fields and establish one component-access story.
-- Keep `DisplayBackend` public because platform implementations are separate
-  crates, but make every description visible through `CydDisplayEsp` and
-  `CydDisplayRp` say immediately that it is a platform-author seam. Strengthen
-  the backend example so it explicitly names or implements `DisplayBackend`;
-  merely using `D: CydDisplay` does not demonstrate the item.
+- Keep `DisplayBackend` technically public because platform implementations are
+  separate crates, but hide its module from normal Rustdoc browsing. Its
+  maintainer documentation should remain short and concrete; no backend
+  example is required.
 - Review the long primary constructors against the project's 90/10 goal. The
   common path currently requires explicit SPI policy, colors, and font even
   though defaults exist. Before changing signatures, propose one direct,
@@ -887,11 +884,11 @@ pass:
    supported drawing value, or redesign `at` so its public return contract does
    not expose an unnameable type. Review this API choice before implementation.
 
-`DisplayBackend` is not a remaining visibility problem: separate platform
-crates require the seam, its page says why it is public, and its compiled
-platform-author example exercises it. Likewise, the frame, streaming, tiling,
-and `draw_items` conveniences are distinct, demonstrated user intents rather
-than redundant surface to remove for its own sake.
+`DisplayBackend` remains technically public because separate platform crates
+require the seam, but its module is hidden from normal Rustdoc browsing and no
+longer presented as an application-facing extension point. The frame,
+streaming, tiling, and `draw_items` conveniences remain distinct, demonstrated
+user intents rather than redundant surface to remove for its own sake.
 
 ##### C. Coverage audit
 

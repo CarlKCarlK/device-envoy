@@ -16,6 +16,9 @@
 #![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]
 #![doc = include_str!("../../../docs/cyd/implementations.md")]
 
+// This must remain public because the ESP and RP platform implementations live
+// in separate crates, but it is not part of the application-facing API.
+#[doc(hidden)]
 pub mod backend;
 pub mod display;
 pub mod touch;
@@ -117,8 +120,7 @@ pub trait Cyd: Sized {
 ///
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
 /// the same logical display coordinates as the display, or `None` when there is no
-/// touch. See the [calibrated-read example](CydTouch::read);
-/// applications should not need the platform-author-only backend module.
+/// touch. See the [calibrated-read example](CydTouch::read).
 /// See the [CYD implementations](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1)
 /// to find `CydEsp`, `CydRp`, `CydWasm`, and `CydMemory` touch sources.
 pub trait CydTouch: Sized {
@@ -176,6 +178,10 @@ pub trait CydTouch: Sized {
 /// pieces when memory is tight. Contiguous-pixel methods (see
 /// [`CydDisplay::fill_contiguous`]) stream pixels straight to the screen with
 /// virtually no buffering.
+///
+/// Rustdoc shows `DisplayBackend` as a supertrait because Device Envoy's
+/// platform crates provide the low-level frame construction. Application code
+/// does not use that internal interface.
 ///
 /// The workflows have deliberately different coordinate and replay semantics:
 /// full-screen frames render a complete scene in frame-local coordinates; regional frames update

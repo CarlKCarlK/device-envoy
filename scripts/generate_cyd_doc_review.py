@@ -21,6 +21,12 @@ SCOPES = (
     ("Core Memory", "target/doc/device_envoy_core/memory"),
 )
 
+# These paths remain technically public so sibling platform crates can use
+# them, but they are deliberately hidden from application-facing Rustdoc.
+HIDDEN_REVIEW_PREFIXES = (
+    "target/doc/device_envoy_core/cyd/backend/",
+)
+
 
 @dataclass(frozen=True)
 class Page:
@@ -50,7 +56,14 @@ def load_pages(repo: Path) -> tuple[dict[str, Page], dict[Path, str], dict[str, 
                 f"missing rendered documentation tree: {root}\n"
                 "Build core, ESP, and RP documentation before generating the checklist."
             )
-        scope_pages = sorted(root.rglob("*.html"))
+        scope_pages = sorted(
+            path
+            for path in root.rglob("*.html")
+            if not any(
+                path.relative_to(repo).as_posix().startswith(prefix)
+                for prefix in HIDDEN_REVIEW_PREFIXES
+            )
+        )
         if not scope_pages:
             raise SystemExit(f"rendered documentation tree contains no HTML pages: {root}")
         crate_roots[root.parent.name] = root.parent.resolve()
@@ -201,14 +214,8 @@ def generate(repo: Path, output: Path) -> None:
         raise SystemExit("ESP CYD overview is not first in the traversal")
 
     old_ids = existing_stable_ids(output)
-    if old_ids and old_ids != set(pages):
-        removed = sorted(old_ids - set(pages))
-        added = sorted(set(pages) - old_ids)
-        raise SystemExit(
-            "stable review IDs changed\n"
-            f"removed: {removed}\n"
-            f"added: {added}"
-        )
+    removed_ids = old_ids - set(pages)
+    added_ids = set(pages) - old_ids
 
     total = len(pages)
     orphan_content = (
@@ -331,7 +338,8 @@ update();
     output.write_text(document, encoding="utf-8")
     print(
         f"generated {output} with {total} pages: "
-        f"{len(reached)} reached, {len(orphaned)} orphaned"
+        f"{len(reached)} reached, {len(orphaned)} orphaned; "
+        f"{len(added_ids)} added, {len(removed_ids)} removed"
     )
 
 

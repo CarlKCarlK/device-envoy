@@ -39,16 +39,17 @@ type SharedSpiMutex = Mutex<NoopRawMutex, RefCell<SharedSpiBus>>;
 /// `SpiDeviceWithConfig` before every transaction it makes.
 type SharedSpiDevice = SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus, Output<'static>>;
 
-/// A CYD-family ESP32 bundle using one shared SPI peripheral for display and touch.
+/// An ESP32 CYD device containing a display and calibrated touch input on one
+/// shared SPI bus.
 ///
-/// Display and touch each get their own `SpiDeviceWithConfig` over the same underlying bus,
-/// with independent chip-select pins *and* independent clock speeds: `SpiDeviceWithConfig`
-/// re-applies its device's `spi::master::Config` to the shared bus immediately before each of
-/// its transactions, so the physical SPI clock switches between the display and touch settings as
-/// display and touch take turns using the bus. Because the two halves share
-/// state through that bus, this type keeps shared-bus ownership atomic inside the complete
-/// [`Cyd`] bundle.
-/// See the compiled [`CydEspOneSpi::new`] constructor example.
+/// [`CydEspOneSpi::new_static`] creates the pixel buffer storage passed to
+/// [`CydEspOneSpi::new`], which constructs the hardware and loads or performs
+/// touch calibration. See the [`cyd`](super) module example for normal drawing
+/// and touch input.
+///
+/// Display and touch retain independent chip-select pins and clock speeds while
+/// sharing the physical bus. Use [`CydEsp`](super::CydEsp) when they use separate
+/// SPI buses.
 pub struct CydEspOneSpi {
     display: CydDisplayEsp<SharedSpiDevice>,
     touch: CydTouchEsp<SharedSpiDevice>,
@@ -60,59 +61,93 @@ impl CydEspOneSpi {
     /// See the compiled [`CydEspOneSpi::new`] constructor example.
     pub const SCREEN_PIXELS: usize = device_envoy_core::cyd::SCREEN_PIXELS;
 
-    /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    /// Create static storage for a CYD pixel buffer.
     ///
-    /// See the [`CydEspOneSpi::new`] constructor example.
+    /// Choose any `PIXEL_COUNT` from zero through
+    /// [`CydEspOneSpi::SCREEN_PIXELS`].
+    ///
+    /// - `0` allocates no pixel buffer, so only
+    ///   [immediate operations](super::CydDisplay::fill_rectangle) and
+    ///   [contiguous streaming](super::CydDisplay::fill_contiguous) are
+    ///   available.
+    /// - A smaller buffer saves static RAM but limits the largest buffered
+    ///   region.
+    /// - For tiled drawing, size the buffer to
+    ///   [`TileGrid::max_tile_pixel_count`](super::tiling::TileGrid::max_tile_pixel_count),
+    ///   then pass the grid to
+    ///   [`CydDisplay::for_each_tile`](super::CydDisplay::for_each_tile) to draw
+    ///   the tiles. Only one tile is buffered at a time.
+    /// - [`CydEspOneSpi::SCREEN_PIXELS`] allocates a full-screen buffer and is
+    ///   usually the most convenient choice when enough RAM is available.
+    ///
+    /// Attempting to create a frame or tile larger than the allocated buffer
+    /// panics. See [`CydStaticEsp`] for the complete sizing rules and the
+    /// [`CydEspOneSpi::new`] constructor example.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
         CydStaticEsp::new()
     }
 
-    /// Construct a calibrated one-SPI CYD bundle using the saved-or-interactive calibration flow.
+    /// Construct a ready-to-use one-SPI CYD.
+    ///
+    /// The display and touch controller share one SPI bus, with independent
+    /// chip-select pins and clock speeds. The supplied flash block stores touch
+    /// calibration, and `recalibration_button` requests interactive
+    /// recalibration.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydEspOneSpi::new_static`] for the sizing choices.
+    ///
+    /// Use [`CydEsp`](super::CydEsp) for boards where display and touch use
+    /// separate SPI buses.
     ///
     /// ```rust,no_run
-    /// #![no_std]
-    /// #![no_main]
-    /// use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{Cyd, CydEspOneSpi, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
-    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{Cyd, CydEspOneSpi, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
+    /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-    /// async fn construct(mut p: esp_hal::peripherals::Peripherals) -> Result<()> {
-    ///     let [mut flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    ///     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    ///     static STORAGE: CydStaticEsp<{ CydEspOneSpi::SCREEN_PIXELS }> = CydEspOneSpi::new_static();
-    ///     let cyd = CydEspOneSpi::new(&STORAGE, p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3, p.GPIO4,
-    ///         p.GPIO5, p.GPIO7, p.GPIO8, DEFAULT_DISPLAY_SPI_HZ, p.GPIO12, p.GPIO13,
-    ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT,
-    ///         &mut flash, &mut button).await?;
-    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
-    ///     Ok(())
-    /// }
+    /// # async fn construct(mut p: esp_hal::peripherals::Peripherals) -> Result<()> {
+    /// #     let [mut calibration_flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// #     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    ///     static CYD_STATIC: CydStaticEsp<{ CydEspOneSpi::SCREEN_PIXELS }> =
+    ///         CydEspOneSpi::new_static();
+    ///
+    ///     let cyd = CydEspOneSpi::new(
+    ///         &CYD_STATIC,
+    ///
+    ///         // Shared SPI and display pins:
+    ///         p.SPI2,
+    ///         p.GPIO1,
+    ///         p.GPIO2,
+    ///         p.GPIO3,
+    ///         p.GPIO4,
+    ///         p.GPIO5,
+    ///         p.GPIO7,
+    ///         p.GPIO8,
+    ///         DEFAULT_DISPLAY_SPI_HZ,
+    ///
+    ///         // Touch pins:
+    ///         p.GPIO12,
+    ///         p.GPIO13,
+    ///
+    ///         // Presentation:
+    ///         Orientation::Landscape,
+    ///         Rgb888::BLACK,
+    ///         Rgb888::WHITE,
+    ///         &DEFAULT_FONT,
+    ///
+    ///         // Calibration storage and recalibration button:
+    ///         &mut calibration_flash,
+    ///         &mut recalibration_button,
+    ///     )
+    ///     .await?;
+    /// #     assert_eq!(cyd.orientation(), Orientation::Landscape);
+    /// #     Ok(())
+    /// # }
     /// ```
-    ///
-    /// Mirrors [`super::CydEsp::new`]'s calibration handling exactly (same
-    /// automatic calibration flow and the same flash-backed load/save behavior — the only
-    /// difference from the two-SPI bundle is that display and touch share one physical bus).
-    ///
-    /// # Arguments
-    ///
-    /// * `statics` - Static storage for the display's draw buffer
-    /// * `spi` - The shared SPI peripheral
-    /// * `sck_pin` / `mosi_pin` / `miso_pin` - Shared bus pins for both display and touch
-    /// * `lcd_cs_pin` - LCD chip-select pin (active low)
-    /// * `lcd_dc_pin` - LCD data/command pin
-    /// * `lcd_rst_pin` - LCD reset pin (active low)
-    /// * `lcd_backlight_pin` - LCD backlight enable pin
-    /// * `touch_cs_pin` - Touch chip-select pin (active low)
-    /// * `touch_irq_pin` - Touch interrupt pin
-    /// * `orientation` - Screen orientation
-    /// * `background_color` - Default background color
-    /// * `foreground_color` - Default foreground/text color
-    /// * `font` - Default monospace font for text drawing
-    /// * `calibration_flash_block` - Flash block used to load/save the touch calibration
-    /// * `recalibration_button` - Button that restarts the interactive calibration flow
-    ///
-    /// Returns a ready-to-use [`CydEspOneSpi`].
     #[allow(clippy::too_many_arguments)]
     pub async fn new<const PIXEL_COUNT: usize, R: Button>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,

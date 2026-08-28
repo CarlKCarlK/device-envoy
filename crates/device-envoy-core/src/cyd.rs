@@ -74,11 +74,7 @@ pub trait Cyd: Sized {
     /// generic operation that returns this error.
     type Error;
 
-    /// The display component borrowed from the complete device.
-    /// See the [application example](index.html#application-example).
     type Display: CydDisplay<Error = Self::Error>;
-    /// The calibrated touch component borrowed from the complete device.
-    /// See the [application example](index.html#application-example).
     type Touch: CydTouch<Error = Self::Error>;
 
     /// Borrow the display and calibrated touch components at once.
@@ -307,7 +303,7 @@ frame.flush().await?;
         self.frame_mut(Rectangle::new(Point::zero(), self.screen_size()))
     }
 
-    /// Fill `rectangle` immediately in logical display coordinates.
+    /// Fill `rectangle` immediately with `color` in logical display coordinates.
     ///
     /// Unlike [`display::CydFrame::fill`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.fill), this is a device-level operation rather than a
     /// frame-buffered draw. Implementations clip to the logical display and

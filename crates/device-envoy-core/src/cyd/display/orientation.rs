@@ -9,23 +9,20 @@ use super::super::{SCREEN_HEIGHT, SCREEN_WIDTH};
 ///
 /// `Landscape` and `LandscapeInverted` have size 320×240.
 /// `Portrait` and `PortraitInverted` have size 240×320.
-///
-/// Use [`map_landscape_point`](Self::map_landscape_point) to convert a point in
-/// the panel's native 320×240 coordinate system into logical display
-/// coordinates. Touch events returned by
-/// [`CydTouch::read`](crate::cyd::CydTouch::read) are already mapped.
+/// See the [`Cyd::orientation` example](crate::cyd::Cyd::orientation).
+#[cfg_attr(feature = "host", doc = "")]
+#[cfg_attr(
+    feature = "host",
+    doc = "For complete device usage, see the [orientation and frame-budget example](crate::memory#orientation-and-frame-budget-example)."
+)]
 ///
 /// ```rust,no_run
 /// use device_envoy_core::cyd::display::Orientation;
-/// use embedded_graphics::prelude::{Point, Size};
+/// use embedded_graphics::prelude::Size;
 ///
 /// let orientation = Orientation::Portrait;
 ///
 /// assert_eq!(orientation.size(), Size::new(240, 320));
-/// assert_eq!(
-///     orientation.map_landscape_point(Point::new(10, 20)),
-///     Point::new(20, 309),
-/// );
 /// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum Orientation {

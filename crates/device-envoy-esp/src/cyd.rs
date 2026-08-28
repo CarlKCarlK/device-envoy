@@ -141,18 +141,16 @@ pub struct CydTouchEsp<D = touch_driver::CydTouchSpiDevice> {
     orientation: Orientation,
 }
 
-/// A calibrated CYD-family ESP32 bundle.
+/// An ESP32 CYD device containing a display and calibrated touch input.
 ///
-/// Start with the short [`cyd`](mod@crate::cyd) module example to draw and read
-/// touch input. See [`CydEsp::new`] when choosing pins and constructing the
-/// hardware; construction performs saved or interactive touch calibration
-/// before returning.
+/// [`CydEsp::new_static`] creates the pixel buffer storage passed to
+/// [`CydEsp::new`], which constructs the hardware and loads or performs touch
+/// calibration. See the [`cyd`](mod@crate::cyd) module example for normal
+/// drawing and touch input.
 pub struct CydEsp {
-    /// The owned display component.
-    /// See the [`cyd`](mod@crate::cyd) module example.
+    /// The display component.
     pub display: CydDisplayEsp,
-    /// The owned calibrated touch component.
-    /// See the [`cyd`](mod@crate::cyd) module example.
+    /// The calibrated touch component.
     pub touch: CydTouchEsp,
 }
 
@@ -166,19 +164,22 @@ pub(crate) struct CydEspUncalibrated {
 
 /// Static storage for a [`CydEsp`]-owned pixel buffer.
 ///
-/// `PIXEL_COUNT` is an RGB565 pixel count, not a byte count. Use
-/// `CydEsp::SCREEN_PIXELS` for `full_frame_mut`, the pixel count of the largest
-/// independently updated rectangle for `frame_mut`, or
-/// [`TileGrid`](device_envoy_core::cyd::display::tiling::TileGrid)'s
-/// `max_tile_pixel_count()` for `for_each_tile`. If a requested frame
-/// or tile is larger than the declared capacity, frame creation panics with
-/// the buffer's `view must fit in workspace` assertion; no pixels are silently
-/// clipped. `CydStaticEsp<0>` is useful
-/// only with immediate operations and contiguous streaming, which do not use a
-/// frame buffer.
+/// `PIXEL_COUNT` is a caller-chosen RGB565 pixel count, not a byte count. Any
+/// value from zero through `CydEsp::SCREEN_PIXELS` can be supplied. Zero
+/// allocates no pixel buffer: immediate operations and contiguous streaming
+/// still work, but buffered frames and tiles do not. A smaller positive value
+/// saves static RAM when the app buffers only a bounded rectangle or draws the
+/// screen tile by tile. Values above `CydEsp::SCREEN_PIXELS` are rejected during
+/// static initialization because they provide no additional drawing capability.
 ///
-/// The app declares one at file scope and names the workspace pixel count it
-/// wants:
+/// Tiling is explicit, not automatic. The app chooses a
+/// [`TileGrid`](device_envoy_core::cyd::display::tiling::TileGrid), stores at
+/// least its `max_tile_pixel_count()`, and buffers one tile at a time through
+/// `for_each_tile`. Use `CydEsp::SCREEN_PIXELS` for `full_frame_mut`, or the
+/// largest rectangle's pixel count for `frame_mut`. If a requested frame or tile
+/// exceeds the allocated pixel buffer, frame creation panics.
+///
+/// The app declares one at file scope and chooses the pixel buffer capacity:
 ///
 /// ```rust,no_run
 /// #![no_std]
@@ -210,6 +211,10 @@ impl<const PIXEL_COUNT: usize> CydStaticEsp<PIXEL_COUNT> {
     /// Internal constructor. Apps create storage via [`CydEsp::new_static`] so all
     /// construction goes through the `CydEsp` device abstraction.
     pub(crate) const fn new() -> Self {
+        assert!(
+            PIXEL_COUNT <= SCREEN_PIXELS,
+            "PIXEL_COUNT must not exceed SCREEN_PIXELS"
+        );
         Self {
             pixel_buffer: StaticCell::new(),
         }
@@ -500,8 +505,10 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
 
 impl CydDisplayEsp<display::CydDisplaySpiDevice> {
     /// Construct a display-only CYD display component that owns its draw buffer.
-    /// Zero capacity is intentional when only immediate fills or contiguous
-    /// streaming are used; frame-based and tiled drawing need positive storage.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydEsp::new_static`] for the sizing choices.
     ///
     /// ```rust,no_run
     /// # #![no_std]
@@ -511,8 +518,8 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
     /// async fn construct(p: esp_hal::peripherals::Peripherals) -> Result<()> {
-    ///     static STORAGE: device_envoy_esp::cyd::CydStaticEsp<0> = CydEsp::new_static();
-    ///     let display = CydDisplayEsp::new(&STORAGE, p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3,
+    ///     static CYD_STATIC: device_envoy_esp::cyd::CydStaticEsp<0> = CydEsp::new_static();
+    ///     let display = CydDisplayEsp::new(&CYD_STATIC, p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3,
     ///         p.GPIO4, p.GPIO5, p.GPIO7, p.GPIO8, DEFAULT_DISPLAY_SPI_HZ,
     ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT)?;
     ///     assert_eq!(display.screen_size(), Orientation::Landscape.size());
@@ -603,19 +610,39 @@ impl CydEsp {
     /// Used by the [`CydStaticEsp`] storage example.
     pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
 
-    /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    /// Create static storage for a CYD pixel buffer.
     ///
-    /// See the [`CydStaticEsp`] storage example.
+    /// Choose any `PIXEL_COUNT` from zero through [`CydEsp::SCREEN_PIXELS`].
+    ///
+    /// - `0` allocates no pixel buffer, so only
+    ///   [immediate operations](CydDisplay::fill_rectangle) and
+    ///   [contiguous streaming](CydDisplay::fill_contiguous) are available.
+    /// - A smaller buffer saves static RAM but limits the largest buffered
+    ///   region.
+    /// - For tiled drawing, size the buffer to
+    ///   [`tiling::TileGrid::max_tile_pixel_count`], then pass the grid to
+    ///   [`CydDisplay::for_each_tile`]. Only one tile is buffered at a time.
+    /// - [`CydEsp::SCREEN_PIXELS`] allocates a full-screen buffer and is usually
+    ///   the most convenient choice when enough RAM is available.
+    ///
+    /// Attempting to create a frame or tile larger than the allocated buffer
+    /// panics. See [`CydStaticEsp`] for the complete sizing rules and example.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
         CydStaticEsp::new()
     }
 
-    /// Construct a ready-to-use calibrated CYD, loading or completing calibration internally.
-    /// The display arguments use one SPI bus and its SCK/MOSI/MISO/CS/DC/reset/backlight pins;
-    /// `touch_spi` and the following touch pins are a separate SPI bus. The flash block stores
-    /// calibration, and the button requests interactive recalibration. Use
-    /// [`CydEspOneSpi`] when display and touch must share one bus.
+    /// Construct a ready-to-use CYD.
+    ///
+    /// The display and touch controller use separate SPI buses. The supplied
+    /// flash block stores touch calibration, and `recalibration_button` requests
+    /// interactive recalibration.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydEsp::new_static`] for the sizing choices.
+    ///
+    /// Use [`CydEspOneSpi`] for boards where display and touch share one SPI bus.
     ///
     /// This example focuses on the board-specific construction. For the normal
     /// draw/flush/read loop, start with the [`cyd`](mod@crate::cyd) module
@@ -623,36 +650,55 @@ impl CydEsp {
     /// [checked ESP32 CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-esp/examples/esp32/generic/cyd_touch_paint.rs).
     ///
     /// ```rust,no_run
-    /// #![no_std]
-    /// #![no_main]
+    /// # #![no_std]
+    /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
     /// # use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # use esp_hal::spi::master::AnySpi;
-    /// async fn construct(mut p: esp_hal::peripherals::Peripherals, touch_spi: AnySpi<'static>) -> Result<()> {
-    ///     let [mut calibration_flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
-    ///     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    ///     static STORAGE: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
+    /// # async fn construct(mut p: esp_hal::peripherals::Peripherals, touch_spi: AnySpi<'static>) -> Result<()> {
+    /// #     let [mut calibration_flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// #     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    ///     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
     ///
     ///     let cyd = CydEsp::new(
-    ///         &STORAGE,
-    ///         // Display SPI resource and pins:
-    ///         p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3, p.GPIO4,
-    ///         p.GPIO5, p.GPIO7, p.GPIO8,
+    ///         &CYD_STATIC,
+    ///
+    ///         // Display SPI and pins:
+    ///         p.SPI2,
+    ///         p.GPIO1,
+    ///         p.GPIO2,
+    ///         p.GPIO3,
+    ///         p.GPIO4,
+    ///         p.GPIO5,
+    ///         p.GPIO7,
+    ///         p.GPIO8,
     ///         DEFAULT_DISPLAY_SPI_HZ,
+    ///
     ///         // Presentation:
     ///         Orientation::Landscape,
-    ///         Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT,
-    ///         // Touch SPI resource and pins:
-    ///         touch_spi, p.GPIO9, p.GPIO10, p.GPIO11, p.GPIO12, p.GPIO13,
-    ///         // Saved calibration and the recalibration button:
-    ///         &mut calibration_flash, &mut recalibration_button,
-    ///     ).await?;
+    ///         Rgb888::BLACK,
+    ///         Rgb888::WHITE,
+    ///         &DEFAULT_FONT,
     ///
-    ///     drop(cyd);
-    ///     Ok(())
-    /// }
+    ///         // Touch SPI and pins:
+    ///         touch_spi,
+    ///         p.GPIO9,
+    ///         p.GPIO10,
+    ///         p.GPIO11,
+    ///         p.GPIO12,
+    ///         p.GPIO13,
+    ///
+    ///         // Calibration storage and recalibration button:
+    ///         &mut calibration_flash,
+    ///         &mut recalibration_button,
+    ///     )
+    ///     .await?;
+    ///
+    /// #     drop(cyd);
+    /// #     Ok(())
+    /// # }
     /// ```
     pub async fn new<const PIXEL_COUNT: usize, R: Button>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,

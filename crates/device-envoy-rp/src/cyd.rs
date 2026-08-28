@@ -165,6 +165,8 @@ pub(crate) struct CydRpUncalibrated {
     pub touch: CydTouchUncalibratedRp,
 }
 
+// TODO0 Add the ESP-style `0..=SCREEN_PIXELS` capacity, zero-workspace,
+// static-RAM, explicit-tiling, and compile-time upper-bound guidance here.
 /// Static storage for a [`CydRp`]-owned pixel buffer.
 ///
 /// `PIXEL_COUNT` is an RGB565 pixel count, not a byte count. Use
@@ -480,6 +482,9 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
 }
 
 impl CydDisplayRp<display::CydDisplaySpiDevice> {
+    // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` workspace guidance,
+    // compile-time upper-bound behavior, and `CYD_STATIC` naming to the
+    // `CydDisplayRp::new` documentation.
     /// Construct a display-only `CydDisplayRp` that owns its draw buffer.
     /// Zero capacity is intentional when only immediate fills or contiguous
     /// streaming are used; frame-based and tiled drawing need positive storage.
@@ -605,6 +610,8 @@ impl CydRp {
     /// Used by the [`CydStaticRp`] storage example.
     pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
 
+    // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` workspace guidance and
+    // compile-time upper-bound enforcement to `CydRp::new_static` and `CydRp::new`.
     /// Create [`CydStaticRp`] storage for a `PIXEL_COUNT`-sized draw buffer.
     ///
     /// See the [`CydStaticRp`] example.

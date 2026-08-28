@@ -164,6 +164,12 @@ Use `TODO&#48;*` for release-priority TODO items (`TODO` + one or more trailing 
 
 ## Documentation Conventions
 
+- Every doctest that produces an image or other visible rendered output must
+  show that output in the rendered documentation. Place the preview after the
+  code example so readers can directly compare the example with its result.
+- When working on documentation, regenerate the affected rendered docs with
+  the appropriate `just update-docs-*` recipe and inspect the generated pages
+  before handing the work back.
 - Start module docs with "A device abstraction ..." and have them point readers to the main struct docs.
 - Put a single compilable example on the primary struct; other public docs should link back to that example instead of duplicating snippets.
 - When linking to module documentation, name the module in the link text (for example, "led_strip module documentation").

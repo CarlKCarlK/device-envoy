@@ -4,7 +4,7 @@
 //! Envoy's platform implementations connect raw controller samples to the
 //! private calibration workflow. Applications use
 //! [`CydTouch`](super::CydTouch); see its
-//! [calibrated-read example](super::CydTouch::read).
+//! [example](super::CydTouch::read).
 
 pub(crate) mod calibration;
 pub(crate) mod driver;
@@ -14,9 +14,12 @@ use embedded_graphics::geometry::Point;
 
 /// A touch event in logical display coordinates (already calibrated and oriented).
 ///
-/// Read it with [CydTouch::read](super::CydTouch::read) in the [calibrated-read
-/// example](super::CydTouch::read). Applications receive coordinates bounded by
-/// `CydDisplay::screen_size()` and must not apply another orientation mapping.
+/// Read it with [CydTouch::read](super::CydTouch::read) in the
+/// [focused example](super::CydTouch::read), or see the larger
+/// [application example](../index.html#application-example) for a complete
+/// read-and-draw flow. Applications receive coordinates bounded by
+/// [`CydDisplay::screen_size()`](super::CydDisplay::screen_size) and must not
+/// apply another orientation mapping.
 /// Calibration remains defined against the fixed `320×240` landscape panel
 /// internally; the platform touch implementation maps the result into the
 /// runtime display orientation before returning it.

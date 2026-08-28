@@ -5,56 +5,42 @@ use embedded_graphics::prelude::Size;
 
 use super::super::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-/// How the fixed landscape panel is presented.
+/// Display orientation for the fixed 320×240 CYD panel.
 ///
-/// `Landscape`, `Portrait`, `LandscapeInverted`, and `PortraitInverted` name
-/// the four display layouts. A complete device applies the selected layout to
-/// calibrated touch samples before returning them. Applications consume those
-/// logical points directly; they do not map a [`TouchEvent`](crate::cyd::touch::TouchEvent)
-/// again.
+/// `Landscape` and `LandscapeInverted` have size 320×240.
+/// `Portrait` and `PortraitInverted` have size 240×320.
 ///
-/// Concrete platforms map this to their display driver's rotation; this enum
-/// only knows the resulting oriented dimensions.
+/// Use [`map_landscape_point`](Self::map_landscape_point) to convert a point in
+/// the panel's native 320×240 coordinate system into logical display
+/// coordinates. Touch events returned by
+/// [`CydTouch::read`](crate::cyd::CydTouch::read) are already mapped.
 ///
 /// ```rust,no_run
 /// use device_envoy_core::cyd::display::Orientation;
 /// use embedded_graphics::prelude::{Point, Size};
 ///
-/// for orientation in [
-///     Orientation::Landscape,
-///     Orientation::Portrait,
-///     Orientation::LandscapeInverted,
-///     Orientation::PortraitInverted,
-/// ] {
-///     assert!(orientation.width() > 0 && orientation.height() > 0);
-/// }
-/// let landscape = Orientation::Landscape;
-/// assert_eq!(landscape.size(), Size::new(320, 240));
-/// assert_eq!(landscape.pixels(), 320 * 240);
-/// assert_eq!(landscape.next(), Orientation::Portrait);
-/// assert_eq!(landscape.map_landscape_point(Point::new(10, 20)), Point::new(10, 20));
-/// assert_eq!(Orientation::Portrait.map_landscape_point(Point::new(10, 20)), Point::new(20, 309));
-/// assert_eq!(Orientation::LandscapeInverted.map_landscape_point(Point::new(10, 20)), Point::new(309, 219));
-/// assert_eq!(Orientation::PortraitInverted.map_landscape_point(Point::new(10, 20)), Point::new(219, 10));
+/// let orientation = Orientation::Portrait;
+///
+/// assert_eq!(orientation.size(), Size::new(240, 320));
+/// assert_eq!(
+///     orientation.map_landscape_point(Point::new(10, 20)),
+///     Point::new(20, 309),
+/// );
 /// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum Orientation {
-    /// Native 320×240 landscape presentation.
-    /// See the compiled [`Orientation`] example.
+    /// 320×240.
     Landscape,
-    /// 240×320 portrait presentation, rotated clockwise.
-    /// See the compiled [`Orientation`] example.
+    /// 240×320, rotated clockwise.
     Portrait,
-    /// Native landscape presentation rotated 180°.
-    /// See the compiled [`Orientation`] example.
+    /// 320×240, rotated 180°.
     LandscapeInverted,
-    /// 240×320 portrait presentation, rotated counterclockwise.
-    /// See the compiled [`Orientation`] example.
+    /// 240×320, rotated counterclockwise.
     PortraitInverted,
 }
 
 impl Orientation {
-    /// See the [`Orientation` example](Orientation).
+    /// Logical display width for this orientation.
     #[must_use]
     pub const fn width(self) -> u32 {
         match self {
@@ -63,7 +49,7 @@ impl Orientation {
         }
     }
 
-    /// See the [`Orientation` example](Orientation).
+    /// Logical display height for this orientation.
     #[must_use]
     pub const fn height(self) -> u32 {
         match self {
@@ -72,20 +58,19 @@ impl Orientation {
         }
     }
 
-    /// See the [`Orientation` example](Orientation).
+    /// Logical display size for this orientation.
     #[must_use]
     pub const fn size(self) -> Size {
         Size::new(self.width(), self.height())
     }
 
-    /// See the [`Orientation` example](Orientation).
+    /// Number of display pixels.
     #[must_use]
     pub const fn pixels(self) -> usize {
         self.width() as usize * self.height() as usize
     }
 
     /// Return the next orientation in the four-state display test cycle.
-    /// See the [`Orientation` example](Orientation).
     #[must_use]
     pub const fn next(self) -> Self {
         match self {
@@ -96,14 +81,13 @@ impl Orientation {
         }
     }
 
-    /// Map a fixed-landscape panel point into logical display coordinates.
+    /// Convert a point from the panel's native 320×240 landscape coordinates
+    /// into logical display coordinates for this orientation.
     ///
-    /// Touch calibration always describes the fixed 320×240 landscape panel.
-    /// Use this for panel/calibration coordinates or fixed-landscape assets.
-    /// Do not use it on an application-facing [`TouchEvent`](crate::cyd::touch::TouchEvent):
-    /// [`CydTouch::read`](crate::cyd::CydTouch::read) has already applied this
-    /// mapping exactly once.
-    /// See the [`Orientation` example](Orientation).
+    /// Use this for calibration data or assets defined in native panel
+    /// coordinates. Do not apply it to [`TouchEvent`](crate::cyd::touch::TouchEvent)
+    /// points returned by [`CydTouch::read`](crate::cyd::CydTouch::read); those
+    /// are already mapped.
     #[must_use]
     pub const fn map_landscape_point(self, point: Point) -> Point {
         let landscape_width = SCREEN_WIDTH as i32;

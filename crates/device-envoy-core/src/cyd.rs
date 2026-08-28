@@ -124,15 +124,15 @@ pub trait Cyd: Sized {
     fn orientation(&self) -> Orientation;
 }
 
-/// A CYD touch source for calibrated, oriented events that apps read.
+/// A CYD touch source that returns calibrated, oriented touch events.
 ///
 /// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
 /// the same logical display coordinates as the display, or `None` when there is no
-/// touch. See the [calibrated-read example](CydTouch::read).
-/// See the [CYD implementations](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1)
-/// to find `CydEsp`, `CydRp`, `CydWasm`, and `CydMemory` touch sources.
+/// touch. See the [`CydTouch::read`] example for focused usage, or the
+/// [application example](index.html#application-example) for a complete
+/// read-and-draw flow.
 pub trait CydTouch: Sized {
-    /// Error returned when reading touch fails.
+    /// Error returned when a touch read fails.
     /// See the [`CydTouch::read`] example.
     type Error;
 
@@ -141,31 +141,29 @@ pub trait CydTouch: Sized {
     /// Returned points are calibrated and oriented into the same logical
     /// coordinates as the display's [`CydDisplay::screen_size`]. Returns
     /// `Ok(None)` when there is no pending touch.
-    /// Errors only on a hardware/read failure.
+    /// Returns an error only when the underlying touch source cannot be read.
     ///
-    /// The calibrated-read example below consumes the already
-    /// oriented point directly; applications must not map it a second time.
+    /// The example below consumes the already oriented point directly;
+    /// applications must not map it a second time.
+    /// The [application example](index.html#application-example) shows this
+    /// method in a complete read-and-draw flow.
     ///
     /// ```rust,no_run
     /// use device_envoy_core::cyd::{CydTouch, touch::TouchEvent};
+    /// # use embedded_graphics::prelude::Point;
+    /// # fn handle_point(_point: Point) {}
     ///
     /// fn read_calibrated<T: CydTouch>(touch: &mut T) -> Result<(), T::Error> {
     ///     if let Some(event) = touch.read()? {
-    ///         let point = match event {
+    ///         match event {
     ///             TouchEvent::Down { point } | TouchEvent::Move { point } => {
-    ///                 // `point` is already in the display's logical coordinates.
-    ///                 point
+    ///                 // `point` is already in logical display coordinates.
+    ///                 handle_point(point);
     ///             }
-    ///             TouchEvent::Up => return Ok(()),
-    ///         };
-    ///         consume_point(point);
+    ///             TouchEvent::Up => {}
+    ///         }
     ///     }
     ///     Ok(())
-    /// }
-    ///
-    /// fn consume_point(point: embedded_graphics::prelude::Point) {
-    ///     // Hit testing and drawing use this logical display coordinate directly.
-    ///     assert!(point.x >= 0 && point.y >= 0);
     /// }
     /// ```
     fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;

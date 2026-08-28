@@ -12,7 +12,7 @@
 //! uncalibrated touch implementation remains private to this crate
 //! — so the only new code here is building the shared bus itself.
 
-use core::cell::RefCell;
+use core::{cell::RefCell, fmt};
 
 use embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig;
 use embassy_sync::blocking_mutex::{Mutex, raw::NoopRawMutex};
@@ -261,5 +261,14 @@ impl Cyd for CydEspOneSpi {
 
     fn orientation(&self) -> Orientation {
         self.display.orientation
+    }
+}
+
+impl fmt::Debug for CydEspOneSpi {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CydEspOneSpi")
+            .field("orientation", &self.display.orientation)
+            .finish_non_exhaustive()
     }
 }

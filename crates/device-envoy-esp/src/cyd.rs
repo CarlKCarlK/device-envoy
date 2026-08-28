@@ -838,6 +838,7 @@ impl<D: SpiDevice<u8>> fmt::Debug for CydDisplayEsp<D> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydDisplayEsp")
+            .field("orientation", &self.orientation)
             .finish_non_exhaustive()
     }
 }
@@ -855,13 +856,17 @@ impl<D> fmt::Debug for CydTouchEsp<D> {
         formatter
             .debug_struct("CydTouchEsp")
             .field("calibration_config", &self.calibration_config)
+            .field("orientation", &self.orientation)
             .finish_non_exhaustive()
     }
 }
 
 impl fmt::Debug for CydEsp {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_struct("CydEsp").finish_non_exhaustive()
+        formatter
+            .debug_struct("CydEsp")
+            .field("orientation", &self.display.orientation)
+            .finish_non_exhaustive()
     }
 }
 
@@ -869,6 +874,7 @@ impl fmt::Debug for CydEspUncalibrated {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydEspUncalibrated")
+            .field("orientation", &self.display.orientation)
             .finish_non_exhaustive()
     }
 }

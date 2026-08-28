@@ -17,7 +17,7 @@
 //! (`SPI0`/`SPI1`) as a type parameter, so [`CydRpOneSpi`] and its static storage,
 //! [`CydRpOneSpiStatic`], are generic over that peripheral instance `T`.
 
-use core::cell::RefCell;
+use core::{cell::RefCell, fmt};
 
 use device_envoy_core::button::Button;
 use device_envoy_core::cyd::{Cyd, backend};
@@ -299,10 +299,11 @@ impl<T: spi::Instance + 'static> Cyd for CydRpOneSpi<T> {
     }
 }
 
-impl<T: spi::Instance + 'static> core::fmt::Debug for CydRpOneSpi<T> {
-    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<T: spi::Instance + 'static> fmt::Debug for CydRpOneSpi<T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydRpOneSpi")
+            .field("orientation", &self.display.orientation)
             .finish_non_exhaustive()
     }
 }

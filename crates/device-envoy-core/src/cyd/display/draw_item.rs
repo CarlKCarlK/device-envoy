@@ -138,82 +138,136 @@ impl Iterator for Image565ViewPixels {
     }
 }
 
-/// A pixel-space 2D draw item, ready to draw onto a [`PixelTarget`].
+/// A 2D drawing command that can be rendered onto a [`PixelTarget`].
 ///
-/// Construct one directly when you already have pixel-space geometry, or via
-/// linkage-blaze's CYD 3D adapters when projecting a 3D scene. All coordinates
-/// and sizes are in pixels. The `color` stays [`Rgb888`]; the target performs
-/// any conversion (for example to `Rgb565`) at its pixel boundary.
+/// Coordinates and sizes are measured in display pixels. Colors are specified
+/// as [`Rgb888`], and the target converts them to its native pixel format when
+/// needed. Applications construct items directly for ordinary 2D drawing.
 ///
-/// ```rust,no_run
-/// use device_envoy_core::{cyd::display::{DrawItem, Image565View}, pixel_target::PixelTarget};
-/// use embedded_graphics::prelude::{Point, RgbColor, Size};
+/// # Example
 ///
-/// static PIXELS: [u16; 1] = [0xffff];
-/// fn draw<T: PixelTarget>(target: &mut T) {
-///     DrawItem::Stroke { start: (0.0, 0.0), end: (8.0, 8.0), color: embedded_graphics::pixelcolor::Rgb888::RED, pixel_width: 1.0 }.draw(target);
-///     DrawItem::Ellipse { center: (4.0, 4.0), axis_a: (3.0, 0.0), axis_b: (0.0, 2.0), color: embedded_graphics::pixelcolor::Rgb888::GREEN }.draw(target);
-///     DrawItem::Circle { center: (4.0, 4.0), pixel_radius: 2.0, color: embedded_graphics::pixelcolor::Rgb888::WHITE }.draw(target);
-///     DrawItem::Bitmap { view: Image565View::new(&PIXELS, Size::new(1, 1)), top_left: Point::zero() }.draw(target);
-/// }
-/// ```
+/// This example loads a TGA bitmap at compile time and draws one of each item
+/// variant onto a full-screen frame.
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "draw_item_bitmap",
+        "docs/assets/draw_item_bitmap.png"
+    )
+)]
+#[cfg_attr(
+    feature = "host",
+    doc = r#"
+
+```rust
+use device_envoy_core::cyd::{
+    Cyd, CydDisplay,
+    display::{CydFrame, DrawItem, Image565Fixed, tga},
+};
+use embedded_graphics::{
+    pixelcolor::Rgb888,
+    prelude::{Point, RgbColor},
+};
+
+const BITMAP: Image565Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/docs/assets/cyd_fill_contiguous.tga"
+))
+.to_565();
+
+async fn draw<C: Cyd>(cyd: &mut C) -> Result<(), C::Error> {
+    let display = cyd.display();
+    let mut frame = display.full_frame_mut();
+    let draw_items = [
+        DrawItem::Bitmap {
+            view: BITMAP.view(),
+            top_left: Point::new(35, 84),
+        },
+        DrawItem::Circle {
+            center: (125.0, 120.0),
+            pixel_radius: 32.0,
+            color: Rgb888::CYAN,
+        },
+        DrawItem::Ellipse {
+            center: (215.0, 120.0),
+            axis_a: (38.0, 0.0),
+            axis_b: (12.0, 24.0),
+            color: Rgb888::GREEN,
+        },
+        DrawItem::Stroke {
+            start: (280.0, 80.0),
+            end: (300.0, 160.0),
+            color: Rgb888::YELLOW,
+            pixel_width: 8.0,
+        },
+    ];
+    for draw_item in draw_items {
+        draw_item.draw(&mut frame);
+    }
+    frame.flush().await
+}
+
+# use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
+# use embedded_graphics::{mono_font::ascii::FONT_9X15_BOLD, prelude::Size};
+# let mut cyd_memory = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# futures_executor::block_on(draw(&mut cyd_memory))?;
+# let golden_result = assert_framebuffer_matches_expected_png(
+#     &cyd_memory,
+#     env!("CARGO_MANIFEST_DIR"),
+#     "draw_item_bitmap.png",
+# );
+# assert!(golden_result.is_ok(), "{golden_result:?}");
+# Ok::<(), device_envoy_core::memory::Error>(())
+```
+
+![Examples of all four DrawItem variants][draw_item_bitmap]
+"#
+)]
 #[derive(Clone, Copy, Debug)]
 pub enum DrawItem {
     /// A line stroke from `start` to `end` with the given pixel width.
-    /// See the compiled [`DrawItem`] example.
     Stroke {
-        /// Projected start point in logical display coordinates.
-        /// See the compiled [`DrawItem`] example.
+        /// Start point in display coordinates.
         start: (f32, f32),
-        /// Projected end point in logical display coordinates.
-        /// See the compiled [`DrawItem`] example.
+        /// End point in display coordinates.
         end: (f32, f32),
         /// Stroke color.
-        /// See the compiled [`DrawItem`] example.
         color: Rgb888,
         /// Stroke width in pixels.
-        /// See the compiled [`DrawItem`] example.
         pixel_width: f32,
     },
-    /// A filled, possibly foreshortened, ellipse (a projected disk).
+    /// A filled ellipse, which can also represent a projected disk.
     ///
     /// The ellipse is the locus of `center + s·axis_a + t·axis_b` with `s²+t² ≤ 1`.
-    /// See the compiled [`DrawItem`] example.
     Ellipse {
-        /// Projected ellipse center in logical display coordinates.
-        /// See the compiled [`DrawItem`] example.
+        /// Center in display coordinates.
         center: (f32, f32),
-        /// First projected radius vector.
-        /// See the compiled [`DrawItem`] example.
+        /// First radius vector, measured in pixels.
         axis_a: (f32, f32),
-        /// Second projected radius vector.
-        /// See the compiled [`DrawItem`] example.
+        /// Second radius vector, measured in pixels.
         axis_b: (f32, f32),
         /// Fill color.
-        /// See the compiled [`DrawItem`] example.
         color: Rgb888,
     },
-    /// A filled circle (a projected sphere).
-    /// See the compiled [`DrawItem`] example.
+    /// A filled circle, which can also represent a projected sphere.
     Circle {
-        /// Projected center in logical display coordinates.
-        /// See the compiled [`DrawItem`] example.
+        /// Center in display coordinates.
         center: (f32, f32),
         /// Radius in pixels.
-        /// See the compiled [`DrawItem`] example.
         pixel_radius: f32,
         /// Fill color.
-        /// See the compiled [`DrawItem`] example.
         color: Rgb888,
     },
-    /// A statically-stored RGB565 bitmap view placed at a screen position.
-    /// See the compiled [`DrawItem`] example.
+    /// A statically stored RGB565 bitmap placed at a display position.
     Bitmap {
         /// Bitmap pixels and dimensions.
-        /// See the compiled [`DrawItem`] example.
         view: Image565View,
-        /// Bitmap top-left in logical display coordinates.
-        /// See the compiled [`DrawItem`] example.
+        /// Top-left corner in display coordinates.
         top_left: Point,
     },
 }
@@ -225,7 +279,7 @@ impl DrawItem {
     /// [`Line`](https://docs.rs/embedded-graphics/latest/embedded_graphics/primitives/struct.Line.html)
     /// primitive and circles use
     /// [`Circle`](https://docs.rs/embedded-graphics/latest/embedded_graphics/primitives/struct.Circle.html);
-    /// the general projected ellipse is rasterized with
+    /// the general ellipse is rasterized with
     /// [`fill_ellipse_pixels`].
     ///
     /// See the [`DrawItem` example](DrawItem).

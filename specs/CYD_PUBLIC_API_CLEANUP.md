@@ -708,9 +708,10 @@ Address these concrete problems in severity order.
    Keep the supporting examples and tests honest while making this overview
    discoverable:
 
-   - the canonical `TileGrid` example must call and assert all three storage
-     sizing paths: `rectangle_pixel_count`, `max_rectangle_pixel_count`, and
-     `TileGrid::max_tile_pixel_count`, without discarded placeholder values;
+   - the canonical `TileGrid` example must show
+     `TileGrid::max_tile_pixel_count` together with the `for_each_tile` workflow;
+     keep `rectangle_pixel_count` and `max_rectangle_pixel_count` on focused
+     fixed-region storage paths instead of combining three separate use cases;
    - the hidden backend seam needs concise maintainer documentation rather than
      a synthetic platform-implementation example; and
    - the ESP and RP insufficient-buffer regression tests must execute against
@@ -776,12 +777,10 @@ Address these concrete problems in severity order.
 
 #### Public Surface Decisions Requiring Audit
 
-- `TileGrid::top_left` and `TileGrid::size` are publicly mutable while the
-  constructor validates the grid counts. Audit whether mutation can bypass or
-  invalidate those invariants. Prefer private fields plus `top_left`, `size`,
-  or `rectangle` getters unless a demonstrated application needs struct-literal
-  construction or mutation. Also evaluate `TileGrid::new(rectangle, columns,
-  rows)` as the clearer constructor shape.
+- Resolved: `TileGrid` stores one private `Rectangle`, exposes it through
+  `rectangle()`, and accepts it directly in
+  `TileGrid::new(rectangle, columns, rows)`. No downstream struct construction
+  or field mutation required the previous public `top_left` and `size` fields.
 - Audit application use of `CydFrame::tile_top_left`. Its rendered semantics are
   translation plumbing, and ordinary tiled drawing is already translated by
   `for_each_tile`. Move it to the backend seam or remove it if no supported
@@ -868,20 +867,16 @@ pass:
    `display` and `touch` fields. Review the fields and establish one
    component-access story; do not carry two equal paths merely for
    compatibility.
-3. **Questionable public visibility — `TileGrid` mutation.** Public mutable
-   `top_left` and `size` can change the geometry after constructor validation.
-   Search downstream struct-literal and mutation use, then prefer private fields
-   with getters (and consider `TileGrid::new(rectangle, columns, rows)`) if no
-   demonstrated application requires mutation.
-4. **Implementation machinery — `CydFrame::tile_top_left`.** Ordinary tiled
+3. **Implementation machinery — `CydFrame::tile_top_left`.** Ordinary tiled
    drawing is already translated by `for_each_tile`; no application-shaped
    example needs to inspect the translation offset. Search downstream uses and
    move this method to the platform-author seam or remove it if only backends
    require it.
-5. **Resolved nameability — `PlacedImage565`.** Downstream application code
+4. **Resolved nameability — `PlacedImage565`.** Downstream application code
    uses `Image565Fixed::at(...).draw_masked(...)`, so the positioned-image API
-   remains supported. `PlacedImage565` is now re-exported from `cyd::display`
-   and has a canonical public page documenting ordinary and masked drawing.
+   remains supported. `PlacedImage565` is a documented supporting adapter
+   returned by `Image565Fixed::at`; callers normally use it without naming or
+   storing the type.
 
 `DisplayBackend` remains technically public because separate platform crates
 require the seam, but its module is hidden from normal Rustdoc browsing and no

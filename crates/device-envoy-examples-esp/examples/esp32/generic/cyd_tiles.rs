@@ -23,6 +23,7 @@ use embassy_time::{Duration, Timer};
 use embedded_graphics::{
     geometry::{Point, Size},
     pixelcolor::{Rgb565, Rgb888},
+    primitives::Rectangle,
 };
 use esp_backtrace as _;
 use log::info;
@@ -76,7 +77,11 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     let palette = [Rgb565::new(6, 20, 10), Rgb565::new(2, 10, 25)];
 
-    let grid = TileGrid::new(Point::zero(), Size::new(320, 240), TILE_COLUMNS, TILE_ROWS);
+    let grid = TileGrid::new(
+        Rectangle::new(Point::zero(), Size::new(320, 240)),
+        TILE_COLUMNS,
+        TILE_ROWS,
+    );
 
     loop {
         let mut tile_index: usize = 0;

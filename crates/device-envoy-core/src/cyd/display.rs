@@ -26,7 +26,7 @@ use crate::pixel_target::PixelTarget;
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
-pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, PlacedImage565, mask_byte_count};
+pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, MaskedDrawable, mask_byte_count};
 
 /// Embeds and decodes a supported TGA file into an [`Image888Fixed`] at compile
 /// time.

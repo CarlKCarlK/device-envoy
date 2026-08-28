@@ -536,21 +536,8 @@ frame.flush().await?;
     /// reusable frame and flush sequence, so callers do not need to handle lending iterator
     /// lifetimes. This is the primary low-memory drawing workflow.
     ///
-    /// ```rust,no_run
-    /// use device_envoy_core::{cyd::{CydDisplay, display::CydFrame, display::tiling::TileGrid}, UnwrapInfallible};
-    /// use embedded_graphics::{Drawable, pixelcolor::Rgb565, prelude::{Point, Primitive, RgbColor, Size}, primitives::{PrimitiveStyle, Rectangle}};
-    ///
-    /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
-    ///     let grid = TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3);
-    ///     display.for_each_tile(grid, |frame| {
-    ///         frame.fill(Rgb565::BLUE);
-    ///         Rectangle::new(Point::new(12, 18), Size::new(20, 12))
-    ///             .into_styled(PrimitiveStyle::with_fill(Rgb565::WHITE))
-    ///             .draw(frame)
-    ///             .unwrap_infallible();
-    ///     }).await
-    /// }
-    /// ```
+    /// See the visual [`TileGrid`](display::tiling::TileGrid) example for grid
+    /// construction, buffer sizing, and a scene drawn across tile boundaries.
     fn for_each_tile<'a, F>(
         &'a mut self,
         grid: display::tiling::TileGrid,
@@ -717,7 +704,11 @@ mod tests {
     #[test]
     fn tiled_frames_use_screen_tile_top_left() {
         let mut cyd = TestCyd;
-        let grid = display::tiling::TileGrid::new(Point::new(10, 20), Size::new(8, 6), 2, 2);
+        let grid = display::tiling::TileGrid::new(
+            Rectangle::new(Point::new(10, 20), Size::new(8, 6)),
+            2,
+            2,
+        );
         let mut tiles = display::tiling::Tiles::new(&mut cyd, grid);
 
         {

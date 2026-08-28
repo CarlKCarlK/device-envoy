@@ -181,7 +181,11 @@ pub(crate) struct CydEspUncalibrated {
 /// # use embedded_graphics::{prelude::{Point, Size}, primitives::Rectangle};
 /// const STATUS_REGION: Rectangle = Rectangle::new(Point::new(0, 0), Size::new(160, 40));
 /// const STATUS_PIXELS: usize = rectangle_pixel_count(STATUS_REGION);
-/// const GRID: TileGrid = TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3);
+/// const GRID: TileGrid = TileGrid::new(
+///     Rectangle::new(Point::zero(), Size::new(320, 240)),
+///     4,
+///     3,
+/// );
 /// static STATUS_STORAGE: CydStaticEsp<STATUS_PIXELS> = CydEsp::new_static();
 /// static TILE_STORAGE: CydStaticEsp<{ GRID.max_tile_pixel_count() }> = CydEsp::new_static();
 /// # #[panic_handler]

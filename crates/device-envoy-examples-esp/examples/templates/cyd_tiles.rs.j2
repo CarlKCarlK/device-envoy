@@ -27,7 +27,11 @@ use core::{convert::Infallible, fmt::Write};
 
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
-use embedded_graphics::{geometry::{Point, Size}, pixelcolor::{Rgb565, Rgb888}};
+use embedded_graphics::{
+    geometry::{Point, Size},
+    pixelcolor::{Rgb565, Rgb888},
+    primitives::Rectangle,
+};
 use esp_backtrace as _;
 use log::info;
 
@@ -83,8 +87,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     ];
 
     let grid = TileGrid::new(
-        Point::zero(),
-        Size::new(320, 240),
+        Rectangle::new(Point::zero(), Size::new(320, 240)),
         TILE_COLUMNS,
         TILE_ROWS,
     );

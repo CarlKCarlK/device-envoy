@@ -144,7 +144,7 @@ fn cyd_drawing_strategies_produce_identical_framebuffers()
         let mut maximum_dimensions = (0, 0);
         display
             .for_each_tile(
-                TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3),
+                TileGrid::new(Rectangle::new(Point::zero(), Size::new(320, 240)), 4, 3),
                 |frame| {
                     let frame_size = frame.rectangle().size;
                     maximum_dimensions.0 = maximum_dimensions.0.max(frame_size.width);
@@ -182,8 +182,8 @@ fn cyd_drawing_strategies_produce_identical_framebuffers()
         Rectangle::new(Point::zero(), Size::new(160, 120)),
         Rectangle::new(Point::new(160, 120), Size::new(160, 120)),
     );
-    let tile_pixels =
-        TileGrid::new(Point::zero(), Size::new(320, 240), 4, 3).max_tile_pixel_count();
+    let tile_pixels = TileGrid::new(Rectangle::new(Point::zero(), Size::new(320, 240)), 4, 3)
+        .max_tile_pixel_count();
     assert_eq!(
         (full_pixels, largest_region_pixels, tile_pixels),
         (76800, 19200, 6400)

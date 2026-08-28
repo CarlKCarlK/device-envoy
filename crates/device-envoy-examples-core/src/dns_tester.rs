@@ -451,14 +451,15 @@ where
     let mut frame = display.frame_mut(rectangle);
     DrawItem::Bitmap {
         view: bitmap,
-        top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+        top_left: Point::zero(),
     }
     .draw(&mut frame);
-    let position = match slot.alignment {
-        Alignment::Left => Point::zero(),
-        Alignment::Center => Point::new((rectangle.size.width / 2) as i32, 0),
-        Alignment::Right => Point::new(rectangle.size.width as i32, 0),
-    };
+    let position = rectangle.top_left
+        + match slot.alignment {
+            Alignment::Left => Point::zero(),
+            Alignment::Center => Point::new((rectangle.size.width / 2) as i32, 0),
+            Alignment::Right => Point::new(rectangle.size.width as i32, 0),
+        };
     Text::with_text_style(
         text,
         position,
@@ -777,7 +778,7 @@ where
         .build();
     Text::with_text_style(
         text,
-        Point::new((rectangle.size.width / 2) as i32, 0),
+        rectangle.top_left + Point::new((rectangle.size.width / 2) as i32, 0),
         MonoTextStyle::new(font, Rgb565::from(VALUE_TEXT)),
         text_style,
     )

@@ -149,11 +149,10 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
             .map_err(|_| super::Error::FlushFrameBuffer)
     }
 
-    pub(crate) fn make_frame_with_tile_top_left<'a>(
+    pub(crate) fn make_frame<'a>(
         &'a mut self,
         pixel_buffer: &'a mut dyn DynPixelBuffer,
         rectangle: Rectangle,
-        tile_top_left: Point,
         background565: Rgb565,
         foreground565: Rgb565,
         font: &'static MonoFont<'static>,
@@ -167,7 +166,6 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
             display: self,
             view,
             rectangle,
-            tile_top_left,
             background565,
             foreground565,
             font,

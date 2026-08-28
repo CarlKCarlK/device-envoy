@@ -624,11 +624,7 @@ impl crate::cyd::backend::DisplayBackend for CydDisplayWasm {
     where
         Self: 'a;
 
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> Self::Frame<'_> {
+    fn create_frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
         let size = rectangle.size;
         let pixel_count = size.width as usize * size.height as usize;
         let pixels = vec![self.background565.into_storage(); pixel_count];
@@ -636,7 +632,6 @@ impl crate::cyd::backend::DisplayBackend for CydDisplayWasm {
             context: &self.context,
             pixels,
             rectangle,
-            tile_top_left,
             background565: self.background565,
             foreground565: self.foreground565,
             font: self.font,
@@ -757,8 +752,8 @@ fn push_rgb565_rgba(bytes: &mut Vec<u8>, pixel: u16) {
 
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
 ///
-/// The frame rectangle and [`CydFrame::tile_top_left`]
-/// use logical display coordinates. The inherent [`fill`](Self::fill) method
+/// The frame rectangle and all drawing coordinates use logical display
+/// coordinates. The inherent [`fill`](Self::fill) method
 /// is synchronous; the platform-neutral [`CydFrame::flush`]
 /// method is awaited and presents on the next browser animation frame.
 /// See the [`CydWasm` module example](crate::wasm).
@@ -768,9 +763,6 @@ pub struct CydFrameWasm<'a> {
     // Where this frame presents and how large it is: set from the `Rectangle`
     // passed to `frame_mut`, so `flush` needs no separate position argument.
     rectangle: Rectangle,
-    // Tile top-left in logical display coordinates. Drawing coordinates are
-    // translated by this point before reaching the local frame buffer.
-    tile_top_left: Point,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -786,11 +778,11 @@ impl CydFrameWasm<'_> {
     }
 
     fn local_x(&self, x: i32) -> Option<usize> {
-        usize::try_from(x.checked_sub(self.tile_top_left.x)?).ok()
+        usize::try_from(x.checked_sub(self.rectangle.top_left.x)?).ok()
     }
 
     fn local_y(&self, y: i32) -> Option<usize> {
-        usize::try_from(y.checked_sub(self.tile_top_left.y)?).ok()
+        usize::try_from(y.checked_sub(self.rectangle.top_left.y)?).ok()
     }
 
     /// Fill this browser frame's local RGB565 buffer and return `self`.
@@ -858,21 +850,21 @@ impl DrawTarget for CydFrameWasm<'_> {
 
 impl Dimensions for CydFrameWasm<'_> {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(self.tile_top_left, self.rectangle.size)
+        self.rectangle
     }
 }
 
 impl PixelTarget for CydFrameWasm<'_> {
     fn width(&self) -> usize {
-        usize::try_from(self.tile_top_left.x)
-            .expect("tile top-left x must be non-negative")
+        usize::try_from(self.rectangle.top_left.x)
+            .expect("frame top-left x must be non-negative")
             .checked_add(CydFrameWasm::width(self))
             .expect("frame width must fit in usize")
     }
 
     fn height(&self) -> usize {
-        usize::try_from(self.tile_top_left.y)
-            .expect("tile top-left y must be non-negative")
+        usize::try_from(self.rectangle.top_left.y)
+            .expect("frame top-left y must be non-negative")
             .checked_add(CydFrameWasm::height(self))
             .expect("frame height must fit in usize")
     }
@@ -911,10 +903,6 @@ impl PixelTarget for CydFrameWasm<'_> {
 impl CydFrame for CydFrameWasm<'_> {
     type Error = Infallible;
 
-    fn tile_top_left(&self) -> Point {
-        self.tile_top_left
-    }
-
     fn rectangle(&self) -> Rectangle {
         self.rectangle
     }
@@ -940,7 +928,7 @@ impl CydFrame for CydFrameWasm<'_> {
 
     fn write_text(&mut self, text: &str) -> &mut Self {
         let style = MonoTextStyle::new(self.font, self.foreground565);
-        Text::with_baseline(text, Point::zero(), style, Baseline::Top)
+        Text::with_baseline(text, self.rectangle.top_left, style, Baseline::Top)
             .draw(self)
             .expect("drawing onto an Infallible frame cannot fail");
         self

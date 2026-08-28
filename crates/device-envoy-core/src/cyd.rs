@@ -173,119 +173,69 @@ pub trait CydTouch: Sized {
 
 /// A CYD display.
 ///
-/// The screen is a fixed 320×240 RGB565 panel. `CydDisplay` has three drawing
-/// mechanisms and four common workflows: full-screen and regional buffered
-/// frames, callback-based tiled replay, and contiguous-pixel streaming. Start
-/// with the [`CydDisplay::frame_mut`] example, which shows the normal
-/// buffered-frame path. See
-/// the [CYD implementations](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1)
-/// for `CydEsp`, `CydRp`, `CydWasm`, and `CydMemory`.
-/// Buffered [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html)
-/// values can be drawn into and flushed to any rectangle on screen. Callback-tiled frames (see
-/// [`CydDisplay::for_each_tile`]) cover the screen or a rectangle in smaller
-/// pieces when memory is tight. Contiguous-pixel methods (see
-/// [`CydDisplay::fill_contiguous`]) stream pixels straight to the screen with
-/// virtually no buffering.
-///
-/// Rustdoc shows `DisplayBackend` as a supertrait because Device Envoy's
-/// platform crates provide the low-level frame construction. Application code
-/// does not use that internal interface.
-///
-/// The workflows have deliberately different coordinate and replay semantics:
-/// full-screen frames render a complete scene in frame-local coordinates; regional frames update
-/// independent rectangles and use coordinates local to each rectangle; tiled callbacks replay a
-/// complete scene once per tile while accepting logical display coordinates; and streaming generates the
-/// complete row-major raster directly. The native desktop comparison test exercises the same boundary-
-/// crossing scene through all four paths.
-///
-/// Decision guide: use `full_frame_mut()` plus `flush().await` for a normal
-/// frame (`SCREEN_PIXELS` pixels); use `frame_mut(region)` plus
-/// `flush().await` for an independently updated region (the region's pixel
-/// count); use `for_each_tile(grid, draw)` when the synchronous scene can be
-/// replayed and storage is `grid.max_tile_pixel_count()`; use
-/// `fill_contiguous(region, pixels)` or `fill_contiguous_full(pixels)` only
-/// when the application already produces a row-major raster. The first two
-/// workflows draw in frame-local coordinates, tiling draws in logical display
-/// coordinates, and streaming does not replay a scene or borrow frame storage.
+/// The screen is a fixed 320×240 RGB565 panel. Start with the
+/// [`CydDisplay::frame_mut`] example for the normal buffered drawing path. The
+/// [drawing-strategy guide](index.html#choose-a-drawing-strategy) compares
+/// full-screen and regional buffering, tiled replay, and contiguous-pixel
+/// streaming.
 ///
 pub trait CydDisplay: backend::DisplayBackend {
-    /// Oriented screen size for the configured orientation.
+    /// Screen size after applying the configured [`Orientation`]:
+    /// 320×240 in landscape or 240×320 in portrait.
     ///
     /// ```rust,no_run
     /// use device_envoy_core::cyd::CydDisplay;
-    /// use embedded_graphics::prelude::RgbColor;
     ///
-    /// fn inspect<D: CydDisplay>(display: &D) {
-    ///     let size = display.screen_size();
-    ///     assert!(size.width > 0 && size.height > 0);
-    ///     let background = display.background_color();
-    ///     let foreground = display.foreground_color();
-    ///     assert_eq!(display.background_565(), display.to_rgb565(background));
-    ///     assert_eq!(display.foreground_565(), display.to_rgb565(foreground));
-    ///     assert_ne!(foreground, embedded_graphics::pixelcolor::Rgb888::BLACK);
-    /// }
+    /// # fn inspect(display: &impl CydDisplay) {
+    /// let size = display.screen_size();
+    /// assert!(
+    ///     (size.width == 320 && size.height == 240)
+    ///         || (size.width == 240 && size.height == 320)
+    /// );
+    /// # }
     /// ```
-    ///
-    #[cfg_attr(
-        feature = "host",
-        doc = r#"
-
-```rust
-use device_envoy_core::cyd::CydDisplay;
-use device_envoy_core::memory::CydMemory;
-use embedded_graphics::pixelcolor::Rgb888;
-# use embedded_graphics::{
-#     mono_font::ascii::FONT_9X15_BOLD,
-#     prelude::{RgbColor, Size},
-# };
-let display = CydMemory::new(
-    Size::new(320, 240),
-    Rgb888::BLACK,
-    Rgb888::WHITE,
-    &FONT_9X15_BOLD,
-)
-.display();
-assert_eq!(display.screen_size(), Size::new(320, 240));
-assert_eq!(display.background_565(), display.to_rgb565(display.background_color()));
-assert_eq!(display.foreground_565(), display.to_rgb565(display.foreground_color()));
-# Ok::<(), device_envoy_core::memory::Error>(())
-```
-"#
-    )]
     fn screen_size(&self) -> Size;
 
     /// The device default background color.
     ///
-    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::CydDisplay;
+    ///
+    /// # fn inspect(display: &impl CydDisplay) {
+    /// let background = display.background_color();
+    /// let foreground = display.foreground_color();
+    /// assert_eq!(display.background_565(), display.to_rgb565(background));
+    /// assert_eq!(display.foreground_565(), display.to_rgb565(foreground));
+    /// # }
+    /// ```
     fn background_color(&self) -> Rgb888;
 
     /// The device default foreground/text color.
     ///
-    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
+    /// See the [color getter example](CydDisplay::background_color).
     fn foreground_color(&self) -> Rgb888;
 
     /// The device default background color in the native `Rgb565` format.
     ///
-    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
+    /// See the [color getter example](CydDisplay::background_color).
     fn background_565(&self) -> Rgb565;
 
     /// The device default foreground/text color in the native `Rgb565` format.
     ///
-    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
+    /// See the [color getter example](CydDisplay::background_color).
     fn foreground_565(&self) -> Rgb565;
 
     /// Convert an `Rgb888` color to the device's native `Rgb565` format.
     ///
-    /// See the [`CydDisplay::screen_size`] example covering the device getter family.
+    /// See the [color getter example](CydDisplay::background_color).
     fn to_rgb565(&self, color: Rgb888) -> Rgb565 {
         rgb565_from_rgb888(color)
     }
 
     /// Borrow a frame covering `rectangle`, cleared to the device background color.
     ///
-    /// Drawing commands use coordinates local to the frame's rectangle. Use
-    /// [`CydDisplay::for_each_tile`] when replaying a complete logical-display-coordinate
-    /// scene into smaller buffers.
+    /// All drawing commands use logical display coordinates. The frame merely
+    /// restricts the drawable region and the pixels buffered for presentation.
     ///
     /// See the [frame example](CydDisplay::frame_mut).
     ///
@@ -349,7 +299,7 @@ frame.flush().await?;
         doc = "\n![CYD frame preview][cyd_frame_mut_preview]\n"
     )]
     fn frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
-        backend::DisplayBackend::frame_mut_with_tile_top_left(self, rectangle, Point::zero())
+        backend::DisplayBackend::create_frame_mut(self, rectangle)
     }
 
     /// Borrow a full-screen frame, cleared to the device background color.
@@ -362,7 +312,7 @@ frame.flush().await?;
     /// Fill `rectangle` immediately in logical display coordinates.
     ///
     /// Unlike [`display::CydFrame::fill`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.fill), this is a device-level operation rather than a
-    /// frame-local buffered draw. Implementations clip to the logical display and
+    /// frame-buffered draw. Implementations clip to the logical display and
     /// treat an empty intersection as a no-op.
     ///
     /// The following example covers the immediate and contiguous operations:
@@ -575,7 +525,7 @@ mod tests {
     use embedded_graphics::pixelcolor::WebColors;
     use embedded_graphics::{
         Pixel,
-        prelude::{DrawTarget, OriginDimensions},
+        prelude::{Dimensions, DrawTarget},
     };
 
     // TODO The shared `linkage-blaze-cyd-memory` fake cannot replace this unit-test
@@ -587,22 +537,14 @@ mod tests {
 
     struct TestFrame {
         rectangle: Rectangle,
-        tile_top_left: Point,
     }
 
     impl backend::DisplayBackend for TestCyd {
         type Error = Infallible;
         type Frame<'a> = TestFrame;
 
-        fn frame_mut_with_tile_top_left(
-            &mut self,
-            rectangle: Rectangle,
-            tile_top_left: Point,
-        ) -> TestFrame {
-            TestFrame {
-                rectangle,
-                tile_top_left,
-            }
+        fn create_frame_mut(&mut self, rectangle: Rectangle) -> TestFrame {
+            TestFrame { rectangle }
         }
     }
 
@@ -659,19 +601,19 @@ mod tests {
         }
     }
 
-    impl OriginDimensions for TestFrame {
-        fn size(&self) -> Size {
-            self.rectangle.size
+    impl Dimensions for TestFrame {
+        fn bounding_box(&self) -> Rectangle {
+            self.rectangle
         }
     }
 
     impl PixelTarget for TestFrame {
         fn width(&self) -> usize {
-            self.rectangle.size.width as usize
+            (self.rectangle.top_left.x as usize) + self.rectangle.size.width as usize
         }
 
         fn height(&self) -> usize {
-            self.rectangle.size.height as usize
+            (self.rectangle.top_left.y as usize) + self.rectangle.size.height as usize
         }
 
         fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
@@ -679,10 +621,6 @@ mod tests {
 
     impl CydFrame for TestFrame {
         type Error = Infallible;
-
-        fn tile_top_left(&self) -> Point {
-            self.tile_top_left
-        }
 
         fn rectangle(&self) -> Rectangle {
             self.rectangle
@@ -710,7 +648,7 @@ mod tests {
     }
 
     #[test]
-    fn tiled_frames_use_screen_tile_top_left() {
+    fn tiled_frames_use_logical_display_rectangles() {
         let mut cyd = TestCyd;
         let grid = display::tiling::TileGrid::new(
             Rectangle::new(Point::new(10, 20), Size::new(8, 6)),
@@ -725,7 +663,7 @@ mod tests {
                 first.rectangle(),
                 Rectangle::new(Point::new(10, 20), Size::new(4, 3))
             );
-            assert_eq!(first.tile_top_left(), Point::new(10, 20));
+            assert_eq!(first.bounding_box(), first.rectangle());
         }
 
         {
@@ -734,7 +672,7 @@ mod tests {
                 second.rectangle(),
                 Rectangle::new(Point::new(14, 20), Size::new(4, 3))
             );
-            assert_eq!(second.tile_top_left(), Point::new(14, 20));
+            assert_eq!(second.bounding_box(), second.rectangle());
         }
 
         let third = tiles.next().expect("third tile exists");
@@ -742,6 +680,6 @@ mod tests {
             third.rectangle(),
             Rectangle::new(Point::new(10, 23), Size::new(4, 3))
         );
-        assert_eq!(third.tile_top_left(), Point::new(10, 23));
+        assert_eq!(third.bounding_box(), third.rectangle());
     }
 }

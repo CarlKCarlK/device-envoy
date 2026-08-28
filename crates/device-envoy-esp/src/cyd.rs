@@ -247,9 +247,6 @@ pub struct CydFrameEsp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     // Where this frame presents and how large it is: set from the `Rectangle`
     // passed to `frame_mut`, so `flush` needs no separate position argument.
     rectangle: Rectangle,
-    // Tile top-left in logical display coordinates. Drawing coordinates are translated
-    // by this point before reaching the local frame buffer.
-    tile_top_left: Point,
     // Default foreground color and font, copied from the owning `CydDisplayEsp`, so
     // `write_text` can render with the device default style.
     pub(crate) background565: Rgb565,
@@ -306,11 +303,11 @@ impl<'a, D: SpiDevice<u8>> CydFrameEsp<'a, D> {
     }
 
     fn local_x(&self, x: i32) -> Option<usize> {
-        usize::try_from(x.checked_sub(self.tile_top_left.x)?).ok()
+        usize::try_from(x.checked_sub(self.rectangle.top_left.x)?).ok()
     }
 
     fn local_y(&self, y: i32) -> Option<usize> {
-        usize::try_from(y.checked_sub(self.tile_top_left.y)?).ok()
+        usize::try_from(y.checked_sub(self.rectangle.top_left.y)?).ok()
     }
 }
 
@@ -345,21 +342,21 @@ impl<D: SpiDevice<u8>> DrawTarget for CydFrameEsp<'_, D> {
 
 impl<D: SpiDevice<u8>> Dimensions for CydFrameEsp<'_, D> {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(self.tile_top_left, self.view.size())
+        self.rectangle
     }
 }
 
 impl<D: SpiDevice<u8>> PixelTarget for CydFrameEsp<'_, D> {
     fn width(&self) -> usize {
-        usize::try_from(self.tile_top_left.x)
-            .expect("tile top-left x must be non-negative")
+        usize::try_from(self.rectangle.top_left.x)
+            .expect("frame top-left x must be non-negative")
             .checked_add(self.width())
             .expect("frame width must fit in usize")
     }
 
     fn height(&self) -> usize {
-        usize::try_from(self.tile_top_left.y)
-            .expect("tile top-left y must be non-negative")
+        usize::try_from(self.rectangle.top_left.y)
+            .expect("frame top-left y must be non-negative")
             .checked_add(self.height())
             .expect("frame height must fit in usize")
     }
@@ -837,15 +834,10 @@ impl<D: SpiDevice<u8>> backend::DisplayBackend for CydDisplayEsp<D> {
     where
         Self: 'a;
 
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> Self::Frame<'_> {
-        self.display.make_frame_with_tile_top_left(
+    fn create_frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
+        self.display.make_frame(
             self.pixel_buffer,
             rectangle,
-            tile_top_left,
             self.background565,
             self.foreground565,
             self.font,
@@ -942,10 +934,6 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
 
 impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
     type Error = Error;
-
-    fn tile_top_left(&self) -> Point {
-        self.tile_top_left
-    }
 
     fn rectangle(&self) -> Rectangle {
         self.rectangle

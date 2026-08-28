@@ -313,7 +313,6 @@ pub struct CydFrameMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
     screen_size: Size,
     rectangle: Rectangle,
-    tile_top_left: Point,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -742,17 +741,12 @@ impl crate::cyd::backend::DisplayBackend for CydDisplayMemory {
 
     type Frame<'a> = CydFrameMemory;
 
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> Self::Frame<'_> {
+    fn create_frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
         let pixel_count = rectangle.size.width as usize * rectangle.size.height as usize;
         CydFrameMemory {
             shared: self.shared.clone(),
             screen_size: self.size,
             rectangle,
-            tile_top_left,
             background565: self.background565,
             foreground565: self.foreground565,
             font: self.font,
@@ -828,11 +822,11 @@ impl CydFrameMemory {
     }
 
     fn local_x(&self, position_x: i32) -> Option<usize> {
-        usize::try_from(position_x.checked_sub(self.tile_top_left.x)?).ok()
+        usize::try_from(position_x.checked_sub(self.rectangle.top_left.x)?).ok()
     }
 
     fn local_y(&self, position_y: i32) -> Option<usize> {
-        usize::try_from(position_y.checked_sub(self.tile_top_left.y)?).ok()
+        usize::try_from(position_y.checked_sub(self.rectangle.top_left.y)?).ok()
     }
 
     fn flush_now(&mut self) -> Result<(), Error> {
@@ -891,21 +885,21 @@ impl DrawTarget for CydFrameMemory {
 
 impl Dimensions for CydFrameMemory {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(self.tile_top_left, self.rectangle.size)
+        self.rectangle
     }
 }
 
 impl PixelTarget for CydFrameMemory {
     fn width(&self) -> usize {
-        usize::try_from(self.tile_top_left.x)
-            .expect("tile top-left x must be non-negative")
+        usize::try_from(self.rectangle.top_left.x)
+            .expect("frame top-left x must be non-negative")
             .checked_add(self.width())
             .expect("frame width must fit in usize")
     }
 
     fn height(&self) -> usize {
-        usize::try_from(self.tile_top_left.y)
-            .expect("tile top-left y must be non-negative")
+        usize::try_from(self.rectangle.top_left.y)
+            .expect("frame top-left y must be non-negative")
             .checked_add(self.height())
             .expect("frame height must fit in usize")
     }
@@ -932,10 +926,6 @@ impl PixelTarget for CydFrameMemory {
 impl CydFrame for CydFrameMemory {
     type Error = Error;
 
-    fn tile_top_left(&self) -> Point {
-        self.tile_top_left
-    }
-
     fn rectangle(&self) -> Rectangle {
         self.rectangle
     }
@@ -952,7 +942,7 @@ impl CydFrame for CydFrameMemory {
     fn write_text(&mut self, text: &str) -> &mut Self {
         Text::with_baseline(
             text,
-            Point::zero(),
+            self.rectangle.top_left,
             MonoTextStyle::new(self.font, self.foreground565),
             Baseline::Top,
         )
@@ -1458,11 +1448,7 @@ mod tests {
         let memory_cyd = test_cyd_memory();
         {
             let mut display = memory_cyd.display();
-            let mut frame = crate::cyd::backend::DisplayBackend::frame_mut_with_tile_top_left(
-                &mut display,
-                Rectangle::new(Point::new(10, 20), Size::new(4, 3)),
-                Point::new(10, 20),
-            );
+            let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 20), Size::new(4, 3)));
             frame
                 .draw_iter([Pixel(Point::new(11, 21), Rgb565::CSS_RED)])
                 .expect("drawing into memory frame should succeed");

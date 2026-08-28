@@ -339,14 +339,9 @@ impl<C: CydDisplay> Tiles<'_, C> {
                 self.row += 1;
             }
             if let Some(rectangle) = rectangle {
-                let tile_top_left = rectangle.top_left;
-                return Some(
-                    super::super::backend::DisplayBackend::frame_mut_with_tile_top_left(
-                        self.cyd,
-                        rectangle,
-                        tile_top_left,
-                    ),
-                );
+                return Some(super::super::backend::DisplayBackend::create_frame_mut(
+                    self.cyd, rectangle,
+                ));
             }
         }
     }

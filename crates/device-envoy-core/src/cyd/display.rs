@@ -15,11 +15,7 @@ mod tga;
 pub mod tiling;
 
 use core::{convert::Infallible, future::Future};
-use embedded_graphics::{
-    pixelcolor::Rgb565,
-    prelude::{DrawTarget, Point},
-    primitives::Rectangle,
-};
+use embedded_graphics::{pixelcolor::Rgb565, prelude::DrawTarget, primitives::Rectangle};
 
 use crate::pixel_target::PixelTarget;
 
@@ -54,6 +50,8 @@ pub use crate::__cyd_tga as tga;
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
 ///
 /// Also a [`PixelTarget`] so projected linkage draw items can render into it.
+/// All drawing coordinates are logical display coordinates. A frame only
+/// restricts the drawable region and the pixels buffered for presentation.
 /// See the [Cyd trait documentation](super::Cyd) for an end-to-end example that
 /// creates, writes, and flushes a frame.
 ///
@@ -61,19 +59,13 @@ pub use crate::__cyd_tga as tga;
 /// use device_envoy_core::cyd::display::CydFrame;
 /// use embedded_graphics::{
 ///     pixelcolor::Rgb565,
-///     prelude::RgbColor,
+///     prelude::{Dimensions, RgbColor},
 ///     primitives::Rectangle,
 /// };
 ///
 /// fn copy_once<F: CydFrame>(frame: &mut F, pixels: &[u16]) -> device_envoy_core::Result<()> {
 ///     let rectangle = frame.rectangle();
-///     let tile_top_left = frame.tile_top_left();
-///     let width = frame.width();
-///     let height = frame.height();
-///     assert_eq!(rectangle.size.width as usize, width);
-///     assert_eq!(rectangle.size.height as usize, height);
-///     let local_rectangle = Rectangle::new(rectangle.top_left - tile_top_left, rectangle.size);
-///     assert_eq!(local_rectangle.size, rectangle.size);
+///     assert_eq!(frame.bounding_box(), rectangle);
 ///     frame.fill(Rgb565::BLACK);
 ///     CydFrame::clear(frame);
 ///     frame.write_text("CYD");
@@ -88,18 +80,11 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// See the compiled [CydFrame example](trait.CydFrame.html).
     type Error;
 
-    /// This frame's tile top-left in logical display coordinates.
-    ///
-    /// This point is subtracted from input drawing commands before pixels reach
-    /// this frame's local backing buffer. Regular, non-tiled frames use `(0, 0)`.
-    ///
-    /// See the [`CydFrame` example](CydFrame).
-    #[must_use]
-    fn tile_top_left(&self) -> Point {
-        Point::zero()
-    }
-
     /// This frame's rectangle (top-left and size) in logical display coordinates.
+    ///
+    /// Embedded-graphics'
+    /// [`Dimensions::bounding_box`](https://docs.rs/embedded-graphics/latest/embedded_graphics/geometry/trait.Dimensions.html#tymethod.bounding_box)
+    /// returns this same rectangle.
     ///
     /// See the [`CydFrame` example](CydFrame).
     fn rectangle(&self) -> Rectangle;
@@ -117,8 +102,8 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// See the [`CydFrame` example](CydFrame).
     fn clear(&mut self) -> &mut Self;
 
-    /// Draw `text` at frame-local `(0, 0)` using the device default font and
-    /// foreground color. Returns `&mut Self` for chaining.
+    /// Draw `text` at the frame rectangle's top-left using the device default
+    /// font and foreground color. Returns `&mut Self` for chaining.
     ///
     /// See the [`CydFrame` example](CydFrame).
     fn write_text(&mut self, text: &str) -> &mut Self;

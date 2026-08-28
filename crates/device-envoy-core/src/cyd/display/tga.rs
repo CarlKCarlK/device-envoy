@@ -217,7 +217,9 @@ pub struct MaskFixed<const W: usize, const H: usize, const MASK_N: usize> {
 
 /// Draws a fixed RGB565 image through a matching binary mask.
 ///
-/// This image-specific counterpart to [`Drawable`] is implemented for both an
+/// This image-specific counterpart to
+/// [`Drawable`](https://docs.rs/embedded-graphics/latest/embedded_graphics/trait.Drawable.html)
+/// is implemented for both an
 /// [`Image565Fixed`] and the positioned value returned by
 /// [`Image565Fixed::at`]. The `W` and `H` const arguments require the image and
 /// [`MaskFixed`] dimensions to match at compile time. It is intentionally not
@@ -225,40 +227,14 @@ pub struct MaskFixed<const W: usize, const H: usize, const MASK_N: usize> {
 /// correspond to a fixed, row-major mask.
 ///
 /// Import this trait to make [`draw_masked`](MaskedDrawable::draw_masked)
-/// available. The positioned adapter normally remains an unnamed temporary:
-///
-/// ```rust,no_run
-/// use device_envoy_core::cyd::display::{
-///     Image565Fixed, MaskFixed, MaskedDrawable,
-/// };
-/// use embedded_graphics::{
-///     Drawable,
-///     draw_target::DrawTarget,
-///     pixelcolor::Rgb565,
-///     prelude::Point,
-/// };
-///
-/// fn draw<const W: usize, const H: usize, const N: usize, const MASK_N: usize, D>(
-///     image: &Image565Fixed<W, H, N>,
-///     mask: &MaskFixed<W, H, MASK_N>,
-///     target: &mut D,
-///     position: Point,
-/// ) -> Result<(), D::Error>
-/// where
-///     D: DrawTarget<Color = Rgb565>,
-/// {
-///     image.draw(target)?;
-///     image.draw_masked(mask, target)?;
-///     image.at(position).draw(target)?;
-///     image.at(position).draw_masked(mask, target)
-/// }
-/// ```
+/// available. See the visual [`MaskFixed` example](MaskFixed), which draws an
+/// opaque image beside its positioned, masked result.
 pub trait MaskedDrawable<const W: usize, const H: usize>: Drawable<Output = ()> {
     /// Draws the image, skipping pixels whose corresponding mask bits are clear.
     ///
     /// An [`Image565Fixed`] draws at `(0, 0)`. The value returned by
-    /// [`Image565Fixed::at`] draws at the supplied position. See the
-    /// [trait example](MaskedDrawable) for both forms.
+    /// [`Image565Fixed::at`] draws at the supplied position. See the visual
+    /// [`MaskFixed` example](MaskFixed) for the masked output.
     fn draw_masked<const MASK_N: usize, D>(
         &self,
         mask: &MaskFixed<W, H, MASK_N>,
@@ -393,9 +369,11 @@ impl<const W: usize, const H: usize, const N: usize> Image565Fixed<W, H, N> {
     ///
     /// Drawing the image directly places it at [`Point::zero`]. This method
     /// changes that drawing position without copying or modifying the image.
-    /// The returned value supports [`Drawable::draw`] and
-    /// [`MaskedDrawable::draw_masked`]. See the
-    /// [`MaskedDrawable` example](MaskedDrawable) for both forms.
+    /// The returned value supports
+    /// [`Drawable::draw`](https://docs.rs/embedded-graphics/latest/embedded_graphics/trait.Drawable.html#tymethod.draw)
+    /// and
+    /// [`MaskedDrawable::draw_masked`]. See the visual
+    /// [`MaskFixed` example](MaskFixed) for the positioned output.
     pub const fn at(&self, top_left: Point) -> impl MaskedDrawable<W, H, Color = Rgb565> + '_ {
         PlacedImage565 {
             image: self,

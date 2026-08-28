@@ -21,16 +21,10 @@ pub trait DisplayBackend {
     where
         Self: 'a;
 
-    /// Create a frame covering `rectangle`.
-    ///
-    /// `tile_top_left` is the logical display coordinate corresponding to the
-    /// frame's local origin. Pass `Point::zero()` for ordinary frame-local
-    /// drawing. Pass `rectangle.top_left` when replaying display-coordinate
-    /// drawing into a tile.
-    fn frame_mut_with_tile_top_left(
+    /// Create a frame covering `rectangle` in logical display coordinates.
+    fn create_frame_mut(
         &mut self,
         rectangle: embedded_graphics::primitives::Rectangle,
-        tile_top_left: embedded_graphics::prelude::Point,
     ) -> Self::Frame<'_>;
 }
 

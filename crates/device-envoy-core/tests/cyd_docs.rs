@@ -14,7 +14,7 @@ use embedded_graphics::{
     Drawable, Pixel,
     mono_font::ascii::FONT_9X15_BOLD,
     pixelcolor::{Rgb565, Rgb888},
-    prelude::{IntoStorage, Point, Primitive, RgbColor, Size},
+    prelude::{Dimensions, IntoStorage, Point, Primitive, RgbColor, Size},
     primitives::{PrimitiveStyle, Rectangle},
 };
 use std::error::Error;
@@ -39,28 +39,20 @@ fn generated_background_pixels() -> impl Iterator<Item = Rgb565> {
 }
 
 fn comparison_scene<F: CydFrame>(frame: &mut F) {
-    comparison_scene_local(frame, Point::zero());
-}
-
-fn comparison_scene_local<F: CydFrame>(frame: &mut F, screen_origin: Point) {
-    // `frame_mut` gives a regional frame local to its rectangle, so translate
-    // this screen-coordinate scene explicitly for that strategy. The tiled
-    // callback uses screen coordinates and therefore calls `comparison_scene`.
-    let translate = |point: Point| point - screen_origin;
     CydFrame::clear(frame);
-    Rectangle::new(translate(Point::new(21, 17)), Size::new(211, 67))
+    Rectangle::new(Point::new(21, 17), Size::new(211, 67))
         .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
         .draw(frame)
         .unwrap_infallible();
-    Rectangle::new(translate(Point::new(143, 91)), Size::new(119, 83))
+    Rectangle::new(Point::new(143, 91), Size::new(119, 83))
         .into_styled(PrimitiveStyle::with_fill(Rgb565::GREEN))
         .draw(frame)
         .unwrap_infallible();
-    Rectangle::new(translate(Point::new(271, 19)), Size::new(17, 39))
+    Rectangle::new(Point::new(271, 19), Size::new(17, 39))
         .into_styled(PrimitiveStyle::with_fill(Rgb565::BLUE))
         .draw(frame)
         .unwrap_infallible();
-    Pixel(translate(Point::new(306, 211)), Rgb565::WHITE)
+    Pixel(Point::new(306, 211), Rgb565::WHITE)
         .draw(frame)
         .unwrap_infallible();
 }
@@ -124,9 +116,10 @@ fn cyd_drawing_strategies_produce_identical_framebuffers()
         ] {
             let rectangle = Rectangle::new(top_left, Size::new(160, 120));
             let mut frame = display.frame_mut(rectangle);
+            assert_eq!(frame.bounding_box(), frame.rectangle());
             let frame_size = frame.rectangle().size;
             actual_dimensions.push((frame_size.width, frame_size.height));
-            comparison_scene_local(&mut frame, top_left);
+            comparison_scene(&mut frame);
             frame.flush().await?;
         }
         assert_eq!(actual_dimensions, [(160, 120); 4]);
@@ -146,6 +139,7 @@ fn cyd_drawing_strategies_produce_identical_framebuffers()
             .for_each_tile(
                 TileGrid::new(Rectangle::new(Point::zero(), Size::new(320, 240)), 4, 3),
                 |frame| {
+                    assert_eq!(frame.bounding_box(), frame.rectangle());
                     let frame_size = frame.rectangle().size;
                     maximum_dimensions.0 = maximum_dimensions.0.max(frame_size.width);
                     maximum_dimensions.1 = maximum_dimensions.1.max(frame_size.height);
@@ -312,7 +306,7 @@ fn cyd_application_preview_matches_expected() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+fn cyd_frame_logical_coordinates_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     let cyd_memory = futures_executor::block_on(async {
         let cyd_memory = CydMemory::new(
             Size::new(320, 240),
@@ -321,12 +315,7 @@ fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box
             &FONT_9X15_BOLD,
         );
         let mut display = cyd_memory.display();
-        let mut frame =
-            device_envoy_core::cyd::backend::DisplayBackend::frame_mut_with_tile_top_left(
-                &mut display,
-                Rectangle::new(Point::new(32, 24), Size::new(48, 32)),
-                Point::new(32, 24),
-            );
+        let mut frame = display.frame_mut(Rectangle::new(Point::new(32, 24), Size::new(48, 32)));
         frame.fill(Rgb565::GREEN);
         Rectangle::new(Point::new(36, 28), Size::new(6, 6))
             .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
@@ -345,7 +334,7 @@ fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box
     assert_framebuffer_matches_expected_png(
         &cyd_memory,
         env!("CARGO_MANIFEST_DIR"),
-        "cyd_frame_mut_with_tile_top_left_preview.png",
+        "cyd_frame_logical_coordinates_preview.png",
     )
 }
 

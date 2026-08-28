@@ -5,6 +5,13 @@
         "../device-envoy-core/docs/assets/cyd_application_preview.png"
     )
 )]
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "linkage_blaze_gallery",
+        "../device-envoy-core/docs/assets/linkage_blaze_gallery.png"
+    )
+)]
 //! Raspberry Pi Pico support for standalone Cheap Yellow Display (CYD) modules.
 //!
 //! These modules combine a 320×240 ILI9341 display with XPT2046 resistive
@@ -13,6 +20,7 @@
 //! calibrated-touch interfaces from
 //! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
 //! The ESP32, WebAssembly, and in-memory implementations share these interfaces.
+#![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]
 //!
 //! [Choose a constructor](#choose-a-constructor) explains how to construct a

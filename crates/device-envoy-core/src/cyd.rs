@@ -5,6 +5,13 @@
         "docs/assets/cyd_application_preview.png"
     )
 )]
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "linkage_blaze_gallery",
+        "docs/assets/linkage_blaze_gallery.png"
+    )
+)]
 //! Portable display and touch interfaces for Cheap Yellow Display (CYD)
 //! applications.
 //!
@@ -12,6 +19,7 @@
 //! calibrated touch input. Hardware, browser, and in-memory devices all provide
 //! the same [`Cyd`], [`CydDisplay`], [`CydTouch`], and
 //! [`CydFrame`] interfaces.
+#![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]
 #![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]
 #![doc = include_str!("../../../docs/cyd/implementations.md")]

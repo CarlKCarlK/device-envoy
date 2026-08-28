@@ -59,110 +59,77 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
 
 /// A display region divided into tiles for low-memory drawing.
 ///
-/// A grid describes how [`CydDisplay::for_each_tile`] divides one rectangle
-/// into reusable frame-sized pieces. It does not store pixels or draw by
-/// itself. The callback redraws the same screen-coordinate scene for each tile;
-/// the frame clips drawing to the current tile and is then flushed.
+/// [`CydDisplay::for_each_tile`] redraws the same logical-display-coordinate
+/// scene into each tile, clipping drawing to that tile before flushing it.
 ///
-/// The rectangle can cover the entire display or only a region of it. A
-/// nonzero top-left places the tiled region within the display—for example,
-/// below a header that should remain untouched. Drawing inside each callback
-/// still uses full-display coordinates.
-///
-/// The nominal tile size is calculated with ceiling division. If the region
-/// does not divide evenly, the final column or row is clipped to the region's
-/// right or bottom edge.
+/// The tiled region may cover the full display or only a subregion.
+/// Some tiles may be smaller when the region does not divide evenly.
 ///
 /// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::{
+///     UnwrapInfallible,
+///     cyd::{
+///         CydDisplay,
+///         display::{CydFrame, tiling::TileGrid},
+///     },
+/// };
+/// use embedded_graphics::{
+///     Drawable,
+///     pixelcolor::Rgb565,
+///     prelude::{Point, Primitive, RgbColor, Size},
+///     primitives::{Circle, Line, PrimitiveStyle, Rectangle},
+/// };
+///
+/// // Tile the entire 320 × 240 display. The grid could instead cover a subregion.
+/// const GRID: TileGrid = TileGrid::new(
+///     Rectangle::new(Point::zero(), Size::new(320, 240)),
+///     4, // columns
+///     3, // rows
+/// );
+/// const FRAME_PIXELS: usize = GRID.max_tile_pixel_count();
+///
+/// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+///     display
+///         .for_each_tile(GRID, |frame| {
+///             frame.fill(Rgb565::BLACK);
+///             Circle::new(Point::new(85, 45), 150)
+///                 .into_styled(PrimitiveStyle::with_fill(Rgb565::BLUE))
+///                 .draw(frame)
+///                 .unwrap_infallible();
+///             Line::new(Point::new(20, 210), Point::new(300, 30))
+///                 .into_styled(PrimitiveStyle::with_stroke(Rgb565::YELLOW, 5))
+///                 .draw(frame)
+///                 .unwrap_infallible();
+///             // Outline the current tile's frame rectangle so the tiling is visible.
+///             frame
+///                 .rectangle()
+///                 .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+///                 .draw(frame)
+///                 .unwrap_infallible();
+///         })
+///         .await
+/// }
+///
+/// assert_eq!(GRID.rectangle(), Rectangle::new(Point::zero(), Size::new(320, 240)));
+/// assert_eq!(GRID.columns(), 4);
+/// assert_eq!(GRID.rows(), 3);
+/// assert_eq!(GRID.tile_width(), 80);
+/// assert_eq!(GRID.tile_height(), 80);
+/// assert_eq!(FRAME_PIXELS, 80 * 80);
+/// ```
+///
+/// A `320 × 240` region split into `4 × 3` tiles uses one `80 × 80` frame buffer.
+/// The white outlines show the individual frames; the scene remains continuous
+/// across their boundaries.
 #[cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!("tile_grid", "docs/assets/tile_grid.png")
 )]
 #[cfg_attr(
-    feature = "host",
-    doc = r#"
-
-```rust
-use device_envoy_core::{
-    UnwrapInfallible,
-    cyd::{
-        CydDisplay,
-        display::{CydFrame, tiling::TileGrid},
-    },
-};
-use embedded_graphics::{
-    Drawable,
-    pixelcolor::Rgb565,
-    prelude::{Point, Primitive, RgbColor, Size},
-    primitives::{Circle, Line, PrimitiveStyle, Rectangle},
-};
-
-// Tile the entire 320 × 240 display. The rectangle could instead select a
-// subregion, such as the area below a header.
-const GRID: TileGrid = TileGrid::new(
-    Rectangle::new(Point::zero(), Size::new(320, 240)),
-    4, // columns
-    3, // rows
-);
-
-async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
-    display
-        .for_each_tile(GRID, |frame| {
-            // `frame` represents the current tile, but drawing still uses
-            // full-display coordinates; the frame clips to its tile.
-            frame.fill(Rgb565::BLACK);
-            Circle::new(Point::new(85, 45), 150)
-                .into_styled(PrimitiveStyle::with_fill(Rgb565::BLUE))
-                .draw(frame)
-                .unwrap_infallible();
-            Line::new(Point::new(20, 210), Point::new(300, 30))
-                .into_styled(PrimitiveStyle::with_stroke(Rgb565::YELLOW, 5))
-                .draw(frame)
-                .unwrap_infallible();
-            // Outline the current tile's frame rectangle so the tiling is visible.
-            frame
-                .rectangle()
-                .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
-                .draw(frame)
-                .unwrap_infallible();
-        })
-        .await
-}
-
-assert_eq!(GRID.max_tile_pixel_count(), 80 * 80);
-# assert_eq!(GRID.rectangle(), Rectangle::new(Point::zero(), Size::new(320, 240)));
-# assert_eq!(GRID.columns(), 4);
-# assert_eq!(GRID.rows(), 3);
-# assert_eq!(GRID.tile_width(), 80);
-# assert_eq!(GRID.tile_height(), 80);
-# use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
-# use embedded_graphics::{
-#     mono_font::ascii::FONT_9X15_BOLD,
-#     pixelcolor::Rgb888,
-# };
-# let mut cyd_memory = CydMemory::new(
-#     Size::new(320, 240),
-#     Rgb888::BLACK,
-#     Rgb888::WHITE,
-#     &FONT_9X15_BOLD,
-# );
-# let mut display = cyd_memory.display();
-# futures_executor::block_on(draw(&mut display))?;
-# let golden_result = assert_framebuffer_matches_expected_png(
-#     &cyd_memory,
-#     env!("CARGO_MANIFEST_DIR"),
-#     "tile_grid.png",
-# );
-# assert!(golden_result.is_ok(), "{golden_result:?}");
-# Ok::<(), device_envoy_core::memory::Error>(())
-```
-
-A `320 × 240` region split into `4 × 3` tiles uses one `80 × 80` frame buffer.
-The white outlines show the individual frames; the scene remains continuous
-across their boundaries:
-
-![A circle and diagonal line drawn continuously across a four-by-three tile grid][tile_grid]
-"#
+    feature = "doc-images",
+    doc = "\n![A circle and diagonal line drawn continuously across a four-by-three tile grid][tile_grid]\n"
 )]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileGrid {

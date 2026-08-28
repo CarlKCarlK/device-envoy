@@ -73,7 +73,7 @@ for a judgeable public story.
 Calibration is constructor behavior, not an application subsystem. The
 supported ESP and RP workflow is: construct a complete device, allow the
 constructor to load or run calibration, and read screen-space `TouchEvent`s
-through `CydTouch::read`. Applications must not need to assemble or drive the
+through `CydTouch::try_read`. Applications must not need to assemble or drive the
 calibration state machine.
 
 - Remove the public `touch::calibration` module. Keep the calibration math,
@@ -445,7 +445,7 @@ remaining behavior and rendered-documentation problems found during the final
 audit:
 
 - Make the public touch-coordinate contract match the display contract:
-  `CydTouch::read` returns calibrated `TouchEvent::Down` and `TouchEvent::Move`
+  `CydTouch::try_read` returns calibrated `TouchEvent::Down` and `TouchEvent::Move`
   points in the configured logical display orientation. Their coordinate bounds
   must match `CydDisplay::screen_size()`. Applications must not call
   `Orientation::map_landscape_point` on ordinary touch events.
@@ -494,7 +494,7 @@ audit:
 The `tiling` and `touch` modules remain public. They are not implementation-only
 namespaces: `tiling::TileGrid` and its rectangle-sizing helpers configure the
 public `CydDisplay::for_each_tile` workflow, while `touch::TouchEvent` is the
-public result of `CydTouch::read`. These namespaces keep display layout and
+public result of `CydTouch::try_read`. These namespaces keep display layout and
 touch input distinct and give their related public types discoverable homes.
 The internal `Tiles` iterator, calibration state machine, raw-point types, and
 backend implementation details remain private or confined to the deliberately
@@ -510,7 +510,7 @@ This correction is complete only when all of the following are true:
 - `CydTouch` and `TouchEvent` both lead directly to the focused calibrated-touch
   example, whose coordinate handling agrees with their prose.
 - Tests cover all four orientations and prove that calibrated corner and
-  representative interior points returned by `CydTouch::read` lie in the same
+  representative interior points returned by `CydTouch::try_read` lie in the same
   logical coordinate system and bounds as the display. Tests also guard against
   double mapping in migrated consumers.
 - Interactive calibration and verification are performed in landscape, while
@@ -594,7 +594,7 @@ when already producing a raster.
 Address these concrete problems in severity order.
 
 1. **Make the touch-coordinate contract consistent.**
-   `CydTouch::read` and `TouchEvent` are authoritative: application events are
+   `CydTouch::try_read` and `TouchEvent` are authoritative: application events are
    already calibrated and mapped into the configured logical display
    orientation. Rewrite `Orientation::map_landscape_point` and its example to
    describe direct conversion of fixed-landscape panel, calibration, or asset
@@ -773,7 +773,7 @@ Address these concrete problems in severity order.
     application example. `CydTouchEsp` and `CydTouchRp`, for example, must say
     explicitly that construction is covered by the compiled complete-device
     constructor example and calibrated reading is covered by the compiled
-    `CydTouch::read` example.
+    `CydTouch::try_read` example.
 
 #### Public Surface Decisions Requiring Audit
 
@@ -836,7 +836,7 @@ The corrected natural path is:
    touch halves are borrowed.
 5. `CydDisplay::frame_mut` and `CydFrame`: follow the normal buffered path,
    draw in frame-local coordinates, and await the portable flush boundary.
-6. `CydTouch::read` and `TouchEvent`: consume calibrated, already-oriented
+6. `CydTouch::try_read` and `TouchEvent`: consume calibrated, already-oriented
    logical-display coordinates without remapping them.
 7. `CydDisplay::for_each_tile` and `TileGrid`: choose replayable tiled drawing
    when RAM is constrained and size the shared buffer from the maximum tile.

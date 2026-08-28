@@ -136,7 +136,7 @@ pub(crate) struct CydTouchUncalibratedRp<D = touch_driver::CydTouchSpiDevice> {
 /// An owned calibrated CYD touch component for RP boards.
 ///
 /// Construction is covered by the [`CydRp::new`] example; applications
-/// then call the calibrated [`CydTouch::read`] operation.
+/// then call the calibrated [`CydTouch::try_read`] operation.
 pub struct CydTouchRp<D = touch_driver::CydTouchSpiDevice> {
     raw: CydTouchUncalibratedRp<D>,
     calibration_config: CalibrationConfig,
@@ -646,7 +646,7 @@ impl CydRp {
     ///     let display: &mut CydDisplayRp = &mut cyd.display;
     ///     assert_eq!(display.screen_size(), Orientation::Landscape.size());
     ///     let touch: &mut CydTouchRp = &mut cyd.touch;
-    ///     touch.read()?;
+    ///     touch.try_read()?;
     ///     Ok(())
     /// }
     /// fn classify(error: Error) {
@@ -965,7 +965,7 @@ impl<D: SpiDevice<u8>> TouchUncalibrated for CydTouchUncalibratedRp<D> {
 impl<D: SpiDevice<u8>> CydTouch for CydTouchRp<D> {
     type Error = Error;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, Error> {
+    fn try_read(&mut self) -> Result<Option<TouchEvent>, Error> {
         Ok(self
             .raw
             .touch

@@ -122,7 +122,7 @@ where
         ui.value(layout.failures, format_args!("{failures}"))
             .await?;
 
-        match ui.touch(touch.read()?) {
+        match ui.touch(touch.try_read()?) {
             TouchAction::None => {}
             TouchAction::StartDns => {
                 let start = Instant::now();

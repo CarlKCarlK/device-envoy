@@ -34,16 +34,16 @@
 //!     let (_, mut touch) = cyd.owned_parts();
 //!     control.touch_down(10.0, 20.0);
 //!     assert!(matches!(
-//!         touch.read().unwrap_infallible(),
+//!         touch.try_read().unwrap_infallible(),
 //!         Some(TouchEvent::Down { .. }),
 //!     ));
 //!     control.touch_move(12.0, 22.0);
 //!     assert!(matches!(
-//!         touch.read().unwrap_infallible(),
+//!         touch.try_read().unwrap_infallible(),
 //!         Some(TouchEvent::Move { .. }),
 //!     ));
 //!     control.touch_up();
-//!     assert!(matches!(touch.read().unwrap_infallible(), Some(TouchEvent::Up)));
+//!     assert!(matches!(touch.try_read().unwrap_infallible(), Some(TouchEvent::Up)));
 //!     control.boot_down();
 //!     assert!(button.is_pressed());
 //!     control.boot_up();

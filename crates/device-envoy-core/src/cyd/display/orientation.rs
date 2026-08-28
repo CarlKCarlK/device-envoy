@@ -83,7 +83,7 @@ impl Orientation {
     ///
     /// Use this for calibration data or assets defined in native panel
     /// coordinates. Do not apply it to [`TouchEvent`](crate::cyd::touch::TouchEvent)
-    /// points returned by [`CydTouch::read`](crate::cyd::CydTouch::read); those
+    /// points returned by [`CydTouch::try_read`](crate::cyd::CydTouch::try_read); those
     /// are already mapped.
     #[must_use]
     pub const fn map_landscape_point(self, point: Point) -> Point {

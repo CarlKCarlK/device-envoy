@@ -20,7 +20,7 @@ use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
 
 async fn draw_once<C: Cyd>(cyd: &mut C) -> Result<(), C::Error> {
     let (display, touch) = cyd.parts();
-    let touch_event = touch.read()?;
+    let touch_event = touch.try_read()?;
     let mut frame = display.full_frame_mut();
 
     frame.write_text("Hello CYD");

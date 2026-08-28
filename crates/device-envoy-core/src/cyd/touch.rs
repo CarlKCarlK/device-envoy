@@ -4,7 +4,7 @@
 //! Envoy's platform implementations connect raw controller samples to the
 //! private calibration workflow. Applications use
 //! [`CydTouch`](super::CydTouch); see its
-//! [example](super::CydTouch::read).
+//! [example](super::CydTouch::try_read).
 
 pub(crate) mod calibration;
 pub(crate) mod driver;
@@ -14,8 +14,8 @@ use embedded_graphics::geometry::Point;
 
 /// A touch event in logical display coordinates (already calibrated and oriented).
 ///
-/// Read it with [CydTouch::read](super::CydTouch::read) in the
-/// [focused example](super::CydTouch::read), or see the larger
+/// Read it with [CydTouch::try_read](super::CydTouch::try_read) in the
+/// [focused example](super::CydTouch::try_read), or see the larger
 /// [application example](../index.html#application-example) for a complete
 /// read-and-draw flow. Applications receive coordinates bounded by
 /// [`CydDisplay::screen_size()`](super::CydDisplay::screen_size) and must not
@@ -26,21 +26,21 @@ use embedded_graphics::geometry::Point;
 #[derive(Clone, Copy, Debug)]
 pub enum TouchEvent {
     /// The touch contact began at `point` in logical display coordinates.
-    /// See the compiled [`CydTouch::read`](super::CydTouch::read) example.
+    /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
     Down {
         /// Calibrated point bounded by the display's logical size.
-        /// See the compiled [`CydTouch::read`](super::CydTouch::read) example.
+        /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
         point: Point,
     },
     /// The active touch contact moved to `point` in logical display coordinates.
-    /// See the compiled [`CydTouch::read`](super::CydTouch::read) example.
+    /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
     Move {
         /// Calibrated point bounded by the display's logical size.
-        /// See the compiled [`CydTouch::read`](super::CydTouch::read) example.
+        /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
         point: Point,
     },
     /// The touch contact ended; no point is carried.
-    /// See the compiled [`CydTouch::read`](super::CydTouch::read) example.
+    /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
     Up,
 }
 

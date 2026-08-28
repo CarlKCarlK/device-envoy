@@ -88,7 +88,7 @@
 //!     cyd_memory.owned_parts();
 //! assert_eq!(owned_display.screen_size(), Size::new(320, 240));
 //! cyd_memory.push_touch_event(TouchEvent::Up);
-//! assert!(matches!(owned_touch.read()?, Some(TouchEvent::Up)));
+//! assert!(matches!(owned_touch.try_read()?, Some(TouchEvent::Up)));
 //! let mut button_memory = cyd_memory.button_memory();
 //! button_memory.set_pressed(true);
 //! assert!(button_memory.is_pressed());
@@ -803,7 +803,7 @@ impl CydDisplay for CydDisplayMemory {
 impl CydTouch for CydTouchMemory {
     type Error = Error;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
+    fn try_read(&mut self) -> Result<Option<TouchEvent>, Self::Error> {
         Ok(self
             .shared
             .borrow_mut()
@@ -1681,7 +1681,7 @@ mod tests {
             .expect("preloaded calibration should load");
 
             assert!(matches!(
-                touch.read(),
+                touch.try_read(),
                 Ok(Some(TouchEvent::Down { point: actual_point }))
                     if actual_point == point
             ));

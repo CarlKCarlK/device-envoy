@@ -134,7 +134,7 @@ pub(crate) struct CydTouchUncalibratedEsp<D = touch_driver::CydTouchSpiDevice> {
 ///
 /// Start with the [`cyd`](mod@crate::cyd) module example. Construction
 /// is covered by [`CydEsp::new`]; applications then call the calibrated
-/// [`CydTouch::read`] operation.
+/// [`CydTouch::try_read`] operation.
 pub struct CydTouchEsp<D = touch_driver::CydTouchSpiDevice> {
     raw: CydTouchUncalibratedEsp<D>,
     calibration_config: CalibrationConfig,
@@ -951,7 +951,7 @@ impl<D: SpiDevice<u8>> TouchUncalibrated for CydTouchUncalibratedEsp<D> {
 impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
     type Error = Error;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, Error> {
+    fn try_read(&mut self) -> Result<Option<TouchEvent>, Error> {
         Ok(self
             .raw
             .touch

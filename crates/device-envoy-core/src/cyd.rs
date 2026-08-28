@@ -122,22 +122,22 @@ pub trait Cyd: Sized {
 
 /// A CYD touch source that returns calibrated, oriented touch events.
 ///
-/// [`CydTouch::read`] returns a [`touch::TouchEvent`] carrying an x-y point in
-/// the same logical display coordinates as the display, or `None` when there is no
-/// touch. See the [`CydTouch::read`] example for focused usage, or the
+/// [`CydTouch::try_read`] polls for a [`touch::TouchEvent`] in the same logical
+/// display coordinates as the display. See the [`CydTouch::try_read`] example
+/// for focused usage, or the
 /// [application example](index.html#application-example) for a complete
 /// read-and-draw flow.
 pub trait CydTouch: Sized {
     /// Error returned when a touch read fails.
-    /// See the [`CydTouch::read`] example.
+    /// See the [`CydTouch::try_read`] example.
     type Error;
 
-    /// Read the next calibrated touch event, if any.
+    /// Try to read the next calibrated touch event without blocking.
     ///
     /// Returned points are calibrated and oriented into the same logical
-    /// coordinates as the display's [`CydDisplay::screen_size`]. Returns
-    /// `Ok(None)` when there is no pending touch.
-    /// Returns an error only when the underlying touch source cannot be read.
+    /// coordinates as the display's [`CydDisplay::screen_size`]. `Ok(Some(event))`
+    /// means an event is available, `Ok(None)` means no event is available now,
+    /// and `Err(error)` means the underlying touch source could not be read.
     ///
     /// The example below consumes the already oriented point directly;
     /// applications must not map it a second time.
@@ -150,7 +150,7 @@ pub trait CydTouch: Sized {
     /// # fn handle_point(_point: Point) {}
     ///
     /// fn read_calibrated<T: CydTouch>(touch: &mut T) -> Result<(), T::Error> {
-    ///     if let Some(event) = touch.read()? {
+    ///     if let Some(event) = touch.try_read()? {
     ///         match event {
     ///             TouchEvent::Down { point } | TouchEvent::Move { point } => {
     ///                 // `point` is already in logical display coordinates.
@@ -162,7 +162,7 @@ pub trait CydTouch: Sized {
     ///     Ok(())
     /// }
     /// ```
-    fn read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
+    fn try_read(&mut self) -> Result<Option<TouchEvent>, Self::Error>;
 }
 
 /// A CYD display.
@@ -488,7 +488,7 @@ frame.flush().await?;
     /// reusable frame and flush sequence, so callers do not need to handle lending iterator
     /// lifetimes. This is the primary low-memory drawing workflow.
     ///
-    /// See the visual [`TileGrid`](display::tiling::TileGrid) example for grid
+    /// See the [`TileGrid`](display::tiling::TileGrid) example for grid
     /// construction, buffer sizing, and a scene drawn across tile boundaries.
     fn for_each_tile<'a, F>(
         &'a mut self,

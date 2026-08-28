@@ -15,9 +15,9 @@ use embedded_graphics::{
     mono_font::ascii::FONT_9X15_BOLD,
     pixelcolor::{Rgb565, Rgb888},
     prelude::{Dimensions, IntoStorage, Point, Primitive, RgbColor, Size},
-    primitives::{PrimitiveStyle, Rectangle},
+    primitives::{Circle, Line, PrimitiveStyle, Rectangle},
 };
-use std::error::Error;
+use std::{error::Error, path::Path};
 
 const STREAMED_BITMAP: Image565Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -280,7 +280,7 @@ fn cyd_application_preview_matches_expected() -> Result<(), Box<dyn Error>> {
             point: Point::new(160, 120),
         });
         let (display, touch) = cyd_memory.parts();
-        let touch_event = touch.read()?;
+        let touch_event = touch.try_read()?;
         let mut frame = display.full_frame_mut();
 
         frame.write_text("Hello CYD");
@@ -361,6 +361,56 @@ fn cyd_frame_mut_preview_matches_expected() -> Result<(), Box<dyn Error>> {
         env!("CARGO_MANIFEST_DIR"),
         "cyd_frame_mut_preview.png",
     )
+}
+
+#[test]
+fn tile_grid_doc_image_matches_expected() -> Result<(), Box<dyn Error>> {
+    let cyd_memory = futures_executor::block_on(async {
+        let cyd_memory = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd_memory.display();
+        let grid = TileGrid::new(Rectangle::new(Point::zero(), Size::new(320, 240)), 4, 3);
+        display
+            .for_each_tile(grid, |frame| {
+                frame.fill(Rgb565::BLACK);
+                Circle::new(Point::new(85, 45), 150)
+                    .into_styled(PrimitiveStyle::with_fill(Rgb565::BLUE))
+                    .draw(frame)
+                    .unwrap_infallible();
+                Line::new(Point::new(20, 210), Point::new(300, 30))
+                    .into_styled(PrimitiveStyle::with_stroke(Rgb565::YELLOW, 5))
+                    .draw(frame)
+                    .unwrap_infallible();
+                frame
+                    .rectangle()
+                    .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                    .draw(frame)
+                    .unwrap_infallible();
+            })
+            .await?;
+
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)
+    })
+    .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
+
+    assert_framebuffer_matches_expected_png(
+        &cyd_memory,
+        env!("CARGO_MANIFEST_DIR"),
+        "tile_grid.png",
+    )?;
+
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let tested_png = std::fs::read(manifest_dir.join("tests/assets/tile_grid.png"))?;
+    let documented_png = std::fs::read(manifest_dir.join("docs/assets/tile_grid.png"))?;
+    assert_eq!(
+        documented_png, tested_png,
+        "the embedded TileGrid image must match the golden image"
+    );
+    Ok(())
 }
 
 const fn cyd_trait_bitmap_pixels() -> [u16; BITMAP_PIXEL_COUNT] {

@@ -67,22 +67,22 @@
 //!     frame.flush().await.unwrap_infallible();
 //!     injected_touch_source.touch_down(10.0, 20.0);
 //!     assert!(matches!(
-//!         touch.read().unwrap_infallible(),
+//!         touch.try_read().unwrap_infallible(),
 //!         Some(device_envoy_core::cyd::touch::TouchEvent::Down { .. }),
 //!     ));
 //!     injected_touch_source.touch_move(12.0, 22.0);
 //!     assert!(matches!(
-//!         touch.read().unwrap_infallible(),
+//!         touch.try_read().unwrap_infallible(),
 //!         Some(device_envoy_core::cyd::touch::TouchEvent::Move { .. }),
 //!     ));
 //!     injected_touch_source.touch_up();
 //!     assert!(matches!(
-//!         touch.read().unwrap_infallible(),
+//!         touch.try_read().unwrap_infallible(),
 //!         Some(device_envoy_core::cyd::touch::TouchEvent::Up),
 //!     ));
 //!     injected_touch_source.wait_for_fresh_press();
 //!     injected_touch_source.touch_down(14.0, 24.0);
-//!     assert!(touch.read().unwrap_infallible().is_none());
+//!     assert!(touch.try_read().unwrap_infallible().is_none());
 //!     let button_source = ButtonWasmSource::new();
 //!     let button: ButtonWasm = button_source.button();
 //!     button_source.press();
@@ -332,7 +332,7 @@ impl CydTouchWasmSource {
     /// Queue a calibrated-panel point in fixed landscape coordinates.
     ///
     /// The browser control converts logical canvas coordinates to this raw
-    /// calibration boundary before calling the source. `CydTouchWasm::read`
+    /// calibration boundary before calling the source. `CydTouchWasm::try_read`
     /// performs the one runtime-orientation mapping for the application.
     /// Queue a touch-release event and allow the next press.
     /// See the [`CydWasm` module example](crate::wasm).
@@ -699,7 +699,7 @@ impl CydDisplay for CydDisplayWasm {
 impl CydTouch for CydTouchWasm {
     type Error = Infallible;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
+    fn try_read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
         Ok(self
             .raw_touch_events
             .borrow_mut()

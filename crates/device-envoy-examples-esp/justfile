@@ -4,8 +4,9 @@ set shell := ["bash", "-cu"]
 update-docs-esp:
     ../device-envoy-esp/scripts/update-docs.sh
 
-# ESP docs fast path (no extra validation/generation steps)
-update-docs-esp-fast:
+# Incomplete ESP docs preview: uses existing images but skips regeneration and validation
+update-docs-esp-unvalidated:
+    @echo "WARNING: doc images are not regenerated and validation is skipped; generated ESP docs are not authoritative." >&2
     source "$HOME/export-esp.sh" && cargo doc --manifest-path ../device-envoy-esp/Cargo.toml --no-deps --release --target riscv32imac-unknown-none-elf --features doc-images,esp32c6 --no-default-features
 
 # Build docs and open them in a browser

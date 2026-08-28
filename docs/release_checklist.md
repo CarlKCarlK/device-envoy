@@ -44,6 +44,10 @@ just update-docs-rp
 just update-docs-esp
 ```
 
+These are the authoritative documentation workflows: they regenerate and
+stage documentation images and validate the rendered output. Do not use the
+explicitly incomplete preview recipes for release review.
+
 - Optional local preview in a browser:
 
 ```bash

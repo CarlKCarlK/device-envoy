@@ -19,6 +19,10 @@
 //! calibrated touch input. Hardware, browser, and in-memory devices all provide
 //! the same [`Cyd`], [`CydDisplay`], [`CydTouch`], and
 //! [`CydFrame`] interfaces.
+#![cfg_attr(
+    not(feature = "doc-images"),
+    doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. Use `just update-docs-core` for authoritative local documentation.\n"
+)]
 #![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]
 #![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]

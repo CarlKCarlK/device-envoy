@@ -67,15 +67,16 @@ update-docs:
     just update-docs-esp
     just update-docs-core
 
-# Update ESP docs only (fast path)
-update-docs-esp-fast:
-    cd crates/device-envoy-examples-esp && just update-docs-esp-fast
+# Build an incomplete ESP docs preview without regenerating assets or validating output
+update-docs-esp-unvalidated:
+    cd crates/device-envoy-examples-esp && just update-docs-esp-unvalidated
 
-# Update RP docs only (fast path)
-update-docs-rp-fast:
-    cd crates/device-envoy-rp && just update-docs-rp-fast
+# Build an incomplete RP docs preview without images or validation
+update-docs-rp-no-images:
+    cd crates/device-envoy-rp && just update-docs-rp-no-images
 
-# Update RP + ESP docs (fast path)
-update-docs-fast:
-    just update-docs-rp-fast
-    just update-docs-esp-fast
+# Build incomplete RP and ESP docs previews; never use this output for review or publishing
+update-docs-incomplete:
+    @echo "WARNING: building incomplete documentation previews; use 'just update-docs' for authoritative output." >&2
+    just update-docs-rp-no-images
+    just update-docs-esp-unvalidated

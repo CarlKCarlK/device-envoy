@@ -20,6 +20,10 @@
 //! calibrated-touch interfaces from
 //! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
 //! The ESP32, WebAssembly, and in-memory implementations share these interfaces.
+#![cfg_attr(
+    not(feature = "doc-images"),
+    doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. Use `just update-docs-rp` for authoritative local documentation.\n"
+)]
 #![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]
 //!
@@ -99,15 +103,15 @@ use crate::flash_block::FlashBlockRp;
 use display::CydDisplayRp as CydDisplayRpDevice;
 use touch_driver::CydTouchRp as CydTouchRpDevice;
 
-/// An owned CYD display component for RP boards.
+/// An owned CYD-family RP display component.
 ///
 /// `D` is the underlying `embedded-hal` SPI device type; it defaults to an
 /// exclusively-owned SPI peripheral. Shared-bus backends (see
 /// [`CydRpOneSpi`]) instantiate this with a shared-bus device instead.
 ///
-/// The display constructor and static-storage pattern are shown by the
-/// [`CydStaticRp`] example. The complete-device constructor is shown by the
-/// [`CydRp::new`] example.
+/// Start with the [`cyd`](mod@crate::cyd) module example. The display-only
+/// constructor and static-storage pattern are shown by the
+/// [`CydDisplayRp::new`] example.
 pub struct CydDisplayRp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: CydDisplayRpDevice<D>,
     orientation: Orientation,
@@ -133,27 +137,27 @@ pub(crate) struct CydTouchUncalibratedRp<D = touch_driver::CydTouchSpiDevice> {
     touch: CydTouchRpDevice<D>,
 }
 
-/// An owned calibrated CYD touch component for RP boards.
+/// An owned calibrated CYD-family RP touch component.
 ///
-/// Construction is covered by the [`CydRp::new`] example; applications
-/// then call the calibrated [`CydTouch::try_read`] operation.
+/// Start with the [`cyd`](mod@crate::cyd) module example. Construction
+/// is covered by [`CydRp::new`]; applications then call the calibrated
+/// [`CydTouch::try_read`] operation.
 pub struct CydTouchRp<D = touch_driver::CydTouchSpiDevice> {
     raw: CydTouchUncalibratedRp<D>,
     calibration_config: CalibrationConfig,
     orientation: Orientation,
 }
 
-/// A calibrated CYD RP bundle.
+/// An RP CYD device containing a display and calibrated touch input.
 ///
-/// See the [`CydRp::new`] constructor example after declaring
-/// [`CydStaticRp`] storage; construction performs the saved-or-interactive
-/// touch calibration before returning.
+/// [`CydRp::new_static`] creates the pixel buffer storage passed to
+/// [`CydRp::new`], which constructs the hardware and loads or performs touch
+/// calibration. See the [`cyd`](mod@crate::cyd) module example for normal
+/// drawing and touch input.
 pub struct CydRp {
-    /// The owned display component.
-    /// See the [`CydRp::new`] constructor example.
+    /// The display component.
     pub display: CydDisplayRp,
-    /// The owned calibrated touch component.
-    /// See the [`CydRp::new`] constructor example.
+    /// The calibrated touch component.
     pub touch: CydTouchRp,
 }
 
@@ -167,29 +171,30 @@ pub(crate) struct CydRpUncalibrated {
 
 // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` capacity, zero-workspace,
 // static-RAM, explicit-tiling, and compile-time upper-bound guidance here.
+// (may no longer apply: the guidance and upper-bound check now match CydEsp.)
 /// Static storage for a [`CydRp`]-owned pixel buffer.
 ///
-/// `PIXEL_COUNT` is an RGB565 pixel count, not a byte count. Use
-/// `CydRp::SCREEN_PIXELS` for `full_frame_mut`, the pixel count of the largest
-/// independently updated rectangle for `frame_mut`, or
-/// [`TileGrid`](device_envoy_core::cyd::display::tiling::TileGrid)'s
-/// `max_tile_pixel_count()` for `for_each_tile`. If a requested frame
-/// or tile is larger than the declared capacity, frame creation panics with
-/// the buffer's `view must fit in workspace` assertion; no pixels are silently
-/// clipped. `CydStaticRp<0>` is useful
-/// only with immediate operations and contiguous streaming, which do not use a
-/// frame buffer.
+/// `PIXEL_COUNT` is a caller-chosen RGB565 pixel count, not a byte count. Any
+/// value from zero through `CydRp::SCREEN_PIXELS` can be supplied. Zero
+/// allocates no pixel buffer: immediate operations and contiguous streaming
+/// still work, but buffered frames and tiles do not. A smaller positive value
+/// saves static RAM when the app buffers only a bounded rectangle or draws the
+/// screen tile by tile. Values above `CydRp::SCREEN_PIXELS` are rejected during
+/// static initialization because they provide no additional drawing capability.
 ///
-/// The app declares one at file scope and names the workspace pixel count it
-/// wants:
+/// Tiling is explicit, not automatic. The app chooses a
+/// [`TileGrid`](device_envoy_core::cyd::display::tiling::TileGrid), stores at
+/// least its `max_tile_pixel_count()`, and buffers one tile at a time through
+/// `for_each_tile`. Use `CydRp::SCREEN_PIXELS` for `full_frame_mut`, or the
+/// largest rectangle's pixel count for `frame_mut`. If a requested frame or tile
+/// exceeds the allocated pixel buffer, frame creation panics.
+///
+/// The app declares one at file scope and chooses the pixel buffer capacity:
 ///
 /// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
+/// #![no_std]
+/// #![no_main]
 /// use device_envoy_rp::cyd::{CydRp, CydStaticRp};
-/// # #[panic_handler]
-/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-///
 /// static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
 /// # use device_envoy_core::cyd::display::tiling::{TileGrid, rectangle_pixel_count};
 /// # use embedded_graphics::{prelude::{Point, Size}, primitives::Rectangle};
@@ -202,6 +207,8 @@ pub(crate) struct CydRpUncalibrated {
 /// );
 /// static STATUS_STORAGE: CydStaticRp<STATUS_PIXELS> = CydRp::new_static();
 /// static TILE_STORAGE: CydStaticRp<{ GRID.max_tile_pixel_count() }> = CydRp::new_static();
+/// # #[panic_handler]
+/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// ```
 ///
 /// The app chooses the pixel count (policy); [`CydDisplayRp::new`] owns the
@@ -214,6 +221,10 @@ impl<const PIXEL_COUNT: usize> CydStaticRp<PIXEL_COUNT> {
     /// Internal constructor. Apps create storage via [`CydRp::new_static`] so all
     /// construction goes through the `CydRp` device abstraction.
     pub(crate) const fn new() -> Self {
+        assert!(
+            PIXEL_COUNT <= SCREEN_PIXELS,
+            "PIXEL_COUNT must not exceed SCREEN_PIXELS"
+        );
         Self {
             pixel_buffer: StaticCell::new(),
         }
@@ -484,21 +495,24 @@ impl<D: SpiDevice<u8>> CydDisplayRp<D> {
 impl CydDisplayRp<display::CydDisplaySpiDevice> {
     // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` workspace guidance,
     // compile-time upper-bound behavior, and `CYD_STATIC` naming to the
-    // `CydDisplayRp::new` documentation.
-    /// Construct a display-only `CydDisplayRp` that owns its draw buffer.
-    /// Zero capacity is intentional when only immediate fills or contiguous
-    /// streaming are used; frame-based and tiled drawing need positive storage.
+    // `CydDisplayRp::new` documentation. (may no longer apply: the documentation
+    // and CydStaticRp upper-bound check now match CydDisplayEsp.)
+    /// Construct a display-only CYD display component that owns its draw buffer.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydRp::new_static`] for the sizing choices.
     ///
     /// ```rust,no_run
-    /// #![no_std]
-    /// #![no_main]
+    /// # #![no_std]
+    /// # #![no_main]
     /// use device_envoy_rp::{Result, cyd::{CydDisplay, CydDisplayRp, CydRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}};
     /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
-    ///     static STORAGE: device_envoy_rp::cyd::CydStaticRp<0> = CydRp::new_static();
-    ///     let display = CydDisplayRp::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16,
+    ///     static CYD_STATIC: device_envoy_rp::cyd::CydStaticRp<0> = CydRp::new_static();
+    ///     let display = CydDisplayRp::new(&CYD_STATIC, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16,
     ///         p.PIN_17, p.PIN_20, p.PIN_21, p.PIN_22, DEFAULT_DISPLAY_SPI_HZ,
     ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT)?;
     ///     assert_eq!(display.screen_size(), Orientation::Landscape.size());
@@ -612,47 +626,95 @@ impl CydRp {
 
     // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` workspace guidance and
     // compile-time upper-bound enforcement to `CydRp::new_static` and `CydRp::new`.
-    /// Create [`CydStaticRp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    // (may no longer apply: the guidance and upper-bound check now match CydEsp.)
+    /// Create static storage for a CYD pixel buffer.
     ///
-    /// See the [`CydStaticRp`] example.
+    /// Choose any `PIXEL_COUNT` from zero through [`CydRp::SCREEN_PIXELS`].
+    ///
+    /// - `0` allocates no pixel buffer, so only
+    ///   [immediate operations](CydDisplay::fill_rectangle) and
+    ///   [contiguous streaming](CydDisplay::fill_contiguous) are available.
+    /// - A smaller buffer saves static RAM but limits the largest buffered
+    ///   region.
+    /// - For tiled drawing, size the buffer to
+    ///   [`tiling::TileGrid::max_tile_pixel_count`], then pass the grid to
+    ///   [`CydDisplay::for_each_tile`]. Only one tile is buffered at a time.
+    /// - [`CydRp::SCREEN_PIXELS`] allocates a full-screen buffer and is usually
+    ///   the most convenient choice when enough RAM is available.
+    ///
+    /// Attempting to create a frame or tile larger than the allocated buffer
+    /// panics. See [`CydStaticRp`] for the complete sizing rules and example.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticRp<PIXEL_COUNT> {
         CydStaticRp::new()
     }
 
-    /// Construct a calibrated CYD bundle using the saved-or-interactive calibration flow.
-    /// The display arguments use `SPI0` and its display pins; `touch_spi` and
-    /// the following touch pins use the separate `SPI1` bus. The flash block
-    /// stores calibration, and the button requests interactive recalibration.
-    /// Use [`CydRpOneSpi`] when both controllers must share one peripheral.
+    /// Construct a ready-to-use CYD.
+    ///
+    /// The display and touch controllers use separate SPI peripherals. The
+    /// supplied flash block stores touch calibration, and
+    /// `recalibration_button` requests interactive recalibration.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydRp::new_static`] for the sizing choices.
+    ///
+    /// Use [`CydRpOneSpi`] for boards where display and touch share one SPI
+    /// peripheral.
+    ///
+    /// This example focuses on the board-specific construction. For the normal
+    /// draw/flush/read loop, start with the [`cyd`](mod@crate::cyd) module
+    /// example. For complete startup and wiring in a real program, see the
+    /// [checked Raspberry Pi Pico CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-rp/examples/cyd_touch_paint.rs).
     ///
     /// ```rust,no_run
-    /// #![no_std]
-    /// #![no_main]
-    /// use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{Cyd, CydDisplay, CydDisplayRp, CydRp, CydStaticRp, CydTouch, CydTouchRp, Error, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
-    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #![no_std]
+    /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-    ///
+    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
-    ///     let [mut flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    ///     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
-    ///     static STORAGE: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
-    ///     let mut cyd = CydRp::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17,
-    ///         p.PIN_20, p.PIN_21, p.PIN_22, DEFAULT_DISPLAY_SPI_HZ, Orientation::Landscape,
-    ///         Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT, p.SPI1, p.PIN_10, p.PIN_11,
-    ///         p.PIN_12, p.PIN_13, p.PIN_14, &mut flash, &mut button).await?;
-    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
-    ///     let display: &mut CydDisplayRp = &mut cyd.display;
-    ///     assert_eq!(display.screen_size(), Orientation::Landscape.size());
-    ///     let touch: &mut CydTouchRp = &mut cyd.touch;
-    ///     touch.try_read()?;
+    ///     let [mut calibration_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    ///     let mut recalibration_button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
+    ///     static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
+    ///
+    ///     let cyd = CydRp::new(
+    ///         &CYD_STATIC,
+    ///
+    ///         // Display SPI and pins:
+    ///         p.SPI0,
+    ///         p.PIN_18,
+    ///         p.PIN_19,
+    ///         p.PIN_16,
+    ///         p.PIN_17,
+    ///         p.PIN_20,
+    ///         p.PIN_21,
+    ///         p.PIN_22,
+    ///         DEFAULT_DISPLAY_SPI_HZ,
+    ///
+    ///         // Presentation:
+    ///         Orientation::Landscape,
+    ///         Rgb888::BLACK,
+    ///         Rgb888::WHITE,
+    ///         &DEFAULT_FONT,
+    ///
+    ///         // Touch SPI and pins:
+    ///         p.SPI1,
+    ///         p.PIN_10,
+    ///         p.PIN_11,
+    ///         p.PIN_12,
+    ///         p.PIN_13,
+    ///         p.PIN_14,
+    ///
+    ///         // Calibration storage and recalibration button:
+    ///         &mut calibration_flash,
+    ///         &mut recalibration_button,
+    ///     )
+    ///     .await?;
+    ///
+    ///     drop(cyd);
     ///     Ok(())
-    /// }
-    /// fn classify(error: Error) {
-    ///     match error {
-    ///         Error::InitDisplay | Error::SetOrientation | Error::FlushFrameBuffer => {}
-    ///     }
     /// }
     /// ```
     #[expect(clippy::too_many_arguments, reason = "mirrors CydDisplayRp::new")]

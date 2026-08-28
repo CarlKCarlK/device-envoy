@@ -19,6 +19,10 @@
 //! calibrated-touch interfaces from
 //! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
 //! The RP, WebAssembly, and in-memory implementations share these interfaces.
+#![cfg_attr(
+    not(feature = "doc-images"),
+    doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. Use `just update-docs-esp` for authoritative local documentation.\n"
+)]
 #![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]
 //!

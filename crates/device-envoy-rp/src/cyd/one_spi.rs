@@ -5,7 +5,7 @@
 //! CYD bundle for one-SPI shared-bus designs where display and touch share a single SPI peripheral.
 //!
 //! This module provides [`CydRpOneSpi`], which arbitrates a single physical SPI bus between
-//! the ST7789 display and the XPT2046 touch controller using an
+//! the ILI9341 display and the XPT2046 touch controller using an
 //! `embassy_embedded_hal::shared_bus::blocking::spi::SpiDeviceWithConfig` per peripheral (each
 //! with its own chip-select pin and its own fixed touch-bus clock). It reuses
 //! the same display/touch drivers as the two-SPI [`super::CydRp`], while the
@@ -44,19 +44,20 @@ type SharedSpiMutex<T> = Mutex<NoopRawMutex, RefCell<SharedSpiBus<T>>>;
 type SharedSpiDevice<T> =
     SpiDeviceWithConfig<'static, NoopRawMutex, SharedSpiBus<T>, Output<'static>>;
 
-/// A CYD-family RP bundle using one shared SPI peripheral for display and touch.
+/// An RP CYD device containing a display and calibrated touch input on one
+/// shared SPI peripheral.
 ///
-/// Display and touch each get their own `SpiDeviceWithConfig` over the same underlying bus,
-/// with independent chip-select pins *and* independent clock speeds: `SpiDeviceWithConfig`
-/// re-applies its device's `embassy_rp::spi::Config` to the shared bus immediately before each of
-/// its transactions, so the physical SPI clock switches between the display and touch settings as
-/// display and touch take turns using the bus. Because the two halves share
-/// state through that bus, this type keeps shared-bus ownership atomic inside the complete
-/// [`Cyd`] bundle.
+/// [`CydRpOneSpi::new_static`] creates the pixel buffer and shared-bus storage
+/// passed to [`CydRpOneSpi::new`], which constructs the hardware and loads or
+/// performs touch calibration. See the [`cyd`](super) module example for normal
+/// drawing and touch input.
+///
+/// Display and touch retain independent chip-select pins and clock speeds while
+/// sharing the physical bus. Use [`CydRp`](super::CydRp) when they use separate
+/// SPI peripherals.
 ///
 /// `T` is the SPI peripheral instance (`SPI0` or `SPI1`) the shared bus runs on; see
 /// [`CydRpOneSpiStatic`] for why the static storage must name the same `T`.
-/// See the compiled [`CydRpOneSpi::new`] constructor example.
 pub struct CydRpOneSpi<T: spi::Instance + 'static> {
     display: CydDisplayRp<SharedSpiDevice<T>>,
     touch: CydTouchRp<SharedSpiDevice<T>>,
@@ -64,14 +65,28 @@ pub struct CydRpOneSpi<T: spi::Instance + 'static> {
 
 // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` capacity, zero-workspace,
 // static-RAM, explicit-tiling, and compile-time upper-bound guidance here.
+// (may no longer apply: the guidance and upper-bound check now match CydEspOneSpi.)
 /// Static storage for a [`CydRpOneSpi`]-owned draw buffer and shared SPI bus.
 ///
-/// Unlike [`super::CydStaticRp`], this bundles the shared-bus mutex alongside the pixel buffer:
-/// `embassy_rp::spi::Spi<'static, T, Blocking>` carries its peripheral instance `T` as a type
-/// parameter, and a `static` item cannot reference a generic parameter of the function that
-/// creates it — so the caller must declare this storage (naming a concrete `T`) at module scope,
-/// same as any other multi-instance device in this crate.
-/// See the compiled [`CydRpOneSpi::new`] constructor example.
+/// `PIXEL_COUNT` is a caller-chosen RGB565 pixel count, not a byte count. Any
+/// value from zero through `CydRpOneSpi::<T>::SCREEN_PIXELS` can be supplied.
+/// Zero allocates no pixel buffer: immediate operations and contiguous
+/// streaming still work, but buffered frames and tiles do not. A smaller
+/// positive value saves static RAM when the app buffers only a bounded
+/// rectangle or draws the screen tile by tile. Values above the screen pixel
+/// count are rejected during static initialization.
+///
+/// Tiling is explicit, not automatic. The app chooses a
+/// [`TileGrid`](super::tiling::TileGrid), stores at least its
+/// `max_tile_pixel_count()`, and buffers one tile at a time through
+/// `for_each_tile`. Use `CydRpOneSpi::<T>::SCREEN_PIXELS` for `full_frame_mut`,
+/// or the largest rectangle's pixel count for `frame_mut`. If a requested frame
+/// or tile exceeds the allocated pixel buffer, frame creation panics.
+///
+/// Unlike [`super::CydStaticRp`], this storage also contains the shared-bus
+/// mutex. `embassy_rp::spi::Spi<'static, T, Blocking>` carries its peripheral
+/// instance `T` as a type parameter, so the caller declares the storage at
+/// module scope and names the concrete SPI peripheral.
 ///
 /// ```rust,no_run
 /// # #![no_std]
@@ -93,6 +108,10 @@ impl<T: spi::Instance + 'static, const PIXEL_COUNT: usize> CydRpOneSpiStatic<T, 
     /// Internal constructor. Apps create storage via [`CydRpOneSpi::new_static`] so all
     /// construction goes through the `CydRpOneSpi` device abstraction.
     pub(crate) const fn new() -> Self {
+        assert!(
+            PIXEL_COUNT <= CydRpOneSpi::<T>::SCREEN_PIXELS,
+            "PIXEL_COUNT must not exceed SCREEN_PIXELS"
+        );
         Self {
             pixel_buffer: StaticCell::new(),
             shared_spi: StaticCell::new(),
@@ -108,63 +127,104 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
 
     // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` workspace guidance,
     // compile-time upper-bound enforcement, and constructor-example cleanup to
-    // `CydRpOneSpi::new_static` and `CydRpOneSpi::new`.
-    /// Create [`CydRpOneSpiStatic`] storage for a `PIXEL_COUNT`-sized draw buffer and the shared
-    /// SPI bus.
+    // `CydRpOneSpi::new_static` and `CydRpOneSpi::new`. (may no longer apply:
+    // the guidance, check, and example now match CydEspOneSpi.)
+    /// Create static storage for a CYD pixel buffer and shared SPI bus.
     ///
-    /// See the [`CydRpOneSpi::new`] constructor example.
+    /// Choose any `PIXEL_COUNT` from zero through
+    /// [`CydRpOneSpi::SCREEN_PIXELS`].
+    ///
+    /// - `0` allocates no pixel buffer, so only
+    ///   [immediate operations](super::CydDisplay::fill_rectangle) and
+    ///   [contiguous streaming](super::CydDisplay::fill_contiguous) are
+    ///   available.
+    /// - A smaller buffer saves static RAM but limits the largest buffered
+    ///   region.
+    /// - For tiled drawing, size the buffer to
+    ///   [`TileGrid::max_tile_pixel_count`](super::tiling::TileGrid::max_tile_pixel_count),
+    ///   then pass the grid to
+    ///   [`CydDisplay::for_each_tile`](super::CydDisplay::for_each_tile). Only
+    ///   one tile is buffered at a time.
+    /// - [`CydRpOneSpi::SCREEN_PIXELS`] allocates a full-screen buffer and is
+    ///   usually the most convenient choice when enough RAM is available.
+    ///
+    /// Attempting to create a frame or tile larger than the allocated buffer
+    /// panics. See [`CydRpOneSpiStatic`] for the complete sizing rules and the
+    /// [`CydRpOneSpi::new`] constructor example.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydRpOneSpiStatic<T, PIXEL_COUNT> {
         CydRpOneSpiStatic::new()
     }
 
-    /// Construct a calibrated one-SPI CYD bundle using the saved-or-interactive calibration flow.
+    /// Construct a ready-to-use one-SPI CYD.
+    ///
+    /// The display and touch controllers share one SPI peripheral, with
+    /// independent chip-select pins and clock speeds. The supplied flash block
+    /// stores touch calibration, and `recalibration_button` requests
+    /// interactive recalibration.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydRpOneSpi::new_static`] for the sizing choices.
+    ///
+    /// Use [`CydRp`](super::CydRp) for boards where display and touch use
+    /// separate SPI peripherals.
+    ///
+    /// This example focuses on board-specific construction. For the normal
+    /// draw/flush/read loop, start with the [`cyd`](super) module example. For a
+    /// complete application using this bundle, see the
+    /// [checked RP one-SPI DNS tester](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-rp/examples/dns_tester_one_spi.rs).
     ///
     /// ```rust,no_run
-    /// #![no_std]
-    /// #![no_main]
-    /// use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{Cyd, CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
-    /// use embassy_rp::peripherals::SPI0;
-    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// # use embassy_rp::peripherals::SPI0;
+    /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
-    ///     let [mut flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    ///     let mut button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
-    ///     static STORAGE: CydRpOneSpiStatic<SPI0, { CydRpOneSpi::<SPI0>::SCREEN_PIXELS }> = CydRpOneSpi::new_static();
-    ///     let cyd = CydRpOneSpi::new(&STORAGE, p.SPI0, p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17,
-    ///         p.PIN_20, p.PIN_21, p.PIN_22, DEFAULT_DISPLAY_SPI_HZ, p.PIN_13, p.PIN_14,
-    ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT,
-    ///         &mut flash, &mut button).await?;
-    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
+    ///     let [mut calibration_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    ///     let mut recalibration_button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
+    ///     static CYD_STATIC: CydRpOneSpiStatic<
+    ///         SPI0,
+    ///         { CydRpOneSpi::<SPI0>::SCREEN_PIXELS },
+    ///     > = CydRpOneSpi::new_static();
+    ///
+    ///     let cyd = CydRpOneSpi::new(
+    ///         &CYD_STATIC,
+    ///
+    ///         // Shared SPI and display pins:
+    ///         p.SPI0,
+    ///         p.PIN_18,
+    ///         p.PIN_19,
+    ///         p.PIN_16,
+    ///         p.PIN_17,
+    ///         p.PIN_20,
+    ///         p.PIN_21,
+    ///         p.PIN_22,
+    ///         DEFAULT_DISPLAY_SPI_HZ,
+    ///
+    ///         // Touch pins:
+    ///         p.PIN_13,
+    ///         p.PIN_14,
+    ///
+    ///         // Presentation:
+    ///         Orientation::Landscape,
+    ///         Rgb888::BLACK,
+    ///         Rgb888::WHITE,
+    ///         &DEFAULT_FONT,
+    ///
+    ///         // Calibration storage and recalibration button:
+    ///         &mut calibration_flash,
+    ///         &mut recalibration_button,
+    ///     )
+    ///     .await?;
+    ///
+    ///     drop(cyd);
     ///     Ok(())
     /// }
     /// ```
-    ///
-    /// Mirrors [`super::CydRp::new`]'s calibration handling exactly (same
-    /// automatic calibration flow and the same flash-backed load/save behavior — the only
-    /// difference from the two-SPI bundle is that display and touch share one physical bus).
-    ///
-    /// # Arguments
-    ///
-    /// * `statics` - Static storage for the shared SPI bus and the display's draw buffer
-    /// * `spi` - The shared SPI peripheral
-    /// * `sck_pin` / `mosi_pin` / `miso_pin` - Shared bus pins for both display and touch
-    /// * `lcd_cs_pin` - LCD chip-select pin (active low)
-    /// * `lcd_dc_pin` - LCD data/command pin
-    /// * `lcd_rst_pin` - LCD reset pin (active low)
-    /// * `lcd_backlight_pin` - LCD backlight enable pin
-    /// * `display_spi_hz` - SPI clock used for display transactions
-    /// * `touch_cs_pin` - Touch chip-select pin (active low)
-    /// * `touch_irq_pin` - Touch interrupt pin
-    /// * `orientation` - Screen orientation
-    /// * `background_color` - Default background color
-    /// * `foreground_color` - Default foreground/text color
-    /// * `font` - Default monospace font for text drawing
-    /// * `calibration_flash_block` - Flash block used to load/save the touch calibration
-    /// * `recalibration_button` - Button that restarts the interactive calibration flow
-    ///
-    /// Returns a ready-to-use [`CydRpOneSpi`].
     #[expect(clippy::too_many_arguments, reason = "mirrors CydEspOneSpi::new")]
     pub async fn new<
         const PIXEL_COUNT: usize,
@@ -231,7 +291,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
         let lcd_cs = Output::new(lcd_cs_pin, Level::High);
         let touch_cs = Output::new(touch_cs_pin, Level::High);
 
-        // The ST7789 display tolerates a much faster clock than the XPT2046 touch
+        // The ILI9341 display tolerates a much faster clock than the XPT2046 touch
         // controller; each device carries its own `Config`, applied to the bus immediately
         // before its own transactions (mirrors the ESP one-SPI bundle's measured rationale).
         let lcd_spi_config = {

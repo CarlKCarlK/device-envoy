@@ -4,8 +4,9 @@ set shell := ["bash", "-cu"]
 update-docs-rp:
 	./scripts/update-docs.sh
 
-# RP docs fast path (no cleanup/check-docs/doc-images asset staging)
-update-docs-rp-fast:
+# Incomplete RP docs preview: skips cleanup, validation, and doc images
+update-docs-rp-no-images:
+	@echo "WARNING: doc images are disabled; generated RP docs are incomplete and must not be reviewed or published." >&2
 	cargo doc --target thumbv8m.main-none-eabihf --no-deps --release --features pico2,arm,wifi --no-default-features
 
 # Build docs and open them in Windows Edge (via WSL)

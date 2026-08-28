@@ -117,6 +117,12 @@ just update-docs-rp
 just update-docs-esp
 ```
 
+These are the authoritative documentation builds. They regenerate and stage
+documentation images and validate the rendered output. The explicitly named
+`update-docs-rp-no-images`, `update-docs-esp-unvalidated`, and
+`update-docs-incomplete` recipes are incomplete local previews; each prints a
+warning and must not be used for documentation review or publishing.
+
 Optional: build and open docs in a browser:
 
 ```bash

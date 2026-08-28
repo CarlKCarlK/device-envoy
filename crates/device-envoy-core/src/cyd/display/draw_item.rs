@@ -9,29 +9,107 @@ use embedded_graphics::{
     primitives::{Circle, Line, Primitive, PrimitiveStyle},
 };
 
-/// A view into a statically-stored RGB565 bitmap, optionally cropped to a
-/// sub-rectangle.
+/// A read-only view of all or part of a statically stored RGB565 image.
 ///
-/// For a full-image view use [`Image565Fixed::view`](super::tga::Image565Fixed::view);
-/// for a cropped view use
-/// [`Image565Fixed::view_rect`](super::tga::Image565Fixed::view_rect). `stride`
-/// is the full image width (row step in pixels); `source` is the crop
-/// rectangle in image coordinates.
+/// A view borrows the original pixels without copying or allocating. Create a
+/// full-image view with [`Image565Fixed::view`](super::tga::Image565Fixed::view),
+/// or select a rectangular portion with
+/// [`Image565Fixed::view_rect`](super::tga::Image565Fixed::view_rect).
 ///
-/// ```rust,no_run
-/// use device_envoy_core::cyd::display::Image565View;
-/// use embedded_graphics::{pixelcolor::Rgb565, prelude::{Point, RgbColor, Size}};
+/// Coordinates passed to [`Image565View::pixel_at`] are local to the view, so
+/// `(0, 0)` addresses the crop's top-left pixel rather than the original
+/// image's top-left pixel.
 ///
-/// static PIXELS: [u16; 4] = [0, 0xffff, 0, 0xffff];
-/// let image = Image565View::new(&PIXELS, Size::new(2, 2));
-/// assert_eq!(image.size(), Size::new(2, 2));
-/// assert_eq!(image.pixel_at(Point::new(0, 0)), Rgb565::BLACK);
-/// let pixels: heapless::Vec<_, 4> = image.rgb565_iter().collect();
-/// assert_eq!(
-///     pixels.as_slice(),
-///     &[Rgb565::BLACK, Rgb565::WHITE, Rgb565::BLACK, Rgb565::WHITE],
-/// );
-/// ```
+/// Views contain only color pixels and draw opaquely. For color-key
+/// transparency, draw an [`Image565Fixed`](super::Image565Fixed) with a
+/// [`MaskFixed`](super::MaskFixed), as shown in the
+/// [`MaskFixed` example](super::MaskFixed).
+///
+/// # Example
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "image565_view",
+        "docs/assets/image565_view.png"
+    )
+)]
+#[cfg_attr(
+    feature = "host",
+    doc = r#"
+
+```rust
+use device_envoy_core::cyd::{
+    Cyd, CydDisplay,
+    display::{CydFrame, DrawItem, Image565Fixed, tga},
+};
+use embedded_graphics::{
+    prelude::{Point, Size},
+    primitives::Rectangle,
+};
+
+const IMAGE: Image565Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/docs/assets/cyd_fill_contiguous.tga"
+))
+.to_565();
+
+async fn draw<C: Cyd>(cyd: &mut C) -> Result<(), C::Error> {
+    let full_view = IMAGE.view();
+    let source = Rectangle::new(Point::new(2, 35), Size::new(41, 36));
+    let cropped_view = IMAGE.view_rect(source);
+
+    assert_eq!(cropped_view.size(), source.size);
+    assert_eq!(
+        cropped_view.pixel_at(Point::zero()),
+        full_view.pixel_at(source.top_left),
+    );
+    assert_eq!(
+        cropped_view.rgb565_iter().count(),
+        source.size.width as usize * source.size.height as usize,
+    );
+
+    let display = cyd.display();
+    let mut frame = display.full_frame_mut();
+    DrawItem::Bitmap {
+        view: full_view,
+        top_left: Point::new(80, 84),
+    }
+    .draw(&mut frame);
+    DrawItem::Bitmap {
+        view: cropped_view,
+        top_left: Point::new(200, 102),
+    }
+    .draw(&mut frame);
+    frame.flush().await
+}
+
+# use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     pixelcolor::Rgb888,
+#     prelude::RgbColor,
+# };
+# let mut cyd_memory = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# futures_executor::block_on(draw(&mut cyd_memory))?;
+# let golden_result = assert_framebuffer_matches_expected_png(
+#     &cyd_memory,
+#     env!("CARGO_MANIFEST_DIR"),
+#     "image565_view.png",
+# );
+# assert!(golden_result.is_ok(), "{golden_result:?}");
+# Ok::<(), device_envoy_core::memory::Error>(())
+```
+
+The complete image is shown on the left and its cropped view on the right:
+
+![A complete RGB565 image beside a cropped view of the same image][image565_view]
+"#
+)]
 #[derive(Clone, Copy, Debug)]
 pub struct Image565View {
     pixels: &'static [u16],
@@ -40,8 +118,11 @@ pub struct Image565View {
 }
 
 impl Image565View {
-    /// See the [`Image565View` example](Image565View).
-    /// Full-image view from a raw pixel slice.
+    /// Creates a full-image view from a row-major RGB565 pixel slice.
+    ///
+    /// Use this when pixels are already available as packed RGB565 values. For
+    /// a compile-time TGA image, prefer [`Image565Fixed::view`](super::tga::Image565Fixed::view),
+    /// as shown in the [`Image565View` example](Image565View).
     ///
     /// Panics if `pixels.len() != size.width * size.height`.
     #[must_use]
@@ -72,15 +153,21 @@ impl Image565View {
         }
     }
 
-    /// See the [`Image565View` example](Image565View).
+    /// Returns this view's dimensions.
+    ///
+    /// For a cropped view, these are the crop dimensions rather than the full
+    /// image dimensions. See the [`Image565View` example](Image565View).
     #[must_use]
     pub const fn size(&self) -> Size {
         self.source.size
     }
 
-    /// Returns the pixel at `point`, where `point` is in view-local coordinates
-    /// (i.e. `(0, 0)` is the top-left of this view, not of the underlying image).
-    /// See the [`Image565View` example](Image565View).
+    /// Returns the pixel at a view-local coordinate.
+    ///
+    /// `(0, 0)` is the top-left of this view, not necessarily the top-left of
+    /// the underlying image. See the [`Image565View` example](Image565View).
+    ///
+    /// Panics if `point` is outside the view.
     #[must_use]
     pub fn pixel_at(&self, point: Point) -> Rgb565 {
         assert!(

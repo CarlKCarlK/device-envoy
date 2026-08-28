@@ -878,11 +878,10 @@ pass:
    example needs to inspect the translation offset. Search downstream uses and
    move this method to the platform-author seam or remove it if only backends
    require it.
-5. **Nameability — `PlacedImage565`.** `Image565Fixed::at` returns the public
-   `PlacedImage565` type from a private source module, but the type has no
-   canonical nameable public page. Either re-export and document the type as a
-   supported drawing value, or redesign `at` so its public return contract does
-   not expose an unnameable type. Review this API choice before implementation.
+5. **Resolved nameability — `PlacedImage565`.** Downstream application code
+   uses `Image565Fixed::at(...).draw_masked(...)`, so the positioned-image API
+   remains supported. `PlacedImage565` is now re-exported from `cyd::display`
+   and has a canonical public page documenting ordinary and masked drawing.
 
 `DisplayBackend` remains technically public because separate platform crates
 require the seam, but its module is hidden from normal Rustdoc browsing and no
@@ -897,8 +896,7 @@ user intents rather than redundant surface to remove for its own sake.
   link to one that names and exercises them: none of 437.
 - Items still requiring a public-visibility/design decision:
   `TileGrid::top_left`, `TileGrid::size`, `CydFrame::tile_top_left`, the concrete
-  complete-device component fields/accessors, and the unnameable
-  `PlacedImage565` return type described above.
+  complete-device component fields/accessors.
 
 ##### D. Overall assessment
 
@@ -912,8 +910,9 @@ user intents rather than redundant surface to remove for its own sake.
   memory costs.
 - Example coverage: **5/5** — every one of the 437 rendered records has direct,
   mechanically reconciled visible compiled-example evidence.
-- Public-surface discipline: **4/5** — the backend seam is justified, but tile
-  plumbing/mutability and `PlacedImage565` still require design decisions.
+- Public-surface discipline: **4/5** — the backend seam and positioned-image
+  type are justified, but tile plumbing and mutability still require design
+  decisions.
 - Consistency: **4/5** — platform pairs and error naming are parallel, while
   complete-device component access and constructor hierarchy remain asymmetric
   or overly broad.

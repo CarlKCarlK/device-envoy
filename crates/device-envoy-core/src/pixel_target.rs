@@ -46,8 +46,9 @@ pub fn fill_ellipse_pixels(
 
 /// A raw pixel sink that accepts individual pixels by integer coordinates.
 ///
-/// Implement this trait for a framebuffer or display frame that should receive
-/// 2D drawing. See the canonical [`DrawItem`](crate::cyd::display::DrawItem)
+/// Every [`CydFrame`](crate::cyd::display::CydFrame) implements this trait, so
+/// [`DrawItem`](crate::cyd::display::DrawItem) values can draw directly onto any
+/// CYD frame. See the canonical [`DrawItem`](crate::cyd::display::DrawItem)
 /// example for construction, rendering, and framebuffer verification.
 pub trait PixelTarget {
     fn width(&self) -> usize;

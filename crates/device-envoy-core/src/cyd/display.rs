@@ -26,11 +26,29 @@ use crate::pixel_target::PixelTarget;
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
 pub use orientation::Orientation;
-pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, mask_byte_count};
+pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, PlacedImage565, mask_byte_count};
 
-/// Compile a supported TGA file into an [`Image888Fixed`](tga::Image888Fixed).
+/// Embeds and decodes a supported TGA file into an [`Image888Fixed`] at compile
+/// time.
 ///
-/// See the [TGA family example](tga).
+/// The file must be an uncompressed 24-bit BGR or 32-bit BGRA true-color TGA.
+/// Alpha is discarded. The output type supplies the expected image dimensions;
+/// compilation fails if they do not match the file. The decoded
+/// [`Image888Fixed`] can also produce the color-key transparency mask shown in
+/// the [`MaskFixed` example](MaskFixed).
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::{Image888Fixed, tga};
+///
+/// const IMAGE: Image888Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+///     env!("CARGO_MANIFEST_DIR"),
+///     "/docs/assets/cyd_fill_contiguous.tga"
+/// ));
+///
+/// assert_eq!(IMAGE.pixels.len(), 45 * 73);
+/// ```
 pub use crate::__cyd_tga as tga;
 
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.

@@ -251,6 +251,8 @@ gh release view vX.Y.Z \
 - Confirm that the top-level README badges resolve to the new versions.
 - Update `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to the published
   registry versions in separate pull requests.
+- Bump each starter package version to the Device Envoy release version so a
+  cloned starter clearly identifies the library release it targets.
 - Refresh only the Device Envoy entries in each starter lockfile and review the
   diff to avoid unrelated dependency upgrades.
 - Confirm every Device Envoy lockfile entry has a crates.io `source` and

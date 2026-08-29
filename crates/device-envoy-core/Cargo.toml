@@ -11,6 +11,11 @@ repository = "https://github.com/CarlKCarlK/device-envoy"
 documentation = "https://docs.rs/device-envoy-core"
 homepage = "https://github.com/CarlKCarlK/device-envoy"
 
+[package.metadata.docs.rs]
+all-features = false
+no-default-features = true
+features = ["host", "wasm", "doc-images"]
+
 [lib]
 name = "device_envoy_core"
 path = "src/lib.rs"

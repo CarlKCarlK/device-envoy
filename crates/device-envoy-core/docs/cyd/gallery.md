@@ -6,7 +6,7 @@
 with Device Envoy's portable CYD display APIs. Explore the examples in the
 [interactive Linkage Blaze gallery].
 
-![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]
+[![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]][interactive Linkage Blaze gallery]
 
 [Linkage Blaze]: https://github.com/CarlKCarlK/linkage-blaze
 [interactive Linkage Blaze gallery]: https://carlkcarlk.github.io/linkage-blaze/demos/

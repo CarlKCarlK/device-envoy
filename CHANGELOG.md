@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4-alpha.1
+
+- Fixed the `device-envoy-core` docs.rs configuration so CYD output images and
+  the host and WebAssembly implementation documentation are included.
+- Added colorful, clickable Linkage Blaze gallery previews to the ESP and RP
+  CYD module landing pages.
+
 ## 0.1.3
 
 - Refined the pre-adoption CYD display and touch APIs across Core, RP, and ESP,

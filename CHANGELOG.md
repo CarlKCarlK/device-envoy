@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.3 (unreleased)
+## 0.1.3
 
 - Refined the pre-adoption CYD display and touch APIs across Core, RP, and ESP,
   including logical coordinates, tiled drawing, and fallible touch reads.

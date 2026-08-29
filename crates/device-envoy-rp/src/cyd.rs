@@ -7,10 +7,11 @@
 //! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
 //! The ESP32, WebAssembly, and in-memory implementations share these interfaces.
 //!
-//! The portable [`device_envoy_core::cyd`] documentation provides the shared
+//! The portable [Core CYD documentation] provides the shared
 //! [application example], [drawing-strategy guide], [implementation overview],
 //! and [Linkage Blaze gallery].
 //!
+//! [Core CYD documentation]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/
 //! [application example]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#application-example
 //! [drawing-strategy guide]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#choose-a-drawing-strategy
 //! [implementation overview]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1

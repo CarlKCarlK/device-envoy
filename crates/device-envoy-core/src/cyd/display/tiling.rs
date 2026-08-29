@@ -88,8 +88,6 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
 ///     4, // columns
 ///     3, // rows
 /// );
-/// const FRAME_PIXELS: usize = GRID.max_tile_pixel_count();
-///
 /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
 ///     display
 ///         .for_each_tile(GRID, |frame| {
@@ -112,12 +110,7 @@ pub const fn max_rectangle_pixel_count(first: Rectangle, second: Rectangle) -> u
 ///         .await
 /// }
 ///
-/// assert_eq!(GRID.rectangle(), Rectangle::new(Point::zero(), Size::new(320, 240)));
-/// assert_eq!(GRID.columns(), 4);
-/// assert_eq!(GRID.rows(), 3);
-/// assert_eq!(GRID.tile_width(), 80);
-/// assert_eq!(GRID.tile_height(), 80);
-/// assert_eq!(FRAME_PIXELS, 80 * 80);
+/// assert_eq!(GRID.max_tile_pixel_count(), 80 * 80);
 /// ```
 ///
 /// A `320 × 240` region split into `4 × 3` tiles uses one `80 × 80` frame buffer.
@@ -168,7 +161,6 @@ impl TileGrid {
 
     /// Returns the display region covered by this grid.
     ///
-    /// See the [`TileGrid` example](TileGrid).
     #[must_use]
     pub const fn rectangle(&self) -> Rectangle {
         self.rectangle
@@ -176,7 +168,6 @@ impl TileGrid {
 
     /// Number of tile columns the rectangle is split into.
     ///
-    /// See the [`TileGrid` example](TileGrid).
     #[must_use]
     pub const fn columns(&self) -> usize {
         self.columns
@@ -184,7 +175,6 @@ impl TileGrid {
 
     /// Number of tile rows the rectangle is split into.
     ///
-    /// See the [`TileGrid` example](TileGrid).
     #[must_use]
     pub const fn rows(&self) -> usize {
         self.rows
@@ -192,7 +182,6 @@ impl TileGrid {
 
     /// Nominal tile width: the rectangle width divided by the column count, rounded up.
     ///
-    /// See the [`TileGrid` example](TileGrid).
     #[must_use]
     pub const fn tile_width(&self) -> usize {
         (self.rectangle.size.width as usize).div_ceil(self.columns)
@@ -200,7 +189,6 @@ impl TileGrid {
 
     /// Nominal tile height: the rectangle height divided by the row count, rounded up.
     ///
-    /// See the [`TileGrid` example](TileGrid).
     #[must_use]
     pub const fn tile_height(&self) -> usize {
         (self.rectangle.size.height as usize).div_ceil(self.rows)
@@ -255,7 +243,7 @@ const fn min_usize(first: usize, second: usize) -> usize {
     if first < second { first } else { second }
 }
 
-/// Internal lending/streaming iterator used by `CydDisplay::for_each_tile`.
+/// Internal tile sequence used by `CydDisplay::for_each_tile`.
 ///
 /// Created internally by [`CydDisplay::for_each_tile`]. This deliberately does *not* implement
 /// [`Iterator`]: each yielded frame borrows the device's
@@ -288,10 +276,10 @@ impl<C: CydDisplay> Tiles<'_, C> {
     /// any `(column, row)` that falls entirely outside the grid rectangle.
     ///
     /// See the [`CydDisplay::for_each_tile` example](CydDisplay::for_each_tile).
-    // This is a lending iterator: each yielded frame borrows the device's single
-    // reusable frame buffer, so it cannot implement `Iterator` (whose `next`
-    // returns an item that outlives the `&mut self` borrow). The `next` name is
-    // the intended call shape, so allow the trait-shape lint here.
+    // Each yielded frame borrows the device's single reusable frame buffer, so
+    // it cannot implement `Iterator` (whose `next` returns an item that outlives
+    // the `&mut self` borrow). The `next` name is the intended call shape, so
+    // allow the trait-shape lint here.
     #[allow(clippy::should_implement_trait)]
     pub(crate) fn next(&mut self) -> Option<C::Frame<'_>> {
         let (columns, rows) = (self.grid.columns(), self.grid.rows());

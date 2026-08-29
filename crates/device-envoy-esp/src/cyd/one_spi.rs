@@ -70,8 +70,8 @@ impl CydEspOneSpi {
     ///   [immediate operations](super::CydDisplay::fill_rectangle) and
     ///   [contiguous streaming](super::CydDisplay::fill_contiguous) are
     ///   available.
-    /// - A smaller buffer saves static RAM but limits the largest buffered
-    ///   region.
+    /// - A regional buffer can be sized for the largest rectangle requested
+    ///   through [`CydDisplay::frame_mut`](super::CydDisplay::frame_mut).
     /// - For tiled drawing, size the buffer to
     ///   [`TileGrid::max_tile_pixel_count`](super::tiling::TileGrid::max_tile_pixel_count),
     ///   then pass the grid to
@@ -81,8 +81,7 @@ impl CydEspOneSpi {
     ///   usually the most convenient choice when enough RAM is available.
     ///
     /// Attempting to create a frame or tile larger than the allocated buffer
-    /// panics. See [`CydStaticEsp`] for the complete sizing rules and the
-    /// [`CydEspOneSpi::new`] constructor example.
+    /// panics.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
         CydStaticEsp::new()
@@ -105,7 +104,7 @@ impl CydEspOneSpi {
     /// ```rust,no_run
     /// # #![no_std]
     /// # #![no_main]
-    /// # use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{Cyd, CydEspOneSpi, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
+    /// # use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{CydEspOneSpi, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
@@ -144,7 +143,6 @@ impl CydEspOneSpi {
     ///         &mut recalibration_button,
     ///     )
     ///     .await?;
-    /// #     assert_eq!(cyd.orientation(), Orientation::Landscape);
     /// #     Ok(())
     /// # }
     /// ```

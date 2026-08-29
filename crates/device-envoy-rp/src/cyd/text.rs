@@ -31,7 +31,9 @@ impl<D: SpiDevice<u8>> CydFrameRp<'_, D> {
     /// For any other font, color, alignment, or baseline, draw with
     /// embedded-graphics directly against this frame.
     ///
-    /// See the [`CydFrameRp` example](super::CydFrameRp).
+    /// See the portable
+    /// [`CydFrame::write_text`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.write_text)
+    /// documentation.
     pub fn write_text(&mut self, text: &str) -> &mut Self {
         Text::with_baseline(
             text,

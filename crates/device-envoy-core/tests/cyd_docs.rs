@@ -25,14 +25,15 @@ const STREAMED_BITMAP: Image565Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
 ))
 .to_565();
 
-fn generated_background_pixels() -> impl Iterator<Item = Rgb565> {
+fn generated_background_pixels(screen_size: Size) -> impl Iterator<Item = Rgb565> {
     // A blue-green RGB565 gradient with a warmer lower-right corner.
-    (0..240).flat_map(|position_y| {
-        (0..320).map(move |position_x| {
+    (0..screen_size.height).flat_map(move |position_y| {
+        (0..screen_size.width).map(move |position_x| {
             Rgb565::new(
-                (position_x / 10) as u8,
-                (position_y / 4) as u8,
-                ((position_x + position_y) / 18) as u8,
+                (position_x * 31 / (screen_size.width - 1)) as u8,
+                (position_y * 63 / (screen_size.height - 1)) as u8,
+                ((position_x + position_y) * 31 / (screen_size.width + screen_size.height - 2))
+                    as u8,
             )
         })
     })
@@ -217,9 +218,10 @@ fn cyd_fill_contiguous_full_preview_matches_expected() -> Result<(), Box<dyn Err
         Rgb888::WHITE,
         &FONT_9X15_BOLD,
     );
-    cyd_memory
-        .display()
-        .fill_contiguous_full(generated_background_pixels())
+    let mut display = cyd_memory.display();
+    let screen_size = display.screen_size();
+    display
+        .fill_contiguous_full(generated_background_pixels(screen_size))
         .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
 
     assert_framebuffer_matches_expected_png(
@@ -341,8 +343,8 @@ fn cyd_frame_mut_preview_matches_expected() -> Result<(), Box<dyn Error>> {
             &FONT_9X15_BOLD,
         );
         let mut display = cyd_memory.display();
-        let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(50, 40)));
-        frame.fill(Rgb565::RED);
+        let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(100, 40)));
+        frame.fill(Rgb565::BLUE).write_text("CYD");
         frame.flush().await?;
 
         Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)

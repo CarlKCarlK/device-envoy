@@ -174,45 +174,17 @@ pub(crate) struct CydRpUncalibrated {
 // (may no longer apply: the guidance and upper-bound check now match CydEsp.)
 /// Static storage for a [`CydRp`]-owned pixel buffer.
 ///
-/// `PIXEL_COUNT` is a caller-chosen RGB565 pixel count, not a byte count. Any
-/// value from zero through `CydRp::SCREEN_PIXELS` can be supplied. Zero
-/// allocates no pixel buffer: immediate operations and contiguous streaming
-/// still work, but buffered frames and tiles do not. A smaller positive value
-/// saves static RAM when the app buffers only a bounded rectangle or draws the
-/// screen tile by tile. Values above `CydRp::SCREEN_PIXELS` are rejected during
-/// static initialization because they provide no additional drawing capability.
-///
-/// Tiling is explicit, not automatic. The app chooses a
-/// [`TileGrid`](device_envoy_core::cyd::display::tiling::TileGrid), stores at
-/// least its `max_tile_pixel_count()`, and buffers one tile at a time through
-/// `for_each_tile`. Use `CydRp::SCREEN_PIXELS` for `full_frame_mut`, or the
-/// largest rectangle's pixel count for `frame_mut`. If a requested frame or tile
-/// exceeds the allocated pixel buffer, frame creation panics.
-///
-/// The app declares one at file scope and chooses the pixel buffer capacity:
+/// `PIXEL_COUNT` is an RGB565 pixel count, not a byte count. Choose its capacity
+/// through [`CydRp::new_static`]. Declare the storage at file scope:
 ///
 /// ```rust,no_run
 /// #![no_std]
 /// #![no_main]
 /// use device_envoy_rp::cyd::{CydRp, CydStaticRp};
 /// static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
-/// # use device_envoy_core::cyd::display::tiling::{TileGrid, rectangle_pixel_count};
-/// # use embedded_graphics::{prelude::{Point, Size}, primitives::Rectangle};
-/// const STATUS_REGION: Rectangle = Rectangle::new(Point::new(0, 0), Size::new(160, 40));
-/// const STATUS_PIXELS: usize = rectangle_pixel_count(STATUS_REGION);
-/// const GRID: TileGrid = TileGrid::new(
-///     Rectangle::new(Point::zero(), Size::new(320, 240)),
-///     4,
-///     3,
-/// );
-/// static STATUS_STORAGE: CydStaticRp<STATUS_PIXELS> = CydRp::new_static();
-/// static TILE_STORAGE: CydStaticRp<{ GRID.max_tile_pixel_count() }> = CydRp::new_static();
 /// # #[panic_handler]
 /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// ```
-///
-/// The app chooses the pixel count (policy); [`CydDisplayRp::new`] owns the
-/// initialization protocol and the storage details.
 pub struct CydStaticRp<const PIXEL_COUNT: usize> {
     pixel_buffer: StaticCell<PixelBuffer<PIXEL_COUNT>>,
 }
@@ -231,31 +203,12 @@ impl<const PIXEL_COUNT: usize> CydStaticRp<PIXEL_COUNT> {
     }
 }
 
-/// A single in-progress frame backed by an `Rgb565` pixel buffer.
+/// The RP implementation of
+/// [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html).
 ///
-/// Frames are returned by [`CydDisplay::frame_mut`] and implement the core
+/// Frames are returned by [`CydDisplay::frame_mut`]. See the portable
 /// [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html)
-/// operations. This page contains the `CydFrameRp` example.
-///
-/// ```rust,no_run
-/// #![no_std]
-/// #![no_main]
-/// use device_envoy_rp::cyd::{CydFrameRp, Error};
-/// use embedded_hal::spi::SpiDevice;
-/// use embedded_graphics::{pixelcolor::Rgb565, prelude::RgbColor};
-/// # #[panic_handler]
-/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-///
-/// fn use_frame<D: SpiDevice<u8>>(frame: &mut CydFrameRp<'_, D>) -> Result<(), Error> {
-///     let width = frame.width();
-///     let height = frame.height();
-///     assert!(width > 0 && height > 0);
-///     frame.fill(Rgb565::BLACK).write_text("CYD");
-///     let pixels = frame.raw_pixels_mut();
-///     assert_eq!(pixels.len(), width * height);
-///     frame.flush()
-/// }
-/// ```
+/// documentation for normal drawing.
 pub struct CydFrameRp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: &'a mut CydDisplayRpDevice<D>,
     view: RegionView<'a>,
@@ -272,31 +225,27 @@ pub struct CydFrameRp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     /// Fill the frame with an explicit color.
     ///
-    /// See the [`CydFrameRp` example](CydFrameRp).
+    /// See the portable
+    /// [`CydFrame::fill`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.fill)
+    /// documentation.
     pub fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.view.fill(color);
         self
     }
 
-    /// The frame's width in pixels.
-    ///
-    /// See the [`CydFrameRp` example](CydFrameRp).
+    /// The buffered frame region's width in pixels.
     #[must_use]
     pub fn width(&self) -> usize {
         self.view.width()
     }
 
-    /// The frame's height in pixels.
-    ///
-    /// See the [`CydFrameRp` example](CydFrameRp).
+    /// The buffered frame region's height in pixels.
     #[must_use]
     pub fn height(&self) -> usize {
         self.view.height()
     }
 
-    /// Borrow the frame's raw RGB565 pixels, row-major.
-    ///
-    /// See the [`CydFrameRp` example](CydFrameRp).
+    /// Borrow the buffered frame region's raw RGB565 pixels in row-major order.
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
@@ -304,8 +253,8 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     /// Present this frame's pixels at its rectangle's top-left (set by
     /// [`CydDisplay::frame_mut`]).
     ///
-    /// See the [`CydFrameRp` example](CydFrameRp).
-    /// This inherent method is the synchronous RP-specific call. In generic
+    /// This inherent method synchronously writes the buffered rectangle over
+    /// SPI. In generic
     /// code, call [`CydFrame::flush`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.flush)
     /// and await its future instead.
     pub fn flush(&mut self) -> Result<(), Error> {
@@ -634,8 +583,8 @@ impl CydRp {
     /// - `0` allocates no pixel buffer, so only
     ///   [immediate operations](CydDisplay::fill_rectangle) and
     ///   [contiguous streaming](CydDisplay::fill_contiguous) are available.
-    /// - A smaller buffer saves static RAM but limits the largest buffered
-    ///   region.
+    /// - A regional buffer can be sized for the largest rectangle requested
+    ///   through [`CydDisplay::frame_mut`].
     /// - For tiled drawing, size the buffer to
     ///   [`tiling::TileGrid::max_tile_pixel_count`], then pass the grid to
     ///   [`CydDisplay::for_each_tile`]. Only one tile is buffered at a time.
@@ -643,7 +592,7 @@ impl CydRp {
     ///   the most convenient choice when enough RAM is available.
     ///
     /// Attempting to create a frame or tile larger than the allocated buffer
-    /// panics. See [`CydStaticRp`] for the complete sizing rules and example.
+    /// panics.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticRp<PIXEL_COUNT> {
         CydStaticRp::new()
@@ -672,7 +621,7 @@ impl CydRp {
     /// # #![no_main]
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
-    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{Cyd, CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
     ///     let [mut calibration_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
@@ -713,7 +662,6 @@ impl CydRp {
     ///     )
     ///     .await?;
     ///
-    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
     ///     Ok(())
     /// }
     /// ```

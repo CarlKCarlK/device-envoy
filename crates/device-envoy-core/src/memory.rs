@@ -183,7 +183,7 @@ struct CydMemoryShared {
     frame_clock: FrameClockMemory,
 }
 
-/// Owned display half of [`CydMemory`]. See the example on [`CydMemory`].
+/// Owned display half of [`CydMemory`].
 #[derive(Clone)]
 pub struct CydDisplayMemory {
     size: Size,
@@ -195,7 +195,7 @@ pub struct CydDisplayMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
 }
 
-/// Owned calibrated touch half of [`CydMemory`]. See the example on [`CydMemory`].
+/// Owned calibrated touch half of [`CydMemory`].
 #[derive(Clone)]
 pub struct CydTouchMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
@@ -208,8 +208,7 @@ pub(crate) struct CydTouchUncalibratedMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
 }
 
-/// In-progress in-memory frame that flushes into an in-memory framebuffer. See the
-/// example on [`CydMemory`].
+/// In-progress in-memory frame that flushes into an in-memory framebuffer.
 pub struct CydFrameMemory {
     shared: Rc<RefCell<CydMemoryShared>>,
     screen_size: Size,
@@ -257,7 +256,9 @@ pub struct ButtonMemory {
 
 impl CydMemory {
     /// Construct an empty in-memory CYD surface with the given screen style.
-    /// See the example on [`CydMemory`].
+    ///
+    /// The [`CydMemory` example](CydMemory) demonstrates the canonical
+    /// construction and complete host-test workflow.
     #[must_use]
     pub fn new(
         size: Size,
@@ -291,13 +292,12 @@ impl CydMemory {
     /// use futures_executor::block_on;
     ///
     /// let mut cyd_memory = CydMemory::new_with_orientation(
-    ///     Orientation::Portrait,
+    ///     Orientation::LandscapeInverted,
     ///     Rgb888::BLACK,
     ///     Rgb888::WHITE,
     ///     &FONT_9X15_BOLD,
     /// );
-    /// assert_eq!(cyd_memory.orientation(), Orientation::Portrait);
-    /// cyd_memory.set_frame_budget(1);
+    /// assert_eq!(cyd_memory.orientation(), Orientation::LandscapeInverted);
     ///
     /// let pixel = Rectangle::new(Point::zero(), Size::new(1, 1));
     /// let mut display = cyd_memory.display();
@@ -305,11 +305,9 @@ impl CydMemory {
     /// first_frame.fill(Rgb565::RED);
     /// block_on(first_frame.flush())?;
     /// drop(first_frame);
+    /// assert_eq!(cyd_memory.pixel(0, 0), Rgb565::RED);
     /// cyd_memory.rotate_framebuffer_180();
-    /// assert_eq!(cyd_memory.pixel(239, 319), Rgb565::RED);
-    ///
-    /// let mut second_frame = display.frame_mut(pixel);
-    /// assert_eq!(block_on(second_frame.flush()), Err(Error::OutOfFrames));
+    /// assert_eq!(cyd_memory.pixel(319, 239), Rgb565::RED);
     /// # Ok::<(), Error>(())
     /// ```
     #[must_use]
@@ -371,13 +369,11 @@ impl CydMemory {
 
     #[must_use]
     /// Clone the device's display component for an independent test task.
-    /// See the example on [`CydMemory`].
     pub fn display(&self) -> CydDisplayMemory {
         self.display.clone()
     }
 
     /// Clone owned calibrated parts that share this harness's backing state.
-    /// See the example on [`CydMemory`].
     #[must_use]
     pub fn owned_parts(&self) -> (CydDisplayMemory, CydTouchMemory) {
         (self.display.clone(), self.touch.clone())
@@ -411,7 +407,37 @@ impl Cyd for CydMemory {
 
 impl CydMemory {
     /// Limit how many frames may flush before [`Error::OutOfFrames`].
-    /// See the example on [`CydMemory::new_with_orientation`].
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::{
+    ///     cyd::{CydDisplay, display::CydFrame},
+    ///     memory::{CydMemory, Error},
+    /// };
+    /// use embedded_graphics::{
+    ///     mono_font::ascii::FONT_9X15_BOLD,
+    ///     pixelcolor::{Rgb888, RgbColor},
+    ///     prelude::Size,
+    /// };
+    ///
+    /// let mut cyd_memory = CydMemory::new(
+    ///     Size::new(320, 240),
+    ///     Rgb888::BLACK,
+    ///     Rgb888::WHITE,
+    ///     &FONT_9X15_BOLD,
+    /// );
+    /// cyd_memory.set_frame_budget(1);
+    /// let mut display = cyd_memory.display();
+    ///
+    /// let mut first_frame = display.full_frame_mut();
+    /// futures_executor::block_on(first_frame.flush())?;
+    /// drop(first_frame);
+    /// let mut second_frame = display.full_frame_mut();
+    /// assert_eq!(
+    ///     futures_executor::block_on(second_frame.flush()),
+    ///     Err(Error::OutOfFrames),
+    /// );
+    /// # Ok::<(), Error>(())
+    /// ```
     pub fn set_frame_budget(&mut self, frame_budget: usize) {
         self.shared.borrow_mut().frame_budget = frame_budget;
     }
@@ -422,8 +448,10 @@ impl CydMemory {
     }
 
     /// Create a native desktop test button tied to this device's frame clock.
+    ///
+    /// The [`CydMemory` example](CydMemory) demonstrates button state changing
+    /// when a frame flush advances the shared clock.
     #[must_use]
-    /// See the example on [`CydMemory`].
     pub fn button_memory(&self) -> ButtonMemory {
         ButtonMemory::with_frame_clock(self.frame_clock())
     }
@@ -453,7 +481,9 @@ impl CydMemory {
     }
 
     /// Queue one calibrated touch event for the current frame.
-    /// See the example on [`CydMemory`].
+    ///
+    /// The [`CydMemory` example](CydMemory) demonstrates injecting an event and
+    /// reading it through the portable [`CydTouch`] API.
     pub fn push_touch_event(&mut self, touch_event: TouchEvent) {
         self.shared
             .borrow_mut()
@@ -462,21 +492,18 @@ impl CydMemory {
     }
 
     /// Return how many frames have flushed so far.
-    /// See the example on [`CydMemory`].
     #[must_use]
     pub fn flush_count(&self) -> usize {
         self.shared.borrow().flush_count
     }
 
     /// Return the rectangle flushed most recently, if any.
-    /// See the example on [`CydMemory`].
     #[must_use]
     pub fn last_flush_rectangle(&self) -> Option<Rectangle> {
         self.shared.borrow().last_flush_rectangle
     }
 
     /// Read one pixel from the in-memory framebuffer.
-    /// See the example on [`CydMemory`].
     #[must_use]
     pub fn pixel(&self, position_x: usize, position_y: usize) -> Rgb565 {
         assert!(
@@ -495,7 +522,9 @@ impl CydMemory {
     }
 
     /// Apply the physical 180-degree presentation used by an inverted CYD orientation.
-    /// See [`CydMemory::new_with_orientation`].
+    ///
+    /// The [`new_with_orientation`](CydMemory::new_with_orientation) example
+    /// demonstrates rotating an inverted framebuffer and inspecting a pixel.
     ///
     /// Hardware display drivers and browser shells apply this transform outside the logical
     /// application framebuffer. Native desktop previews can call this after rendering to compare the
@@ -553,7 +582,8 @@ impl CydMemory {
 
 /// Compare a rendered [`CydMemory`] framebuffer with an expected PNG.
 ///
-/// See the complete golden-image test in the example on [`CydMemory`].
+/// The [`CydMemory` example](CydMemory) demonstrates the complete golden-image
+/// workflow.
 ///
 /// # Expected image
 ///
@@ -1157,7 +1187,9 @@ impl ButtonMemory {
     }
 
     /// Override the pressed state for one specific flushed frame index.
-    /// See the example on [`CydMemory`].
+    ///
+    /// The [`CydMemory` example](CydMemory) demonstrates scheduled state taking
+    /// effect after a frame flush.
     pub fn set_pressed_for_frame(&mut self, frame_index: usize, pressed: bool) {
         if let Some(existing_state) = self
             .pressed_frames

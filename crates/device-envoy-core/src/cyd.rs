@@ -124,16 +124,10 @@ pub trait Cyd: Sized {
     fn orientation(&self) -> Orientation;
 }
 
-/// A CYD touch source that returns calibrated, oriented touch events.
-///
-/// [`CydTouch::try_read`] polls for a [`touch::TouchEvent`] in the same logical
-/// display coordinates as the display. See the [`CydTouch::try_read`] example
-/// for focused usage, or the
-/// [application example](index.html#application-example) for a complete
-/// read-and-draw flow.
+/// A CYD touch source that returns calibrated, oriented touch events in logical
+/// display coordinates.
 pub trait CydTouch: Sized {
-    /// Error returned when a touch read fails.
-    /// See the [`CydTouch::try_read`] example.
+    /// Error returned when reading touch input.
     type Error;
 
     /// Try to read the next calibrated touch event without blocking.
@@ -235,18 +229,6 @@ pub trait CydDisplay: backend::DisplayBackend {
     /// All drawing commands use logical display coordinates. The frame merely
     /// restricts the drawable region and the pixels buffered for presentation.
     ///
-    /// See the [frame example](CydDisplay::frame_mut).
-    ///
-    /// ```rust,no_run
-    /// use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
-    /// use embedded_graphics::{prelude::Point, primitives::Rectangle};
-    ///
-    /// async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
-    ///     let mut frame = display.frame_mut(Rectangle::new(Point::zero(), display.screen_size()));
-    ///     frame.clear().flush().await
-    /// }
-    /// ```
-    ///
     #[cfg_attr(
         feature = "doc-images",
         doc = ::embed_doc_image::embed_image!(
@@ -260,14 +242,22 @@ pub trait CydDisplay: backend::DisplayBackend {
 
 ```rust
 use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
-use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
 use embedded_graphics::{
-    pixelcolor::{Rgb565, Rgb888},
-    prelude::{RgbColor, Size},
+    pixelcolor::{Rgb565, RgbColor},
+    prelude::{Point, Size},
     primitives::Rectangle,
 };
-# use embedded_graphics::{mono_font::ascii::FONT_9X15_BOLD, prelude::Point};
-# futures_executor::block_on(async {
+
+async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    let mut frame = display.frame_mut(Rectangle::new(
+        Point::new(10, 10),
+        Size::new(100, 40),
+    ));
+    frame.fill(Rgb565::BLUE).write_text("CYD").flush().await
+}
+
+# use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
+# use embedded_graphics::{mono_font::ascii::FONT_9X15_BOLD, pixelcolor::Rgb888};
 # let memory_cyd = CydMemory::new(
 #     Size::new(320, 240),
 #     Rgb888::BLACK,
@@ -275,9 +265,7 @@ use embedded_graphics::{
 #     &FONT_9X15_BOLD,
 # );
 # let mut display = memory_cyd.display();
-let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(50, 40)));
-frame.fill(Rgb565::RED);
-frame.flush().await?;
+# futures_executor::block_on(draw(&mut display))?;
 # if let Err(error) = assert_framebuffer_matches_expected_png(
 #     &memory_cyd,
 #     env!("CARGO_MANIFEST_DIR"),
@@ -285,8 +273,6 @@ frame.flush().await?;
 # ) {
 #     panic!("{error}");
 # }
-# Ok::<(), device_envoy_core::memory::Error>(())
-# })?;
 # Ok::<(), device_envoy_core::memory::Error>(())
 ```
 
@@ -409,13 +395,15 @@ frame.flush().await?;
     /// use embedded_graphics::{pixelcolor::Rgb565, prelude::RgbColor};
     ///
     /// fn stream_background<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
+    ///     let screen_size = display.screen_size();
     ///     // A blue-green RGB565 gradient with a warmer lower-right corner.
-    ///     let pixels = (0..240).flat_map(|position_y| {
-    ///         (0..320).map(move |position_x| {
+    ///     let pixels = (0..screen_size.height).flat_map(|position_y| {
+    ///         (0..screen_size.width).map(move |position_x| {
     ///             Rgb565::new(
-    ///                 (position_x / 10) as u8,
-    ///                 (position_y / 4) as u8,
-    ///                 ((position_x + position_y) / 18) as u8,
+    ///                 (position_x * 31 / (screen_size.width - 1)) as u8,
+    ///                 (position_y * 63 / (screen_size.height - 1)) as u8,
+    ///                 ((position_x + position_y) * 31
+    ///                     / (screen_size.width + screen_size.height - 2)) as u8,
     ///             )
     ///         })
     ///     });
@@ -446,13 +434,18 @@ frame.flush().await?;
         self.fill_contiguous(Rectangle::new(Point::zero(), self.screen_size()), pixels)
     }
 
-    /// Draw projected draw items immediately inside `bounds`.
+    /// Draw `items` immediately inside `bounds`.
     ///
     /// See the [immediate-operations example](CydDisplay::fill_rectangle) and
     /// the [`display::DrawItem`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/enum.DrawItem.html) documentation for the draw-item types this consumes.
-    /// `PIXEL_SOURCE_COUNT` is the maximum number of primitive or bitmap
-    /// sources retained from `items`; choose it at least as large as the items
-    /// that contribute pixels.
+    /// `PIXEL_SOURCE_COUNT` is the allocation-free capacity for prepared draw
+    /// items. Each nondegenerate item consumes at most one slot, including an
+    /// item that lies outside `bounds`. Using the total number of supplied items
+    /// is always safe.
+    ///
+    /// # Panics
+    ///
+    /// Panics if preparing the items exhausts `PIXEL_SOURCE_COUNT`.
     fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
         &mut self,
         bounds: Rectangle,
@@ -486,11 +479,11 @@ frame.flush().await?;
         self.fill_rectangle(Rectangle::new(Point::zero(), self.screen_size()), color)
     }
 
-    /// Draw and flush each tile in `grid` through a synchronous callback.
+    /// Draw and flush each tile in `grid`.
     ///
-    /// The callback receives one logical-display-coordinate frame at a time; this helper owns the
-    /// reusable frame and flush sequence, so callers do not need to handle lending iterator
-    /// lifetimes. This is the primary low-memory drawing workflow.
+    /// `draw` receives one logical-display-coordinate frame for each tile. Each
+    /// frame clips drawing to its tile and is flushed after `draw` returns and
+    /// before the next tile is processed. Only one tile is buffered at a time.
     ///
     /// See the [`TileGrid`](display::tiling::TileGrid) example for grid
     /// construction, buffer sizing, and a scene drawn across tile boundaries.

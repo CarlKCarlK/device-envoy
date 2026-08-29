@@ -1,7 +1,7 @@
 //! Display-only data, asset, and drawing plumbing for the CYD's `cyd` device
 //! abstraction.
 //!
-//! This module contains the buffered-frame, callback-tiling, and contiguous
+//! This module contains the buffered-frame, tiled drawing, and contiguous
 //! streaming drawing mechanisms used by [`CydDisplay`](crate::cyd::CydDisplay).
 //! `DrawItem` is a convenience for describing shapes and images inside those
 //! workflows; see [`CydDisplay::draw_items`](crate::cyd::CydDisplay::draw_items)
@@ -104,7 +104,7 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     doc = "\n![A blue frame containing white CYD text on an in-memory display.][cyd_frame_preview]\n"
 )]
 pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
-    /// Error returned when flushing this frame to the panel.
+    /// Error returned when presenting the frame.
     type Error;
 
     /// This frame's rectangle (top-left and size) in logical display coordinates.

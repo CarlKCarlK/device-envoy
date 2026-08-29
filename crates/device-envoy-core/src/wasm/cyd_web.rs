@@ -138,22 +138,18 @@ use crate::flash_block::FlashBlock as _;
 #[derive(Clone, Copy)]
 /// Presentation and persistent-storage settings for a [`Capabilities`]
 /// session.
-/// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
+/// The compiled browser-shell example on [`crate::wasm::cyd_web`] constructs
+/// and reads every field.
 pub struct Config {
     /// Namespace used for orientation and simulated Wi-Fi state.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub storage_namespace: &'static str,
     /// Orientation used when no saved orientation exists.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub initial_orientation: Orientation,
     /// Canvas background color.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub background_color: Rgb888,
     /// Canvas foreground color.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub foreground_color: Rgb888,
     /// Font used by the simulated display.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub font: &'static MonoFont<'static>,
 }
 
@@ -179,22 +175,18 @@ impl Config {
 
 #[derive(Clone, Copy)]
 /// Browser-facing metadata displayed by the shared CYD simulator shell.
-/// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
+/// The compiled browser-shell example on [`crate::wasm::cyd_web`] constructs
+/// and reads every field.
 pub struct PageInfo {
     /// Page title.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub title: &'static str,
     /// Short preview text.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub preview: &'static str,
     /// Longer application description.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub description: &'static str,
     /// Human-readable interaction instructions.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub controls: &'static str,
     /// Link to the platform-neutral application source.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub core_code_url: &'static str,
 }
 
@@ -222,6 +214,8 @@ impl PageInfo {
 ///
 /// A launcher receives this value from [`start`], selects focused capabilities,
 /// and returns a [`Command`].
+/// The compiled browser-shell example on [`crate::wasm::cyd_web`] reads every
+/// field.
 ///
 /// ```rust,no_run
 /// # use core::convert::Infallible;
@@ -239,53 +233,45 @@ impl PageInfo {
 /// ```
 pub struct Capabilities {
     /// CYD display and touch capability.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub cyd: CydWasm,
     /// BOOT-button capability.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub button: ButtonWasm,
     /// Browser-backed clock capability.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub clock_sync: ClockSyncWasm,
     /// Simulated Wi-Fi capability.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub wifi_simulator: WifiSimulatorWasm,
     /// Deterministic simulated DNS capability.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub dns_simulator: DnsSimulatorWasm,
 }
 
 /// Result requested by an application after one run.
-/// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
+/// The compiled browser-shell example on [`crate::wasm::cyd_web`] constructs
+/// every variant.
 pub enum Command {
     /// Restart the current session.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     Restart,
     /// Report that physical calibration is unnecessary in the browser.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     CalibrationNotNeeded,
     /// Clear simulated Wi-Fi state and restart.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     ResetWifi,
     /// Persist and apply a new display orientation.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     Reorientate(Orientation),
     /// Stop the supervisor.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     Stop,
 }
 
 #[wasm_bindgen(js_name = CydWebNoticeSeverity)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Severity assigned to a framework notice.
+///
+/// The compiled browser-shell example on [`crate::wasm::cyd_web`] constructs
+/// every variant.
 pub enum NoticeSeverity {
     /// Informational notice.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     Info,
     /// Recoverable warning.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     Warning,
     /// Terminal runtime failure.
-    /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     Fatal,
 }
 

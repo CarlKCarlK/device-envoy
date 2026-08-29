@@ -25,22 +25,17 @@ use embedded_graphics::geometry::Point;
 /// runtime display orientation before returning it.
 #[derive(Clone, Copy, Debug)]
 pub enum TouchEvent {
-    /// The touch contact began at `point` in logical display coordinates.
-    /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
+    /// The touch contact began at `point`.
     Down {
-        /// Calibrated point bounded by the display's logical size.
-        /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
+        /// The contact position.
         point: Point,
     },
-    /// The active touch contact moved to `point` in logical display coordinates.
-    /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
+    /// The active contact moved to `point`.
     Move {
-        /// Calibrated point bounded by the display's logical size.
-        /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
+        /// The contact position.
         point: Point,
     },
-    /// The touch contact ended; no point is carried.
-    /// See the compiled [`CydTouch::try_read`](super::CydTouch::try_read) example.
+    /// The touch contact ended.
     Up,
 }
 

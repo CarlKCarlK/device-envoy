@@ -68,20 +68,8 @@ pub struct CydRpOneSpi<T: spi::Instance + 'static> {
 // (may no longer apply: the guidance and upper-bound check now match CydEspOneSpi.)
 /// Static storage for a [`CydRpOneSpi`]-owned draw buffer and shared SPI bus.
 ///
-/// `PIXEL_COUNT` is a caller-chosen RGB565 pixel count, not a byte count. Any
-/// value from zero through `CydRpOneSpi::<T>::SCREEN_PIXELS` can be supplied.
-/// Zero allocates no pixel buffer: immediate operations and contiguous
-/// streaming still work, but buffered frames and tiles do not. A smaller
-/// positive value saves static RAM when the app buffers only a bounded
-/// rectangle or draws the screen tile by tile. Values above the screen pixel
-/// count are rejected during static initialization.
-///
-/// Tiling is explicit, not automatic. The app chooses a
-/// [`TileGrid`](super::tiling::TileGrid), stores at least its
-/// `max_tile_pixel_count()`, and buffers one tile at a time through
-/// `for_each_tile`. Use `CydRpOneSpi::<T>::SCREEN_PIXELS` for `full_frame_mut`,
-/// or the largest rectangle's pixel count for `frame_mut`. If a requested frame
-/// or tile exceeds the allocated pixel buffer, frame creation panics.
+/// `PIXEL_COUNT` is an RGB565 pixel count, not a byte count. Choose its capacity
+/// through [`CydRpOneSpi::new_static`].
 ///
 /// Unlike [`super::CydStaticRp`], this storage also contains the shared-bus
 /// mutex. `embassy_rp::spi::Spi<'static, T, Blocking>` carries its peripheral
@@ -138,8 +126,8 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     ///   [immediate operations](super::CydDisplay::fill_rectangle) and
     ///   [contiguous streaming](super::CydDisplay::fill_contiguous) are
     ///   available.
-    /// - A smaller buffer saves static RAM but limits the largest buffered
-    ///   region.
+    /// - A regional buffer can be sized for the largest rectangle requested
+    ///   through [`CydDisplay::frame_mut`](super::CydDisplay::frame_mut).
     /// - For tiled drawing, size the buffer to
     ///   [`TileGrid::max_tile_pixel_count`](super::tiling::TileGrid::max_tile_pixel_count),
     ///   then pass the grid to
@@ -149,8 +137,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     ///   usually the most convenient choice when enough RAM is available.
     ///
     /// Attempting to create a frame or tile larger than the allocated buffer
-    /// panics. See [`CydRpOneSpiStatic`] for the complete sizing rules and the
-    /// [`CydRpOneSpi::new`] constructor example.
+    /// panics.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydRpOneSpiStatic<T, PIXEL_COUNT> {
         CydRpOneSpiStatic::new()
@@ -178,7 +165,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// ```rust,no_run
     /// # #![no_std]
     /// # #![no_main]
-    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{Cyd, CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
+    /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRpOneSpi, CydRpOneSpiStatic, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
     /// # use embassy_rp::peripherals::SPI0;
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # #[panic_handler]
@@ -221,7 +208,6 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     ///     )
     ///     .await?;
     ///
-    ///     assert_eq!(cyd.orientation(), Orientation::Landscape);
     ///     Ok(())
     /// }
     /// ```

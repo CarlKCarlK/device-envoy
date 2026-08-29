@@ -91,14 +91,12 @@ pub struct CydSimulatorControlWasm {
 }
 
 /// Result of the shared browser Wi-Fi connection simulation.
-/// See the compiled [`WifiSimulatorWasm`] example.
+/// The compiled [`WifiSimulatorWasm`] example constructs both variants.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WifiConnectOutcome {
     /// The simulated client connection completed.
-    /// See the compiled [`WifiSimulatorWasm`] example.
     Connected,
     /// BOOT interrupted the connection and requests a reset.
-    /// See the compiled [`WifiSimulatorWasm`] example.
     ResetRequested,
 }
 

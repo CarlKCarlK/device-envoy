@@ -103,7 +103,7 @@ All code and documentation contributed to this repository must be reviewed, edit
 
 ## Development Guide
 
-If you want to edit this workspace, start here: [development.md](development.md).
+If you want to edit this workspace, start here: [development guide](docs/development.md).
 
 ## License
 

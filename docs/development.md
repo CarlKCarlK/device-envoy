@@ -98,9 +98,13 @@ recipes open partial previews instead.
 
 ## Release Process
 
-For release prep, publishing order, and tagging, use:
+The canonical release procedure, including PR/CI gates, starter validation,
+publishing order, downstream updates, and tagging, is:
 
-- [`docs/release_checklist.md`](docs/release_checklist.md)
+- [`release_checklist.md`](release_checklist.md)
+
+Keep release steps there rather than duplicating them in this development
+guide.
 
 ## Standard Pin Assignments
 

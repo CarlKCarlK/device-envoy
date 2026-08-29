@@ -1,12 +1,19 @@
 # Release Checklist
 
-Use this checklist when preparing a new workspace release.
+This is the canonical release procedure for the Device Envoy workspace. Other
+repository documentation should link here rather than duplicate these steps.
 
-## 1. Prep
+## 1. Prepare the Release Branch
 
-- Format all code files.
-- Pick the target version (for example `0.0.5-alpha.6`).
-- Create a release branch if needed.
+- Pick the target version (for example `0.1.3`).
+- Prepare the release on a dedicated feature or release branch, not directly on
+  `main`.
+- Start with a clean working tree and an up-to-date `main` base.
+- Format all code files:
+
+```bash
+cargo fmt --all -- --check
+```
 
 ## 2. Sweep TODO Priorities
 
@@ -16,94 +23,140 @@ Use this checklist when preparing a new workspace release.
 rg -n '(?i)\btodo''0+\b' crates xtask specs docs --glob '!docs/release_checklist.md'
 ```
 
-- Resolve, defer explicitly, or document why each remaining item is not blocking.
+- Resolve, explicitly defer, or document why each remaining item is not
+  blocking.
 
 ## 3. Update Versions
 
-- Bump versions together (lockstep unless intentionally diverging):
+- Bump published crate versions together unless a release intentionally
+  diverges:
   - `crates/device-envoy-core/Cargo.toml`
   - `crates/device-envoy-rp/Cargo.toml`
   - `crates/device-envoy-esp/Cargo.toml`
   - `crates/device-envoy/Cargo.toml`
-- Verify dependency constraints between workspace crates still match the new version.
-- Update dependent/sample project dependencies to the new versions (for example `device-envoy-rp-blinky` and `device-envoy-esp-blinky`).
-- Refresh the workspace lockfile through Cargo after version bumps (for example `cargo update -w` or `cargo check-all`).
+- Update version requirements between workspace crates to match.
+- Refresh the workspace lockfile through Cargo, for example with
+  `cargo update -w` or `cargo check-all`.
+- Do not update downstream repositories to an unpublished registry version.
+  Validate them against this branch first, then update their registry
+  dependencies after publication.
 
-## 4. Update Changelog
+## 4. Update the Changelog
 
-- Update top-level [CHANGELOG.md](../CHANGELOG.md) with a new section for the release.
+- Update the top-level [CHANGELOG.md](../CHANGELOG.md) with a concise section
+  for the release.
 - Summarize API changes, behavior changes, and notable fixes.
-- Include a note that `device-envoy-rp-blinky` and `device-envoy-esp-blinky` were updated for this release.
+- Mention downstream repository updates only when those updates are actually
+  part of the coordinated release.
 
-## 5. Generate and Review Docs
+## 5. Generate and Review Documentation
 
-- Regenerate docs:
+- Build the authoritative Core, ESP, and RP documentation snapshot:
 
 ```bash
 just docs
 ```
 
-This is the only authoritative documentation workflow. It rebuilds Core, ESP,
-and RP documentation with the complete review feature sets, stages shared
-images, and verifies sentinel pages and images. Do not use any `*-only` or
-explicitly incomplete preview recipe for release review.
+This is the only authoritative documentation workflow. It rebuilds all three
+sites with their complete review feature sets, stages shared images, and
+verifies sentinel pages, images, and selected rendered links. Do not use an
+individual `*-only` or explicitly incomplete preview for release review.
 
-- Optional local preview in a browser:
+- Optionally rebuild and open all three sites in a browser:
 
 ```bash
 just show-docs
 ```
 
-Note: `show-docs` runs the authoritative `docs` step before opening the
-Core, ESP, and RP indexes.
+- Manually inspect Core, RP, and ESP for broken links, stale examples, missing
+  images or sections, and inconsistent platform documentation.
+- Optionally export rustdoc to DOCX with
+  `scripts/rustdoc_site_to_docx.py` for a whole-site comparison.
 
-- Manually inspect docs output for both crates (`rp` and `esp`) for broken links, stale examples, and missing sections.
-- Optional: export rustdoc to a single DOCX for whole-site diff/review using `scripts/rustdoc_site_to_docx.py` (for example, export current output and a `main` baseline, then compare the two DOCX files in your diff tool).
+## 6. Run Full Local Checks
 
-## 6. Run Full Checks
-
-- Run top-level checks:
+Run the workspace's local CI equivalent from the repository root:
 
 ```bash
 cargo check-all
 ```
 
-- Fix failures before publishing.
+Fix every failure before pushing the final release-preparation commit.
 
-## 7. Validate Sample Projects
+## 7. Validate the Starter Repositories
 
-- Update `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to the new release version.
-- Temporarily replace their `device-envoy-*` dependencies with direct path
-  dependencies to this local workspace.
-- Run the sample/template projects that depend on this workspace (including `device-envoy-rp-blinky` and `device-envoy-esp-blinky`).
-- Confirm they build and run with the new versions.
-- Restore the registry dependencies; do not commit machine-specific paths.
+The `Check Starters` workflow validates every supported RP and ESP starter
+configuration against this Device Envoy branch by substituting local path
+dependencies. It is intentionally manual and does not run automatically for a
+pull request.
 
-## 8. Publish Dry Run
+- Push the release branch, then dispatch the workflow against that branch:
 
-- Use a fresh Cargo target directory for each dry run. This prevents files from
-  an earlier workspace package from accidentally satisfying a package's
-  references to files that were not included in its own archive.
-- Dry-run the core crate first:
+```bash
+RELEASE_BRANCH="$(git branch --show-current)"
+git push -u origin "$RELEASE_BRANCH"
+gh workflow run check-starters.yml --ref "$RELEASE_BRANCH"
+STARTER_RUN_ID="$(gh run list --workflow check-starters.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+```
+
+- Watch the run identified by the final command and require it to pass:
+
+```bash
+gh run watch "$STARTER_RUN_ID" --exit-status
+```
+
+- Perform any release-specific hardware smoke tests that cannot run in CI.
+- Do not commit temporary path dependencies to a downstream repository.
+
+## 8. Integrate Through a Pull Request
+
+- Commit and push all release-preparation changes.
+- Open or update a pull request from the release branch into `main`.
+- Wait for the pull request's `Check All` and `Check Clippy` workflows to pass.
+  From the checked-out release branch, inspect their current state with:
+
+```bash
+gh pr checks
+```
+
+  Repeat the command as needed or monitor the checks in the GitHub pull-request
+  page until every required check passes.
+
+- Review the complete pull request diff and confirm that the changelog,
+  manifests, and lockfile describe the intended release.
+- Merge through GitHub only after the pull-request checks and the manually
+  dispatched starter checks pass. Do not bypass this gate with a direct local
+  merge and push to `main`.
+- Wait for the push-triggered `Check All` and `Check Clippy` workflows on
+  `main` to pass after the merge.
+- Update the local checkout to the approved commit and confirm it is clean:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git status --short --branch
+```
+
+## 9. Publish in Dependency Order
+
+Publishing is effectively permanent. Run every command from the clean,
+CI-approved `main` commit. Use a fresh Cargo target directory for each dry run
+so one package cannot accidentally rely on files left by another package.
+
+- Dry-run and publish Core first:
 
 ```bash
 CARGO_TARGET_DIR="$(mktemp -d)" cargo publish --dry-run --locked -p device-envoy-core
-```
-
-- The RP and ESP dry-runs resolve `device-envoy-core` from crates.io, so run
-  them only after the matching core version has been published and propagated.
-- The top-level `device-envoy` landing crate is not published.
-
-## 9. Publish
-
-- Publish core first:
-
-```bash
 cargo publish --locked -p device-envoy-core
 ```
 
-- Wait until the new `device-envoy-core` version resolves from crates.io.
-- Dry-run the platform crates:
+- Wait until the exact Core version resolves from crates.io:
+
+```bash
+cargo info device-envoy-core@X.Y.Z
+```
+
+- Dry-run RP and ESP against the published Core version:
 
 ```bash
 CARGO_TARGET_DIR="$(mktemp -d)" cargo publish --dry-run --locked -p device-envoy-rp
@@ -117,47 +170,62 @@ cargo publish --locked -p device-envoy-rp
 cargo publish --locked -p device-envoy-esp
 ```
 
-- Wait for crates.io index propagation after publishing `device-envoy-rp` and
-  `device-envoy-esp`.
-- The blinky repositories are cloneable templates and are not published to crates.io.
-
-## 10. Tag and GitHub Release
-
-- Create an annotated git tag:
+- Wait until both exact platform versions resolve from crates.io:
 
 ```bash
+cargo info device-envoy-rp@X.Y.Z
+cargo info device-envoy-esp@X.Y.Z
+```
+
+- Do not publish the top-level `device-envoy` landing crate.
+- Do not publish the blinky repositories; they are cloneable project
+  templates, not crates.io packages.
+
+## 10. Tag and Create the GitHub Release
+
+After all three crates have been published, tag the exact approved `main`
+commit:
+
+```bash
+git status --short --branch
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-- Create a GitHub Release from that tag.
-- Optionally add a `release` label to the PR/issue used to track the release.
+- Create a GitHub Release from the tag using the curated changelog section.
+- Add a `release` label to the pull request or tracking issue when useful.
 
-## 11. Post-Release Verification
+## 11. Verify and Update Downstream Repositories
 
-- Verify crate pages on crates.io for all published crates.
-- Verify docs.rs builds for `device-envoy-rp` and `device-envoy-esp`.
-- Confirm the top-level README version badges reflect the new release.
-- Refresh only the Device Envoy entries in each blinky repository's lockfile;
-  review the diff to avoid unrelated dependency upgrades.
+- Verify the exact Core, RP, and ESP versions on crates.io.
+- Verify the Core, RP, and ESP builds on docs.rs.
+- Confirm that the top-level README badges resolve to the new versions.
+- Update `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to the published
+  registry versions in separate pull requests.
+- Refresh only the Device Envoy entries in each starter lockfile and review the
+  diff to avoid unrelated dependency upgrades.
 - Confirm every Device Envoy lockfile entry has a crates.io `source` and
-  `checksum`, and verify that Cargo accepts the lockfile without changing it:
+  `checksum`, then verify the lockfile without modifying it:
 
 ```bash
 cargo metadata --locked --format-version 1 > /dev/null
 ```
 
-- Validate every supported starter configuration against the published crates,
-  then push the dependency and lockfile updates:
+- Validate every supported starter configuration against the published crates:
 
 ```bash
-# in device-envoy-rp-blinky
+# In device-envoy-rp-blinky:
 cargo xtask check --board pico1
 cargo xtask check --board pico2
 cargo xtask check --board pico1w
 cargo xtask check --board pico2w
 
-# in device-envoy-esp-blinky
+# In device-envoy-esp-blinky:
 cargo xtask check --chip c6
 cargo xtask check --chip s3
 ```
+
+- Merge the starter updates only after their pull-request checks pass.
+- For a coordinated downstream crate release, such as Linkage Blaze, wait for
+  all required Device Envoy versions to resolve from crates.io before running
+  registry-only checks and publishing that crate.

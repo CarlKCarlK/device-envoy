@@ -57,8 +57,6 @@
 //! shared application code can use the [`Cyd`] trait without naming an ESP type.
 #![doc = include_str!("../../../docs/cyd/implementations.md")]
 
-// TODO0 Reduce CYD's public API surface; see specs/CYD_PUBLIC_API_CLEANUP.md.
-
 mod buffer;
 mod display;
 mod one_spi;

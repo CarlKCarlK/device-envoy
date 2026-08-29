@@ -63,9 +63,6 @@ pub struct CydRpOneSpi<T: spi::Instance + 'static> {
     touch: CydTouchRp<SharedSpiDevice<T>>,
 }
 
-// TODO0 Add the ESP-style `0..=SCREEN_PIXELS` capacity, zero-workspace,
-// static-RAM, explicit-tiling, and compile-time upper-bound guidance here.
-// (may no longer apply: the guidance and upper-bound check now match CydEspOneSpi.)
 /// Static storage for a [`CydRpOneSpi`]-owned draw buffer and shared SPI bus.
 ///
 /// `PIXEL_COUNT` is an RGB565 pixel count, not a byte count. Choose its capacity
@@ -113,10 +110,6 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// See the compiled [`CydRpOneSpi::new`] constructor example.
     pub const SCREEN_PIXELS: usize = device_envoy_core::cyd::SCREEN_PIXELS;
 
-    // TODO0 Add the ESP-style `0..=SCREEN_PIXELS` workspace guidance,
-    // compile-time upper-bound enforcement, and constructor-example cleanup to
-    // `CydRpOneSpi::new_static` and `CydRpOneSpi::new`. (may no longer apply:
-    // the guidance, check, and example now match CydEspOneSpi.)
     /// Create static storage for a CYD pixel buffer and shared SPI bus.
     ///
     /// Choose any `PIXEL_COUNT` from zero through

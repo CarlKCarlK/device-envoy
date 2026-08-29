@@ -1,4 +1,6 @@
 /target/
+__pycache__/
+*.pyc
 .codex
 .vscode/settings.json
 crates/device-envoy-esp/.vscode/

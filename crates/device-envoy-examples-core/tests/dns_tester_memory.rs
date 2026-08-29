@@ -93,10 +93,7 @@ fn shared_dns_tester_orientation_goldens() -> Result<(), Box<dyn std::error::Err
             ),
         });
         cyd_memory.push_touch_event(TouchEvent::Down {
-            point: physical_point_for_logical_point(
-                orientation,
-                orientation_control_point(orientation),
-            ),
+            point: orientation_control_point(orientation),
         });
         let mut dns = SuccessfulDns;
         let mut button = cyd_memory.button_memory();
@@ -154,10 +151,7 @@ fn ordinary_touch_runs_dns_once_and_ignores_move_up() -> Result<(), Box<dyn std:
     });
     cyd_memory.push_touch_event(TouchEvent::Up);
     cyd_memory.push_touch_event(TouchEvent::Down {
-        point: physical_point_for_logical_point(
-            Orientation::Landscape,
-            orientation_control_point(Orientation::Landscape),
-        ),
+        point: orientation_control_point(Orientation::Landscape),
     });
     let lookup_count = Rc::new(Cell::new(0));
     let mut dns = CountingDns {
@@ -172,15 +166,6 @@ fn ordinary_touch_runs_dns_once_and_ignores_move_up() -> Result<(), Box<dyn std:
     );
     assert_eq!(lookup_count.get(), 1);
     Ok(())
-}
-
-fn physical_point_for_logical_point(orientation: Orientation, point: Point) -> Point {
-    match orientation {
-        Orientation::Landscape => point,
-        Orientation::Portrait => Point::new(319 - point.y, point.x),
-        Orientation::LandscapeInverted => Point::new(319 - point.x, 239 - point.y),
-        Orientation::PortraitInverted => Point::new(point.y, 239 - point.x),
-    }
 }
 
 fn orientation_control_point(orientation: Orientation) -> Point {

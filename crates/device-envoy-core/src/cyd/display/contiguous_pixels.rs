@@ -214,7 +214,7 @@ impl PreparedPrimitive {
     }
 }
 
-/// A compiled row-major RGB565 view of projected draw items inside one rectangle.
+/// A prepared row-major RGB565 view of draw items inside one rectangle.
 pub(crate) struct ContiguousPixels<const PIXEL_SOURCE_COUNT: usize> {
     bounds: Rectangle,
     left: i32,
@@ -226,7 +226,7 @@ pub(crate) struct ContiguousPixels<const PIXEL_SOURCE_COUNT: usize> {
 }
 
 impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
-    /// Compile already-projected draw items for indexed pixel lookups.
+    /// Prepare draw items for indexed pixel lookups.
     #[must_use]
     pub(crate) fn from_draw_items(
         bounds: Rectangle,
@@ -238,7 +238,7 @@ impl<const PIXEL_SOURCE_COUNT: usize> ContiguousPixels<PIXEL_SOURCE_COUNT> {
             if let Some(prepared_pixel_source) = PreparedPrimitive::from_projected(&draw_item) {
                 pixel_sources
                     .push(prepared_pixel_source)
-                    .expect("projected draw items fit the prepared pixel source capacity");
+                    .expect("draw items fit the prepared pixel source capacity");
             }
         }
 

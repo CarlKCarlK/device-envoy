@@ -6,7 +6,7 @@ use crate::flash_block::FlashBlock;
 use embassy_time::Timer;
 use heapless::String;
 
-use super::super::{CydDisplay, CydTouchUncalibrated};
+use super::super::CydDisplay;
 use super::calibration::{
     CALIBRATION_MAX_DRAW_ITEMS, CALIBRATION_TEXT_RECTANGLE, CalibrationConfig, CalibrationCorner,
     VERIFY_HIT_RADIUS_PIXELS, calibration_ack_dot_item, calibration_rejected_target_items,
@@ -16,6 +16,7 @@ use super::calibration::{
 use super::flow::CalibrationFlow;
 use super::flow::CalibrationFlowEvent;
 use super::flow::{ReleaseTouchCapture, ReleaseTouchCaptureEvent};
+use crate::cyd::backend::TouchUncalibrated;
 use crate::cyd::display::{CydFrame, DrawItem};
 use crate::cyd::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use embedded_graphics::{
@@ -43,77 +44,28 @@ const CALIBRATION_SHAPES_RECTANGLE: Rectangle = Rectangle::new(
     Size::new(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
 );
 
-/// Result of ensuring calibration at startup.
-#[derive(Clone, Copy, Debug)]
-pub enum EnsureCalibrationOutcome {
-    Loaded(CalibrationConfig),
-    Saved(CalibrationConfig),
-}
-
-impl EnsureCalibrationOutcome {
-    #[must_use]
-    pub const fn calibration_config(self) -> CalibrationConfig {
-        match self {
-            Self::Loaded(calibration_config) | Self::Saved(calibration_config) => {
-                calibration_config
-            }
-        }
-    }
-
-    #[must_use]
-    pub const fn was_saved(self) -> bool {
-        matches!(self, Self::Saved(_))
-    }
-}
-
-/// Error from the shared calibration driver.
-pub struct Error<T: CydTouchUncalibrated, FlashError> {
-    pub touch: T,
-    pub kind: ErrorKind<T::Error, FlashError>,
-}
-
-// Manual impl: the returned device is not `Debug`, so only `kind` is shown.
-impl<T, FlashError> core::fmt::Debug for Error<T, FlashError>
-where
-    T: CydTouchUncalibrated,
-    T::Error: core::fmt::Debug,
-    FlashError: core::fmt::Debug,
-{
-    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        formatter
-            .debug_struct("Error")
-            .field("kind", &self.kind)
-            .finish_non_exhaustive()
-    }
-}
-
+/// Error while loading or interactively creating touch calibration.
 #[derive(Debug)]
-pub enum ErrorKind<DeviceError, FlashError> {
+pub enum Error<DeviceError, FlashError> {
+    /// Reading or drawing through the platform touch/display backend failed.
     Device(DeviceError),
+    /// Loading or saving calibration in persistent storage failed.
     Flash(FlashError),
 }
 
 #[derive(Clone, Copy, Debug)]
 /// Tunable frame-budget settings for the shared calibration flow.
-pub struct EnsureCalibrationSettings {
+struct EnsureCalibrationSettings {
     verify_timeout_frames: usize,
 }
 
 impl EnsureCalibrationSettings {
-    pub const DEFAULT: Self = Self {
+    const DEFAULT: Self = Self {
         verify_timeout_frames: VERIFY_TIMEOUT_FRAMES,
     };
 
     #[must_use]
-    pub const fn new(verify_timeout_frames: usize) -> Self {
-        assert!(verify_timeout_frames > 0, "verify timeout must be non-zero");
-        Self {
-            verify_timeout_frames,
-        }
-    }
-
-    #[must_use]
-    pub const fn verify_timeout_frames(self) -> usize {
+    const fn verify_timeout_frames(self) -> usize {
         self.verify_timeout_frames
     }
 }
@@ -146,175 +98,24 @@ enum CalibrationShape {
     Verifying,
 }
 
-/// Ensure that `touch` has a calibration, running the shared four-tap flow when
-/// the flash block does not currently deserialize as a valid configuration.
+/// Load saved touch calibration or create it interactively during device construction.
 ///
-/// Invalid, corrupt, or absent flash content is treated as "not calibrated"
-/// instead of bricking boot. The driver simply reruns the calibration flow and
-/// overwrites the block with a fresh solve after the candidate is validated and
-/// the user confirms it by hitting the center verify target, then returns so
-/// the caller can proceed immediately.
-///
-/// ```rust,no_run
-/// # use core::{convert::Infallible, future::ready};
-/// # use device_envoy_core::{
-/// #     button::{Button, __ButtonMonitor},
-/// #     cyd::{CydDisplay, CydTouch, CydTouchUncalibrated, display::CydFrame, touch::{RawTouchEvent, calibration::{CalibrationConfig, ensure_calibration}}},
-/// #     flash_block::FlashBlock,
-/// #     pixel_target::PixelTarget,
-/// # };
-/// # use embedded_graphics::{
-/// #     pixelcolor::{Rgb565, Rgb888},
-/// #     prelude::{DrawTarget, OriginDimensions, Point, RgbColor, Size},
-/// #     primitives::Rectangle,
-/// # };
-/// # use serde::{Deserialize, Serialize};
-/// # struct DemoDisplay;
-/// # struct DemoFrame;
-/// # struct DemoTouch;
-/// # struct DemoTouchUncalibrated;
-/// # struct DemoFlashBlock {
-/// #     calibration_config: Option<CalibrationConfig>,
-/// # }
-/// # struct DemoButton;
-/// # impl CydTouch for DemoTouch {
-/// #     type Error = Infallible;
-/// #     type Uncalibrated = DemoTouchUncalibrated;
-/// #     fn read(&mut self) -> Result<Option<device_envoy_core::cyd::touch::TouchEvent>, Self::Error> { Ok(None) }
-/// #     fn calibration_config(&self) -> CalibrationConfig {
-/// #         CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
-/// #     }
-/// #     fn decalibrate(self) -> Self::Uncalibrated { DemoTouchUncalibrated }
-/// # }
-/// # impl CydTouchUncalibrated for DemoTouchUncalibrated {
-/// #     type Error = Infallible;
-/// #     type Calibrated = DemoTouch;
-/// #     fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Self::Error> {
-/// #         Ok(None)
-/// #     }
-/// #     fn calibrate(self, _calibration_config: CalibrationConfig) -> Self::Calibrated {
-/// #         DemoTouch
-/// #     }
-/// # }
-/// # impl CydDisplay for DemoDisplay {
-/// #     type Error = Infallible;
-/// #     type Frame<'a> = DemoFrame;
-/// #     fn screen_size(&self) -> Size { Size::new(320, 240) }
-/// #     fn background_color(&self) -> Rgb888 { Rgb888::BLACK }
-/// #     fn foreground_color(&self) -> Rgb888 { Rgb888::WHITE }
-/// #     fn background_565(&self) -> Rgb565 { Rgb565::BLACK }
-/// #     fn foreground_565(&self) -> Rgb565 { Rgb565::WHITE }
-/// #     fn frame_mut_with_tile_top_left(
-/// #         &mut self,
-/// #         _rectangle: Rectangle,
-/// #         _tile_top_left: Point,
-/// #     ) -> Self::Frame<'_> {
-/// #         DemoFrame
-/// #     }
-/// #     fn fill_rectangle(
-/// #         &mut self,
-/// #         _rectangle: Rectangle,
-/// #         _color: Rgb565,
-/// #     ) -> Result<(), Self::Error> {
-/// #         Ok(())
-/// #     }
-/// #     fn fill_contiguous<I>(
-/// #         &mut self,
-/// #         _rectangle: Rectangle,
-/// #         _pixels: I,
-/// #     ) -> Result<(), Self::Error>
-/// #     where
-/// #         I: IntoIterator<Item = Rgb565>,
-/// #     {
-/// #         Ok(())
-/// #     }
-/// # }
-/// # impl DrawTarget for DemoFrame {
-/// #     type Color = Rgb565;
-/// #     type Error = Infallible;
-/// #     fn draw_iter<I>(&mut self, _pixels: I) -> Result<(), Self::Error>
-/// #     where
-/// #         I: IntoIterator<Item = embedded_graphics::Pixel<Self::Color>>,
-/// #     {
-/// #         Ok(())
-/// #     }
-/// # }
-/// # impl OriginDimensions for DemoFrame {
-/// #     fn size(&self) -> Size { Size::new(320, 240) }
-/// # }
-/// # impl PixelTarget for DemoFrame {
-/// #     fn width(&self) -> usize { 320 }
-/// #     fn height(&self) -> usize { 240 }
-/// #     fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
-/// # }
-/// # impl CydFrame for DemoFrame {
-/// #     type Error = Infallible;
-/// #     fn rectangle(&self) -> Rectangle {
-/// #         Rectangle::new(Point::zero(), Size::new(320, 240))
-/// #     }
-/// #     fn fill(&mut self, _color: Rgb565) -> &mut Self { self }
-/// #     fn clear(&mut self) -> &mut Self { self }
-/// #     fn write_text(&mut self, _text: &str) -> &mut Self { self }
-/// #     fn copy_from_565(
-/// #         &mut self,
-/// #         _src: &[u16],
-/// #     ) -> device_envoy_core::Result<()> {
-/// #         Ok(())
-/// #     }
-/// #     fn flush(
-/// #         &mut self,
-/// #     ) -> impl core::future::Future<Output = Result<(), <Self as CydFrame>::Error>> {
-/// #         ready(Ok(()))
-/// #     }
-/// # }
-/// # impl FlashBlock for DemoFlashBlock {
-/// #     type Error = Infallible;
-/// #     fn load<T>(&mut self) -> Result<Option<T>, Self::Error>
-/// #     where
-/// #         T: Serialize + for<'de> Deserialize<'de>,
-/// #     {
-/// #         Ok(None)
-/// #     }
-/// #     fn save<T>(&mut self, _value: &T) -> Result<(), Self::Error>
-/// #     where
-/// #         T: Serialize + for<'de> Deserialize<'de>,
-/// #     {
-/// #         Ok(())
-/// #     }
-/// #     fn clear(&mut self) -> Result<(), Self::Error> { Ok(()) }
-/// # }
-/// # impl __ButtonMonitor for DemoButton {
-/// #     fn is_pressed_raw(&self) -> bool { false }
-/// #     async fn wait_until_pressed_state(&mut self, _pressed: bool) {}
-/// # }
-/// # impl Button for DemoButton {}
-/// # async fn demo() -> Result<(), device_envoy_core::cyd::touch::calibration::Error<DemoTouchUncalibrated, Infallible>> {
-/// let mut display = DemoDisplay;
-/// let touch = DemoTouchUncalibrated;
-/// let mut calibration_flash_block = DemoFlashBlock {
-///     calibration_config: None,
-/// };
-/// let mut recalibration_button = DemoButton;
-/// let (_touch, _outcome) = ensure_calibration(
-///     &mut display,
-///     touch,
-///     &mut calibration_flash_block,
-///     &mut recalibration_button,
-///     Some("Touch calibrated"),
-/// ).await?;
-/// # Ok(())
-/// # }
-/// ```
+/// Missing, corrupt, or invalid saved data starts the four-tap calibration flow and
+/// saves the new configuration. Platform constructors keep the display in landscape
+/// orientation during this process, then return the calibrated touch implementation
+/// configured for `orientation`. Application code reads events through
+/// [`CydTouch`](crate::cyd::CydTouch) instead.
 pub async fn ensure_calibration<D, T, F, R>(
     display: &mut D,
     touch: T,
     calibration_flash_block: &mut F,
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
-) -> Result<(T::Calibrated, EnsureCalibrationOutcome), Error<T, F::Error>>
+    orientation: crate::cyd::display::Orientation,
+) -> Result<T::Calibrated, Error<D::Error, F::Error>>
 where
     D: CydDisplay,
-    T: CydTouchUncalibrated<Error = D::Error>,
+    T: TouchUncalibrated<Error = D::Error>,
     F: FlashBlock,
     R: Button,
 {
@@ -325,22 +126,23 @@ where
         recalibration_button,
         confirmed_message,
         EnsureCalibrationSettings::DEFAULT,
+        orientation,
     )
     .await
 }
 
-/// Like [`ensure_calibration`], with tunable flow timings.
-pub async fn ensure_calibration_with_settings<D, T, F, R>(
+async fn ensure_calibration_with_settings<D, T, F, R>(
     display: &mut D,
     mut touch: T,
     calibration_flash_block: &mut F,
     recalibration_button: &mut R,
     confirmed_message: Option<&str>,
     ensure_calibration_settings: EnsureCalibrationSettings,
-) -> Result<(T::Calibrated, EnsureCalibrationOutcome), Error<T, F::Error>>
+    orientation: crate::cyd::display::Orientation,
+) -> Result<T::Calibrated, Error<D::Error, F::Error>>
 where
     D: CydDisplay,
-    T: CydTouchUncalibrated<Error = D::Error>,
+    T: TouchUncalibrated<Error = D::Error>,
     F: FlashBlock,
     R: Button,
 {
@@ -348,10 +150,7 @@ where
         .load::<CalibrationConfig>()
         .unwrap_or(None)
     {
-        return Ok((
-            touch.calibrate(calibration_config),
-            EnsureCalibrationOutcome::Loaded(calibration_config),
-        ));
+        return Ok(touch.calibrate(calibration_config, orientation));
     }
 
     let mut calibration_flow = CalibrationFlow::new();
@@ -375,10 +174,7 @@ where
             let raw_touch_event = match touch.read_raw_touch_event() {
                 Ok(raw_touch_event) => raw_touch_event,
                 Err(error) => {
-                    return Err(Error {
-                        touch,
-                        kind: ErrorKind::Device(error),
-                    });
+                    return Err(Error::Device(error));
                 }
             };
             let Some(raw_touch_event) = raw_touch_event else {
@@ -462,22 +258,13 @@ where
                             && let Err(error) =
                                 draw_message_screen(display, confirmed_message).await
                         {
-                            return Err(Error {
-                                touch,
-                                kind: ErrorKind::Device(error),
-                            });
+                            return Err(Error::Device(error));
                         }
                         if let Err(error) = calibration_flash_block.save(candidate_config) {
-                            return Err(Error {
-                                touch,
-                                kind: ErrorKind::Flash(error),
-                            });
+                            return Err(Error::Flash(error));
                         }
                         let calibration_config = *candidate_config;
-                        return Ok((
-                            touch.calibrate(calibration_config),
-                            EnsureCalibrationOutcome::Saved(calibration_config),
-                        ));
+                        return Ok(touch.calibrate(calibration_config, orientation));
                     } else {
                         calibration_flow.restart();
                         calibration_driver_state = CalibrationDriverState::ShowRejected {
@@ -503,10 +290,7 @@ where
         )
         .await
         {
-            return Err(Error {
-                touch,
-                kind: ErrorKind::Device(error),
-            });
+            return Err(Error::Device(error));
         }
 
         if saw_idle {

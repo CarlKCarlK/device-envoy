@@ -14,26 +14,30 @@
 use embedded_graphics::{
     Drawable,
     mono_font::{MonoFont, MonoTextStyle, ascii::FONT_9X15_BOLD},
-    prelude::Point,
     text::{Baseline, Text},
 };
 use embedded_hal::spi::SpiDevice;
 
 use super::CydFrameRp;
 
-/// Font apps typically pass to [`super::CydDisplayRp::new`] as the device default.
+/// The default font accepted by [`CydDisplayRp::new`](super::CydDisplayRp::new).
+/// See that method's compiled display-only constructor example.
 pub const DEFAULT_FONT: MonoFont<'static> = FONT_9X15_BOLD;
 
 impl<D: SpiDevice<u8>> CydFrameRp<'_, D> {
-    /// Draw `text` at input coordinate `(0, 0)` using the device default
+    /// Draw `text` at the frame rectangle's top-left using the device default
     /// font and foreground color.
     ///
     /// For any other font, color, alignment, or baseline, draw with
     /// embedded-graphics directly against this frame.
+    ///
+    /// See the portable
+    /// [`CydFrame::write_text`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.write_text)
+    /// documentation.
     pub fn write_text(&mut self, text: &str) -> &mut Self {
         Text::with_baseline(
             text,
-            Point::zero(),
+            self.rectangle.top_left,
             MonoTextStyle::new(self.font, self.foreground565),
             Baseline::Top,
         )

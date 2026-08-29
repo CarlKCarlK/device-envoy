@@ -3,25 +3,233 @@
 use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
     Cyd, CydDisplay, CydTouch,
-    display::{CydFrame, DrawItem, Image565View},
+    display::{
+        CydFrame, DrawItem, Image565Fixed, tga,
+        tiling::{TileGrid, max_rectangle_pixel_count},
+    },
     touch::TouchEvent,
 };
 use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
 use embedded_graphics::{
-    Drawable,
+    Drawable, Pixel,
     mono_font::ascii::FONT_9X15_BOLD,
     pixelcolor::{Rgb565, Rgb888},
-    prelude::{Point, Primitive, RgbColor, Size},
-    primitives::{PrimitiveStyle, Rectangle},
+    prelude::{Dimensions, IntoStorage, Point, Primitive, RgbColor, Size},
+    primitives::{Circle, Line, PrimitiveStyle, Rectangle},
 };
-use std::error::Error;
+use std::{error::Error, path::Path};
 
-const BITMAP_WIDTH: usize = 64;
-const BITMAP_HEIGHT: usize = 64;
-const BITMAP_PIXEL_COUNT: usize = BITMAP_WIDTH * BITMAP_HEIGHT;
-const BITMAP_COLOR0: u16 = 0xfbe0;
-const BITMAP_COLOR1: u16 = 0x051f;
-const BITMAP_COLOR2: u16 = 0xffff;
+const STREAMED_BITMAP: Image565Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/docs/assets/cyd_fill_contiguous.tga"
+))
+.to_565();
+
+fn generated_background_pixels(screen_size: Size) -> impl Iterator<Item = Rgb565> {
+    // A blue-green RGB565 gradient with a warmer lower-right corner.
+    (0..screen_size.height).flat_map(move |position_y| {
+        (0..screen_size.width).map(move |position_x| {
+            Rgb565::new(
+                (position_x * 31 / (screen_size.width - 1)) as u8,
+                (position_y * 63 / (screen_size.height - 1)) as u8,
+                ((position_x + position_y) * 31 / (screen_size.width + screen_size.height - 2))
+                    as u8,
+            )
+        })
+    })
+}
+
+fn comparison_scene<F: CydFrame>(frame: &mut F) {
+    CydFrame::clear(frame);
+    Rectangle::new(Point::new(21, 17), Size::new(211, 67))
+        .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
+        .draw(frame)
+        .unwrap_infallible();
+    Rectangle::new(Point::new(143, 91), Size::new(119, 83))
+        .into_styled(PrimitiveStyle::with_fill(Rgb565::GREEN))
+        .draw(frame)
+        .unwrap_infallible();
+    Rectangle::new(Point::new(271, 19), Size::new(17, 39))
+        .into_styled(PrimitiveStyle::with_fill(Rgb565::BLUE))
+        .draw(frame)
+        .unwrap_infallible();
+    Pixel(Point::new(306, 211), Rgb565::WHITE)
+        .draw(frame)
+        .unwrap_infallible();
+}
+
+fn comparison_scene_pixel(position_x: usize, position_y: usize) -> Rgb565 {
+    let point = Point::new(position_x as i32, position_y as i32);
+    if point == Point::new(306, 211) {
+        Rgb565::WHITE
+    } else if Rectangle::new(Point::new(271, 19), Size::new(17, 39)).contains(point) {
+        Rgb565::BLUE
+    } else if Rectangle::new(Point::new(143, 91), Size::new(119, 83)).contains(point) {
+        Rgb565::GREEN
+    } else if Rectangle::new(Point::new(21, 17), Size::new(211, 67)).contains(point) {
+        Rgb565::RED
+    } else {
+        Rgb565::BLACK
+    }
+}
+
+fn framebuffer(cyd: &CydMemory) -> Vec<u16> {
+    (0..240)
+        .flat_map(|position_y| {
+            (0..320).map(move |position_x| cyd.pixel(position_x, position_y).into_storage())
+        })
+        .collect()
+}
+
+#[test]
+fn cyd_drawing_strategies_produce_identical_framebuffers()
+-> Result<(), device_envoy_core::memory::Error> {
+    let full_frame = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let mut frame = display.full_frame_mut();
+        let frame_size = frame.rectangle().size;
+        assert_eq!((frame_size.width, frame_size.height), (320, 240));
+        comparison_scene(&mut frame);
+        frame.flush().await?;
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let regional_frames = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let mut actual_dimensions = Vec::new();
+        for top_left in [
+            Point::new(0, 0),
+            Point::new(160, 0),
+            Point::new(0, 120),
+            Point::new(160, 120),
+        ] {
+            let rectangle = Rectangle::new(top_left, Size::new(160, 120));
+            let mut frame = display.frame_mut(rectangle);
+            assert_eq!(frame.bounding_box(), frame.rectangle());
+            let frame_size = frame.rectangle().size;
+            actual_dimensions.push((frame_size.width, frame_size.height));
+            comparison_scene(&mut frame);
+            frame.flush().await?;
+        }
+        assert_eq!(actual_dimensions, [(160, 120); 4]);
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let tiled_frames = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let mut maximum_dimensions = (0, 0);
+        display
+            .for_each_tile(
+                TileGrid::new(Rectangle::new(Point::zero(), Size::new(320, 240)), 4, 3),
+                |frame| {
+                    assert_eq!(frame.bounding_box(), frame.rectangle());
+                    let frame_size = frame.rectangle().size;
+                    maximum_dimensions.0 = maximum_dimensions.0.max(frame_size.width);
+                    maximum_dimensions.1 = maximum_dimensions.1.max(frame_size.height);
+                    comparison_scene(frame);
+                },
+            )
+            .await?;
+        assert_eq!(maximum_dimensions, (80, 80));
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let contiguous = futures_executor::block_on(async {
+        let cyd = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd.display();
+        let pixels = (0..240).flat_map(|position_y| {
+            (0..320).map(move |position_x| comparison_scene_pixel(position_x, position_y))
+        });
+        display.fill_contiguous_full(pixels)?;
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd)
+    })?;
+
+    let expected = framebuffer(&full_frame);
+    assert_eq!(framebuffer(&regional_frames), expected);
+    assert_eq!(framebuffer(&tiled_frames), expected);
+    assert_eq!(framebuffer(&contiguous), expected);
+
+    let full_pixels = 320 * 240;
+    let largest_region_pixels = max_rectangle_pixel_count(
+        Rectangle::new(Point::zero(), Size::new(160, 120)),
+        Rectangle::new(Point::new(160, 120), Size::new(160, 120)),
+    );
+    let tile_pixels = TileGrid::new(Rectangle::new(Point::zero(), Size::new(320, 240)), 4, 3)
+        .max_tile_pixel_count();
+    assert_eq!(
+        (full_pixels, largest_region_pixels, tile_pixels),
+        (76800, 19200, 6400)
+    );
+    Ok(())
+}
+
+#[test]
+fn cyd_fill_contiguous_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+    let cyd_memory = CydMemory::new(
+        Size::new(320, 240),
+        Rgb888::BLACK,
+        Rgb888::WHITE,
+        &FONT_9X15_BOLD,
+    );
+    let mut display = cyd_memory.display();
+    let bitmap = STREAMED_BITMAP.view();
+    display
+        .fill_contiguous(
+            Rectangle::new(Point::new(40, 30), bitmap.size()),
+            bitmap.rgb565_iter(),
+        )
+        .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
+
+    assert_framebuffer_matches_expected_png(
+        &cyd_memory,
+        env!("CARGO_MANIFEST_DIR"),
+        "cyd_fill_contiguous_preview.png",
+    )
+}
+
+#[test]
+fn cyd_fill_contiguous_full_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+    let cyd_memory = CydMemory::new(
+        Size::new(320, 240),
+        Rgb888::BLACK,
+        Rgb888::WHITE,
+        &FONT_9X15_BOLD,
+    );
+    let mut display = cyd_memory.display();
+    let screen_size = display.screen_size();
+    display
+        .fill_contiguous_full(generated_background_pixels(screen_size))
+        .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
+
+    assert_framebuffer_matches_expected_png(
+        &cyd_memory,
+        env!("CARGO_MANIFEST_DIR"),
+        "cyd_fill_contiguous_full_preview.png",
+    )
+}
 
 #[test]
 fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
@@ -37,7 +245,7 @@ fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
 
         frame.write_text("Hello CYD");
         DrawItem::Bitmap {
-            view: bitmap_view(),
+            view: STREAMED_BITMAP.view(),
             top_left: Point::new(128, 88),
         }
         .draw(&mut frame);
@@ -55,7 +263,7 @@ fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+fn cyd_application_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     let cyd_memory = futures_executor::block_on(async {
         let mut cyd_memory = CydMemory::new(
             Size::new(320, 240),
@@ -67,7 +275,7 @@ fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
             point: Point::new(160, 120),
         });
         let (display, touch) = cyd_memory.parts();
-        let touch_event = touch.read()?;
+        let touch_event = touch.try_read()?;
         let mut frame = display.full_frame_mut();
 
         frame.write_text("Hello CYD");
@@ -88,12 +296,12 @@ fn cyd_trait_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     assert_framebuffer_matches_expected_png(
         &cyd_memory,
         env!("CARGO_MANIFEST_DIR"),
-        "cyd_trait_preview.png",
+        "cyd_application_preview.png",
     )
 }
 
 #[test]
-fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box<dyn Error>> {
+fn cyd_frame_logical_coordinates_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     let cyd_memory = futures_executor::block_on(async {
         let cyd_memory = CydMemory::new(
             Size::new(320, 240),
@@ -102,10 +310,7 @@ fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box
             &FONT_9X15_BOLD,
         );
         let mut display = cyd_memory.display();
-        let mut frame = display.frame_mut_with_tile_top_left(
-            Rectangle::new(Point::new(32, 24), Size::new(48, 32)),
-            Point::new(32, 24),
-        );
+        let mut frame = display.frame_mut(Rectangle::new(Point::new(32, 24), Size::new(48, 32)));
         frame.fill(Rgb565::GREEN);
         Rectangle::new(Point::new(36, 28), Size::new(6, 6))
             .into_styled(PrimitiveStyle::with_fill(Rgb565::RED))
@@ -124,7 +329,7 @@ fn cyd_frame_mut_with_tile_top_left_preview_matches_expected() -> Result<(), Box
     assert_framebuffer_matches_expected_png(
         &cyd_memory,
         env!("CARGO_MANIFEST_DIR"),
-        "cyd_frame_mut_with_tile_top_left_preview.png",
+        "cyd_frame_logical_coordinates_preview.png",
     )
 }
 
@@ -138,8 +343,8 @@ fn cyd_frame_mut_preview_matches_expected() -> Result<(), Box<dyn Error>> {
             &FONT_9X15_BOLD,
         );
         let mut display = cyd_memory.display();
-        let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(50, 40)));
-        frame.fill(Rgb565::RED);
+        let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(100, 40)));
+        frame.fill(Rgb565::BLUE).write_text("CYD");
         frame.flush().await?;
 
         Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)
@@ -153,33 +358,52 @@ fn cyd_frame_mut_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     )
 }
 
-const fn cyd_trait_bitmap_pixels() -> [u16; BITMAP_PIXEL_COUNT] {
-    let mut pixels = [0u16; BITMAP_PIXEL_COUNT];
-    let mut y = 0;
-    while y < BITMAP_HEIGHT {
-        let mut x = 0;
-        while x < BITMAP_WIDTH {
-            let edge = x < 2 || y < 2 || x >= BITMAP_WIDTH - 2 || y >= BITMAP_HEIGHT - 2;
-            let diagonal = x == y || x + y == BITMAP_WIDTH - 1;
-            pixels[y * BITMAP_WIDTH + x] = if edge {
-                BITMAP_COLOR2
-            } else if diagonal {
-                BITMAP_COLOR1
-            } else {
-                BITMAP_COLOR0
-            };
-            x += 1;
-        }
-        y += 1;
-    }
-    pixels
-}
+#[test]
+fn tile_grid_doc_image_matches_expected() -> Result<(), Box<dyn Error>> {
+    let cyd_memory = futures_executor::block_on(async {
+        let cyd_memory = CydMemory::new(
+            Size::new(320, 240),
+            Rgb888::BLACK,
+            Rgb888::WHITE,
+            &FONT_9X15_BOLD,
+        );
+        let mut display = cyd_memory.display();
+        let grid = TileGrid::new(Rectangle::new(Point::zero(), Size::new(320, 240)), 4, 3);
+        display
+            .for_each_tile(grid, |frame| {
+                frame.fill(Rgb565::BLACK);
+                Circle::new(Point::new(85, 45), 150)
+                    .into_styled(PrimitiveStyle::with_fill(Rgb565::BLUE))
+                    .draw(frame)
+                    .unwrap_infallible();
+                Line::new(Point::new(20, 210), Point::new(300, 30))
+                    .into_styled(PrimitiveStyle::with_stroke(Rgb565::YELLOW, 5))
+                    .draw(frame)
+                    .unwrap_infallible();
+                frame
+                    .rectangle()
+                    .into_styled(PrimitiveStyle::with_stroke(Rgb565::WHITE, 1))
+                    .draw(frame)
+                    .unwrap_infallible();
+            })
+            .await?;
 
-static BITMAP_PIXELS: [u16; BITMAP_PIXEL_COUNT] = cyd_trait_bitmap_pixels();
+        Ok::<CydMemory, device_envoy_core::memory::Error>(cyd_memory)
+    })
+    .map_err(|error| std::io::Error::other(format!("{error:?}")))?;
 
-fn bitmap_view() -> Image565View {
-    Image565View::new(
-        &BITMAP_PIXELS,
-        Size::new(BITMAP_WIDTH as u32, BITMAP_HEIGHT as u32),
-    )
+    assert_framebuffer_matches_expected_png(
+        &cyd_memory,
+        env!("CARGO_MANIFEST_DIR"),
+        "tile_grid.png",
+    )?;
+
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let tested_png = std::fs::read(manifest_dir.join("tests/assets/tile_grid.png"))?;
+    let documented_png = std::fs::read(manifest_dir.join("docs/assets/tile_grid.png"))?;
+    assert_eq!(
+        documented_png, tested_png,
+        "the embedded TileGrid image must match the golden image"
+    );
+    Ok(())
 }

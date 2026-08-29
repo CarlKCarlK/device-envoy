@@ -95,7 +95,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     display.full_frame_mut().flush()?;
 
     loop {
-        if let Some(touch_event) = touch.read()? {
+        if let Some(touch_event) = touch.try_read()? {
             let point = match touch_event {
                 device_envoy_rp::cyd::touch::TouchEvent::Down { point }
                 | device_envoy_rp::cyd::touch::TouchEvent::Move { point } => Some(point),

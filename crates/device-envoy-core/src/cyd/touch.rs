@@ -1,41 +1,47 @@
 //! Touch-side support types for the CYD's `cyd` device abstraction.
 //!
-//! Apps read calibrated screen-space events via [`TouchEvent`]. Devices also
-//! implement [`super::CydTouchUncalibrated`] so the shared touch-calibration
-//! flow in [`calibration`] can read raw controller samples and transition
-//! into a calibrated [`super::CydTouch`].
+//! Applications read calibrated, oriented events via [`TouchEvent`]. Device
+//! Envoy's platform implementations connect raw controller samples to the
+//! private calibration workflow. Applications use
+//! [`CydTouch`](super::CydTouch); see its
+//! [example](super::CydTouch::try_read).
 
-pub mod calibration;
+pub(crate) mod calibration;
 pub(crate) mod driver;
 pub(crate) mod flow;
 
 use embedded_graphics::geometry::Point;
 
-/// A touch event in screen coordinates (already calibrated and mapped).
+/// A touch event in logical display coordinates (already calibrated and oriented).
 ///
-/// See the [`super::Cyd`] trait documentation for a usage example.
+/// Read it with [CydTouch::try_read](super::CydTouch::try_read) in the
+/// [focused example](super::CydTouch::try_read), or see the larger
+/// [application example](../index.html#application-example) for a complete
+/// read-and-draw flow. Applications receive coordinates bounded by
+/// [`CydDisplay::screen_size()`](super::CydDisplay::screen_size) and must not
+/// apply another orientation mapping.
+/// Calibration remains defined against the fixed `320×240` landscape panel
+/// internally; the platform touch implementation maps the result into the
+/// runtime display orientation before returning it.
 #[derive(Clone, Copy, Debug)]
 pub enum TouchEvent {
-    Down { point: Point },
-    Move { point: Point },
+    /// The touch contact began at `point`.
+    Down {
+        /// The contact position.
+        point: Point,
+    },
+    /// The active contact moved to `point`.
+    Move {
+        /// The contact position.
+        point: Point,
+    },
+    /// The touch contact ended.
     Up,
 }
 
-/// A raw XPT2046 touch sample in controller coordinates.
-///
-/// See the [touch calibration module documentation](calibration) for usage.
+/// A raw XPT2046 touch sample used internally by calibration.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RawPoint {
+pub(crate) struct RawPoint {
     pub x: u16,
     pub y: u16,
-}
-
-/// A raw XPT2046 touch event used by shared calibration flows.
-///
-/// See the [touch calibration module documentation](calibration) for usage.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RawTouchEvent {
-    Down { raw_x: u16, raw_y: u16 },
-    Move { raw_x: u16, raw_y: u16 },
-    Up,
 }

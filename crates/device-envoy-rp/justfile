@@ -1,25 +1,18 @@
 set shell := ["bash", "-cu"]
 
-# RP docs only
-update-docs-rp:
-	./scripts/update-docs.sh
+# RP-only docs preview. Run `just docs` at the workspace root for review.
+docs-rp-only:
+	./scripts/docs-rp-only.sh
 
-# RP docs fast path (no cleanup/check-docs/doc-images asset staging)
-update-docs-rp-fast:
+# Incomplete RP docs preview: skips cleanup, validation, and doc images
+docs-rp-only-no-images:
+	@echo "WARNING: doc images are disabled; generated RP docs are incomplete and must not be reviewed or published." >&2
 	cargo doc --target thumbv8m.main-none-eabihf --no-deps --release --features pico2,arm,wifi --no-default-features
 
 # Build docs and open them in Windows Edge (via WSL)
 show-docs-rp:
-	just update-docs-rp
+	just docs-rp-only
 	./scripts/open-docs-rp.sh
-
-# ESP docs only (pass-through)
-update-docs-esp:
-	cd ../device-envoy-esp && just update-docs-esp
-
-# Build ESP docs and open them in a browser (pass-through)
-show-docs-esp:
-	cd ../device-envoy-esp && just show-docs-esp
 
 run name board="1":
 	./scripts/device-action.sh run {{name}} {{board}}
@@ -43,7 +36,7 @@ pngs-update-all:
 
 # Full validation (docs + embedded + host PNGs)
 verify-all:
-        just update-docs-rp
+        just docs-rp-only
         cargo check-all
         just pngs-check-all
 

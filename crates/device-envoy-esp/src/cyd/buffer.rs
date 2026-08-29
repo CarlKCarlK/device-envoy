@@ -1,6 +1,5 @@
 use core::convert::Infallible;
 
-use device_envoy_core::cyd::display::RectanglePixels;
 use embedded_graphics::{
     Pixel,
     pixelcolor::{IntoStorage, Rgb565},
@@ -8,112 +7,18 @@ use embedded_graphics::{
 };
 use static_cell::StaticCell;
 
-/// A fixed `WIDTH`x`HEIGHT` RGB565 pixel buffer, usable directly as an
-/// [`embedded_graphics::draw_target::DrawTarget`].
-pub struct RegionBuffer<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> {
-    pixels: [u16; PIXEL_COUNT],
-}
-
 /// A `PIXEL_COUNT`-sized RGB565 pixel workspace a [`super::CydEsp`] can own and
 /// hand out [`RegionView`]s from, sized smaller than the full screen for
 /// tiled drawing.
-pub struct PixelBuffer<const PIXEL_COUNT: usize> {
+pub(crate) struct PixelBuffer<const PIXEL_COUNT: usize> {
     pixels: [u16; PIXEL_COUNT],
 }
 
-/// A borrowed `width`x`height` view into a [`PixelBuffer`].
-pub struct RegionView<'a> {
+/// A borrowed `width`×`height` view into a [`PixelBuffer`].
+pub(crate) struct RegionView<'a> {
     width: usize,
     height: usize,
     pixels: &'a mut [u16],
-}
-
-impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize>
-    RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT>
-{
-    /// Create a zeroed buffer. Panics if `PIXEL_COUNT != WIDTH * HEIGHT`.
-    #[must_use]
-    pub fn new() -> Self {
-        assert!(
-            PIXEL_COUNT == WIDTH * HEIGHT,
-            "PIXEL_COUNT must equal WIDTH * HEIGHT"
-        );
-        Self {
-            pixels: [0; PIXEL_COUNT],
-        }
-    }
-
-    /// Initialize this buffer into `'static` storage.
-    pub fn init_static(
-        storage: &'static StaticCell<Self>,
-    ) -> &'static mut RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT> {
-        storage.init_with(Self::new)
-    }
-
-    /// Fill every pixel with `color`.
-    pub fn fill(&mut self, color: Rgb565) {
-        self.pixels.fill(color.into_storage());
-    }
-
-    /// Borrow the raw RGB565 pixels, row-major.
-    #[must_use]
-    pub fn raw_pixels(&self) -> &[u16; PIXEL_COUNT] {
-        &self.pixels
-    }
-}
-
-impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> Default
-    for RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT>
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> RectanglePixels
-    for RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT>
-{
-    fn width(&self) -> usize {
-        WIDTH
-    }
-
-    fn height(&self) -> usize {
-        HEIGHT
-    }
-
-    fn raw_pixels(&self) -> &[u16] {
-        &self.pixels
-    }
-}
-
-impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> DrawTarget
-    for RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT>
-{
-    type Color = Rgb565;
-    type Error = Infallible;
-
-    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        self.fill(color);
-        Ok(())
-    }
-
-    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = Pixel<Self::Color>>,
-    {
-        for Pixel(point, color) in pixels {
-            if point.x < 0 || point.y < 0 {
-                continue;
-            }
-            let point_x = point.x as usize;
-            let point_y = point.y as usize;
-            if point_x >= WIDTH || point_y >= HEIGHT {
-                continue;
-            }
-            self.pixels[point_y * WIDTH + point_x] = color.into_storage();
-        }
-        Ok(())
-    }
 }
 
 impl<const PIXEL_COUNT: usize> PixelBuffer<PIXEL_COUNT> {
@@ -132,7 +37,7 @@ impl<const PIXEL_COUNT: usize> PixelBuffer<PIXEL_COUNT> {
         storage.init_with(Self::new)
     }
 
-    /// Borrow a `width`x`height` view out of the workspace (must fit the capacity).
+    /// Borrow a `width`×`height` view out of the workspace (must fit the capacity).
     pub fn view_mut(&mut self, width: usize, height: usize) -> RegionView<'_> {
         let pixel_count = width * height;
         assert!(pixel_count <= PIXEL_COUNT, "view must fit in workspace");
@@ -168,7 +73,40 @@ impl<const PIXEL_COUNT: usize> DynPixelBuffer for PixelBuffer<PIXEL_COUNT> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{DynPixelBuffer, PixelBuffer};
+    use static_cell::StaticCell;
+
+    #[test]
+    #[should_panic(expected = "view must fit in workspace")]
+    fn cyd_static_esp_frame_capacity_panics_when_region_is_too_large() {
+        let mut pixel_buffer = PixelBuffer::<3>::new();
+        pixel_buffer.view_mut(2, 2);
+    }
+
+    #[test]
+    fn host_test_exercises_esp_pixel_buffer_path() {
+        static STORAGE: StaticCell<PixelBuffer<1>> = StaticCell::new();
+        let pixel_buffer = PixelBuffer::init_static(&STORAGE);
+        let buffer: &mut dyn DynPixelBuffer = pixel_buffer;
+        let mut view = buffer.view_mut(1, 1);
+        assert_eq!(view.width(), 1);
+        assert_eq!(view.height(), 1);
+        view.raw_pixels_mut()[0] = 0x1234;
+        assert_eq!(view.raw_pixels()[0], 0x1234);
+    }
+}
+
 impl RegionView<'_> {
+    pub(crate) fn width(&self) -> usize {
+        self.width
+    }
+
+    pub(crate) fn height(&self) -> usize {
+        self.height
+    }
+
     /// Fill every pixel with `color`.
     pub fn fill(&mut self, color: Rgb565) {
         self.pixels.fill(color.into_storage());
@@ -178,18 +116,7 @@ impl RegionView<'_> {
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.pixels
     }
-}
-
-impl RectanglePixels for RegionView<'_> {
-    fn width(&self) -> usize {
-        self.width
-    }
-
-    fn height(&self) -> usize {
-        self.height
-    }
-
-    fn raw_pixels(&self) -> &[u16] {
+    pub(crate) fn raw_pixels(&self) -> &[u16] {
         self.pixels
     }
 }
@@ -225,13 +152,5 @@ impl DrawTarget for RegionView<'_> {
 impl OriginDimensions for RegionView<'_> {
     fn size(&self) -> Size {
         Size::new(self.width as u32, self.height as u32)
-    }
-}
-
-impl<const WIDTH: usize, const HEIGHT: usize, const PIXEL_COUNT: usize> OriginDimensions
-    for RegionBuffer<WIDTH, HEIGHT, PIXEL_COUNT>
-{
-    fn size(&self) -> Size {
-        Size::new(WIDTH as u32, HEIGHT as u32)
     }
 }

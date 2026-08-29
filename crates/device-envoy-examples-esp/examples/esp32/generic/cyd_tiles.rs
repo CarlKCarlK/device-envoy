@@ -23,6 +23,7 @@ use embassy_time::{Duration, Timer};
 use embedded_graphics::{
     geometry::{Point, Size},
     pixelcolor::{Rgb565, Rgb888},
+    primitives::Rectangle,
 };
 use esp_backtrace as _;
 use log::info;
@@ -76,22 +77,26 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     let palette = [Rgb565::new(6, 20, 10), Rgb565::new(2, 10, 25)];
 
-    let grid = TileGrid::new(Point::zero(), Size::new(320, 240), TILE_COLUMNS, TILE_ROWS);
+    let grid = TileGrid::new(
+        Rectangle::new(Point::zero(), Size::new(320, 240)),
+        TILE_COLUMNS,
+        TILE_ROWS,
+    );
 
     loop {
-        let mut tiles = display.tiles(grid);
         let mut tile_index: usize = 0;
-        while let Some(mut frame) = tiles.next() {
-            frame.fill(palette[tile_index % palette.len()]);
-            let mut label = heapless::String::<8>::new();
-            assert!(
-                write!(label, "{tile_index}").is_ok(),
-                "tile index label exceeds buffer"
-            );
-            frame.write_text(label.as_str());
-            frame.flush()?;
-            tile_index += 1;
-        }
+        display
+            .for_each_tile(grid, |frame| {
+                frame.fill(palette[tile_index % palette.len()]);
+                let mut label = heapless::String::<8>::new();
+                assert!(
+                    write!(label, "{tile_index}").is_ok(),
+                    "tile index label exceeds buffer"
+                );
+                frame.write_text(label.as_str());
+                tile_index += 1;
+            })
+            .await?;
         Timer::after(Duration::from_secs(1)).await;
     }
 }

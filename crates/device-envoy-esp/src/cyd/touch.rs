@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::touch::RawTouchEvent;
+use device_envoy_core::{UnwrapInfallible, cyd::backend::RawTouchEvent};
 use embedded_hal::spi::SpiDevice;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
@@ -10,21 +10,11 @@ use esp_hal::{
 };
 
 /// SPI clock frequency for the touch bus.
-pub const TOUCH_SPI_HZ: u32 = 2_500_000;
+pub(super) const TOUCH_SPI_HZ: u32 = 2_500_000;
 
 type CydTouchSpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
 /// The SPI device type used when touch owns an exclusive SPI peripheral.
 pub(crate) type CydTouchSpiDevice = ExclusiveDevice<CydTouchSpiBus, Output<'static>, NoDelay>;
-
-// TODO Revisit the remaining platform-specific CYD error names as one API cleanup.
-/// Error initializing the touch controller over SPI.
-#[derive(Clone, Copy, Debug)]
-pub enum CydTouchEspInitError {
-    /// Configuring the touch SPI peripheral failed.
-    ConfigureTouchSpi,
-    /// Wrapping the touch SPI bus with its CS pin failed.
-    CreateTouchSpiDevice,
-}
 
 /// An XPT2046 touch controller driven over `D`, an `embedded-hal` SPI device.
 ///
@@ -64,20 +54,20 @@ impl CydTouchEsp<CydTouchSpiDevice> {
         miso_pin: impl PeripheralInput<'static>,
         cs_pin: impl OutputPin + 'static,
         irq_pin: impl EspInputPin + 'static,
-    ) -> Result<CydTouchEsp<CydTouchSpiDevice>, CydTouchEspInitError> {
+    ) -> Result<CydTouchEsp<CydTouchSpiDevice>, super::Error> {
         let spi_config = spi::master::Config::default()
             .with_frequency(esp_hal::time::Rate::from_hz(TOUCH_SPI_HZ))
             .with_mode(spi::Mode::_0);
         let spi = spi::master::Spi::new(spi, spi_config)
-            .map_err(|_| CydTouchEspInitError::ConfigureTouchSpi)?
+            .map_err(super::Error::ConfigureTouchSpi)?
             .with_sck(sck_pin)
             .with_mosi(mosi_pin)
             .with_miso(miso_pin);
 
         let cs = Output::new(cs_pin, esp_hal::gpio::Level::High, OutputConfig::default());
 
-        let touch_spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
-            .map_err(|_| CydTouchEspInitError::CreateTouchSpiDevice)?;
+        let touch_spi_device =
+            ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs).unwrap_infallible();
 
         Ok(Self::from_device(touch_spi_device, irq_pin))
     }

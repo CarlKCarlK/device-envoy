@@ -44,8 +44,12 @@ pub fn fill_ellipse_pixels(
     }
 }
 
-/// A raw pixel sink: a flat RGBA or similar framebuffer that accepts individual
-/// pixel writes by integer coordinates.
+/// A raw pixel sink that accepts individual pixels by integer coordinates.
+///
+/// Every [`CydFrame`](crate::cyd::display::CydFrame) implements this trait, so
+/// [`DrawItem`](crate::cyd::display::DrawItem) values can draw directly onto any
+/// CYD frame. See the canonical [`DrawItem`](crate::cyd::display::DrawItem)
+/// example for construction, rendering, and framebuffer verification.
 pub trait PixelTarget {
     fn width(&self) -> usize;
     fn height(&self) -> usize;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 (unreleased)
+
+- Refined the pre-adoption CYD display and touch APIs across Core, RP, and ESP,
+  including logical coordinates, tiled drawing, and fallible touch reads.
+- Expanded CYD image, memory, browser-simulation, and API documentation support
+  and removed the experimental-status warnings from the public READMEs.
+
 ## 0.1.2
 
 - Fixed the `device-envoy-rp` package so its generated PCM and ADPCM sample

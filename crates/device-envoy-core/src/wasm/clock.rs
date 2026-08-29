@@ -1,4 +1,13 @@
-//! Browser wall-clock support for CYD applications.
+//! Browser wall-clock support for Device Envoy applications.
+//!
+//! ```rust,no_run
+//! use device_envoy_core::wasm::clock::ClockSyncWasm;
+//!
+//! let clock_sync = ClockSyncWasm::new();
+//! assert!(!clock_sync.control_is_visible());
+//! clock_sync.show();
+//! assert!(clock_sync.control_is_visible());
+//! ```
 
 use core::cell::Cell;
 use std::rc::Rc;
@@ -9,6 +18,7 @@ use time::{OffsetDateTime, Time, UtcOffset};
 use crate::clock_sync::{ClockSync, ClockSyncTick, UnixSeconds};
 
 /// A [`ClockSync`] implementation backed by browser wall-clock time.
+/// See the compiled [`crate::wasm::clock`] example.
 pub struct ClockSyncWasm {
     offset_minutes: Cell<i32>,
     time_of_day: Rc<Cell<Option<u32>>>,
@@ -17,6 +27,7 @@ pub struct ClockSyncWasm {
 
 impl ClockSyncWasm {
     /// Construct a clock using the browser's current local UTC offset.
+    /// See the compiled [`crate::wasm::clock`] example.
     pub fn new() -> Self {
         Self::new_with_control_state(Rc::new(Cell::new(None)), Rc::new(Cell::new(false)))
     }
@@ -33,11 +44,13 @@ impl ClockSyncWasm {
     }
 
     /// Request the shared browser shell to display the time control.
+    /// See the compiled [`crate::wasm::clock`] example.
     pub fn show(&self) {
         self.visible.set(true);
     }
 
     /// Return whether the shared browser shell should display the control.
+    /// See the compiled [`crate::wasm::clock`] example.
     pub fn control_is_visible(&self) -> bool {
         self.visible.get()
     }

@@ -1,4 +1,4 @@
-use device_envoy_core::cyd::display::RectanglePixels;
+use device_envoy_core::UnwrapInfallible;
 use embedded_graphics::{
     draw_target::DrawTarget,
     mono_font::MonoFont,
@@ -30,6 +30,8 @@ use super::{CydFrameEsp, Orientation, buffer::DynPixelBuffer};
 // was faster in measurement but produced visible corruption on the tested
 // panel.
 /// Default SPI clock for CYD display traffic on ESP boards.
+///
+/// See the [`CydDisplayEsp::new`](super::CydDisplayEsp::new) constructor example.
 pub const DEFAULT_DISPLAY_SPI_HZ: u32 = 60_000_000;
 const DISPLAY_SPI_BUFFER_LEN: usize = 64;
 
@@ -55,26 +57,6 @@ fn orientation_to_mipi(orientation: Orientation) -> MipiOrientation {
     }
 }
 
-/// Error initializing the display over SPI.
-#[derive(Clone, Copy, Debug)]
-pub enum CydDisplayEspInitError {
-    /// Configuring the display SPI peripheral failed.
-    ConfigureDisplaySpi,
-    /// Wrapping the display SPI bus with its CS pin failed.
-    CreateDisplaySpiDevice,
-    /// The mipidsi display driver failed to initialize the panel.
-    InitDisplay,
-}
-
-/// Error flushing pixels to the display.
-#[derive(Clone, Copy, Debug)]
-pub enum CydDisplayEspFlushError {
-    /// Writing the frame buffer to the panel over SPI failed.
-    FlushFrameBuffer,
-    /// Changing the panel orientation failed.
-    SetOrientation,
-}
-
 /// An ILI9341 display driven over `D`, an `embedded-hal` SPI device.
 ///
 /// `D` defaults to [`CydDisplaySpiDevice`], an exclusively-owned SPI
@@ -86,6 +68,14 @@ pub(crate) struct CydDisplayEsp<D: SpiDevice<u8> = CydDisplaySpiDevice> {
 }
 
 impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
+    pub(crate) fn set_orientation(&mut self, orientation: Orientation) -> Result<(), super::Error> {
+        self.display
+            .set_orientation(orientation_to_mipi(orientation))
+            .map_err(|_| super::Error::SetOrientation)?;
+        self.screen_size = orientation.size();
+        Ok(())
+    }
+
     /// Oriented screen size stored at init time.
     #[must_use]
     pub const fn size(&self) -> Size {
@@ -108,7 +98,7 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         rst_pin: impl OutputPin + 'static,
         backlight_pin: impl OutputPin + 'static,
         orientation: Orientation,
-    ) -> Result<CydDisplayEsp<D>, CydDisplayEspInitError> {
+    ) -> Result<CydDisplayEsp<D>, super::Error> {
         let dc = Output::new(dc_pin, Level::Low, OutputConfig::default());
         let rst = Output::new(rst_pin, Level::High, OutputConfig::default());
         let mut backlight = Output::new(backlight_pin, Level::High, OutputConfig::default());
@@ -125,7 +115,10 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
             .color_order(ColorOrder::Bgr)
             .orientation(orientation_to_mipi(orientation))
             .init(&mut delay)
-            .map_err(|_| CydDisplayEspInitError::InitDisplay)?;
+            // `InitError` is parameterized by the private SPI-device type. The
+            // public CYD error keeps the operation context while the concrete
+            // device error remains behind this platform abstraction.
+            .map_err(|_| super::Error::InitDisplay)?;
 
         backlight.set_high();
 
@@ -137,30 +130,29 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
 
     pub(crate) fn flush_buffer(
         &mut self,
-        buffer: &impl RectanglePixels,
+        width: usize,
+        height: usize,
+        pixels: &[u16],
         top_left: Point,
-    ) -> Result<(), CydDisplayEspFlushError> {
-        let rectangle = Rectangle::new(
-            top_left,
-            Size::new(buffer.width() as u32, buffer.height() as u32),
-        );
+    ) -> Result<(), super::Error> {
+        let rectangle = Rectangle::new(top_left, Size::new(width as u32, height as u32));
         self.display
             .fill_contiguous(
                 &rectangle,
-                buffer
-                    .raw_pixels()
+                pixels
                     .iter()
                     .copied()
                     .map(|pixel| Rgb565::from(RawU16::new(pixel))),
             )
-            .map_err(|_| CydDisplayEspFlushError::FlushFrameBuffer)
+            // The display error is parameterized by the private SPI-device
+            // type; retain the public operation context at this boundary.
+            .map_err(|_| super::Error::FlushFrameBuffer)
     }
 
-    pub(crate) fn make_frame_with_tile_top_left<'a>(
+    pub(crate) fn make_frame<'a>(
         &'a mut self,
         pixel_buffer: &'a mut dyn DynPixelBuffer,
         rectangle: Rectangle,
-        tile_top_left: Point,
         background565: Rgb565,
         foreground565: Rgb565,
         font: &'static MonoFont<'static>,
@@ -174,14 +166,13 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
             display: self,
             view,
             rectangle,
-            tile_top_left,
             background565,
             foreground565,
             font,
         }
     }
 
-    pub(crate) fn fill(&mut self, color: Rgb565) -> Result<(), CydDisplayEspFlushError> {
+    pub(crate) fn fill(&mut self, color: Rgb565) -> Result<(), super::Error> {
         self.fill_rectangle(self.screen_rectangle(), color)
     }
 
@@ -189,17 +180,17 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         &mut self,
         rectangle: Rectangle,
         color: Rgb565,
-    ) -> Result<(), CydDisplayEspFlushError> {
+    ) -> Result<(), super::Error> {
         self.display
             .fill_solid(&rectangle, color)
-            .map_err(|_| CydDisplayEspFlushError::FlushFrameBuffer)
+            .map_err(|_| super::Error::FlushFrameBuffer)
     }
 
     pub(crate) fn fill_contiguous<I>(
         &mut self,
         rectangle: Rectangle,
         pixels: I,
-    ) -> Result<(), CydDisplayEspFlushError>
+    ) -> Result<(), super::Error>
     where
         I: IntoIterator<Item = Rgb565>,
     {
@@ -208,7 +199,7 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
         }
         self.display
             .fill_contiguous(&rectangle, pixels)
-            .map_err(|_| CydDisplayEspFlushError::FlushFrameBuffer)
+            .map_err(|_| super::Error::FlushFrameBuffer)
     }
 }
 
@@ -224,20 +215,20 @@ impl CydDisplayEsp<CydDisplaySpiDevice> {
         backlight_pin: impl OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
-    ) -> Result<CydDisplayEsp<CydDisplaySpiDevice>, CydDisplayEspInitError> {
+    ) -> Result<CydDisplayEsp<CydDisplaySpiDevice>, super::Error> {
         let spi_config = spi::master::Config::default()
             .with_frequency(esp_hal::time::Rate::from_hz(display_spi_hz))
             .with_mode(spi::Mode::_0);
         let spi = spi::master::Spi::new(spi, spi_config)
-            .map_err(|_| CydDisplayEspInitError::ConfigureDisplaySpi)?
+            .map_err(super::Error::ConfigureDisplaySpi)?
             .with_sck(sck_pin)
             .with_mosi(mosi_pin)
             .with_miso(miso_pin);
 
         let cs = Output::new(cs_pin, Level::High, OutputConfig::default());
 
-        let spi_device = ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs)
-            .map_err(|_| CydDisplayEspInitError::CreateDisplaySpiDevice)?;
+        let spi_device =
+            ExclusiveDevice::<_, _, NoDelay>::new_no_delay(spi, cs).unwrap_infallible();
 
         Self::new_from_device(spi_device, dc_pin, rst_pin, backlight_pin, orientation)
     }

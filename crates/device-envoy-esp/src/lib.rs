@@ -181,6 +181,12 @@ pub mod time_sync {
 pub mod audio_player;
 #[cfg(target_os = "none")]
 pub mod cyd;
+// The buffer implementation is hardware-independent, so exercise the same
+// private storage code in the host test harness even though the full CYD
+// peripheral module is embedded-only.
+#[cfg(all(test, feature = "host"))]
+#[path = "cyd/buffer.rs"]
+mod cyd_buffer_host_tests;
 pub mod flash_block;
 pub mod init_and_start;
 #[cfg(esp_has_rmt)]
@@ -314,15 +320,9 @@ pub enum Error {
     #[cfg(all(target_os = "none", esp_has_wifi))]
     Wifi(esp_radio::wifi::WifiError),
     #[cfg(target_os = "none")]
-    CydDisplayInit(cyd::CydDisplayEspInitError),
-    #[cfg(target_os = "none")]
-    CydTouchInit(cyd::CydTouchEspInitError),
-    #[cfg(target_os = "none")]
     #[from(ignore)]
-    CydDisplayFlush(cyd::CydDisplayEspFlushError),
-    #[cfg(target_os = "none")]
-    #[from(ignore)]
-    CydDisplaySetOrientation(cyd::CydDisplayEspFlushError),
+    // `cyd::Error` carries the detailed operation/source diagnostics.
+    Cyd(cyd::Error),
     #[cfg(target_os = "none")]
     CydTouchUnavailable,
 }
@@ -330,31 +330,7 @@ pub enum Error {
 #[cfg(target_os = "none")]
 impl From<cyd::Error> for Error {
     fn from(error: cyd::Error) -> Self {
-        match error {
-            cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
-            cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
-            cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
-            cyd::Error::DisplaySetOrientation(error) => Self::CydDisplaySetOrientation(error),
-        }
-    }
-}
-
-#[cfg(target_os = "none")]
-impl From<device_envoy_core::cyd::touch::calibration::Error<cyd::CydTouchUncalibratedEsp, Error>>
-    for Error
-{
-    fn from(
-        error: device_envoy_core::cyd::touch::calibration::Error<
-            cyd::CydTouchUncalibratedEsp,
-            Error,
-        >,
-    ) -> Self {
-        match error.kind {
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
-                Self::from(error)
-            }
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
-        }
+        Self::Cyd(error)
     }
 }
 

@@ -1,9 +1,61 @@
-//! A device abstraction for the "Cheap Yellow Display" (CYD) family of
-//! 320x240 ILI9341 + XPT2046 resistive-touch ESP32 boards.
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "cyd_application_preview",
+        "../device-envoy-core/docs/assets/cyd_application_preview.png"
+    )
+)]
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "linkage_blaze_gallery",
+        "../device-envoy-core/docs/assets/linkage_blaze_gallery.png"
+    )
+)]
+//! ESP32 support for Cheap Yellow Display (CYD) boards.
 //!
-//! See [`CydEsp`] and [`CydDisplayEsp`] for the public constructors; the
-//! device-agnostic [`CydDisplay`] and [`CydTouch`] traits live in
-//! [`device_envoy_core::cyd`].
+//! These boards combine a 320×240 ILI9341 display with XPT2046 resistive
+//! touch. After construction, applications use the portable display and
+//! calibrated-touch interfaces from
+//! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
+//! The RP, WebAssembly, and in-memory implementations share these interfaces.
+#![cfg_attr(
+    not(feature = "doc-images"),
+    doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. From the workspace root, use `just docs` for authoritative local documentation.\n"
+)]
+#![doc = include_str!("../../../docs/cyd/gallery.md")]
+#![doc = include_str!("../../../docs/cyd/application-example.md")]
+//!
+//! Your drawing strategy determines the pixel-buffer capacity selected through
+//! [`CydEsp::new_static`]: use [`CydEsp::SCREEN_PIXELS`] for full-screen frames,
+//! the largest region's pixel count for regional frames,
+//! [`tiling::TileGrid::max_tile_pixel_count`] for tiled drawing, or `0` for
+//! immediate operations and contiguous streaming.
+//!
+//! [Choose a constructor](#choose-a-constructor) explains how to construct an
+//! ESP32 device. The
+//! [ESP32 CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-esp/examples/esp32/generic/cyd_touch_paint.rs)
+//! puts both stages together in a complete program.
+#![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]
+//! ## Choose a constructor
+//!
+//! Construction depends on how many [SPI resources](crate#glossary) the CYD
+//! should use and whether the application needs touch:
+//!
+//! - [`CydEsp`] uses two SPI resources: one for the display and one for touch.
+//!   Choose it when the board has both resources available. Construction also
+//!   loads or runs touch calibration.
+//! - [`CydEspOneSpi`] uses one SPI resource for both the display and touch.
+//!   Choose it when the board has only one available, or when the application
+//!   needs to keep another SPI resource for something else. Device Envoy
+//!   coordinates access internally.
+//! - [`CydDisplayEsp`] uses one SPI resource for the display and omits touch.
+//!   Choose it when the application does not need touch.
+//!
+//! The [`CydEsp::new`], [`CydEspOneSpi::new`], and [`CydDisplayEsp::new`]
+//! examples show the constructor arguments for each choice. After construction,
+//! shared application code can use the [`Cyd`] trait without naming an ESP type.
+#![doc = include_str!("../../../docs/cyd/implementations.md")]
 
 mod buffer;
 mod display;
@@ -25,28 +77,27 @@ use embedded_hal::spi::SpiDevice;
 use static_cell::StaticCell;
 
 use buffer::DynPixelBuffer;
-pub use buffer::{PixelBuffer, RegionBuffer, RegionView};
+use buffer::{PixelBuffer, RegionView};
 use device_envoy_core::button::Button;
+use device_envoy_core::cyd::backend;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
-    display::{CydFrame, RectanglePixels},
-    touch::{
-        RawTouchEvent, TouchEvent,
-        calibration::{CalibrationConfig, ensure_calibration},
-    },
+    backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
+    display::CydFrame,
+    touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;
-pub use display::{CydDisplayEspFlushError, CydDisplayEspInitError, DEFAULT_DISPLAY_SPI_HZ};
+pub use display::DEFAULT_DISPLAY_SPI_HZ;
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch,
     display::{Orientation, tiling},
     touch,
 };
 pub use one_spi::CydEspOneSpi;
 pub use text::DEFAULT_FONT;
-pub use touch_driver::{CydTouchEspInitError, TOUCH_SPI_HZ};
+use touch_driver::TOUCH_SPI_HZ;
 
 use crate::flash_block::FlashBlockEsp;
 use display::CydDisplayEsp as CydDisplayEspDevice;
@@ -58,6 +109,10 @@ use touch_driver::CydTouchEsp as CydTouchEspDevice;
 /// exclusively-owned SPI peripheral. Shared-bus backends (see
 /// [`CydEspOneSpi`]) instantiate this with an
 /// `embedded_hal_bus::spi::RefCellDevice` instead.
+///
+/// Start with the [`cyd`](mod@crate::cyd) module example. The
+/// display-only constructor and static-storage pattern are shown by the
+/// [`CydDisplayEsp::new`] example.
 pub struct CydDisplayEsp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: CydDisplayEspDevice<D>,
     orientation: Orientation,
@@ -79,21 +134,31 @@ pub struct CydDisplayEsp<D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 ///
 /// `D` is the underlying `embedded-hal` SPI device type; see
 /// [`CydDisplayEsp`] for the shared-bus rationale.
-pub struct CydTouchUncalibratedEsp<D = touch_driver::CydTouchSpiDevice> {
+pub(crate) struct CydTouchUncalibratedEsp<D = touch_driver::CydTouchSpiDevice> {
     touch: CydTouchEspDevice<D>,
 }
 
 /// An owned calibrated CYD-family ESP32 touch component.
+///
+/// Start with the [`cyd`](mod@crate::cyd) module example. Construction
+/// is covered by [`CydEsp::new`]; applications then call the calibrated
+/// [`CydTouch::try_read`] operation.
 pub struct CydTouchEsp<D = touch_driver::CydTouchSpiDevice> {
     raw: CydTouchUncalibratedEsp<D>,
     calibration_config: CalibrationConfig,
+    orientation: Orientation,
 }
 
-/// A calibrated CYD-family ESP32 bundle.
+/// An ESP32 CYD device containing a display and calibrated touch input.
+///
+/// [`CydEsp::new_static`] creates the pixel buffer storage passed to
+/// [`CydEsp::new`], which constructs the hardware and loads or performs touch
+/// calibration. See the [`cyd`](mod@crate::cyd) module example for normal
+/// drawing and touch input.
 pub struct CydEsp {
-    /// The owned display component.
+    /// The display component.
     pub display: CydDisplayEsp,
-    /// The owned calibrated touch component.
+    /// The calibrated touch component.
     pub touch: CydTouchEsp,
 }
 
@@ -107,15 +172,18 @@ pub(crate) struct CydEspUncalibrated {
 
 /// Static storage for a [`CydEsp`]-owned pixel buffer.
 ///
-/// The app declares one at file scope and names the workspace pixel count it
-/// wants:
+/// `PIXEL_COUNT` is an RGB565 pixel count, not a byte count. Choose its capacity
+/// through [`CydEsp::new_static`] or [`CydEspOneSpi::new_static`].
+/// Declare the storage at file scope:
 ///
 /// ```rust,no_run
+/// #![no_std]
+/// #![no_main]
+/// use device_envoy_esp::cyd::{CydEsp, CydStaticEsp};
 /// static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
+/// # #[panic_handler]
+/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 /// ```
-///
-/// The app chooses the pixel count (policy); [`CydDisplayEsp::new`] owns the
-/// initialization protocol and the storage details.
 pub struct CydStaticEsp<const PIXEL_COUNT: usize> {
     pixel_buffer: StaticCell<PixelBuffer<PIXEL_COUNT>>,
 }
@@ -124,22 +192,28 @@ impl<const PIXEL_COUNT: usize> CydStaticEsp<PIXEL_COUNT> {
     /// Internal constructor. Apps create storage via [`CydEsp::new_static`] so all
     /// construction goes through the `CydEsp` device abstraction.
     pub(crate) const fn new() -> Self {
+        assert!(
+            PIXEL_COUNT <= SCREEN_PIXELS,
+            "PIXEL_COUNT must not exceed SCREEN_PIXELS"
+        );
         Self {
             pixel_buffer: StaticCell::new(),
         }
     }
 }
 
-/// A single in-progress frame backed by an `Rgb565` pixel buffer.
+/// The ESP implementation of
+/// [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html).
+///
+/// Frames are returned by [`CydDisplay::frame_mut`]. See the portable
+/// [`CydFrame`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html)
+/// documentation for normal drawing.
 pub struct CydFrameEsp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
     display: &'a mut CydDisplayEspDevice<D>,
     view: RegionView<'a>,
     // Where this frame presents and how large it is: set from the `Rectangle`
     // passed to `frame_mut`, so `flush` needs no separate position argument.
     rectangle: Rectangle,
-    // Tile top-left in screen coordinates. Drawing coordinates are translated
-    // by this point before reaching the local frame buffer.
-    tile_top_left: Point,
     // Default foreground color and font, copied from the owning `CydDisplayEsp`, so
     // `write_text` can render with the device default style.
     pub(crate) background565: Rgb565,
@@ -148,48 +222,55 @@ pub struct CydFrameEsp<'a, D: SpiDevice<u8> = display::CydDisplaySpiDevice> {
 }
 
 impl<'a, D: SpiDevice<u8>> CydFrameEsp<'a, D> {
-    /// Borrow the frame's underlying pixel view.
-    pub fn view_mut(&mut self) -> &mut RegionView<'a> {
-        &mut self.view
-    }
-
     /// Fill the frame with an explicit color.
+    ///
+    /// See the portable
+    /// [`CydFrame::fill`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.fill)
+    /// documentation.
     pub fn fill(&mut self, color: Rgb565) -> &mut Self {
         self.view.fill(color);
         self
     }
 
-    /// The frame's width in pixels.
+    /// The buffered frame region's width in pixels.
     #[must_use]
     pub fn width(&self) -> usize {
         self.view.width()
     }
 
-    /// The frame's height in pixels.
+    /// The buffered frame region's height in pixels.
     #[must_use]
     pub fn height(&self) -> usize {
         self.view.height()
     }
 
-    /// Borrow the frame's raw RGB565 pixels, row-major.
+    /// Borrow the buffered frame region's raw RGB565 pixels in row-major order.
     pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
 
     /// Present this frame's pixels at its rectangle's top-left (set by
     /// [`CydDisplay::frame_mut`]).
+    ///
+    /// This inherent method synchronously writes the buffered rectangle over
+    /// SPI. In generic
+    /// code, call [`CydFrame::flush`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.flush)
+    /// and await its future instead.
     pub fn flush(&mut self) -> Result<(), Error> {
-        Ok(self
-            .display
-            .flush_buffer(&self.view, self.rectangle.top_left)?)
+        Ok(self.display.flush_buffer(
+            self.view.size().width as usize,
+            self.view.size().height as usize,
+            self.view.raw_pixels(),
+            self.rectangle.top_left,
+        )?)
     }
 
     fn local_x(&self, x: i32) -> Option<usize> {
-        usize::try_from(x.checked_sub(self.tile_top_left.x)?).ok()
+        usize::try_from(x.checked_sub(self.rectangle.top_left.x)?).ok()
     }
 
     fn local_y(&self, y: i32) -> Option<usize> {
-        usize::try_from(y.checked_sub(self.tile_top_left.y)?).ok()
+        usize::try_from(y.checked_sub(self.rectangle.top_left.y)?).ok()
     }
 }
 
@@ -224,21 +305,21 @@ impl<D: SpiDevice<u8>> DrawTarget for CydFrameEsp<'_, D> {
 
 impl<D: SpiDevice<u8>> Dimensions for CydFrameEsp<'_, D> {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(self.tile_top_left, self.view.size())
+        self.rectangle
     }
 }
 
 impl<D: SpiDevice<u8>> PixelTarget for CydFrameEsp<'_, D> {
     fn width(&self) -> usize {
-        usize::try_from(self.tile_top_left.x)
-            .expect("tile top-left x must be non-negative")
+        usize::try_from(self.rectangle.top_left.x)
+            .expect("frame top-left x must be non-negative")
             .checked_add(self.width())
             .expect("frame width must fit in usize")
     }
 
     fn height(&self) -> usize {
-        usize::try_from(self.tile_top_left.y)
-            .expect("tile top-left y must be non-negative")
+        usize::try_from(self.rectangle.top_left.y)
+            .expect("frame top-left y must be non-negative")
             .checked_add(self.height())
             .expect("frame height must fit in usize")
     }
@@ -275,37 +356,55 @@ impl<D: SpiDevice<u8>> PixelTarget for CydFrameEsp<'_, D> {
 }
 
 /// Error from a CYD ESP display or touch operation.
+///
+/// Most applications propagate this error with `?`. Code that reports errors
+/// differently by operation can match the preserved source-bearing variants:
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # #[panic_handler]
+/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+/// use device_envoy_esp::cyd::Error;
+///
+/// fn report(error: Error) {
+///     match error {
+///         Error::ConfigureDisplaySpi(source) | Error::ConfigureTouchSpi(source) => {
+///             // Report the SPI configuration details from `source`.
+///             drop(source);
+///         }
+///         Error::InitDisplay => { /* Display initialization failed. */ }
+///         Error::FlushFrameBuffer => { /* Sending pixels failed. */ }
+///         Error::SetOrientation => { /* Changing orientation failed. */ }
+///     }
+/// }
+/// ```
 #[derive(Debug)]
 pub enum Error {
-    /// Initializing the display over SPI failed.
-    DisplayInit(CydDisplayEspInitError),
-    /// Initializing the touch controller over SPI failed.
-    TouchInit(CydTouchEspInitError),
-    /// Flushing a frame to the display failed.
-    DisplayFlush(CydDisplayEspFlushError),
+    /// Configuring the display SPI peripheral failed.
+    /// See the [`Error`] example.
+    ConfigureDisplaySpi(esp_hal::spi::master::ConfigError),
+    /// The display panel could not be initialized.
+    /// See the [`Error`] example.
+    InitDisplay,
+    /// Configuring the touch SPI peripheral failed.
+    /// See the [`Error`] example.
+    ConfigureTouchSpi(esp_hal::spi::master::ConfigError),
+    /// A frame could not be flushed to the display.
+    /// See the [`Error`] example.
+    FlushFrameBuffer,
     /// Changing the display orientation failed.
-    DisplaySetOrientation(CydDisplayEspFlushError),
-}
-
-impl From<CydDisplayEspInitError> for Error {
-    fn from(error: CydDisplayEspInitError) -> Self {
-        Self::DisplayInit(error)
-    }
-}
-
-impl From<CydTouchEspInitError> for Error {
-    fn from(error: CydTouchEspInitError) -> Self {
-        Self::TouchInit(error)
-    }
-}
-
-impl From<CydDisplayEspFlushError> for Error {
-    fn from(error: CydDisplayEspFlushError) -> Self {
-        Self::DisplayFlush(error)
-    }
+    /// See the [`Error`] example.
+    SetOrientation,
 }
 
 impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
+    fn set_orientation(&mut self, orientation: Orientation) -> Result<(), Error> {
+        self.display.set_orientation(orientation)?;
+        self.orientation = orientation;
+        Ok(())
+    }
+
     fn from_display_device(
         mut display: CydDisplayEspDevice<D>,
         orientation: Orientation,
@@ -364,6 +463,27 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
 
 impl CydDisplayEsp<display::CydDisplaySpiDevice> {
     /// Construct a display-only CYD display component that owns its draw buffer.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydEsp::new_static`] for the sizing choices.
+    ///
+    /// ```rust,no_run
+    /// # #![no_std]
+    /// # #![no_main]
+    /// use device_envoy_esp::{Result, cyd::{CydDisplay, CydDisplayEsp, CydEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}};
+    /// use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # #[panic_handler]
+    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+    /// async fn construct(p: esp_hal::peripherals::Peripherals) -> Result<()> {
+    ///     static CYD_STATIC: device_envoy_esp::cyd::CydStaticEsp<0> = CydEsp::new_static();
+    ///     let display = CydDisplayEsp::new(&CYD_STATIC, p.SPI2, p.GPIO1, p.GPIO2, p.GPIO3,
+    ///         p.GPIO4, p.GPIO5, p.GPIO7, p.GPIO8, DEFAULT_DISPLAY_SPI_HZ,
+    ///         Orientation::Landscape, Rgb888::BLACK, Rgb888::WHITE, &DEFAULT_FONT)?;
+    ///     assert_eq!(display.screen_size(), Orientation::Landscape.size());
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn new<const PIXEL_COUNT: usize>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
         display_spi: impl esp_hal::spi::master::Instance + 'static,
@@ -444,15 +564,99 @@ impl CydTouchUncalibratedEsp<touch_driver::CydTouchSpiDevice> {
 
 impl CydEsp {
     /// Total pixel count of the CYD panel — fixed hardware, independent of orientation.
+    ///
+    /// Used by the [`CydStaticEsp`] storage example.
     pub const SCREEN_PIXELS: usize = SCREEN_PIXELS;
 
-    /// Create [`CydStaticEsp`] storage for a `PIXEL_COUNT`-sized draw buffer.
+    /// Create static storage for a CYD pixel buffer.
+    ///
+    /// Choose any `PIXEL_COUNT` from zero through [`CydEsp::SCREEN_PIXELS`].
+    ///
+    /// - `0` allocates no pixel buffer, so only
+    ///   [immediate operations](CydDisplay::fill_rectangle) and
+    ///   [contiguous streaming](CydDisplay::fill_contiguous) are available.
+    /// - A regional buffer can be sized for the largest rectangle requested
+    ///   through [`CydDisplay::frame_mut`].
+    /// - For tiled drawing, size the buffer to
+    ///   [`tiling::TileGrid::max_tile_pixel_count`], then pass the grid to
+    ///   [`CydDisplay::for_each_tile`]. Only one tile is buffered at a time.
+    /// - [`CydEsp::SCREEN_PIXELS`] allocates a full-screen buffer and is usually
+    ///   the most convenient choice when enough RAM is available.
+    ///
+    /// Attempting to create a frame or tile larger than the allocated buffer
+    /// panics.
     #[must_use]
     pub const fn new_static<const PIXEL_COUNT: usize>() -> CydStaticEsp<PIXEL_COUNT> {
         CydStaticEsp::new()
     }
 
-    /// Construct a ready-to-use calibrated CYD, loading or completing calibration internally.
+    /// Construct a ready-to-use CYD.
+    ///
+    /// The display and touch controller use separate SPI buses. The supplied
+    /// flash block stores touch calibration, and `recalibration_button` requests
+    /// interactive recalibration.
+    ///
+    /// Choosing the pixel buffer capacity is the most important construction
+    /// decision: `statics` determines both static RAM use and the largest
+    /// buffered region. See [`CydEsp::new_static`] for the sizing choices.
+    ///
+    /// Use [`CydEspOneSpi`] for boards where display and touch share one SPI bus.
+    ///
+    /// This example focuses on the board-specific construction. For the normal
+    /// draw/flush/read loop, start with the [`cyd`](mod@crate::cyd) module
+    /// example. For complete startup and wiring in a real program, see the
+    /// [checked ESP32 CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-esp/examples/esp32/generic/cyd_touch_paint.rs).
+    ///
+    /// ```rust,no_run
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # #[panic_handler]
+    /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+    /// # use device_envoy_esp::{Result, button::{ButtonEsp, PressedTo}, cyd::{CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockEsp};
+    /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
+    /// # use esp_hal::spi::master::AnySpi;
+    /// # async fn construct(mut p: esp_hal::peripherals::Peripherals, touch_spi: AnySpi<'static>) -> Result<()> {
+    /// #     let [mut calibration_flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// #     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
+    ///     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
+    ///
+    ///     let cyd = CydEsp::new(
+    ///         &CYD_STATIC,
+    ///
+    ///         // Display SPI and pins:
+    ///         p.SPI2,
+    ///         p.GPIO1,
+    ///         p.GPIO2,
+    ///         p.GPIO3,
+    ///         p.GPIO4,
+    ///         p.GPIO5,
+    ///         p.GPIO7,
+    ///         p.GPIO8,
+    ///         DEFAULT_DISPLAY_SPI_HZ,
+    ///
+    ///         // Presentation:
+    ///         Orientation::Landscape,
+    ///         Rgb888::BLACK,
+    ///         Rgb888::WHITE,
+    ///         &DEFAULT_FONT,
+    ///
+    ///         // Touch SPI and pins:
+    ///         touch_spi,
+    ///         p.GPIO9,
+    ///         p.GPIO10,
+    ///         p.GPIO11,
+    ///         p.GPIO12,
+    ///         p.GPIO13,
+    ///
+    ///         // Calibration storage and recalibration button:
+    ///         &mut calibration_flash,
+    ///         &mut recalibration_button,
+    ///     )
+    ///     .await?;
+    ///
+    /// #     Ok(())
+    /// # }
+    /// ```
     pub async fn new<const PIXEL_COUNT: usize, R: Button>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,
         display_spi: impl esp_hal::spi::master::Instance + 'static,
@@ -499,22 +703,20 @@ impl CydEsp {
             touch_cs_pin,
             touch_irq_pin,
         )?;
-        let (touch, _) = ensure_calibration(
+        let touch = backend::ensure_calibration(
             &mut display,
             touch,
             calibration_flash_block,
             recalibration_button,
             None,
+            orientation,
         )
         .await
-        .map_err(|error| match error.kind {
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(cyd_error) => {
-                crate::Error::from(cyd_error)
-            }
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(flash_error) => {
-                flash_error
-            }
+        .map_err(|error| match error {
+            backend::Error::Device(cyd_error) => crate::Error::from(cyd_error),
+            backend::Error::Flash(flash_error) => flash_error,
         })?;
+        display.set_orientation(orientation)?;
         Ok(Self { display, touch })
     }
 }
@@ -545,7 +747,7 @@ impl CydEspUncalibrated {
         display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
-        orientation: Orientation,
+        _orientation: Orientation,
         background_color: Rgb888,
         foreground_color: Rgb888,
         font: &'static MonoFont<'static>,
@@ -568,7 +770,7 @@ impl CydEspUncalibrated {
                 display_rst_pin,
                 display_backlight_pin,
                 display_spi_hz,
-                orientation,
+                Orientation::Landscape,
                 background_color,
                 foreground_color,
                 font,
@@ -593,6 +795,7 @@ impl<D: SpiDevice<u8>> fmt::Debug for CydDisplayEsp<D> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydDisplayEsp")
+            .field("orientation", &self.orientation)
             .finish_non_exhaustive()
     }
 }
@@ -610,13 +813,17 @@ impl<D> fmt::Debug for CydTouchEsp<D> {
         formatter
             .debug_struct("CydTouchEsp")
             .field("calibration_config", &self.calibration_config)
+            .field("orientation", &self.orientation)
             .finish_non_exhaustive()
     }
 }
 
 impl fmt::Debug for CydEsp {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_struct("CydEsp").finish_non_exhaustive()
+        formatter
+            .debug_struct("CydEsp")
+            .field("orientation", &self.display.orientation)
+            .finish_non_exhaustive()
     }
 }
 
@@ -624,17 +831,30 @@ impl fmt::Debug for CydEspUncalibrated {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CydEspUncalibrated")
+            .field("orientation", &self.display.orientation)
             .finish_non_exhaustive()
     }
 }
 
-impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
+impl<D: SpiDevice<u8>> backend::DisplayBackend for CydDisplayEsp<D> {
     type Error = Error;
     type Frame<'a>
         = CydFrameEsp<'a, D>
     where
         Self: 'a;
 
+    fn create_frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
+        self.display.make_frame(
+            self.pixel_buffer,
+            rectangle,
+            self.background565,
+            self.foreground565,
+            self.font,
+        )
+    }
+}
+
+impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     #[inline]
     fn screen_size(&self) -> Size {
         self.display.size()
@@ -656,21 +876,6 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
         self.foreground565
     }
 
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> CydFrameEsp<'_, D> {
-        self.display.make_frame_with_tile_top_left(
-            self.pixel_buffer,
-            rectangle,
-            tile_top_left,
-            self.background565,
-            self.foreground565,
-            self.font,
-        )
-    }
-
     #[inline]
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Error> {
         Ok(self.display.fill_rectangle(rectangle, color)?)
@@ -683,14 +888,9 @@ impl<D: SpiDevice<u8>> CydDisplay for CydDisplayEsp<D> {
     {
         Ok(self.display.fill_contiguous(rectangle, pixels)?)
     }
-
-    #[inline]
-    fn flush_at(&mut self, buffer: &impl RectanglePixels, top_left: Point) -> Result<(), Error> {
-        Ok(self.display.flush_buffer(buffer, top_left)?)
-    }
 }
 
-impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
+impl<D: SpiDevice<u8>> TouchUncalibrated for CydTouchUncalibratedEsp<D> {
     type Error = Error;
     type Calibrated = CydTouchEsp<D>;
 
@@ -698,19 +898,23 @@ impl<D: SpiDevice<u8>> CydTouchUncalibrated for CydTouchUncalibratedEsp<D> {
         Ok(self.touch.read_raw_touch_event())
     }
 
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
+    fn calibrate(
+        self,
+        calibration_config: CalibrationConfig,
+        orientation: Orientation,
+    ) -> Self::Calibrated {
         CydTouchEsp {
             raw: self,
             calibration_config,
+            orientation,
         }
     }
 }
 
 impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
     type Error = Error;
-    type Uncalibrated = CydTouchUncalibratedEsp<D>;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, Error> {
+    fn try_read(&mut self) -> Result<Option<TouchEvent>, Error> {
         Ok(self
             .raw
             .touch
@@ -719,34 +923,26 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
                 RawTouchEvent::Down { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Down {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Move { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Move {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
     }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config
-    }
-
-    fn decalibrate(self) -> Self::Uncalibrated {
-        self.raw
-    }
 }
 
 impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
     type Error = Error;
-
-    fn tile_top_left(&self) -> Point {
-        self.tile_top_left
-    }
 
     fn rectangle(&self) -> Rectangle {
         self.rectangle

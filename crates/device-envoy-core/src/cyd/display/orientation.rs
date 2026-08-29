@@ -1,23 +1,43 @@
-//! Panel orientation for the fixed 320x240 CYD display.
+//! Panel orientation for the fixed 320×240 CYD display.
 
 use embedded_graphics::geometry::Point;
 use embedded_graphics::prelude::Size;
 
 use super::super::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
-/// How the fixed landscape panel is presented.
+/// Display orientation for the fixed 320×240 CYD panel.
 ///
-/// Concrete platforms map this to their display driver's rotation; this enum
-/// only knows the resulting oriented dimensions.
+/// `Landscape` and `LandscapeInverted` have size 320×240.
+/// `Portrait` and `PortraitInverted` have size 240×320.
+/// See the [`Cyd::orientation` example](crate::cyd::Cyd::orientation).
+#[cfg_attr(feature = "host", doc = "")]
+#[cfg_attr(
+    feature = "host",
+    doc = "For complete device usage, see the [orientation and frame-budget example](crate::memory#orientation-and-frame-budget-example)."
+)]
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::Orientation;
+/// use embedded_graphics::prelude::Size;
+///
+/// let orientation = Orientation::Portrait;
+///
+/// assert_eq!(orientation.size(), Size::new(240, 320));
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum Orientation {
+    /// 320×240.
     Landscape,
+    /// 240×320, rotated clockwise.
     Portrait,
+    /// 320×240, rotated 180°.
     LandscapeInverted,
+    /// 240×320, rotated counterclockwise.
     PortraitInverted,
 }
 
 impl Orientation {
+    /// Logical display width for this orientation.
     #[must_use]
     pub const fn width(self) -> u32 {
         match self {
@@ -26,6 +46,7 @@ impl Orientation {
         }
     }
 
+    /// Logical display height for this orientation.
     #[must_use]
     pub const fn height(self) -> u32 {
         match self {
@@ -34,11 +55,13 @@ impl Orientation {
         }
     }
 
+    /// Logical display size for this orientation.
     #[must_use]
     pub const fn size(self) -> Size {
         Size::new(self.width(), self.height())
     }
 
+    /// Number of display pixels.
     #[must_use]
     pub const fn pixels(self) -> usize {
         self.width() as usize * self.height() as usize
@@ -55,11 +78,13 @@ impl Orientation {
         }
     }
 
-    /// Map a calibrated landscape point into this orientation's screen space.
+    /// Convert a point from the panel's native 320×240 landscape coordinates
+    /// into logical display coordinates for this orientation.
     ///
-    /// Touch calibration always describes the fixed 320x240 landscape panel.
-    /// A calibrated [`TouchEvent`](crate::cyd::touch::TouchEvent) must be
-    /// converted with this method exactly once before logical UI hit testing.
+    /// Use this for calibration data or assets defined in native panel
+    /// coordinates. Do not apply it to [`TouchEvent`](crate::cyd::touch::TouchEvent)
+    /// points returned by [`CydTouch::try_read`](crate::cyd::CydTouch::try_read); those
+    /// are already mapped.
     #[must_use]
     pub const fn map_landscape_point(self, point: Point) -> Point {
         let landscape_width = SCREEN_WIDTH as i32;

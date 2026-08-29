@@ -2,8 +2,10 @@ set shell := ["bash", "-cu"]
 
 # Core docs checks (doctests + docs build, fail on rustdoc warnings).
 check-docs-core:
-    RUSTDOCFLAGS="-D warnings" cargo test --doc --features host,wasm
+    RUSTDOCFLAGS="-D warnings" cargo test --doc --features host
+    RUSTDOCFLAGS="-D warnings" cargo test --doc --no-default-features --features wasm wasm
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features host,wasm,doc-images
+    bash ../../scripts/check-rendered-cyd-links.sh ../../target/doc/device_envoy_core/cyd
 
 # Full validation for device-envoy-core.
 check-all:

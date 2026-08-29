@@ -1,10 +1,23 @@
-//! Browser-simulated CYD parts plus [`Button`] and [`FlashBlock`] implementations.
+//! Browser implementations for CYD, buttons, flash storage, clocks, DNS, and simulators.
 //!
-//! Requires the `wasm` feature. [`CydWasm`] offers owned CYD display/touch
-//! parts against an HTML canvas, so the same generic example code that drives
-//! the real esp32 `CydEsp` also runs in a web page. Its [`CydFrameWasm::flush`]
-//! awaits the next browser animation frame (see [`next_animation_frame`]),
-//! blits the frame to the canvas, then resolves.
+//! Enable the `wasm` feature when compiling application code for a browser.
+//!
+//! ## Implementations
+//!
+//! - [`CydWasm`] provides an HTML-canvas display and browser pointer-based touch
+//!   input.
+//! - [`ButtonWasm`] provides browser-controlled button input.
+//! - [`FlashBlockWasm`] provides flash-block storage backed by browser local
+//!   storage.
+//! - [`ClockSyncWasm`] provides browser clock synchronization; see the
+//!   [`clock` module](clock).
+//! - [`DnsSimulatorWasm`] provides deterministic DNS simulation; see the
+//!   [`dns` module](dns).
+//! - [`CydSimulatorWasm`] and [`WifiSimulatorWasm`] provide higher-level browser
+//!   simulators; see the [`simulator` module](simulator).
+//!
+//! The [`cyd_web` module](cyd_web) supplies the browser shell for CYD
+//! applications, and [`next_animation_frame`] provides browser frame pacing.
 
 mod animation_frame;
 pub mod clock;
@@ -20,9 +33,10 @@ use core::{
 use std::{collections::VecDeque, rc::Rc};
 
 use crate::cyd::{
-    Cyd, CydDisplay, CydTouch, CydTouchUncalibrated,
+    Cyd, CydDisplay, CydTouch,
+    backend::{CalibrationConfig, RawTouchEvent},
     display::{CydFrame, Orientation},
-    touch::{RawPoint, RawTouchEvent, TouchEvent, calibration::CalibrationConfig},
+    touch::{RawPoint, TouchEvent},
 };
 use crate::{
     button::{__ButtonMonitor, BUTTON_POLL_INTERVAL, Button},
@@ -60,12 +74,57 @@ const fn identity_calibration_config() -> CalibrationConfig {
     CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 }
 
-/// A CYD display simulated on an HTML canvas.
+/// A CYD device rendered to an HTML canvas with browser-supplied touch input.
+///
+/// `CydWasm` implements the portable [`Cyd`] interface used by the hardware
+/// implementations. Write normal application code against the
+/// [`cyd`](crate::cyd) module and its [`CydDisplay`] drawing APIs; only browser
+/// setup and input plumbing need WASM-specific types.
+///
+/// Browser pointer handlers feed touch input through [`CydTouchWasmSource`],
+/// where it is calibrated and oriented like hardware touch input.
+/// [`CydFrameWasm::flush`] presents the current frame and awaits the next
+/// browser animation frame for frame pacing.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::{
+///     cyd::display::Orientation,
+///     wasm::{CydTouchWasmSource, CydWasm},
+/// };
+/// use embedded_graphics::{
+///     mono_font::ascii::FONT_6X10,
+///     pixelcolor::{Rgb888, RgbColor},
+/// };
+/// use wasm_bindgen::{JsCast, JsValue};
+/// use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+///
+/// fn create_cyd(canvas: HtmlCanvasElement) -> Result<CydWasm, JsValue> {
+///     let orientation = Orientation::Landscape;
+///     canvas.set_width(orientation.width());
+///     canvas.set_height(orientation.height());
+///     let context = canvas
+///         .get_context("2d")?
+///         .ok_or_else(|| JsValue::from_str("2D canvas context unavailable"))?
+///         .dyn_into::<CanvasRenderingContext2d>()?;
+///
+///     Ok(CydWasm::new(
+///         context,
+///         orientation,
+///         Rgb888::BLACK,
+///         Rgb888::WHITE,
+///         &FONT_6X10,
+///         CydTouchWasmSource::new(),
+///     ))
+/// }
+/// ```
 pub struct CydWasm {
     display: CydDisplayWasm,
     touch: CydTouchWasm,
 }
 
+/// Owned HTML-canvas display half of [`CydWasm`].
 #[derive(Clone)]
 pub struct CydDisplayWasm {
     context: CanvasRenderingContext2d,
@@ -78,21 +137,17 @@ pub struct CydDisplayWasm {
     font: &'static MonoFont<'static>,
 }
 
+/// Owned calibrated and oriented touch half of [`CydWasm`].
 #[derive(Clone)]
 pub struct CydTouchWasm {
     raw_touch_events: RawTouchEvents,
     interaction_state: Rc<Cell<InteractionState>>,
     latest_raw_point: Rc<Cell<Option<RawPoint>>>,
     calibration_config: CalibrationConfig,
+    orientation: Orientation,
 }
 
-#[derive(Clone)]
-pub struct CydTouchUncalibratedWasm {
-    raw_touch_events: RawTouchEvents,
-    interaction_state: Rc<Cell<InteractionState>>,
-    latest_raw_point: Rc<Cell<Option<RawPoint>>>,
-}
-
+/// Input source used by browser pointer handlers to feed touch events to a [`CydWasm`].
 #[derive(Clone)]
 pub struct CydTouchWasmSource {
     raw_touch_events: RawTouchEvents,
@@ -100,15 +155,18 @@ pub struct CydTouchWasmSource {
     latest_raw_point: Rc<Cell<Option<RawPoint>>>,
 }
 
+/// Browser button state controlled by a [`ButtonWasmSource`].
 pub struct ButtonWasm {
     pressed: Rc<Cell<bool>>,
 }
 
 #[derive(Clone)]
+/// Input source used by browser controls to update a [`ButtonWasm`].
 pub struct ButtonWasmSource {
     pressed: Rc<Cell<bool>>,
 }
 
+/// Flash-block storage backed by browser local storage.
 pub struct FlashBlockWasm {
     flash_device: FlashDeviceWasm,
 }
@@ -121,9 +179,15 @@ struct FlashDeviceWasm {
     bytes: [u8; FLASH_BLOCK_SIZE],
 }
 
+/// Errors reported by browser-backed WASM support.
+///
+/// These errors concern persistent browser storage used by [`FlashBlockWasm`];
+/// display drawing and calibrated touch use the in-memory simulator state.
 #[derive(Debug)]
 pub enum Error {
+    /// The browser does not provide the requested storage facility.
     StorageUnavailable,
+    /// The browser rejected or failed a storage operation.
     StorageAccess,
 }
 
@@ -135,7 +199,12 @@ enum InteractionState {
 }
 
 impl CydWasm {
-    /// Build a simulated CYD that presents onto `context`, sized for `orientation`.
+    /// Construct a simulated CYD that presents frames onto `context`.
+    ///
+    /// `orientation` determines the logical display size and touch mapping. The
+    /// caller should size the context's canvas to match. Colors and `font`
+    /// configure the portable [`CydDisplay`] helpers, and `touch_source`
+    /// receives input from the browser's pointer handlers.
     #[must_use]
     pub fn new(
         context: CanvasRenderingContext2d,
@@ -160,11 +229,13 @@ impl CydWasm {
             interaction_state: touch_source.interaction_state,
             latest_raw_point: touch_source.latest_raw_point,
             calibration_config: identity_calibration_config(),
+            orientation,
         };
         Self { display, touch }
     }
 
     #[must_use]
+    /// Clone the input source that feeds browser pointer events to this device.
     pub fn touch_source(&self) -> CydTouchWasmSource {
         CydTouchWasmSource {
             raw_touch_events: self.touch.raw_touch_events.clone(),
@@ -174,11 +245,15 @@ impl CydWasm {
     }
 
     #[must_use]
+    /// Clone the HTML-canvas display component.
     pub fn display(&self) -> CydDisplayWasm {
         self.display.clone()
     }
 
-    /// Clone owned calibrated parts that share this device's browser state.
+    /// Return owned display and calibrated touch handles.
+    ///
+    /// The handles share the same browser canvas and touch-event state as this
+    /// device.
     #[must_use]
     pub fn owned_parts(&self) -> (CydDisplayWasm, CydTouchWasm) {
         (self.display.clone(), self.touch.clone())
@@ -186,6 +261,7 @@ impl CydWasm {
 }
 
 impl Cyd for CydWasm {
+    /// Browser CYD display and touch operations are infallible.
     type Error = Infallible;
     type Display = CydDisplayWasm;
     type Touch = CydTouchWasm;
@@ -200,6 +276,7 @@ impl Cyd for CydWasm {
 }
 
 impl CydTouchWasmSource {
+    /// Construct an empty browser touch-event source.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -209,6 +286,11 @@ impl CydTouchWasmSource {
         }
     }
 
+    /// Queue a calibrated-panel point in fixed landscape coordinates.
+    ///
+    /// The browser control converts logical canvas coordinates to this raw
+    /// calibration boundary before calling the source. `CydTouchWasm::try_read`
+    /// performs the one runtime-orientation mapping for the application.
     pub fn touch_down(&self, x: f32, y: f32) {
         match self.interaction_state.get() {
             InteractionState::WaitingForFreshPress => return,
@@ -229,6 +311,7 @@ impl CydTouchWasmSource {
         });
     }
 
+    /// Queue a movement point in fixed landscape calibration coordinates.
     pub fn touch_move(&self, x: f32, y: f32) {
         if self.interaction_state.get() != InteractionState::PointerDown {
             return;
@@ -246,6 +329,7 @@ impl CydTouchWasmSource {
         });
     }
 
+    /// Queue a touch-release event and allow the next press.
     pub fn touch_up(&self) {
         let interaction_state = self.interaction_state.get();
         self.interaction_state.set(InteractionState::Ready);
@@ -256,6 +340,7 @@ impl CydTouchWasmSource {
         self.push(RawTouchEvent::Up);
     }
 
+    /// Discard pending input until the next touch-down event.
     pub fn wait_for_fresh_press(&self) {
         self.raw_touch_events.borrow_mut().clear();
         self.latest_raw_point.set(None);
@@ -277,6 +362,7 @@ impl Default for CydTouchWasmSource {
 }
 
 impl ButtonWasmSource {
+    /// Construct a released browser button source.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -285,16 +371,19 @@ impl ButtonWasmSource {
     }
 
     #[must_use]
+    /// Return a button handle backed by this source's current state.
     pub fn button(&self) -> ButtonWasm {
         ButtonWasm {
             pressed: self.pressed.clone(),
         }
     }
 
+    /// Set the browser button state to pressed.
     pub fn press(&self) {
         self.pressed.set(true);
     }
 
+    /// Set the browser button state to released.
     pub fn release(&self) {
         self.pressed.set(false);
     }
@@ -326,6 +415,7 @@ impl __ButtonMonitor for ButtonWasm {
 impl Button for ButtonWasm {}
 
 impl FlashBlockWasm {
+    /// Create browser-backed storage under `storage_key`.
     pub fn new(storage_key: &str) -> Result<Self, Error> {
         Ok(Self {
             flash_device: FlashDeviceWasm::new(storage_key)?,
@@ -474,13 +564,29 @@ const fn decode_hex_nibble(byte: u8) -> Option<u8> {
     }
 }
 
-impl CydDisplay for CydDisplayWasm {
+impl crate::cyd::backend::DisplayBackend for CydDisplayWasm {
     type Error = Infallible;
     type Frame<'a>
         = CydFrameWasm<'a>
     where
         Self: 'a;
 
+    fn create_frame_mut(&mut self, rectangle: Rectangle) -> Self::Frame<'_> {
+        let size = rectangle.size;
+        let pixel_count = size.width as usize * size.height as usize;
+        let pixels = vec![self.background565.into_storage(); pixel_count];
+        CydFrameWasm {
+            context: &self.context,
+            pixels,
+            rectangle,
+            background565: self.background565,
+            foreground565: self.foreground565,
+            font: self.font,
+        }
+    }
+}
+
+impl CydDisplay for CydDisplayWasm {
     fn screen_size(&self) -> Size {
         self.size
     }
@@ -499,27 +605,6 @@ impl CydDisplay for CydDisplayWasm {
 
     fn foreground_565(&self) -> Rgb565 {
         self.foreground565
-    }
-
-    fn frame_mut_with_tile_top_left(
-        &mut self,
-        rectangle: Rectangle,
-        tile_top_left: Point,
-    ) -> CydFrameWasm<'_> {
-        let size = rectangle.size;
-        let pixel_count = size.width as usize * size.height as usize;
-        // Every new frame starts cleared to the device background color so callers
-        // never have to clear it themselves.
-        let pixels = vec![self.background565.into_storage(); pixel_count];
-        CydFrameWasm {
-            context: &self.context,
-            pixels,
-            rectangle,
-            tile_top_left,
-            background565: self.background565,
-            foreground565: self.foreground565,
-            font: self.font,
-        }
     }
 
     fn fill_rectangle(&mut self, rectangle: Rectangle, color: Rgb565) -> Result<(), Infallible> {
@@ -560,9 +645,8 @@ impl CydDisplay for CydDisplayWasm {
 
 impl CydTouch for CydTouchWasm {
     type Error = Infallible;
-    type Uncalibrated = CydTouchUncalibratedWasm;
 
-    fn read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
+    fn try_read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
         Ok(self
             .raw_touch_events
             .borrow_mut()
@@ -571,62 +655,21 @@ impl CydTouch for CydTouchWasm {
                 RawTouchEvent::Down { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Down {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Move { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Move {
-                        point: Point::new(x as i32, y as i32),
+                        point: self
+                            .orientation
+                            .map_landscape_point(Point::new(x as i32, y as i32)),
                     }
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
-    }
-
-    fn calibration_config(&self) -> CalibrationConfig {
-        self.calibration_config
-    }
-
-    fn decalibrate(self) -> Self::Uncalibrated {
-        CydTouchUncalibratedWasm {
-            raw_touch_events: self.raw_touch_events,
-            interaction_state: self.interaction_state,
-            latest_raw_point: self.latest_raw_point,
-        }
-    }
-}
-
-impl CydTouchUncalibrated for CydTouchUncalibratedWasm {
-    type Error = Infallible;
-    type Calibrated = CydTouchWasm;
-
-    fn read_raw_touch_event(&mut self) -> Result<Option<RawTouchEvent>, Infallible> {
-        if let Some(raw_touch_event) = self.raw_touch_events.borrow_mut().pop_front() {
-            return Ok(Some(raw_touch_event));
-        }
-
-        if self.interaction_state.get() != InteractionState::PointerDown {
-            return Ok(None);
-        }
-
-        let Some(raw_point) = self.latest_raw_point.get() else {
-            return Ok(None);
-        };
-
-        Ok(Some(RawTouchEvent::Move {
-            raw_x: raw_point.x,
-            raw_y: raw_point.y,
-        }))
-    }
-
-    fn calibrate(self, calibration_config: CalibrationConfig) -> Self::Calibrated {
-        CydTouchWasm {
-            raw_touch_events: self.raw_touch_events,
-            interaction_state: self.interaction_state,
-            latest_raw_point: self.latest_raw_point,
-            calibration_config,
-        }
     }
 }
 
@@ -655,15 +698,15 @@ fn push_rgb565_rgba(bytes: &mut Vec<u8>, pixel: u16) {
 }
 
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
+///
+/// Drawing uses logical display coordinates. [`CydFrame::flush`] presents the
+/// buffered region to the canvas and awaits the next browser animation frame.
 pub struct CydFrameWasm<'a> {
     context: &'a CanvasRenderingContext2d,
     pixels: Vec<u16>,
     // Where this frame presents and how large it is: set from the `Rectangle`
     // passed to `frame_mut`, so `flush` needs no separate position argument.
     rectangle: Rectangle,
-    // Tile top-left in screen coordinates. Drawing coordinates are translated
-    // by this point before reaching the local frame buffer.
-    tile_top_left: Point,
     background565: Rgb565,
     foreground565: Rgb565,
     font: &'static MonoFont<'static>,
@@ -679,16 +722,11 @@ impl CydFrameWasm<'_> {
     }
 
     fn local_x(&self, x: i32) -> Option<usize> {
-        usize::try_from(x.checked_sub(self.tile_top_left.x)?).ok()
+        usize::try_from(x.checked_sub(self.rectangle.top_left.x)?).ok()
     }
 
     fn local_y(&self, y: i32) -> Option<usize> {
-        usize::try_from(y.checked_sub(self.tile_top_left.y)?).ok()
-    }
-
-    pub fn fill(&mut self, color: Rgb565) -> &mut Self {
-        self.pixels.fill(color.into_storage());
-        self
+        usize::try_from(y.checked_sub(self.rectangle.top_left.y)?).ok()
     }
 
     /// Convert the `Rgb565` buffer to RGBA8 and `putImageData` it at the frame's top-left.
@@ -722,7 +760,7 @@ impl DrawTarget for CydFrameWasm<'_> {
     type Error = Infallible;
 
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        self.fill(color);
+        CydFrame::fill(self, color);
         Ok(())
     }
 
@@ -748,21 +786,21 @@ impl DrawTarget for CydFrameWasm<'_> {
 
 impl Dimensions for CydFrameWasm<'_> {
     fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(self.tile_top_left, self.rectangle.size)
+        self.rectangle
     }
 }
 
 impl PixelTarget for CydFrameWasm<'_> {
     fn width(&self) -> usize {
-        usize::try_from(self.tile_top_left.x)
-            .expect("tile top-left x must be non-negative")
+        usize::try_from(self.rectangle.top_left.x)
+            .expect("frame top-left x must be non-negative")
             .checked_add(CydFrameWasm::width(self))
             .expect("frame width must fit in usize")
     }
 
     fn height(&self) -> usize {
-        usize::try_from(self.tile_top_left.y)
-            .expect("tile top-left y must be non-negative")
+        usize::try_from(self.rectangle.top_left.y)
+            .expect("frame top-left y must be non-negative")
             .checked_add(CydFrameWasm::height(self))
             .expect("frame height must fit in usize")
     }
@@ -799,18 +837,16 @@ impl PixelTarget for CydFrameWasm<'_> {
 }
 
 impl CydFrame for CydFrameWasm<'_> {
+    /// WASM frame presentation is infallible.
     type Error = Infallible;
-
-    fn tile_top_left(&self) -> Point {
-        self.tile_top_left
-    }
 
     fn rectangle(&self) -> Rectangle {
         self.rectangle
     }
 
     fn fill(&mut self, color: Rgb565) -> &mut Self {
-        CydFrameWasm::fill(self, color)
+        self.pixels.fill(color.into_storage());
+        self
     }
 
     fn clear(&mut self) -> &mut Self {
@@ -830,7 +866,7 @@ impl CydFrame for CydFrameWasm<'_> {
 
     fn write_text(&mut self, text: &str) -> &mut Self {
         let style = MonoTextStyle::new(self.font, self.foreground565);
-        Text::with_baseline(text, Point::zero(), style, Baseline::Top)
+        Text::with_baseline(text, self.rectangle.top_left, style, Baseline::Top)
             .draw(self)
             .expect("drawing onto an Infallible frame cannot fail");
         self

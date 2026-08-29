@@ -94,8 +94,8 @@ where
         Orientation::Portrait | Orientation::PortraitInverted => PORTRAIT_LAYOUT,
     };
     let (display, touch) = cyd.parts();
-    let mut ui = Ui::<_, 16>::new(display, layout, orientation);
-    ui.fill_contiguous_full()?;
+    let mut ui = Ui::<_, 16>::new(display, layout);
+    ui.fill_bitmap()?;
     ui.text(layout.hostname, DNS_HOSTNAME).await?;
     loop {
         yield_now().await;
@@ -122,7 +122,7 @@ where
         ui.value(layout.failures, format_args!("{failures}"))
             .await?;
 
-        match ui.touch(touch.read()?) {
+        match ui.touch(touch.try_read()?) {
             TouchAction::None => {}
             TouchAction::StartDns => {
                 let start = Instant::now();
@@ -349,7 +349,6 @@ pub const FRAME_PIXEL_COUNT: usize = 240 * 20;
 struct Ui<'a, Display, const TEXT_CAPACITY: usize> {
     display: &'a mut Display,
     layout: Layout,
-    orientation: Orientation,
     text: heapless::String<TEXT_CAPACITY>,
 }
 
@@ -357,23 +356,15 @@ impl<'a, Display, const TEXT_CAPACITY: usize> Ui<'a, Display, TEXT_CAPACITY>
 where
     Display: CydDisplay,
 {
-    fn new(display: &'a mut Display, layout: Layout, orientation: Orientation) -> Self {
+    fn new(display: &'a mut Display, layout: Layout) -> Self {
         Self {
             display,
             layout,
-            orientation,
             text: heapless::String::new(),
         }
     }
 
     fn touch(&self, touch_event: Option<TouchEvent>) -> TouchAction {
-        let touch_event = touch_event.map(|touch_event| match touch_event {
-            TouchEvent::Down { point } => TouchEvent::Down {
-                point: self.orientation.map_landscape_point(point),
-            },
-            touch_event => touch_event,
-        });
-
         match touch_event {
             Some(TouchEvent::Down { point }) => self
                 .layout
@@ -383,9 +374,10 @@ where
         }
     }
 
-    fn fill_contiguous_full(&mut self) -> Result<(), render::Error<Display::Error>> {
+    fn fill_bitmap(&mut self) -> Result<(), render::Error<Display::Error>> {
+        let rectangle = Rectangle::new(Point::zero(), self.layout.bitmap.size());
         self.display
-            .fill_contiguous_full(self.layout.bitmap.rgb565_iter())?;
+            .fill_contiguous(rectangle, self.layout.bitmap.rgb565_iter())?;
         Ok(())
     }
 
@@ -459,14 +451,15 @@ where
     let mut frame = display.frame_mut(rectangle);
     DrawItem::Bitmap {
         view: bitmap,
-        top_left: Point::new(-rectangle.top_left.x, -rectangle.top_left.y),
+        top_left: Point::zero(),
     }
     .draw(&mut frame);
-    let position = match slot.alignment {
-        Alignment::Left => Point::zero(),
-        Alignment::Center => Point::new((rectangle.size.width / 2) as i32, 0),
-        Alignment::Right => Point::new(rectangle.size.width as i32, 0),
-    };
+    let position = rectangle.top_left
+        + match slot.alignment {
+            Alignment::Left => Point::zero(),
+            Alignment::Center => Point::new((rectangle.size.width / 2) as i32, 0),
+            Alignment::Right => Point::new(rectangle.size.width as i32, 0),
+        };
     Text::with_text_style(
         text,
         position,
@@ -655,12 +648,14 @@ where
     D: CydDisplay,
 {
     match orientation {
-        Orientation::Landscape | Orientation::LandscapeInverted => {
-            display.fill_contiguous_full(LANDSCAPE_BITMAP.rgb565_iter())?
-        }
-        Orientation::Portrait | Orientation::PortraitInverted => {
-            display.fill_contiguous_full(PORTRAIT_BITMAP.rgb565_iter())?
-        }
+        Orientation::Landscape | Orientation::LandscapeInverted => display.fill_contiguous(
+            Rectangle::new(Point::zero(), LANDSCAPE_BITMAP.size()),
+            LANDSCAPE_BITMAP.rgb565_iter(),
+        )?,
+        Orientation::Portrait | Orientation::PortraitInverted => display.fill_contiguous(
+            Rectangle::new(Point::zero(), PORTRAIT_BITMAP.size()),
+            PORTRAIT_BITMAP.rgb565_iter(),
+        )?,
     }
 
     // READY belongs to the live dashboard, not to a startup or operational
@@ -783,7 +778,7 @@ where
         .build();
     Text::with_text_style(
         text,
-        Point::new((rectangle.size.width / 2) as i32, 0),
+        rectangle.top_left + Point::new((rectangle.size.width / 2) as i32, 0),
         MonoTextStyle::new(font, Rgb565::from(VALUE_TEXT)),
         text_style,
     )

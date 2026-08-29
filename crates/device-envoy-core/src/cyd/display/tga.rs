@@ -1,4 +1,4 @@
-//! Compile-time decoding and drawing of the supported subset of TGA images.
+//! Compile-time image storage, conversion, masking, and drawing internals.
 
 use crate::cyd::display::CydFrame;
 use embedded_graphics::{
@@ -8,30 +8,243 @@ use embedded_graphics::{
     primitives::Rectangle,
 };
 
-/// Returns the number of bytes required for a packed one-bit mask.
+/// Returns the storage length required by [`MaskFixed`] for an image size.
+///
+/// Each image pixel uses one bit, and the final byte includes any padding bits
+/// needed when the pixel count is not divisible by eight.
+///
+/// Use this function for `MaskFixed`'s third const argument when calling
+/// [`Image888Fixed::to_mask_magenta`]. See the visual
+/// [`MaskFixed` example](MaskFixed).
 pub const fn mask_byte_count(width: usize, height: usize) -> usize {
     (width * height).div_ceil(8)
 }
 
-/// A decoded, row-major RGB888 image.
+/// A fixed-size RGB888 source image stored directly in the value.
+///
+/// `W` and `H` are the image dimensions and `N` is the pixel count (`W * H`).
+/// Use [`tga!`](macro@crate::cyd::display::tga) to embed and decode an image
+/// file at compile time, then convert it to display-ready RGB565 storage or a
+/// visibility mask. See the visual [`MaskFixed` example](MaskFixed) for
+/// color-key transparency.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use device_envoy_core::cyd::display::{Image565Fixed, Image888Fixed, tga};
+///
+/// const SOURCE: Image888Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+///     env!("CARGO_MANIFEST_DIR"),
+///     "/docs/assets/cyd_fill_contiguous.tga"
+/// ));
+/// const IMAGE: Image565Fixed<45, 73, { 45 * 73 }> = SOURCE.to_565();
+///
+/// assert_eq!(SOURCE.pixels.len(), 45 * 73);
+/// assert_eq!(IMAGE.pixels.len(), 45 * 73);
+/// ```
 pub struct Image888Fixed<const W: usize, const H: usize, const N: usize> {
-    /// Row-major top-left-origin pixels stored as `[red, green, blue]`.
+    /// Row-major, top-left-origin pixels stored as `[red, green, blue]`.
     pub pixels: [[u8; 3]; N],
 }
 
-/// An opaque RGB565 image.
+/// A fixed-size RGB565 image stored directly in the value.
+///
+/// `W` and `H` are the image dimensions and `N` is the pixel count (`W * H`).
+/// The image has no alpha channel. Use [`MaskFixed`] and
+/// [`MaskedDrawable::draw_masked`] when color-key transparency is needed.
+/// The visual [`MaskFixed` example](MaskFixed) shows the opaque source and
+/// masked result side by side. Convert a compile-time [`Image888Fixed`] with
+/// [`Image888Fixed::to_565`].
+///
+/// Use [`Image565Fixed::view`] to borrow the complete image as an
+/// [`Image565View`](super::Image565View), or [`Image565Fixed::view_rect`] to
+/// borrow a crop without copying pixels.
+///
+/// # Example
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "image565_fixed",
+        "docs/assets/image565_fixed.png"
+    )
+)]
+#[cfg_attr(
+    feature = "host",
+    doc = r#"
+
+```rust
+use device_envoy_core::{
+    UnwrapInfallible,
+    cyd::{
+        Cyd, CydDisplay,
+        display::{CydFrame, Image565Fixed, tga},
+    },
+};
+use embedded_graphics::{Drawable, prelude::Point};
+
+const IMAGE: Image565Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/docs/assets/cyd_fill_contiguous.tga"
+))
+.to_565();
+
+async fn draw<C: Cyd>(cyd: &mut C) -> Result<(), C::Error> {
+    let display = cyd.display();
+    let mut frame = display.full_frame_mut();
+    for top_left in [
+        Point::new(50, 84),
+        Point::new(138, 84),
+        Point::new(226, 84),
+    ] {
+        IMAGE.at(top_left).draw(&mut frame).unwrap_infallible();
+    }
+    frame.flush().await
+}
+
+# use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     pixelcolor::Rgb888,
+#     prelude::{RgbColor, Size},
+# };
+# let mut cyd_memory = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# futures_executor::block_on(draw(&mut cyd_memory))?;
+# let golden_result = assert_framebuffer_matches_expected_png(
+#     &cyd_memory,
+#     env!("CARGO_MANIFEST_DIR"),
+#     "image565_fixed.png",
+# );
+# assert!(golden_result.is_ok(), "{golden_result:?}");
+# Ok::<(), device_envoy_core::memory::Error>(())
+```
+
+![The same fixed RGB565 image drawn at three display positions][image565_fixed]
+"#
+)]
 pub struct Image565Fixed<const W: usize, const H: usize, const N: usize> {
-    /// Row-major top-left-origin pixels.
+    /// Row-major, top-left-origin pixels packed as `RRRRR_GGGGGG_BBBBB`.
     pub pixels: [u16; N],
 }
 
 /// A packed binary visibility mask with one bit per image pixel.
+///
+/// Set bits are drawn and clear bits are transparent. Create a mask from an
+/// [`Image888Fixed`] with [`Image888Fixed::to_mask_magenta`], then pass it to
+/// [`MaskedDrawable::draw_masked`].
+///
+/// # Example
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!("mask_fixed", "docs/assets/mask_fixed.png")
+)]
+#[cfg_attr(
+    feature = "host",
+    doc = r#"
+
+```rust
+use device_envoy_core::{
+    UnwrapInfallible,
+    cyd::{
+        Cyd, CydDisplay,
+        display::{
+            CydFrame, Image565Fixed, Image888Fixed, MaskFixed, MaskedDrawable,
+            mask_byte_count, tga,
+        },
+    },
+};
+use embedded_graphics::{Drawable, prelude::Point};
+
+const SOURCE: Image888Fixed<45, 73, { 45 * 73 }> = tga!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/docs/assets/cyd_fill_contiguous.tga"
+));
+const IMAGE: Image565Fixed<45, 73, { 45 * 73 }> = SOURCE.to_565();
+const MASK: MaskFixed<45, 73, { mask_byte_count(45, 73) }> =
+    SOURCE.to_mask_magenta();
+
+async fn draw<C: Cyd>(cyd: &mut C) -> Result<(), C::Error> {
+    let display = cyd.display();
+    let mut frame = display.full_frame_mut();
+    IMAGE
+        .at(Point::new(80, 84))
+        .draw(&mut frame)
+        .unwrap_infallible();
+    IMAGE
+        .at(Point::new(200, 84))
+        .draw_masked(&MASK, &mut frame)
+        .unwrap_infallible();
+    frame.flush().await
+}
+
+assert!(!MASK.is_set(0));
+# use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
+# use embedded_graphics::{
+#     mono_font::ascii::FONT_9X15_BOLD,
+#     pixelcolor::Rgb888,
+#     prelude::{RgbColor, Size},
+# };
+# let mut cyd_memory = CydMemory::new(
+#     Size::new(320, 240),
+#     Rgb888::BLACK,
+#     Rgb888::WHITE,
+#     &FONT_9X15_BOLD,
+# );
+# futures_executor::block_on(draw(&mut cyd_memory))?;
+# let golden_result = assert_framebuffer_matches_expected_png(
+#     &cyd_memory,
+#     env!("CARGO_MANIFEST_DIR"),
+#     "mask_fixed.png",
+# );
+# assert!(golden_result.is_ok(), "{golden_result:?}");
+# Ok::<(), device_envoy_core::memory::Error>(())
+```
+
+The opaque RGB565 image is on the left. The masked drawing on the right skips
+the magenta background:
+
+![An opaque RGB565 image beside the same image drawn with a transparency mask][mask_fixed]
+"#
+)]
 pub struct MaskFixed<const W: usize, const H: usize, const MASK_N: usize> {
-    /// Row-major bits, least-significant bit first. Set means visible.
+    /// Row-major visibility bits, least-significant bit first within each byte.
     pub bits: [u8; MASK_N],
 }
 
-pub struct PlacedImage565<'a, const W: usize, const H: usize, const N: usize> {
+/// Draws a fixed RGB565 image through a matching binary mask.
+///
+/// This image-specific counterpart to
+/// [`Drawable`](https://docs.rs/embedded-graphics/latest/embedded_graphics/trait.Drawable.html)
+/// is implemented for both an
+/// [`Image565Fixed`] and the positioned value returned by
+/// [`Image565Fixed::at`]. The `W` and `H` const arguments require the image and
+/// [`MaskFixed`] dimensions to match at compile time. It is intentionally not
+/// implemented for arbitrary `Drawable` types, whose pixels might not
+/// correspond to a fixed, row-major mask.
+///
+/// Import this trait to make [`draw_masked`](MaskedDrawable::draw_masked)
+/// available. See the visual [`MaskFixed` example](MaskFixed), which draws an
+/// opaque image beside its positioned, masked result.
+pub trait MaskedDrawable<const W: usize, const H: usize>: Drawable<Output = ()> {
+    /// Draws the image, skipping pixels whose corresponding mask bits are clear.
+    ///
+    /// An [`Image565Fixed`] draws at `(0, 0)`. The value returned by
+    /// [`Image565Fixed::at`] draws at the supplied position. See the visual
+    /// [`MaskFixed` example](MaskFixed) for the masked output.
+    fn draw_masked<const MASK_N: usize, D>(
+        &self,
+        mask: &MaskFixed<W, H, MASK_N>,
+        target: &mut D,
+    ) -> Result<(), D::Error>
+    where
+        D: DrawTarget<Color = Self::Color>;
+}
+
+struct PlacedImage565<'a, const W: usize, const H: usize, const N: usize> {
     image: &'a Image565Fixed<W, H, N>,
     top_left: Point,
 }
@@ -78,6 +291,13 @@ const fn parse_header(bytes: &[u8], width: usize, height: usize) -> (usize, usiz
 
 impl<const W: usize, const H: usize, const N: usize> Image888Fixed<W, H, N> {
     /// Decodes a supported TGA at compile time, preserving RGB and discarding alpha.
+    ///
+    /// Prefer the public [`tga!`](macro@crate::cyd::display::tga) macro shown in
+    /// its compiled example. This constructor powers that macro when raw TGA
+    /// bytes are already available.
+    ///
+    /// Panics during const evaluation if `N != W * H` or the bytes do not
+    /// contain a supported TGA with matching dimensions.
     pub const fn from_tga(bytes: &[u8]) -> Self {
         assert!(N == W * H, "Image888Fixed: N must equal W * H");
         let (pixel_start, bytes_per_pixel, top_origin) = parse_header(bytes, W, H);
@@ -100,6 +320,9 @@ impl<const W: usize, const H: usize, const N: usize> Image888Fixed<W, H, N> {
     }
 
     /// Converts this source image to RGB565.
+    ///
+    /// Each channel is reduced to the RGB565 bit depth. See the
+    /// [`Image565Fixed` example](Image565Fixed).
     pub const fn to_565(&self) -> Image565Fixed<W, H, N> {
         let mut pixels = [0u16; N];
         let mut index = 0;
@@ -112,7 +335,14 @@ impl<const W: usize, const H: usize, const N: usize> Image888Fixed<W, H, N> {
         Image565Fixed { pixels }
     }
 
-    /// Derives a binary mask using the magenta color key.
+    /// Derives a binary visibility mask using magenta as the transparent color.
+    ///
+    /// Pixels with red and blue at least `200` and green at most `60` become
+    /// transparent; all other pixels remain visible. See the
+    /// [`MaskFixed` example](MaskFixed).
+    ///
+    /// Panics during const evaluation if `MASK_N` does not equal
+    /// [`mask_byte_count(W, H)`](mask_byte_count).
     pub const fn to_mask_magenta<const MASK_N: usize>(&self) -> MaskFixed<W, H, MASK_N> {
         assert!(
             MASK_N == mask_byte_count(W, H),
@@ -135,17 +365,37 @@ impl<const W: usize, const H: usize, const N: usize> Image888Fixed<W, H, N> {
 }
 
 impl<const W: usize, const H: usize, const N: usize> Image565Fixed<W, H, N> {
-    pub const fn at(&self, top_left: Point) -> PlacedImage565<'_, W, H, N> {
+    /// Returns a lightweight value that draws this image at `top_left`.
+    ///
+    /// Drawing the image directly places it at [`Point::zero`]. This method
+    /// changes that drawing position without copying or modifying the image.
+    /// The returned value supports
+    /// [`Drawable::draw`](https://docs.rs/embedded-graphics/latest/embedded_graphics/trait.Drawable.html#tymethod.draw)
+    /// and
+    /// [`MaskedDrawable::draw_masked`]. See the visual
+    /// [`MaskFixed` example](MaskFixed) for the positioned output.
+    pub const fn at(&self, top_left: Point) -> impl MaskedDrawable<W, H, Color = Rgb565> + '_ {
         PlacedImage565 {
             image: self,
             top_left,
         }
     }
 
+    /// View the complete image as RGB565 pixels.
+    ///
+    /// This is a zero-copy view over the complete image. See the
+    /// [`Image565View` example](super::Image565View).
     pub const fn view(&'static self) -> super::Image565View {
         self.view_rect(Rectangle::new(Point::zero(), Size::new(W as u32, H as u32)))
     }
 
+    /// View a validated rectangular crop of the image without copying pixels.
+    ///
+    /// `source` uses coordinates in the full image. Coordinates used through
+    /// the returned view are local to that rectangle. See the
+    /// [`Image565View` example](super::Image565View).
+    ///
+    /// Panics if `source` has a negative origin or extends outside the image.
     pub const fn view_rect(&'static self, source: Rectangle) -> super::Image565View {
         assert!(
             source.top_left.x >= 0 && source.top_left.y >= 0,
@@ -159,25 +409,46 @@ impl<const W: usize, const H: usize, const N: usize> Image565Fixed<W, H, N> {
         super::Image565View::new_cropped(&self.pixels, W as u32, source)
     }
 
+    /// Bulk-copies the complete image into a frame with matching dimensions.
+    ///
+    /// This uses [`CydFrame::copy_from_565`] and does not flush the frame.
+    /// Returns [`crate::Error::CopySize`] if the image and frame pixel counts
+    /// differ.
+    ///
+    /// ```rust,no_run
+    /// use device_envoy_core::cyd::display::{CydFrame, Image565Fixed};
+    ///
+    /// fn copy<const W: usize, const H: usize, const N: usize, F: CydFrame>(
+    ///     image: &Image565Fixed<W, H, N>,
+    ///     frame: &mut F,
+    /// ) -> device_envoy_core::Result<()> {
+    ///     image.copy_to(frame)
+    /// }
+    /// ```
     pub fn copy_to<F: CydFrame>(&self, frame: &mut F) -> crate::Result<()> {
         frame.copy_from_565(&self.pixels)
     }
 }
 
 impl<const W: usize, const H: usize, const MASK_N: usize> MaskFixed<W, H, MASK_N> {
+    /// Returns whether the row-major pixel at `index` is visible.
+    ///
+    /// See the [`MaskFixed` example](MaskFixed).
     pub const fn is_set(&self, index: usize) -> bool {
         self.bits[index / 8] & (1 << (index % 8)) != 0
     }
 }
 
-impl<'a, const W: usize, const H: usize, const N: usize> PlacedImage565<'a, W, H, N> {
-    pub fn draw_masked<const MASK_N: usize, D>(
+impl<const W: usize, const H: usize, const N: usize> MaskedDrawable<W, H>
+    for PlacedImage565<'_, W, H, N>
+{
+    fn draw_masked<const MASK_N: usize, D>(
         &self,
         mask: &MaskFixed<W, H, MASK_N>,
         target: &mut D,
     ) -> Result<(), D::Error>
     where
-        D: DrawTarget<Color = Rgb565>,
+        D: DrawTarget<Color = Self::Color>,
     {
         let mut pixels = ImagePixels::<W, N> {
             pixels: &self.image.pixels,
@@ -193,6 +464,21 @@ impl<'a, const W: usize, const H: usize, const N: usize> PlacedImage565<'a, W, H
                 }
             }
         }))
+    }
+}
+
+impl<const W: usize, const H: usize, const N: usize> MaskedDrawable<W, H>
+    for Image565Fixed<W, H, N>
+{
+    fn draw_masked<const MASK_N: usize, D>(
+        &self,
+        mask: &MaskFixed<W, H, MASK_N>,
+        target: &mut D,
+    ) -> Result<(), D::Error>
+    where
+        D: DrawTarget<Color = Self::Color>,
+    {
+        self.at(Point::zero()).draw_masked(mask, target)
     }
 }
 
@@ -220,6 +506,8 @@ impl<const W: usize, const N: usize> Iterator for ImagePixels<'_, W, N> {
 impl<const W: usize, const H: usize, const N: usize> Drawable for PlacedImage565<'_, W, H, N> {
     type Color = Rgb565;
     type Output = ();
+    /// Draws every image pixel at the display position supplied to
+    /// [`Image565Fixed::at`].
     fn draw<D>(&self, target: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = Rgb565>,

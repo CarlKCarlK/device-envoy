@@ -138,16 +138,22 @@ When capturing variables in closures or creating references, append `_ref`:
 
 ## Comment Conventions
 
-Use `TODO0*` for release-priority TODO items (`TODO` + one or more trailing `0`s):
+In this `AGENTS.md` only, `&#48;` inside a TODO marker means the ASCII digit
+zero. Agents must write the real, contiguous marker (`TODO` immediately
+followed by one or more `0` digits) in source and spec files. This encoding is
+used only here so plain-text release-TODO searches do not find documentation
+examples.
+
+Use `TODO&#48;*` for release-priority TODO items (`TODO` + one or more trailing `0`s):
 
 ```rust
-// TODO00 high priority task
-// TODO0 lower priority consideration
-// TODO0000 release-blocking task with explicit emphasis
+// TODO&#48;&#48; high priority task
+// TODO&#48; lower priority consideration
+// TODO&#48;&#48;&#48;&#48; release-blocking task with explicit emphasis
 // TODO lowest standard todo for general items
 ```
 
-- `TODO0*` (for example `TODO0`, `TODO00`, `TODO0000`) means action is required before the next release.
+- `TODO&#48;*` (for example `TODO&#48;`, `TODO&#48;&#48;`, `TODO&#48;&#48;&#48;&#48;`) means action is required before the next release.
 - Plain `TODO` means later/non-release work unless explicitly stated otherwise.
 - For code that uses a stable workaround where a clearly better nightly feature exists, add:
   `// TODO_NIGHTLY When nightly feature <feature_name> becomes stable, change this code by <specific change>.`
@@ -158,6 +164,12 @@ Use `TODO0*` for release-priority TODO items (`TODO` + one or more trailing `0`s
 
 ## Documentation Conventions
 
+- Every doctest that produces an image or other visible rendered output must
+  show that output in the rendered documentation. Place the preview after the
+  code example so readers can directly compare the example with its result.
+- When working on documentation, run the authoritative `just docs` workflow
+  and inspect the generated pages before handing the work back. The
+  `docs-*-only` recipes are partial previews, not review snapshots.
 - Start module docs with "A device abstraction ..." and have them point readers to the main struct docs.
 - Put a single compilable example on the primary struct; other public docs should link back to that example instead of duplicating snippets.
 - When linking to module documentation, name the module in the link text (for example, "led_strip module documentation").

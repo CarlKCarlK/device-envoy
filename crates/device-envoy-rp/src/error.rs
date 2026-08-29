@@ -64,16 +64,11 @@ pub enum Error {
     Core(#[error(not(source))] device_envoy_core::Error),
 
     #[cfg(target_os = "none")]
-    #[display("CYD display init failed: {_0:?}")]
-    CydDisplayInit(#[error(not(source))] crate::cyd::CydDisplayRpInitError),
-
-    #[cfg(target_os = "none")]
-    #[display("CYD touch init failed: {_0:?}")]
-    CydTouchInit(#[error(not(source))] crate::cyd::CydTouchRpInitError),
-
-    #[cfg(target_os = "none")]
-    #[display("CYD display flush failed: {_0:?}")]
-    CydDisplayFlush(#[error(not(source))] crate::cyd::CydDisplayRpFlushError),
+    #[display("CYD operation failed: {_0:?}")]
+    #[from(ignore)]
+    // `cyd::Error` is a diagnostic enum but is not itself a `core::error::Error`;
+    // keep it as structured context rather than claiming it as a source.
+    Cyd(#[error(not(source))] crate::cyd::Error),
 
     #[cfg(target_os = "none")]
     #[display("CYD touch unavailable")]
@@ -83,35 +78,7 @@ pub enum Error {
 #[cfg(target_os = "none")]
 impl From<crate::cyd::Error> for Error {
     fn from(error: crate::cyd::Error) -> Self {
-        match error {
-            crate::cyd::Error::DisplayInit(error) => Self::CydDisplayInit(error),
-            crate::cyd::Error::TouchInit(error) => Self::CydTouchInit(error),
-            crate::cyd::Error::DisplayFlush(error) => Self::CydDisplayFlush(error),
-        }
-    }
-}
-
-#[cfg(target_os = "none")]
-impl
-    From<
-        device_envoy_core::cyd::touch::calibration::Error<
-            crate::cyd::CydTouchUncalibratedRp,
-            Error,
-        >,
-    > for Error
-{
-    fn from(
-        error: device_envoy_core::cyd::touch::calibration::Error<
-            crate::cyd::CydTouchUncalibratedRp,
-            Error,
-        >,
-    ) -> Self {
-        match error.kind {
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Device(error) => {
-                Self::from(error)
-            }
-            device_envoy_core::cyd::touch::calibration::ErrorKind::Flash(error) => error,
-        }
+        Self::Cyd(error)
     }
 }
 

@@ -1,17 +1,3 @@
-#![cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!(
-        "cyd_application_preview",
-        "../device-envoy-core/docs/assets/cyd_application_preview.png"
-    )
-)]
-#![cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!(
-        "linkage_blaze_gallery",
-        "../device-envoy-core/docs/assets/linkage_blaze_gallery.png"
-    )
-)]
 //! ESP32 support for Cheap Yellow Display (CYD) boards.
 //!
 //! These boards combine a 320×240 ILI9341 display with XPT2046 resistive
@@ -19,12 +5,16 @@
 //! calibrated-touch interfaces from
 //! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
 //! The RP, WebAssembly, and in-memory implementations share these interfaces.
-#![cfg_attr(
-    not(feature = "doc-images"),
-    doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. From the workspace root, use `just docs` for authoritative local documentation.\n"
-)]
-#![doc = include_str!("../../../docs/cyd/gallery.md")]
-#![doc = include_str!("../../../docs/cyd/application-example.md")]
+//!
+//! The portable [Core CYD documentation] provides the shared
+//! [application example], [drawing-strategy guide], [implementation overview],
+//! and [Linkage Blaze gallery].
+//!
+//! [Core CYD documentation]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/
+//! [application example]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#application-example
+//! [drawing-strategy guide]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#choose-a-drawing-strategy
+//! [implementation overview]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1
+//! [Linkage Blaze gallery]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#see-cyd-in-action
 //!
 //! Your drawing strategy determines the pixel-buffer capacity selected through
 //! [`CydEsp::new_static`]: use [`CydEsp::SCREEN_PIXELS`] for full-screen frames,
@@ -36,7 +26,6 @@
 //! ESP32 device. The
 //! [ESP32 CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-esp/examples/esp32/generic/cyd_touch_paint.rs)
 //! puts both stages together in a complete program.
-#![doc = include_str!("../../../docs/cyd/drawing-strategies.md")]
 //! ## Choose a constructor
 //!
 //! Construction depends on how many [SPI resources](crate#glossary) the CYD
@@ -55,7 +44,6 @@
 //! The [`CydEsp::new`], [`CydEspOneSpi::new`], and [`CydDisplayEsp::new`]
 //! examples show the constructor arguments for each choice. After construction,
 //! shared application code can use the [`Cyd`] trait without naming an ESP type.
-#![doc = include_str!("../../../docs/cyd/implementations.md")]
 
 mod buffer;
 mod display;

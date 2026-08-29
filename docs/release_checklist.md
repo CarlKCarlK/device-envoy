@@ -110,7 +110,27 @@ gh run watch "$STARTER_RUN_ID" --exit-status
 
 ## 8. Integrate Through a Pull Request
 
-- Commit and push all release-preparation changes.
+- Commit all release-preparation changes locally. Keep the commit unpushed
+  until the package preflight below passes, so any packaging fix can be added
+  before opening the pull request.
+- Run the Core publish dry-run from the release branch before opening the pull
+  request. This verifies the actual archive in a clean target directory and
+  catches package-boundary errors that workspace builds cannot see:
+
+```bash
+CARGO_TARGET_DIR="$(mktemp -d)" cargo publish --dry-run --locked -p device-envoy-core
+```
+
+- Confirm the RP and ESP archive file lists contain every required source,
+  documentation, and asset file. Their full dry-runs must wait until the new
+  Core version has been published to crates.io:
+
+```bash
+cargo package --list -p device-envoy-rp
+cargo package --list -p device-envoy-esp
+```
+
+- Push the validated release-preparation commit.
 - Open or update a pull request from the release branch into `main`.
 - Wait for the pull request's `Check All` and `Check Clippy` workflows to pass.
   From the checked-out release branch, inspect their current state with:

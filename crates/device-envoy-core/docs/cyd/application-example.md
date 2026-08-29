@@ -1,4 +1,4 @@
-<!-- Shared Rustdoc source included by device-envoy-core::cyd, device-envoy-esp::cyd, device-envoy-rp::cyd, device-envoy-core::wasm, and device-envoy-core::memory. -->
+<!-- Rustdoc source included by device-envoy-core::cyd. -->
 
 ## Application example
 

@@ -1,14 +1,23 @@
 //! Browser implementations for CYD, buttons, flash storage, clocks, DNS, and simulators.
 //!
-//! [`CydWasm`] simulates a CYD on an HTML canvas. Browser pointer handlers feed
-//! touch input through [`CydTouchWasmSource`], where it is calibrated and
-//! oriented like hardware touch input. [`CydFrameWasm::flush`] presents the
-//! current frame and awaits the next browser animation frame for frame pacing.
+//! Enable the `wasm` feature when compiling application code for a browser.
 //!
-//! `CydWasm` implements the portable [`crate::cyd::Cyd`] interface used by the
-//! hardware implementations. Write normal application code against
-//! [`crate::cyd`] and its [`crate::cyd::CydDisplay`] drawing APIs; only browser
-//! setup and input plumbing need the WASM-specific types in this module.
+//! ## Implementations
+//!
+//! - [`CydWasm`] provides an HTML-canvas display and browser pointer-based touch
+//!   input.
+//! - [`ButtonWasm`] provides browser-controlled button input.
+//! - [`FlashBlockWasm`] provides flash-block storage backed by browser local
+//!   storage.
+//! - [`ClockSyncWasm`] provides browser clock synchronization; see the
+//!   [`clock` module](clock).
+//! - [`DnsSimulatorWasm`] provides deterministic DNS simulation; see the
+//!   [`dns` module](dns).
+//! - [`CydSimulatorWasm`] and [`WifiSimulatorWasm`] provide higher-level browser
+//!   simulators; see the [`simulator` module](simulator).
+//!
+//! The [`cyd_web` module](cyd_web) supplies the browser shell for CYD
+//! applications, and [`next_animation_frame`] provides browser frame pacing.
 
 mod animation_frame;
 pub mod clock;
@@ -67,9 +76,15 @@ const fn identity_calibration_config() -> CalibrationConfig {
 
 /// A CYD device rendered to an HTML canvas with browser-supplied touch input.
 ///
-/// Once constructed, use this through the portable [`Cyd`] interface. Browser
-/// pointer handlers can pass input to the [`CydTouchWasmSource`] used during
-/// construction.
+/// `CydWasm` implements the portable [`Cyd`] interface used by the hardware
+/// implementations. Write normal application code against the
+/// [`cyd`](crate::cyd) module and its [`CydDisplay`] drawing APIs; only browser
+/// setup and input plumbing need WASM-specific types.
+///
+/// Browser pointer handlers feed touch input through [`CydTouchWasmSource`],
+/// where it is calibrated and oriented like hardware touch input.
+/// [`CydFrameWasm::flush`] presents the current frame and awaits the next
+/// browser animation frame for frame pacing.
 ///
 /// # Example
 ///
@@ -235,9 +250,9 @@ impl CydWasm {
         self.display.clone()
     }
 
-    /// Clone the display and calibrated touch components.
+    /// Return owned display and calibrated touch handles.
     ///
-    /// The clones share the same browser canvas and touch-event state as this
+    /// The handles share the same browser canvas and touch-event state as this
     /// device.
     #[must_use]
     pub fn owned_parts(&self) -> (CydDisplayWasm, CydTouchWasm) {
@@ -246,6 +261,7 @@ impl CydWasm {
 }
 
 impl Cyd for CydWasm {
+    /// Browser CYD display and touch operations are infallible.
     type Error = Infallible;
     type Display = CydDisplayWasm;
     type Touch = CydTouchWasm;
@@ -683,10 +699,8 @@ fn push_rgb565_rgba(bytes: &mut Vec<u8>, pixel: u16) {
 
 /// A single in-progress frame backed by an `Rgb565` pixel buffer.
 ///
-/// The frame rectangle and all drawing coordinates use logical display
-/// coordinates. The inherent [`fill`](Self::fill) method
-/// is synchronous; the platform-neutral [`CydFrame::flush`]
-/// method presents the buffer and then awaits the next browser animation frame.
+/// Drawing uses logical display coordinates. [`CydFrame::flush`] presents the
+/// buffered region to the canvas and awaits the next browser animation frame.
 pub struct CydFrameWasm<'a> {
     context: &'a CanvasRenderingContext2d,
     pixels: Vec<u16>,
@@ -713,12 +727,6 @@ impl CydFrameWasm<'_> {
 
     fn local_y(&self, y: i32) -> Option<usize> {
         usize::try_from(y.checked_sub(self.rectangle.top_left.y)?).ok()
-    }
-
-    /// Fill this browser frame's local RGB565 buffer and return `self`.
-    pub fn fill(&mut self, color: Rgb565) -> &mut Self {
-        self.pixels.fill(color.into_storage());
-        self
     }
 
     /// Convert the `Rgb565` buffer to RGBA8 and `putImageData` it at the frame's top-left.
@@ -752,7 +760,7 @@ impl DrawTarget for CydFrameWasm<'_> {
     type Error = Infallible;
 
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        self.fill(color);
+        CydFrame::fill(self, color);
         Ok(())
     }
 
@@ -829,6 +837,7 @@ impl PixelTarget for CydFrameWasm<'_> {
 }
 
 impl CydFrame for CydFrameWasm<'_> {
+    /// WASM frame presentation is infallible.
     type Error = Infallible;
 
     fn rectangle(&self) -> Rectangle {
@@ -836,7 +845,8 @@ impl CydFrame for CydFrameWasm<'_> {
     }
 
     fn fill(&mut self, color: Rgb565) -> &mut Self {
-        CydFrameWasm::fill(self, color)
+        self.pixels.fill(color.into_storage());
+        self
     }
 
     fn clear(&mut self) -> &mut Self {

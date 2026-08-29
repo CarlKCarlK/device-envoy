@@ -14,10 +14,6 @@ check-compile-only-tests = "xtask check-compile-only"
 
 test-docs = "test --doc --target thumbv8m.main-none-eabihf --features pico2,wifi,arm --no-default-features"
 
-update-docs = "doc --target thumbv8m.main-none-eabihf --no-deps --features pico2,arm,wifi,doc-images --no-default-features"
-update-docs-check = "check --target thumbv8m.main-none-eabihf --no-deps --features pico2,arm,wifi --no-default-features"
-update-docs-host = "doc --no-deps --features doc-images"
-
 [target.thumbv6m-none-eabi]
 runner = "probe-rs run --chip=RP2040"
 rustflags = [

@@ -1,17 +1,17 @@
 set shell := ["bash", "-cu"]
 
-# ESP docs only
-update-docs-esp:
-    ../device-envoy-esp/scripts/update-docs.sh
+# ESP-only docs preview. Run `just docs` at the workspace root for review.
+docs-esp-only:
+    ../device-envoy-esp/scripts/docs-esp-only.sh
 
 # Incomplete ESP docs preview: uses existing images but skips regeneration and validation
-update-docs-esp-unvalidated:
+docs-esp-only-unvalidated:
     @echo "WARNING: doc images are not regenerated and validation is skipped; generated ESP docs are not authoritative." >&2
     source "$HOME/export-esp.sh" && cargo doc --manifest-path ../device-envoy-esp/Cargo.toml --no-deps --release --target riscv32imac-unknown-none-elf --features doc-images,esp32c6 --no-default-features
 
 # Build docs and open them in a browser
 show-docs-esp:
-    just update-docs-esp
+    just docs-esp-only
     ../device-envoy-esp/scripts/open-docs-esp.sh
 
 # Regenerate board-specific ESP examples from their templates.

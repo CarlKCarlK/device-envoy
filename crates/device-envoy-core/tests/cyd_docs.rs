@@ -4,7 +4,7 @@ use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
     Cyd, CydDisplay, CydTouch,
     display::{
-        CydFrame, DrawItem, Image565Fixed, Image565View, tga,
+        CydFrame, DrawItem, Image565Fixed, tga,
         tiling::{TileGrid, max_rectangle_pixel_count},
     },
     touch::TouchEvent,
@@ -229,13 +229,6 @@ fn cyd_fill_contiguous_full_preview_matches_expected() -> Result<(), Box<dyn Err
     )
 }
 
-const BITMAP_WIDTH: usize = 64;
-const BITMAP_HEIGHT: usize = 64;
-const BITMAP_PIXEL_COUNT: usize = BITMAP_WIDTH * BITMAP_HEIGHT;
-const BITMAP_COLOR0: u16 = 0xfbe0;
-const BITMAP_COLOR1: u16 = 0x051f;
-const BITMAP_COLOR2: u16 = 0xffff;
-
 #[test]
 fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
     let cyd_memory = futures_executor::block_on(async {
@@ -250,7 +243,7 @@ fn cyd_memory_bitmap_preview_matches_expected() -> Result<(), Box<dyn Error>> {
 
         frame.write_text("Hello CYD");
         DrawItem::Bitmap {
-            view: bitmap_view(),
+            view: STREAMED_BITMAP.view(),
             top_left: Point::new(128, 88),
         }
         .draw(&mut frame);
@@ -411,35 +404,4 @@ fn tile_grid_doc_image_matches_expected() -> Result<(), Box<dyn Error>> {
         "the embedded TileGrid image must match the golden image"
     );
     Ok(())
-}
-
-const fn cyd_trait_bitmap_pixels() -> [u16; BITMAP_PIXEL_COUNT] {
-    let mut pixels = [0u16; BITMAP_PIXEL_COUNT];
-    let mut y = 0;
-    while y < BITMAP_HEIGHT {
-        let mut x = 0;
-        while x < BITMAP_WIDTH {
-            let edge = x < 2 || y < 2 || x >= BITMAP_WIDTH - 2 || y >= BITMAP_HEIGHT - 2;
-            let diagonal = x == y || x + y == BITMAP_WIDTH - 1;
-            pixels[y * BITMAP_WIDTH + x] = if edge {
-                BITMAP_COLOR2
-            } else if diagonal {
-                BITMAP_COLOR1
-            } else {
-                BITMAP_COLOR0
-            };
-            x += 1;
-        }
-        y += 1;
-    }
-    pixels
-}
-
-static BITMAP_PIXELS: [u16; BITMAP_PIXEL_COUNT] = cyd_trait_bitmap_pixels();
-
-fn bitmap_view() -> Image565View {
-    Image565View::new(
-        &BITMAP_PIXELS,
-        Size::new(BITMAP_WIDTH as u32, BITMAP_HEIGHT as u32),
-    )
 }

@@ -40,22 +40,22 @@ rg -n '(?i)\btodo''0+\b' crates xtask specs docs --glob '!docs/release_checklist
 - Regenerate docs:
 
 ```bash
-just update-docs-rp
-just update-docs-esp
+just docs
 ```
 
-These are the authoritative documentation workflows: they regenerate and
-stage documentation images and validate the rendered output. Do not use the
-explicitly incomplete preview recipes for release review.
+This is the only authoritative documentation workflow. It rebuilds Core, ESP,
+and RP documentation with the complete review feature sets, stages shared
+images, and verifies sentinel pages and images. Do not use any `*-only` or
+explicitly incomplete preview recipe for release review.
 
 - Optional local preview in a browser:
 
 ```bash
-just show-docs-rp
-just show-docs-esp
+just show-docs
 ```
 
-Note: `show-docs-rp` and `show-docs-esp` run the corresponding `update-docs-*` step before opening.
+Note: `show-docs` runs the authoritative `docs` step before opening the
+Core, ESP, and RP indexes.
 
 - Manually inspect docs output for both crates (`rp` and `esp`) for broken links, stale examples, and missing sections.
 - Optional: export rustdoc to a single DOCX for whole-site diff/review using `scripts/rustdoc_site_to_docx.py` (for example, export current output and a `main` baseline, then compare the two DOCX files in your diff tool).

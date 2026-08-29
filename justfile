@@ -29,54 +29,59 @@ run-conway version="v2" port="8000":
     just build-conway "{{version}}"
     python3 -m http.server "{{port}}" --bind 127.0.0.1 --directory "docs/conway/{{version}}"
 
-# Build RP docs and open them in a browser
+# Build the RP-only docs preview and open it in a browser
 show-docs-rp:
     cd crates/device-envoy-rp && just show-docs-rp
 
-# Build all public documentation and open the Core, ESP, and RP indexes
+# Build the authoritative documentation snapshot and open all three indexes
 show-docs:
-    just update-docs
+    just docs
     bash -lc 'if command -v xdg-open >/dev/null; then xdg-open target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; elif command -v wslview >/dev/null; then wslview target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; else echo "Core docs built at target/doc/device_envoy_core/index.html"; fi'
     crates/device-envoy-esp/scripts/open-docs-esp.sh
     crates/device-envoy-rp/scripts/open-docs-rp.sh
 
-# Build core docs and open them in a browser
+# Build the Core-only docs preview and open it in a browser
 show-docs-core:
-    just update-docs-core
+    just docs-core-only
     bash -lc 'if command -v xdg-open >/dev/null; then xdg-open target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; elif command -v wslview >/dev/null; then wslview target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; else echo "Docs built at target/doc/device_envoy_core/index.html"; fi'
 
-# Build ESP docs and open them in a browser
+# Build the ESP-only docs preview and open it in a browser
 show-docs-esp:
     cd crates/device-envoy-examples-esp && just show-docs-esp
 
-# Update core docs only
-update-docs-core:
+# Build only Core docs. This invalidates the authoritative full snapshot.
+docs-core-only:
     cargo doc -p device-envoy-core --no-deps --features host,wasm,doc-images
 
-# Update ESP docs only
-update-docs-esp:
-    cd crates/device-envoy-examples-esp && just update-docs-esp
+# Build only ESP docs. This invalidates the authoritative full snapshot.
+docs-esp-only:
+    cd crates/device-envoy-examples-esp && just docs-esp-only
 
-# Update RP docs only
-update-docs-rp:
-    cd crates/device-envoy-rp && just update-docs-rp
+# Build only RP docs. This invalidates the authoritative full snapshot.
+docs-rp-only:
+    cd crates/device-envoy-rp && just docs-rp-only
 
-# Update Core, ESP, and RP documentation
-update-docs:
-    just update-docs-rp
-    just update-docs-esp
-    just update-docs-core
+# Build and verify the one authoritative, reviewable documentation snapshot.
+docs:
+    just docs-rp-only
+    just docs-esp-only
+    just docs-core-only
+    bash scripts/check-docs-full.sh
 
-# Build an incomplete ESP docs preview without regenerating assets or validating output
-update-docs-esp-unvalidated:
-    cd crates/device-envoy-examples-esp && just update-docs-esp-unvalidated
+# Rebuild authoritative docs and bundle CYD-related pages as agent-readable Markdown.
+docs-agent-text: docs
+    python3 scripts/rustdoc_sites_to_markdown.py --output target/device-envoy-cyd-rustdoc.md
 
-# Build an incomplete RP docs preview without images or validation
-update-docs-rp-no-images:
-    cd crates/device-envoy-rp && just update-docs-rp-no-images
+# Build an incomplete ESP-only preview without regenerating assets or validating output
+docs-esp-only-unvalidated:
+    cd crates/device-envoy-examples-esp && just docs-esp-only-unvalidated
+
+# Build an incomplete RP-only preview without images or validation
+docs-rp-only-no-images:
+    cd crates/device-envoy-rp && just docs-rp-only-no-images
 
 # Build incomplete RP and ESP docs previews; never use this output for review or publishing
-update-docs-incomplete:
-    @echo "WARNING: building incomplete documentation previews; use 'just update-docs' for authoritative output." >&2
-    just update-docs-rp-no-images
-    just update-docs-esp-unvalidated
+docs-incomplete:
+    @echo "WARNING: building incomplete documentation previews; use 'just docs' for authoritative output." >&2
+    just docs-rp-only-no-images
+    just docs-esp-only-unvalidated

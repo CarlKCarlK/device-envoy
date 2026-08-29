@@ -72,24 +72,29 @@ cargo run --manifest-path xtask/Cargo.toml -- check-all
 From the workspace root:
 
 ```bash
-just update-docs-rp
-just update-docs-esp
+just docs
 ```
 
-These are the authoritative documentation builds. They regenerate and stage
-documentation images and validate the rendered output. The explicitly named
-`update-docs-rp-no-images`, `update-docs-esp-unvalidated`, and
-`update-docs-incomplete` recipes are incomplete local previews; each prints a
-warning and must not be used for documentation review or publishing.
+This is the only authoritative documentation build. It rebuilds Core with the
+`host`, `wasm`, and `doc-images` features, rebuilds ESP and RP documentation,
+stages the shared images, and verifies sentinel pages and images in the final
+snapshot. A successful command leaves all three reviewable output trees in
+`target/`.
+
+The explicitly partial `docs-core-only`, `docs-rp-only`, and `docs-esp-only`
+recipes are useful for focused iteration, but their output is not the complete
+review snapshot. The `*-no-images`, `*-unvalidated`, and `docs-incomplete`
+recipes are faster, incomplete previews. After any partial build, rerun
+`just docs` before review or publishing.
 
 Optional: build and open docs in a browser:
 
 ```bash
-just show-docs-rp
-just show-docs-esp
+just show-docs
 ```
 
-Note: `show-docs-rp` and `show-docs-esp` are currently WSL/Windows-oriented scripts.
+The platform-specific `show-docs-rp`, `show-docs-esp`, and `show-docs-core`
+recipes open partial previews instead.
 
 ## Release Process
 

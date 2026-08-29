@@ -22,7 +22,7 @@
 //! The ESP32, WebAssembly, and in-memory implementations share these interfaces.
 #![cfg_attr(
     not(feature = "doc-images"),
-    doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. Use `just update-docs-rp` for authoritative local documentation.\n"
+    doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. From the workspace root, use `just docs` for authoritative local documentation.\n"
 )]
 #![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]

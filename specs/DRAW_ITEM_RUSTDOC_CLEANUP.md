@@ -61,7 +61,7 @@ rustfmt --edition 2024 --check crates/device-envoy-core/src/cyd/display/draw_ite
 RUSTDOCFLAGS="-D warnings" cargo test -p device-envoy-core --doc --features host
 RUSTDOCFLAGS="-D warnings" cargo doc -p device-envoy-core --no-deps --features host,wasm,doc-images
 bash scripts/check-rendered-cyd-links.sh target/doc/device_envoy_core/cyd
-just update-docs-core
+just docs
 ```
 
 Finally, inspect

@@ -522,8 +522,7 @@ This correction is complete only when all of the following are true:
   the narrow backend seam only if required to carry orientation cleanly. No
   compatibility aliases, lint suppressions, or additional drawing APIs are
   introduced.
-- `just update-docs-core`, `just update-docs-esp`, `just update-docs-rp`, and
-  `cargo check-all` pass, with `cargo check-all` run last.
+- `just docs` and `cargo check-all` pass, with `cargo check-all` run last.
 
 ### 6. Pass 2: Rendered New-User and Public API Review
 
@@ -998,8 +997,8 @@ user intents rather than redundant surface to remove for its own sake.
 - Keep the rendered unresolved-link scan at zero matches and run all published
   feature/target doctest combinations.
 - Migrate Device Envoy examples, Linkage Blaze, and the ESP/RP starters for any
-  accepted API change. Run `just update-docs-core`, `just update-docs-esp`,
-  `just update-docs-rp`, both workspaces' focused checks, `git diff --check`, and
+  accepted API change. Run `just docs`, both workspaces' focused checks,
+  `git diff --check`, and
   Device Envoy `cargo check-all` last. Stop for review before implementing a
   constructor redesign or removing a questioned public item.
 

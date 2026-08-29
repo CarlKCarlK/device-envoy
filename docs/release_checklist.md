@@ -45,9 +45,18 @@ rg -n '(?i)\btodo''0+\b' crates xtask specs docs --glob '!docs/release_checklist
 
 - Update the top-level [CHANGELOG.md](../CHANGELOG.md) with a concise section
   for the release.
+- Finalize the release heading before the release pull request. Remove draft
+  markers such as `(unreleased)` or `TBD`; the heading in the tagged commit
+  must describe a completed release.
 - Summarize API changes, behavior changes, and notable fixes.
 - Mention downstream repository updates only when those updates are actually
   part of the coordinated release.
+- Confirm that no draft marker remains in the release changelog. This command
+  must print no matches:
+
+```bash
+rg -n -i '\bunreleased\b|\btbd\b' CHANGELOG.md
+```
 
 ## 5. Generate and Review Documentation
 
@@ -143,7 +152,9 @@ gh pr checks
   page until every required check passes.
 
 - Review the complete pull request diff and confirm that the changelog,
-  manifests, and lockfile describe the intended release.
+  manifests, and lockfile describe the intended release. In particular,
+  confirm that the changelog heading no longer contains an `unreleased` or
+  `TBD` marker.
 - Merge through GitHub only after the pull-request checks and the manually
   dispatched starter checks pass. Do not bypass this gate with a direct local
   merge and push to `main`.
@@ -213,6 +224,24 @@ git push origin vX.Y.Z
 ```
 
 - Create a GitHub Release from the tag using the curated changelog section.
+  Do not include a draft changelog marker in the release title or notes, and do
+  not use automatically generated notes in place of the curated section. For
+  example, after copying that section's body into a temporary Markdown file:
+
+```bash
+gh release create vX.Y.Z \
+  --title "Device Envoy X.Y.Z" \
+  --notes-file /path/to/release-notes.md
+```
+
+- Verify that the release uses the intended tag and title and is neither a
+  draft nor a prerelease:
+
+```bash
+gh release view vX.Y.Z \
+  --json name,tagName,isDraft,isPrerelease,url
+```
+
 - Add a `release` label to the pull request or tracking issue when useful.
 
 ## 11. Verify and Update Downstream Repositories

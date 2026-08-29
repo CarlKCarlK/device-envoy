@@ -19,6 +19,32 @@
 //! calibrated touch input. Hardware, browser, and in-memory devices all provide
 //! the same [`Cyd`], [`CydDisplay`], [`CydTouch`], and
 //! [`CydFrame`] interfaces.
+//!
+//! ## Portable CYD abstraction
+//!
+//! ```text
+//! CydEsp / CydRp / CydWasm / CydMemory
+//!                   │ implement
+//!                   ▼
+//!                  Cyd
+//!           ┌───────┴───────┐
+//!     parts().0         parts().1
+//!     CydDisplay        CydTouch
+//!          │                 │
+//!  frame_mut()          try_read()
+//!          ▼                 ▼
+//!     CydFrame          TouchEvent
+//!  borrowed frame       calibrated + oriented
+//! ```
+//!
+//! [`Cyd::parts`] borrows the display and touch components together.
+//! [`CydDisplay::frame_mut`] returns a temporary borrowed frame for a display
+//! region, while [`CydTouch::try_read`] returns already calibrated and oriented
+//! events. A full-screen frame is the special case where the borrowed region is
+//! the complete display.
+//!
+//! > **Touch-event coordinates and drawing coordinates use the same logical
+//! > orientation. Do not rotate touch points again.**
 #![cfg_attr(
     not(feature = "doc-images"),
     doc = "\n> **Incomplete documentation preview:** Gallery images are omitted because the `doc-images` feature is disabled. From the workspace root, use `just docs` for authoritative local documentation.\n"
@@ -165,8 +191,25 @@ pub trait CydTouch: Sized {
 
 /// A CYD display.
 ///
-/// The screen is a fixed 320×240 RGB565 panel. Start with the
-/// [`CydDisplay::frame_mut`] example for the normal buffered drawing path. The
+/// The screen is a fixed 320×240 RGB565 panel.
+///
+/// | Need | API | Reusable pixel-buffer storage |
+/// | --- | --- | ---: |
+/// | Normal drawing with enough RAM | [`full_frame_mut`](CydDisplay::full_frame_mut) | 153,600 bytes |
+/// | Redraw one region | [`frame_mut`](CydDisplay::frame_mut) | 2 × rectangle pixel count bytes |
+/// | Normal drawing with little RAM | [`for_each_tile`](CydDisplay::for_each_tile) | 2 × largest tile pixel count bytes |
+/// | Existing or generated row-major RGB565 pixels | [`fill_contiguous`](CydDisplay::fill_contiguous) or [`fill_contiguous_full`](CydDisplay::fill_contiguous_full) | No reusable frame buffer |
+/// | Small immediate [`DrawItem`](display::DrawItem) scene | [`draw_items`](CydDisplay::draw_items) | No pixel frame buffer |
+///
+/// The full-screen figure is `320 × 240 × 2` bytes for the fixed RGB565 panel.
+/// `draw_items` does not need a pixel frame buffer, but it does need
+/// allocation-free prepared-item capacity. Each nondegenerate `DrawItem`
+/// consumes at most one prepared-item slot, so setting the capacity to the
+/// number of supplied items is always safe. See [`CydDisplay::draw_items`] for
+/// details.
+///
+/// Start with [`CydDisplay::full_frame_mut`] when a 153,600-byte frame buffer is
+/// practical. The
 /// [drawing-strategy guide](index.html#choose-a-drawing-strategy) compares
 /// full-screen and regional buffering, tiled replay, and contiguous-pixel
 /// streaming.
@@ -226,8 +269,8 @@ pub trait CydDisplay: backend::DisplayBackend {
 
     /// Borrow a frame covering `rectangle`, cleared to the device background color.
     ///
-    /// All drawing commands use logical display coordinates. The frame merely
-    /// restricts the drawable region and the pixels buffered for presentation.
+    /// See [`CydFrame`](display::CydFrame#coordinates-and-clipping) for the
+    /// shared screen-coordinate and clipping model.
     ///
     #[cfg_attr(
         feature = "doc-images",
@@ -311,6 +354,7 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     ///     let rectangle = Rectangle::new(Point::zero(), Size::new(2, 2));
     ///     display.fill_rectangle(rectangle, Rgb565::BLACK)?;
     ///     display.fill_contiguous(rectangle, [Rgb565::RED; 4])?;
+    ///     // One DrawItem, so reserve one prepared-item slot.
     ///     display.draw_items::<1>(rectangle, Rgb565::BLACK, [
     ///         DrawItem::Circle {
     ///             center: (1.0, 1.0), pixel_radius: 1.0, color: Rgb888::WHITE,
@@ -438,22 +482,22 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     ///
     /// See the [immediate-operations example](CydDisplay::fill_rectangle) and
     /// the [`display::DrawItem`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/enum.DrawItem.html) documentation for the draw-item types this consumes.
-    /// `PIXEL_SOURCE_COUNT` is the allocation-free capacity for prepared draw
+    /// `DRAW_ITEM_CAPACITY` is the allocation-free capacity for prepared draw
     /// items. Each nondegenerate item consumes at most one slot, including an
     /// item that lies outside `bounds`. Using the total number of supplied items
     /// is always safe.
     ///
     /// # Panics
     ///
-    /// Panics if preparing the items exhausts `PIXEL_SOURCE_COUNT`.
-    fn draw_items<const PIXEL_SOURCE_COUNT: usize>(
+    /// Panics if preparing the items exhausts `DRAW_ITEM_CAPACITY`.
+    fn draw_items<const DRAW_ITEM_CAPACITY: usize>(
         &mut self,
         bounds: Rectangle,
         background_color: Rgb565,
         items: impl IntoIterator<Item = display::DrawItem>,
     ) -> Result<(), Self::Error> {
         let bounds = bounds.intersection(&Rectangle::new(Point::zero(), self.screen_size()));
-        let pixel_sources = ContiguousPixels::<PIXEL_SOURCE_COUNT>::from_draw_items(
+        let pixel_sources = ContiguousPixels::<DRAW_ITEM_CAPACITY>::from_draw_items(
             bounds,
             background_color,
             items,
@@ -481,9 +525,11 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
 
     /// Draw and flush each tile in `grid`.
     ///
-    /// `draw` receives one logical-display-coordinate frame for each tile. Each
-    /// frame clips drawing to its tile and is flushed after `draw` returns and
-    /// before the next tile is processed. Only one tile is buffered at a time.
+    /// `draw` receives one frame for each tile. See
+    /// [`CydFrame`](display::CydFrame#coordinates-and-clipping) for how the same
+    /// screen-coordinate scene is clipped to each tile. Each frame is flushed
+    /// after `draw` returns and before the next tile is processed. Only one tile
+    /// is buffered at a time.
     ///
     /// See the [`TileGrid`](display::tiling::TileGrid) example for grid
     /// construction, buffer sizing, and a scene drawn across tile boundaries.

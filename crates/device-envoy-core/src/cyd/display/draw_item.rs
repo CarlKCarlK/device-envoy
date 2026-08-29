@@ -227,9 +227,23 @@ impl Iterator for Image565ViewPixels {
 
 /// A 2D drawing command that can be rendered onto a [`PixelTarget`].
 ///
+/// `DrawItem` is a compact, [`Copy`] representation for a heterogeneous scene.
+/// Its floating-point geometry is convenient for calculated or projected
+/// coordinates, but projection is not required. The same items can be passed to
+/// [`CydDisplay::draw_items`](crate::cyd::CydDisplay::draw_items), which
+/// composites and streams them without a pixel frame buffer, or rendered
+/// directly with [`DrawItem::draw`] when a frame is available.
+///
+/// For ordinary imperative drawing into a
+/// [`CydFrame`](crate::cyd::display::CydFrame), embedded-graphics primitives are
+/// also appropriate, particularly when their integer-coordinate geometry and
+/// styling API fit the scene. `DrawItem::draw` uses embedded-graphics internally
+/// for strokes and circles as an implementation detail; `DrawItem` does not
+/// replace the broader embedded-graphics API.
+///
 /// Coordinates and sizes are measured in display pixels. Colors are specified
 /// as [`Rgb888`], and the target converts them to its native pixel format when
-/// needed. Applications construct items directly for ordinary 2D drawing.
+/// needed.
 ///
 /// # Example
 ///
@@ -328,7 +342,7 @@ pub enum DrawItem {
         /// Stroke width in pixels.
         pixel_width: f32,
     },
-    /// A filled ellipse, which can also represent a projected disk.
+    /// A filled ellipse. It can also represent a projected disk.
     ///
     /// The ellipse is the locus of `center + s·axis_a + t·axis_b` with `s²+t² ≤ 1`.
     Ellipse {
@@ -341,7 +355,7 @@ pub enum DrawItem {
         /// Fill color.
         color: Rgb888,
     },
-    /// A filled circle, which can also represent a projected sphere.
+    /// A filled circle. It can also represent a projected sphere.
     Circle {
         /// Center in display coordinates.
         center: (f32, f32),

@@ -7,6 +7,28 @@
 //! workflows; see [`CydDisplay::draw_items`](crate::cyd::CydDisplay::draw_items)
 //! for an example.
 //! Start with the compiled [`CydFrame`] example for ordinary buffered drawing.
+//!
+//! ## Fixed-image pipeline
+//!
+//! ```text
+//! TGA file
+//!    │ tga!()
+//!    ▼
+//! Image888Fixed
+//!    ├── .to_565() ──────────► Image565Fixed
+//!    │                              ├── .view() / .view_rect() ─► Image565View
+//!    │                              └── .at(...).draw[_masked](...)
+//!    └── .to_mask_magenta() ─► MaskFixed ────────────────┘
+//! ```
+//!
+//! [`Image888Fixed`] owns fixed-size RGB888 source pixels, normally produced at
+//! compile time by [`tga!`](macro@tga). [`Image565Fixed`] owns display-ready RGB565
+//! pixels. [`Image565View`] is a zero-copy borrow of the complete image or a
+//! crop, useful for contiguous streaming and [`DrawItem::Bitmap`]. [`MaskFixed`]
+//! stores one-bit visibility and is used alongside a matching [`Image565Fixed`]
+//! for color-key transparency. [`MaskedDrawable`] is the trait that provides
+//! [`draw_masked`](MaskedDrawable::draw_masked), not another image storage
+//! stage.
 
 mod contiguous_pixels;
 mod draw_item;
@@ -49,9 +71,19 @@ pub use crate::__cyd_tga as tga;
 
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
 ///
-/// Also a [`PixelTarget`] so projected linkage draw items can render into it.
-/// All drawing coordinates are logical display coordinates. A frame only
-/// restricts the drawable region and the pixels buffered for presentation.
+/// Also a [`PixelTarget`] so draw items can render into it.
+///
+/// # Coordinates and clipping
+///
+/// **Frames do not introduce a local coordinate system.** All drawing uses
+/// logical screen coordinates. A frame covering `x = 100..200` and
+/// `y = 50..100` accepts coordinates in that range and clips drawing outside
+/// it. A full-screen frame follows the same rule and merely has its top-left at
+/// `(0, 0)`.
+///
+/// Tiled drawing also uses this model: the application redraws the same
+/// screen-coordinate scene for every tile, while each temporary frame clips it
+/// to that tile.
 /// See the [`CydDisplay::frame_mut`](crate::cyd::CydDisplay::frame_mut) example
 /// for constructing a frame from a display.
 #[cfg_attr(

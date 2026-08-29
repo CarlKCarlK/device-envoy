@@ -27,6 +27,12 @@
 #![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]
 //!
+//! Your drawing strategy determines the pixel-buffer capacity selected through
+//! [`CydRp::new_static`]: use [`CydRp::SCREEN_PIXELS`] for full-screen frames,
+//! the largest region's pixel count for regional frames,
+//! [`tiling::TileGrid::max_tile_pixel_count`] for tiled drawing, or `0` for
+//! immediate operations and contiguous streaming.
+//!
 //! [Choose a constructor](#choose-a-constructor) explains how to construct a
 //! Raspberry Pi Pico device. The
 //! [Raspberry Pi Pico CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-rp/examples/cyd_touch_paint.rs)

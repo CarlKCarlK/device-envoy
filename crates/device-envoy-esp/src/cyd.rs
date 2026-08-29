@@ -26,6 +26,12 @@
 #![doc = include_str!("../../../docs/cyd/gallery.md")]
 #![doc = include_str!("../../../docs/cyd/application-example.md")]
 //!
+//! Your drawing strategy determines the pixel-buffer capacity selected through
+//! [`CydEsp::new_static`]: use [`CydEsp::SCREEN_PIXELS`] for full-screen frames,
+//! the largest region's pixel count for regional frames,
+//! [`tiling::TileGrid::max_tile_pixel_count`] for tiled drawing, or `0` for
+//! immediate operations and contiguous streaming.
+//!
 //! [Choose a constructor](#choose-a-constructor) explains how to construct an
 //! ESP32 device. The
 //! [ESP32 CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-esp/examples/esp32/generic/cyd_touch_paint.rs)

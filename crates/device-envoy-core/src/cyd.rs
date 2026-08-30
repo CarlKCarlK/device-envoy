@@ -61,7 +61,7 @@ pub mod backend;
 pub mod display;
 pub mod touch;
 
-use display::{ContiguousPixels, CydFrame, DrawItem};
+use display::{ContiguousPixels, CydFrame};
 
 /// Native panel width in pixels (landscape): 320. The CYD panel is fixed hardware.
 pub(crate) const SCREEN_WIDTH: usize = 320;
@@ -338,10 +338,9 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
 
     /// Fill `rectangle` immediately with `color` in logical display coordinates.
     ///
-    /// Unlike [`CydFrame::fill`], this is a device-level operation
-    /// rather than a
-    /// frame-buffered draw. Implementations clip to the logical display and
-    /// treat an empty intersection as a no-op.
+    /// Unlike filling a frame returned by [`CydDisplay::frame_mut`], this is a
+    /// device-level operation rather than a frame-buffered draw. Implementations
+    /// clip to the logical display and treat an empty intersection as a no-op.
     ///
     /// The following example covers the immediate and contiguous operations:
     /// [`CydDisplay::fill_contiguous`], [`CydDisplay::draw_items`], [`CydDisplay::clear`],
@@ -481,9 +480,8 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
 
     /// Draw `items` immediately inside `bounds`.
     ///
-    /// See the [immediate-operations example](CydDisplay::fill_rectangle) and
-    /// the [`DrawItem`] documentation for the draw-item types this
-    /// consumes.
+    /// See the [immediate-operations example](CydDisplay::fill_rectangle) for a
+    /// complete immediate-drawing flow.
     /// `DRAW_ITEM_CAPACITY` is the allocation-free capacity for prepared draw
     /// items. Each nondegenerate item consumes at most one slot, including an
     /// item that lies outside `bounds`. Using the total number of supplied items

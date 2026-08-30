@@ -29,6 +29,7 @@ done
 image_pages=(
     "${CORE_DOCS}/cyd/index.html"
     "${CORE_DOCS}/memory/struct.CydMemory.html"
+    "${CORE_DOCS}/wasm/struct.CydWasm.html"
     "${ESP_DOCS}/cyd/index.html"
     "${RP_DOCS}/cyd/index.html"
 )
@@ -42,6 +43,7 @@ done
 
 gallery_pages=(
     "${CORE_DOCS}/cyd/index.html"
+    "${CORE_DOCS}/wasm/struct.CydWasm.html"
     "${ESP_DOCS}/cyd/index.html"
     "${RP_DOCS}/cyd/index.html"
 )

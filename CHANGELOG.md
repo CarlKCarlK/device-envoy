@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4-alpha.2
+
+- Replaced Core's absolute docs.rs self-links with version-local intra-doc
+  links and added a release check that rejects unchecked Core self-links.
+- Added a colorful, clickable Linkage Blaze gallery preview to the `CydWasm`
+  documentation.
+
 ## 0.1.4-alpha.1
 
 - Fixed the `device-envoy-core` docs.rs configuration so CYD output images and

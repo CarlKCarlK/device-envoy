@@ -18,6 +18,11 @@ fn check_all() -> ExitCode {
     let workspace_root = workspace_root();
     let start = Instant::now();
 
+    println!("==> Checking documentation self-links...");
+    if !reject_absolute_core_self_links(&workspace_root) {
+        return ExitCode::FAILURE;
+    }
+
     println!("==> Formatting workspace...");
     if !run_command(
         Command::new("cargo")
@@ -240,6 +245,40 @@ fn check_all() -> ExitCode {
         let elapsed = start.elapsed();
         println!("check-all passed in {:.1}s", elapsed.as_secs_f64());
         ExitCode::SUCCESS
+    }
+}
+
+fn reject_absolute_core_self_links(workspace_root: &Path) -> bool {
+    let core_root = workspace_root.join("crates/device-envoy-core");
+    let output = Command::new("rg")
+        .current_dir(&core_root)
+        .args([
+            "-n",
+            "-F",
+            "https://docs.rs/device-envoy-core/",
+            "src",
+            "docs",
+        ])
+        .output()
+        .expect("failed to run rg for Core documentation self-links");
+
+    match output.status.code() {
+        Some(1) => true,
+        Some(0) => {
+            eprintln!(
+                "Core documentation must use checked intra-doc links for Core items:\n{}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+            false
+        }
+        status => {
+            eprintln!(
+                "failed to scan Core documentation self-links (rg exit {:?}):\n{}",
+                status,
+                String::from_utf8_lossy(&output.stderr)
+            );
+            false
+        }
     }
 }
 

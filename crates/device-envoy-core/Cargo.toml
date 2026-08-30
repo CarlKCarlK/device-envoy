@@ -1,6 +1,6 @@
 [package]
 name = "device-envoy-core"
-version = "0.1.4-alpha.1"
+version = "0.1.4-alpha.2"
 edition = "2024"
 rust-version = "1.93"
 description = "Shared traits and data types for device-envoy platform crates"

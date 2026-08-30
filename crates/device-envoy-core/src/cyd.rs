@@ -338,7 +338,8 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
 
     /// Fill `rectangle` immediately with `color` in logical display coordinates.
     ///
-    /// Unlike [`display::CydFrame::fill`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/trait.CydFrame.html#tymethod.fill), this is a device-level operation rather than a
+    /// Unlike [`display::CydFrame::fill`], this is a device-level operation
+    /// rather than a
     /// frame-buffered draw. Implementations clip to the logical display and
     /// treat an empty intersection as a no-op.
     ///
@@ -481,7 +482,8 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     /// Draw `items` immediately inside `bounds`.
     ///
     /// See the [immediate-operations example](CydDisplay::fill_rectangle) and
-    /// the [`display::DrawItem`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/display/enum.DrawItem.html) documentation for the draw-item types this consumes.
+    /// the [`display::DrawItem`] documentation for the draw-item types this
+    /// consumes.
     /// `DRAW_ITEM_CAPACITY` is the allocation-free capacity for prepared draw
     /// items. Each nondegenerate item consumes at most one slot, including an
     /// item that lies outside `bounds`. Using the total number of supplied items

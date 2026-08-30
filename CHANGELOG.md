@@ -1,18 +1,14 @@
 # Changelog
 
-## 0.1.4-alpha.2
+## 0.1.4
 
+- Fixed and expanded Core, RP, and ESP docs.rs output for the CYD APIs,
+  including host and WebAssembly implementation documentation and embedded
+  images.
 - Replaced Core's absolute docs.rs self-links with version-local intra-doc
   links and added a release check that rejects unchecked Core self-links.
-- Added a colorful, clickable Linkage Blaze gallery preview to the `CydWasm`
-  documentation.
-
-## 0.1.4-alpha.1
-
-- Fixed the `device-envoy-core` docs.rs configuration so CYD output images and
-  the host and WebAssembly implementation documentation are included.
-- Added colorful, clickable Linkage Blaze gallery previews to the ESP and RP
-  CYD module landing pages.
+- Added colorful, clickable Linkage Blaze gallery previews to the Core, RP,
+  and ESP CYD documentation.
 
 ## 0.1.3
 

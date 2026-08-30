@@ -91,7 +91,7 @@ use device_envoy_core::cyd::backend;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
     backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
-    display::CydFrame,
+    display::{CydFrame, DrawItem},
     touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;

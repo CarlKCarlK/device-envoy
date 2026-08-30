@@ -74,6 +74,13 @@ const fn identity_calibration_config() -> CalibrationConfig {
     CalibrationConfig::new(1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 }
 
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "linkage_blaze_gallery",
+        "docs/assets/linkage_blaze_gallery.png"
+    )
+)]
 /// A CYD device rendered to an HTML canvas with browser-supplied touch input.
 ///
 /// `CydWasm` implements the portable [`Cyd`] interface used by the hardware
@@ -85,6 +92,19 @@ const fn identity_calibration_config() -> CalibrationConfig {
 /// where it is calibrated and oriented like hardware touch input.
 /// [`CydFrameWasm::flush`] presents the current frame and awaits the next
 /// browser animation frame for frame pacing.
+///
+/// ## See CYD in action
+///
+/// [Linkage Blaze] demonstrates animated clocks, mechanisms, and figures built
+/// with Device Envoy's portable CYD display APIs. Explore the examples in the
+/// [interactive Linkage Blaze gallery].
+#[cfg_attr(
+    feature = "doc-images",
+    doc = "\n[![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]][interactive Linkage Blaze gallery]\n"
+)]
+///
+/// [Linkage Blaze]: https://github.com/CarlKCarlK/linkage-blaze
+/// [interactive Linkage Blaze gallery]: https://carlkcarlk.github.io/linkage-blaze/demos/
 ///
 /// # Example
 ///

@@ -1,6 +1,6 @@
 [package]
 name = "device-envoy-core"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2024"
 rust-version = "1.93"
 description = "Shared traits and data types for device-envoy platform crates"
@@ -10,6 +10,11 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/CarlKCarlK/device-envoy"
 documentation = "https://docs.rs/device-envoy-core"
 homepage = "https://github.com/CarlKCarlK/device-envoy"
+
+[package.metadata.docs.rs]
+all-features = false
+no-default-features = true
+features = ["host", "wasm", "doc-images"]
 
 [lib]
 name = "device_envoy_core"

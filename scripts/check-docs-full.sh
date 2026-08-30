@@ -26,11 +26,36 @@ for required_page in "${required_pages[@]}"; do
     fi
 done
 
-if ! rg -q 'src="data:image/png;base64,' \
-    "${CORE_DOCS}/memory/struct.CydMemory.html"; then
-    echo "CydMemory documentation is missing its embedded preview image" >&2
-    exit 1
-fi
+image_pages=(
+    "${CORE_DOCS}/cyd/index.html"
+    "${CORE_DOCS}/memory/struct.CydMemory.html"
+    "${CORE_DOCS}/wasm/struct.CydWasm.html"
+    "${ESP_DOCS}/cyd/index.html"
+    "${RP_DOCS}/cyd/index.html"
+)
+
+for image_page in "${image_pages[@]}"; do
+    if ! rg -q 'src="data:image/png;base64,' "${image_page}"; then
+        echo "documentation page is missing its embedded preview image: ${image_page}" >&2
+        exit 1
+    fi
+done
+
+gallery_pages=(
+    "${CORE_DOCS}/cyd/index.html"
+    "${CORE_DOCS}/wasm/struct.CydWasm.html"
+    "${ESP_DOCS}/cyd/index.html"
+    "${RP_DOCS}/cyd/index.html"
+)
+
+for gallery_page in "${gallery_pages[@]}"; do
+    if ! rg -U -q \
+        '<a href="https://carlkcarlk\.github\.io/linkage-blaze/demos/">\s*<img src="data:image/png;base64,' \
+        "${gallery_page}"; then
+        echo "gallery preview does not link to the interactive gallery: ${gallery_page}" >&2
+        exit 1
+    fi
+done
 
 for source_image in "${WORKSPACE_ROOT}/crates/device-envoy-core/docs/assets/"*.png; do
     if [[ ! -s "${source_image}" ]]; then

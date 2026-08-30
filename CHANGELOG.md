@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.4
+
+- Fixed and expanded Core, RP, and ESP docs.rs output for the CYD APIs,
+  including host and WebAssembly implementation documentation and embedded
+  images.
+- Replaced Core's absolute docs.rs self-links with version-local intra-doc
+  links and added a release check that rejects unchecked Core self-links.
+- Added colorful, clickable Linkage Blaze gallery previews to the Core, RP,
+  and ESP CYD documentation.
+
 ## 0.1.3
 
 - Refined the pre-adoption CYD display and touch APIs across Core, RP, and ESP,

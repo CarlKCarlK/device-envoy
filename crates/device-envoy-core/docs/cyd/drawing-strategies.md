@@ -31,11 +31,11 @@ Small heterogeneous scenes can instead be streamed with
 the [`CydDisplay` documentation] for the compact storage table,
 immediate-drawing capacity rule, and coordinate conventions.
 
-[`CydDisplay`]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html
-[`CydDisplay::full_frame_mut`]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html#method.full_frame_mut
-[`CydDisplay::frame_mut`]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html#method.frame_mut
-[`CydDisplay::for_each_tile`]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html#method.for_each_tile
-[`CydDisplay::fill_contiguous`]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html#tymethod.fill_contiguous
-[`CydDisplay::fill_contiguous_full`]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html#method.fill_contiguous_full
-[`CydDisplay::draw_items`]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html#method.draw_items
-[`CydDisplay` documentation]: https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/trait.CydDisplay.html
+[`CydDisplay`]: crate::cyd::CydDisplay
+[`CydDisplay::full_frame_mut`]: crate::cyd::CydDisplay::full_frame_mut
+[`CydDisplay::frame_mut`]: crate::cyd::CydDisplay::frame_mut
+[`CydDisplay::for_each_tile`]: crate::cyd::CydDisplay::for_each_tile
+[`CydDisplay::fill_contiguous`]: crate::cyd::CydDisplay::fill_contiguous
+[`CydDisplay::fill_contiguous_full`]: crate::cyd::CydDisplay::fill_contiguous_full
+[`CydDisplay::draw_items`]: crate::cyd::CydDisplay::draw_items
+[`CydDisplay` documentation]: crate::cyd::CydDisplay

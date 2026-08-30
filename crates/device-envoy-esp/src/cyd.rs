@@ -1,3 +1,10 @@
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
+        "linkage_blaze_gallery",
+        "docs/assets/linkage_blaze_gallery.png"
+    )
+)]
 //! ESP32 support for Cheap Yellow Display (CYD) boards.
 //!
 //! These boards combine a 320×240 ILI9341 display with XPT2046 resistive
@@ -5,6 +12,19 @@
 //! calibrated-touch interfaces from
 //! [`device_envoy_core::cyd`](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/).
 //! The RP, WebAssembly, and in-memory implementations share these interfaces.
+//!
+//! ## See CYD in action
+//!
+//! [Linkage Blaze] demonstrates animated clocks, mechanisms, and figures built
+//! with Device Envoy's portable CYD display APIs. Explore the examples in the
+//! [interactive Linkage Blaze gallery].
+#![cfg_attr(
+    feature = "doc-images",
+    doc = "\n[![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]][interactive Linkage Blaze gallery]\n"
+)]
+//!
+//! [Linkage Blaze]: https://github.com/CarlKCarlK/linkage-blaze
+//! [interactive Linkage Blaze gallery]: https://carlkcarlk.github.io/linkage-blaze/demos/
 //!
 //! The portable [Core CYD documentation] provides the shared
 //! [application example], [drawing-strategy guide], [implementation overview],

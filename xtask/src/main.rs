@@ -1,3 +1,5 @@
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::thread;
@@ -250,36 +252,66 @@ fn check_all() -> ExitCode {
 
 fn reject_absolute_core_self_links(workspace_root: &Path) -> bool {
     let core_root = workspace_root.join("crates/device-envoy-core");
-    let output = Command::new("rg")
-        .current_dir(&core_root)
-        .args([
-            "-n",
-            "-F",
+    let mut matches = Vec::new();
+    let result = ["src", "docs"].into_iter().try_for_each(|directory| {
+        find_text_matches(
+            &core_root.join(directory),
+            &core_root,
             "https://docs.rs/device-envoy-core/",
-            "src",
-            "docs",
-        ])
-        .output()
-        .expect("failed to run rg for Core documentation self-links");
+            &mut matches,
+        )
+    });
 
-    match output.status.code() {
-        Some(1) => true,
-        Some(0) => {
+    match result {
+        Ok(()) if matches.is_empty() => true,
+        Ok(()) => {
             eprintln!(
                 "Core documentation must use checked intra-doc links for Core items:\n{}",
-                String::from_utf8_lossy(&output.stdout)
+                matches.join("\n")
             );
             false
         }
-        status => {
-            eprintln!(
-                "failed to scan Core documentation self-links (rg exit {:?}):\n{}",
-                status,
-                String::from_utf8_lossy(&output.stderr)
-            );
+        Err(error) => {
+            eprintln!("failed to scan Core documentation self-links: {error}");
             false
         }
     }
+}
+
+fn find_text_matches(
+    directory: &Path,
+    display_root: &Path,
+    needle: &str,
+    matches: &mut Vec<String>,
+) -> io::Result<()> {
+    for entry in fs::read_dir(directory)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            find_text_matches(&path, display_root, needle, matches)?;
+            continue;
+        }
+
+        if !matches!(
+            path.extension().and_then(|extension| extension.to_str()),
+            Some("md" | "rs")
+        ) {
+            continue;
+        }
+
+        let contents = fs::read_to_string(&path)?;
+        for (line_index, line) in contents.lines().enumerate() {
+            if line.contains(needle) {
+                let display_path = path.strip_prefix(display_root).unwrap_or(&path);
+                matches.push(format!(
+                    "{}:{}:{}",
+                    display_path.display(),
+                    line_index + 1,
+                    line.trim()
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn workspace_root() -> PathBuf {

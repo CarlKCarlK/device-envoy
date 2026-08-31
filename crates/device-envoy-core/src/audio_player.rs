@@ -473,11 +473,11 @@ async fn play_full_adpcm_clip_once<
             return ControlFlow::Continue(());
         }
 
-        let runtime_volume = audio_player_static.effective_runtime_volume();
-        let mut predictor_i32 = match read_i16_le(adpcm_block, 0) {
-            Some(value) => value as i32,
-            None => return ControlFlow::Continue(()),
+        let Some(predictor_bytes) = adpcm_block.first_chunk::<2>() else {
+            return ControlFlow::Continue(());
         };
+        let runtime_volume = audio_player_static.effective_runtime_volume();
+        let mut predictor_i32 = i16::from_le_bytes(*predictor_bytes) as i32;
         let mut step_index_i32 = adpcm_block[2] as i32;
         if !(0..=88).contains(&step_index_i32) {
             return ControlFlow::Continue(());
@@ -602,18 +602,6 @@ async fn play_silence_duration_once<
     }
 
     ControlFlow::Continue(())
-}
-
-#[inline]
-fn read_i16_le(bytes: &[u8], byte_offset: usize) -> Option<i16> {
-    let end_offset = byte_offset.checked_add(2)?;
-    if end_offset > bytes.len() {
-        return None;
-    }
-    Some(i16::from_le_bytes([
-        bytes[byte_offset],
-        bytes[byte_offset + 1],
-    ]))
 }
 
 /// End-of-sequence behavior for playback.
@@ -743,7 +731,8 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         let mut block_start = 0usize;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while block_start < DATA_LEN && remaining_sample_count > 0 {
-            let mut predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
+            let mut predictor_i32 =
+                i16::from_le_bytes(read_le_bytes_const(&self.data, block_start)) as i32;
             let mut step_index_i32 = self.data[block_start + 2] as i32;
             assert!(step_index_i32 >= 0, "ADPCM step_index must be >= 0");
             assert!(step_index_i32 <= 88, "ADPCM step_index must be <= 88");
@@ -821,7 +810,8 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         let mut block_start = 0usize;
         // TODO_NIGHTLY When nightly feature const_for becomes stable, replace these while loops with for loops.
         while block_start < DATA_LEN {
-            let mut source_predictor_i32 = read_i16_le_const(&self.data, block_start) as i32;
+            let mut source_predictor_i32 =
+                i16::from_le_bytes(read_le_bytes_const(&self.data, block_start)) as i32;
             let mut source_step_index_i32 = self.data[block_start + 2] as i32;
             assert!(
                 source_step_index_i32 >= 0 && source_step_index_i32 <= 88,
@@ -936,7 +926,8 @@ pub const fn __parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader 
 
     // TODO_NIGHTLY When nightly feature const_for becomes stable, replace this while loop with a for loop.
     while chunk_offset + 8 <= wav_bytes.len() {
-        let chunk_size = read_u32_le_const(wav_bytes, chunk_offset + 4) as usize;
+        let chunk_size =
+            u32::from_le_bytes(read_le_bytes_const(wav_bytes, chunk_offset + 4)) as usize;
         let chunk_data_start = chunk_offset + 8;
         if chunk_data_start > wav_bytes.len() || chunk_size > wav_bytes.len() - chunk_data_start {
             panic!("WAV chunk overruns file");
@@ -948,11 +939,14 @@ pub const fn __parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader 
                 panic!("fmt chunk too small");
             }
 
-            let audio_format = read_u16_le_const(wav_bytes, chunk_data_start);
-            let channels = read_u16_le_const(wav_bytes, chunk_data_start + 2);
-            sample_rate_hz = read_u32_le_const(wav_bytes, chunk_data_start + 4);
-            block_align = read_u16_le_const(wav_bytes, chunk_data_start + 12) as usize;
-            let bits_per_sample = read_u16_le_const(wav_bytes, chunk_data_start + 14);
+            let audio_format = u16::from_le_bytes(read_le_bytes_const(wav_bytes, chunk_data_start));
+            let channels = u16::from_le_bytes(read_le_bytes_const(wav_bytes, chunk_data_start + 2));
+            sample_rate_hz =
+                u32::from_le_bytes(read_le_bytes_const(wav_bytes, chunk_data_start + 4));
+            block_align =
+                u16::from_le_bytes(read_le_bytes_const(wav_bytes, chunk_data_start + 12)) as usize;
+            let bits_per_sample =
+                u16::from_le_bytes(read_le_bytes_const(wav_bytes, chunk_data_start + 14));
 
             if audio_format != 0x0011 {
                 panic!("Expected ADPCM WAV format");
@@ -969,7 +963,7 @@ pub const fn __parse_adpcm_wav_header(wav_bytes: &[u8]) -> ParsedAdpcmWavHeader 
 
             let derived_samples_per_block = derive_samples_per_block_const(block_align);
             samples_per_block = if chunk_size >= 22 {
-                read_u16_le_const(wav_bytes, chunk_data_start + 18) as usize
+                u16::from_le_bytes(read_le_bytes_const(wav_bytes, chunk_data_start + 18)) as usize
             } else {
                 derived_samples_per_block
             };
@@ -1073,30 +1067,18 @@ pub const fn __adpcm_data_len_for_pcm_samples_with_block_align(
     block_count * block_align
 }
 
-const fn read_u16_le_const(bytes: &[u8], byte_offset: usize) -> u16 {
-    if byte_offset > bytes.len().saturating_sub(2) {
-        panic!("read_u16_le_const out of bounds");
+const fn read_le_bytes_const<const BYTE_COUNT: usize>(
+    bytes: &[u8],
+    byte_offset: usize,
+) -> [u8; BYTE_COUNT] {
+    if byte_offset > bytes.len().saturating_sub(BYTE_COUNT) {
+        panic!("little-endian read out of bounds");
     }
-    u16::from_le_bytes([bytes[byte_offset], bytes[byte_offset + 1]])
-}
-
-const fn read_i16_le_const(bytes: &[u8], byte_offset: usize) -> i16 {
-    if byte_offset > bytes.len().saturating_sub(2) {
-        panic!("read_i16_le_const out of bounds");
-    }
-    i16::from_le_bytes([bytes[byte_offset], bytes[byte_offset + 1]])
-}
-
-const fn read_u32_le_const(bytes: &[u8], byte_offset: usize) -> u32 {
-    if byte_offset > bytes.len().saturating_sub(4) {
-        panic!("read_u32_le_const out of bounds");
-    }
-    u32::from_le_bytes([
-        bytes[byte_offset],
-        bytes[byte_offset + 1],
-        bytes[byte_offset + 2],
-        bytes[byte_offset + 3],
-    ])
+    let (_, bytes) = bytes.split_at(byte_offset);
+    let Some(value_bytes) = bytes.first_chunk::<BYTE_COUNT>() else {
+        panic!("little-endian read out of bounds");
+    };
+    *value_bytes
 }
 
 // Must be `pub` so platform-crate `device_loop` and play functions can match
@@ -2327,20 +2309,14 @@ macro_rules! __audio_clip_impl {
                     { SAMPLE_RATE_HZ },
                     { PCM_SAMPLE_COUNT },
                 > {
-                    assert!(
-                        AUDIO_SAMPLE_BYTES_LEN % 2 == 0,
-                        "audio byte length must be even for s16le"
-                    );
-
                     let audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN] = include_bytes!($file);
+                    let (sample_bytes, []) = audio_sample_s16le.as_chunks::<2>() else {
+                        panic!("audio byte length must be even for s16le");
+                    };
                     let mut samples = [0_i16; SOURCE_SAMPLE_COUNT];
                     let mut sample_index = 0_usize;
                     while sample_index < SOURCE_SAMPLE_COUNT {
-                        let byte_index = sample_index * 2;
-                        samples[sample_index] = i16::from_le_bytes([
-                            audio_sample_s16le[byte_index],
-                            audio_sample_s16le[byte_index + 1],
-                        ]);
+                        samples[sample_index] = i16::from_le_bytes(sample_bytes[sample_index]);
                         sample_index += 1;
                     }
                     $crate::audio_player::__resample_pcm_clip::<

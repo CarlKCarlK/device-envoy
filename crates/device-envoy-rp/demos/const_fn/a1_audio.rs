@@ -21,7 +21,7 @@ use core::convert::Infallible;
 use defmt::info;
 use device_envoy_rp::{
     Result,
-    audio_player::{AtEnd, AudioPlayer as _, PcmClipBuf, Playable, Volume, audio_player, pcm_clip},
+    audio_player::{AtEnd, AudioPlayer as _, Volume, audio_player, pcm_clip},
     button::{Button as _, ButtonRp, PressedTo},
 };
 use embassy_executor::Spawner;
@@ -44,8 +44,6 @@ pcm_clip! {
     }
 }
 
-use Nasa::{PCM_SAMPLE_COUNT, SAMPLE_RATE_HZ};
-
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let err = inner_main(spawner).await.unwrap_err();
@@ -53,7 +51,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    const NASA: PcmClipBuf<SAMPLE_RATE_HZ, PCM_SAMPLE_COUNT> = Nasa::pcm_clip();
+    const NASA: &AudioPlayer22KPlayable = &Nasa::pcm_clip();
 
     let peripherals = embassy_rp::init(Default::default());
     let mut button = ButtonRp::new(peripherals.PIN_13, PressedTo::Ground);
@@ -70,6 +68,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     loop {
         button.wait_for_press().await;
-        audio_player22k.play([&NASA as &dyn Playable<SAMPLE_RATE_HZ>], AtEnd::Stop);
+        audio_player22k.play([NASA], AtEnd::Stop);
     }
 }

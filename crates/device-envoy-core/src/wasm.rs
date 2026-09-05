@@ -667,11 +667,27 @@ impl CydTouch for CydTouchWasm {
     type Error = Infallible;
 
     fn try_read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
-        Ok(self
-            .raw_touch_events
-            .borrow_mut()
-            .pop_front()
-            .map(|raw_touch_event| match raw_touch_event {
+        let raw_touch_event = self.raw_touch_events.borrow_mut().pop_front();
+        let raw_touch_event = raw_touch_event.map(|raw_touch_event| {
+            if let RawTouchEvent::Move { .. } = raw_touch_event {
+                // Pointer events can arrive much faster than a full-frame
+                // canvas presentation. Keep the newest consecutive move so
+                // the application follows the pointer instead of painting a
+                // backlog of stale positions.
+                let mut latest_move = raw_touch_event;
+                let mut raw_touch_events = self.raw_touch_events.borrow_mut();
+                while let Some(RawTouchEvent::Move { .. }) = raw_touch_events.front() {
+                    if let Some(next_move) = raw_touch_events.pop_front() {
+                        latest_move = next_move;
+                    }
+                }
+                latest_move
+            } else {
+                raw_touch_event
+            }
+        });
+        Ok(
+            raw_touch_event.map(|raw_touch_event| match raw_touch_event {
                 RawTouchEvent::Down { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Down {
@@ -689,7 +705,8 @@ impl CydTouch for CydTouchWasm {
                     }
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
-            }))
+            }),
+        )
     }
 }
 

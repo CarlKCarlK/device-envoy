@@ -37,7 +37,11 @@ mod tga;
 pub mod tiling;
 
 use core::{convert::Infallible, future::Future};
-use embedded_graphics::{pixelcolor::Rgb565, prelude::DrawTarget, primitives::Rectangle};
+use embedded_graphics::{
+    pixelcolor::Rgb565,
+    prelude::{DrawTarget, Point},
+    primitives::Rectangle,
+};
 
 use crate::pixel_target::PixelTarget;
 
@@ -107,7 +111,9 @@ use embedded_graphics::{
 
 async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(100, 40)));
-    frame.fill(Rgb565::BLUE).write_text("CYD").flush().await
+    frame.fill(Rgb565::BLUE);
+    assert_eq!(frame.pixel(Point::new(109, 49)), Some(Rgb565::BLUE));
+    frame.write_text("CYD").flush().await
 }
 
 # use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
@@ -157,6 +163,18 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// See the [`CydDisplay::frame_mut`](crate::cyd::CydDisplay::frame_mut)
     /// example.
     fn clear(&mut self) -> &mut Self;
+
+    // TODO0000 Decide whether CydFrame::pixel, Image565View::pixel_at, and
+    // CydMemory::pixel should use one consistent name and Point-based signature.
+    // TODO0000 Audit raw_pixels_mut call sites to see which reads can use this
+    // portable operation, and decide whether per-pixel mutation needs a
+    // pixel_at_mut-style API beyond PixelTarget::put_pixel_565.
+    /// Read a buffered pixel at a logical screen coordinate.
+    ///
+    /// Returns `None` when `point` lies outside this frame. The [`CydFrame`
+    /// example](CydFrame#examples) demonstrates reading a pixel after filling
+    /// a frame.
+    fn pixel(&self, point: Point) -> Option<Rgb565>;
 
     /// Draw `text` at the frame rectangle's top-left using the device default
     /// font and foreground color. Returns `&mut Self` for chaining.

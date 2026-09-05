@@ -77,7 +77,7 @@ use core::{convert::Infallible, fmt};
 use embedded_graphics::{
     Pixel,
     mono_font::MonoFont,
-    pixelcolor::{IntoStorage, Rgb565, Rgb888},
+    pixelcolor::{IntoStorage, Rgb565, Rgb888, raw::RawU16},
     prelude::{Dimensions, DrawTarget, OriginDimensions, Point, Size},
     primitives::Rectangle,
 };
@@ -598,6 +598,8 @@ impl CydEsp {
         CydStaticEsp::new()
     }
 
+    // TODO00 Investigate a board-specific constructor that assumes the standard
+    // classic CYD pin assignments instead of requiring every pin individually.
     /// Construct a ready-to-use CYD.
     ///
     /// The display and touch controller use separate SPI buses. The supplied
@@ -962,6 +964,17 @@ impl<D: SpiDevice<u8>> CydFrame for CydFrameEsp<'_, D> {
 
     fn clear(&mut self) -> &mut Self {
         self.fill(self.background565)
+    }
+
+    fn pixel(&self, point: Point) -> Option<Rgb565> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.view.width() || local_y >= self.view.height() {
+            return None;
+        }
+        Some(Rgb565::from(RawU16::new(
+            self.view.raw_pixels()[local_y * self.view.width() + local_x],
+        )))
     }
 
     fn write_text(&mut self, text: &str) -> &mut Self {

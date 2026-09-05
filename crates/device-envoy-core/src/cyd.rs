@@ -671,6 +671,10 @@ mod tests {
             self
         }
 
+        fn pixel(&self, _point: Point) -> Option<Rgb565> {
+            None
+        }
+
         fn write_text(&mut self, _text: &str) -> &mut Self {
             self
         }

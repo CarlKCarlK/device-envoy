@@ -50,7 +50,7 @@ use embedded_graphics::pixelcolor::RgbColor;
 use embedded_graphics::{
     Drawable, Pixel,
     mono_font::{MonoFont, MonoTextStyle},
-    pixelcolor::{IntoStorage, Rgb565, Rgb888},
+    pixelcolor::{IntoStorage, Rgb565, Rgb888, raw::RawU16},
     prelude::{Dimensions, DrawTarget, Point, Size},
     primitives::Rectangle,
     text::{Baseline, Text},
@@ -871,6 +871,17 @@ impl CydFrame for CydFrameWasm<'_> {
 
     fn clear(&mut self) -> &mut Self {
         self.fill(self.background565)
+    }
+
+    fn pixel(&self, point: Point) -> Option<Rgb565> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.width() || local_y >= self.height() {
+            return None;
+        }
+        Some(Rgb565::from(RawU16::new(
+            self.pixels[local_y * self.width() + local_x],
+        )))
     }
 
     fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()> {

@@ -598,8 +598,6 @@ impl CydEsp {
         CydStaticEsp::new()
     }
 
-    // TODO00 Investigate a board-specific constructor that assumes the standard
-    // classic CYD pin assignments instead of requiring every pin individually.
     /// Construct a ready-to-use CYD.
     ///
     /// The display and touch controller use separate SPI buses. The supplied

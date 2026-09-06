@@ -143,13 +143,6 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
 pub trait CydFrame:
     DrawTarget<Color = Rgb565, Error = Infallible> + GetPixel<Color = Rgb565> + PixelTarget
 {
-    // TODO0000 Decide whether CydFrame::pixel, Image565View::pixel_at, and
-    // CydMemory::pixel should use one consistent name and Point-based signature.
-    // (may no longer apply)
-    // TODO0000 Audit raw_pixels_mut call sites to see which reads can use this
-    // portable operation, and decide whether per-pixel mutation needs a
-    // pixel_at_mut-style API beyond PixelTarget::put_pixel_565.
-    // (may no longer apply)
     /// Error returned when presenting the frame.
     type Error;
 

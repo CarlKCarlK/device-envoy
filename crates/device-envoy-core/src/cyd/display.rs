@@ -164,6 +164,8 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     /// example.
     fn clear(&mut self) -> &mut Self;
 
+    // TODO0 migrate FlashBlock values to the canonical `_flash_block` suffix.
+
     // TODO0000 Decide whether CydFrame::pixel, Image565View::pixel_at, and
     // CydMemory::pixel should use one consistent name and Point-based signature.
     // TODO0000 Audit raw_pixels_mut call sites to see which reads can use this

@@ -155,7 +155,7 @@ impl CydEspOneSpi {
         miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         lcd_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         lcd_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        lcd_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        lcd_rst_pin: impl super::DisplayResetPin,
         lcd_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,

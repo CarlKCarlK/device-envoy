@@ -95,7 +95,7 @@ use device_envoy_core::cyd::{
     touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;
-pub use display::DEFAULT_DISPLAY_SPI_HZ;
+pub use display::{DEFAULT_DISPLAY_SPI_HZ, DisplayResetPin, NoDisplayReset};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
@@ -404,7 +404,7 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
     pub(crate) fn new_from_device(
         spi_device: D,
         dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        rst_pin: impl DisplayResetPin,
         backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         orientation: Orientation,
         background_color: Rgb888,
@@ -461,7 +461,7 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
         display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl DisplayResetPin,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
@@ -634,7 +634,7 @@ impl CydEsp {
         display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl DisplayResetPin,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
@@ -713,7 +713,7 @@ impl CydEspUncalibrated {
         display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl DisplayResetPin,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         _orientation: Orientation,

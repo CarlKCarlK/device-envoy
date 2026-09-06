@@ -3,7 +3,7 @@
 //! Draws a tiled, labeled grid across the full 320x240 CYD panel using a
 //! small, tile-sized draw buffer rather than a full-screen one.
 //!
-{%- if chip_feature == "esp32" %}
+{%- if cyd_display_rst_pin is none %}
 //! Wiring: the classic CYD board's built-in ILI9341 display, fixed at the
 //! factory (see `device_envoy_esp::cyd` module docs for the CYD abstraction):
 {%- else %}
@@ -17,7 +17,11 @@
 //! - Display SPI MISO -> GPIO{{ cyd_display_miso_pin }}
 //! - Display CS       -> GPIO{{ cyd_display_cs_pin }}
 //! - Display DC       -> GPIO{{ cyd_display_dc_pin }}
+{%- if cyd_display_rst_pin is none %}
+//! - Display RST      -> board reset / EN (no dedicated GPIO)
+{%- else %}
 //! - Display RST      -> GPIO{{ cyd_display_rst_pin }}
+{%- endif %}
 //! - Display backlight -> GPIO{{ cyd_display_backlight_pin }}
 //! - Plus 3.3V and GND
 #![no_std]
@@ -39,6 +43,7 @@ use device_envoy_esp::{
     Result, init_and_start,
     cyd::{DEFAULT_DISPLAY_SPI_HZ, 
         CydDisplay as _, CydDisplayEsp, CydEsp, CydStaticEsp, DEFAULT_FONT, Orientation,
+        {% if cyd_display_rst_pin is none %}NoDisplayReset,{% endif %}
         tiling::TileGrid,
     },
 };
@@ -71,7 +76,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO{{ cyd_display_miso_pin }},
         p.GPIO{{ cyd_display_cs_pin }},
         p.GPIO{{ cyd_display_dc_pin }},
+        {% if cyd_display_rst_pin is none %}NoDisplayReset,{% else %}
         p.GPIO{{ cyd_display_rst_pin }},
+        {%- endif %}
         p.GPIO{{ cyd_display_backlight_pin }},
         DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,

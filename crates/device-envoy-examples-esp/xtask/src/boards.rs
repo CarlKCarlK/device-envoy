@@ -115,7 +115,8 @@ pub(crate) struct CydDisplayWiring {
     pub(crate) miso_pin_num: u8,
     pub(crate) cs_pin_num: u8,
     pub(crate) dc_pin_num: u8,
-    pub(crate) rst_pin_num: u8,
+    /// Dedicated display-reset GPIO, or `None` when reset shares the board reset/EN net.
+    pub(crate) rst_pin_num: Option<u8>,
     pub(crate) backlight_pin_num: u8,
 }
 
@@ -220,7 +221,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 12,
             cs_pin_num: 15,
             dc_pin_num: 2,
-            rst_pin_num: 4,
+            rst_pin_num: None,
             backlight_pin_num: 21,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -291,7 +292,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 2,
             cs_pin_num: 10,
             dc_pin_num: 3,
-            rst_pin_num: 4,
+            rst_pin_num: Some(4),
             backlight_pin_num: 5,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -364,7 +365,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 2,
             cs_pin_num: 10,
             dc_pin_num: 3,
-            rst_pin_num: 4,
+            rst_pin_num: Some(4),
             backlight_pin_num: 5,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -420,7 +421,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 20,
             cs_pin_num: 21,
             dc_pin_num: 4,
-            rst_pin_num: 5,
+            rst_pin_num: Some(5),
             backlight_pin_num: 7,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -474,7 +475,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 20,
             cs_pin_num: 21,
             dc_pin_num: 4,
-            rst_pin_num: 5,
+            rst_pin_num: Some(5),
             backlight_pin_num: 7,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -528,7 +529,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 3,
             cs_pin_num: 4,
             dc_pin_num: 5,
-            rst_pin_num: 7,
+            rst_pin_num: Some(7),
             backlight_pin_num: 8,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -577,7 +578,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 3,
             cs_pin_num: 4,
             dc_pin_num: 5,
-            rst_pin_num: 7,
+            rst_pin_num: Some(7),
             backlight_pin_num: 8,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -631,7 +632,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 3,
             cs_pin_num: 4,
             dc_pin_num: 5,
-            rst_pin_num: 7,
+            rst_pin_num: Some(7),
             backlight_pin_num: 8,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -680,7 +681,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 20,
             cs_pin_num: 21,
             dc_pin_num: 4,
-            rst_pin_num: 5,
+            rst_pin_num: Some(5),
             backlight_pin_num: 7,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -734,7 +735,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 10,
             cs_pin_num: 11,
             dc_pin_num: 12,
-            rst_pin_num: 13,
+            rst_pin_num: Some(13),
             backlight_pin_num: 14,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -788,7 +789,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 3,
             cs_pin_num: 4,
             dc_pin_num: 5,
-            rst_pin_num: 7,
+            rst_pin_num: Some(7),
             backlight_pin_num: 8,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -842,7 +843,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 3,
             cs_pin_num: 4,
             dc_pin_num: 5,
-            rst_pin_num: 7,
+            rst_pin_num: Some(7),
             backlight_pin_num: 8,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -896,7 +897,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 3,
             cs_pin_num: 4,
             dc_pin_num: 5,
-            rst_pin_num: 7,
+            rst_pin_num: Some(7),
             backlight_pin_num: 8,
         },
         cyd_touch_wiring: CydTouchWiring {
@@ -950,7 +951,7 @@ pub(crate) const BOARD_PROFILES: &[BoardProfile] = &[
             miso_pin_num: 3,
             cs_pin_num: 4,
             dc_pin_num: 5,
-            rst_pin_num: 7,
+            rst_pin_num: Some(7),
             backlight_pin_num: 8,
         },
         cyd_touch_wiring: CydTouchWiring {

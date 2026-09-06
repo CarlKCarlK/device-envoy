@@ -19,7 +19,7 @@
 //! - Display SPI MISO -> GPIO12
 //! - Display CS       -> GPIO15
 //! - Display DC       -> GPIO2
-//! - Display RST      -> GPIO4
+//! - Display RST      -> board reset / EN (no dedicated GPIO)
 //! - Display backlight -> GPIO21
 //! - Touch SPI SCK    -> GPIO25
 //! - Touch SPI MOSI   -> GPIO32
@@ -48,7 +48,10 @@ use device_envoy_esp::{
     Error as DeviceEnvoyError,
     button::PressedTo,
     button_watch,
-    cyd::{CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Error as CydError},
+    cyd::{
+        CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Error as CydError,
+        NoDisplayReset,
+    },
     flash_block::FlashBlockEsp,
     init_and_start,
     wifi_auto::{WifiAuto as _, WifiAutoEsp},
@@ -100,7 +103,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error>
         p.GPIO12,                   // display_miso_pin
         p.GPIO15,                   // display_cs_pin
         p.GPIO2,                    // display_dc_pin
-        p.GPIO4,                    // display_rst_pin
+        NoDisplayReset,             // display_rst_pin
         p.GPIO21,                   // display_backlight_pin
         DEFAULT_DISPLAY_SPI_HZ,     // display_spi_hz
         orientation,                // orientation

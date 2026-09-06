@@ -1,3 +1,5 @@
+use core::convert::Infallible;
+
 use device_envoy_core::UnwrapInfallible;
 use embedded_graphics::{
     draw_target::DrawTarget,
@@ -39,7 +41,71 @@ type CydDisplaySpiBus = spi::master::Spi<'static, esp_hal::Blocking>;
 /// The SPI device type used when the display owns an exclusive SPI peripheral.
 pub(crate) type CydDisplaySpiDevice = ExclusiveDevice<CydDisplaySpiBus, Output<'static>, NoDelay>;
 type CydDisplayInterface<D> = SpiInterface<'static, D, Output<'static>>;
-type CydDisplayDevice<D> = mipidsi::Display<CydDisplayInterface<D>, ILI9341Rgb565, Output<'static>>;
+type CydDisplayDevice<D> =
+    mipidsi::Display<CydDisplayInterface<D>, ILI9341Rgb565, DisplayResetOutput>;
+
+/// A display-reset argument accepted by the CYD constructors.
+///
+/// Ordinary ESP GPIO output pins implement this trait automatically. Pass
+/// [`NoDisplayReset`] when the display reset line shares the board reset/EN net.
+pub trait DisplayResetPin: reset_pin::Sealed {}
+
+impl<Pin: OutputPin + 'static> DisplayResetPin for Pin {}
+
+/// Indicates that a CYD display has no dedicated reset GPIO.
+///
+/// Pass this to a CYD constructor when the display reset line shares the board
+/// reset/EN net, as it does on the classic ESP32-2432S028R.
+pub struct NoDisplayReset;
+
+impl DisplayResetPin for NoDisplayReset {}
+
+pub enum DisplayResetOutput {
+    Pin(Output<'static>),
+    Board,
+}
+
+impl embedded_hal::digital::ErrorType for DisplayResetOutput {
+    type Error = Infallible;
+}
+
+impl embedded_hal::digital::OutputPin for DisplayResetOutput {
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        if let Self::Pin(pin) = self {
+            pin.set_low();
+        }
+        Ok(())
+    }
+
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        if let Self::Pin(pin) = self {
+            pin.set_high();
+        }
+        Ok(())
+    }
+}
+
+mod reset_pin {
+    use esp_hal::gpio::{Level, Output, OutputConfig, OutputPin};
+
+    use super::{DisplayResetOutput, NoDisplayReset};
+
+    pub trait Sealed {
+        fn into_output(self) -> DisplayResetOutput;
+    }
+
+    impl<Pin: OutputPin + 'static> Sealed for Pin {
+        fn into_output(self) -> DisplayResetOutput {
+            DisplayResetOutput::Pin(Output::new(self, Level::High, OutputConfig::default()))
+        }
+    }
+
+    impl Sealed for NoDisplayReset {
+        fn into_output(self) -> DisplayResetOutput {
+            DisplayResetOutput::Board
+        }
+    }
+}
 
 fn orientation_to_mipi(orientation: Orientation) -> MipiOrientation {
     match orientation {
@@ -95,12 +161,12 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
     pub(crate) fn new_from_device(
         spi_device: D,
         dc_pin: impl OutputPin + 'static,
-        rst_pin: impl OutputPin + 'static,
+        rst_pin: impl DisplayResetPin,
         backlight_pin: impl OutputPin + 'static,
         orientation: Orientation,
     ) -> Result<CydDisplayEsp<D>, super::Error> {
         let dc = Output::new(dc_pin, Level::Low, OutputConfig::default());
-        let rst = Output::new(rst_pin, Level::High, OutputConfig::default());
+        let rst = reset_pin::Sealed::into_output(rst_pin);
         let mut backlight = Output::new(backlight_pin, Level::High, OutputConfig::default());
 
         static SPI_BUFFER: StaticCell<[u8; DISPLAY_SPI_BUFFER_LEN]> = StaticCell::new();
@@ -211,7 +277,7 @@ impl CydDisplayEsp<CydDisplaySpiDevice> {
         miso_pin: impl PeripheralInput<'static>,
         cs_pin: impl OutputPin + 'static,
         dc_pin: impl OutputPin + 'static,
-        rst_pin: impl OutputPin + 'static,
+        rst_pin: impl DisplayResetPin,
         backlight_pin: impl OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,

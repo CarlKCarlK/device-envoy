@@ -10,7 +10,7 @@
 //! - Display SPI MISO -> GPIO12
 //! - Display CS       -> GPIO15
 //! - Display DC       -> GPIO2
-//! - Display RST      -> GPIO4
+//! - Display RST      -> board reset / EN (no dedicated GPIO)
 //! - Display backlight -> GPIO21
 //! - Plus 3.3V and GND
 #![no_std]
@@ -32,7 +32,7 @@ use device_envoy_esp::{
     Result,
     cyd::{
         CydDisplay as _, CydDisplayEsp, CydEsp, CydStaticEsp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
-        Orientation, tiling::TileGrid,
+        NoDisplayReset, Orientation, tiling::TileGrid,
     },
     init_and_start,
 };
@@ -65,7 +65,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO12,
         p.GPIO15,
         p.GPIO2,
-        p.GPIO4,
+        NoDisplayReset,
         p.GPIO21,
         DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,

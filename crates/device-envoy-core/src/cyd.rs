@@ -8,6 +8,13 @@
 #![cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!(
+        "device_envoy_cyd_starter_preview",
+        "docs/assets/device_envoy_cyd_starter_preview.png"
+    )
+)]
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
         "linkage_blaze_gallery",
         "docs/assets/linkage_blaze_gallery.png"
     )

@@ -77,6 +77,13 @@ const fn identity_calibration_config() -> CalibrationConfig {
 #[cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!(
+        "device_envoy_cyd_starter_preview",
+        "docs/assets/device_envoy_cyd_starter_preview.png"
+    )
+)]
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
         "linkage_blaze_gallery",
         "docs/assets/linkage_blaze_gallery.png"
     )
@@ -95,14 +102,24 @@ const fn identity_calibration_config() -> CalibrationConfig {
 ///
 /// ## See CYD in action
 ///
-/// [Linkage Blaze] demonstrates animated clocks, mechanisms, and figures built
-/// with Device Envoy's portable CYD display APIs. Explore the examples in the
-/// [interactive Linkage Blaze gallery].
+/// See the [device-envoy-cyd-starter browser demo], a touch-enabled
+/// paint-book application. It runs in the browser or on the classic ESP32 CYD. It
+/// includes [full instructions](https://github.com/CarlKCarlK/device-envoy-cyd-starter)
+/// for getting started with the CYD and Device Envoy.
+#[cfg_attr(
+    feature = "doc-images",
+    doc = "\n[![The device-envoy-cyd-starter paint-book application running on a CYD][device_envoy_cyd_starter_preview]][device-envoy-cyd-starter browser demo]\n"
+)]
+///
+/// For more examples, [Linkage Blaze] demonstrates animated clocks, mechanisms,
+/// and figures built with Device Envoy's portable CYD display APIs. Explore them
+/// in the [interactive Linkage Blaze gallery].
 #[cfg_attr(
     feature = "doc-images",
     doc = "\n[![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]][interactive Linkage Blaze gallery]\n"
 )]
 ///
+/// [device-envoy-cyd-starter browser demo]: https://carlkcarlk.github.io/device-envoy-cyd-starter/www/
 /// [Linkage Blaze]: https://github.com/CarlKCarlK/linkage-blaze
 /// [interactive Linkage Blaze gallery]: https://carlkcarlk.github.io/linkage-blaze/demos/
 ///

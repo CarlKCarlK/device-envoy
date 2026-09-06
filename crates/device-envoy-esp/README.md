@@ -18,7 +18,8 @@ small, focused APIs instead of managing low-level coordination directly.
 
 Want a minimal starting project?
 
-- [`device-envoy-esp-blinky` on GitHub](https://github.com/CarlKCarlK/device-envoy-esp-blinky)
+- [`device-envoy-esp-blinky`](https://github.com/CarlKCarlK/device-envoy-esp-blinky) — a minimal starting project for general ESP32 boards
+- [`device-envoy-cyd-starter`](https://github.com/CarlKCarlK/device-envoy-cyd-starter) — a complete first project for the classic ESP32 Cheap Yellow Display, with the same portable application running in a browser simulator
 
 ## Features
 
@@ -132,7 +133,8 @@ See the `examples/` directory for complete runnable code.
 
 ## Building & Running
 
-- If you just want to use this library, start from the template project: [`device-envoy-esp-blinky`](https://github.com/CarlKCarlK/device-envoy-esp-blinky).
+- For a general ESP32 project, start from [`device-envoy-esp-blinky`](https://github.com/CarlKCarlK/device-envoy-esp-blinky).
+- For a classic ESP32 Cheap Yellow Display, start from [`device-envoy-cyd-starter`](https://github.com/CarlKCarlK/device-envoy-cyd-starter).
 - If you want to edit this project, see the [Development Guide](docs/development_guide/index.html).
 
 ## Glossary

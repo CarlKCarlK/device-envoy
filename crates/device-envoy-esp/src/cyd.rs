@@ -1,6 +1,13 @@
 #![cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!(
+        "device_envoy_cyd_starter_preview",
+        "docs/assets/device_envoy_cyd_starter_preview.png"
+    )
+)]
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
         "linkage_blaze_gallery",
         "docs/assets/linkage_blaze_gallery.png"
     )
@@ -15,16 +22,28 @@
 //!
 //! ## See CYD in action
 //!
-//! [Linkage Blaze] demonstrates animated clocks, mechanisms, and figures built
-//! with Device Envoy's portable CYD display APIs. Explore the examples in the
-//! [interactive Linkage Blaze gallery].
+//! See the [device-envoy-cyd-starter browser demo], a touch-enabled
+//! paint-book application. It runs in the browser or on the classic ESP32 CYD. It
+//! includes [full instructions](https://github.com/CarlKCarlK/device-envoy-cyd-starter)
+//! for getting started with the CYD and Device Envoy.
+#![cfg_attr(
+    feature = "doc-images",
+    doc = "\n[![The device-envoy-cyd-starter paint-book application running on a CYD][device_envoy_cyd_starter_preview]][device-envoy-cyd-starter browser demo]\n"
+)]
+//!
+//! For more examples, [Linkage Blaze] demonstrates animated clocks, mechanisms,
+//! and figures built with Device Envoy's portable CYD display APIs. Explore them
+//! in the [interactive Linkage Blaze gallery].
 #![cfg_attr(
     feature = "doc-images",
     doc = "\n[![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]][interactive Linkage Blaze gallery]\n"
 )]
 //!
+//! [device-envoy-cyd-starter browser demo]: https://carlkcarlk.github.io/device-envoy-cyd-starter/www/
 //! [Linkage Blaze]: https://github.com/CarlKCarlK/linkage-blaze
 //! [interactive Linkage Blaze gallery]: https://carlkcarlk.github.io/linkage-blaze/demos/
+//!
+//! ## Portable application API
 //!
 //! The portable [Core CYD documentation] provides the shared
 //! [application example], [drawing-strategy guide], [implementation overview],
@@ -43,9 +62,10 @@
 //! immediate operations and contiguous streaming.
 //!
 //! [Choose a constructor](#choose-a-constructor) explains how to construct an
-//! ESP32 device. The
-//! [ESP32 CYD touch-paint example](https://github.com/CarlKCarlK/device-envoy/blob/main/crates/device-envoy-examples-esp/examples/esp32/generic/cyd_touch_paint.rs)
-//! puts both stages together in a complete program.
+//! ESP32 device. See the
+//! [`device-envoy-cyd-starter` project](https://github.com/CarlKCarlK/device-envoy-cyd-starter)
+//! for a complete guide to building a portable CYD application that runs on
+//! ESP32 hardware and in a browser simulator.
 //! ## Choose a constructor
 //!
 //! Construction depends on how many [SPI resources](crate#glossary) the CYD
@@ -77,7 +97,7 @@ use core::{convert::Infallible, fmt};
 use embedded_graphics::{
     Pixel,
     mono_font::MonoFont,
-    pixelcolor::{IntoStorage, Rgb565, Rgb888},
+    pixelcolor::{IntoStorage, Rgb565, Rgb888, raw::RawU16},
     prelude::{Dimensions, DrawTarget, OriginDimensions, Point, Size},
     primitives::Rectangle,
 };
@@ -91,11 +111,11 @@ use device_envoy_core::cyd::backend;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
     backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
-    display::CydFrame,
+    display::{CydFrame, GetPixel},
     touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;
-pub use display::DEFAULT_DISPLAY_SPI_HZ;
+pub use display::{DEFAULT_DISPLAY_SPI_HZ, DisplayResetPin, NoDisplayReset};
 // The device abstraction and its neutral support types live in
 // `device-envoy-core::cyd`; re-export the public surface from this device crate.
 pub use device_envoy_core::cyd::{
@@ -253,7 +273,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameEsp<'a, D> {
     }
 
     /// Borrow the buffered frame region's raw RGB565 pixels in row-major order.
-    pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
+    fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
 
@@ -296,16 +316,7 @@ impl<D: SpiDevice<u8>> DrawTarget for CydFrameEsp<'_, D> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(point, color) in pixels {
-            let Some(local_x) = self.local_x(point.x) else {
-                continue;
-            };
-            let Some(local_y) = self.local_y(point.y) else {
-                continue;
-            };
-            if local_x < self.view.width() && local_y < self.view.height() {
-                let index = local_y * self.view.width() + local_x;
-                self.raw_pixels_mut()[index] = color.into_storage();
-            }
+            self.set_pixel(point, color);
         }
         Ok(())
     }
@@ -318,48 +329,18 @@ impl<D: SpiDevice<u8>> Dimensions for CydFrameEsp<'_, D> {
 }
 
 impl<D: SpiDevice<u8>> PixelTarget for CydFrameEsp<'_, D> {
-    fn width(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.x)
-            .expect("frame top-left x must be non-negative")
-            .checked_add(self.width())
-            .expect("frame width must fit in usize")
-    }
-
-    fn height(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.y)
-            .expect("frame top-left y must be non-negative")
-            .checked_add(self.height())
-            .expect("frame height must fit in usize")
-    }
-
-    fn put_pixel(&mut self, x: usize, y: usize, color: Rgb888) {
-        let Some(local_x) = self.local_x(x as i32) else {
+    fn set_pixel(&mut self, point: Point, color: Rgb565) {
+        let Some(local_x) = self.local_x(point.x) else {
             return;
         };
-        let Some(local_y) = self.local_y(y as i32) else {
+        let Some(local_y) = self.local_y(point.y) else {
             return;
         };
         if local_x >= self.view.width() || local_y >= self.view.height() {
             return;
         }
         let stride = self.view.width();
-        self.raw_pixels_mut()[local_y * stride + local_x] = Rgb565::from(color).into_storage();
-    }
-
-    /// The frame buffer already stores RGB565, so a decoded image pixel can be
-    /// written verbatim with no RGB888 round-trip.
-    fn put_pixel_565(&mut self, x: usize, y: usize, rgb565: u16) {
-        let Some(local_x) = self.local_x(x as i32) else {
-            return;
-        };
-        let Some(local_y) = self.local_y(y as i32) else {
-            return;
-        };
-        if local_x >= self.view.width() || local_y >= self.view.height() {
-            return;
-        }
-        let stride = self.view.width();
-        self.raw_pixels_mut()[local_y * stride + local_x] = rgb565;
+        self.raw_pixels_mut()[local_y * stride + local_x] = color.into_storage();
     }
 }
 
@@ -443,7 +424,7 @@ impl<D: SpiDevice<u8>> CydDisplayEsp<D> {
     pub(crate) fn new_from_device(
         spi_device: D,
         dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        rst_pin: impl DisplayResetPin,
         backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         orientation: Orientation,
         background_color: Rgb888,
@@ -500,7 +481,7 @@ impl CydDisplayEsp<display::CydDisplaySpiDevice> {
         display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl DisplayResetPin,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
@@ -624,7 +605,7 @@ impl CydEsp {
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # use esp_hal::spi::master::AnySpi;
     /// # async fn construct(mut p: esp_hal::peripherals::Peripherals, touch_spi: AnySpi<'static>) -> Result<()> {
-    /// #     let [mut calibration_flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// #     let [mut calibration_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
     /// #     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     ///     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
     ///
@@ -657,7 +638,7 @@ impl CydEsp {
     ///         p.GPIO13,
     ///
     ///         // Calibration storage and recalibration button:
-    ///         &mut calibration_flash,
+    ///         &mut calibration_flash_block,
     ///         &mut recalibration_button,
     ///     )
     ///     .await?;
@@ -673,7 +654,7 @@ impl CydEsp {
         display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl DisplayResetPin,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         orientation: Orientation,
@@ -752,7 +733,7 @@ impl CydEspUncalibrated {
         display_miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         display_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        display_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        display_rst_pin: impl DisplayResetPin,
         display_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         _orientation: Orientation,
@@ -946,6 +927,21 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchEsp<D> {
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
+    }
+}
+
+impl<D: SpiDevice<u8>> GetPixel for CydFrameEsp<'_, D> {
+    type Color = Rgb565;
+
+    fn pixel(&self, point: Point) -> Option<Rgb565> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.view.width() || local_y >= self.view.height() {
+            return None;
+        }
+        Some(Rgb565::from(RawU16::new(
+            self.view.raw_pixels()[local_y * self.view.width() + local_x],
+        )))
     }
 }
 

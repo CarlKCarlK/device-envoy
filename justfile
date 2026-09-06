@@ -31,23 +31,23 @@ run-conway version="v2" port="8000":
 
 # Build the RP-only docs preview and open it in a browser
 show-docs-rp:
-    cd crates/device-envoy-rp && just show-docs-rp
+    just docs-rp-only
+    bash scripts/show-docs.sh rp
 
 # Build the authoritative documentation snapshot and open all three indexes
 show-docs:
     just docs
-    bash -lc 'if command -v xdg-open >/dev/null; then xdg-open target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; elif command -v wslview >/dev/null; then wslview target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; else echo "Core docs built at target/doc/device_envoy_core/index.html"; fi'
-    crates/device-envoy-esp/scripts/open-docs-esp.sh
-    crates/device-envoy-rp/scripts/open-docs-rp.sh
+    bash scripts/show-docs.sh all
 
 # Build the Core-only docs preview and open it in a browser
 show-docs-core:
     just docs-core-only
-    bash -lc 'if command -v xdg-open >/dev/null; then xdg-open target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; elif command -v wslview >/dev/null; then wslview target/doc/device_envoy_core/index.html >/dev/null 2>&1 || true; else echo "Docs built at target/doc/device_envoy_core/index.html"; fi'
+    bash scripts/show-docs.sh core
 
 # Build the ESP-only docs preview and open it in a browser
 show-docs-esp:
-    cd crates/device-envoy-examples-esp && just show-docs-esp
+    just docs-esp-only
+    bash scripts/show-docs.sh esp
 
 # Build only Core docs. This invalidates the authoritative full snapshot.
 docs-core-only:

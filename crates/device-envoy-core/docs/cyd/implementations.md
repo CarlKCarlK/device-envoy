@@ -2,6 +2,8 @@
 
 ## Implementations
 
+Device Envoy provides four implementations of its portable CYD interfaces:
+
 - [`CydEsp`](https://docs.rs/device-envoy-esp/latest/device_envoy_esp/cyd/struct.CydEsp.html)
   runs on ESP32 hardware.
 - [`CydRp`](https://docs.rs/device-envoy-rp/latest/device_envoy_rp/cyd/struct.CydRp.html)

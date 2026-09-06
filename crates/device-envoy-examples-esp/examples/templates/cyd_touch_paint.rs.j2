@@ -5,7 +5,7 @@
 //! demo of `device_envoy_esp::cyd`'s calibration flow and calibrated touch
 //! event stream.
 //!
-{%- if chip_feature == "esp32" %}
+{%- if cyd_display_rst_pin is none %}
 //! Wiring: the classic CYD board's built-in ILI9341 display and XPT2046
 //! touch controller, fixed at the factory (see `device_envoy_esp::cyd`
 //! module docs for the CYD abstraction):
@@ -20,7 +20,11 @@
 //! - Display SPI MISO -> GPIO{{ cyd_display_miso_pin }}
 //! - Display CS       -> GPIO{{ cyd_display_cs_pin }}
 //! - Display DC       -> GPIO{{ cyd_display_dc_pin }}
+{%- if cyd_display_rst_pin is none %}
+//! - Display RST      -> board reset / EN (no dedicated GPIO)
+{%- else %}
 //! - Display RST      -> GPIO{{ cyd_display_rst_pin }}
+{%- endif %}
 //! - Display backlight -> GPIO{{ cyd_display_backlight_pin }}
 //! - Touch SPI SCK    -> GPIO{{ cyd_touch_sck_pin }}
 //! - Touch SPI MOSI   -> GPIO{{ cyd_touch_mosi_pin }}
@@ -50,6 +54,7 @@ use device_envoy_esp::{
     button::{ButtonEsp, PressedTo},
     cyd::{Cyd, CydDisplay as _, CydTouch as _, DEFAULT_DISPLAY_SPI_HZ,
         CydEsp, CydStaticEsp, DEFAULT_FONT,
+        {% if cyd_display_rst_pin is none %}NoDisplayReset,{% endif %}
         Orientation,
     },
     flash_block::FlashBlockEsp,
@@ -82,7 +87,9 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         p.GPIO{{ cyd_display_miso_pin }},
         p.GPIO{{ cyd_display_cs_pin }},
         p.GPIO{{ cyd_display_dc_pin }},
+        {% if cyd_display_rst_pin is none %}NoDisplayReset,{% else %}
         p.GPIO{{ cyd_display_rst_pin }},
+        {%- endif %}
         p.GPIO{{ cyd_display_backlight_pin }},
         DEFAULT_DISPLAY_SPI_HZ,
         Orientation::Landscape,

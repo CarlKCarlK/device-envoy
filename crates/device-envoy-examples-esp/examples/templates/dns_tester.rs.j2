@@ -11,7 +11,7 @@
 //! board. The status line stays deliberately small: a full-screen frame
 //! buffer plus the Wi-Fi stack's own heap overflows plain ESP32's DRAM.
 //!
-{%- if chip_feature == "esp32" %}
+{%- if cyd_display_rst_pin is none %}
 //! Wiring: the classic CYD board's built-in ILI9341 display and XPT2046
 //! touch controller, fixed at the factory (see `device_envoy_esp::cyd`
 //! module docs for the CYD abstraction):
@@ -26,7 +26,11 @@
 //! - Display SPI MISO -> GPIO{{ cyd_display_miso_pin }}
 //! - Display CS       -> GPIO{{ cyd_display_cs_pin }}
 //! - Display DC       -> GPIO{{ cyd_display_dc_pin }}
+{%- if cyd_display_rst_pin is none %}
+//! - Display RST      -> board reset / EN (no dedicated GPIO)
+{%- else %}
 //! - Display RST      -> GPIO{{ cyd_display_rst_pin }}
+{%- endif %}
 //! - Display backlight -> GPIO{{ cyd_display_backlight_pin }}
 {%- if spi_count >= 2 %}
 //! - Touch SPI SCK    -> GPIO{{ cyd_touch_sck_pin }}
@@ -63,6 +67,7 @@ use device_envoy_esp::{
     cyd::{
         Error as CydError,
         {% if spi_count == 1 %}CydEspOneSpi, CydStaticEsp,{% else %}CydEsp, CydStaticEsp,{% endif %}
+        {% if cyd_display_rst_pin is none %}NoDisplayReset,{% endif %}
         DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT,
     },
     flash_block::FlashBlockEsp,
@@ -110,7 +115,9 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error>
         p.GPIO{{ cyd_display_miso_pin }},
         p.GPIO{{ cyd_display_cs_pin }},
         p.GPIO{{ cyd_display_dc_pin }},
+        {% if cyd_display_rst_pin is none %}NoDisplayReset,{% else %}
         p.GPIO{{ cyd_display_rst_pin }},
+        {%- endif %}
         p.GPIO{{ cyd_display_backlight_pin }},
         DEFAULT_DISPLAY_SPI_HZ,
         p.GPIO{{ cyd_touch_cs_pin }},
@@ -132,7 +139,7 @@ async fn inner_main(spawner: Spawner) -> core::result::Result<Infallible, Error>
         p.GPIO{{ cyd_display_miso_pin }}, // display_miso_pin
         p.GPIO{{ cyd_display_cs_pin }}, // display_cs_pin
         p.GPIO{{ cyd_display_dc_pin }}, // display_dc_pin
-        p.GPIO{{ cyd_display_rst_pin }}, // display_rst_pin
+        {% if cyd_display_rst_pin is none %}NoDisplayReset{% else %}p.GPIO{{ cyd_display_rst_pin }}{% endif %}, // display_rst_pin
         p.GPIO{{ cyd_display_backlight_pin }}, // display_backlight_pin
         DEFAULT_DISPLAY_SPI_HZ, // display_spi_hz
         orientation, // orientation

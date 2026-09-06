@@ -109,7 +109,7 @@ impl CydEspOneSpi {
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
     /// # async fn construct(mut p: esp_hal::peripherals::Peripherals) -> Result<()> {
-    /// #     let [mut calibration_flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// #     let [mut calibration_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
     /// #     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     ///     static CYD_STATIC: CydStaticEsp<{ CydEspOneSpi::SCREEN_PIXELS }> =
     ///         CydEspOneSpi::new_static();
@@ -139,7 +139,7 @@ impl CydEspOneSpi {
     ///         &DEFAULT_FONT,
     ///
     ///         // Calibration storage and recalibration button:
-    ///         &mut calibration_flash,
+    ///         &mut calibration_flash_block,
     ///         &mut recalibration_button,
     ///     )
     ///     .await?;
@@ -155,7 +155,7 @@ impl CydEspOneSpi {
         miso_pin: impl esp_hal::gpio::interconnect::PeripheralInput<'static>,
         lcd_cs_pin: impl esp_hal::gpio::OutputPin + 'static,
         lcd_dc_pin: impl esp_hal::gpio::OutputPin + 'static,
-        lcd_rst_pin: impl esp_hal::gpio::OutputPin + 'static,
+        lcd_rst_pin: impl super::DisplayResetPin,
         lcd_backlight_pin: impl esp_hal::gpio::OutputPin + 'static,
         display_spi_hz: u32,
         touch_cs_pin: impl esp_hal::gpio::OutputPin + 'static,

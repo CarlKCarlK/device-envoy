@@ -35,7 +35,7 @@ use std::{collections::VecDeque, rc::Rc};
 use crate::cyd::{
     Cyd, CydDisplay, CydTouch,
     backend::{CalibrationConfig, RawTouchEvent},
-    display::{CydFrame, Orientation},
+    display::{CydFrame, GetPixel, Orientation},
     touch::{RawPoint, TouchEvent},
 };
 use crate::{
@@ -50,7 +50,7 @@ use embedded_graphics::pixelcolor::RgbColor;
 use embedded_graphics::{
     Drawable, Pixel,
     mono_font::{MonoFont, MonoTextStyle},
-    pixelcolor::{IntoStorage, Rgb565, Rgb888},
+    pixelcolor::{IntoStorage, Rgb565, Rgb888, raw::RawU16},
     prelude::{Dimensions, DrawTarget, Point, Size},
     primitives::Rectangle,
     text::{Baseline, Text},
@@ -77,6 +77,13 @@ const fn identity_calibration_config() -> CalibrationConfig {
 #[cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!(
+        "device_envoy_cyd_starter_preview",
+        "docs/assets/device_envoy_cyd_starter_preview.png"
+    )
+)]
+#[cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
         "linkage_blaze_gallery",
         "docs/assets/linkage_blaze_gallery.png"
     )
@@ -95,14 +102,24 @@ const fn identity_calibration_config() -> CalibrationConfig {
 ///
 /// ## See CYD in action
 ///
-/// [Linkage Blaze] demonstrates animated clocks, mechanisms, and figures built
-/// with Device Envoy's portable CYD display APIs. Explore the examples in the
-/// [interactive Linkage Blaze gallery].
+/// See the [device-envoy-cyd-starter browser demo], a touch-enabled
+/// paint-book application. It runs in the browser or on the classic ESP32 CYD. It
+/// includes [full instructions](https://github.com/CarlKCarlK/device-envoy-cyd-starter)
+/// for getting started with the CYD and Device Envoy.
+#[cfg_attr(
+    feature = "doc-images",
+    doc = "\n[![The device-envoy-cyd-starter paint-book application running on a CYD][device_envoy_cyd_starter_preview]][device-envoy-cyd-starter browser demo]\n"
+)]
+///
+/// For more examples, [Linkage Blaze] demonstrates animated clocks, mechanisms,
+/// and figures built with Device Envoy's portable CYD display APIs. Explore them
+/// in the [interactive Linkage Blaze gallery].
 #[cfg_attr(
     feature = "doc-images",
     doc = "\n[![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]][interactive Linkage Blaze gallery]\n"
 )]
 ///
+/// [device-envoy-cyd-starter browser demo]: https://carlkcarlk.github.io/device-envoy-cyd-starter/www/
 /// [Linkage Blaze]: https://github.com/CarlKCarlK/linkage-blaze
 /// [interactive Linkage Blaze gallery]: https://carlkcarlk.github.io/linkage-blaze/demos/
 ///
@@ -667,11 +684,27 @@ impl CydTouch for CydTouchWasm {
     type Error = Infallible;
 
     fn try_read(&mut self) -> Result<Option<TouchEvent>, Infallible> {
-        Ok(self
-            .raw_touch_events
-            .borrow_mut()
-            .pop_front()
-            .map(|raw_touch_event| match raw_touch_event {
+        let raw_touch_event = self.raw_touch_events.borrow_mut().pop_front();
+        let raw_touch_event = raw_touch_event.map(|raw_touch_event| {
+            if let RawTouchEvent::Move { .. } = raw_touch_event {
+                // Pointer events can arrive much faster than a full-frame
+                // canvas presentation. Keep the newest consecutive move so
+                // the application follows the pointer instead of painting a
+                // backlog of stale positions.
+                let mut latest_move = raw_touch_event;
+                let mut raw_touch_events = self.raw_touch_events.borrow_mut();
+                while let Some(RawTouchEvent::Move { .. }) = raw_touch_events.front() {
+                    if let Some(next_move) = raw_touch_events.pop_front() {
+                        latest_move = next_move;
+                    }
+                }
+                latest_move
+            } else {
+                raw_touch_event
+            }
+        });
+        Ok(
+            raw_touch_event.map(|raw_touch_event| match raw_touch_event {
                 RawTouchEvent::Down { raw_x, raw_y } => {
                     let (x, y) = self.calibration_config.map_raw_to_screen(raw_x, raw_y);
                     TouchEvent::Down {
@@ -689,7 +722,8 @@ impl CydTouch for CydTouchWasm {
                     }
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
-            }))
+            }),
+        )
     }
 }
 
@@ -789,16 +823,7 @@ impl DrawTarget for CydFrameWasm<'_> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(point, color) in pixels {
-            let Some(local_x) = self.local_x(point.x) else {
-                continue;
-            };
-            let Some(local_y) = self.local_y(point.y) else {
-                continue;
-            };
-            if local_x < CydFrameWasm::width(self) && local_y < CydFrameWasm::height(self) {
-                let index = local_y * CydFrameWasm::width(self) + local_x;
-                self.pixels[index] = color.into_storage();
-            }
+            self.set_pixel(point, color);
         }
         Ok(())
     }
@@ -811,48 +836,33 @@ impl Dimensions for CydFrameWasm<'_> {
 }
 
 impl PixelTarget for CydFrameWasm<'_> {
-    fn width(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.x)
-            .expect("frame top-left x must be non-negative")
-            .checked_add(CydFrameWasm::width(self))
-            .expect("frame width must fit in usize")
-    }
-
-    fn height(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.y)
-            .expect("frame top-left y must be non-negative")
-            .checked_add(CydFrameWasm::height(self))
-            .expect("frame height must fit in usize")
-    }
-
-    fn put_pixel(&mut self, x: usize, y: usize, color: Rgb888) {
-        let Some(local_x) = self.local_x(x as i32) else {
+    fn set_pixel(&mut self, point: Point, color: Rgb565) {
+        let Some(local_x) = self.local_x(point.x) else {
             return;
         };
-        let Some(local_y) = self.local_y(y as i32) else {
+        let Some(local_y) = self.local_y(point.y) else {
             return;
         };
         if local_x >= CydFrameWasm::width(self) || local_y >= CydFrameWasm::height(self) {
             return;
         }
         let stride = CydFrameWasm::width(self);
-        self.pixels[local_y * stride + local_x] = Rgb565::from(color).into_storage();
+        self.pixels[local_y * stride + local_x] = color.into_storage();
     }
+}
 
-    /// The frame buffer already stores RGB565, so a decoded image pixel can be
-    /// written verbatim with no RGB888 round-trip.
-    fn put_pixel_565(&mut self, x: usize, y: usize, rgb565: u16) {
-        let Some(local_x) = self.local_x(x as i32) else {
-            return;
-        };
-        let Some(local_y) = self.local_y(y as i32) else {
-            return;
-        };
-        if local_x >= CydFrameWasm::width(self) || local_y >= CydFrameWasm::height(self) {
-            return;
+impl GetPixel for CydFrameWasm<'_> {
+    type Color = Rgb565;
+
+    fn pixel(&self, point: Point) -> Option<Rgb565> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.width() || local_y >= self.height() {
+            return None;
         }
-        let stride = CydFrameWasm::width(self);
-        self.pixels[local_y * stride + local_x] = rgb565;
+        Some(Rgb565::from(RawU16::new(
+            self.pixels[local_y * self.width() + local_x],
+        )))
     }
 }
 

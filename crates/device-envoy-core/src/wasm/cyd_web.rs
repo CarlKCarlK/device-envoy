@@ -688,11 +688,11 @@ fn fatal(state: &Rc<RefCell<SupervisorState>>, message: String) {
 fn apply_host_request(
     request: HostRequest,
     config: &Config,
-    flash: &mut FlashBlockWasm,
+    orientation_flash_block: &mut FlashBlockWasm,
     state: &Rc<RefCell<SupervisorState>>,
 ) -> Result<(), String> {
     if matches!(request, HostRequest::ClearStorage) {
-        flash
+        orientation_flash_block
             .clear()
             .map_err(|error| format!("storage clear failed: {error:?}"))?;
         state.borrow_mut().orientation = config.initial_orientation;

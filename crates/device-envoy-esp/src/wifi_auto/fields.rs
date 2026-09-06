@@ -29,23 +29,24 @@
 //!     p: esp_hal::peripherals::Peripherals,
 //! ) -> Result<()> {
 //!     let mut button6 = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-//!     let [wifi_flash, website_flash, timezone_flash] = FlashBlockEsp::new_array::<3>(p.FLASH)?;
+//!     let [wifi_credentials_flash_block, website_flash_block, timezone_flash_block] =
+//!         FlashBlockEsp::new_array::<3>(p.FLASH)?;
 //!
 //!     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
 //!     let website_field = TextField::new(
 //!         &WEBSITE_STATIC,
-//!         website_flash,
+//!         website_flash_block,
 //!         "website",
 //!         "Website",
 //!         "google.com",
 //!     );
 //!
 //!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
-//!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
+//!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
 //!
 //!     let wifi_auto = WifiAutoEsp::new(
 //!         p.WIFI,
-//!         wifi_flash,
+//!         wifi_credentials_flash_block,
 //!         "DeviceEnvoySetup",
 //!         [website_field, timezone_field],
 //!         spawner,

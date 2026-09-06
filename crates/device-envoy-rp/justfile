@@ -9,10 +9,10 @@ docs-rp-only-no-images:
 	@echo "WARNING: doc images are disabled; generated RP docs are incomplete and must not be reviewed or published." >&2
 	cargo doc --target thumbv8m.main-none-eabihf --no-deps --release --features pico2,arm,wifi --no-default-features
 
-# Build docs and open them in Windows Edge (via WSL)
+# Build docs and open them in a browser
 show-docs-rp:
 	just docs-rp-only
-	./scripts/open-docs-rp.sh
+	bash ../../scripts/show-docs.sh rp
 
 run name board="1":
 	./scripts/device-action.sh run {{name}} {{board}}

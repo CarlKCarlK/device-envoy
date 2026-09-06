@@ -1,9 +1,12 @@
 #![cfg(feature = "host")]
 
-use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
+use device_envoy_core::{
+    cyd::display::GetPixel,
+    memory::{CydMemory, assert_framebuffer_matches_expected_png},
+};
 use device_envoy_examples_core::conway_app::{ConwayApp, ConwayInput, ConwayStatus};
 use embedded_graphics::{
-    geometry::Size,
+    geometry::{Point, Size},
     mono_font::ascii::FONT_6X10,
     pixelcolor::{Rgb565, Rgb888},
     prelude::RgbColor,
@@ -63,7 +66,11 @@ fn shared_conway_memory_runs_public_input_tick_and_power_paths()
 fn framebuffer_pixels(cyd_memory: &CydMemory) -> Vec<Rgb565> {
     (0..240)
         .flat_map(|position_y| {
-            (0..320).map(move |position_x| cyd_memory.pixel(position_x, position_y))
+            (0..320).map(move |position_x| {
+                cyd_memory
+                    .pixel(Point::new(position_x, position_y))
+                    .expect("framebuffer point should be in bounds")
+            })
         })
         .collect()
 }

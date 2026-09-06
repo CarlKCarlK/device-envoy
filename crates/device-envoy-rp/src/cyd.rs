@@ -1,6 +1,13 @@
 #![cfg_attr(
     feature = "doc-images",
     doc = ::embed_doc_image::embed_image!(
+        "device_envoy_cyd_starter_preview",
+        "docs/assets/device_envoy_cyd_starter_preview.png"
+    )
+)]
+#![cfg_attr(
+    feature = "doc-images",
+    doc = ::embed_doc_image::embed_image!(
         "linkage_blaze_gallery",
         "docs/assets/linkage_blaze_gallery.png"
     )
@@ -16,16 +23,28 @@
 //!
 //! ## See CYD in action
 //!
-//! [Linkage Blaze] demonstrates animated clocks, mechanisms, and figures built
-//! with Device Envoy's portable CYD display APIs. Explore the examples in the
-//! [interactive Linkage Blaze gallery].
+//! See the [device-envoy-cyd-starter browser demo], a touch-enabled
+//! paint-book application. It runs in the browser or on the classic ESP32 CYD. It
+//! includes [full instructions](https://github.com/CarlKCarlK/device-envoy-cyd-starter)
+//! for getting started with the CYD and Device Envoy.
+#![cfg_attr(
+    feature = "doc-images",
+    doc = "\n[![The device-envoy-cyd-starter paint-book application running on a CYD][device_envoy_cyd_starter_preview]][device-envoy-cyd-starter browser demo]\n"
+)]
+//!
+//! For more examples, [Linkage Blaze] demonstrates animated clocks, mechanisms,
+//! and figures built with Device Envoy's portable CYD display APIs. Explore them
+//! in the [interactive Linkage Blaze gallery].
 #![cfg_attr(
     feature = "doc-images",
     doc = "\n[![Linkage Blaze gallery showing CYD applications][linkage_blaze_gallery]][interactive Linkage Blaze gallery]\n"
 )]
 //!
+//! [device-envoy-cyd-starter browser demo]: https://carlkcarlk.github.io/device-envoy-cyd-starter/www/
 //! [Linkage Blaze]: https://github.com/CarlKCarlK/linkage-blaze
 //! [interactive Linkage Blaze gallery]: https://carlkcarlk.github.io/linkage-blaze/demos/
+//!
+//! ## Portable application API
 //!
 //! The portable [Core CYD documentation] provides the shared
 //! [application example], [drawing-strategy guide], [implementation overview],
@@ -79,7 +98,7 @@ use device_envoy_core::cyd::backend;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
     backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
-    display::CydFrame,
+    display::{CydFrame, GetPixel},
     touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;
@@ -97,7 +116,7 @@ use embassy_rp::spi::{ClkPin, MisoPin, MosiPin};
 use embedded_graphics::{
     Pixel,
     mono_font::MonoFont,
-    pixelcolor::{IntoStorage, Rgb565, Rgb888},
+    pixelcolor::{IntoStorage, Rgb565, Rgb888, raw::RawU16},
     prelude::{Dimensions, DrawTarget, OriginDimensions, Point, Size},
     primitives::Rectangle,
 };
@@ -255,7 +274,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     }
 
     /// Borrow the buffered frame region's raw RGB565 pixels in row-major order.
-    pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
+    fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
 
@@ -298,16 +317,7 @@ impl<D: SpiDevice<u8>> DrawTarget for CydFrameRp<'_, D> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(point, color) in pixels {
-            let Some(local_x) = self.local_x(point.x) else {
-                continue;
-            };
-            let Some(local_y) = self.local_y(point.y) else {
-                continue;
-            };
-            if local_x < self.view.width() && local_y < self.view.height() {
-                let index = local_y * self.view.width() + local_x;
-                self.raw_pixels_mut()[index] = color.into_storage();
-            }
+            self.set_pixel(point, color);
         }
         Ok(())
     }
@@ -320,48 +330,18 @@ impl<D: SpiDevice<u8>> Dimensions for CydFrameRp<'_, D> {
 }
 
 impl<D: SpiDevice<u8>> PixelTarget for CydFrameRp<'_, D> {
-    fn width(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.x)
-            .expect("frame top-left x must be non-negative")
-            .checked_add(self.width())
-            .expect("frame width must fit in usize")
-    }
-
-    fn height(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.y)
-            .expect("frame top-left y must be non-negative")
-            .checked_add(self.height())
-            .expect("frame height must fit in usize")
-    }
-
-    fn put_pixel(&mut self, x: usize, y: usize, color: Rgb888) {
-        let Some(local_x) = self.local_x(x as i32) else {
+    fn set_pixel(&mut self, point: Point, color: Rgb565) {
+        let Some(local_x) = self.local_x(point.x) else {
             return;
         };
-        let Some(local_y) = self.local_y(y as i32) else {
+        let Some(local_y) = self.local_y(point.y) else {
             return;
         };
         if local_x >= self.view.width() || local_y >= self.view.height() {
             return;
         }
         let stride = self.view.width();
-        self.raw_pixels_mut()[local_y * stride + local_x] = Rgb565::from(color).into_storage();
-    }
-
-    /// The frame buffer already stores RGB565, so a decoded image pixel can be
-    /// written verbatim with no RGB888 round-trip.
-    fn put_pixel_565(&mut self, x: usize, y: usize, rgb565: u16) {
-        let Some(local_x) = self.local_x(x as i32) else {
-            return;
-        };
-        let Some(local_y) = self.local_y(y as i32) else {
-            return;
-        };
-        if local_x >= self.view.width() || local_y >= self.view.height() {
-            return;
-        }
-        let stride = self.view.width();
-        self.raw_pixels_mut()[local_y * stride + local_x] = rgb565;
+        self.raw_pixels_mut()[local_y * stride + local_x] = color.into_storage();
     }
 }
 
@@ -626,7 +606,7 @@ impl CydRp {
     /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
-    ///     let [mut calibration_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    ///     let [mut calibration_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     ///     let mut recalibration_button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
     ///     static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
     ///
@@ -659,7 +639,7 @@ impl CydRp {
     ///         p.PIN_14,
     ///
     ///         // Calibration storage and recalibration button:
-    ///         &mut calibration_flash,
+    ///         &mut calibration_flash_block,
     ///         &mut recalibration_button,
     ///     )
     ///     .await?;
@@ -1007,6 +987,21 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchRp<D> {
                 }
                 RawTouchEvent::Up => TouchEvent::Up,
             }))
+    }
+}
+
+impl<D: SpiDevice<u8>> GetPixel for CydFrameRp<'_, D> {
+    type Color = Rgb565;
+
+    fn pixel(&self, point: Point) -> Option<Rgb565> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.view.width() || local_y >= self.view.height() {
+            return None;
+        }
+        Some(Rgb565::from(RawU16::new(
+            self.view.raw_pixels()[local_y * self.view.width() + local_x],
+        )))
     }
 }
 

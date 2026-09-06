@@ -1,4 +1,6 @@
-use embedded_graphics::{pixelcolor::Rgb565, prelude::Point, primitives::Rectangle};
+use embedded_graphics::{
+    image::GetPixel, pixelcolor::Rgb565, prelude::Point, primitives::Rectangle,
+};
 
 use super::{DrawItem, Image565View};
 
@@ -304,7 +306,7 @@ impl PreparedPixelSource {
                 .covers_inside_bounds(point_x, point_y)
                 .then_some(primitive.color),
             PreparedPixelSourceKind::Bitmap { view, top_left } => {
-                Some(view.pixel_at(Point::new(point_x, point_y) - top_left))
+                view.pixel(Point::new(point_x, point_y) - top_left)
             }
         }
     }

@@ -12,7 +12,7 @@ docs-esp-only-unvalidated:
 # Build docs and open them in a browser
 show-docs-esp:
     just docs-esp-only
-    ../device-envoy-esp/scripts/open-docs-esp.sh
+    bash ../../scripts/show-docs.sh esp
 
 # Regenerate board-specific ESP examples from their templates.
 generate-board-examples:

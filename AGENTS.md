@@ -99,6 +99,11 @@ Variables should generally match their type names converted to snake_case. This 
 
 Avoid abbreviations like `addrs`; spell out `addresses`.
 
+When a value is named after its type, spell out the type name instead of
+shortening it. For a `FlashBlock` value, use the full `_flash_block` suffix:
+prefer `page_flash_block` or `boot_counter_flash_block` over `page_block` or
+`boot_counter_block`.
+
 ### Naming: dimensions and 2d
 
 Use standard Rust snake_case for locals, fields, and functions; UpperCamelCase for types; SCREAMING_SNAKE_CASE for constants.

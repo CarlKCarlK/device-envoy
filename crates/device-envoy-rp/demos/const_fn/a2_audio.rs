@@ -83,11 +83,13 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 const fn read_s16le<const SAMPLE_COUNT: usize>(
     bytes: &[u8],
 ) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
+    let (sample_bytes, []) = bytes.as_chunks::<2>() else {
+        panic!("s16le requires exactly two bytes per sample");
+    };
     let mut samples = [0_i16; SAMPLE_COUNT];
     let mut sample_index = 0;
     while sample_index < SAMPLE_COUNT {
-        let byte_index = sample_index * 2;
-        samples[sample_index] = i16::from_le_bytes([bytes[byte_index], bytes[byte_index + 1]]);
+        samples[sample_index] = i16::from_le_bytes(sample_bytes[sample_index]);
         sample_index += 1;
     }
     __pcm_clip_from_samples(samples)

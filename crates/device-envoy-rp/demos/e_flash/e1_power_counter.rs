@@ -45,18 +45,16 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     // Create a one-block flash array. Each block holds up to 3900 bytes
     // of serialized data (one 4 KB flash block minus metadata).
-    let flash_block_array = FlashBlockRp::new_array::<1>(p.FLASH)?;
-    // Can destructure the array.
-    let [mut boot_counter_block] = flash_block_array;
+    let [mut boot_counter_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
     // Read the boot counter. Wrong type -> None -> BootCounter(0).
-    let mut boot_counter = boot_counter_block.load()?.unwrap_or(BootCounter(0));
+    let mut boot_counter = boot_counter_flash_block.load()?.unwrap_or(BootCounter(0));
 
     boot_counter.0 = (boot_counter.0 + 1) % 10; // Increment and wrap at 10.
 
     // Write counter back to flash. (Avoid tight loop.
     // Flash is typically good for ~100K erase cycles per block.)
-    boot_counter_block.save(&boot_counter)?;
+    boot_counter_flash_block.save(&boot_counter)?;
 
     // Display the counter on the LED panel (single digit 0-9)
     const DIGITS: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];

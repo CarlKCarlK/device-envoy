@@ -6,6 +6,7 @@ If you only want to use `device-envoy-rp` or `device-envoy-esp` in your own proj
 
 - [`device-envoy-rp-blinky`](https://github.com/CarlKCarlK/device-envoy-rp-blinky)
 - [`device-envoy-esp-blinky`](https://github.com/CarlKCarlK/device-envoy-esp-blinky)
+- [`device-envoy-cyd-starter`](https://github.com/CarlKCarlK/device-envoy-cyd-starter)
 
 ## Toolchains and Targets
 

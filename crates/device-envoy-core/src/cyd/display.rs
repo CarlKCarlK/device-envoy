@@ -43,6 +43,7 @@ use crate::pixel_target::PixelTarget;
 
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
+pub use embedded_graphics::image::GetPixel;
 pub use orientation::Orientation;
 pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, MaskedDrawable, mask_byte_count};
 
@@ -72,6 +73,8 @@ pub use crate::__cyd_tga as tga;
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
 ///
 /// Also a [`PixelTarget`] so draw items can render into it.
+/// [`GetPixel::pixel`] reads buffered pixels at logical screen coordinates and
+/// returns `None` outside the frame.
 ///
 /// # Coordinates and clipping
 ///
@@ -98,7 +101,7 @@ pub use crate::__cyd_tga as tga;
     doc = r#"
 
 ```rust
-use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
+use device_envoy_core::cyd::{CydDisplay, display::{CydFrame, GetPixel}};
 use embedded_graphics::{
     pixelcolor::{Rgb565, RgbColor},
     prelude::{Point, Size},
@@ -107,7 +110,9 @@ use embedded_graphics::{
 
 async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     let mut frame = display.frame_mut(Rectangle::new(Point::new(10, 10), Size::new(100, 40)));
-    frame.fill(Rgb565::BLUE).write_text("CYD").flush().await
+    frame.fill(Rgb565::BLUE);
+    assert_eq!(frame.pixel(Point::new(109, 49)), Some(Rgb565::BLUE));
+    frame.write_text("CYD").flush().await
 }
 
 # use device_envoy_core::memory::{CydMemory, assert_framebuffer_matches_expected_png};
@@ -135,7 +140,9 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     all(feature = "host", feature = "doc-images"),
     doc = "\n![A blue frame containing white CYD text on an in-memory display.][cyd_frame_preview]\n"
 )]
-pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
+pub trait CydFrame:
+    DrawTarget<Color = Rgb565, Error = Infallible> + GetPixel<Color = Rgb565> + PixelTarget
+{
     /// Error returned when presenting the frame.
     type Error;
 

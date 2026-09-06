@@ -113,7 +113,7 @@ impl RegionView<'_> {
     }
 
     /// Borrow the raw RGB565 pixels, row-major.
-    pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
+    pub(super) fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.pixels
     }
     pub(crate) fn raw_pixels(&self) -> &[u16] {

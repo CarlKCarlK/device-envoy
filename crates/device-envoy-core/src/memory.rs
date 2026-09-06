@@ -35,7 +35,7 @@ use crate::cyd::touch::flow::{MIN_SAMPLES_PER_POINT, SAMPLES_DISCARDED_AFTER_DOW
 use crate::cyd::{
     Cyd, CydDisplay, CydTouch,
     backend::{CalibrationConfig, RawTouchEvent},
-    display::{CydFrame, Orientation},
+    display::{CydFrame, GetPixel, Orientation},
     touch::TouchEvent,
 };
 #[cfg(test)]
@@ -105,6 +105,7 @@ pub enum Error {
 /// process. Tests can draw through the portable [`Cyd`]
 /// interface, inject touch and button input, inspect pixels and flush counts,
 /// and compare the complete framebuffer with a golden PNG.
+/// [`GetPixel::pixel`] inspects the framebuffer in logical screen coordinates.
 ///
 /// # Example
 ///
@@ -280,7 +281,7 @@ impl CydMemory {
     ///
     /// ```rust,no_run
     /// use device_envoy_core::{
-    ///     cyd::{Cyd, CydDisplay, display::{CydFrame, Orientation}},
+    ///     cyd::{Cyd, CydDisplay, display::{CydFrame, GetPixel, Orientation}},
     ///     memory::{CydMemory, Error},
     /// };
     /// use embedded_graphics::{
@@ -305,9 +306,12 @@ impl CydMemory {
     /// first_frame.fill(Rgb565::RED);
     /// block_on(first_frame.flush())?;
     /// drop(first_frame);
-    /// assert_eq!(cyd_memory.pixel(0, 0), Rgb565::RED);
+    /// assert_eq!(cyd_memory.pixel(Point::zero()), Some(Rgb565::RED));
     /// cyd_memory.rotate_framebuffer_180();
-    /// assert_eq!(cyd_memory.pixel(319, 239), Rgb565::RED);
+    /// assert_eq!(
+    ///     cyd_memory.pixel(Point::new(319, 239)),
+    ///     Some(Rgb565::RED),
+    /// );
     /// # Ok::<(), Error>(())
     /// ```
     #[must_use]
@@ -503,24 +507,6 @@ impl CydMemory {
         self.shared.borrow().last_flush_rectangle
     }
 
-    /// Read one pixel from the in-memory framebuffer.
-    #[must_use]
-    pub fn pixel(&self, position_x: usize, position_y: usize) -> Rgb565 {
-        assert!(
-            position_x < self.display.size.width as usize,
-            "position_x must stay within the screen"
-        );
-        assert!(
-            position_y < self.display.size.height as usize,
-            "position_y must stay within the screen"
-        );
-        let stride = self.display.size.width as usize;
-        let shared = self.shared.borrow();
-        Rgb565::from(RawU16::new(
-            shared.framebuffer[position_y * stride + position_x],
-        ))
-    }
-
     /// Apply the physical 180-degree presentation used by an inverted CYD orientation.
     ///
     /// The [`new_with_orientation`](CydMemory::new_with_orientation) example
@@ -577,6 +563,26 @@ impl CydMemory {
         let mut png_writer = encoder.write_header()?;
         png_writer.write_image_data(&rgb_bytes)?;
         Ok(())
+    }
+}
+
+impl GetPixel for CydMemory {
+    type Color = Rgb565;
+
+    /// Read one pixel from the in-memory framebuffer.
+    fn pixel(&self, point: Point) -> Option<Self::Color> {
+        let position_x = usize::try_from(point.x).ok()?;
+        let position_y = usize::try_from(point.y).ok()?;
+        if position_x >= self.display.size.width as usize
+            || position_y >= self.display.size.height as usize
+        {
+            return None;
+        }
+        let stride = self.display.size.width as usize;
+        let shared = self.shared.borrow();
+        Some(Rgb565::from(RawU16::new(
+            shared.framebuffer[position_y * stride + position_x],
+        )))
     }
 }
 
@@ -860,17 +866,7 @@ impl DrawTarget for CydFrameMemory {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(point, color) in pixels {
-            let Some(local_x) = self.local_x(point.x) else {
-                continue;
-            };
-            let Some(local_y) = self.local_y(point.y) else {
-                continue;
-            };
-            if local_x >= self.width() || local_y >= self.height() {
-                continue;
-            }
-            let stride = self.width();
-            self.pixels[local_y * stride + local_x] = color.into_storage();
+            self.set_pixel(point, color);
         }
         Ok(())
     }
@@ -883,36 +879,33 @@ impl Dimensions for CydFrameMemory {
 }
 
 impl PixelTarget for CydFrameMemory {
-    fn width(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.x)
-            .expect("frame top-left x must be non-negative")
-            .checked_add(self.width())
-            .expect("frame width must fit in usize")
-    }
-
-    fn height(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.y)
-            .expect("frame top-left y must be non-negative")
-            .checked_add(self.height())
-            .expect("frame height must fit in usize")
-    }
-
-    fn put_pixel(&mut self, x: usize, y: usize, color: Rgb888) {
-        self.put_pixel_565(x, y, Rgb565::from(color).into_storage());
-    }
-
-    fn put_pixel_565(&mut self, x: usize, y: usize, rgb565: u16) {
-        let Some(local_x) = self.local_x(x as i32) else {
+    fn set_pixel(&mut self, point: Point, color: Rgb565) {
+        let Some(local_x) = self.local_x(point.x) else {
             return;
         };
-        let Some(local_y) = self.local_y(y as i32) else {
+        let Some(local_y) = self.local_y(point.y) else {
             return;
         };
         if local_x >= self.width() || local_y >= self.height() {
             return;
         }
         let stride = self.width();
-        self.pixels[local_y * stride + local_x] = rgb565;
+        self.pixels[local_y * stride + local_x] = color.into_storage();
+    }
+}
+
+impl GetPixel for CydFrameMemory {
+    type Color = Rgb565;
+
+    fn pixel(&self, point: Point) -> Option<Self::Color> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.width() || local_y >= self.height() {
+            return None;
+        }
+        Some(Rgb565::from(RawU16::new(
+            self.pixels[local_y * self.width() + local_x],
+        )))
     }
 }
 
@@ -930,17 +923,6 @@ impl CydFrame for CydFrameMemory {
 
     fn clear(&mut self) -> &mut Self {
         self.fill(self.background565)
-    }
-
-    fn pixel(&self, point: Point) -> Option<Rgb565> {
-        let local_x = self.local_x(point.x)?;
-        let local_y = self.local_y(point.y)?;
-        if local_x >= self.width() || local_y >= self.height() {
-            return None;
-        }
-        Some(Rgb565::from(RawU16::new(
-            self.pixels[local_y * self.width() + local_x],
-        )))
     }
 
     fn write_text(&mut self, text: &str) -> &mut Self {
@@ -1322,7 +1304,7 @@ mod tests {
             CalibrationConfig, Error as CalibrationError, RawTouchEvent, TouchUncalibrated,
             ensure_calibration,
         },
-        display::{CydFrame, Orientation},
+        display::{CydFrame, GetPixel, Orientation},
         touch::{
             RawPoint, TouchEvent,
             calibration::{
@@ -1406,6 +1388,14 @@ mod tests {
     }
 
     #[test]
+    fn pixel_returns_none_outside_display() {
+        let memory_cyd = test_cyd_memory();
+
+        assert_eq!(memory_cyd.pixel(Point::new(-1, 0)), None);
+        assert_eq!(memory_cyd.pixel(Point::new(320, 0)), None);
+    }
+
+    #[test]
     fn short_fill_contiguous_iterator_changes_only_supplied_pixels() {
         let memory_cyd = test_cyd_memory();
         let rectangle = Rectangle::new(Point::new(2, 3), Size::new(2, 2));
@@ -1416,10 +1406,10 @@ mod tests {
                 .expect("memory streaming should succeed");
         }
 
-        assert_eq!(memory_cyd.pixel(2, 3), Rgb565::CSS_RED);
-        assert_eq!(memory_cyd.pixel(3, 3), Rgb565::CSS_GREEN);
-        assert_eq!(memory_cyd.pixel(2, 4), Rgb565::CSS_BLACK);
-        assert_eq!(memory_cyd.pixel(3, 4), Rgb565::CSS_BLACK);
+        assert_eq!(memory_cyd.pixel(Point::new(2, 3)), Some(Rgb565::CSS_RED));
+        assert_eq!(memory_cyd.pixel(Point::new(3, 3)), Some(Rgb565::CSS_GREEN));
+        assert_eq!(memory_cyd.pixel(Point::new(2, 4)), Some(Rgb565::CSS_BLACK));
+        assert_eq!(memory_cyd.pixel(Point::new(3, 4)), Some(Rgb565::CSS_BLACK));
     }
 
     #[test]
@@ -1442,11 +1432,11 @@ mod tests {
                 .expect("memory streaming should succeed");
         }
 
-        assert_eq!(memory_cyd.pixel(2, 3), Rgb565::CSS_RED);
-        assert_eq!(memory_cyd.pixel(3, 3), Rgb565::CSS_GREEN);
-        assert_eq!(memory_cyd.pixel(2, 4), Rgb565::CSS_BLUE);
-        assert_eq!(memory_cyd.pixel(3, 4), Rgb565::CSS_WHITE);
-        assert_eq!(memory_cyd.pixel(4, 3), Rgb565::CSS_BLACK);
+        assert_eq!(memory_cyd.pixel(Point::new(2, 3)), Some(Rgb565::CSS_RED));
+        assert_eq!(memory_cyd.pixel(Point::new(3, 3)), Some(Rgb565::CSS_GREEN));
+        assert_eq!(memory_cyd.pixel(Point::new(2, 4)), Some(Rgb565::CSS_BLUE));
+        assert_eq!(memory_cyd.pixel(Point::new(3, 4)), Some(Rgb565::CSS_WHITE));
+        assert_eq!(memory_cyd.pixel(Point::new(4, 3)), Some(Rgb565::CSS_BLACK));
     }
 
     #[test]
@@ -1460,7 +1450,7 @@ mod tests {
                 .expect("drawing into memory frame should succeed");
             block_on(frame.flush()).expect("flush should succeed");
         }
-        assert_eq!(memory_cyd.pixel(11, 21), Rgb565::CSS_RED);
+        assert_eq!(memory_cyd.pixel(Point::new(11, 21)), Some(Rgb565::CSS_RED));
         assert_eq!(
             memory_cyd.last_flush_rectangle(),
             Some(Rectangle::new(Point::new(10, 20), Size::new(4, 3)))
@@ -1490,9 +1480,9 @@ mod tests {
                 )
                 .expect("off-screen fill_rectangle should stay a no-op");
         }
-        assert_eq!(memory_cyd.pixel(0, 0), Rgb565::CSS_GREEN);
-        assert_eq!(memory_cyd.pixel(1, 1), Rgb565::CSS_GREEN);
-        assert_eq!(memory_cyd.pixel(3, 3), Rgb565::CSS_BLACK);
+        assert_eq!(memory_cyd.pixel(Point::zero()), Some(Rgb565::CSS_GREEN));
+        assert_eq!(memory_cyd.pixel(Point::new(1, 1)), Some(Rgb565::CSS_GREEN));
+        assert_eq!(memory_cyd.pixel(Point::new(3, 3)), Some(Rgb565::CSS_BLACK));
     }
 
     #[test]
@@ -1763,15 +1753,15 @@ mod tests {
         ));
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);
+        assert_eq!(memory_cyd.pixel(upper_left_center), Some(Rgb565::CSS_WHITE));
         assert_eq!(
-            memory_cyd.pixel(upper_left_center.x as usize, upper_left_center.y as usize),
-            Rgb565::CSS_WHITE
+            memory_cyd.pixel(upper_right_center),
+            Some(Rgb565::CSS_WHITE)
         );
         assert_eq!(
-            memory_cyd.pixel(upper_right_center.x as usize, upper_right_center.y as usize),
-            Rgb565::CSS_WHITE
+            memory_cyd.pixel(Point::new(160, 120)),
+            Some(Rgb565::CSS_BLACK)
         );
-        assert_eq!(memory_cyd.pixel(160, 120), Rgb565::CSS_BLACK);
     }
 
     #[test]
@@ -2023,13 +2013,10 @@ mod tests {
         assert_eq!(memory_cyd.flush_count(), 2);
         let upper_left_center = calibration_corner_center(CalibrationCorner::UpperLeft);
         let upper_right_center = calibration_corner_center(CalibrationCorner::UpperRight);
+        assert_eq!(memory_cyd.pixel(upper_left_center), Some(Rgb565::CSS_WHITE));
         assert_eq!(
-            memory_cyd.pixel(upper_left_center.x as usize, upper_left_center.y as usize),
-            Rgb565::CSS_WHITE
-        );
-        assert_eq!(
-            memory_cyd.pixel(upper_right_center.x as usize, upper_right_center.y as usize),
-            Rgb565::CSS_WHITE
+            memory_cyd.pixel(upper_right_center),
+            Some(Rgb565::CSS_WHITE)
         );
         assert_eq!(
             read_next_raw_touch_event(&memory_cyd)

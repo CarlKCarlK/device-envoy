@@ -4,7 +4,7 @@ use device_envoy_core::UnwrapInfallible;
 use device_envoy_core::cyd::{
     Cyd, CydDisplay, CydTouch,
     display::{
-        CydFrame, DrawItem, Image565Fixed, tga,
+        CydFrame, DrawItem, GetPixel, Image565Fixed, tga,
         tiling::{TileGrid, max_rectangle_pixel_count},
     },
     touch::TouchEvent,
@@ -76,7 +76,11 @@ fn comparison_scene_pixel(position_x: usize, position_y: usize) -> Rgb565 {
 fn framebuffer(cyd: &CydMemory) -> Vec<u16> {
     (0..240)
         .flat_map(|position_y| {
-            (0..320).map(move |position_x| cyd.pixel(position_x, position_y).into_storage())
+            (0..320).map(move |position_x| {
+                cyd.pixel(Point::new(position_x, position_y))
+                    .expect("framebuffer point should be in bounds")
+                    .into_storage()
+            })
         })
         .collect()
 }

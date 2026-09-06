@@ -5,9 +5,10 @@ use core::convert::Infallible;
 use embedded_graphics::{
     Pixel,
     draw_target::DrawTarget,
-    geometry::{OriginDimensions, Size},
+    geometry::{Dimensions, Point},
     pixelcolor::{Rgb565, Rgb888},
     prelude::RgbColor,
+    primitives::Rectangle,
 };
 
 /// Rasterize an ellipse pixel-by-pixel via a callback.
@@ -44,21 +45,18 @@ pub fn fill_ellipse_pixels(
     }
 }
 
-/// A raw pixel sink that accepts individual pixels by integer coordinates.
+/// A pixel sink that accepts individual RGB565 pixels at logical coordinates.
 ///
 /// Every [`CydFrame`](crate::cyd::display::CydFrame) implements this trait, so
 /// [`DrawItem`](crate::cyd::display::DrawItem) values can draw directly onto any
 /// CYD frame. See the canonical [`DrawItem`](crate::cyd::display::DrawItem)
 /// example for construction, rendering, and framebuffer verification.
-pub trait PixelTarget {
-    fn width(&self) -> usize;
-    fn height(&self) -> usize;
-    fn put_pixel(&mut self, x: usize, y: usize, color: Rgb888);
-
-    /// Write a pre-packed RGB565 pixel (bit layout `RRRRR_GGGGGG_BBBBB`).
-    fn put_pixel_565(&mut self, x: usize, y: usize, rgb565: u16) {
-        self.put_pixel(x, y, rgb888_from_rgb565(rgb565));
-    }
+pub trait PixelTarget: Dimensions {
+    /// Set a pixel, ignoring points outside the target's bounds.
+    ///
+    /// The [`DrawItem`](crate::cyd::display::DrawItem) example demonstrates
+    /// drawing through this operation.
+    fn set_pixel(&mut self, point: Point, color: Rgb565);
 }
 
 /// Expands a packed RGB565 value (`RRRRR_GGGGGG_BBBBB`) to [`Rgb888`].
@@ -84,32 +82,6 @@ pub fn rgb565_from_rgb888(color: Rgb888) -> Rgb565 {
     rgb565_from_rgb888_components(color.r(), color.g(), color.b())
 }
 
-/// Bounds-checked pixel write for a [`PixelTarget`]. Out-of-bounds writes are silently discarded.
-pub fn pixel_put<T: PixelTarget>(target: &mut T, x: i32, y: i32, color: Rgb888) {
-    if x < 0 || y < 0 {
-        return;
-    }
-    let x = x as usize;
-    let y = y as usize;
-    if x >= target.width() || y >= target.height() {
-        return;
-    }
-    target.put_pixel(x, y, color);
-}
-
-/// Bounds-checked raw-RGB565 pixel write for a [`PixelTarget`].
-pub fn pixel_put_565<T: PixelTarget>(target: &mut T, x: i32, y: i32, rgb565: u16) {
-    if x < 0 || y < 0 {
-        return;
-    }
-    let x = x as usize;
-    let y = y as usize;
-    if x >= target.width() || y >= target.height() {
-        return;
-    }
-    target.put_pixel_565(x, y, rgb565);
-}
-
 /// Bridges a [`PixelTarget`] to the embedded-graphics [`DrawTarget`] interface.
 pub struct PixelTargetAdapter<'a, T: PixelTarget>(pub &'a mut T);
 
@@ -122,14 +94,14 @@ impl<T: PixelTarget> DrawTarget for PixelTargetAdapter<'_, T> {
         I: IntoIterator<Item = Pixel<Rgb888>>,
     {
         for Pixel(point, color) in pixels {
-            pixel_put(self.0, point.x, point.y, color);
+            self.0.set_pixel(point, Rgb565::from(color));
         }
         Ok(())
     }
 }
 
-impl<T: PixelTarget> OriginDimensions for PixelTargetAdapter<'_, T> {
-    fn size(&self) -> Size {
-        Size::new(self.0.width() as u32, self.0.height() as u32)
+impl<T: PixelTarget> Dimensions for PixelTargetAdapter<'_, T> {
+    fn bounding_box(&self) -> Rectangle {
+        self.0.bounding_box()
     }
 }

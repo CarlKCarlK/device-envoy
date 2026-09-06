@@ -556,7 +556,7 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cyd::display::CydFrame;
+    use crate::cyd::display::{CydFrame, GetPixel};
     use crate::pixel_target::PixelTarget;
     use core::convert::Infallible;
     use embedded_graphics::pixelcolor::WebColors;
@@ -645,15 +645,15 @@ mod tests {
     }
 
     impl PixelTarget for TestFrame {
-        fn width(&self) -> usize {
-            (self.rectangle.top_left.x as usize) + self.rectangle.size.width as usize
-        }
+        fn set_pixel(&mut self, _point: Point, _color: Rgb565) {}
+    }
 
-        fn height(&self) -> usize {
-            (self.rectangle.top_left.y as usize) + self.rectangle.size.height as usize
-        }
+    impl GetPixel for TestFrame {
+        type Color = Rgb565;
 
-        fn put_pixel(&mut self, _x: usize, _y: usize, _color: Rgb888) {}
+        fn pixel(&self, _point: Point) -> Option<Self::Color> {
+            None
+        }
     }
 
     impl CydFrame for TestFrame {
@@ -669,10 +669,6 @@ mod tests {
 
         fn clear(&mut self) -> &mut Self {
             self
-        }
-
-        fn pixel(&self, _point: Point) -> Option<Rgb565> {
-            None
         }
 
         fn write_text(&mut self, _text: &str) -> &mut Self {

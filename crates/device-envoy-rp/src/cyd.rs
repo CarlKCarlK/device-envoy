@@ -79,7 +79,7 @@ use device_envoy_core::cyd::backend;
 use device_envoy_core::cyd::{
     SCREEN_PIXELS,
     backend::{CalibrationConfig, RawTouchEvent, TouchUncalibrated},
-    display::CydFrame,
+    display::{CydFrame, GetPixel},
     touch::TouchEvent,
 };
 use device_envoy_core::pixel_target::PixelTarget;
@@ -255,7 +255,7 @@ impl<'a, D: SpiDevice<u8>> CydFrameRp<'a, D> {
     }
 
     /// Borrow the buffered frame region's raw RGB565 pixels in row-major order.
-    pub fn raw_pixels_mut(&mut self) -> &mut [u16] {
+    fn raw_pixels_mut(&mut self) -> &mut [u16] {
         self.view.raw_pixels_mut()
     }
 
@@ -298,16 +298,7 @@ impl<D: SpiDevice<u8>> DrawTarget for CydFrameRp<'_, D> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(point, color) in pixels {
-            let Some(local_x) = self.local_x(point.x) else {
-                continue;
-            };
-            let Some(local_y) = self.local_y(point.y) else {
-                continue;
-            };
-            if local_x < self.view.width() && local_y < self.view.height() {
-                let index = local_y * self.view.width() + local_x;
-                self.raw_pixels_mut()[index] = color.into_storage();
-            }
+            self.set_pixel(point, color);
         }
         Ok(())
     }
@@ -320,48 +311,18 @@ impl<D: SpiDevice<u8>> Dimensions for CydFrameRp<'_, D> {
 }
 
 impl<D: SpiDevice<u8>> PixelTarget for CydFrameRp<'_, D> {
-    fn width(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.x)
-            .expect("frame top-left x must be non-negative")
-            .checked_add(self.width())
-            .expect("frame width must fit in usize")
-    }
-
-    fn height(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.y)
-            .expect("frame top-left y must be non-negative")
-            .checked_add(self.height())
-            .expect("frame height must fit in usize")
-    }
-
-    fn put_pixel(&mut self, x: usize, y: usize, color: Rgb888) {
-        let Some(local_x) = self.local_x(x as i32) else {
+    fn set_pixel(&mut self, point: Point, color: Rgb565) {
+        let Some(local_x) = self.local_x(point.x) else {
             return;
         };
-        let Some(local_y) = self.local_y(y as i32) else {
+        let Some(local_y) = self.local_y(point.y) else {
             return;
         };
         if local_x >= self.view.width() || local_y >= self.view.height() {
             return;
         }
         let stride = self.view.width();
-        self.raw_pixels_mut()[local_y * stride + local_x] = Rgb565::from(color).into_storage();
-    }
-
-    /// The frame buffer already stores RGB565, so a decoded image pixel can be
-    /// written verbatim with no RGB888 round-trip.
-    fn put_pixel_565(&mut self, x: usize, y: usize, rgb565: u16) {
-        let Some(local_x) = self.local_x(x as i32) else {
-            return;
-        };
-        let Some(local_y) = self.local_y(y as i32) else {
-            return;
-        };
-        if local_x >= self.view.width() || local_y >= self.view.height() {
-            return;
-        }
-        let stride = self.view.width();
-        self.raw_pixels_mut()[local_y * stride + local_x] = rgb565;
+        self.raw_pixels_mut()[local_y * stride + local_x] = color.into_storage();
     }
 }
 
@@ -1010,6 +971,21 @@ impl<D: SpiDevice<u8>> CydTouch for CydTouchRp<D> {
     }
 }
 
+impl<D: SpiDevice<u8>> GetPixel for CydFrameRp<'_, D> {
+    type Color = Rgb565;
+
+    fn pixel(&self, point: Point) -> Option<Rgb565> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.view.width() || local_y >= self.view.height() {
+            return None;
+        }
+        Some(Rgb565::from(RawU16::new(
+            self.view.raw_pixels()[local_y * self.view.width() + local_x],
+        )))
+    }
+}
+
 impl<D: SpiDevice<u8>> CydFrame for CydFrameRp<'_, D> {
     type Error = Error;
 
@@ -1023,17 +999,6 @@ impl<D: SpiDevice<u8>> CydFrame for CydFrameRp<'_, D> {
 
     fn clear(&mut self) -> &mut Self {
         self.fill(self.background565)
-    }
-
-    fn pixel(&self, point: Point) -> Option<Rgb565> {
-        let local_x = self.local_x(point.x)?;
-        let local_y = self.local_y(point.y)?;
-        if local_x >= self.view.width() || local_y >= self.view.height() {
-            return None;
-        }
-        Some(Rgb565::from(RawU16::new(
-            self.view.raw_pixels()[local_y * self.view.width() + local_x],
-        )))
     }
 
     fn write_text(&mut self, text: &str) -> &mut Self {

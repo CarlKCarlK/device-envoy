@@ -1,10 +1,9 @@
-use crate::pixel_target::{
-    PixelTarget, PixelTargetAdapter, fill_ellipse_pixels, pixel_put, pixel_put_565,
-};
+use crate::pixel_target::{PixelTarget, PixelTargetAdapter, fill_ellipse_pixels};
 use embedded_graphics::{
     Drawable,
+    image::GetPixel,
     pixelcolor::{Rgb565, Rgb888, raw::RawU16},
-    prelude::{IntoStorage, Point, Size},
+    prelude::{Point, Size},
     primitives::Rectangle,
     primitives::{Circle, Line, Primitive, PrimitiveStyle},
 };
@@ -16,7 +15,7 @@ use embedded_graphics::{
 /// or select a rectangular portion with
 /// [`Image565Fixed::view_rect`](super::tga::Image565Fixed::view_rect).
 ///
-/// Coordinates passed to [`Image565View::pixel_at`] are local to the view, so
+/// Coordinates passed to [`GetPixel::pixel`] are local to the view, so
 /// `(0, 0)` addresses the crop's top-left pixel rather than the original
 /// image's top-left pixel.
 ///
@@ -40,7 +39,7 @@ use embedded_graphics::{
 ```rust
 use device_envoy_core::cyd::{
     Cyd, CydDisplay,
-    display::{CydFrame, DrawItem, Image565Fixed, tga},
+    display::{CydFrame, DrawItem, GetPixel, Image565Fixed, tga},
 };
 use embedded_graphics::{
     prelude::{Point, Size},
@@ -60,8 +59,8 @@ async fn draw<C: Cyd>(cyd: &mut C) -> Result<(), C::Error> {
 
     assert_eq!(cropped_view.size(), source.size);
     assert_eq!(
-        cropped_view.pixel_at(Point::zero()),
-        full_view.pixel_at(source.top_left),
+        cropped_view.pixel(Point::zero()),
+        full_view.pixel(source.top_left),
     );
     assert_eq!(
         cropped_view.rgb565_iter().count(),
@@ -162,30 +161,6 @@ impl Image565View {
         self.source.size
     }
 
-    /// Returns the pixel at a view-local coordinate.
-    ///
-    /// `(0, 0)` is the top-left of this view, not necessarily the top-left of
-    /// the underlying image. See the [`Image565View` example](Image565View).
-    ///
-    /// Panics if `point` is outside the view.
-    #[must_use]
-    pub fn pixel_at(&self, point: Point) -> Rgb565 {
-        assert!(
-            point.x >= 0 && point.y >= 0,
-            "Image565View pixel coordinate must be non-negative"
-        );
-        let vx = point.x as usize;
-        let vy = point.y as usize;
-        assert!(
-            vx < self.source.size.width as usize && vy < self.source.size.height as usize,
-            "Image565View pixel coordinate must be inside the view"
-        );
-        let source_x = self.source.top_left.x as usize + vx;
-        let source_y = self.source.top_left.y as usize + vy;
-        let index = source_y * self.stride as usize + source_x;
-        Rgb565::from(RawU16::new(self.pixels[index]))
-    }
-
     /// Iterate over the view's pixels in row-major order as `Rgb565` values.
     ///
     /// Cropped views skip the pixels outside the view while preserving the
@@ -197,6 +172,27 @@ impl Image565View {
             view: *self,
             index: 0,
         }
+    }
+}
+
+impl GetPixel for Image565View {
+    type Color = Rgb565;
+
+    /// Returns the pixel at a view-local coordinate.
+    ///
+    /// `(0, 0)` is the top-left of this view, not necessarily the top-left of
+    /// the underlying image. Returns `None` if `point` is outside the view. See
+    /// the [`Image565View` example](Image565View).
+    fn pixel(&self, point: Point) -> Option<Self::Color> {
+        let view_x = usize::try_from(point.x).ok()?;
+        let view_y = usize::try_from(point.y).ok()?;
+        if view_x >= self.source.size.width as usize || view_y >= self.source.size.height as usize {
+            return None;
+        }
+        let source_x = self.source.top_left.x as usize + view_x;
+        let source_y = self.source.top_left.y as usize + view_y;
+        let index = source_y * self.stride as usize + source_x;
+        Some(Rgb565::from(RawU16::new(self.pixels[index])))
     }
 }
 
@@ -222,6 +218,24 @@ impl Iterator for Image565ViewPixels {
         let source_index = source_y * self.view.stride as usize + source_x;
         self.index += 1;
         Some(Rgb565::from(RawU16::new(self.view.pixels[source_index])))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pixel_uses_view_local_coordinates_and_checks_bounds() {
+        const PIXELS: [u16; 4] = [0x1234, 0x5678, 0x9abc, 0xdef0];
+        let view = Image565View::new(&PIXELS, Size::new(2, 2));
+
+        assert_eq!(
+            view.pixel(Point::new(1, 0)),
+            Some(Rgb565::from(RawU16::new(0x5678)))
+        );
+        assert_eq!(view.pixel(Point::new(-1, 0)), None);
+        assert_eq!(view.pixel(Point::new(2, 0)), None);
     }
 }
 
@@ -408,7 +422,7 @@ impl DrawItem {
                 color,
             } => {
                 fill_ellipse_pixels(center, axis_a, axis_b, |position_x, position_y| {
-                    pixel_put(target, position_x, position_y, color);
+                    target.set_pixel(Point::new(position_x, position_y), Rgb565::from(color));
                 });
             }
             DrawItem::Circle {
@@ -431,12 +445,9 @@ impl DrawItem {
                     for dx in 0..size.width as i32 {
                         let view_point = Point::new(dx, dy);
                         let target_point = top_left + view_point;
-                        pixel_put_565(
-                            target,
-                            target_point.x,
-                            target_point.y,
-                            view.pixel_at(view_point).into_storage(),
-                        );
+                        if let Some(color) = view.pixel(view_point) {
+                            target.set_pixel(target_point, color);
+                        }
                     }
                 }
             }

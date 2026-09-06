@@ -37,16 +37,13 @@ mod tga;
 pub mod tiling;
 
 use core::{convert::Infallible, future::Future};
-use embedded_graphics::{
-    pixelcolor::Rgb565,
-    prelude::{DrawTarget, Point},
-    primitives::Rectangle,
-};
+use embedded_graphics::{pixelcolor::Rgb565, prelude::DrawTarget, primitives::Rectangle};
 
 use crate::pixel_target::PixelTarget;
 
 pub(crate) use contiguous_pixels::ContiguousPixels;
 pub use draw_item::{DrawItem, Image565View};
+pub use embedded_graphics::image::GetPixel;
 pub use orientation::Orientation;
 pub use tga::{Image565Fixed, Image888Fixed, MaskFixed, MaskedDrawable, mask_byte_count};
 
@@ -76,6 +73,8 @@ pub use crate::__cyd_tga as tga;
 /// A single in-progress frame: a `Rgb565` draw target that can be flushed.
 ///
 /// Also a [`PixelTarget`] so draw items can render into it.
+/// [`GetPixel::pixel`] reads buffered pixels at logical screen coordinates and
+/// returns `None` outside the frame.
 ///
 /// # Coordinates and clipping
 ///
@@ -102,7 +101,7 @@ pub use crate::__cyd_tga as tga;
     doc = r#"
 
 ```rust
-use device_envoy_core::cyd::{CydDisplay, display::CydFrame};
+use device_envoy_core::cyd::{CydDisplay, display::{CydFrame, GetPixel}};
 use embedded_graphics::{
     pixelcolor::{Rgb565, RgbColor},
     prelude::{Point, Size},
@@ -141,7 +140,16 @@ async fn draw<D: CydDisplay>(display: &mut D) -> Result<(), D::Error> {
     all(feature = "host", feature = "doc-images"),
     doc = "\n![A blue frame containing white CYD text on an in-memory display.][cyd_frame_preview]\n"
 )]
-pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget {
+pub trait CydFrame:
+    DrawTarget<Color = Rgb565, Error = Infallible> + GetPixel<Color = Rgb565> + PixelTarget
+{
+    // TODO0000 Decide whether CydFrame::pixel, Image565View::pixel_at, and
+    // CydMemory::pixel should use one consistent name and Point-based signature.
+    // (may no longer apply)
+    // TODO0000 Audit raw_pixels_mut call sites to see which reads can use this
+    // portable operation, and decide whether per-pixel mutation needs a
+    // pixel_at_mut-style API beyond PixelTarget::put_pixel_565.
+    // (may no longer apply)
     /// Error returned when presenting the frame.
     type Error;
 
@@ -165,18 +173,6 @@ pub trait CydFrame: DrawTarget<Color = Rgb565, Error = Infallible> + PixelTarget
     fn clear(&mut self) -> &mut Self;
 
     // TODO0 migrate FlashBlock values to the canonical `_flash_block` suffix.
-
-    // TODO0000 Decide whether CydFrame::pixel, Image565View::pixel_at, and
-    // CydMemory::pixel should use one consistent name and Point-based signature.
-    // TODO0000 Audit raw_pixels_mut call sites to see which reads can use this
-    // portable operation, and decide whether per-pixel mutation needs a
-    // pixel_at_mut-style API beyond PixelTarget::put_pixel_565.
-    /// Read a buffered pixel at a logical screen coordinate.
-    ///
-    /// Returns `None` when `point` lies outside this frame. The [`CydFrame`
-    /// example](CydFrame#examples) demonstrates reading a pixel after filling
-    /// a frame.
-    fn pixel(&self, point: Point) -> Option<Rgb565>;
 
     /// Draw `text` at the frame rectangle's top-left using the device default
     /// font and foreground color. Returns `&mut Self` for chaining.

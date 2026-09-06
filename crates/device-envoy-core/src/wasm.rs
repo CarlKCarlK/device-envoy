@@ -35,7 +35,7 @@ use std::{collections::VecDeque, rc::Rc};
 use crate::cyd::{
     Cyd, CydDisplay, CydTouch,
     backend::{CalibrationConfig, RawTouchEvent},
-    display::{CydFrame, Orientation},
+    display::{CydFrame, GetPixel, Orientation},
     touch::{RawPoint, TouchEvent},
 };
 use crate::{
@@ -806,16 +806,7 @@ impl DrawTarget for CydFrameWasm<'_> {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for Pixel(point, color) in pixels {
-            let Some(local_x) = self.local_x(point.x) else {
-                continue;
-            };
-            let Some(local_y) = self.local_y(point.y) else {
-                continue;
-            };
-            if local_x < CydFrameWasm::width(self) && local_y < CydFrameWasm::height(self) {
-                let index = local_y * CydFrameWasm::width(self) + local_x;
-                self.pixels[index] = color.into_storage();
-            }
+            self.set_pixel(point, color);
         }
         Ok(())
     }
@@ -828,48 +819,33 @@ impl Dimensions for CydFrameWasm<'_> {
 }
 
 impl PixelTarget for CydFrameWasm<'_> {
-    fn width(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.x)
-            .expect("frame top-left x must be non-negative")
-            .checked_add(CydFrameWasm::width(self))
-            .expect("frame width must fit in usize")
-    }
-
-    fn height(&self) -> usize {
-        usize::try_from(self.rectangle.top_left.y)
-            .expect("frame top-left y must be non-negative")
-            .checked_add(CydFrameWasm::height(self))
-            .expect("frame height must fit in usize")
-    }
-
-    fn put_pixel(&mut self, x: usize, y: usize, color: Rgb888) {
-        let Some(local_x) = self.local_x(x as i32) else {
+    fn set_pixel(&mut self, point: Point, color: Rgb565) {
+        let Some(local_x) = self.local_x(point.x) else {
             return;
         };
-        let Some(local_y) = self.local_y(y as i32) else {
+        let Some(local_y) = self.local_y(point.y) else {
             return;
         };
         if local_x >= CydFrameWasm::width(self) || local_y >= CydFrameWasm::height(self) {
             return;
         }
         let stride = CydFrameWasm::width(self);
-        self.pixels[local_y * stride + local_x] = Rgb565::from(color).into_storage();
+        self.pixels[local_y * stride + local_x] = color.into_storage();
     }
+}
 
-    /// The frame buffer already stores RGB565, so a decoded image pixel can be
-    /// written verbatim with no RGB888 round-trip.
-    fn put_pixel_565(&mut self, x: usize, y: usize, rgb565: u16) {
-        let Some(local_x) = self.local_x(x as i32) else {
-            return;
-        };
-        let Some(local_y) = self.local_y(y as i32) else {
-            return;
-        };
-        if local_x >= CydFrameWasm::width(self) || local_y >= CydFrameWasm::height(self) {
-            return;
+impl GetPixel for CydFrameWasm<'_> {
+    type Color = Rgb565;
+
+    fn pixel(&self, point: Point) -> Option<Rgb565> {
+        let local_x = self.local_x(point.x)?;
+        let local_y = self.local_y(point.y)?;
+        if local_x >= self.width() || local_y >= self.height() {
+            return None;
         }
-        let stride = CydFrameWasm::width(self);
-        self.pixels[local_y * stride + local_x] = rgb565;
+        Some(Rgb565::from(RawU16::new(
+            self.pixels[local_y * self.width() + local_x],
+        )))
     }
 }
 
@@ -888,17 +864,6 @@ impl CydFrame for CydFrameWasm<'_> {
 
     fn clear(&mut self) -> &mut Self {
         self.fill(self.background565)
-    }
-
-    fn pixel(&self, point: Point) -> Option<Rgb565> {
-        let local_x = self.local_x(point.x)?;
-        let local_y = self.local_y(point.y)?;
-        if local_x >= self.width() || local_y >= self.height() {
-            return None;
-        }
-        Some(Rgb565::from(RawU16::new(
-            self.pixels[local_y * self.width() + local_x],
-        )))
     }
 
     fn copy_from_565(&mut self, src: &[u16]) -> crate::Result<()> {

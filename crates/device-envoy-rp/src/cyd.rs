@@ -587,7 +587,7 @@ impl CydRp {
     /// # use device_envoy_rp::{Result, button::{ButtonRp, PressedTo}, cyd::{CydRp, CydStaticRp, DEFAULT_DISPLAY_SPI_HZ, DEFAULT_FONT, Orientation}, flash_block::FlashBlockRp};
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
-    ///     let [mut calibration_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    ///     let [mut calibration_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     ///     let mut recalibration_button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
     ///     static CYD_STATIC: CydStaticRp<{ CydRp::SCREEN_PIXELS }> = CydRp::new_static();
     ///
@@ -620,7 +620,7 @@ impl CydRp {
     ///         p.PIN_14,
     ///
     ///         // Calibration storage and recalibration button:
-    ///         &mut calibration_flash,
+    ///         &mut calibration_flash_block,
     ///         &mut recalibration_button,
     ///     )
     ///     .await?;

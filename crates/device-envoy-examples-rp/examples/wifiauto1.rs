@@ -30,7 +30,7 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
@@ -40,7 +40,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         p.PIN_29,  // CYW43 clock
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
-        wifi_flash,
+        wifi_credentials_flash_block,
         "DeviceEnvoySetup", // Captive-portal SSID
         [],                 // Any extra fields
         spawner,

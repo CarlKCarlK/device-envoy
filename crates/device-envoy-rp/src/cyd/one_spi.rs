@@ -164,7 +164,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     /// # #[panic_handler]
     /// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
     /// async fn construct(p: embassy_rp::Peripherals) -> Result<()> {
-    ///     let [mut calibration_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    ///     let [mut calibration_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     ///     let mut recalibration_button = ButtonRp::new(p.PIN_15, PressedTo::Ground);
     ///     static CYD_STATIC: CydRpOneSpiStatic<
     ///         SPI0,
@@ -196,7 +196,7 @@ impl<T: spi::Instance + 'static> CydRpOneSpi<T> {
     ///         &DEFAULT_FONT,
     ///
     ///         // Calibration storage and recalibration button:
-    ///         &mut calibration_flash,
+    ///         &mut calibration_flash_block,
     ///         &mut recalibration_button,
     ///     )
     ///     .await?;

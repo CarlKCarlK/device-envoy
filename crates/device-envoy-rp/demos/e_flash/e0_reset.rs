@@ -42,11 +42,11 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     // Create a flash array with one element.
-    let mut flash_block_array = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    let [mut reset_marker_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 
     // Write a ResetMarker (different type than BootCounter) to flash.
     // This clears any existing BootCounter since FlashBlockRp type-checks on load.
-    flash_block_array[0].save(&ResetMarker(0))?;
+    reset_marker_flash_block.save(&ResetMarker(0))?;
 
     // Display black (turn off all LEDs) on the panel
     let led12x8 = Led12x8::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;

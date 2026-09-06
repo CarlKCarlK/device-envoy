@@ -117,7 +117,7 @@ pub(crate) struct WifiAutoStatic {
 ///     let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
 ///
 ///     // Set up flash storage for WiFi credentials.
-///     let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+///     let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
 ///
 ///     // Construct WifiAutoRp
 ///     let wifi_auto = WifiAutoRp::new(
@@ -127,7 +127,7 @@ pub(crate) struct WifiAutoStatic {
 ///         p.PIN_29,  // CYW43 clock
 ///         p.PIO0,            // WiFi PIO
 ///         p.DMA_CH0,         // WiFi DMA
-///         wifi_flash,
+///         wifi_credentials_flash_block,
 ///         "DeviceEnvoySetup", // Captive-portal SSID
 ///         [],                // Any extra fields
 ///         spawner,
@@ -391,7 +391,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     }
     /// # }
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
-    /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    /// # let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     /// # let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
@@ -400,7 +400,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIN_29,
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
-    /// #     wifi_flash,
+    /// #     wifi_credentials_flash_block,
     /// #     "DeviceEnvoySetup",
     /// #     [],
     /// #     spawner,
@@ -441,7 +441,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// # async fn show_animated_dots(_led8x12: &Led8x12) -> Result<()> { Ok(()) }
     /// # const COLORS: &[RGB8] = &[colors::WHITE];
     /// # async fn example(spawner: Spawner, p: Peripherals) -> Result<()> {
-    /// # let [wifi_flash] = FlashBlockRp::new_array::<1>(p.FLASH)?;
+    /// # let [wifi_credentials_flash_block] = FlashBlockRp::new_array::<1>(p.FLASH)?;
     /// # let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
     /// # let wifi_auto = WifiAutoRp::new(
     /// #     p.PIN_23,
@@ -450,7 +450,7 @@ impl device_envoy_core::wifi_auto::WifiAuto for WifiAutoRp {
     /// #     p.PIN_29,
     /// #     p.PIO0,
     /// #     p.DMA_CH0,
-    /// #     wifi_flash,
+    /// #     wifi_credentials_flash_block,
     /// #     "DeviceEnvoySetup",
     /// #     [],
     /// #     spawner,

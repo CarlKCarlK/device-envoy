@@ -204,7 +204,7 @@ pub struct WifiStatic {
 pub struct Wifi {
     events: &'static WifiEvents,
     stack: &'static StackStorage,
-    credential_store: Mutex<CriticalSectionRawMutex, RefCell<FlashBlockRp>>,
+    wifi_credentials_flash_block: Mutex<CriticalSectionRawMutex, RefCell<FlashBlockRp>>,
 }
 
 impl Wifi {
@@ -254,7 +254,7 @@ impl Wifi {
         pin_29: Peri<'static, PIN_29>,
         pio: Peri<'static, PIO>,
         dma: Peri<'static, DMA>,
-        credential_store: FlashBlockRp,
+        mut wifi_credentials_flash_block: FlashBlockRp,
         captive_portal_ssid: &'static str,
         spawner: Spawner,
     ) -> &'static Self
@@ -264,8 +264,7 @@ impl Wifi {
                 embassy_rp::dma::InterruptHandler<DMA>,
             >,
     {
-        let mut store_block = credential_store;
-        let stored_state = load_state_from_block(&mut store_block);
+        let stored_state = load_state_from_block(&mut wifi_credentials_flash_block);
         let mode = match stored_state.start_mode {
             WifiStartMode::CaptivePortal => WifiMode::CaptivePortal,
             WifiStartMode::Client => {
@@ -293,7 +292,7 @@ impl Wifi {
         wifi_static.wifi_cell.init(Self {
             events: &wifi_static.events,
             stack: &wifi_static.stack,
-            credential_store: Mutex::new(RefCell::new(store_block)),
+            wifi_credentials_flash_block: Mutex::new(RefCell::new(wifi_credentials_flash_block)),
         })
     }
 
@@ -301,18 +300,18 @@ impl Wifi {
     where
         F: FnOnce(&mut WifiStoredState),
     {
-        self.credential_store.lock(|cell| {
-            let mut block = cell.borrow_mut();
-            let mut state = load_state_from_block(&mut block);
+        self.wifi_credentials_flash_block.lock(|cell| {
+            let mut wifi_credentials_flash_block_ref = cell.borrow_mut();
+            let mut state = load_state_from_block(&mut wifi_credentials_flash_block_ref);
             f(&mut state);
-            save_state_to_block(&mut block, &state)
+            save_state_to_block(&mut wifi_credentials_flash_block_ref, &state)
         })
     }
 
     fn read_state<R>(&self, f: impl FnOnce(&WifiStoredState) -> R) -> R {
-        self.credential_store.lock(|cell| {
-            let mut block = cell.borrow_mut();
-            let state = load_state_from_block(&mut block);
+        self.wifi_credentials_flash_block.lock(|cell| {
+            let mut wifi_credentials_flash_block_ref = cell.borrow_mut();
+            let state = load_state_from_block(&mut wifi_credentials_flash_block_ref);
             f(&state)
         })
     }
@@ -353,27 +352,29 @@ impl Wifi {
 
     /// Update the start mode flag in a raw flash block before WiFi initialization.
     pub fn prepare_start_mode(
-        block: &mut FlashBlockRp,
+        wifi_credentials_flash_block: &mut FlashBlockRp,
         mode: WifiStartMode,
     ) -> Result<(), &'static str> {
-        let mut state = load_state_from_block(block);
+        let mut state = load_state_from_block(wifi_credentials_flash_block);
         state.start_mode = mode;
-        save_state_to_block(block, &state)
+        save_state_to_block(wifi_credentials_flash_block, &state)
     }
 
     /// Peek stored credentials directly from a flash block.
-    pub fn peek_credentials(block: &mut FlashBlockRp) -> Option<WifiCredentials> {
-        load_state_from_block(block).credentials
+    pub fn peek_credentials(
+        wifi_credentials_flash_block: &mut FlashBlockRp,
+    ) -> Option<WifiCredentials> {
+        load_state_from_block(wifi_credentials_flash_block).credentials
     }
 
     /// Peek the stored start mode directly from a flash block.
-    pub fn peek_start_mode(block: &mut FlashBlockRp) -> WifiStartMode {
-        load_state_from_block(block).start_mode
+    pub fn peek_start_mode(wifi_credentials_flash_block: &mut FlashBlockRp) -> WifiStartMode {
+        load_state_from_block(wifi_credentials_flash_block).start_mode
     }
 }
 
-fn load_state_from_block(block: &mut FlashBlockRp) -> WifiStoredState {
-    match block.load::<WifiStoredState>() {
+fn load_state_from_block(wifi_credentials_flash_block: &mut FlashBlockRp) -> WifiStoredState {
+    match wifi_credentials_flash_block.load::<WifiStoredState>() {
         Ok(Some(state)) => state,
         Ok(None) => WifiStoredState::default(),
         Err(_) => {
@@ -384,10 +385,10 @@ fn load_state_from_block(block: &mut FlashBlockRp) -> WifiStoredState {
 }
 
 fn save_state_to_block(
-    block: &mut FlashBlockRp,
+    wifi_credentials_flash_block: &mut FlashBlockRp,
     state: &WifiStoredState,
 ) -> Result<(), &'static str> {
-    block
+    wifi_credentials_flash_block
         .save(state)
         .map_err(|_| "Failed to save WiFi state to flash")
 }

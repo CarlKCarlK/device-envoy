@@ -36,19 +36,20 @@
 //!     spawner: embassy_executor::Spawner,
 //!     p: embassy_rp::Peripherals,
 //! ) -> Result<()> {
-//!     let [wifi_flash, website_flash, timezone_flash] = FlashBlockRp::new_array::<3>(p.FLASH)?;
+//!     let [wifi_credentials_flash_block, website_flash_block, timezone_flash_block] =
+//!         FlashBlockRp::new_array::<3>(p.FLASH)?;
 //!
 //!     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
 //!     let website_field = TextField::new(
 //!         &WEBSITE_STATIC,
-//!         website_flash,
+//!         website_flash_block,
 //!         "website",
 //!         "Website",
 //!         "google.com",
 //!     );
 //!
 //!     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
-//!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
+//!     let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
 //!
 //!     let button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner).await?;
 //!     let wifi_auto = WifiAutoRp::new(
@@ -58,7 +59,7 @@
 //!         p.PIN_29,
 //!         p.PIO0,
 //!         p.DMA_CH0,
-//!         wifi_flash,
+//!         wifi_credentials_flash_block,
 //!         "DeviceEnvoySetup",
 //!         [website_field, timezone_field],
 //!         spawner,

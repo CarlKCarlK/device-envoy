@@ -585,7 +585,7 @@ impl CydEsp {
     /// # use embedded_graphics::{pixelcolor::Rgb888, prelude::RgbColor};
     /// # use esp_hal::spi::master::AnySpi;
     /// # async fn construct(mut p: esp_hal::peripherals::Peripherals, touch_spi: AnySpi<'static>) -> Result<()> {
-    /// #     let [mut calibration_flash] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
+    /// #     let [mut calibration_flash_block] = FlashBlockEsp::new_array::<1>(p.FLASH)?;
     /// #     let mut recalibration_button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     ///     static CYD_STATIC: CydStaticEsp<{ CydEsp::SCREEN_PIXELS }> = CydEsp::new_static();
     ///
@@ -618,7 +618,7 @@ impl CydEsp {
     ///         p.GPIO13,
     ///
     ///         // Calibration storage and recalibration button:
-    ///         &mut calibration_flash,
+    ///         &mut calibration_flash_block,
     ///         &mut recalibration_button,
     ///     )
     ///     .await?;

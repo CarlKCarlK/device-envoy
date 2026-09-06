@@ -44,24 +44,30 @@ async fn inner_main(_spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     // Initialize Flash device
-    let [_, _, _, mut string_block, mut config_block] = FlashBlockRp::new_array::<5>(p.FLASH)?;
+    let [
+        _,
+        _,
+        _,
+        mut string_flash_block,
+        mut sensor_config_flash_block,
+    ] = FlashBlockRp::new_array::<5>(p.FLASH)?;
 
     info!("Part 1: Storing data to flash");
     let greeting =
         String::<64>::try_from("Hello, Flash Storage!").map_err(|_| Error::FormatError)?;
-    string_block.save(&greeting)?;
+    string_flash_block.save(&greeting)?;
 
     let sensor_name = String::<32>::try_from("Temperature").map_err(|_| Error::FormatError)?;
-    config_block.save(&SensorConfig {
+    sensor_config_flash_block.save(&SensorConfig {
         name: sensor_name.clone(),
         sample_rate_hz: 1000,
         enabled: true,
     })?;
 
     info!("Part 2: Reading data from flash");
-    let string: Option<String<64>> = string_block.load()?;
+    let string: Option<String<64>> = string_flash_block.load()?;
     assert!(string.as_deref() == Some("Hello, Flash Storage!"));
-    let config: Option<SensorConfig> = config_block.load()?;
+    let config: Option<SensorConfig> = sensor_config_flash_block.load()?;
     assert!(
         config
             == Some(SensorConfig {
@@ -73,17 +79,17 @@ async fn inner_main(_spawner: Spawner) -> Result<()> {
 
     info!("Part 3: Reading a different type counts as empty");
     // Try to read the string block as a SensorConfig
-    let wrong_type_result: Option<SensorConfig> = string_block.load()?;
+    let wrong_type_result: Option<SensorConfig> = string_flash_block.load()?;
     assert!(wrong_type_result.is_none());
 
     info!("Part 4: Clearing flash blocks");
-    string_block.clear()?;
-    config_block.clear()?;
+    string_flash_block.clear()?;
+    sensor_config_flash_block.clear()?;
 
     info!("Part 5: Verifying cleared blocks");
-    let string: Option<String<64>> = string_block.load()?;
+    let string: Option<String<64>> = string_flash_block.load()?;
     assert!(string.is_none());
-    let config: Option<SensorConfig> = config_block.load()?;
+    let config: Option<SensorConfig> = sensor_config_flash_block.load()?;
     assert!(config.is_none());
 
     info!("Flash Storage Example Complete!");

@@ -29,12 +29,16 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
-    let [wifi_flash, website_flash, timezone_flash] = FlashBlockRp::new_array::<3>(p.FLASH)?;
+    let [
+        wifi_credentials_flash_block,
+        website_flash_block,
+        timezone_flash_block,
+    ] = FlashBlockRp::new_array::<3>(p.FLASH)?;
 
     static WEBSITE_STATIC: TextFieldStatic<32> = TextField::new_static();
     let website_field = TextField::new(
         &WEBSITE_STATIC,
-        website_flash,
+        website_flash_block,
         "website",
         "Website",
         "google.com",
@@ -42,7 +46,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 
     // Create timezone field
     static TIMEZONE_STATIC: TimezoneFieldStatic = TimezoneField::new_static();
-    let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash);
+    let timezone_field = TimezoneField::new(&TIMEZONE_STATIC, timezone_flash_block);
 
     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
     let wifi_auto = WifiAutoRp::new(
@@ -52,7 +56,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
         p.PIN_29,  // CYW43 clock
         p.PIO0,    // WiFi PIO
         p.DMA_CH0, // WiFi DMA
-        wifi_flash,
+        wifi_credentials_flash_block,
         "DeviceEnvoySetup",              // Captive-portal SSID
         [website_field, timezone_field], // Custom fields
         spawner,

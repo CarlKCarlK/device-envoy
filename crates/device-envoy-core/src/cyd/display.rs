@@ -166,6 +166,7 @@ pub trait CydFrame:
     fn clear(&mut self) -> &mut Self;
 
     // TODO0 migrate FlashBlock values to the canonical `_flash_block` suffix.
+    // (may no longer apply)
 
     /// Draw `text` at the frame rectangle's top-left using the device default
     /// font and foreground color. Returns `&mut Self` for chaining.

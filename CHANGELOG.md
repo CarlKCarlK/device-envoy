@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.5
+
+- Added portable CYD framebuffer pixel lookup and aligned pixel access across
+  Core, RP, ESP, memory, and WebAssembly implementations with
+  `embedded-graphics` behavior.
+- Reduced browser-simulator touch latency by coalescing queued pointer events.
+- Refined the CYD platform integrations, including shared display reset/enable
+  handling and consistent `FlashBlock` value naming.
+- Added the `device-envoy-cyd-starter` project and browser demo to the Core,
+  RP, and ESP documentation, with a shared cross-platform documentation
+  preview command.
+
 ## 0.1.4
 
 - Fixed and expanded Core, RP, and ESP docs.rs output for the CYD APIs,

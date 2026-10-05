@@ -115,6 +115,10 @@ pub use lcd_text::i2cs;
 pub use lcd_text::lcd_text;
 #[cfg(target_os = "none")]
 pub mod led;
+// Crate-root path kept for `use device_envoy_rp::led;`; documented in `led`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use led::led;
 pub mod led2d;
 #[cfg(target_os = "none")]
 pub mod led4;

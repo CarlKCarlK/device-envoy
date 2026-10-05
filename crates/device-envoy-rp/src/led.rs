@@ -158,169 +158,24 @@ pub async fn run_animation_loop<const MAX_STEPS: usize>(
     }
 }
 
-/// Macro to generate a single LED struct type (includes syntax details).
+/// Code generator for [`led!`](crate::led::led).
 ///
-/// **See the [led module documentation](mod@crate::led) for usage examples.**
-///
-/// **Syntax:**
-///
-/// ```text
-/// led! {
-///     [<visibility>] <Name> {
-///         pin: <pin_ident>,
-///         max_steps: <usize_expr>, // optional
-///     }
-/// }
-/// ```
-///
-/// **Required fields:**
-///
-/// - `pin` — GPIO pin resource type for this generated LED.
-///
-/// **Optional fields:**
-///
-/// - `max_steps` — Maximum number of animation frames (default: 32).
-///
-/// `max_steps = 0` disables animation storage; `set_level()` is still supported.
+/// Called only by `led!` after its `const_structures::define!` schema has validated
+/// the input and filled defaults. Must be public for macro expansion in downstream
+/// crates, but not user-facing API.
+// TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
+// code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
+// so macro visibility and helper exposure can be controlled more precisely. (may no longer apply)
 #[doc(hidden)]
 #[macro_export]
-macro_rules! led {
-    // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
-    // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
-    // so macro visibility and helper exposure can be controlled more precisely.
-    ($($tt:tt)*) => { $crate::__led_impl! { $($tt)* } };
-}
-
-/// Implementation macro. Not part of the public API; use [`led!`] instead.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led_impl {
+macro_rules! __led_generate {
     (
-        $vis:vis $name:ident {
-            $($fields:tt)*
-        }
-    ) => {
-        $crate::__led_impl! {
-            @__parse
-            vis: $vis,
-            name: $name,
-            pin: [],
-            max_steps: [],
-            fields: [ $($fields)* ]
-        }
-    };
-
-    (@__parse
-        vis: $vis:vis,
+        attrs: [$(#[$attr:meta])*],
+        vis: [$vis:vis],
         name: $name:ident,
-        pin: [],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__led_impl! {
-            @__parse
-            vis: $vis,
-            name: $name,
-            pin: [$pin],
-            max_steps: [$($max_steps)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$_pin_seen:ident],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("led! duplicate `pin` field");
-    };
-
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [],
-        fields: [ max_steps: $max_steps:expr $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__led_impl! {
-            @__parse
-            vis: $vis,
-            name: $name,
-            pin: [$($pin)?],
-            max_steps: [$max_steps],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [$_max_steps_seen:expr],
-        fields: [ max_steps: $max_steps:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("led! duplicate `max_steps` field");
-    };
-
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ ]
-    ) => {
-        $crate::__led_impl! {
-            @__finish
-            vis: $vis,
-            name: $name,
-            pin: [$($pin)?],
-            max_steps: [$($max_steps)?]
-        }
-    };
-
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ $field:ident : $value:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("led! unknown field; expected `pin` or `max_steps`");
-    };
-
-    (@__finish
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [],
-        max_steps: [$($max_steps:expr)?]
-    ) => {
-        compile_error!("led! missing required `pin` field");
-    };
-
-    (@__finish
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$pin:ident],
-        max_steps: []
-    ) => {
-        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $crate::led::DEFAULT_MAX_STEPS);
-    };
-
-    (@__finish
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$pin:ident],
-        max_steps: [$max_steps:expr]
-    ) => {
-        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
-    };
-
-    (
-        @__emit
-        vis: $vis:vis,
-        name: $name:ident,
+        doc: $doc:literal,
         pin: $pin:ident,
-        max_steps: $max_steps:expr
+        max_steps: $max_steps:expr,
     ) => {
         $crate::led::paste::paste! {
             const [<$name:upper _MAX_STEPS>]: usize = $max_steps;
@@ -330,6 +185,8 @@ macro_rules! __led_impl {
                 $crate::led::LedStatic::new();
 
             #[allow(non_camel_case_types)]
+            $(#[$attr])*
+            #[doc = $doc]
             $vis struct $name(&'static $crate::led::LedOuterStatic<{ [<$name:upper _MAX_STEPS>] }>);
 
             impl $name {
@@ -402,5 +259,17 @@ macro_rules! __led_impl {
     };
 }
 
-#[doc(inline)]
-pub use led;
+const_structures::define! {
+    /// Macro to generate a single LED struct type.
+    ///
+    /// **See the [led module documentation](mod@crate::led) for usage examples.**
+    ///
+    /// `max_steps = 0` disables animation storage; `set_level()` is still supported.
+    pub led => __led_generate {
+        /// GPIO pin for the LED.
+        pin: ident,
+        /// Maximum number of animation steps; `0` disables animation storage.
+        #[default_display = "32"]
+        max_steps: expr = $crate::led::DEFAULT_MAX_STEPS,
+    }
+}

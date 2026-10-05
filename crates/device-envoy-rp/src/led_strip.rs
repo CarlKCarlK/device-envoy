@@ -340,7 +340,7 @@ where
 
 /// Code generator for [`led_strips!`](crate::led_strip::led_strips).
 ///
-/// Called only by `led_strips!` after `device-envoy-macros` has validated the
+/// Called only by `led_strips!` after its `const_structures::define!` schema has validated the
 /// input and filled defaults. Must be public for macro expansion in downstream
 /// crates, but not user-facing API.
 #[cfg(not(feature = "host"))]
@@ -686,7 +686,7 @@ macro_rules! __led_strips_member {
 /// Code generator for [`led_strip!`](crate::led_strip::led_strip): a one-member
 /// [`led_strips!`](crate::led_strip::led_strips) group plus a constructor that hides the group.
 ///
-/// Called only by `led_strip!` after `device-envoy-macros` has validated the
+/// Called only by `led_strip!` after its `const_structures::define!` schema has validated the
 /// input and filled defaults. Must be public for macro expansion in downstream
 /// crates, but not user-facing API.
 // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
@@ -753,212 +753,257 @@ macro_rules! __led_strip_generate {
     };
 }
 
-/// Macro to generate an LED-strip struct type.
-///
-/// **See the [led_strip module documentation](mod@crate::led_strip) for usage examples.**
-///
-/// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
-///
-#[doc = include_str!("docs/current_limiting_and_gamma.md")]
-///
-/// # Related Macros
-///
-/// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples)
-/// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
-///
-#[cfg(not(feature = "host"))]
-#[doc(inline)]
-pub use device_envoy_macros::rp_led_strip as led_strip;
-/// Macro to generate multiple LED strip and panel struct types that share a single
-/// [PIO resource](crate#glossary).
-///
-/// This page provides the primary documentation and examples for configuring strip/panel
-/// groups that share a PIO resource.
-///
-/// **After reading the examples below, see also:**
-///
-/// - [`LedStrip`](`crate::led_strip::LedStrip`) — LED **strip** trait defining methods and associated constants
-/// - [`Led2d`](crate::led2d::Led2d) — LED **panel** trait defining methods and associated constants
-/// - [`led_strip!`](macro@crate::led_strip) — Alternative macro to generate a single LED strip type. Consumes a PIO resource.
-/// - [`led2d!`](mod@crate::led2d) — Alternative macro to generate a single LED panel type. Consumes a PIO resource.
-///
-/// Use this macro when your project has multiple LED strips or panels
-/// that should share a single PIO resource.
-/// If you only need a single strip or panel, prefer [`led_strip!`](macro@crate::led_strip)
-/// or [`led2d!`](macro@crate::led2d) for simpler configuration.
-///
-/// We’ll start with a complete example below. The syntax and field reference are at
-/// the end of this page.
-///
-/// # Example: Connect Three LED Strips/Panels to One PIO Resource
-///
-/// This example creates three LED strips/panels on GPIO0, GPIO3, and GPIO4,
-/// all sharing PIO0. It demonstrates showing a pattern on the first two strips
-/// and animating text on the 2D panel.
-///
-/// ![GPIO0 strip preview][led_strip_gpio0]
-///
-/// ![GPIO3 strip preview][led_strip_simple]
-///
-/// ![GPIO4 panel preview][led_strip_gogo]
-///
-/// ```rust,no_run
-/// # #![no_std]
-/// # #![no_main]
-/// # use panic_probe as _;
-/// # use core::{convert::Infallible, future::pending};
-/// # use defmt_rtt as _;
-/// # use embassy_executor::Spawner;
-/// # use defmt::info;
-/// use device_envoy_rp::{Result, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout, led_strip::{LedStrip as _, Current, Frame1d, Gamma, colors, led_strips}};
-/// use device_envoy_rp::led2d::Led2d as _;
-/// use embassy_time::Duration;
-///
-/// // Our 2D panel is two 12x4 panels stacked vertically.
-/// const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
-/// const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4);
-/// const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
-///
-/// led_strips! {
-///     LedStrips0 {                        // Name for this group of LED strips/panels. Can provide visibility modifier
-///         pio: PIO0,                      // Optional; defaults to PIO0.
-///
-///         // 1. a 8-LED strip on GPIO0
-///         Gpio0LedStrip {                 // Exact struct name for this strip. Can provide visibility modifier
-///             pin: PIN_0,                 // GPIO pin for LED data signal.
-///             len: 8,                     // 8 LEDs on this strip.
-///             max_current: Current::Milliamps(25), // Every strip/panel requires an electrical current budget.
-///         },
-///         // 2. a 48-LED strip on GPIO3
-///         Gpio3LedStrip {
-///             pin: PIN_3,
-///             len: 48,
-///             max_current: Current::Milliamps(75),
-///             gamma: Gamma::Srgb,        // Optional; color correction (default, Gamma::Srgb).
-///             max_frames: 1,              // Optional; default 16 frames.
-///             dma: DMA_CH11,              // Optional; auto-assigned by strip order.
-///         },
-///         // 3. a 96-LED 2D panel on GPIO4
-///         Gpio4Led2d {
-///             pin: PIN_4,
-///             len: 96,
-///             max_current: Current::Milliamps(250),
-///             max_frames: 2,
-///             led2d: {                    // Optional panel configuration for 2D displays.
-///                 led_layout: LED_LAYOUT_12X8_ROTATED, // Two 12×4 panels stacked and rotated.
-///                 font: Led2dFont::Font4x6Trim, // 4x6 pixel font without the usual 1 pixel spacing.
-///             },
-///         },
-///     }
-/// }
-///
-/// # #[embassy_executor::main]
-/// # async fn main(spawner: Spawner) -> ! {
-/// #     let _ = example(spawner).await;
-/// #     core::panic!("done");
-/// # }
-/// async fn example(spawner: Spawner) -> Result<Infallible> {
-///     let p = embassy_rp::init(Default::default());
-///
-///     // Create instances of two LED strips and one panel.
-///     let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips0::new(
-///         p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, spawner,
-///     )?;
-///
-///     info!("Setting GPIO0 to white, GPIO3 to alternating blue/gray, GPIO4 to Go Go animation");
-///
-///     // Turn on all-white on GPIO0 strip.
-///     let frame_gpio0 = Frame1d::filled(colors::WHITE);
-///     gpio0_led_strip.write_frame(frame_gpio0); // Display the frame (until replaced)
-///
-///     // Alternate blue/gray on GPIO3 strip.
-///     let mut frame_gpio3 = Frame1d::new();
-///     for pixel_index in 0..Gpio3LedStrip::LEN {
-///         frame_gpio3[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
-///     }
-///     gpio3_led_strip.write_frame(frame_gpio3);  // Display the frame (until replaced)
-///
-///     // Animate "Go Go" text on GPIO4 2D panel.
-///     let mut frame_go_top = Frame2d::new();
-///     gpio4_led2d.write_text_to_frame("Go", &[], &mut frame_go_top);
-///
-///     let mut frame_go_bottom = Frame2d::new();
-///     gpio4_led2d.write_text_to_frame(
-///         "\nGo",
-///         &[colors::HOT_PINK, colors::LIME],
-///         &mut frame_go_bottom,
-///     );
-///
-///     let frame_duration = Duration::from_secs(1);
-///     gpio4_led2d
-///         .animate([
-///             (frame_go_top, frame_duration),
-///             (frame_go_bottom, frame_duration),
-///         ]); // Loop animation (until replaced)
-///
-///     pending().await // run forever
-/// }
-/// ```
-///
-/// # 2D Panels
-///
-/// If a member is a rectangular LED panel rather than a linear strip, add a `led2d`
-/// block to describe its geometry. That member's type then implements
-/// [`Led2d`](crate::led2d::Led2d) instead of [`LedStrip`](crate::led_strip::LedStrip).
-/// The `led_layout` value must be a `const` [`LedLayout`](crate::led2d::layout::LedLayout)
-/// so its dimensions are known at compile time, and `font` is a
-/// [`Led2dFont`](crate::led2d::Led2dFont). Detailed 2D rendering and animation support is
-/// documented in the [`led2d` module](mod@crate::led2d).
-///
-/// Set `max_frames: 0` to disable animation and allocate no frame storage; `write_frame()`
-/// is still supported.
-///
-/// # Capacity and Board Capabilities
-///
-/// The `led_strips!` macro is designed to **fully utilize the PIO resources**
-/// of supported Pico boards.
-///
-/// Each `led_strips!` invocation can drive up to **4 LED strips or panels**
-/// while sharing a single PIO resource. This lets you consolidate multiple
-/// LED outputs efficiently instead of consuming one PIO per strip.
-///
-/// Each invocation consumes exactly one PIO resource.
-///
-/// On supported boards, this enables the maximum practical LED capacity:
-///
-/// - **Pico 1** provides **2 PIO resources**, allowing up to **8 LED strips or panels**
-/// - **Pico 2** provides **3 PIO resources**, allowing up to **12 LED strips or panels**
-///
-#[doc = include_str!("docs/current_limiting_and_gamma.md")]
-///
-/// # Related Macros
-///
-/// - [`led_strip!`](macro@crate::led_strip) — For a single 1-dimensional LED strip (includes examples)
-/// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
-#[cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!(
-        "led_strip_gpio0",
-        "docs/assets/led_strip_gpio0.png"
-    )
-)]
-#[cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!(
-        "led_strip_simple",
-        "docs/assets/led_strip_simple.png"
-    )
-)]
-#[cfg_attr(
-    feature = "doc-images",
-    doc = ::embed_doc_image::embed_image!(
-        "led_strip_gogo",
-        "docs/assets/led2d2.png"
-    )
-)]
-#[cfg(not(feature = "host"))]
-#[doc(inline)]
-pub use device_envoy_macros::rp_led_strips as led_strips;
+const_structures::define! {
+    /// Macro to generate an LED-strip struct type.
+    ///
+    /// **See the [led_strip module documentation](mod@crate::led_strip) for usage examples.**
+    ///
+    /// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
+    ///
+    #[doc = include_str!("docs/current_limiting_and_gamma.md")]
+    ///
+    /// # Related Macros
+    ///
+    /// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples)
+    /// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
+    ///
+    #[cfg(not(feature = "host"))]
+    pub led_strip => __led_strip_generate {
+        /// GPIO pin for LED data, for example `PIN_0`.
+        pin: ident,
+        /// Number of LEDs (pixels).
+        len: expr,
+        /// PIO resource.
+        pio: ident = PIO0,
+        /// DMA channel.
+        dma: ident = DMA_CH0,
+        /// Electrical current budget.
+        #[default_display = "Current::Milliamps(250)"]
+        max_current: expr = $crate::led_strip::MAX_CURRENT_DEFAULT,
+        /// Color correction curve.
+        #[default_display = "Gamma::Srgb"]
+        gamma: expr = $crate::led_strip::Gamma::Srgb,
+        /// Maximum number of animation frames; `0` disables animation.
+        max_frames: expr = 16,
+    }
+}
+const_structures::define! {
+    /// Macro to generate multiple LED strip and panel struct types that share a single
+    /// [PIO resource](crate#glossary).
+    ///
+    /// This page provides the primary documentation and examples for configuring strip/panel
+    /// groups that share a PIO resource.
+    ///
+    /// **After reading the examples below, see also:**
+    ///
+    /// - [`LedStrip`](`crate::led_strip::LedStrip`) — LED **strip** trait defining methods and associated constants
+    /// - [`Led2d`](crate::led2d::Led2d) — LED **panel** trait defining methods and associated constants
+    /// - [`led_strip!`](macro@crate::led_strip) — Alternative macro to generate a single LED strip type. Consumes a PIO resource.
+    /// - [`led2d!`](mod@crate::led2d) — Alternative macro to generate a single LED panel type. Consumes a PIO resource.
+    ///
+    /// Use this macro when your project has multiple LED strips or panels
+    /// that should share a single PIO resource.
+    /// If you only need a single strip or panel, prefer [`led_strip!`](macro@crate::led_strip)
+    /// or [`led2d!`](macro@crate::led2d) for simpler configuration.
+    ///
+    /// We’ll start with a complete example below. The syntax and field reference are at
+    /// the end of this page.
+    ///
+    /// # Example: Connect Three LED Strips/Panels to One PIO Resource
+    ///
+    /// This example creates three LED strips/panels on GPIO0, GPIO3, and GPIO4,
+    /// all sharing PIO0. It demonstrates showing a pattern on the first two strips
+    /// and animating text on the 2D panel.
+    ///
+    /// ![GPIO0 strip preview][led_strip_gpio0]
+    ///
+    /// ![GPIO3 strip preview][led_strip_simple]
+    ///
+    /// ![GPIO4 panel preview][led_strip_gogo]
+    ///
+    /// ```rust,no_run
+    /// # #![no_std]
+    /// # #![no_main]
+    /// # use panic_probe as _;
+    /// # use core::{convert::Infallible, future::pending};
+    /// # use defmt_rtt as _;
+    /// # use embassy_executor::Spawner;
+    /// # use defmt::info;
+    /// use device_envoy_rp::{Result, led2d::Frame2d, led2d::Led2dFont, led2d::layout::LedLayout, led_strip::{LedStrip as _, Current, Frame1d, Gamma, colors, led_strips}};
+    /// use device_envoy_rp::led2d::Led2d as _;
+    /// use embassy_time::Duration;
+    ///
+    /// // Our 2D panel is two 12x4 panels stacked vertically.
+    /// const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
+    /// const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYOUT_12X4);
+    /// const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
+    ///
+    /// led_strips! {
+    ///     LedStrips0 {                        // Name for this group of LED strips/panels. Can provide visibility modifier
+    ///         pio: PIO0,                      // Optional; defaults to PIO0.
+    ///
+    ///         // 1. a 8-LED strip on GPIO0
+    ///         Gpio0LedStrip {                 // Exact struct name for this strip. Can provide visibility modifier
+    ///             pin: PIN_0,                 // GPIO pin for LED data signal.
+    ///             len: 8,                     // 8 LEDs on this strip.
+    ///             max_current: Current::Milliamps(25), // Every strip/panel requires an electrical current budget.
+    ///         },
+    ///         // 2. a 48-LED strip on GPIO3
+    ///         Gpio3LedStrip {
+    ///             pin: PIN_3,
+    ///             len: 48,
+    ///             max_current: Current::Milliamps(75),
+    ///             gamma: Gamma::Srgb,        // Optional; color correction (default, Gamma::Srgb).
+    ///             max_frames: 1,              // Optional; default 16 frames.
+    ///             dma: DMA_CH11,              // Optional; auto-assigned by strip order.
+    ///         },
+    ///         // 3. a 96-LED 2D panel on GPIO4
+    ///         Gpio4Led2d {
+    ///             pin: PIN_4,
+    ///             len: 96,
+    ///             max_current: Current::Milliamps(250),
+    ///             max_frames: 2,
+    ///             led2d: {                    // Optional panel configuration for 2D displays.
+    ///                 led_layout: LED_LAYOUT_12X8_ROTATED, // Two 12×4 panels stacked and rotated.
+    ///                 font: Led2dFont::Font4x6Trim, // 4x6 pixel font without the usual 1 pixel spacing.
+    ///             },
+    ///         },
+    ///     }
+    /// }
+    ///
+    /// # #[embassy_executor::main]
+    /// # async fn main(spawner: Spawner) -> ! {
+    /// #     let _ = example(spawner).await;
+    /// #     core::panic!("done");
+    /// # }
+    /// async fn example(spawner: Spawner) -> Result<Infallible> {
+    ///     let p = embassy_rp::init(Default::default());
+    ///
+    ///     // Create instances of two LED strips and one panel.
+    ///     let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips0::new(
+    ///         p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, spawner,
+    ///     )?;
+    ///
+    ///     info!("Setting GPIO0 to white, GPIO3 to alternating blue/gray, GPIO4 to Go Go animation");
+    ///
+    ///     // Turn on all-white on GPIO0 strip.
+    ///     let frame_gpio0 = Frame1d::filled(colors::WHITE);
+    ///     gpio0_led_strip.write_frame(frame_gpio0); // Display the frame (until replaced)
+    ///
+    ///     // Alternate blue/gray on GPIO3 strip.
+    ///     let mut frame_gpio3 = Frame1d::new();
+    ///     for pixel_index in 0..Gpio3LedStrip::LEN {
+    ///         frame_gpio3[pixel_index] = [colors::BLUE, colors::GRAY][pixel_index % 2];
+    ///     }
+    ///     gpio3_led_strip.write_frame(frame_gpio3);  // Display the frame (until replaced)
+    ///
+    ///     // Animate "Go Go" text on GPIO4 2D panel.
+    ///     let mut frame_go_top = Frame2d::new();
+    ///     gpio4_led2d.write_text_to_frame("Go", &[], &mut frame_go_top);
+    ///
+    ///     let mut frame_go_bottom = Frame2d::new();
+    ///     gpio4_led2d.write_text_to_frame(
+    ///         "\nGo",
+    ///         &[colors::HOT_PINK, colors::LIME],
+    ///         &mut frame_go_bottom,
+    ///     );
+    ///
+    ///     let frame_duration = Duration::from_secs(1);
+    ///     gpio4_led2d
+    ///         .animate([
+    ///             (frame_go_top, frame_duration),
+    ///             (frame_go_bottom, frame_duration),
+    ///         ]); // Loop animation (until replaced)
+    ///
+    ///     pending().await // run forever
+    /// }
+    /// ```
+    ///
+    /// # 2D Panels
+    ///
+    /// If a member is a rectangular LED panel rather than a linear strip, add a `led2d`
+    /// block to describe its geometry. That member's type then implements
+    /// [`Led2d`](crate::led2d::Led2d) instead of [`LedStrip`](crate::led_strip::LedStrip).
+    /// The `led_layout` value must be a `const` [`LedLayout`](crate::led2d::layout::LedLayout)
+    /// so its dimensions are known at compile time, and `font` is a
+    /// [`Led2dFont`](crate::led2d::Led2dFont). Detailed 2D rendering and animation support is
+    /// documented in the [`led2d` module](mod@crate::led2d).
+    ///
+    /// Set `max_frames: 0` to disable animation and allocate no frame storage; `write_frame()`
+    /// is still supported.
+    ///
+    /// # Capacity and Board Capabilities
+    ///
+    /// The `led_strips!` macro is designed to **fully utilize the PIO resources**
+    /// of supported Pico boards.
+    ///
+    /// Each `led_strips!` invocation can drive up to **4 LED strips or panels**
+    /// while sharing a single PIO resource. This lets you consolidate multiple
+    /// LED outputs efficiently instead of consuming one PIO per strip.
+    ///
+    /// Each invocation consumes exactly one PIO resource.
+    ///
+    /// On supported boards, this enables the maximum practical LED capacity:
+    ///
+    /// - **Pico 1** provides **2 PIO resources**, allowing up to **8 LED strips or panels**
+    /// - **Pico 2** provides **3 PIO resources**, allowing up to **12 LED strips or panels**
+    ///
+    #[doc = include_str!("docs/current_limiting_and_gamma.md")]
+    ///
+    /// # Related Macros
+    ///
+    /// - [`led_strip!`](macro@crate::led_strip) — For a single 1-dimensional LED strip (includes examples)
+    /// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
+    #[cfg_attr(
+        feature = "doc-images",
+        doc = ::embed_doc_image::embed_image!(
+            "led_strip_gpio0",
+            "docs/assets/led_strip_gpio0.png"
+        )
+    )]
+    #[cfg_attr(
+        feature = "doc-images",
+        doc = ::embed_doc_image::embed_image!(
+            "led_strip_simple",
+            "docs/assets/led_strip_simple.png"
+        )
+    )]
+    #[cfg_attr(
+        feature = "doc-images",
+        doc = ::embed_doc_image::embed_image!(
+            "led_strip_gogo",
+            "docs/assets/led2d2.png"
+        )
+    )]
+    #[cfg(not(feature = "host"))]
+    pub led_strips => __led_strips_generate {
+        /// PIO resource shared by every strip and panel in the group.
+        pio: ident = PIO0,
+        /// Each member is one LED strip or 2D panel and uses one PIO state machine.
+        members 1..=4 {
+            /// GPIO pin for LED data, for example `PIN_0`.
+            pin: ident,
+            /// Number of LEDs (pixels).
+            len: expr,
+            /// Electrical current budget, for example `Current::Milliamps(250)`.
+            max_current: expr,
+            /// DMA channel.
+            dma: ident = by_index[DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3],
+            /// Color correction curve.
+            #[default_display = "Gamma::Srgb"]
+            gamma: expr = $crate::led_strip::Gamma::Srgb,
+            /// Maximum number of animation frames; `0` disables animation.
+            max_frames: expr = 16,
+            /// Makes this member a 2D panel.
+            led2d?: {
+                /// Physical layout; a `const` `LedLayout` that defines the panel size.
+                led_layout: expr,
+                /// Built-in font for text, for example `Led2dFont::Font4x6Trim`.
+                font: expr,
+            },
+        },
+    }
+}
 
 // Public so led_strip!/led_strips! expansions in downstream crates can reference it.
 #[doc(hidden)]

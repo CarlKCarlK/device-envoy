@@ -6,7 +6,6 @@ members = [
     "crates/device-envoy-conway-wasm",
     "crates/device-envoy-dns-tester-wasm",
     "crates/device-envoy-core",
-    "crates/device-envoy-macros",
     "crates/device-envoy-examples-core",
     "crates/device-envoy-examples-esp",
     "crates/device-envoy-examples-esp/xtask",

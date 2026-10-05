@@ -361,7 +361,7 @@ where
 
 // ===== Code generators for the IR macros ====================================
 //
-// Each IR macro is declared from a schema in `device-envoy-macros`, which
+// Each IR macro is declared from a `const_structures::define!` schema below, which
 // validates the input, fills defaults, and calls one of these with every field
 // present. The group generators come in three layers (raw, mapped, Kepler);
 // each single-receiver generator is a one-member group plus a `new` that hides
@@ -781,66 +781,119 @@ macro_rules! __ir_kepler_generate {
     };
 }
 
-/// Macro to generate an IR receiver struct type.
-///
-/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
-///
-/// # Related Macros
-///
-/// - [`irs!`](crate::irs) — Share one PIO resource with multiple IR receivers
-/// - [`ir_mapping!`](crate::ir_mapping) — Generate a mapped-button IR receiver type
-#[doc(inline)]
-pub use device_envoy_macros::rp_ir as ir;
-/// Macro to generate a Kepler IR struct type.
-///
-/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
-///
-/// # Related Macros
-///
-/// - [`ir_keplers!`](crate::ir_keplers) — Share one PIO resource with multiple Kepler IR receivers
-/// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
-#[doc(inline)]
-pub use device_envoy_macros::rp_ir_kepler as ir_kepler;
-/// Macro to generate multiple Kepler IR struct types that share one PIO resource.
-///
-/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
-///
-/// # Related Macros
-///
-/// - [`ir_kepler!`](crate::ir_kepler) — Generate a single Kepler IR receiver type
-/// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
-#[doc(inline)]
-pub use device_envoy_macros::rp_ir_keplers as ir_keplers;
-/// Macro to generate an IR mapping struct type.
-///
-/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
-///
-/// # Related Macros
-///
-/// - [`ir_mappings!`](crate::ir_mappings) — Share one PIO resource with multiple mapping receivers
-/// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
-#[doc(inline)]
-pub use device_envoy_macros::rp_ir_mapping as ir_mapping;
-/// Macro to generate multiple IR mapping struct types that share one PIO resource.
-///
-/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
-///
-/// # Related Macros
-///
-/// - [`ir_mapping!`](crate::ir_mapping) — Generate a single IR mapping receiver type
-/// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
-#[doc(inline)]
-pub use device_envoy_macros::rp_ir_mappings as ir_mappings;
-/// Macro to generate multiple IR receiver struct types that share one PIO resource.
-///
-/// **See the [ir module documentation](mod@crate::ir) for usage examples.**
-///
-/// # Related Macros
-///
-/// - [`ir!`](crate::ir!) — Generate a single IR receiver type
-/// - [`ir_mappings!`](crate::ir_mappings) — Generate mapped-button receivers sharing one PIO
-#[doc(inline)]
-pub use device_envoy_macros::rp_irs as irs;
+const_structures::define! {
+    /// Macro to generate an IR receiver struct type.
+    ///
+    /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+    ///
+    /// # Related Macros
+    ///
+    /// - [`irs!`](crate::irs) — Share one PIO resource with multiple IR receivers
+    /// - [`ir_mapping!`](crate::ir_mapping) — Generate a mapped-button IR receiver type
+    pub ir => __ir_generate {
+        /// PIO resource, for example `PIO0`.
+        pio: ident,
+        /// GPIO input pin connected to the IR receiver.
+        pin: ident,
+    }
+}
+const_structures::define! {
+    /// Macro to generate a Kepler IR struct type.
+    ///
+    /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+    ///
+    /// # Related Macros
+    ///
+    /// - [`ir_keplers!`](crate::ir_keplers) — Share one PIO resource with multiple Kepler IR receivers
+    /// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
+    pub ir_kepler => __ir_kepler_generate {
+        /// PIO resource, for example `PIO0`.
+        pio: ident,
+        /// GPIO input pin connected to the IR receiver.
+        pin: ident,
+    }
+}
+const_structures::define! {
+    /// Macro to generate multiple Kepler IR struct types that share one PIO resource.
+    ///
+    /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+    ///
+    /// # Related Macros
+    ///
+    /// - [`ir_kepler!`](crate::ir_kepler) — Generate a single Kepler IR receiver type
+    /// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
+    pub ir_keplers => __ir_keplers_generate {
+        /// PIO resource shared by every receiver in the group, for example `PIO0`.
+        pio: ident,
+        /// Each member is one Kepler remote receiver and uses one PIO state machine.
+        members 1..=4 {
+            /// GPIO input pin connected to the IR receiver.
+            pin: ident,
+        },
+    }
+}
+const_structures::define! {
+    /// Macro to generate an IR mapping struct type.
+    ///
+    /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+    ///
+    /// # Related Macros
+    ///
+    /// - [`ir_mappings!`](crate::ir_mappings) — Share one PIO resource with multiple mapping receivers
+    /// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
+    pub ir_mapping => __ir_mapping_generate {
+        /// PIO resource, for example `PIO0`.
+        pio: ident,
+        /// GPIO input pin connected to the IR receiver.
+        pin: ident,
+        /// Application button type that IR codes map to.
+        button: ty,
+        /// Maximum mapping entries; at least the number of entries you provide.
+        capacity: expr,
+    }
+}
+const_structures::define! {
+    /// Macro to generate multiple IR mapping struct types that share one PIO resource.
+    ///
+    /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+    ///
+    /// # Related Macros
+    ///
+    /// - [`ir_mapping!`](crate::ir_mapping) — Generate a single IR mapping receiver type
+    /// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
+    pub ir_mappings => __ir_mappings_generate {
+        /// PIO resource shared by every receiver in the group, for example `PIO0`.
+        pio: ident,
+        /// Application button type that IR codes map to.
+        button: ty,
+        /// Maximum mapping entries per receiver; at least the number of entries you provide.
+        capacity: expr,
+        /// Each member is one mapping receiver and uses one PIO state machine.
+        members 1..=4 {
+            /// GPIO input pin connected to the IR receiver.
+            pin: ident,
+        },
+    }
+}
+const_structures::define! {
+    /// Macro to generate multiple IR receiver struct types that share one PIO resource.
+    ///
+    /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
+    ///
+    /// # Related Macros
+    ///
+    /// - [`ir!`](crate::ir!) — Generate a single IR receiver type
+    /// - [`ir_mappings!`](crate::ir_mappings) — Generate mapped-button receivers sharing one PIO
+    pub irs => __irs_generate {
+        /// PIO resource shared by every receiver in the group, for example `PIO0`.
+        pio: ident,
+        /// Each member is one IR receiver and uses one PIO state machine.
+        members 1..=4 {
+            /// GPIO input pin connected to the IR receiver.
+            pin: ident,
+        },
+    }
+}
 
 macro_rules! __define_ir_task {
     ($task_name:ident, $pio:ty, $sm:literal) => {

@@ -259,7 +259,7 @@ async fn signal_press_durations<B: device_envoy_core::button::__ButtonMonitor>(
 
 /// Code generator for [`button_watch!`](crate::button_watch!).
 ///
-/// Called only by `button_watch!` after `device-envoy-macros` has validated the
+/// Called only by `button_watch!` after its `const_structures::define!` schema has validated the
 /// input and filled defaults. Must be public for macro expansion in downstream
 /// crates, but not user-facing API.
 #[doc(hidden)]

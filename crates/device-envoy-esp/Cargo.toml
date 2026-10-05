@@ -132,7 +132,8 @@ embassy-embedded-hal = { version = "0.6.0", default-features = false }
 embassy-futures = { version = "0.1.2" }
 smart-leds     = { version = "0.4.0" }
 device-envoy-core = { version = "0.1.6", path = "../device-envoy-core", features = ["wifi"] }
-device-envoy-macros = { version = "0.1.6", path = "../device-envoy-macros" }
+# TODO0 Replace the path dependency on const-structures with a published version before release.
+const-structures = { path = "../../../../const-structures" }
 embedded-graphics = { version = "0.8", default-features = false }
 heapless       = { version = "0.9.2", features = ["serde"] }
 static_cell    = { version = "2.1.1" }

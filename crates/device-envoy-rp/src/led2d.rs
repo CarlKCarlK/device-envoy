@@ -163,7 +163,7 @@ pub type Led2dRp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 /// [`led_strips!`](crate::led_strip::led_strips) group whose member is a 2D panel, plus a
 /// constructor that hides the group.
 ///
-/// Called only by `led2d!` after `device-envoy-macros` has validated the input and
+/// Called only by `led2d!` after its `const_structures::define!` schema has validated the input and
 /// filled defaults. Must be public for macro expansion in downstream crates, but not
 /// user-facing API.
 #[cfg(not(feature = "host"))]
@@ -386,23 +386,43 @@ macro_rules! led2d_from_strip {
     };
 }
 
-/// Macro to generate an LED-panel struct type. See [`Led2d`](`crate::led2d::Led2d`) for the shared API.
-///
-/// **See the [led2d module](mod@crate::led2d) for usage examples.**
-///
-/// The `led_layout` value must be a const so its dimensions can be derived at compile time.
-///
-/// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
-///
-#[doc = include_str!("docs/current_limiting_and_gamma.md")]
-///
-/// # Related Macros
-///
-/// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other panels or LED strips (includes examples)
-/// - [`led_strip!`](mod@crate::led_strip) — For 1-dimensional LED strips
-#[cfg(not(feature = "host"))]
-#[doc(inline)]
-pub use device_envoy_macros::rp_led2d as led2d;
+const_structures::define! {
+    /// Macro to generate an LED-panel struct type. See [`Led2d`](`crate::led2d::Led2d`) for the shared API.
+    ///
+    /// **See the [led2d module](mod@crate::led2d) for usage examples.**
+    ///
+    /// The `led_layout` value must be a const so its dimensions can be derived at compile time.
+    ///
+    /// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
+    ///
+    #[doc = include_str!("docs/current_limiting_and_gamma.md")]
+    ///
+    /// # Related Macros
+    ///
+    /// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other panels or LED strips (includes examples)
+    /// - [`led_strip!`](mod@crate::led_strip) — For 1-dimensional LED strips
+    #[cfg(not(feature = "host"))]
+    pub led2d => __led2d_generate {
+        /// GPIO pin for LED data, for example `PIN_4`.
+        pin: ident,
+        /// Physical layout; a `const` `LedLayout` that defines the panel size.
+        led_layout: expr,
+        /// Built-in font for text, for example `Led2dFont::Font4x6Trim`.
+        font: expr,
+        /// PIO resource.
+        pio: ident = PIO0,
+        /// DMA channel.
+        dma: ident = DMA_CH0,
+        /// Electrical current budget.
+        #[default_display = "Current::Milliamps(250)"]
+        max_current: expr = $crate::led_strip::MAX_CURRENT_DEFAULT,
+        /// Color correction curve.
+        #[default_display = "Gamma::Srgb"]
+        gamma: expr = $crate::led_strip::Gamma::Srgb,
+        /// Maximum number of animation frames; `0` disables animation.
+        max_frames: expr = 16,
+    }
+}
 #[cfg(not(feature = "host"))]
 #[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
 pub use led2d_from_strip;

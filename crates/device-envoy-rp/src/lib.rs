@@ -52,6 +52,14 @@ pub use device_envoy_macros::rp_button_watch as button_watch;
 #[cfg(not(feature = "host"))]
 #[doc(hidden)]
 pub use device_envoy_macros::rp_led_strips as led_strips;
+// Crate-root path kept for `use device_envoy_rp::led_strip;`; documented in `led_strip`.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_led_strip as led_strip;
+// Crate-root path kept for `use device_envoy_rp::led2d;`; documented in `led2d`.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_led2d as led2d;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 #[cfg(target_os = "none")]

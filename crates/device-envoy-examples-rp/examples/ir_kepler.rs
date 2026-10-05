@@ -14,6 +14,7 @@ use panic_probe as _;
 ir_keplers! {
     IrKeplers0 {
         pio: PIO0,
+
         IrKepler15 { pin: PIN_15 },
         IrKepler01 { pin: PIN_16 }
     }

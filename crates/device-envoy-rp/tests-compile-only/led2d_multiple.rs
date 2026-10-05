@@ -30,6 +30,7 @@ const LED_LAYOUT_8X8: LedLayout<64, 8, 8> = LedLayout::serpentine_column_major()
 led_strips! {
     pub LedStripsPio0 {
         pio: PIO0,
+
         Gpio3Led2d {
             pin: PIN_3,
             len: 48,
@@ -45,6 +46,7 @@ led_strips! {
 led_strips! {
     pub LedStripsPio1 {
         pio: PIO1,
+
         Gpio4Led2d {
             dma: DMA_CH1,
             pin: PIN_4,

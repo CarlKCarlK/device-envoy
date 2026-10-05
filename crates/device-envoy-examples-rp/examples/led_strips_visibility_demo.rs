@@ -17,6 +17,7 @@ led_strips! {
 led_strips! {
     pub(crate) CrateLedStrips {
         pio: PIO1,
+
         Gpio2LedStrip { pin: PIN_2, len: 16, max_current: Current::Milliamps(50) }
     }
 }
@@ -28,6 +29,7 @@ mod inner {
     led_strips! {
         pub(super) SuperLedStrips {
             pio: PIO0,
+
             Gpio4LedStrip { pin: PIN_4, len: 24, max_current: Current::Milliamps(75) }
         }
     }

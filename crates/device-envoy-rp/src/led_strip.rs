@@ -822,6 +822,7 @@ pub use device_envoy_macros::rp_led_strip as led_strip;
 /// led_strips! {
 ///     LedStrips0 {                        // Name for this group of LED strips/panels. Can provide visibility modifier
 ///         pio: PIO0,                      // Optional; defaults to PIO0.
+///
 ///         // 1. a 8-LED strip on GPIO0
 ///         Gpio0LedStrip {                 // Exact struct name for this strip. Can provide visibility modifier
 ///             pin: PIN_0,                 // GPIO pin for LED data signal.

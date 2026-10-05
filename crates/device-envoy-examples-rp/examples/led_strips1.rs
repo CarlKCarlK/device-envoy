@@ -15,6 +15,7 @@ use panic_probe as _;
 led_strips! {
     LedStrips1 {
         pio: PIO1, // Optional; default is PIO0
+
         Gpio3LedStrip {
             pin: PIN_3,
             len: 48,

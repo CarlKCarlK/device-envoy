@@ -23,6 +23,7 @@ const LED_LAYOUT_4X12_ROTATED: LedLayout<48, 4, 12> = LED_LAYOUT_12X4.rotate_cw(
 led_strips! {
     LedStripsPio0 {
         pio: PIO0,
+
         Gpio0LedStrip {
             pin: PIN_0,
             len: 8,

@@ -13,6 +13,7 @@ use embassy_executor::Spawner;
 irs! {
     Irs0 {
         pio: PIO0,
+
         Ir15 { pin: PIN_15 },
         Ir16 { pin: PIN_16 },
         Ir17 { pin: PIN_17 },

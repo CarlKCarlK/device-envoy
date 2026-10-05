@@ -21,6 +21,7 @@ use heapless::Vec;
 led_strips! {
     pub LedStripsPio1 {
         pio: PIO1,
+
         Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(200) },
         Gpio3Led2d {
             dma: DMA_CH1,
@@ -39,6 +40,7 @@ led_strips! {
 led_strips! {
     pub LedStripsPio0 {
         pio: PIO0,
+
         Gpio4Led2d {
             dma: DMA_CH2,
             pin: PIN_4,

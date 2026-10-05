@@ -132,6 +132,7 @@ mod test_led_strips_public_led2d {
     led_strips! {
         pub LedStripsPublicLed2d {
             pio: PIO1,
+
             Gpio4Led2d {
                 pin: PIN_4,
                 len: 12,

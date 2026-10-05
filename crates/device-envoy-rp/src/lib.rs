@@ -117,6 +117,14 @@ pub mod rfid;
 pub mod servo;
 #[cfg(target_os = "none")]
 mod servo_player;
+// Crate-root path kept for `use device_envoy_rp::servo;`; documented in `servo`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use servo::servo;
+// Crate-root path kept for `use device_envoy_rp::servo_player;`; documented in `servo`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use servo_player::servo_player;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod wifi_auto;
 

@@ -517,7 +517,8 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
     let examples = discover_examples(&workspace_root);
-    let demos = discover_demo_bins(&workspace_root);
+    // The demos crate lives in device-envoy-rp/demos.
+    let demos = discover_demo_bins(&rp_crate_root());
     let no_wifi_examples: Vec<_> = examples
         .iter()
         .filter(|example| !example.required_capabilities.contains(Capability::Wifi))
@@ -1210,7 +1211,8 @@ fn check_examples() -> ExitCode {
 
 fn check_demos() -> ExitCode {
     let workspace_root = workspace_root();
-    let demos = discover_demo_bins(&workspace_root);
+    // The demos crate lives in device-envoy-rp/demos.
+    let demos = discover_demo_bins(&rp_crate_root());
     if demos.is_empty() {
         println!("{}", "No demos found.".yellow());
         return ExitCode::SUCCESS;

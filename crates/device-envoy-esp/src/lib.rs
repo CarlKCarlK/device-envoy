@@ -245,6 +245,14 @@ mod rmt_mode;
 pub mod servo;
 #[cfg(all(target_os = "none", esp_has_ledc))]
 mod servo_player;
+// Crate-root path kept for `use device_envoy_esp::servo;`; documented in `servo`.
+#[cfg(all(target_os = "none", esp_has_ledc))]
+#[doc(hidden)]
+pub use servo::servo;
+// Crate-root path kept for `use device_envoy_esp::servo_player;`; documented in `servo`.
+#[cfg(all(target_os = "none", esp_has_ledc))]
+#[doc(hidden)]
+pub use servo_player::servo_player;
 #[cfg(any(feature = "host", esp_has_wifi))]
 pub mod wifi_auto;
 

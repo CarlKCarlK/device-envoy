@@ -95,7 +95,7 @@ mod test_led_strips_public_strip {
     // Public visibility
     led_strips! {
         pub LedStripsPublicStrip {
-            Gpio0LedStrip: { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) }
+            Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) }
         }
     }
 
@@ -111,7 +111,7 @@ mod test_led_strips_private_strip {
 
     led_strips! {
         pub(self) LedStripsPrivateStrip {
-            Gpio2LedStrip: { pin: PIN_2, len: 24, max_current: Current::Milliamps(500) }
+            Gpio2LedStrip { pin: PIN_2, len: 24, max_current: Current::Milliamps(500) }
         }
     }
 
@@ -130,9 +130,9 @@ mod test_led_strips_public_led2d {
     const LED_LAYOUT_PUBLIC: LedLayout<12, 4, 3> = LedLayout::serpentine_column_major();
 
     led_strips! {
-        pio: PIO1,
         pub LedStripsPublicLed2d {
-            Gpio4Led2d: {
+            pio: PIO1,
+            Gpio4Led2d {
                 pin: PIN_4,
                 len: 12,
                 max_current: Current::Milliamps(250),
@@ -160,7 +160,7 @@ mod test_led_strips_private_led2d {
 
     led_strips! {
         pub(self) LedStripsPrivateLed2d {
-            Gpio6Led2d: {
+            Gpio6Led2d {
                 pin: PIN_6,
                 len: 12,
                 max_current: Current::Milliamps(250),

@@ -14,24 +14,24 @@ use embassy_executor::Spawner;
 const MAX_CURRENT: Current = Current::Milliamps(250);
 
 led_strips! {
-    pio: PIO0,
     pub LedStripsPio0 {
-        Pio0LedStrip: { pin: PIN_3, len: 48, max_current: MAX_CURRENT }
+        pio: PIO0,
+        Pio0LedStrip { pin: PIN_3, len: 48, max_current: MAX_CURRENT }
     }
 }
 
 led_strips! {
-    pio: PIO1,
     pub LedStripsPio1 {
-        Pio1LedStrip: { dma: DMA_CH1, pin: PIN_4, len: 48, max_current: MAX_CURRENT }
+        pio: PIO1,
+        Pio1LedStrip { dma: DMA_CH1, pin: PIN_4, len: 48, max_current: MAX_CURRENT }
     }
 }
 
 #[cfg(feature = "pico2")]
 led_strips! {
-    pio: PIO2,
     pub LedStripsPio2 {
-        Pio2LedStrip: { dma: DMA_CH2, pin: PIN_5, len: 48, max_current: MAX_CURRENT }
+        pio: PIO2,
+        Pio2LedStrip { dma: DMA_CH2, pin: PIN_5, len: 48, max_current: MAX_CURRENT }
     }
 }
 

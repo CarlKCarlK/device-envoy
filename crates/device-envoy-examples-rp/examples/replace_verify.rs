@@ -21,14 +21,14 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 const LED_LAYOUT_4X12_ROTATED: LedLayout<48, 4, 12> = LED_LAYOUT_12X4.rotate_cw();
 
 led_strips! {
-    pio: PIO0,
     LedStripsPio0 {
-        Gpio0LedStrip: {
+        pio: PIO0,
+        Gpio0LedStrip {
             pin: PIN_0,
             len: 8,
             max_current: Current::Milliamps(100),
         },
-        Gpio3Led2d: {
+        Gpio3Led2d {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(300),

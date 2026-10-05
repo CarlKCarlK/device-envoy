@@ -18,8 +18,8 @@ use panic_probe as _;
 
 led_strips! {
     LedStrips0 {
-        Gpio0LedStrip: { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) },
-        Gpio3Led2d: {
+        Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) },
+        Gpio3Led2d {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(250),
@@ -28,7 +28,7 @@ led_strips! {
                 font: Led2dFont::Font3x4Trim,
             }
         },
-        Gpio4Led2d: {
+        Gpio4Led2d {
             pin: PIN_4,
             len: 96,
             max_current: Current::Milliamps(250),

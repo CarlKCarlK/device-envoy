@@ -22,14 +22,14 @@ const LED_LAYOUT_12X8: LedLayout<96, 12, 8> = LED_LAYOUT_12X4.combine_v(LED_LAYO
 const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw();
 
 led_strips! {
-    pio: PIO0, // Optional; defaults to PIO0.
     pub(self) LedStrips0 { // Name for this collection of strips.
-        Gpio0LedStrip: {                            // Exact struct name (not prefix).
+        pio: PIO0, // Optional; defaults to PIO0.
+        Gpio0LedStrip {                            // Exact struct name (not prefix).
             pin: PIN_0,                             // GPIO pin for LED data signal.
             len: 8,                                 // 8 LEDs on this strip.
             max_current: Current::Milliamps(25),    // Required per strip.
         },
-        Gpio3LedStrip: {
+        Gpio3LedStrip {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(75),
@@ -37,7 +37,7 @@ led_strips! {
             max_frames: 1,                          // Optional; default 16.
             dma: DMA_CH11,                          // Optional; auto-assigned by strip order.
         },
-        Gpio4Led2d: {
+        Gpio4Led2d {
             pin: PIN_4,
             len: 96,
             max_current: Current::Milliamps(250),

@@ -48,6 +48,10 @@ pub mod button;
 // Crate-root path kept for `use device_envoy_rp::button_watch;`; documented in `button`.
 #[doc(hidden)]
 pub use device_envoy_macros::rp_button_watch as button_watch;
+// Crate-root path kept for `use device_envoy_rp::led_strips;`; documented in `led_strip`.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_led_strips as led_strips;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 #[cfg(target_os = "none")]

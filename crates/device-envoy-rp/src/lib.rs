@@ -38,8 +38,16 @@ pub mod pio_irqs;
 // Embedded-only in normal builds, but compiled for host unit tests.
 #[cfg(any(target_os = "none", all(test, feature = "host")))]
 pub mod audio_player;
+// Lets `::device_envoy_rp::...` paths emitted by device-envoy-macros resolve inside this crate.
+// Needed only where this crate invokes its own macros (the `*_generated` modules).
+#[cfg(all(target_os = "none", not(doc), not(feature = "host")))]
+extern crate self as device_envoy_rp;
+
 #[cfg(target_os = "none")]
 pub mod button;
+// Crate-root path kept for `use device_envoy_rp::button_watch;`; documented in `button`.
+#[doc(hidden)]
+pub use device_envoy_macros::rp_button_watch as button_watch;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 #[cfg(target_os = "none")]

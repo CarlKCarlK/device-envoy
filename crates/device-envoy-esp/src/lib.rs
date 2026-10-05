@@ -62,7 +62,15 @@ compile_error!(
 ))]
 compile_error!("Select exactly one chip feature for embedded builds, not both.");
 
+// Lets `::device_envoy_esp::...` paths emitted by device-envoy-macros resolve inside this crate.
+// Needed only where this crate invokes its own macros (the `*_generated` modules).
+#[cfg(all(target_os = "none", not(doc), not(feature = "host")))]
+extern crate self as device_envoy_esp;
+
 pub mod button;
+// Crate-root path kept for `use device_envoy_esp::button_watch;`; documented in `button`.
+#[doc(hidden)]
+pub use device_envoy_macros::esp_button_watch as button_watch;
 #[cfg(all(target_os = "none", esp_has_wifi))]
 pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.

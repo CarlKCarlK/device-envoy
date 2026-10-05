@@ -129,5 +129,65 @@ impl device_envoy_core::button::__ButtonMonitor for ButtonRp<'_> {
 
 impl device_envoy_core::button::Button for ButtonRp<'_> {}
 
+/// Creates a button monitoring device abstraction with a background task.
+///
+/// This macro creates a button monitor that runs in a dedicated background task,
+/// providing continuous monitoring without interruption.
+///
+/// See [`ButtonWatchGenerated`](crate::button::button_watch_generated::ButtonWatchGenerated) for a sample of what the macro generates.
+///
+/// # Constructors
+///
+/// - [`new()`](crate::button::button_watch_generated::ButtonWatchGenerated::new) — Create from a pin
+///
+/// # Use Cases
+///
+/// Use `button_watch!` instead of [`ButtonRp`] when you need continuous monitoring
+/// that works even in fast loops or `select()` operations. [`ButtonRp`] starts
+/// fresh monitoring on each call to `wait_for_press()`, which can miss events in busy loops.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// use device_envoy_rp::button_watch;
+/// use device_envoy_rp::button::PressDuration;
+/// use device_envoy_rp::button::PressedTo;
+/// use device_envoy_rp::button::Button as _;
+/// use embassy_executor::Spawner;
+/// # #[panic_handler]
+/// # fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
+///
+/// button_watch! {
+///     ButtonWatch13 {
+///         pin: PIN_13,
+///     }
+/// }
+///
+/// async fn example(
+///     p: embassy_rp::Peripherals,
+///     spawner: Spawner,
+/// ) -> device_envoy_rp::Result<()> {
+///     // Create the button monitor (spawns background task automatically)
+///     let mut button_watch13 = ButtonWatch13::new(p.PIN_13, PressedTo::Ground, spawner)
+///         .await?;
+///
+///     loop {
+///         // Wait for button press - never misses events even if this loop is slow
+///         match button_watch13.wait_for_press_duration().await {
+///             PressDuration::Short => {
+///                 // Handle short press
+/// #               break;
+///             }
+///             PressDuration::Long => {
+///                 // Handle long press
+/// #               break;
+///             }
+///         }
+///     }
+///     Ok(())
+/// }
+/// ```
 #[doc(inline)]
-pub use crate::button_watch;
+pub use device_envoy_macros::rp_button_watch as button_watch;

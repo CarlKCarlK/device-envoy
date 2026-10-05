@@ -1,0 +1,16 @@
+[package]
+name = "device-envoy-macros"
+version = "0.1.6"
+edition = "2024"
+rust-version = "1.93"
+description = "Schema-declared proc macros re-exported by device-envoy-rp and device-envoy-esp"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/CarlKCarlK/device-envoy"
+# TODO0 Replace the path dependency on const-structures with a published version before release.
+publish = false
+
+[lib]
+proc-macro = true
+
+[dependencies]
+const-structures = { path = "../../../../const-structures" }

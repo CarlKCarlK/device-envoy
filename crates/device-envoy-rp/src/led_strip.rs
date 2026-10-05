@@ -194,7 +194,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStripRp<N, MAX_FRAMES> {
 
 /// A state machine bundled with its PIO bus.
 ///
-/// This is returned by `pio_split!` and passed to strip constructors.
+/// Created by a `led_strips!` group constructor and passed to each member's constructor.
 #[cfg(not(feature = "host"))]
 #[doc(hidden)] // Support type for macro-generated strip types; not intended as surface API
 pub struct PioBusStateMachine<PIO: Instance + 'static, const SM: usize> {
@@ -370,38 +370,11 @@ macro_rules! __led_strips_generate {
         },)*],
     ) => {
         $crate::__paste! {
-            #[allow(non_upper_case_globals)]
-            static [<$pio _BUS>]: ::static_cell::StaticCell<
+            // A PIO resource belongs to one group. Two groups on the same PIO in one module
+            // collide on this name, and the name explains the problem in the compile error.
+            static [<$pio _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE>]: ::static_cell::StaticCell<
                 $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$pio>
             > = ::static_cell::StaticCell::new();
-
-            /// Split the PIO into bus and state machines.
-            ///
-            /// Returns 4 StateMachines (one for each SM)
-            #[allow(dead_code)]
-            pub fn [<$pio:lower _split>](
-                pio: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>,
-            ) -> (
-                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 0>,
-                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 1>,
-                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 2>,
-                $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, 3>,
-            ) {
-                let ::embassy_rp::pio::Pio { common, sm0, sm1, sm2, sm3, .. } =
-                    ::embassy_rp::pio::Pio::new(
-                        pio,
-                        <::embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
-                    );
-                let pio_bus = [<$pio _BUS>].init_with(|| {
-                    $crate::led_strip::PioBus::new(common)
-                });
-                (
-                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm0),
-                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm1),
-                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm2),
-                    $crate::led_strip::PioBusStateMachine::new(pio_bus, sm3),
-                )
-            }
 
             $(
                 $crate::__led_strips_member! {
@@ -441,8 +414,21 @@ macro_rules! __led_strips_generate {
                     )*
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<($($crate::__led_strips_member!(@return_type $label, $led2d),)*)> {
+                    let ::embassy_rp::pio::Pio { common, sm0, sm1, sm2, sm3, .. } =
+                        ::embassy_rp::pio::Pio::new(
+                            pio.into(),
+                            <::embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                        );
+                    let pio_bus = [<$pio _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE>].init_with(|| {
+                        $crate::led_strip::PioBus::new(common)
+                    });
                     #[allow(unused_variables)]
-                    let (sm0, sm1, sm2, sm3) = [<$pio:lower _split>](pio.into());
+                    let (sm0, sm1, sm2, sm3) = (
+                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm0),
+                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm1),
+                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm2),
+                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm3),
+                    );
                     Ok(($(
                         $crate::__led_strips_member!(
                             @new $label,
@@ -766,27 +752,6 @@ macro_rules! __led_strip_generate {
         }
     };
 }
-
-/// Macro for advanced PIO splitting (rarely needed).
-///
-/// **See the module docs.** Most users should use the group constructor instead.
-#[doc(hidden)]
-#[cfg(not(feature = "host"))]
-#[macro_export]
-macro_rules! pio_split {
-    ($p:ident . PIO0) => {
-        pio0_split($p.PIO0)
-    };
-    ($p:ident . PIO1) => {
-        pio1_split($p.PIO1)
-    };
-    ($p:ident . PIO2) => {
-        pio2_split($p.PIO2)
-    };
-}
-
-#[cfg(not(feature = "host"))]
-pub use pio_split;
 
 /// Macro to generate an LED-strip struct type.
 ///

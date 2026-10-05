@@ -41,6 +41,8 @@ wasm = [
 ]
 
 [dependencies]
+# TODO0 Replace the path dependency on const-structures with a published version before release.
+const-structures = { path = "../../../../const-structures" }
 derive_more = { version = "2.1.1", default-features = false, features = ["from"] }
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }

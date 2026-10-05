@@ -2116,162 +2116,39 @@ const fn encode_adpcm_nibble(
 // Macros
 // ============================================================================
 
+/// Code generator for [`pcm_clip!`](crate::audio_player::pcm_clip).
+///
+/// Called only by `pcm_clip!` after its `const_structures::define!` schema has validated
+/// the input. Must be public for macro expansion in downstream crates, but not
+/// user-facing API.
+// TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
+// code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
+// so macro visibility and helper exposure can be controlled more precisely. (may no longer apply)
 #[doc(hidden)]
 #[macro_export]
-macro_rules! pcm_clip {
-    // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
-    // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
-    // so macro visibility and helper exposure can be controlled more precisely.
-    ($($tt:tt)*) => { $crate::__audio_clip_parse! { $($tt)* } };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __audio_clip_parse {
+macro_rules! __pcm_clip_generate {
     (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            sample_rate_hz: $source_sample_rate_hz:expr,
-            target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
-        }
-    ) => {
-        $crate::__audio_clip_dispatch! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $source_sample_rate_hz,
-            target_sample_rate_hz: $target_sample_rate_hz,
-        }
-    };
-    (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            sample_rate_hz: $source_sample_rate_hz:expr,
-            target_sample_rate_hz: $target_sample_rate_hz:expr,
-            $(,)?
-        }
-    ) => {
-        $crate::__audio_clip_dispatch! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $source_sample_rate_hz,
-            target_sample_rate_hz: $target_sample_rate_hz,
-        }
-    };
-    (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            sample_rate_hz: $sample_rate_hz:expr $(,)?
-        }
-    ) => {
-        $crate::__audio_clip_dispatch! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $sample_rate_hz,
-            target_sample_rate_hz: $sample_rate_hz,
-        }
-    };
-    (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            sample_rate_hz: $sample_rate_hz:expr,
-            $(,)?
-        }
-    ) => {
-        $crate::__audio_clip_dispatch! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $sample_rate_hz,
-            target_sample_rate_hz: $sample_rate_hz,
-        }
-    };
-    (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            sample_rate_hz: $sample_rate_hz:expr,
-            $(,)?
-        }
-    ) => {
-        $crate::__audio_clip_dispatch! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $sample_rate_hz,
-            target_sample_rate_hz: $sample_rate_hz,
-        }
-    };
-    // Alias: `source_sample_rate_hz:` is accepted as a synonym for `sample_rate_hz:`.
-    (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            source_sample_rate_hz: $source_sample_rate_hz:expr,
-            target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
-        }
-    ) => {
-        $crate::__audio_clip_dispatch! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $source_sample_rate_hz,
-            target_sample_rate_hz: $target_sample_rate_hz,
-        }
-    };
-    (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            source_sample_rate_hz: $sample_rate_hz:expr $(,)?
-        }
-    ) => {
-        $crate::__audio_clip_dispatch! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $sample_rate_hz,
-            target_sample_rate_hz: $sample_rate_hz,
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __audio_clip_dispatch {
-    (
-        vis: $vis:vis,
+        attrs: [$(#[$attr:meta])*],
+        vis: [$vis:vis],
         name: $name:ident,
+        doc: $doc:literal,
         file: $file:expr,
         source_sample_rate_hz: $source_sample_rate_hz:expr,
-        target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
-    ) => {
-        $crate::__audio_clip_impl! {
-            vis: $vis,
-            name: $name,
-            file: $file,
-            source_sample_rate_hz: $source_sample_rate_hz,
-            target_sample_rate_hz: $target_sample_rate_hz,
-        }
-    };
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __audio_clip_impl {
-    (
-        vis: $vis:vis,
-        name: $name:ident,
-        file: $file:expr,
-        source_sample_rate_hz: $source_sample_rate_hz:expr,
-        target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
+        target_sample_rate_hz: [$($target_sample_rate_hz:expr)?],
     ) => {
         $crate::__paste! {
             const [<$name:upper _SOURCE_SAMPLE_RATE_HZ>]: u32 = $source_sample_rate_hz;
-            const [<$name:upper _TARGET_SAMPLE_RATE_HZ>]: u32 = $target_sample_rate_hz;
+            // `target_sample_rate_hz` is optional; without it, the clip keeps the source rate.
+            const [<$name:upper _TARGET_SAMPLE_RATE_HZ>]: u32 = {
+                let sample_rates_hz = [$source_sample_rate_hz $(, $target_sample_rate_hz)?];
+                sample_rates_hz[sample_rates_hz.len() - 1]
+            };
 
+            $(#[$attr])*
+            #[doc = $doc]
             #[allow(non_snake_case)]
             #[doc = concat!(
-                "Audio clip module generated by [`pcm_clip!`](macro@crate::audio_player::pcm_clip).\n\n",
+                "\n\nItems: ",
                 "[`SAMPLE_RATE_HZ`](Self::SAMPLE_RATE_HZ), ",
                 "[`PCM_SAMPLE_COUNT`](Self::PCM_SAMPLE_COUNT), ",
                 "[`ADPCM_DATA_LEN`](Self::ADPCM_DATA_LEN), ",
@@ -2344,33 +2221,48 @@ macro_rules! __audio_clip_impl {
     };
 }
 
-#[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file (includes syntax details)."]
-#[doc = include_str!("audio_player/adpcm_clip_docs.md")]
-#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
-#[doc = include_str!("audio_player/adpcm_clip_step_3.md")]
-#[doc(inline)]
-pub use crate::adpcm_clip;
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! adpcm_clip {
-    ($($tt:tt)*) => { $crate::__adpcm_clip_parse! { $($tt)* } };
+const_structures::define! {
+    #[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file."]
+    #[doc = include_str!("audio_player/adpcm_clip_docs.md")]
+    #[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
+    #[doc = include_str!("audio_player/adpcm_clip_step_3.md")]
+    pub adpcm_clip => __adpcm_clip_generate {
+        /// Path to a mono IMA ADPCM WAV file, relative to the invoking source file.
+        file: expr,
+        /// Output sample rate in hertz; defaults to the WAV file's own rate.
+        target_sample_rate_hz?: expr,
+    }
 }
 
+/// Code generator for [`adpcm_clip!`](crate::audio_player::adpcm_clip).
+///
+/// Called only by `adpcm_clip!` after its `const_structures::define!` schema has validated
+/// the input. Must be public for macro expansion in downstream crates, but not
+/// user-facing API.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __adpcm_clip_parse {
+macro_rules! __adpcm_clip_generate {
     (
-        $vis:vis $name:ident {
-            file: $file:expr,
-            target_sample_rate_hz: $target_sample_rate_hz:expr $(,)?
-        }
+        attrs: [$(#[$attr:meta])*],
+        vis: [$vis:vis],
+        name: $name:ident,
+        doc: $doc:literal,
+        file: $file:expr,
+        target_sample_rate_hz: [$($target_sample_rate_hz:expr)?],
     ) => {
         $crate::__paste! {
-            const [<$name:upper _TARGET_SAMPLE_RATE_HZ>]: u32 = $target_sample_rate_hz;
+            // `target_sample_rate_hz` is optional; without it, the clip keeps the WAV file's rate.
+            const [<$name:upper _TARGET_SAMPLE_RATE_HZ>]: u32 = {
+                let sample_rates_hz = [
+                    $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file)).sample_rate_hz
+                    $(, $target_sample_rate_hz)?
+                ];
+                sample_rates_hz[sample_rates_hz.len() - 1]
+            };
 
+            $(#[$attr])*
+            #[doc = $doc]
             #[allow(non_snake_case)]
-            #[allow(missing_docs)]
             $vis mod $name {
                 // TODO Parse each included WAV header only once. Reuse this metadata in
                 // source_adpcm_clip, adpcm_clip, and default sample-rate selection.
@@ -2378,6 +2270,7 @@ macro_rules! __adpcm_clip_parse {
                     $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file));
                 const SOURCE_SAMPLE_RATE_HZ: u32 = PARSED_WAV.sample_rate_hz;
                 const TARGET_SAMPLE_RATE_HZ: u32 = super::[<$name:upper _TARGET_SAMPLE_RATE_HZ>];
+                #[doc = "Sample rate in hertz for this generated clip output."]
                 pub const SAMPLE_RATE_HZ: u32 = TARGET_SAMPLE_RATE_HZ;
 
                 const SOURCE_SAMPLE_COUNT: usize = PARSED_WAV.sample_count;
@@ -2472,19 +2365,6 @@ macro_rules! __adpcm_clip_parse {
             }
         }
     };
-
-    (
-        $vis:vis $name:ident {
-            file: $file:expr $(,)?
-        }
-    ) => {
-        $crate::__adpcm_clip_parse! {
-            $vis $name {
-                file: $file,
-                target_sample_rate_hz: $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($file)).sample_rate_hz,
-            }
-        }
-    };
 }
 
 /// Macro to create an audio clip of a musical tone.
@@ -2509,11 +2389,19 @@ macro_rules! tone {
     };
 }
 
-#[doc = "Macro to \"compile in\" an uncompressed (PCM) clip from an external file (includes syntax details)."]
-#[doc = include_str!("audio_player/pcm_clip_docs.md")]
-#[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
-#[doc = include_str!("audio_player/pcm_clip_step_3.md")]
-#[doc(inline)]
-pub use crate::pcm_clip;
+const_structures::define! {
+    #[doc = "Macro to \"compile in\" an uncompressed (PCM) clip from an external file."]
+    #[doc = include_str!("audio_player/pcm_clip_docs.md")]
+    #[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
+    #[doc = include_str!("audio_player/pcm_clip_step_3.md")]
+    pub pcm_clip => __pcm_clip_generate {
+        /// Path to a raw mono 16-bit little-endian file, relative to the invoking source file.
+        file: expr,
+        /// Sample rate of the file in hertz, for example `VOICE_22050_HZ`.
+        source_sample_rate_hz: expr,
+        /// Output sample rate in hertz; defaults to `source_sample_rate_hz`.
+        target_sample_rate_hz?: expr,
+    }
+}
 #[doc(inline)]
 pub use crate::tone;

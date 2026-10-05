@@ -828,6 +828,7 @@ dependencies = [
 name = "device-envoy-core"
 version = "0.1.6"
 dependencies = [
+ "const-structures",
  "crc32fast",
  "critical-section",
  "defmt 1.0.1",

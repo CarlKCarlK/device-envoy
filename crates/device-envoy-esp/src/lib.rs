@@ -199,6 +199,30 @@ pub mod flash_block;
 pub mod init_and_start;
 #[cfg(esp_has_rmt)]
 pub mod ir;
+// Crate-root path kept for `use device_envoy_esp::irs;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::irs;
+// Crate-root path kept for `use device_envoy_esp::ir;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir;
+// Crate-root path kept for `use device_envoy_esp::ir_mappings;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_mappings;
+// Crate-root path kept for `use device_envoy_esp::ir_mapping;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_mapping;
+// Crate-root path kept for `use device_envoy_esp::ir_keplers;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_keplers;
+// Crate-root path kept for `use device_envoy_esp::ir_kepler;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_kepler;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
 #[cfg(target_os = "none")]

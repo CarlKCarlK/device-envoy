@@ -22,8 +22,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_keplers! {
     IrKeplersBoard {
-        IrKeplerReceiver0: { pin: GPIO0 },
-        IrKeplerReceiver1: { pin: GPIO1 }
+        IrKeplerReceiver0 { pin: GPIO0 },
+        IrKeplerReceiver1 { pin: GPIO1 }
     }
 }
 

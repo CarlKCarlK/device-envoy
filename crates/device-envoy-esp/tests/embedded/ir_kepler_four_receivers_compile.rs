@@ -13,10 +13,10 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_keplers! {
     IrKeplersFourCompileTest {
-        IrKepler3: { pin: GPIO3 },
-        IrKepler2: { pin: GPIO2 },
-        IrKepler1: { pin: GPIO1 },
-        IrKepler0: { pin: GPIO0 }
+        IrKepler3 { pin: GPIO3 },
+        IrKepler2 { pin: GPIO2 },
+        IrKepler1 { pin: GPIO1 },
+        IrKepler0 { pin: GPIO0 }
     }
 }
 

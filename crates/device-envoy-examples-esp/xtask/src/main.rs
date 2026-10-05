@@ -1016,7 +1016,8 @@ fn check_embedded_tests() -> ExitCode {
 }
 
 fn check_embedded_tests_for_targets(targets: &[BuildTarget]) -> ExitCode {
-    let root = workspace_root();
+    // The embedded tests are `[[test]]` targets of device-envoy-esp.
+    let root = device_envoy_esp_root();
     println!(
         "{}",
         "--> embedded tests (compile-pass + expected compile-fail)".cyan()

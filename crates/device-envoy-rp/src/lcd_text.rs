@@ -38,10 +38,10 @@
 //! use device_envoy_rp::{Result, lcd_text, lcd_text::LcdText as _};
 //!
 //! lcd_text! {
-//!     i2c: I2C0,
-//!     sda_pin: PIN_4,
-//!     scl_pin: PIN_5,
 //!     LcdTextSimple {
+//!         i2c: I2C0,
+//!         sda_pin: PIN_4,
+//!         scl_pin: PIN_5,
 //!         width: 16,
 //!         height: 2,
 //!         address: 0x27
@@ -76,10 +76,11 @@
 //! use device_envoy_rp::{Result, i2cs, lcd_text::LcdText as _};
 //!
 //! i2cs! {
-//!     i2c: I2C0,
-//!     sda_pin: PIN_4,
-//!     scl_pin: PIN_5,
 //!     I2cs0 {
+//!         i2c: I2C0,
+//!         sda_pin: PIN_4,
+//!         scl_pin: PIN_5,
+//!
 //!         LcdText16x2 { width: 16, height: 2, address: 0x27 },
 //!         LcdText20x4 { width: 20, height: 4, address: 0x3F },
 //!     }
@@ -224,59 +225,34 @@ impl<T: i2c::Instance + 'static> LcdTextWrite for RpLcdTextWrite<T> {
     }
 }
 
-/// Macro to generate multiple LCD text device types that share one I2C
-/// resource (includes syntax details).
+/// Code generator for [`i2cs!`](crate::lcd_text::i2cs).
 ///
-/// This page provides the primary documentation and examples for grouped LCD
-/// text devices that share one I2C peripheral.
-///
-/// **Syntax:**
-///
-/// ```text
-/// i2cs! {
-///     i2c: <i2c_ident>,
-///     sda_pin: <sda_pin_ident>,
-///     scl_pin: <scl_pin_ident>,
-///     [<visibility>] <GroupName> {
-///         [<visibility>] <LcdName> {
-///             width: <usize_expr>,
-///             height: <usize_expr>,
-///             address: <u8_expr>
-///         },
-///         // ...more LCD entries...
-///     }
-/// }
-/// ```
-///
-/// For a single LCD type, see [`lcd_text!`](macro@crate::lcd_text).
-///
-/// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
-/// examples.**
+/// Called only by `i2cs!` and `lcd_text!` after their `const_structures::define!`
+/// schemas have validated the input. Must be public for macro expansion in downstream
+/// crates, but not user-facing API.
 #[cfg(not(feature = "host"))]
 #[doc(hidden)]
 #[macro_export]
-macro_rules! i2cs {
-    ($($tt:tt)*) => { $crate::__i2cs_impl! { $($tt)* } };
-}
-
-/// Implementation macro. Not part of the public API; use [`i2cs!`] instead.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __i2cs_impl {
+macro_rules! __i2cs_generate {
     (
+        attrs: [$(#[$attr:meta])*],
+        vis: [$group_vis:vis],
+        name: $group_name:ident,
+        doc: $doc:literal,
         i2c: $i2c:ident,
         sda_pin: $sda_pin:ident,
         scl_pin: $scl_pin:ident,
-        $group_vis:vis $group_name:ident {
-            $(
-                $lcd_vis:vis $lcd_name:ident {
-                    width: $width:expr,
-                    height: $height:expr,
-                    address: $address:expr
-                }
-            ),+ $(,)?
-        }
+        member_count: $member_count:literal,
+        members: [$({
+            index: $index:literal,
+            attrs: [$(#[$lcd_attr:meta])*],
+            vis: [$lcd_vis:vis],
+            name: $lcd_name:ident,
+            doc: $lcd_doc:literal,
+            width: $width:expr,
+            height: $height:expr,
+            address: $address:expr,
+        },)+],
     ) => {
         $crate::lcd_text::paste::paste! {
             const _: () = {
@@ -293,7 +269,9 @@ macro_rules! __i2cs_impl {
                     $crate::lcd_text::__I2csSignal::new();
             )+
 
-            #[doc = "A generated group of LCD text devices that share one I2C peripheral and pin pair."]
+            $(#[$attr])*
+            #[doc = $doc]
+            #[doc = "\n\nA group of LCD text devices that share one I2C peripheral and pin pair."]
             $group_vis struct $group_name;
 
             struct [<__ $group_name Devices>] {
@@ -351,7 +329,8 @@ macro_rules! __i2cs_impl {
             }
 
             $(
-                /// A generated LCD text device type.
+                $(#[$lcd_attr])*
+                #[doc = $lcd_doc]
                 $lcd_vis struct $lcd_name;
 
                 impl $crate::lcd_text::__LcdText<$width, $height> for $lcd_name {
@@ -431,71 +410,104 @@ macro_rules! __i2cs_impl {
         }
     };
 }
-#[cfg(not(feature = "host"))]
-#[doc(inline)]
-pub use i2cs;
 
-/// Macro to generate a single LCD text device type with a direct constructor.
-///
-/// For multiple LCD types sharing one I2C peripheral, see
-/// [`i2cs!`](macro@crate::i2cs).
-///
-/// **Syntax:**
-///
-/// ```text
-/// lcd_text! {
-///     i2c: <i2c_ident>,
-///     sda_pin: <sda_pin_ident>,
-///     scl_pin: <scl_pin_ident>,
-///     [<visibility>] <LcdName> {
-///         width: <usize_expr>,
-///         height: <usize_expr>,
-///         address: <u8_expr>
-///     }
-/// }
-/// ```
-///
-/// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
-/// examples.**
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! lcd_text {
-    ($($tt:tt)*) => { $crate::__lcd_text_impl! { $($tt)* } };
+const_structures::define! {
+    /// Macro to generate multiple LCD text device types that share one I2C
+    /// resource.
+    ///
+    /// This page provides the primary documentation and examples for grouped LCD
+    /// text devices that share one I2C peripheral.
+    ///
+    /// For a single LCD type, see [`lcd_text!`](macro@crate::lcd_text).
+    ///
+    /// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
+    /// examples.**
+    #[cfg(not(feature = "host"))]
+    pub i2cs => __i2cs_generate {
+        /// I2C peripheral, for example `I2C0`.
+        i2c: ident,
+        /// GPIO pin for I2C data (SDA).
+        sda_pin: ident,
+        /// GPIO pin for I2C clock (SCL).
+        scl_pin: ident,
+        /// Each member is one LCD text display on the shared bus.
+        members 1.. {
+            /// Display width in characters.
+            width: expr,
+            /// Display height in characters; at most 4.
+            height: expr,
+            /// I2C address, for example `0x27`; must be unique within the group.
+            address: expr,
+        },
+    }
 }
 
-/// Implementation macro. Not part of the public API; use [`lcd_text!`] instead.
+/// Code generator for [`lcd_text!`](crate::lcd_text::lcd_text): a one-member
+/// [`i2cs!`](crate::lcd_text::i2cs) group.
+///
+/// Must be public for macro expansion in downstream crates, but not user-facing API.
 #[cfg(not(feature = "host"))]
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lcd_text_impl {
+macro_rules! __lcd_text_generate {
     (
+        attrs: [$(#[$attr:meta])*],
+        vis: [$vis:vis],
+        name: $name:ident,
+        doc: $doc:literal,
         i2c: $i2c:ident,
         sda_pin: $sda_pin:ident,
         scl_pin: $scl_pin:ident,
-        $lcd_vis:vis $lcd_name:ident {
-            width: $width:expr,
-            height: $height:expr,
-            address: $address:expr
-        }
+        width: $width:expr,
+        height: $height:expr,
+        address: $address:expr,
     ) => {
-        $crate::lcd_text::paste::paste! {
-            $crate::i2cs! {
+        $crate::__paste! {
+            $crate::__i2cs_generate! {
+                attrs: [],
+                vis: [pub(self)],
+                name: [<$name Group>],
+                doc: "One-member group behind an `lcd_text!` type.",
                 i2c: $i2c,
                 sda_pin: $sda_pin,
                 scl_pin: $scl_pin,
-                [<LcdTextGroupFor $lcd_name>] {
-                    $lcd_vis $lcd_name {
-                        width: $width,
-                        height: $height,
-                        address: $address
-                    }
-                }
+                member_count: 1,
+                members: [{
+                    index: 0,
+                    attrs: [$(#[$attr])*],
+                    vis: [$vis],
+                    name: $name,
+                    doc: $doc,
+                    width: $width,
+                    height: $height,
+                    address: $address,
+                },],
             }
         }
     };
 }
 
-#[cfg(not(feature = "host"))]
-#[doc(inline)]
-pub use lcd_text;
+const_structures::define! {
+    /// Macro to generate a single LCD text device type with a direct constructor.
+    ///
+    /// For multiple LCD types sharing one I2C peripheral, see
+    /// [`i2cs!`](macro@crate::i2cs).
+    ///
+    /// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
+    /// examples.**
+    #[cfg(not(feature = "host"))]
+    pub lcd_text => __lcd_text_generate {
+        /// I2C peripheral, for example `I2C0`.
+        i2c: ident,
+        /// GPIO pin for I2C data (SDA).
+        sda_pin: ident,
+        /// GPIO pin for I2C clock (SCL).
+        scl_pin: ident,
+        /// Display width in characters.
+        width: expr,
+        /// Display height in characters; at most 4.
+        height: expr,
+        /// I2C address, for example `0x27`; must be unique within the group.
+        address: expr,
+    }
+}

@@ -229,6 +229,14 @@ pub use ir::ir_keplers;
 pub use ir::ir_kepler;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
+// Crate-root path kept for `use device_envoy_esp::i2cs;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::i2cs;
+// Crate-root path kept for `use device_envoy_esp::lcd_text;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::lcd_text;
 #[cfg(target_os = "none")]
 pub mod led;
 #[cfg(any(feature = "host", target_os = "none"))]

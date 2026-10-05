@@ -105,6 +105,14 @@ pub mod flash_block;
 pub mod ir;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
+// Crate-root path kept for `use device_envoy_rp::i2cs;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::i2cs;
+// Crate-root path kept for `use device_envoy_rp::lcd_text;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::lcd_text;
 #[cfg(target_os = "none")]
 pub mod led;
 pub mod led2d;

@@ -27,10 +27,11 @@ use embassy_executor::Spawner;
 use panic_probe as _;
 
 i2cs! {
-    i2c: I2C0,
-    sda_pin: PIN_4,
-    scl_pin: PIN_5,
     I2cs0 {
+        i2c: I2C0,
+        sda_pin: PIN_4,
+        scl_pin: PIN_5,
+
         LcdTextClock { width: 16, height: 2, address: 0x27 },
     }
 }

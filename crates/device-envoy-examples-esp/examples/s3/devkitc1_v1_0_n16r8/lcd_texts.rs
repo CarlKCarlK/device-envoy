@@ -16,10 +16,11 @@ use device_envoy_esp::{Result, i2cs, init_and_start, lcd_text::LcdText as _};
 esp_bootloader_esp_idf::esp_app_desc!();
 
 i2cs! {
-    i2c: I2C0,
-    sda_pin: GPIO16,
-    scl_pin: GPIO17,
     I2cs0 {
+        i2c: I2C0,
+        sda_pin: GPIO16,
+        scl_pin: GPIO17,
+
         LcdText16x2 { width: 16, height: 2, address: 0x27 },
         LcdText20x4 { width: 20, height: 4, address: 0x26 },
     }

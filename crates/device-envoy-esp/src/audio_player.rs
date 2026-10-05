@@ -719,503 +719,22 @@ async fn clear_i2s_output_after_stop<const SAMPLE_RATE_HZ: u32>(
     Err(())
 }
 
-/// Macro to generate an audio player struct type (includes syntax details).
+/// Code generator for [`audio_player!`](crate::audio_player::audio_player).
 ///
-/// See [`AudioPlayerGenerated`](crate::audio_player::audio_player_generated::AudioPlayerGenerated)
-/// for a sample of a generated type.
-///
-/// **See the [audio_player module documentation](mod@crate::audio_player) for
-/// usage examples.**
-///
-/// **Syntax:**
-///
-/// ```text
-/// audio_player! {
-///     [<visibility>] <Name> {
-///         data_pin: <pin_ident>,
-///         bit_clock_pin: <pin_ident>,
-///         word_select_pin: <pin_ident>,
-///         sample_rate_hz: <sample_rate_expr>,
-///         i2s: <i2s_ident>,                // optional (for example: I2S0)
-///         dma: <dma_ident>,
-///         max_clips: <usize_expr>,          // optional
-///         max_volume: <Volume_expr>,        // optional
-///         initial_volume: <Volume_expr>,    // optional
-///     }
-/// }
-/// ```
-///
-/// Field order is flexible. Optional fields may be omitted or specified in
-/// any order.
-///
-/// **Inputs:**
-///
-/// - `$vis` - Optional generated type visibility (for example: `pub`,
-///   `pub(crate)`, `pub(self)`). Defaults to private visibility when omitted.
-/// - `$name` - Generated type name (for example: `AudioPlayer10`)
-///
-/// **Required fields:**
-///
-/// - `data_pin` - GPIO pin carrying I²S data (`DIN`)
-/// - `bit_clock_pin` - GPIO pin carrying I²S bit clock (`BCLK`)
-/// - `word_select_pin` - GPIO pin carrying I²S word-select / LR clock (`LRC` / `LRCLK`)
-/// - `sample_rate_hz` - Playback sample rate in hertz (for example:
-///   [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
-/// - `dma` - DMA channel resource (for example: `DMA_CH0`)
-///
-/// **Optional fields:**
-///
-/// - `i2s` - I2S peripheral resource (default: `I2S0`)
-/// - `max_clips` - Maximum clips per queued play request (default: `16`)
-/// - `max_volume` - Runtime volume ceiling (default: [`Volume::MAX`])
-/// - `initial_volume` - Initial runtime volume relative to `max_volume`
-///   (default: [`Volume::MAX`])
-///
-/// **Generated items:**
-///
-/// - `<Name>` - generated player struct type
-/// - `<Name>Playable` - trait-object clip source alias at this player's sample rate
-/// - associated constants and constructor on `<Name>` (for example:
-///   `SAMPLE_RATE_HZ`, `new(...)`)
-/// - playback operations via [`AudioPlayer`](crate::audio_player::AudioPlayer) trait
-///   (`play(...)`, `stop()`, `wait_until_stopped(...)`, volume controls)
-///
-/// The generated type contains static resources and spawns its background device
-/// task from `new(...)`.
+/// Called only by `audio_player!` after its `const_structures::define!` schema has
+/// validated the input and filled defaults. Must be public for macro expansion in
+/// downstream crates, but not user-facing API.
+// TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
+// code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
+// so macro visibility and helper exposure can be controlled more precisely. (may no longer apply)
 #[doc(hidden)]
 #[macro_export]
-macro_rules! audio_player {
-    // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
-    // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
-    // so macro visibility and helper exposure can be controlled more precisely.
-    ($($tt:tt)*) => { $crate::__audio_player_impl! { $($tt)* } };
-}
-
-/// Internal implementation macro for [`audio_player!`].
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __audio_player_impl {
+macro_rules! __audio_player_generate {
     (
-        $name:ident {
-            $($fields:tt)*
-        }
-    ) => {
-        $crate::__validate_keyword_fields_expr! {
-            macro_name: "audio_player!",
-            allowed_macro: $crate::__audio_player_allowed_field,
-            fields: [ $($fields)* ]
-        }
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: pub(self),
-            name: $name,
-            data_pin: _UNSET_,
-            bit_clock_pin: _UNSET_,
-            word_select_pin: _UNSET_,
-            sample_rate_hz: _UNSET_,
-            i2s: I2S0,
-            dma: _UNSET_,
-            max_clips: 16,
-            max_volume: $crate::audio_player::Volume::MAX,
-            initial_volume: $crate::audio_player::Volume::MAX,
-            fields: [ $($fields)* ]
-        }
-    };
-
-    (
-        $vis:vis $name:ident {
-            $($fields:tt)*
-        }
-    ) => {
-        $crate::__validate_keyword_fields_expr! {
-            macro_name: "audio_player!",
-            allowed_macro: $crate::__audio_player_allowed_field,
-            fields: [ $($fields)* ]
-        }
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: _UNSET_,
-            bit_clock_pin: _UNSET_,
-            word_select_pin: _UNSET_,
-            sample_rate_hz: _UNSET_,
-            i2s: I2S0,
-            dma: _UNSET_,
-            max_clips: 16,
-            max_volume: $crate::audio_player::Volume::MAX,
-            initial_volume: $crate::audio_player::Volume::MAX,
-            fields: [ $($fields)* ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
+        attrs: [$(#[$attr:meta])*],
+        vis: [$vis:vis],
         name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ data_pin: $din_pin_value:ident $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $din_pin_value,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s,
-            dma: $dma,
-            max_clips: $max_clips,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ sample_rate_hz: $sample_rate_hz_value:expr $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz_value,
-            i2s: $i2s,
-            dma: $dma,
-            max_clips: $max_clips,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ bit_clock_pin: $bclk_pin_value:ident $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bclk_pin_value,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s,
-            dma: $dma,
-            max_clips: $max_clips,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ word_select_pin: $lrc_pin_value:ident $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $lrc_pin_value,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s,
-            dma: $dma,
-            max_clips: $max_clips,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ i2s: $i2s_value:ident $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s_value,
-            dma: $dma,
-            max_clips: $max_clips,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ dma: $dma_value:ident $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s,
-            dma: $dma_value,
-            max_clips: $max_clips,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ max_clips: $max_clips_value:expr $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s,
-            dma: $dma,
-            max_clips: $max_clips_value,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ max_volume: $max_volume_value:expr $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s,
-            dma: $dma,
-            max_clips: $max_clips,
-            max_volume: $max_volume_value,
-            initial_volume: $initial_volume,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:tt,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ initial_volume: $initial_volume_value:expr $(, $($rest:tt)* )? ]
-    ) => {
-        $crate::__audio_player_impl! {
-            @__fill_defaults
-            vis: $vis,
-            name: $name,
-            data_pin: $data_pin,
-            bit_clock_pin: $bit_clock_pin,
-            word_select_pin: $word_select_pin,
-            sample_rate_hz: $sample_rate_hz,
-            i2s: $i2s,
-            dma: $dma,
-            max_clips: $max_clips,
-            max_volume: $max_volume,
-            initial_volume: $initial_volume_value,
-            fields: [ $($($rest)*)? ]
-        }
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: _UNSET_,
-        bit_clock_pin: $bit_clock_pin:tt,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ ]
-    ) => {
-        compile_error!("audio_player! requires data_pin");
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:ident,
-        bit_clock_pin: _UNSET_,
-        word_select_pin: $word_select_pin:tt,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ ]
-    ) => {
-        compile_error!("audio_player! requires bit_clock_pin");
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:ident,
-        bit_clock_pin: $bit_clock_pin:ident,
-        word_select_pin: _UNSET_,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ ]
-    ) => {
-        compile_error!("audio_player! requires word_select_pin");
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:ident,
-        bit_clock_pin: $bit_clock_pin:ident,
-        word_select_pin: $word_select_pin:ident,
-        sample_rate_hz: _UNSET_,
-        i2s: $i2s:ident,
-        dma: $dma:ident,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ ]
-    ) => {
-        compile_error!("audio_player! requires sample_rate_hz");
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
-        data_pin: $data_pin:ident,
-        bit_clock_pin: $bit_clock_pin:ident,
-        word_select_pin: $word_select_pin:ident,
-        sample_rate_hz: $sample_rate_hz:expr,
-        i2s: $i2s:ident,
-        dma: _UNSET_,
-        max_clips: $max_clips:expr,
-        max_volume: $max_volume:expr,
-        initial_volume: $initial_volume:expr,
-        fields: [ ]
-    ) => {
-        compile_error!("audio_player! requires dma");
-    };
-
-    (@__fill_defaults
-        vis: $vis:vis,
-        name: $name:ident,
+        doc: $doc:literal,
         data_pin: $data_pin:ident,
         bit_clock_pin: $bit_clock_pin:ident,
         word_select_pin: $word_select_pin:ident,
@@ -1225,7 +744,6 @@ macro_rules! __audio_player_impl {
         max_clips: $max_clips:expr,
         max_volume: $max_volume:expr,
         initial_volume: $initial_volume:expr,
-        fields: [ ]
     ) => {
         $crate::__paste! {
             static [<$name:upper _AUDIO_PLAYER_STATIC>]:
@@ -1237,8 +755,10 @@ macro_rules! __audio_player_impl {
             static [<$name:upper _AUDIO_PLAYER_CELL>]: ::static_cell::StaticCell<$name> =
                 ::static_cell::StaticCell::new();
 
+            $(#[$attr])*
+            #[doc = $doc]
             #[doc = concat!(
-                "Audio player generated by [`audio_player!`](macro@crate::audio_player).\n\n",
+                "\n\n",
                 "See the [audio_player module documentation](mod@crate::audio_player) for usage and examples."
             )]
             $vis struct $name {
@@ -1359,28 +879,57 @@ macro_rules! __audio_player_impl {
     };
 }
 
-/// Public for macro expansion in downstream crates.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __audio_player_allowed_field {
-    (data_pin, $macro_name:literal) => {};
-    (sample_rate_hz, $macro_name:literal) => {};
-    (bit_clock_pin, $macro_name:literal) => {};
-    (word_select_pin, $macro_name:literal) => {};
-    (i2s, $macro_name:literal) => {};
-    (dma, $macro_name:literal) => {};
-    (max_clips, $macro_name:literal) => {};
-    (max_volume, $macro_name:literal) => {};
-    (initial_volume, $macro_name:literal) => {};
-    ($field:ident, $macro_name:literal) => {
-        compile_error!(concat!(
-            $macro_name,
-            " unknown field; expected `data_pin`, `sample_rate_hz`, `bit_clock_pin`, `word_select_pin`, `i2s`, `dma`, `max_clips`, `max_volume`, or `initial_volume`"
-        ));
-    };
+const_structures::define! {
+    /// Macro to generate an audio player struct type.
+    ///
+    /// See [`AudioPlayerGenerated`](crate::audio_player::audio_player_generated::AudioPlayerGenerated)
+    /// for a sample of a generated type.
+    ///
+    /// **See the [audio_player module documentation](mod@crate::audio_player) for
+    /// usage examples.**
+    ///
+    /// Field order is flexible. Optional fields may be omitted or specified in
+    /// any order.
+    ///
+    /// **Inputs:**
+    ///
+    /// - `$vis` - Optional generated type visibility (for example: `pub`,
+    ///   `pub(crate)`, `pub(self)`). Defaults to private visibility when omitted.
+    /// - `$name` - Generated type name (for example: `AudioPlayer10`)
+    ///
+    /// **Generated items:**
+    ///
+    /// - `<Name>` - generated player struct type
+    /// - `<Name>Playable` - trait-object clip source alias at this player's sample rate
+    /// - associated constants and constructor on `<Name>` (for example:
+    ///   `SAMPLE_RATE_HZ`, `new(...)`)
+    /// - playback operations via [`AudioPlayer`](crate::audio_player::AudioPlayer) trait
+    ///   (`play(...)`, `stop()`, `wait_until_stopped(...)`, volume controls)
+    ///
+    /// The generated type contains static resources and spawns its background device
+    /// task from `new(...)`.
+    pub audio_player => __audio_player_generate {
+        /// GPIO pin carrying I²S data (`DIN`).
+        data_pin: ident,
+        /// GPIO pin carrying the I²S bit clock (`BCLK`).
+        bit_clock_pin: ident,
+        /// GPIO pin carrying I²S word select (`LRC` / `LRCLK`).
+        word_select_pin: ident,
+        /// Playback sample rate in hertz, for example `VOICE_22050_HZ`.
+        sample_rate_hz: expr,
+        /// I²S peripheral.
+        i2s: ident = I2S0,
+        /// DMA channel, for example `DMA_CH0`.
+        dma: ident,
+        /// Maximum clips per queued play request.
+        max_clips: expr = 16,
+        /// Runtime volume ceiling.
+        #[default_display = "Volume::MAX"]
+        max_volume: expr = $crate::audio_player::Volume::MAX,
+        /// Initial runtime volume, relative to `max_volume`.
+        #[default_display = "Volume::MAX"]
+        initial_volume: expr = $crate::audio_player::Volume::MAX,
+    }
 }
-
-#[doc(inline)]
-pub use audio_player;
 #[doc(inline)]
 pub use tone;

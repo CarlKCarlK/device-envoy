@@ -38,6 +38,10 @@ pub mod pio_irqs;
 // Embedded-only in normal builds, but compiled for host unit tests.
 #[cfg(any(target_os = "none", all(test, feature = "host")))]
 pub mod audio_player;
+// Crate-root path kept for `use device_envoy_rp::audio_player;`; documented in `audio_player`.
+#[cfg(any(target_os = "none", all(test, feature = "host")))]
+#[doc(hidden)]
+pub use audio_player::audio_player;
 // Must be `pub` for macro expansion: every schema-declared macro forwards to it.
 #[doc(hidden)]
 pub use const_structures::expand as __const_structures_expand;

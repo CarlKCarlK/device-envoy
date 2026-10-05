@@ -187,6 +187,10 @@ pub mod time_sync {
 }
 #[cfg(esp_has_i2s)]
 pub mod audio_player;
+// Crate-root path kept for `use device_envoy_esp::audio_player;`; documented in `audio_player`.
+#[cfg(esp_has_i2s)]
+#[doc(hidden)]
+pub use audio_player::audio_player;
 #[cfg(target_os = "none")]
 pub mod cyd;
 // The buffer implementation is hardware-independent, so exercise the same

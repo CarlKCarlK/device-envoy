@@ -194,603 +194,71 @@ pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 /// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
 ///
 #[doc = include_str!("docs/current_limiting_and_gamma.md")]
+/// Code generator for [`led2d!`](crate::led2d::led2d).
 ///
-/// # Related Macros
-///
-/// - [`led_strip!`](mod@crate::led_strip) - For 1-dimensional LED strips.
+/// Called only by `led2d!` after its `const_structures::define!` schema has validated the
+/// input and filled defaults. The engine backends build the panel type under a hidden
+/// name; this adds the user's name, visibility, attributes, and docs as an alias. Must be
+/// public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! led2d {
-    ($($tt:tt)*) => { $crate::__led2d_impl! { $($tt)* } };
-}
-
-#[cfg(target_os = "none")]
-#[doc(inline)]
-pub use led2d;
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led2d_impl {
+macro_rules! __led2d_generate {
     (
-        $name:ident {
-            $($fields:tt)*
-        }
-    ) => {
-        $crate::__led2d_impl! {
-            $name,
-            pin = [],
-            len = [],
-            led_layout = [],
-            max_current = [],
-            font = [],
-            engine = [],
-            gamma = [],
-            max_frames = [],
-            fields = [$($fields)*],
-        }
-    };
-    (
-        $vis:vis $name:ident {
-            $($fields:tt)*
-        }
+        attrs: [$(#[$attr:meta])*],
+        vis: [$vis:vis],
+        name: $name:ident,
+        doc: $doc:literal,
+        pin: $pin:ident,
+        len: $len:expr,
+        led_layout: $led_layout:expr,
+        font: $font:expr,
+        max_current: $max_current:expr,
+        engine: [$($engine:tt)*],
+        gamma: $gamma:expr,
+        max_frames: $max_frames:expr,
     ) => {
         $crate::__paste! {
-            $crate::__led2d_impl! {
-                [<__ $name _visibility_inner>] {
-                    $($fields)*
-                }
+            $crate::__led_engine_normalize! {
+                panel,
+                [$($engine)*],
+                { [<__ $name Panel>], $pin, $len, $led_layout, $max_current, $font, },
+                { [$gamma], [$max_frames], }
             }
-            $vis type $name = [<__ $name _visibility_inner>];
+
+            $(#[$attr])*
+            #[doc = $doc]
+            $vis type $name = [<__ $name Panel>];
         }
     };
+}
 
-    (
-        $name:ident,
-        pin = [$pin:ident],
-        len = [$len:expr],
-        led_layout = [$led_layout:expr],
-        max_current = [$($max_current:expr)?],
-        font = [$font:expr],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [],
-    ) => {
-        $crate::__led2d_dispatch_engine!(
-            $name,
-            $pin,
-            $len,
-            $led_layout,
-            $crate::__led_strip_max_current_or_default!([$($max_current)?]),
-            $font,
-            [$($engine)?],
-            [$($gamma)?],
-            [$($max_frames)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [],
-    ) => {
-        compile_error!("led2d! missing required `pin` field");
-    };
-    (
-        $name:ident,
-        pin = [$pin:ident],
-        len = [],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [],
-    ) => {
-        compile_error!("led2d! missing required `len` field");
-    };
-    (
-        $name:ident,
-        pin = [$pin:ident],
-        len = [$len:expr],
-        led_layout = [],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [],
-    ) => {
-        compile_error!("led2d! missing required `led_layout` field");
-    };
-    (
-        $name:ident,
-        pin = [$pin:ident],
-        len = [$len:expr],
-        led_layout = [$led_layout:expr],
-        max_current = [$($max_current:expr)?],
-        font = [],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [],
-    ) => {
-        compile_error!("led2d! missing required `font` field");
-    };
-    (
-        $name:ident,
-        pin = [],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [pin: $pin:ident $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$pin],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [$($engine)?],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$already_pin:ident],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [pin: $pin:ident $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `pin` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [len: $len:expr $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$len],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [$($engine)?],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$already_len:expr],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [len: $len:expr $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `len` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [led_layout: $led_layout:expr $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$led_layout],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [$($engine)?],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$already_led_layout:expr],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [led_layout: $led_layout:expr $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `led_layout` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [max_current: $max_current:expr $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$max_current],
-            font = [$($font)?],
-            engine = [$($engine)?],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$already_max_current:expr],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [max_current: $max_current:expr $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `max_current` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [font: $font:expr $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$font],
-            engine = [$($engine)?],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$already_font:expr],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [font: $font:expr $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `font` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: Engine::Spi $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [Spi],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: $crate::led_strip::Engine::Spi $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [Spi],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: device_envoy_esp::led_strip::Engine::Spi $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [Spi],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: Engine::Rmt $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [Rmt],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: $crate::led_strip::Engine::Rmt $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [Rmt],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: device_envoy_esp::led_strip::Engine::Rmt $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [Rmt],
-            gamma = [$($gamma)?],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$already_engine:tt],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: $ignored:path $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `engine` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [engine: $ignored:path $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! engine must be Engine::Rmt or Engine::Spi");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [],
-        max_frames = [$($max_frames:expr)?],
-        fields = [gamma: $gamma:expr $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [$($engine)?],
-            gamma = [$gamma],
-            max_frames = [$($max_frames)?],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$already_gamma:expr],
-        max_frames = [$($max_frames:expr)?],
-        fields = [gamma: $gamma:expr $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `gamma` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [],
-        fields = [max_frames: $max_frames:expr $(, $($rest:tt)*)?],
-    ) => {
-        $crate::__led2d_impl!(
-            $name,
-            pin = [$($pin)?],
-            len = [$($len)?],
-            led_layout = [$($led_layout)?],
-            max_current = [$($max_current)?],
-            font = [$($font)?],
-            engine = [$($engine)?],
-            gamma = [$($gamma)?],
-            max_frames = [$max_frames],
-            fields = [$($($rest)*)?],
-        );
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$already_max_frames:expr],
-        fields = [max_frames: $max_frames:expr $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!("led2d! duplicate `max_frames` field");
-    };
-    (
-        $name:ident,
-        pin = [$($pin:ident)?],
-        len = [$($len:expr)?],
-        led_layout = [$($led_layout:expr)?],
-        max_current = [$($max_current:expr)?],
-        font = [$($font:expr)?],
-        engine = [$($engine:tt)?],
-        gamma = [$($gamma:expr)?],
-        max_frames = [$($max_frames:expr)?],
-        fields = [$field:ident : $value:expr $(, $($rest:tt)*)?],
-    ) => {
-        compile_error!(
-            "led2d! unknown field; expected `pin`, `len`, `led_layout`, `font`, `max_current`, `engine`, `gamma`, or `max_frames`"
-        );
-    };
+const_structures::define! {
+    ///
+    /// # Related Macros
+    ///
+    /// - [`led_strip!`](mod@crate::led_strip) - For 1-dimensional LED strips.
+    #[cfg(target_os = "none")]
+    pub led2d => __led2d_generate {
+        /// GPIO pin for LED data, for example `GPIO8`.
+        pin: ident,
+        /// Number of LEDs (pixels); must match `led_layout`.
+        len: expr,
+        /// Physical layout; a `const` `LedLayout` that defines the panel size.
+        led_layout: expr,
+        /// Built-in font for text, for example `Led2dFont::Font4x6Trim`.
+        font: expr,
+        /// Electrical current budget.
+        #[default_display = "Current::Milliamps(250)"]
+        max_current: expr = $crate::led_strip::CURRENT_DEFAULT,
+        /// Output engine, `Engine::Rmt` or `Engine::Spi`; defaults to RMT on RMT-capable chips, otherwise SPI.
+        engine?: expr,
+        /// Color correction curve.
+        #[default_display = "Gamma::Srgb"]
+        gamma: expr = $crate::led_strip::GAMMA_DEFAULT,
+        /// Maximum number of animation frames; `0` disables animation.
+        #[default_display = "16"]
+        max_frames: expr = $crate::led_strip::MAX_FRAMES_DEFAULT,
+    }
 }
 
 #[doc(hidden)]
@@ -862,5 +330,18 @@ macro_rules! __led2d_dispatch_engine {
             [$led_layout],
             [$font],
         }
+    };
+    (
+        $name:ident,
+        $pin:ident,
+        $len:expr,
+        $led_layout:expr,
+        $max_current:expr,
+        $font:expr,
+        [$($engine:tt)*],
+        [$($gamma:expr)?],
+        [$($max_frames:expr)?],
+    ) => {
+        compile_error!("led2d! `engine` must be `Engine::Rmt` or `Engine::Spi`");
     };
 }

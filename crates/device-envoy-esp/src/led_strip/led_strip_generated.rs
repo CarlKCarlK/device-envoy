@@ -9,7 +9,7 @@ use crate::led_strip;
 
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none"))]
 led_strip! {
-    LedStripGenerated {
+    pub LedStripGenerated {
         pin: GPIO2,
         len: 8,
         max_current: crate::led_strip::Current::Milliamps(250),

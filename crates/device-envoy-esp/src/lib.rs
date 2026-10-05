@@ -245,9 +245,17 @@ pub mod led;
 pub use led::led;
 #[cfg(any(feature = "host", target_os = "none"))]
 pub mod led2d;
+// Crate-root path kept for `use device_envoy_esp::led2d;`; documented in `led2d`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use led2d::led2d;
 pub mod led4;
 #[cfg(target_os = "none")]
 pub mod led_strip;
+// Crate-root path kept for `use device_envoy_esp::led_strip;`; documented in `led_strip`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use led_strip::led_strip;
 #[cfg(target_os = "none")]
 pub mod rfid;
 #[cfg(esp_has_rmt)]

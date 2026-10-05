@@ -16,7 +16,7 @@ const LED_LAYOUT_12X4: crate::led2d::LedLayout<48, 12, 4> =
 
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_has_rmt))]
 led2d! {
-    Led2dGenerated {
+    pub Led2dGenerated {
         pin: GPIO2,
         len: 48,
         led_layout: LED_LAYOUT_12X4,
@@ -27,7 +27,7 @@ led2d! {
 
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none", not(esp_has_rmt)))]
 led2d! {
-    Led2dGenerated {
+    pub Led2dGenerated {
         pin: GPIO2,
         len: 48,
         led_layout: LED_LAYOUT_12X4,

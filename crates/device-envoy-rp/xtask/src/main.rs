@@ -445,7 +445,7 @@ fn check_compile_only() -> ExitCode {
 
     println!("{}", "==> Checking compile-only tests...".cyan());
 
-    let compile_tests_dir = workspace_root.join("tests-compile-only");
+    let compile_tests_dir = rp_crate_root().join("tests-compile-only");
     if !compile_tests_dir.exists() {
         eprintln!("{}", "No tests-compile-only directory found.".red());
         return ExitCode::FAILURE;
@@ -721,8 +721,21 @@ fn check_all() -> ExitCode {
         // 8. Compile-only tests
         s.spawn(|_| {
             println!("{}", "  [8/10] Compile-only tests...".bright_black());
-            let compile_tests_dir = workspace_root.join("tests-compile-only");
-            if compile_tests_dir.exists() {
+            let compile_tests_dir = rp_crate_root().join("tests-compile-only");
+            if !compile_tests_dir.exists() {
+                eprintln!(
+                    "{}",
+                    format!(
+                        "No tests-compile-only directory at {}",
+                        compile_tests_dir.display()
+                    )
+                    .red()
+                );
+                failures
+                    .lock()
+                    .unwrap()
+                    .push("compile-only tests (directory missing)");
+            } else {
                 let mut compile_tests = Vec::new();
                 if let Ok(entries) = fs::read_dir(&compile_tests_dir) {
                     for entry in entries.flatten() {
@@ -1737,6 +1750,13 @@ impl Drop for TemporaryFileCleanup {
             }
         }
     }
+}
+
+fn rp_crate_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .canonicalize()
+        .expect("Failed to find device-envoy-rp crate root")
 }
 
 fn workspace_root() -> PathBuf {

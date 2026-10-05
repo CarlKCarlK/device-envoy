@@ -27,6 +27,7 @@ led_strips! {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(500),
+            max_frames: 48,
             led2d: {
                 led_layout: LED_LAYOUT_12X4,
                 font: Led2dFont::Font3x4Trim,
@@ -43,6 +44,7 @@ led_strips! {
             pin: PIN_4,
             len: 96,
             max_current: Current::Milliamps(200),
+            max_frames: 48,
             led2d: {
                 led_layout: LED_LAYOUT_8X12,
                 font: Led2dFont::Font4x6Trim,

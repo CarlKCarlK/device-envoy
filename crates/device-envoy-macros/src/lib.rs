@@ -27,6 +27,7 @@ const_structures::define! {
             /// DMA channel.
             dma: ident = by_index[DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3],
             /// Color correction curve.
+            #[default_display = "Gamma::Srgb"]
             gamma: expr = ::device_envoy_rp::led_strip::Gamma::Srgb,
             /// Maximum number of animation frames; `0` disables animation.
             max_frames: expr = 16,

@@ -6,7 +6,7 @@ use defmt_rtt as _;
 use device_envoy_rp::led_strip::{Current, led_strips};
 use panic_probe as _;
 
-// Public (visibility is required)
+// Public (visibility is optional; omitting it makes the types private)
 led_strips! {
     pub PublicLedStrips {
         Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(25) }

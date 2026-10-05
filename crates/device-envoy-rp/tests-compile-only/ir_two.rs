@@ -11,10 +11,10 @@ use device_envoy_rp::ir_keplers;
 use embassy_executor::Spawner;
 
 ir_keplers! {
-    pio: PIO0,
     IrKeplers0 {
-        IrKepler15: { pin: PIN_15 },
-        IrKepler01: { pin: PIN_16 }
+        pio: PIO0,
+        IrKepler15 { pin: PIN_15 },
+        IrKepler01 { pin: PIN_16 }
     }
 }
 

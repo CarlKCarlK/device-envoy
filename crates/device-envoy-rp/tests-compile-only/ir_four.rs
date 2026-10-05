@@ -11,12 +11,12 @@ use device_envoy_rp::irs;
 use embassy_executor::Spawner;
 
 irs! {
-    pio: PIO0,
     Irs0 {
-        Ir15: { pin: PIN_15 },
-        Ir16: { pin: PIN_16 },
-        Ir17: { pin: PIN_17 },
-        Ir18: { pin: PIN_18 }
+        pio: PIO0,
+        Ir15 { pin: PIN_15 },
+        Ir16 { pin: PIN_16 },
+        Ir17 { pin: PIN_17 },
+        Ir18 { pin: PIN_18 }
     }
 }
 

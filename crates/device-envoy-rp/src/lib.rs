@@ -60,6 +60,30 @@ pub use device_envoy_macros::rp_led_strip as led_strip;
 #[cfg(not(feature = "host"))]
 #[doc(hidden)]
 pub use device_envoy_macros::rp_led2d as led2d;
+// Crate-root path kept for `use device_envoy_rp::irs;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_irs as irs;
+// Crate-root path kept for `use device_envoy_rp::ir;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_ir as ir;
+// Crate-root path kept for `use device_envoy_rp::ir_mappings;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_ir_mappings as ir_mappings;
+// Crate-root path kept for `use device_envoy_rp::ir_mapping;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_ir_mapping as ir_mapping;
+// Crate-root path kept for `use device_envoy_rp::ir_keplers;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_ir_keplers as ir_keplers;
+// Crate-root path kept for `use device_envoy_rp::ir_kepler;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use device_envoy_macros::rp_ir_kepler as ir_kepler;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 #[cfg(target_os = "none")]

@@ -843,7 +843,7 @@ const_structures::define! {
     ///         pio: PIO0,                      // Optional; defaults to PIO0.
     ///
     ///         // 1. a 8-LED strip on GPIO0
-    ///         Gpio0LedStrip {                 // Exact struct name for this strip. Can provide visibility modifier
+    ///         Gpio0LedStrip {                 // Exact struct name for this strip; same visibility as the group.
     ///             pin: PIN_0,                 // GPIO pin for LED data signal.
     ///             len: 8,                     // 8 LEDs on this strip.
     ///             max_current: Current::Milliamps(25), // Every strip/panel requires an electrical current budget.

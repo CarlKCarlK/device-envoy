@@ -104,6 +104,12 @@ mod test_led_strips_public_strip {
     }
 }
 
+// Members take their group's visibility, so a `pub` group's members are reachable here.
+pub fn use_public_group_members() {
+    type _Strip = test_led_strips_public_strip::Gpio0LedStrip;
+    type _Panel = test_led_strips_public_led2d::Gpio4Led2d;
+}
+
 // led_strips! private visibility (strip mode)
 mod test_led_strips_private_strip {
     use device_envoy_rp::led_strip::Current;

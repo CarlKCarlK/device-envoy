@@ -415,44 +415,13 @@ macro_rules! __led_engine_normalize {
     };
 }
 
-/// Code generator for [`led_strip!`](crate::led_strip::led_strip).
-///
-/// Called only by `led_strip!` after its `const_structures::define!` schema has validated
-/// the input and filled defaults. The engine backends apply the user's name, visibility,
-/// attributes, and generated docs directly to the strip struct. Must be
-/// public for macro expansion in downstream crates, but not user-facing API.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led_strip_generate {
-    (
-        attrs: [$(#[$attr:meta])*],
-        vis: [$vis:vis],
-        name: $name:ident,
-        doc: $doc:literal,
-        pin: $pin:ident,
-        len: $len:expr,
-        max_current: $max_current:expr,
-        engine: [$($engine:tt)*],
-        gamma: $gamma:expr,
-        max_frames: $max_frames:expr,
-        reset_us: [$($reset_us:expr)?],
-    ) => {
-        $crate::__led_engine_normalize! {
-            strip,
-            [$($engine)*],
-            { [$(#[$attr])* #[doc = $doc]], [$vis], $name, $pin, $len, $max_current, },
-            { [$gamma], [$max_frames], [$($reset_us)?], }
-        }
-    };
-}
-
 const_structures::define! {
     ///
     /// # Related Macros
     ///
     /// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
     #[cfg(target_os = "none")]
-    pub led_strip => __led_strip_generate {
+    pub led_strip {
         /// GPIO pin for LED data, for example `GPIO8`.
         pin: ident,
         /// Number of LEDs (pixels).
@@ -470,6 +439,17 @@ const_structures::define! {
         max_frames: expr = $crate::led_strip::MAX_FRAMES_DEFAULT,
         /// WS2812 reset interval in microseconds; only with `Engine::Spi` (default 60).
         reset_us?: expr,
+    }
+
+    generate {
+        // Engine selection is value-based, so it stays in the backend: an optional
+        // `engine` is reduced to `Spi`/`Rmt` (or the chip default) and dispatched there.
+        $crate::__led_engine_normalize! {
+            strip,
+            [$if let Some(chosen) = $engine { $chosen }],
+            { [$attrs #[doc = $doc]], [$vis], $name, $pin, $len, $max_current, },
+            { [$gamma], [$max_frames], [$if let Some(interval) = $reset_us { $interval }], }
+        }
     }
 }
 

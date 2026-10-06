@@ -152,87 +152,24 @@ pub mod led2d_generated;
 #[doc(hidden)]
 pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 
-/// Macro to generate an LED-panel struct type (includes syntax details). See [`Led2d`](`crate::led2d::Led2d`) for the shared API.
-///
-/// **See the [led2d module](mod@crate::led2d) for usage examples.**
-///
-/// **Syntax:**
-///
-/// ```text
-/// led2d! {
-///     <Name> {
-///         pin: <pin_ident>,
-///         len: <usize_expr>,
-///         led_layout: <LedLayout_expr>,
-///         font: <Led2dFont_expr>,
-///         max_current: <Current_expr>, // optional
-///         engine: Engine::Rmt|Engine::Spi, // optional
-///         gamma: <Gamma_expr>, // optional
-///         max_frames: <usize_expr>, // optional
-///     }
-/// }
-/// ```
-///
-/// # Fields
-///
-/// **Required fields:**
-///
-/// - `pin` - GPIO pin for LED data.
-/// - `len` - Number of LEDs in the generated strip.
-/// - `led_layout` - LED strip physical layout (see [`LedLayout`]); this defines panel size.
-/// - `font` - Built-in font variant (see [`Led2dFont`]), for example `Led2dFont::Font4x6Trim`.
-///
-/// The `led_layout` value must be a const so its dimensions can be derived at compile time.
-///
-/// **Optional fields:**
-///
-/// - `max_current` - Electrical current budget (default: 250 mA).
-/// - `engine` - Transport engine (`Engine::Rmt` or `Engine::Spi`, default: RMT on RMT-capable chips, otherwise SPI).
-/// - `gamma` - Color correction curve (default: `Gamma::Srgb`).
-/// - `max_frames` - Maximum number of animation frames (default: 16).
-///
-/// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
-///
-#[doc = include_str!("docs/current_limiting_and_gamma.md")]
-/// Code generator for [`led2d!`](crate::led2d::led2d).
-///
-/// Called only by `led2d!` after its `const_structures::define!` schema has validated the
-/// input and filled defaults. The engine backends apply the user's name, visibility,
-/// attributes, and generated docs directly to the panel struct. Must be
-/// public for macro expansion in downstream crates, but not user-facing API.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led2d_generate {
-    (
-        attrs: [$(#[$attr:meta])*],
-        vis: [$vis:vis],
-        name: $name:ident,
-        doc: $doc:literal,
-        pin: $pin:ident,
-        len: $len:expr,
-        led_layout: $led_layout:expr,
-        font: $font:expr,
-        max_current: $max_current:expr,
-        engine: [$($engine:tt)*],
-        gamma: $gamma:expr,
-        max_frames: $max_frames:expr,
-    ) => {
-        $crate::__led_engine_normalize! {
-            panel,
-            [$($engine)*],
-            { [$(#[$attr])* #[doc = $doc]], [$vis], $name, $pin, $len, $led_layout, $max_current, $font, },
-            { [$gamma], [$max_frames], }
-        }
-    };
-}
-
 const_structures::define! {
+    /// Macro to generate an LED-panel struct type. See [`Led2d`](`crate::led2d::Led2d`) for the shared API.
+    ///
+    /// **See the [led2d module](mod@crate::led2d) for usage examples.**
+    ///
+    /// # Fields
+    ///
+    /// The `led_layout` value must be a const so its dimensions can be derived at compile time.
+    ///
+    /// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
+    ///
+    #[doc = include_str!("docs/current_limiting_and_gamma.md")]
     ///
     /// # Related Macros
     ///
     /// - [`led_strip!`](mod@crate::led_strip) - For 1-dimensional LED strips.
     #[cfg(target_os = "none")]
-    pub led2d => __led2d_generate {
+    pub led2d {
         /// GPIO pin for LED data, for example `GPIO8`.
         pin: ident,
         /// Number of LEDs (pixels); must match `led_layout`.
@@ -252,6 +189,16 @@ const_structures::define! {
         /// Maximum number of animation frames; `0` disables animation.
         #[default_display = "16"]
         max_frames: expr = $crate::led_strip::MAX_FRAMES_DEFAULT,
+    }
+
+    generate {
+        // Engine selection is value-based, so it stays in the backend; see `led_strip!`.
+        $crate::__led_engine_normalize! {
+            panel,
+            [$if let Some(chosen) = $engine { $chosen }],
+            { [$attrs #[doc = $doc]], [$vis], $name, $pin, $len, $led_layout, $max_current, $font, },
+            { [$gamma], [$max_frames], }
+        }
     }
 }
 

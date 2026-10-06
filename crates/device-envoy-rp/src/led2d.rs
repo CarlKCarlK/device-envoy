@@ -344,7 +344,9 @@ const_structures::define! {
         pio: ident = PIO0,
         /// DMA channel.
         dma: ident = DMA_CH0,
-        /// Electrical current budget.
+        /// Electrical current budget for this device; brightness is scaled to stay within it.
+        /// Budgets are per device: several separately declared devices on one supply each get
+        /// the default, so set it explicitly when their total matters.
         #[default_display = "Current::Milliamps(250)"]
         max_current: expr = $crate::led_strip::MAX_CURRENT_DEFAULT,
         /// Color correction curve.

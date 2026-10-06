@@ -426,7 +426,9 @@ const_structures::define! {
         pin: ident,
         /// Number of LEDs (pixels).
         len: expr,
-        /// Electrical current budget.
+        /// Electrical current budget for this device; brightness is scaled to stay within it.
+        /// Budgets are per device: several separately declared devices on one supply each get
+        /// the default, so set it explicitly when their total matters.
         #[default_display = "Current::Milliamps(250)"]
         max_current: expr = $crate::led_strip::CURRENT_DEFAULT,
         /// Output engine, `Engine::Rmt` or `Engine::Spi`; defaults to RMT on RMT-capable chips, otherwise SPI.

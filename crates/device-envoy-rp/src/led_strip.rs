@@ -500,7 +500,9 @@ const_structures::define! {
         pio: ident = PIO0,
         /// DMA channel.
         dma: ident = DMA_CH0,
-        /// Electrical current budget.
+        /// Electrical current budget for this device; brightness is scaled to stay within it.
+        /// Budgets are per device: several separately declared devices on one supply each get
+        /// the default, so set it explicitly when their total matters.
         #[default_display = "Current::Milliamps(250)"]
         max_current: expr = $crate::led_strip::MAX_CURRENT_DEFAULT,
         /// Color correction curve.
@@ -747,7 +749,9 @@ const_structures::define! {
             pin: ident,
             /// Number of LEDs (pixels).
             len: expr,
-            /// Electrical current budget, for example `Current::Milliamps(250)`.
+            /// Electrical current budget for this member, for example `Current::Milliamps(250)`.
+            /// Required in a group, because members share a supply and their currents add up;
+            /// a single `led_strip!` or `led2d!` defaults to 250 mA.
             max_current: expr,
             /// DMA channel.
             dma: ident = by_index[DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3],

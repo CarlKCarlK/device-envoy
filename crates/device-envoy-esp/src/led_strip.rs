@@ -418,8 +418,8 @@ macro_rules! __led_engine_normalize {
 /// Code generator for [`led_strip!`](crate::led_strip::led_strip).
 ///
 /// Called only by `led_strip!` after its `const_structures::define!` schema has validated
-/// the input and filled defaults. The engine backends build the strip type under a hidden
-/// name; this adds the user's name, visibility, attributes, and docs as an alias. Must be
+/// the input and filled defaults. The engine backends apply the user's name, visibility,
+/// attributes, and generated docs directly to the strip struct. Must be
 /// public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
 #[macro_export]
@@ -437,17 +437,11 @@ macro_rules! __led_strip_generate {
         max_frames: $max_frames:expr,
         reset_us: [$($reset_us:expr)?],
     ) => {
-        $crate::__paste! {
-            $crate::__led_engine_normalize! {
-                strip,
-                [$($engine)*],
-                { [<__ $name Strip>], $pin, $len, $max_current, },
-                { [$gamma], [$max_frames], [$($reset_us)?], }
-            }
-
-            $(#[$attr])*
-            #[doc = $doc]
-            $vis type $name = [<__ $name Strip>];
+        $crate::__led_engine_normalize! {
+            strip,
+            [$($engine)*],
+            { [$(#[$attr])* #[doc = $doc]], [$vis], $name, $pin, $len, $max_current, },
+            { [$gamma], [$max_frames], [$($reset_us)?], }
         }
     };
 }
@@ -489,6 +483,8 @@ const_structures::define! {
 #[macro_export]
 macro_rules! __led_strip_inner {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -499,6 +495,8 @@ macro_rules! __led_strip_inner {
         [$($led2d_font:expr)?],
     ) => {
         $crate::__led_strip_impl!{
+            attrs       = [$($attrs)*],
+            vis         = [$vis],
             name        = $name,
             pin         = $pin,
             len         = $len,
@@ -524,6 +522,8 @@ macro_rules! __led_strip_inner {
 #[macro_export]
 macro_rules! __led_strip_dispatch_engine {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -534,6 +534,8 @@ macro_rules! __led_strip_dispatch_engine {
         [$($reset_us:expr)?],
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
@@ -546,6 +548,8 @@ macro_rules! __led_strip_dispatch_engine {
         }
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -558,6 +562,8 @@ macro_rules! __led_strip_dispatch_engine {
         compile_error!("led_strip! `reset_us` is only supported with `engine: Engine::Spi`");
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -568,15 +574,21 @@ macro_rules! __led_strip_dispatch_engine {
         [],
     ) => {
         $crate::__led_strip_dispatch_rmt_engine!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
+            [],
+            [],
         }
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -589,6 +601,8 @@ macro_rules! __led_strip_dispatch_engine {
         compile_error!("led_strip! `reset_us` is only supported with `engine: Engine::Spi`");
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -599,15 +613,21 @@ macro_rules! __led_strip_dispatch_engine {
         [],
     ) => {
         $crate::__led_strip_dispatch_default_engine!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
+            [],
+            [],
         }
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -627,22 +647,28 @@ macro_rules! __led_strip_dispatch_engine {
 #[macro_export]
 macro_rules! __led_strip_dispatch_rmt_engine {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
         $max_current:expr,
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$($led2d_layout:expr)?],
+        [$($led2d_font:expr)?],
     ) => {
         $crate::led_strip::__led_strip_inner!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
-            [],
-            [],
+            [$($led2d_layout)?],
+            [$($led2d_font)?],
         }
     };
 }
@@ -653,12 +679,16 @@ macro_rules! __led_strip_dispatch_rmt_engine {
 #[macro_export]
 macro_rules! __led_strip_dispatch_rmt_engine {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
         $max_current:expr,
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$($led2d_layout:expr)?],
+        [$($led2d_font:expr)?],
     ) => {
         compile_error!(
             "led_strip! `engine: Engine::Rmt` requires an RMT-capable chip; use `engine: Engine::Spi`."
@@ -672,20 +702,28 @@ macro_rules! __led_strip_dispatch_rmt_engine {
 #[macro_export]
 macro_rules! __led_strip_dispatch_default_engine {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
         $max_current:expr,
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$($led2d_layout:expr)?],
+        [$($led2d_font:expr)?],
     ) => {
         $crate::__led_strip_dispatch_rmt_engine!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
             $max_current,
             [$($gamma)?],
             [$($max_frames)?],
+            [$($led2d_layout)?],
+            [$($led2d_font)?],
         }
     };
 }
@@ -696,14 +734,20 @@ macro_rules! __led_strip_dispatch_default_engine {
 #[macro_export]
 macro_rules! __led_strip_dispatch_default_engine {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
         $max_current:expr,
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
+        [$($led2d_layout:expr)?],
+        [$($led2d_font:expr)?],
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
@@ -711,8 +755,8 @@ macro_rules! __led_strip_dispatch_default_engine {
             [$($gamma)?],
             [$($max_frames)?],
             [],
-            [],
-            [],
+            [$($led2d_layout)?],
+            [$($led2d_font)?],
         }
     };
 }
@@ -815,6 +859,8 @@ macro_rules! __led2d_strip_trait_impl {
 #[macro_export]
 macro_rules! __led_strip_impl {
     (
+        attrs       = [$($attrs:tt)*],
+        vis         = [$vis:vis],
         name        = $name:ident,
         pin         = $pin:ident,
         len         = $len:expr,
@@ -848,9 +894,10 @@ macro_rules! __led_strip_impl {
                 > = $crate::led_strip::LedStripEsp::new_static();
 
             // ------------------------------------------------------------------
-            // Public struct.
+            // Struct with the caller's visibility and documentation.
             // ------------------------------------------------------------------
-            pub struct $name {
+            $($attrs)*
+            $vis struct $name {
                 inner: $crate::led_strip::LedStripEsp<
                     { [<$name:snake _consts>]::LEDS },
                     { $max_frames },

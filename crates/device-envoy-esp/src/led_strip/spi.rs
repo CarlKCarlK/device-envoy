@@ -160,6 +160,8 @@ pub async fn led_strip_spi_device_loop<
 #[macro_export]
 macro_rules! __led_strip_spi_inner {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -171,6 +173,8 @@ macro_rules! __led_strip_spi_inner {
         [$($led2d_font:expr)?],
     ) => {
         $crate::__led_strip_spi_impl!{
+            attrs       = [$($attrs)*],
+            vis         = [$vis],
             name        = $name,
             pin         = $pin,
             len         = $len,
@@ -198,6 +202,8 @@ macro_rules! __led_strip_spi_inner {
 #[macro_export]
 macro_rules! __led_strip_spi_impl {
     (
+        attrs       = [$($attrs:tt)*],
+        vis         = [$vis:vis],
         name        = $name:ident,
         pin         = $pin:ident,
         len         = $len:expr,
@@ -222,7 +228,8 @@ macro_rules! __led_strip_spi_impl {
                     { $max_frames },
                 > = $crate::led_strip::LedStripEsp::new_static();
 
-            pub struct $name {
+            $($attrs)*
+            $vis struct $name {
                 inner: $crate::led_strip::LedStripEsp<
                     { [<$name:snake _consts>]::LEDS },
                     { $max_frames },

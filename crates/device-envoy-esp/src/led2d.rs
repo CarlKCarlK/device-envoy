@@ -187,7 +187,7 @@ pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 /// **Optional fields:**
 ///
 /// - `max_current` - Electrical current budget (default: 250 mA).
-/// - `engine` - Transport engine (`Engine::Rmt` or `Engine::Spi`, default: `Engine::Rmt`).
+/// - `engine` - Transport engine (`Engine::Rmt` or `Engine::Spi`, default: RMT on RMT-capable chips, otherwise SPI).
 /// - `gamma` - Color correction curve (default: `Gamma::Srgb`).
 /// - `max_frames` - Maximum number of animation frames (default: 16).
 ///
@@ -197,8 +197,8 @@ pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 /// Code generator for [`led2d!`](crate::led2d::led2d).
 ///
 /// Called only by `led2d!` after its `const_structures::define!` schema has validated the
-/// input and filled defaults. The engine backends build the panel type under a hidden
-/// name; this adds the user's name, visibility, attributes, and docs as an alias. Must be
+/// input and filled defaults. The engine backends apply the user's name, visibility,
+/// attributes, and generated docs directly to the panel struct. Must be
 /// public for macro expansion in downstream crates, but not user-facing API.
 #[doc(hidden)]
 #[macro_export]
@@ -217,17 +217,11 @@ macro_rules! __led2d_generate {
         gamma: $gamma:expr,
         max_frames: $max_frames:expr,
     ) => {
-        $crate::__paste! {
-            $crate::__led_engine_normalize! {
-                panel,
-                [$($engine)*],
-                { [<__ $name Panel>], $pin, $len, $led_layout, $max_current, $font, },
-                { [$gamma], [$max_frames], }
-            }
-
-            $(#[$attr])*
-            #[doc = $doc]
-            $vis type $name = [<__ $name Panel>];
+        $crate::__led_engine_normalize! {
+            panel,
+            [$($engine)*],
+            { [$(#[$attr])* #[doc = $doc]], [$vis], $name, $pin, $len, $led_layout, $max_current, $font, },
+            { [$gamma], [$max_frames], }
         }
     };
 }
@@ -265,6 +259,8 @@ const_structures::define! {
 #[macro_export]
 macro_rules! __led2d_dispatch_engine {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -276,6 +272,8 @@ macro_rules! __led2d_dispatch_engine {
         [$($max_frames:expr)?],
     ) => {
         $crate::led_strip::spi::__led_strip_spi_inner!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
@@ -288,6 +286,8 @@ macro_rules! __led2d_dispatch_engine {
         }
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -298,7 +298,9 @@ macro_rules! __led2d_dispatch_engine {
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
     ) => {
-        $crate::led_strip::__led_strip_inner!{
+        $crate::__led_strip_dispatch_rmt_engine!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
@@ -310,6 +312,8 @@ macro_rules! __led2d_dispatch_engine {
         }
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -320,7 +324,9 @@ macro_rules! __led2d_dispatch_engine {
         [$($gamma:expr)?],
         [$($max_frames:expr)?],
     ) => {
-        $crate::led_strip::__led_strip_inner!{
+        $crate::__led_strip_dispatch_default_engine!{
+            [$($attrs)*],
+            [$vis],
             $name,
             $pin,
             $len,
@@ -332,6 +338,8 @@ macro_rules! __led2d_dispatch_engine {
         }
     };
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,

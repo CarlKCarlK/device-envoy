@@ -28,7 +28,6 @@ led2d! {
         pin: GPIO0,
         max_frames: 2,
         max_current: Current::Milliamps(120),
-        len: 8,
     }
 }
 
@@ -42,7 +41,6 @@ led2d! {
         pin: GPIO10,
         max_frames: 2,
         max_current: Current::Milliamps(120),
-        len: 8,
     }
 }
 
@@ -53,7 +51,6 @@ led2d! {
     pub(crate) Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
         max_frames: 2,
-        len: 8,
         font: Led2dFont::Font4x6,
         pin: GPIO1,
     }
@@ -66,7 +63,6 @@ led2d! {
     pub(crate) Led2dPanelB {
         font: Led2dFont::Font4x6,
         max_frames: 2,
-        len: 8,
         pin: GPIO48,
         led_layout: LED_LAYOUT_4X2,
     }
@@ -83,7 +79,6 @@ led2d! {
     pub(crate) Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
         max_frames: 2,
-        len: 8,
         font: Led2dFont::Font4x6,
         pin: GPIO0,
     }
@@ -96,7 +91,6 @@ led2d! {
     pub(crate) Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
         max_frames: 2,
-        len: 8,
         font: Led2dFont::Font4x6,
         pin: GPIO8,
     }

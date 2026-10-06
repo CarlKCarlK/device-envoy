@@ -32,7 +32,6 @@ const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> =
 led2d! {
     Led12x8 {
         pin: GPIO{{ panel12x8_pin }},
-        len: 96,
         led_layout: LED_LAYOUT_12X8_ROTATED,
         font: Led2dFont::Font4x6Trim,
         // Same options as led_strip! (RMT channel, engine, gamma, max current, max frames)

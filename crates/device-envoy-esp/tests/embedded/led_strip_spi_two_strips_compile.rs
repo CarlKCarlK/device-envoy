@@ -18,13 +18,18 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+// Module-private constants: `len` and `reset_us` may name the caller's items.
+const STRIP_A_LEN: usize = 8;
+const STRIP_A_RESET_US: u32 = 80;
+
 #[cfg(feature = "esp32")]
 led_strip! {
     // A struct-only attribute ensures the declaration does not become a type alias.
     #[repr(transparent)]
     LedStripSpiA {
         engine: device_envoy_esp::led_strip::Engine::Spi,
-        len: 8,
+        len: STRIP_A_LEN,
+        reset_us: STRIP_A_RESET_US,
         pin: GPIO0,
         max_frames: 2,
         max_current: Current::Milliamps(120),
@@ -37,7 +42,8 @@ led_strip! {
     #[repr(transparent)]
     LedStripSpiA {
         engine: device_envoy_esp::led_strip::Engine::Spi,
-        len: 8,
+        len: STRIP_A_LEN,
+        reset_us: STRIP_A_RESET_US,
         pin: GPIO10,
         max_frames: 2,
         max_current: Current::Milliamps(120),
@@ -81,7 +87,6 @@ mod panel {
         #[repr(transparent)]
         pub(super) LedPanelSpi {
             pin: GPIO10,
-            len: 1,
             engine: device_envoy_esp::led_strip::Engine::Spi,
             led_layout: LED_LAYOUT,
             font: Led2dFont::Font4x6Trim,
@@ -93,7 +98,6 @@ mod panel {
         #[repr(transparent)]
         pub(super) LedPanelDefault {
             pin: GPIO10,
-            len: 1,
             led_layout: LED_LAYOUT,
             font: Led2dFont::Font4x6Trim,
         }

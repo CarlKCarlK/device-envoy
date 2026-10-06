@@ -28,7 +28,6 @@ const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw(
 led2d! {
     Led12x8Animated {
         pin: GPIO2,
-        len: 96,
         led_layout: LED_LAYOUT_12X8_ROTATED,
         max_current: Current::Milliamps(300),
         font: Led2dFont::Font4x6Trim,

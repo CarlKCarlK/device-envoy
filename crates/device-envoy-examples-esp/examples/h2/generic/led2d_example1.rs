@@ -26,7 +26,6 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 led2d! {
     Led12x4 {
         pin: GPIO2,
-        len: 48,
         led_layout: LED_LAYOUT_12X4,
         max_current: Current::Milliamps(250),
         font: Led2dFont::Font3x4Trim,

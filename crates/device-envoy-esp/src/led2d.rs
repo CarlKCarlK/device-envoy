@@ -43,7 +43,6 @@
 //! led2d! {
 //!     Led12x4 {
 //!         pin: GPIO18,                       // GPIO pin for LED data signal
-//!         len: 48,                           // Number of LEDs in the panel
 //!         led_layout: LED_LAYOUT_12X4,       // LED layout mapping (defines dimensions)
 //!         font: Led2dFont::Font3x4Trim,      // Font variant
 //!     }
@@ -97,7 +96,6 @@
 //! led2d! {
 //!     Led12x8Animated {
 //!         pin: GPIO18,                           // GPIO pin for LED data signal
-//!         len: 96,                               // Number of LEDs in the panel
 //!         led_layout: LED_LAYOUT_8X12_ROTATED,  // Two 12x4 panels stacked and rotated
 //!         max_current: Current::Milliamps(300), // Power budget, default is 250 mA
 //!         font: Led2dFont::Font4x6Trim,         // 4x6 font without normal padding
@@ -172,9 +170,7 @@ const_structures::define! {
     pub led2d {
         /// GPIO pin for LED data, for example `GPIO8`.
         pin: ident,
-        /// Number of LEDs (pixels); must match `led_layout`.
-        len: expr,
-        /// Physical layout; a `const` `LedLayout` that defines the panel size.
+        /// Physical layout; a `const` `LedLayout` that defines the panel size and its number of LEDs.
         led_layout: expr,
         /// Built-in font for text, for example `Led2dFont::Font4x6Trim`.
         font: expr,
@@ -198,7 +194,7 @@ const_structures::define! {
         $crate::__led_engine_normalize! {
             panel,
             [$if let Some(chosen) = $decl.engine { $chosen }],
-            { [$decl.attrs #[doc = $decl.doc]], [$decl.vis], $decl.name, $decl.pin, $decl.len, $decl.led_layout, $decl.max_current, $decl.font, },
+            { [$decl.attrs #[doc = $decl.doc]], [$decl.vis], $decl.name, $decl.pin, $decl.led_layout.len(), $decl.led_layout, $decl.max_current, $decl.font, },
             { [$decl.gamma], [$decl.max_frames], }
         }
     }

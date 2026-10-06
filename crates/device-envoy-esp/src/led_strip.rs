@@ -857,9 +857,13 @@ macro_rules! __led_strip_impl {
             // Module holding concrete const values for this strip instance.
             // Named after the struct in snake_case to avoid collisions.
             // ------------------------------------------------------------------
+            // Evaluated here, in the caller's scope, so `len` may name the caller's items.
+            #[doc(hidden)]
+            const [<$name:snake:upper _LEDS>]: usize = $len;
+
             mod [<$name:snake _consts>] {
                 /// Number of LED pixels.
-                pub const LEDS: usize = $len;
+                pub const LEDS: usize = super::[<$name:snake:upper _LEDS>];
                 /// Pulse buffer length: 24 bits per LED plus 1 end marker.
                 pub const PULSES: usize = LEDS * 24 + 1;
                 /// Maximum simultaneous-on current in milliamps at full brightness.

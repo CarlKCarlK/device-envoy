@@ -18,7 +18,6 @@ const LED_LAYOUT_12X4: crate::led2d::LedLayout<48, 12, 4> =
 led2d! {
     pub Led2dGenerated {
         pin: GPIO2,
-        len: 48,
         led_layout: LED_LAYOUT_12X4,
         max_current: crate::led_strip::Current::Milliamps(250),
         font: crate::led2d::Led2dFont::Font3x4Trim,
@@ -29,7 +28,6 @@ led2d! {
 led2d! {
     pub Led2dGenerated {
         pin: GPIO2,
-        len: 48,
         led_layout: LED_LAYOUT_12X4,
         max_current: crate::led_strip::Current::Milliamps(250),
         font: crate::led2d::Led2dFont::Font3x4Trim,

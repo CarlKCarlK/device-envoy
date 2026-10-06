@@ -1593,7 +1593,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             relative_path: "src/led2d/led2d_generated.rs",
             required_fragments: &[
                 "pub struct Led2dGenerated",
-                "pub const MAX_FRAMES: usize",
+                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
                 "pub const MAX_BRIGHTNESS: u8",
                 "pub const FONT: Led2dFont",
                 "pub const WIDTH: usize",
@@ -1625,7 +1625,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             required_fragments: &[
                 "pub struct LedStripGenerated",
                 "pub const LEN: usize",
-                "pub const MAX_FRAMES: usize",
+                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
                 "pub const MAX_BRIGHTNESS: u8",
                 "pub fn new(",
                 "impl LedStrip<8> for LedStripGenerated",

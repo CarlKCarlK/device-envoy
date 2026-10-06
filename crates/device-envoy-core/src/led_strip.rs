@@ -98,8 +98,9 @@ pub enum Gamma {
 #[doc(hidden)]
 pub const GAMMA_DEFAULT: Gamma = Gamma::Srgb;
 
-/// Default max_frames used by the `led_strip!` macro.
-#[doc(hidden)]
+/// Default animation capacity for LED strip and panel declaration macros.
+///
+/// The default is 16 frames. See [`LedStrip`] for the animation API.
 pub const MAX_FRAMES_DEFAULT: usize = 16;
 
 /// Gamma 2.2 lookup table (sRGB).

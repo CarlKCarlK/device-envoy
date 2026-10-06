@@ -48,9 +48,12 @@ use crate::Result;
 use crate::led2d::{Frame2d, Led2d, Led2dFont, Point, Size};
 
 #[cfg(doc)]
+use crate::led_strip::MAX_FRAMES_DEFAULT;
+
+#[cfg(doc)]
 impl Led2dGenerated {
     /// Maximum number of animation frames.
-    pub const MAX_FRAMES: usize = 16;
+    pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;
     /// Maximum brightness level after current limiting.
     pub const MAX_BRIGHTNESS: u8 = 22;
     /// Default font used by text helpers.

@@ -7,13 +7,16 @@
 use device_envoy_rp::led_strip;
 use panic_probe as _;
 
-// Test default visibility (public)
+// Omitted visibility is private, as in a normal Rust declaration.
 led_strip! {
     LedStripDefault {
         pin: PIN_3,
         len: 48,
     }
 }
+
+const _: () =
+    assert!(LedStripDefault::MAX_FRAMES == device_envoy_rp::led_strip::MAX_FRAMES_DEFAULT);
 
 // Test explicit public visibility - separate module to avoid conflicts
 mod test_explicit_pub {

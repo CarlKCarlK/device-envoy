@@ -784,7 +784,8 @@ const_structures::define! {
         #[default_display = "Gamma::Srgb"]
         gamma: expr = $crate::led_strip::Gamma::Srgb,
         /// Maximum number of animation frames; `0` disables animation.
-        max_frames: expr = 16,
+        #[default_display = "16"]
+        max_frames: expr = $crate::led_strip::MAX_FRAMES_DEFAULT,
     }
 }
 const_structures::define! {
@@ -993,7 +994,8 @@ const_structures::define! {
             #[default_display = "Gamma::Srgb"]
             gamma: expr = $crate::led_strip::Gamma::Srgb,
             /// Maximum number of animation frames; `0` disables animation.
-            max_frames: expr = 16,
+            #[default_display = "16"]
+            max_frames: expr = $crate::led_strip::MAX_FRAMES_DEFAULT,
             /// Makes this member a 2D panel.
             led2d?: {
                 /// Physical layout; a `const` `LedLayout` that defines the panel size.

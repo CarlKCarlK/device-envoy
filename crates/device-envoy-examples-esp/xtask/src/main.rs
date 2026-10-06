@@ -374,6 +374,9 @@ fn test_capabilities_required(test: &str) -> Capability {
     if test == "led_strip_spi_two_strips_compile" {
         caps.insert(Capability::DUAL_SPI);
     }
+    if test.starts_with("servo_") {
+        caps.insert(Capability::LEDC);
+    }
     caps
 }
 
@@ -1388,6 +1391,9 @@ fn explicit_embedded_test_skip_reason(
     }
     if required_caps.contains(Capability::DUAL_SPI) && !chip_caps.contains(Capability::DUAL_SPI) {
         return Some("chip has fewer than two SPI peripherals");
+    }
+    if required_caps.contains(Capability::LEDC) && !chip_caps.contains(Capability::LEDC) {
+        return Some("chip has no LEDC peripheral");
     }
 
     // GPIO availability: scan the test source for all GPIO pin numbers it references,

@@ -95,15 +95,16 @@ const_structures::define! {
         #[doc = $decl.doc]
         $decl.vis struct $decl.name;
 
-        // Link-time ownership claims: duplicate timer or channel selection across the
-        // final binary should fail the link with duplicate symbol errors.
+        // Ownership claims: choosing the same LEDC timer or channel twice anywhere in the
+        // final binary fails to build. Within one crate rustc reports the name twice; across
+        // crates the linker reports a duplicate symbol. Either way the name explains why.
         #[used]
         #[unsafe(no_mangle)]
-        static $snake(__device_envoy_esp_ledc_timer_claim_, $decl.timer): u8 = 0;
+        static $upper(LEDC_, $decl.timer, _CAN_BE_USED_BY_ONLY_ONE_SERVO_OR_SERVO_PLAYER): u8 = 0;
 
         #[used]
         #[unsafe(no_mangle)]
-        static $snake(__device_envoy_esp_ledc_channel_claim_, $decl.channel): u8 = 0;
+        static $upper(LEDC_, $decl.channel, _CAN_BE_USED_BY_ONLY_ONE_SERVO_OR_SERVO_PLAYER): u8 = 0;
 
         static $upper($decl.name, _SERVO_STATIC): $crate::servo::ServoStatic =
             $crate::servo::ServoStatic::new_static(

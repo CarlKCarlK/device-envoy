@@ -364,6 +364,7 @@ const_structures::define! {
                 pio: $pio,
 
                 $attrs
+                #[doc = $doc]
                 $name {
                     pin: $pin,
                     len: $led_layout.len(),

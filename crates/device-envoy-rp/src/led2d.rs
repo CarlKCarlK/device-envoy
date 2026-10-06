@@ -360,36 +360,36 @@ const_structures::define! {
         // of the docs.
         $crate::led_strip::led_strips! {
             #[doc(hidden)]
-            $vis $ident($name, Group) {
-                pio: $pio,
+            $decl.vis $ident($decl.name, Group) {
+                pio: $decl.pio,
 
-                $attrs
-                #[doc = $doc]
-                $name {
-                    pin: $pin,
-                    len: $led_layout.len(),
-                    max_current: $max_current,
-                    dma: $dma,
-                    gamma: $gamma,
-                    max_frames: $max_frames,
-                    led2d: { led_layout: $led_layout, font: $font },
+                $decl.attrs
+                #[doc = $decl.doc]
+                $decl.name {
+                    pin: $decl.pin,
+                    len: $decl.led_layout.len(),
+                    max_current: $decl.max_current,
+                    dma: $decl.dma,
+                    gamma: $decl.gamma,
+                    max_frames: $decl.max_frames,
+                    led2d: { led_layout: $decl.led_layout, font: $decl.font },
                 },
             }
         }
 
-        impl $name {
+        impl $decl.name {
             /// Creates the LED panel and spawns its background task.
             ///
             /// The `pin`, `pio`, and `dma` arguments must be the GPIO pin, PIO resource,
             /// and DMA channel named in the macro. See the
             /// [led2d module documentation](mod@device_envoy_rp::led2d) for usage.
             pub fn new(
-                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>>,
-                dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
+                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
+                dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.dma>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<Self> {
-                let (led2d,) = $ident($name, Group)::new(pio, pin, dma, spawner)?;
+                let (led2d,) = $ident($decl.name, Group)::new(pio, pin, dma, spawner)?;
                 Ok(led2d)
             }
         }

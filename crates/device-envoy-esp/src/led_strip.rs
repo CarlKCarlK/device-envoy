@@ -446,9 +446,9 @@ const_structures::define! {
         // `engine` is reduced to `Spi`/`Rmt` (or the chip default) and dispatched there.
         $crate::__led_engine_normalize! {
             strip,
-            [$if let Some(chosen) = $engine { $chosen }],
-            { [$attrs #[doc = $doc]], [$vis], $name, $pin, $len, $max_current, },
-            { [$gamma], [$max_frames], [$if let Some(interval) = $reset_us { $interval }], }
+            [$if let Some(chosen) = $decl.engine { $chosen }],
+            { [$decl.attrs #[doc = $decl.doc]], [$decl.vis], $decl.name, $decl.pin, $decl.len, $decl.max_current, },
+            { [$decl.gamma], [$decl.max_frames], [$if let Some(interval) = $decl.reset_us { $interval }], }
         }
     }
 }

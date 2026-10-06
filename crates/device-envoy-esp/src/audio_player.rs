@@ -775,64 +775,64 @@ const_structures::define! {
     }
 
     generate {
-        static $upper($name, _AUDIO_PLAYER_STATIC):
-            $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }> =
-            $crate::audio_player::AudioPlayerEsp::<$max_clips, { $sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
-                $max_volume,
-                $initial_volume,
+        static $upper($decl.name, _AUDIO_PLAYER_STATIC):
+            $crate::audio_player::AudioPlayerStatic<$decl.max_clips, { $decl.sample_rate_hz }> =
+            $crate::audio_player::AudioPlayerEsp::<$decl.max_clips, { $decl.sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
+                $decl.max_volume,
+                $decl.initial_volume,
             );
-        static $upper($name, _AUDIO_PLAYER_CELL): ::static_cell::StaticCell<$name> =
+        static $upper($decl.name, _AUDIO_PLAYER_CELL): ::static_cell::StaticCell<$decl.name> =
             ::static_cell::StaticCell::new();
 
-        $attrs
-        #[doc = $doc]
+        $decl.attrs
+        #[doc = $decl.doc]
         #[doc = concat!(
             "\n\n",
             "See the [audio_player module documentation](mod@crate::audio_player) for usage and examples."
         )]
-        $vis struct $name {
-            player: $crate::audio_player::AudioPlayerEsp<$max_clips, { $sample_rate_hz }>,
+        $decl.vis struct $decl.name {
+            player: $crate::audio_player::AudioPlayerEsp<$decl.max_clips, { $decl.sample_rate_hz }>,
         }
 
         #[doc = concat!(
             "Trait-object clip source type at [`",
-            stringify!($name),
+            stringify!($decl.name),
             "::SAMPLE_RATE_HZ`](struct@",
-            stringify!($name),
+            stringify!($decl.name),
             ").\n\n",
             "Use this in signatures like `&'static ",
-            stringify!($ident($name, Playable)),
+            stringify!($ident($decl.name, Playable)),
             "` instead of repeating `dyn Playable<{ ",
-            stringify!($name),
+            stringify!($decl.name),
             "::SAMPLE_RATE_HZ }>`."
         )]
-        $vis type $ident($name, Playable) =
-            dyn $crate::audio_player::Playable<{ $sample_rate_hz }>;
+        $decl.vis type $ident($decl.name, Playable) =
+            dyn $crate::audio_player::Playable<{ $decl.sample_rate_hz }>;
 
-        impl $name {
+        impl $decl.name {
             /// Sample rate used for audio playback by this generated player type.
-            pub const SAMPLE_RATE_HZ: u32 = $sample_rate_hz;
+            pub const SAMPLE_RATE_HZ: u32 = $decl.sample_rate_hz;
             /// Maximum number of clips accepted by `play(...)`.
-            pub const MAX_CLIPS: usize = $max_clips;
+            pub const MAX_CLIPS: usize = $decl.max_clips;
             /// Initial runtime volume relative to [`Self::MAX_VOLUME`].
-            pub const INITIAL_VOLUME: $crate::audio_player::Volume = $initial_volume;
+            pub const INITIAL_VOLUME: $crate::audio_player::Volume = $decl.initial_volume;
             /// Runtime volume ceiling for this generated player type.
-            pub const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;
+            pub const MAX_VOLUME: $crate::audio_player::Volume = $decl.max_volume;
 
             /// Creates and spawns the generated audio player instance.
             ///
             /// See the [audio_player module documentation](mod@crate::audio_player)
             /// for example usage.
             pub fn new(
-                data_pin: $crate::esp_hal::peripherals::$data_pin<'static>,
-                bit_clock_pin: $crate::esp_hal::peripherals::$bit_clock_pin<'static>,
-                word_select_pin: $crate::esp_hal::peripherals::$word_select_pin<'static>,
-                i2s: $crate::esp_hal::peripherals::$i2s<'static>,
-                dma: $crate::esp_hal::peripherals::$dma<'static>,
+                data_pin: $crate::esp_hal::peripherals::$decl.data_pin<'static>,
+                bit_clock_pin: $crate::esp_hal::peripherals::$decl.bit_clock_pin<'static>,
+                word_select_pin: $crate::esp_hal::peripherals::$decl.word_select_pin<'static>,
+                i2s: $crate::esp_hal::peripherals::$decl.i2s<'static>,
+                dma: $crate::esp_hal::peripherals::$decl.dma<'static>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                let token = $snake($name, _audio_player_task)(
-                    &$upper($name, _AUDIO_PLAYER_STATIC),
+                let token = $snake($decl.name, _audio_player_task)(
+                    &$upper($decl.name, _AUDIO_PLAYER_STATIC),
                     i2s,
                     dma,
                     data_pin,
@@ -841,20 +841,20 @@ const_structures::define! {
                 );
                 spawner.spawn(token?);
                 let player =
-                    $crate::audio_player::AudioPlayerEsp::new(&$upper($name, _AUDIO_PLAYER_STATIC));
-                Ok($upper($name, _AUDIO_PLAYER_CELL).init(Self { player }))
+                    $crate::audio_player::AudioPlayerEsp::new(&$upper($decl.name, _AUDIO_PLAYER_STATIC));
+                Ok($upper($decl.name, _AUDIO_PLAYER_CELL).init(Self { player }))
             }
         }
 
-        impl $crate::audio_player::AudioPlayer<{ $sample_rate_hz }> for $name {
-            const SAMPLE_RATE_HZ: u32 = $sample_rate_hz;
-            const MAX_CLIPS: usize = $max_clips;
-            const INITIAL_VOLUME: $crate::audio_player::Volume = $initial_volume;
-            const MAX_VOLUME: $crate::audio_player::Volume = $max_volume;
+        impl $crate::audio_player::AudioPlayer<{ $decl.sample_rate_hz }> for $decl.name {
+            const SAMPLE_RATE_HZ: u32 = $decl.sample_rate_hz;
+            const MAX_CLIPS: usize = $decl.max_clips;
+            const INITIAL_VOLUME: $crate::audio_player::Volume = $decl.initial_volume;
+            const MAX_VOLUME: $crate::audio_player::Volume = $decl.max_volume;
 
             fn play<I>(&self, audio_clips: I, at_end: $crate::audio_player::AtEnd)
             where
-                I: IntoIterator<Item = &'static dyn $crate::audio_player::Playable<{ $sample_rate_hz }>>,
+                I: IntoIterator<Item = &'static dyn $crate::audio_player::Playable<{ $decl.sample_rate_hz }>>,
             {
                 $crate::audio_player::__audio_player_play(
                     self.player.__audio_player_static(),
@@ -887,21 +887,21 @@ const_structures::define! {
         }
 
         #[::embassy_executor::task]
-        async fn $snake($name, _audio_player_task)(
-            audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$max_clips, { $sample_rate_hz }>,
-            i2s: $crate::esp_hal::peripherals::$i2s<'static>,
-            dma: $crate::esp_hal::peripherals::$dma<'static>,
-            data_pin: $crate::esp_hal::peripherals::$data_pin<'static>,
-            bit_clock_pin: $crate::esp_hal::peripherals::$bit_clock_pin<'static>,
-            word_select_pin: $crate::esp_hal::peripherals::$word_select_pin<'static>,
+        async fn $snake($decl.name, _audio_player_task)(
+            audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$decl.max_clips, { $decl.sample_rate_hz }>,
+            i2s: $crate::esp_hal::peripherals::$decl.i2s<'static>,
+            dma: $crate::esp_hal::peripherals::$decl.dma<'static>,
+            data_pin: $crate::esp_hal::peripherals::$decl.data_pin<'static>,
+            bit_clock_pin: $crate::esp_hal::peripherals::$decl.bit_clock_pin<'static>,
+            word_select_pin: $crate::esp_hal::peripherals::$decl.word_select_pin<'static>,
         ) -> ! {
             $crate::audio_player::device_loop::<
-                $max_clips,
-                { $sample_rate_hz },
-                $crate::esp_hal::peripherals::$dma<'static>,
-                $crate::esp_hal::peripherals::$data_pin<'static>,
-                $crate::esp_hal::peripherals::$bit_clock_pin<'static>,
-                $crate::esp_hal::peripherals::$word_select_pin<'static>,
+                $decl.max_clips,
+                { $decl.sample_rate_hz },
+                $crate::esp_hal::peripherals::$decl.dma<'static>,
+                $crate::esp_hal::peripherals::$decl.data_pin<'static>,
+                $crate::esp_hal::peripherals::$decl.bit_clock_pin<'static>,
+                $crate::esp_hal::peripherals::$decl.word_select_pin<'static>,
             >(audio_player_static, i2s, dma, data_pin, bit_clock_pin, word_select_pin).await
         }
     }

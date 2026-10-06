@@ -196,14 +196,14 @@ const_structures::define! {
     }
 
     generate {
-        $attrs
-        #[doc = $doc]
+        $decl.attrs
+        #[doc = $decl.doc]
         #[doc = "\n\nMonitors button presses in a background task. See the [button module documentation](mod@device_envoy_rp::button) for usage."]
-        $vis struct $name {
+        $decl.vis struct $decl.name {
             button_watch: $crate::button::ButtonWatchRp,
         }
 
-        impl $name {
+        impl $decl.name {
             /// Creates a new button monitor and spawns its background task.
             ///
             /// # Parameters
@@ -216,17 +216,17 @@ const_structures::define! {
             ///
             /// Returns an error if the background task cannot be spawned.
             pub async fn new(
-                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
+                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
                 pressed_to: $crate::button::PressedTo,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static mut Self> {
                 static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticRp =
                     $crate::button::ButtonWatchStaticRp::new();
-                static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$name> =
+                static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$decl.name> =
                     ::static_cell::StaticCell::new();
 
                 let pin = pin.into();
-                let task_token = $snake($name, _task)(
+                let task_token = $snake($decl.name, _task)(
                     pin,
                     pressed_to,
                     BUTTON_WATCH_STATIC.signal(),
@@ -243,13 +243,13 @@ const_structures::define! {
                 );
                 button_watch.wait_until_initialized().await;
 
-                let instance = BUTTON_WATCH_CELL.init($name { button_watch });
+                let instance = BUTTON_WATCH_CELL.init($decl.name { button_watch });
                 Ok(instance)
             }
 
         }
 
-        impl ::core::ops::Deref for $name {
+        impl ::core::ops::Deref for $decl.name {
             type Target = $crate::button::ButtonWatchRp;
 
             fn deref(&self) -> &Self::Target {
@@ -257,7 +257,7 @@ const_structures::define! {
             }
         }
 
-        impl $crate::button::__ButtonMonitor for $name {
+        impl $crate::button::__ButtonMonitor for $decl.name {
             fn is_pressed_raw(&self) -> bool {
                 <$crate::button::ButtonWatchRp as $crate::button::Button>::is_pressed(
                     &self.button_watch,
@@ -273,7 +273,7 @@ const_structures::define! {
             }
         }
 
-        impl $crate::button::Button for $name {
+        impl $crate::button::Button for $decl.name {
             async fn wait_for_press_duration(&mut self) -> $crate::button::PressDuration {
                 <$crate::button::ButtonWatchRp as $crate::button::Button>::wait_for_press_duration(
                     &mut self.button_watch,
@@ -283,8 +283,8 @@ const_structures::define! {
         }
 
         #[::embassy_executor::task]
-        async fn $snake($name, _task)(
-            pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
+        async fn $snake($decl.name, _task)(
+            pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>,
             pressed_to: $crate::button::PressedTo,
             signal: &'static ::embassy_sync::signal::Signal<
                 ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,

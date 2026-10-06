@@ -195,9 +195,9 @@ const_structures::define! {
         // Engine selection is value-based, so it stays in the backend; see `led_strip!`.
         $crate::__led_engine_normalize! {
             panel,
-            [$if let Some(chosen) = $engine { $chosen }],
-            { [$attrs #[doc = $doc]], [$vis], $name, $pin, $len, $led_layout, $max_current, $font, },
-            { [$gamma], [$max_frames], }
+            [$if let Some(chosen) = $decl.engine { $chosen }],
+            { [$decl.attrs #[doc = $decl.doc]], [$decl.vis], $decl.name, $decl.pin, $decl.len, $decl.led_layout, $decl.max_current, $decl.font, },
+            { [$decl.gamma], [$decl.max_frames], }
         }
     }
 }

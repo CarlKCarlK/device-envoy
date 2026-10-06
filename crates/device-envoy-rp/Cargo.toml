@@ -82,8 +82,8 @@ time = { version = "0.3", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 smart-leds = "0.4.0"
 device-envoy-core = { version = "0.1.6", path = "../device-envoy-core", features = ["defmt"] }
-# TODO0 Replace the path dependency on const-structures with a published version before release.
-const-structures = { path = "../../../../const-structures" }
+# TODO0 Publish const-structures 0.1.0 before releasing Device Envoy; the versioned path supports local development.
+const-structures = { version = "0.1.0", path = "../../../../const-structures" }
 itertools = { version = "0.14.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
 embedded-hal = "1.0.0"

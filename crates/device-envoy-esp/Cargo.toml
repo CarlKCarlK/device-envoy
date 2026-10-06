@@ -133,7 +133,7 @@ embassy-futures = { version = "0.1.2" }
 smart-leds     = { version = "0.4.0" }
 device-envoy-core = { version = "0.1.6", path = "../device-envoy-core", features = ["wifi"] }
 # TODO0 Publish macro-schema 0.1.0 before releasing Device Envoy; the versioned path supports local development.
-macro-schema = { version = "0.1.0", path = "../../../../const-structures" }
+macro-schema = { version = "0.1.0", path = "../../../../macro-schema" }
 embedded-graphics = { version = "0.8", default-features = false }
 heapless       = { version = "0.9.2", features = ["serde"] }
 static_cell    = { version = "2.1.1" }

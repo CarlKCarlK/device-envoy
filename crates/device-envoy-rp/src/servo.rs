@@ -150,8 +150,6 @@ pub use device_envoy_core::servo::{
     __servo_player_animate, __servo_player_hold, __servo_player_relax, __servo_player_set_degrees,
     device_loop,
 };
-#[doc(hidden)]
-pub use paste;
 
 const SERVO_PERIOD_US: u16 = 20_000; // 20 ms
 
@@ -161,59 +159,11 @@ pub const SERVO_MIN_US_DEFAULT: u16 = 500;
 /// Default maximum pulse width for hobby servos (microseconds).
 pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 
-/// Code generator for [`servo!`](crate::servo::servo).
-///
-/// Called only by `servo!` after its `const_structures::define!` schema has validated
-/// the input and filled defaults. Must be public for macro expansion in downstream
-/// crates, but not user-facing API.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __servo_generate {
-    (
-        attrs: [$(#[$attr:meta])*],
-        vis: [$vis:vis],
-        name: $name:ident,
-        doc: $doc:literal,
-        pin: $pin:ident,
-        min_us: $min_us:expr,
-        max_us: $max_us:expr,
-        max_degrees: $max_degrees:expr,
-        direction: $direction:expr,
-    ) => {
-        $(#[$attr])*
-        #[doc = $doc]
-        $vis struct $name;
-
-        impl $name {
-            /// Creates the servo on the PWM slice that drives its pin.
-            ///
-            /// The type system checks that `slice` is the slice for this pin. See the
-            /// [servo module documentation](mod@device_envoy_rp::servo) for usage.
-            pub fn new<'d, S>(
-                pin: impl Into<::embassy_rp::Peri<'d, ::embassy_rp::peripherals::$pin>>,
-                slice: impl Into<::embassy_rp::Peri<'d, S>>,
-            ) -> $crate::servo::ServoRp<'d>
-            where
-                ::embassy_rp::peripherals::$pin: $crate::servo::ServoPwmPin<S>,
-                S: ::embassy_rp::PeripheralType + 'd,
-            {
-                $crate::servo::servo_from_pin_slice(
-                    pin.into(),
-                    slice.into(),
-                    $min_us,
-                    $max_us,
-                    $max_degrees,
-                    $direction,
-                )
-            }
-        }
-    };
-}
 const_structures::define! {
     /// Create a servo with keyword arguments and default pulse widths.
     ///
     /// See the [servo module documentation](mod@crate::servo) for details and examples.
-    pub servo => __servo_generate {
+    pub servo {
         /// GPIO pin for servo output, for example `PIN_11`; its PWM slice is passed to `new`.
         pin: ident,
         /// Minimum pulse width in microseconds, for 0°.
@@ -229,9 +179,37 @@ const_structures::define! {
         #[default_display = "Direction::Forward"]
         direction: expr = $crate::servo::Direction::Forward,
     }
-}
 
-// Public for macro expansion in downstream crates.
+    generate {
+        $decl.attrs
+        #[doc = $decl.doc]
+        $decl.vis struct $decl.name;
+
+        impl $decl.name {
+            /// Creates the servo on the PWM slice that drives its pin.
+            ///
+            /// The type system checks that `slice` is the slice for this pin. See the
+            /// [servo module documentation](mod@device_envoy_rp::servo) for usage.
+            pub fn new<'d, S>(
+                pin: impl Into<::embassy_rp::Peri<'d, ::embassy_rp::peripherals::$decl.pin>>,
+                slice: impl Into<::embassy_rp::Peri<'d, S>>,
+            ) -> $crate::servo::ServoRp<'d>
+            where
+                ::embassy_rp::peripherals::$decl.pin: $crate::servo::ServoPwmPin<S>,
+                S: ::embassy_rp::PeripheralType + 'd,
+            {
+                $crate::servo::servo_from_pin_slice(
+                    pin.into(),
+                    slice.into(),
+                    $decl.min_us,
+                    $decl.max_us,
+                    $decl.max_degrees,
+                    $decl.direction,
+                )
+            }
+        }
+    }
+}
 
 // Public for macro expansion in downstream crates.
 #[doc(hidden)]

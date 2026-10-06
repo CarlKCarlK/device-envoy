@@ -285,9 +285,6 @@ pub mod docs {
 }
 
 pub use device_envoy_core::tone;
-/// Used internally by other macros.
-#[doc(hidden)]
-pub use paste::paste as __paste;
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but

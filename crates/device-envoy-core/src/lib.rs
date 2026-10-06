@@ -32,9 +32,6 @@ pub mod wasm;
 pub mod wifi_auto;
 
 pub use error::{Error, Result, UnwrapInfallible};
-/// Used internally by other macros.
-#[doc(hidden)]
-pub use paste::paste as __paste;
 // Must be `pub` for macro expansion: every schema-declared macro forwards to it.
 #[doc(hidden)]
 pub use const_structures::expand as __const_structures_expand;

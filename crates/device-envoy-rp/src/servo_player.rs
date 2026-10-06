@@ -177,178 +177,26 @@ macro_rules! combine {
     }};
 }
 
-/// Macro to generate a servo player struct type (includes syntax details).
-///
-/// This page provides the primary documentation for configuring individual servo players.
-///
-/// See the [servo module documentation](mod@crate::servo) for complete
-/// examples.
-
-///
-/// **After reading the configuration details below, see also:**
-///
-/// - [`servo`](mod@crate::servo) module — Complete examples and usage
-///   patterns
-///
-/// Use this macro when your project has a servo that needs scripted animation control.
-/// The macro generates a struct type and spawns a background
-/// task to execute animation sequences.
-///
-/// **Syntax:**
-///
-/// ```text
-/// servo_player! {
-///     [<visibility>] <Name> {
-///         pin: <pin_ident>,
-///         min_us: <u16_expr>,         // optional
-///         max_us: <u16_expr>,         // optional
-///         max_degrees: <u16_expr>,    // optional
-///         direction: <Direction_expr>,    // optional
-///         max_steps: <usize_expr>,    // optional
-///     }
-/// }
-/// ```
-///
-/// # Configuration
-///
-/// **Required fields:**
-///
-/// - `pin` — GPIO pin for servo
-///
-/// **Optional fields:**
-///
-/// - `min_us` — Minimum pulse width in microseconds for 0° (default: 500)
-/// - `max_us` — Maximum pulse width in microseconds for max_degrees
-///   (default: 2500)
-/// - `max_degrees` — Maximum servo angle in degrees (default: 180)
-/// - `direction` — Logical direction mapping (`Direction::Forward` by default)
-/// - `max_steps` — Maximum number of animation steps (default: 16)
-///
-/// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`,
-/// `hold()`, and `relax()` are still supported.
-
-/// Code generator for [`servo_player!`](crate::servo::servo_player).
-///
-/// Called only by `servo_player!` after its `const_structures::define!` schema has validated
-/// the input and filled defaults. Must be public for macro expansion in downstream
-/// crates, but not user-facing API.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __servo_player_generate {
-    (
-        attrs: [$(#[$attr:meta])*],
-        vis: [$vis:vis],
-        name: $name:ident,
-        doc: $doc:literal,
-        pin: $pin:ident,
-        min_us: $min_us:expr,
-        max_us: $max_us:expr,
-        max_degrees: $max_degrees:expr,
-        direction: $direction:expr,
-        max_steps: $max_steps:expr,
-    ) => {
-        $crate::servo::paste::paste! {
-            static [<$name:upper _SERVO_PLAYER_STATIC>]: $crate::servo::ServoPlayerStatic<$max_steps> =
-                $crate::servo::ServoPlayerHandle::<$max_steps>::new_static();
-            static [<$name:upper _SERVO_PLAYER_CELL>]: ::static_cell::StaticCell<$name> =
-                ::static_cell::StaticCell::new();
-
-            $(#[$attr])*
-            #[doc = $doc]
-            $vis struct $name {
-                servo_player_handle: $crate::servo::ServoPlayerHandle<$max_steps>,
-            }
-
-            #[allow(missing_docs)]
-            impl $name {
-                pub const MAX_STEPS: usize = $max_steps;
-
-                /// Create the servo player and spawn its background task.
-                ///
-                /// The slice is automatically determined from the pin via the type
-                /// system.
-                ///
-                /// # PWM Slice Calculation
-                ///
-                /// Calculate which [PWM slice](crate#glossary) a pin uses:
-                /// `slice = (pin / 2) % 8`. For example, PIN_11 uses PWM_SLICE5
-                /// ((11 / 2) % 8 = 5).
-                ///
-                /// # Parameters
-                ///
-                /// - `pin` — GPIO pin for servo
-                /// - `slice` — PWM slice corresponding to the pin
-                /// - `spawner` — Task spawner for background operations
-                ///
-                /// See the `ServoPlayer` struct example for usage.
-                pub fn new<S: 'static>(
-                    pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
-                    slice: impl Into<::embassy_rp::Peri<'static, S>>,
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<&'static Self>
-                where
-                    ::embassy_rp::peripherals::$pin: $crate::servo::ServoPwmPin<S>,
-                    S: ::embassy_rp::PeripheralType,
-                {
-                    let pin = pin.into();
-                    let slice = slice.into();
-                    let servo = $crate::servo::servo_from_pin_slice(
-                        pin,
-                        slice,
-                        $min_us,
-                        $max_us,
-                        $max_degrees,
-                        $direction
-                    );
-                    let token = [<$name:snake _servo_player_task>](&[<$name:upper _SERVO_PLAYER_STATIC>], servo);
-                    spawner.spawn(token?);
-                    let servo_player_handle =
-                        $crate::servo::ServoPlayerHandle::new(&[<$name:upper _SERVO_PLAYER_STATIC>]);
-                    Ok([<$name:upper _SERVO_PLAYER_CELL>].init(Self { servo_player_handle }))
-                }
-            }
-
-            impl $crate::servo::Servo for $name {
-                const DEFAULT_MAX_DEGREES: u16 = $max_degrees;
-
-                fn set_degrees(&self, degrees: u16) {
-                    $crate::servo::__servo_player_set_degrees(&self.servo_player_handle, degrees);
-                }
-
-                fn hold(&self) {
-                    $crate::servo::__servo_player_hold(&self.servo_player_handle);
-                }
-
-                fn relax(&self) {
-                    $crate::servo::__servo_player_relax(&self.servo_player_handle);
-                }
-            }
-
-            impl $crate::servo::ServoPlayer<$max_steps> for $name {
-                const MAX_STEPS: usize = Self::MAX_STEPS;
-
-                fn animate<I>(&self, steps: I, at_end: $crate::servo::AtEnd)
-                where
-                    I: ::core::iter::IntoIterator,
-                    I::Item: ::core::borrow::Borrow<(u16, ::embassy_time::Duration)>,
-                {
-                    $crate::servo::__servo_player_animate(&self.servo_player_handle, steps, at_end);
-                }
-            }
-
-            #[::embassy_executor::task]
-            async fn [<$name:snake _servo_player_task>](
-                servo_player_static: &'static $crate::servo::ServoPlayerStatic<$max_steps>,
-                servo: $crate::servo::ServoRp<'static>,
-            ) -> ! {
-                $crate::servo::device_loop(servo_player_static, servo).await
-            }
-        }
-    };
-}
 const_structures::define! {
-
-    pub servo_player => __servo_player_generate {
+    /// Macro to generate a servo player struct type.
+    ///
+    /// This page provides the primary documentation for configuring individual servo players.
+    ///
+    /// See the [servo module documentation](mod@crate::servo) for complete
+    /// examples.
+    ///
+    /// **After reading the configuration details below, see also:**
+    ///
+    /// - [`servo`](mod@crate::servo) module — Complete examples and usage
+    ///   patterns
+    ///
+    /// Use this macro when your project has a servo that needs scripted animation control.
+    /// The macro generates a struct type and spawns a background
+    /// task to execute animation sequences.
+    ///
+    /// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`,
+    /// `hold()`, and `relax()` are still supported.
+    pub servo_player {
         /// GPIO pin for servo output, for example `PIN_11`; its PWM slice is passed to `new`.
         pin: ident,
         /// Minimum pulse width in microseconds, for 0°.
@@ -365,6 +213,104 @@ const_structures::define! {
         direction: expr = $crate::servo::Direction::Forward,
         /// Maximum number of animation steps.
         max_steps: expr = 16,
+    }
+
+    generate {
+        static $upper($decl.name, _SERVO_PLAYER_STATIC): $crate::servo::ServoPlayerStatic<$decl.max_steps> =
+            $crate::servo::ServoPlayerHandle::<$decl.max_steps>::new_static();
+        static $upper($decl.name, _SERVO_PLAYER_CELL): ::static_cell::StaticCell<$decl.name> =
+            ::static_cell::StaticCell::new();
+
+        $decl.attrs
+        #[doc = $decl.doc]
+        $decl.vis struct $decl.name {
+            servo_player_handle: $crate::servo::ServoPlayerHandle<$decl.max_steps>,
+        }
+
+        #[allow(missing_docs)]
+        impl $decl.name {
+            pub const MAX_STEPS: usize = $decl.max_steps;
+
+            /// Create the servo player and spawn its background task.
+            ///
+            /// The slice is automatically determined from the pin via the type
+            /// system.
+            ///
+            /// # PWM Slice Calculation
+            ///
+            /// Calculate which [PWM slice](crate#glossary) a pin uses:
+            /// `slice = (pin / 2) % 8`. For example, PIN_11 uses PWM_SLICE5
+            /// ((11 / 2) % 8 = 5).
+            ///
+            /// # Parameters
+            ///
+            /// - `pin` — GPIO pin for servo
+            /// - `slice` — PWM slice corresponding to the pin
+            /// - `spawner` — Task spawner for background operations
+            ///
+            /// See the `ServoPlayer` struct example for usage.
+            pub fn new<S: 'static>(
+                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
+                slice: impl Into<::embassy_rp::Peri<'static, S>>,
+                spawner: ::embassy_executor::Spawner,
+            ) -> $crate::Result<&'static Self>
+            where
+                ::embassy_rp::peripherals::$decl.pin: $crate::servo::ServoPwmPin<S>,
+                S: ::embassy_rp::PeripheralType,
+            {
+                let pin = pin.into();
+                let slice = slice.into();
+                let servo = $crate::servo::servo_from_pin_slice(
+                    pin,
+                    slice,
+                    $decl.min_us,
+                    $decl.max_us,
+                    $decl.max_degrees,
+                    $decl.direction
+                );
+                let token = $snake($decl.name, _servo_player_task)(&$upper($decl.name, _SERVO_PLAYER_STATIC), servo);
+                spawner.spawn(token?);
+                let servo_player_handle =
+                    $crate::servo::ServoPlayerHandle::new(&$upper($decl.name, _SERVO_PLAYER_STATIC));
+                Ok($upper($decl.name, _SERVO_PLAYER_CELL).init(Self { servo_player_handle }))
+            }
+        }
+
+        impl $crate::servo::Servo for $decl.name {
+            const DEFAULT_MAX_DEGREES: u16 = $decl.max_degrees;
+
+            fn set_degrees(&self, degrees: u16) {
+                $crate::servo::__servo_player_set_degrees(&self.servo_player_handle, degrees);
+            }
+
+            fn hold(&self) {
+                $crate::servo::__servo_player_hold(&self.servo_player_handle);
+            }
+
+            fn relax(&self) {
+                $crate::servo::__servo_player_relax(&self.servo_player_handle);
+            }
+        }
+
+        impl $crate::servo::ServoPlayer<$decl.max_steps> for $decl.name {
+            const MAX_STEPS: usize = Self::MAX_STEPS;
+
+            fn animate<I>(&self, steps: I, at_end: $crate::servo::AtEnd)
+            where
+                I: ::core::iter::IntoIterator,
+                I::Item: ::core::borrow::Borrow<(u16, ::embassy_time::Duration)>,
+            {
+                $crate::servo::__servo_player_animate(&self.servo_player_handle, steps, at_end);
+            }
+        }
+
+        #[::embassy_executor::task]
+        async fn $snake($decl.name, _servo_player_task)(
+            servo_player_static: &'static $crate::servo::ServoPlayerStatic<$decl.max_steps>,
+            servo: $crate::servo::ServoRp<'static>,
+        ) -> ! {
+            $crate::servo::device_loop(servo_player_static, servo).await
+        }
     }
 }
 

@@ -270,83 +270,13 @@ impl Servo for ServoEsp {
     }
 }
 
-#[doc(hidden)]
-pub use paste;
-
-/// Code generator for [`servo!`](crate::servo::servo).
-///
-/// Called only by `servo!` after its `const_structures::define!` schema has validated
-/// the input and filled defaults. Must be public for macro expansion in downstream
-/// crates, but not user-facing API.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __servo_generate {
-    (
-        attrs: [$(#[$attr:meta])*],
-        vis: [$vis:vis],
-        name: $name:ident,
-        doc: $doc:literal,
-        pin: $pin:ident,
-        timer: $timer:ident,
-        channel: $channel:ident,
-        min_us: $min_us:expr,
-        max_us: $max_us:expr,
-        max_degrees: $max_degrees:expr,
-        direction: $direction:expr,
-    ) => {
-        $crate::servo::paste::paste! {
-            $(#[$attr])*
-            #[doc = $doc]
-            $vis struct $name;
-
-            // Link-time ownership claims: duplicate timer or channel selection across the
-            // final binary should fail the link with duplicate symbol errors.
-            #[used]
-            #[unsafe(no_mangle)]
-            static [<__device_envoy_esp_ledc_timer_claim_ $timer:lower>]: u8 = 0;
-
-            #[used]
-            #[unsafe(no_mangle)]
-            static [<__device_envoy_esp_ledc_channel_claim_ $channel:lower>]: u8 = 0;
-
-            static [<$name:upper _SERVO_STATIC>]: [<$name Static>] = $name::new_static();
-
-            $vis struct [<$name Static>] {
-                servo_static: $crate::servo::ServoStatic,
-            }
-
-            impl $name {
-                #[must_use]
-                pub const fn new_static() -> [<$name Static>] {
-                    [<$name Static>] {
-                        servo_static: $crate::servo::ServoStatic::new_static(
-                            ::esp_hal::ledc::timer::Number::$timer,
-                            ::esp_hal::ledc::channel::Number::$channel,
-                            $min_us,
-                            $max_us,
-                            $max_degrees,
-                            $direction,
-                        ),
-                    }
-                }
-
-                pub fn new(
-                    ledc: &::esp_hal::ledc::Ledc<'static>,
-                    pin: ::esp_hal::peripherals::$pin<'static>,
-                ) -> $crate::Result<$crate::servo::ServoEsp> {
-                    $crate::servo::ServoEsp::new(&[<$name:upper _SERVO_STATIC>].servo_static, ledc, pin)
-                }
-            }
-        }
-    };
-}
 const_structures::define! {
     /// Macro to generate a direct-servo struct type.
     ///
     /// **See the [servo module documentation](mod@crate::servo) for usage examples.**
     ///
     /// See the [servo module documentation](mod@crate::servo) for details and examples.
-    pub servo => __servo_generate {
+    pub servo {
         /// GPIO pin for servo output, for example `GPIO10`.
         pin: ident,
         /// LEDC timer, for example `Timer0`; claimed exclusively for the whole binary.
@@ -365,5 +295,50 @@ const_structures::define! {
         /// Logical angle direction.
         #[default_display = "Direction::Forward"]
         direction: expr = $crate::servo::Direction::Forward,
+    }
+
+    generate {
+        $decl.attrs
+        #[doc = $decl.doc]
+        $decl.vis struct $decl.name;
+
+        // Link-time ownership claims: duplicate timer or channel selection across the
+        // final binary should fail the link with duplicate symbol errors.
+        #[used]
+        #[unsafe(no_mangle)]
+        static $snake(__device_envoy_esp_ledc_timer_claim_, $decl.timer): u8 = 0;
+
+        #[used]
+        #[unsafe(no_mangle)]
+        static $snake(__device_envoy_esp_ledc_channel_claim_, $decl.channel): u8 = 0;
+
+        static $upper($decl.name, _SERVO_STATIC): $ident($decl.name, Static) = $decl.name::new_static();
+
+        $decl.vis struct $ident($decl.name, Static) {
+            servo_static: $crate::servo::ServoStatic,
+        }
+
+        impl $decl.name {
+            #[must_use]
+            pub const fn new_static() -> $ident($decl.name, Static) {
+                $ident($decl.name, Static) {
+                    servo_static: $crate::servo::ServoStatic::new_static(
+                        ::esp_hal::ledc::timer::Number::$decl.timer,
+                        ::esp_hal::ledc::channel::Number::$decl.channel,
+                        $decl.min_us,
+                        $decl.max_us,
+                        $decl.max_degrees,
+                        $decl.direction,
+                    ),
+                }
+            }
+
+            pub fn new(
+                ledc: &::esp_hal::ledc::Ledc<'static>,
+                pin: ::esp_hal::peripherals::$decl.pin<'static>,
+            ) -> $crate::Result<$crate::servo::ServoEsp> {
+                $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC).servo_static, ledc, pin)
+            }
+        }
     }
 }

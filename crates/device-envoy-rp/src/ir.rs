@@ -152,9 +152,6 @@ use device_envoy_core::ir::decode_nec_frame;
 pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping};
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
-pub use paste;
-// Must be `pub` for macro expansion at downstream call sites.
-#[doc(hidden)]
 pub use device_envoy_core::ir::IrStatic as __IrStatic;
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]

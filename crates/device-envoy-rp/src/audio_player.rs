@@ -551,6 +551,9 @@ const_structures::define! {
         /// Playback sample rate in hertz, for example `VOICE_22050_HZ`.
         sample_rate_hz: expr,
         /// PIO resource.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
         pio: ident = PIO0,
         /// DMA channel.
         dma: ident = DMA_CH0,

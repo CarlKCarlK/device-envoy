@@ -366,8 +366,11 @@ const_structures::define! {
     /// - [`irs!`](crate::irs) — Share one PIO resource with multiple IR receivers
     /// - [`ir_mapping!`](crate::ir_mapping) — Generate a mapped-button IR receiver type
     pub ir {
-        /// PIO resource, for example `PIO0`.
-        pio: ident,
+        /// PIO resource.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
+        pio: ident = PIO0,
         /// GPIO input pin connected to the IR receiver.
         pin: ident,
     }
@@ -410,8 +413,11 @@ const_structures::define! {
     /// - [`ir_keplers!`](crate::ir_keplers) — Share one PIO resource with multiple Kepler IR receivers
     /// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
     pub ir_kepler {
-        /// PIO resource, for example `PIO0`.
-        pio: ident,
+        /// PIO resource.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
+        pio: ident = PIO0,
         /// GPIO input pin connected to the IR receiver.
         pin: ident,
     }
@@ -454,8 +460,11 @@ const_structures::define! {
     /// - [`ir_kepler!`](crate::ir_kepler) — Generate a single Kepler IR receiver type
     /// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
     pub ir_keplers {
-        /// PIO resource shared by every receiver in the group, for example `PIO0`.
-        pio: ident,
+        /// PIO resource shared by every receiver in the group.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
+        pio: ident = PIO0,
         /// Each member is one Kepler remote receiver and uses one PIO state machine.
         members 1..=4 {
             /// GPIO input pin connected to the IR receiver.
@@ -539,8 +548,11 @@ const_structures::define! {
     /// - [`ir_mappings!`](crate::ir_mappings) — Share one PIO resource with multiple mapping receivers
     /// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
     pub ir_mapping {
-        /// PIO resource, for example `PIO0`.
-        pio: ident,
+        /// PIO resource.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
+        pio: ident = PIO0,
         /// GPIO input pin connected to the IR receiver.
         pin: ident,
         /// Application button type that IR codes map to.
@@ -590,8 +602,11 @@ const_structures::define! {
     /// - [`ir_mapping!`](crate::ir_mapping) — Generate a single IR mapping receiver type
     /// - [`irs!`](crate::irs) — Generate raw IR receivers sharing one PIO resource
     pub ir_mappings {
-        /// PIO resource shared by every receiver in the group, for example `PIO0`.
-        pio: ident,
+        /// PIO resource shared by every receiver in the group.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
+        pio: ident = PIO0,
         /// Application button type that IR codes map to.
         button: ty,
         /// Maximum mapping entries per receiver; at least the number of entries you provide.
@@ -681,8 +696,11 @@ const_structures::define! {
     /// - [`ir!`](crate::ir!) — Generate a single IR receiver type
     /// - [`ir_mappings!`](crate::ir_mappings) — Generate mapped-button receivers sharing one PIO
     pub irs {
-        /// PIO resource shared by every receiver in the group, for example `PIO0`.
-        pio: ident,
+        /// PIO resource shared by every receiver in the group.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
+        pio: ident = PIO0,
         /// Each member is one IR receiver and uses one PIO state machine.
         members 1..=4 {
             /// GPIO input pin connected to the IR receiver.

@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
-//! Compile-only verification that two IR receivers on one PIO compile.
+//! Compile-only verification that two IR receivers on one PIO compile, with `pio`
+//! left to its default, `PIO0`.
 
 #![cfg(not(feature = "host"))]
 #![no_std]
@@ -12,8 +13,6 @@ use embassy_executor::Spawner;
 
 ir_keplers! {
     IrKeplers0 {
-        pio: PIO0,
-
         IrKepler15 { pin: PIN_15 },
         IrKepler01 { pin: PIN_16 }
     }

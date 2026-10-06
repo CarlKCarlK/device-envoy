@@ -341,6 +341,9 @@ const_structures::define! {
         /// Built-in font for text, for example `Led2dFont::Font4x6Trim`.
         font: expr,
         /// PIO resource.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
         pio: ident = PIO0,
         /// DMA channel.
         dma: ident = DMA_CH0,

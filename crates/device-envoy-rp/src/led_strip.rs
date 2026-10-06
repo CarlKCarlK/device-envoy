@@ -497,6 +497,9 @@ const_structures::define! {
         /// Number of LEDs (pixels).
         len: expr,
         /// PIO resource.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
         pio: ident = PIO0,
         /// DMA channel.
         dma: ident = DMA_CH0,
@@ -742,6 +745,9 @@ const_structures::define! {
     #[cfg(not(feature = "host"))]
     pub led_strips {
         /// PIO resource shared by every strip and panel in the group.
+        /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
+        /// compile (typically `use of moved value` at the second constructor), so give one of
+        /// them another PIO.
         pio: ident = PIO0,
         /// Each member is one LED strip or 2D panel and uses one PIO state machine.
         members 1..=4 {

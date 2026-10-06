@@ -13,7 +13,7 @@ use crate::led_strip;
 
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none"))]
 led_strip! {
-    LedStripGenerated {
+    pub LedStripGenerated {
         pin: GPIO2,
         len: 8,
         max_current: crate::led_strip::Current::Milliamps(250),
@@ -33,14 +33,14 @@ pub struct LedStripGenerated;
 #[cfg(doc)]
 use crate::Result;
 #[cfg(doc)]
-use crate::led_strip::{Frame1d, LedStrip};
+use crate::led_strip::{Frame1d, LedStrip, MAX_FRAMES_DEFAULT};
 
 #[cfg(doc)]
 impl LedStripGenerated {
     /// Number of pixels in this strip.
     pub const LEN: usize = 8;
     /// Maximum number of animation frames.
-    pub const MAX_FRAMES: usize = 16;
+    pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;
     /// Maximum brightness after current limiting.
     pub const MAX_BRIGHTNESS: u8 = crate::led_strip::Current::Milliamps(250).max_brightness(8 * 60);
 

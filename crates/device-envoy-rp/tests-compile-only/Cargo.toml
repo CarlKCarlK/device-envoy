@@ -121,6 +121,16 @@ path = "lcd_text_four.rs"
 required-features = ["pico1"]
 
 [[bin]]
+name = "led_strip_and_ir_same_pio_should_fail"
+path = "led_strip_and_ir_same_pio_should_fail.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_same_pio_should_fail"
+path = "led_strip_same_pio_should_fail.rs"
+required-features = ["pico1"]
+
+[[bin]]
 name = "lcd_text_single_then_group_should_fail"
 path = "lcd_text_single_then_group_should_fail.rs"
 required-features = ["pico1"]

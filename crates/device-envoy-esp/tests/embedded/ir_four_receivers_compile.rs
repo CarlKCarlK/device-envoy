@@ -13,10 +13,10 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 irs! {
     IrsFourCompileTest {
-        Ir3: { pin: GPIO3 },
-        Ir2: { pin: GPIO2 },
-        Ir1: { pin: GPIO1 },
-        Ir0: { pin: GPIO0 }
+        Ir3 { pin: GPIO3 },
+        Ir2 { pin: GPIO2 },
+        Ir1 { pin: GPIO1 },
+        Ir0 { pin: GPIO0 }
     }
 }
 

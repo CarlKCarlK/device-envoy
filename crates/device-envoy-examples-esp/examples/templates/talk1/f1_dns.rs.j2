@@ -37,7 +37,6 @@ const COLORS: &[smart_leds::RGB8] = &[colors::YELLOW, colors::LIME, colors::CYAN
 led2d! {
     Led8x12 {
         pin: GPIO{{ panel12x8_pin }},
-        len: 96,
         led_layout: LED_LAYOUT_8X12,
         font: Led2dFont::Font4x6Trim,
     }

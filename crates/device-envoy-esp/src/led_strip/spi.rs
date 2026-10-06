@@ -160,6 +160,8 @@ pub async fn led_strip_spi_device_loop<
 #[macro_export]
 macro_rules! __led_strip_spi_inner {
     (
+        [$($attrs:tt)*],
+        [$vis:vis],
         $name:ident,
         $pin:ident,
         $len:expr,
@@ -171,6 +173,8 @@ macro_rules! __led_strip_spi_inner {
         [$($led2d_font:expr)?],
     ) => {
         $crate::__led_strip_spi_impl!{
+            attrs       = [$($attrs)*],
+            vis         = [$vis],
             name        = $name,
             pin         = $pin,
             len         = $len,
@@ -198,6 +202,8 @@ macro_rules! __led_strip_spi_inner {
 #[macro_export]
 macro_rules! __led_strip_spi_impl {
     (
+        attrs       = [$($attrs:tt)*],
+        vis         = [$vis:vis],
         name        = $name:ident,
         pin         = $pin:ident,
         len         = $len:expr,
@@ -209,9 +215,17 @@ macro_rules! __led_strip_spi_impl {
         led2d_font = [$($led2d_font:expr)?],
     ) => {
         ::paste::paste! {
+            // Evaluated here, in the caller's scope, so `len` and `reset_us` may name the
+            // caller's items.
+            #[doc(hidden)]
+            const [<$name:snake:upper _LEDS>]: usize = $len;
+            #[doc(hidden)]
+            const [<$name:snake:upper _RESET_BYTES>]: usize =
+                $crate::led_strip::spi::reset_bytes_for_us($reset_us);
+
             mod [<$name:snake _consts>] {
-                pub const LEDS: usize = $len;
-                pub const RESET_BYTES: usize = $crate::led_strip::spi::reset_bytes_for_us($reset_us);
+                pub const LEDS: usize = super::[<$name:snake:upper _LEDS>];
+                pub const RESET_BYTES: usize = super::[<$name:snake:upper _RESET_BYTES>];
                 pub const BYTES: usize = LEDS * 9 + RESET_BYTES;
                 pub const WORST_CASE_MA: u32 = LEDS as u32 * 60;
             }
@@ -222,7 +236,8 @@ macro_rules! __led_strip_spi_impl {
                     { $max_frames },
                 > = $crate::led_strip::LedStripEsp::new_static();
 
-            pub struct $name {
+            $($attrs)*
+            $vis struct $name {
                 inner: $crate::led_strip::LedStripEsp<
                     { [<$name:snake _consts>]::LEDS },
                     { $max_frames },

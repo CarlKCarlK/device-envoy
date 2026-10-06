@@ -17,30 +17,6 @@ Additionally, you can decode to PCM first with
 store the final clip in compressed ADPCM form with
 [`with_adpcm`](crate::audio_player::PcmClip::with_adpcm).
 
-**Syntax:**
-
-```text
-adpcm_clip! {
-    [<visibility>] <Name> {
-        file: <path_expr>,
-        target_sample_rate_hz: <sample_rate_expr>, // optional, defaults to WAV sample_rate_hz
-    }
-}
-```
-
-**Inputs:**
-
-- `$vis` - Optional generated module visibility.
-- `$name` - Module name for the generated module.
-
-**Required fields:**
-
-- `file` - Path to an ADPCM WAV file.
-
-**Optional fields:**
-
-- `target_sample_rate_hz` - Output sample rate in hertz for generated clips (default: the WAV file sample rate).
-
 **Generated items:**
 
 - [`Name::pcm_clip()`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::pcm_clip) - `const` function that returns the uncompressed (PCM) version of this clip.

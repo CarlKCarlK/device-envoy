@@ -28,9 +28,10 @@ const LED_LAYOUT_8X8: LedLayout<64, 8, 8> = LedLayout::serpentine_column_major()
 
 // Define strips for both devices using led_strips! led2d configuration.
 led_strips! {
-    pio: PIO0,
     pub LedStripsPio0 {
-        Gpio3Led2d: {
+        pio: PIO0,
+
+        Gpio3Led2d {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(500),
@@ -43,9 +44,10 @@ led_strips! {
 }
 
 led_strips! {
-    pio: PIO1,
     pub LedStripsPio1 {
-        Gpio4Led2d: {
+        pio: PIO1,
+
+        Gpio4Led2d {
             dma: DMA_CH1,
             pin: PIN_4,
             len: 64,

@@ -445,7 +445,7 @@ fn check_compile_only() -> ExitCode {
 
     println!("{}", "==> Checking compile-only tests...".cyan());
 
-    let compile_tests_dir = workspace_root.join("tests-compile-only");
+    let compile_tests_dir = rp_crate_root().join("tests-compile-only");
     if !compile_tests_dir.exists() {
         eprintln!("{}", "No tests-compile-only directory found.".red());
         return ExitCode::FAILURE;
@@ -517,7 +517,8 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
     let examples = discover_examples(&workspace_root);
-    let demos = discover_demo_bins(&workspace_root);
+    // The demos crate lives in device-envoy-rp/demos.
+    let demos = discover_demo_bins(&rp_crate_root());
     let no_wifi_examples: Vec<_> = examples
         .iter()
         .filter(|example| !example.required_capabilities.contains(Capability::Wifi))
@@ -721,8 +722,21 @@ fn check_all() -> ExitCode {
         // 8. Compile-only tests
         s.spawn(|_| {
             println!("{}", "  [8/10] Compile-only tests...".bright_black());
-            let compile_tests_dir = workspace_root.join("tests-compile-only");
-            if compile_tests_dir.exists() {
+            let compile_tests_dir = rp_crate_root().join("tests-compile-only");
+            if !compile_tests_dir.exists() {
+                eprintln!(
+                    "{}",
+                    format!(
+                        "No tests-compile-only directory at {}",
+                        compile_tests_dir.display()
+                    )
+                    .red()
+                );
+                failures
+                    .lock()
+                    .unwrap()
+                    .push("compile-only tests (directory missing)");
+            } else {
                 let mut compile_tests = Vec::new();
                 if let Ok(entries) = fs::read_dir(&compile_tests_dir) {
                     for entry in entries.flatten() {
@@ -1197,7 +1211,8 @@ fn check_examples() -> ExitCode {
 
 fn check_demos() -> ExitCode {
     let workspace_root = workspace_root();
-    let demos = discover_demo_bins(&workspace_root);
+    // The demos crate lives in device-envoy-rp/demos.
+    let demos = discover_demo_bins(&rp_crate_root());
     if demos.is_empty() {
         println!("{}", "No demos found.".yellow());
         return ExitCode::SUCCESS;
@@ -1578,7 +1593,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             relative_path: "src/led2d/led2d_generated.rs",
             required_fragments: &[
                 "pub struct Led2dGenerated",
-                "pub const MAX_FRAMES: usize",
+                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
                 "pub const MAX_BRIGHTNESS: u8",
                 "pub const FONT: Led2dFont",
                 "pub const WIDTH: usize",
@@ -1610,7 +1625,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
             required_fragments: &[
                 "pub struct LedStripGenerated",
                 "pub const LEN: usize",
-                "pub const MAX_FRAMES: usize",
+                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
                 "pub const MAX_BRIGHTNESS: u8",
                 "pub fn new(",
                 "impl LedStrip<8> for LedStripGenerated",
@@ -1737,6 +1752,13 @@ impl Drop for TemporaryFileCleanup {
             }
         }
     }
+}
+
+fn rp_crate_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .canonicalize()
+        .expect("Failed to find device-envoy-rp crate root")
 }
 
 fn workspace_root() -> PathBuf {

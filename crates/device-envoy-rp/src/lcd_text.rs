@@ -38,10 +38,10 @@
 //! use device_envoy_rp::{Result, lcd_text, lcd_text::LcdText as _};
 //!
 //! lcd_text! {
-//!     i2c: I2C0,
-//!     sda_pin: PIN_4,
-//!     scl_pin: PIN_5,
 //!     LcdTextSimple {
+//!         i2c: I2C0,
+//!         sda_pin: PIN_4,
+//!         scl_pin: PIN_5,
 //!         width: 16,
 //!         height: 2,
 //!         address: 0x27
@@ -76,10 +76,11 @@
 //! use device_envoy_rp::{Result, i2cs, lcd_text::LcdText as _};
 //!
 //! i2cs! {
-//!     i2c: I2C0,
-//!     sda_pin: PIN_4,
-//!     scl_pin: PIN_5,
 //!     I2cs0 {
+//!         i2c: I2C0,
+//!         sda_pin: PIN_4,
+//!         scl_pin: PIN_5,
+//!
 //!         LcdText16x2 { width: 16, height: 2, address: 0x27 },
 //!         LcdText20x4 { width: 20, height: 4, address: 0x3F },
 //!     }
@@ -107,9 +108,6 @@ use device_envoy_core::lcd_text::{LcdTextDriver, LcdTextFrame, LcdTextWrite};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
 use heapless::Vec;
-// Must be `pub` for macro expansion at downstream call sites.
-#[doc(hidden)]
-pub use paste;
 
 pub mod lcd_text_generated;
 pub use device_envoy_core::lcd_text::LcdText;
@@ -224,278 +222,233 @@ impl<T: i2c::Instance + 'static> LcdTextWrite for RpLcdTextWrite<T> {
     }
 }
 
-/// Macro to generate multiple LCD text device types that share one I2C
-/// resource (includes syntax details).
-///
-/// This page provides the primary documentation and examples for grouped LCD
-/// text devices that share one I2C peripheral.
-///
-/// **Syntax:**
-///
-/// ```text
-/// i2cs! {
-///     i2c: <i2c_ident>,
-///     sda_pin: <sda_pin_ident>,
-///     scl_pin: <scl_pin_ident>,
-///     [<visibility>] <GroupName> {
-///         [<visibility>] <LcdName> {
-///             width: <usize_expr>,
-///             height: <usize_expr>,
-///             address: <u8_expr>
-///         },
-///         // ...more LCD entries...
-///     }
-/// }
-/// ```
-///
-/// For a single LCD type, see [`lcd_text!`](macro@crate::lcd_text).
-///
-/// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
-/// examples.**
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! i2cs {
-    ($($tt:tt)*) => { $crate::__i2cs_impl! { $($tt)* } };
-}
+macro_schema::define! {
+    /// Macro to generate multiple LCD text device types that share one I2C
+    /// resource.
+    ///
+    /// This page provides the primary documentation and examples for grouped LCD
+    /// text devices that share one I2C peripheral.
+    ///
+    /// For a single LCD type, see [`lcd_text!`](macro@crate::lcd_text).
+    ///
+    /// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
+    /// examples.**
+    #[cfg(not(feature = "host"))]
+    pub i2cs {
+        /// I2C peripheral, for example `I2C0`.
+        i2c: ident,
+        /// GPIO pin for I2C data (SDA).
+        sda_pin: ident,
+        /// GPIO pin for I2C clock (SCL).
+        scl_pin: ident,
+        /// Each member is one LCD text display on the shared bus.
+        members 1.. {
+            /// Display width in characters.
+            width: expr,
+            /// Display height in characters; at most 4.
+            height: expr,
+            /// I2C address, for example `0x27`; must be unique within the group.
+            address: expr,
+        },
+    }
 
-/// Implementation macro. Not part of the public API; use [`i2cs!`] instead.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __i2cs_impl {
-    (
-        i2c: $i2c:ident,
-        sda_pin: $sda_pin:ident,
-        scl_pin: $scl_pin:ident,
-        $group_vis:vis $group_name:ident {
-            $(
-                $lcd_vis:vis $lcd_name:ident {
-                    width: $width:expr,
-                    height: $height:expr,
-                    address: $address:expr
-                }
-            ),+ $(,)?
+    generate {
+        const _: () = {
+            $crate::lcd_text::__assert_unique_addresses([$for lcd in $decl.members { $lcd.address, }]);
+        };
+        const $upper(__, $decl.name, _MAX_LCD_CELLS): usize =
+            $crate::lcd_text::__max_lcd_cells([$for lcd in $decl.members { $lcd.width, }], [$for lcd in $decl.members { $lcd.height, }]);
+
+        $for lcd in $decl.members {
+            static $upper($lcd.name, _FRAME_SIGNAL):
+                $crate::lcd_text::__I2csSignal<
+                    $crate::lcd_text::__LcdTextFrame<{ $upper(__, $decl.name, _MAX_LCD_CELLS) }>
+                > =
+                $crate::lcd_text::__I2csSignal::new();
         }
-    ) => {
-        $crate::lcd_text::paste::paste! {
-            const _: () = {
-                $crate::lcd_text::__assert_unique_addresses([$($address,)+]);
-            };
-            const [<__ $group_name:upper _MAX_LCD_CELLS>]: usize =
-                $crate::lcd_text::__max_lcd_cells([$($width,)+], [$($height,)+]);
 
-            $(
-                static [<$lcd_name:upper _FRAME_SIGNAL>]:
-                    $crate::lcd_text::__I2csSignal<
-                        $crate::lcd_text::__LcdTextFrame<{ [<__ $group_name:upper _MAX_LCD_CELLS>] }>
-                    > =
-                    $crate::lcd_text::__I2csSignal::new();
-            )+
+        $decl.attrs
+        #[doc = $decl.doc]
+        #[doc = "\n\nA group of LCD text devices that share one I2C peripheral and pin pair."]
+        $decl.vis struct $decl.name;
 
-            #[doc = "A generated group of LCD text devices that share one I2C peripheral and pin pair."]
-            $group_vis struct $group_name;
-
-            struct [<__ $group_name Devices>] {
-                $(
-                    [<$lcd_name:snake>]: &'static $lcd_name,
-                )+
+        struct $ident(__, $decl.name, Devices) {
+            $for lcd in $decl.members {
+                $snake($lcd.name): &'static $lcd.name,
             }
+        }
 
-            impl [<__ $group_name Devices>] {
-                fn into_tuple(self) -> ($(&'static $lcd_name,)+) {
-                    (
-                        $(self.[<$lcd_name:snake>],)+
-                    )
+        impl $ident(__, $decl.name, Devices) {
+            fn into_tuple(self) -> ($for lcd in $decl.members {&'static $lcd.name,}) {
+                (
+                    $for lcd in $decl.members {self.$snake($lcd.name),}
+                )
+            }
+        }
+
+        impl $decl.name {
+            fn __new_devices(
+                i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.i2c>,
+                sda: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.sda_pin>,
+                scl: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.scl_pin>,
+                spawner: embassy_executor::Spawner,
+            ) -> $crate::Result<$ident(__, $decl.name, Devices)> {
+                let i2c = embassy_rp::i2c::I2c::new_blocking(
+                    i2c_peripheral,
+                    scl,
+                    sda,
+                    embassy_rp::i2c::Config::default(),
+                );
+
+                let token = $snake(__i2cs_task_, $decl.name)(i2c);
+                spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
+
+                $for lcd in $decl.members {
+                    static $upper($lcd.name, _INSTANCE): $lcd.name = $lcd.name;
+                    let $snake($lcd.name) = &$upper($lcd.name, _INSTANCE);
                 }
+
+                Ok($ident(__, $decl.name, Devices) {
+                    $for lcd in $decl.members {
+                        $snake($lcd.name),
+                    }
+                })
             }
 
-            impl $group_name {
-                fn __new_devices(
-                    i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::$i2c>,
-                    sda: embassy_rp::Peri<'static, embassy_rp::peripherals::$sda_pin>,
-                    scl: embassy_rp::Peri<'static, embassy_rp::peripherals::$scl_pin>,
-                    spawner: embassy_executor::Spawner,
-                ) -> $crate::Result<[<__ $group_name Devices>]> {
-                    let i2c = embassy_rp::i2c::I2c::new_blocking(
-                        i2c_peripheral,
-                        scl,
-                        sda,
-                        embassy_rp::i2c::Config::default(),
+            #[doc = "Construct the shared I2C runtime task and all generated LCD text device handles in this group."]
+            pub fn new(
+                i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.i2c>,
+                sda: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.sda_pin>,
+                scl: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.scl_pin>,
+                spawner: embassy_executor::Spawner,
+            ) -> $crate::Result<($for lcd in $decl.members {&'static $lcd.name,})> {
+                Ok(Self::__new_devices(i2c_peripheral, sda, scl, spawner)?.into_tuple())
+            }
+        }
+
+        $for lcd in $decl.members {
+            $lcd.attrs
+            #[doc = $lcd.doc]
+            $lcd.vis struct $lcd.name;
+
+            impl $crate::lcd_text::__LcdText<$lcd.width, $lcd.height> for $lcd.name {
+                const ADDRESS: u8 = $lcd.address;
+
+                fn write_text(&self, text: impl AsRef<str>) {
+                    ::core::assert!($lcd.width > 0, "lcd_text width must be > 0");
+                    ::core::assert!($lcd.height > 0, "lcd_text height must be > 0");
+                    ::core::assert!(
+                        $lcd.height <= 4,
+                        "lcd_text height must be <= 4 for HD44780 row map"
                     );
-
-                    let token = [<__i2cs_task_ $group_name:snake>](i2c);
-                    spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
-
-                    $(
-                        static [<$lcd_name:upper _INSTANCE>]: $lcd_name = $lcd_name;
-                        let [<$lcd_name:snake>] = &[<$lcd_name:upper _INSTANCE>];
-                    )+
-
-                    Ok([<__ $group_name Devices>] {
-                        $(
-                            [<$lcd_name:snake>],
-                        )+
-                    })
+                    let lcd_text_frame =
+                        $crate::lcd_text::__render_lcd_text_frame::<
+                            $lcd.width,
+                            $lcd.height,
+                            { $upper(__, $decl.name, _MAX_LCD_CELLS) }
+                        >(text.as_ref());
+                    $upper($lcd.name, _FRAME_SIGNAL).signal(lcd_text_frame);
                 }
+            }
 
-                #[doc = "Construct the shared I2C runtime task and all generated LCD text device handles in this group."]
+            impl $lcd.name {
+                /// Display width in characters.
+                pub const WIDTH: usize = $lcd.width;
+                /// Display height in characters.
+                pub const HEIGHT: usize = $lcd.height;
+                /// LCD I2C address.
+                pub const ADDRESS: u8 = $lcd.address;
+
+                /// Construct this LCD text device and spawn its shared I2C task.
+                /// See the [lcd_text module documentation](mod@crate::lcd_text) for usage examples.
                 pub fn new(
-                    i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::$i2c>,
-                    sda: embassy_rp::Peri<'static, embassy_rp::peripherals::$sda_pin>,
-                    scl: embassy_rp::Peri<'static, embassy_rp::peripherals::$scl_pin>,
+                    i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.i2c>,
+                    sda: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.sda_pin>,
+                    scl: embassy_rp::Peri<'static, embassy_rp::peripherals::$decl.scl_pin>,
                     spawner: embassy_executor::Spawner,
-                ) -> $crate::Result<($(&'static $lcd_name,)+)> {
-                    Ok(Self::__new_devices(i2c_peripheral, sda, scl, spawner)?.into_tuple())
-                }
-            }
-
-            $(
-                /// A generated LCD text device type.
-                $lcd_vis struct $lcd_name;
-
-                impl $crate::lcd_text::__LcdText<$width, $height> for $lcd_name {
-                    const ADDRESS: u8 = $address;
-
-                    fn write_text(&self, text: impl AsRef<str>) {
-                        ::core::assert!($width > 0, "lcd_text width must be > 0");
-                        ::core::assert!($height > 0, "lcd_text height must be > 0");
-                        ::core::assert!(
-                            $height <= 4,
-                            "lcd_text height must be <= 4 for HD44780 row map"
-                        );
-                        let lcd_text_frame =
-                            $crate::lcd_text::__render_lcd_text_frame::<
-                                $width,
-                                $height,
-                                { [<__ $group_name:upper _MAX_LCD_CELLS>] }
-                            >(text.as_ref());
-                        [<$lcd_name:upper _FRAME_SIGNAL>].signal(lcd_text_frame);
-                    }
+                ) -> $crate::Result<&'static Self> {
+                    let $snake(__, $decl.name, _devices) =
+                        $decl.name::__new_devices(i2c_peripheral, sda, scl, spawner)?;
+                    Ok($snake(__, $decl.name, _devices).$snake($lcd.name))
                 }
 
-                impl $lcd_name {
-                    /// Display width in characters.
-                    pub const WIDTH: usize = $width;
-                    /// Display height in characters.
-                    pub const HEIGHT: usize = $height;
-                    /// LCD I2C address.
-                    pub const ADDRESS: u8 = $address;
-
-                    /// Construct this LCD text device and spawn its shared I2C task.
-                    /// See the [lcd_text module documentation](mod@crate::lcd_text) for usage examples.
-                    pub fn new(
-                        i2c_peripheral: embassy_rp::Peri<'static, embassy_rp::peripherals::$i2c>,
-                        sda: embassy_rp::Peri<'static, embassy_rp::peripherals::$sda_pin>,
-                        scl: embassy_rp::Peri<'static, embassy_rp::peripherals::$scl_pin>,
-                        spawner: embassy_executor::Spawner,
-                    ) -> $crate::Result<&'static Self> {
-                        let [<__ $group_name:snake _devices>] =
-                            $group_name::__new_devices(i2c_peripheral, sda, scl, spawner)?;
-                        Ok([<__ $group_name:snake _devices>].[<$lcd_name:snake>])
-                    }
-
-                }
-            )+
-
-            #[embassy_executor::task]
-            async fn [<__i2cs_task_ $group_name:snake>](
-                i2c: embassy_rp::i2c::I2c<'static, embassy_rp::peripherals::$i2c, embassy_rp::i2c::Blocking>,
-            ) -> ! {
-                let mut rp_lcd_text_write = $crate::lcd_text::RpLcdTextWrite::__new(i2c);
-                let mut lcd_text_driver = $crate::lcd_text::__LcdTextDriver::new(0x27);
-                const ADDRESS_COUNT: usize = [$($address,)+].len();
-                let mut initialized_addresses: heapless::Vec<u8, ADDRESS_COUNT> = heapless::Vec::new();
-                let addresses = [$($address,)+];
-                let widths = [$($width,)+];
-                let heights = [$($height,)+];
-
-                loop {
-                    let (lcd_text_frame, ready_index) = $crate::lcd_text::__select_array([
-                        $([<$lcd_name:upper _FRAME_SIGNAL>].wait(),)+
-                    ]).await;
-                    $crate::lcd_text::__write_lcd_text_cells::<
-                        ADDRESS_COUNT,
-                        { [<__ $group_name:upper _MAX_LCD_CELLS>] }
-                    >(
-                        &mut lcd_text_driver,
-                        &mut rp_lcd_text_write,
-                        &mut initialized_addresses,
-                        addresses[ready_index],
-                        widths[ready_index],
-                        heights[ready_index],
-                        &lcd_text_frame.cells,
-                    ).await;
-                }
             }
         }
-    };
-}
-#[cfg(not(feature = "host"))]
-#[doc(inline)]
-pub use i2cs;
 
-/// Macro to generate a single LCD text device type with a direct constructor.
-///
-/// For multiple LCD types sharing one I2C peripheral, see
-/// [`i2cs!`](macro@crate::i2cs).
-///
-/// **Syntax:**
-///
-/// ```text
-/// lcd_text! {
-///     i2c: <i2c_ident>,
-///     sda_pin: <sda_pin_ident>,
-///     scl_pin: <scl_pin_ident>,
-///     [<visibility>] <LcdName> {
-///         width: <usize_expr>,
-///         height: <usize_expr>,
-///         address: <u8_expr>
-///     }
-/// }
-/// ```
-///
-/// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
-/// examples.**
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! lcd_text {
-    ($($tt:tt)*) => { $crate::__lcd_text_impl! { $($tt)* } };
-}
+        #[embassy_executor::task]
+        async fn $snake(__i2cs_task_, $decl.name)(
+            i2c: embassy_rp::i2c::I2c<'static, embassy_rp::peripherals::$decl.i2c, embassy_rp::i2c::Blocking>,
+        ) -> ! {
+            let mut rp_lcd_text_write = $crate::lcd_text::RpLcdTextWrite::__new(i2c);
+            let mut lcd_text_driver = $crate::lcd_text::__LcdTextDriver::new(0x27);
+            const ADDRESS_COUNT: usize = [$for lcd in $decl.members { $lcd.address, }].len();
+            let mut initialized_addresses: heapless::Vec<u8, ADDRESS_COUNT> = heapless::Vec::new();
+            let addresses = [$for lcd in $decl.members { $lcd.address, }];
+            let widths = [$for lcd in $decl.members { $lcd.width, }];
+            let heights = [$for lcd in $decl.members { $lcd.height, }];
 
-/// Implementation macro. Not part of the public API; use [`lcd_text!`] instead.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __lcd_text_impl {
-    (
-        i2c: $i2c:ident,
-        sda_pin: $sda_pin:ident,
-        scl_pin: $scl_pin:ident,
-        $lcd_vis:vis $lcd_name:ident {
-            width: $width:expr,
-            height: $height:expr,
-            address: $address:expr
-        }
-    ) => {
-        $crate::lcd_text::paste::paste! {
-            $crate::i2cs! {
-                i2c: $i2c,
-                sda_pin: $sda_pin,
-                scl_pin: $scl_pin,
-                [<LcdTextGroupFor $lcd_name>] {
-                    $lcd_vis $lcd_name {
-                        width: $width,
-                        height: $height,
-                        address: $address
-                    }
-                }
+            loop {
+                let (lcd_text_frame, ready_index) = $crate::lcd_text::__select_array([
+                    $for lcd in $decl.members {$upper($lcd.name, _FRAME_SIGNAL).wait(),}
+                ]).await;
+                $crate::lcd_text::__write_lcd_text_cells::<
+                    ADDRESS_COUNT,
+                    { $upper(__, $decl.name, _MAX_LCD_CELLS) }
+                >(
+                    &mut lcd_text_driver,
+                    &mut rp_lcd_text_write,
+                    &mut initialized_addresses,
+                    addresses[ready_index],
+                    widths[ready_index],
+                    heights[ready_index],
+                    &lcd_text_frame.cells,
+                ).await;
             }
         }
-    };
+    }
 }
 
-#[cfg(not(feature = "host"))]
-#[doc(inline)]
-pub use lcd_text;
+macro_schema::define! {
+    /// Macro to generate a single LCD text device type with a direct constructor.
+    ///
+    /// For multiple LCD types sharing one I2C peripheral, see
+    /// [`i2cs!`](macro@crate::i2cs).
+    ///
+    /// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage
+    /// examples.**
+    #[cfg(not(feature = "host"))]
+    pub lcd_text {
+        /// I2C peripheral, for example `I2C0`.
+        i2c: ident,
+        /// GPIO pin for I2C data (SDA).
+        sda_pin: ident,
+        /// GPIO pin for I2C clock (SCL).
+        scl_pin: ident,
+        /// Display width in characters.
+        width: expr,
+        /// Display height in characters; at most 4.
+        height: expr,
+        /// I2C address, for example `0x27`; must be unique within the group.
+        address: expr,
+    }
+
+    generate {
+        // A one-member `i2cs!` group; the group stays out of the docs.
+        $crate::lcd_text::i2cs! {
+            #[doc(hidden)]
+            $decl.vis $ident($decl.name, Group) {
+                i2c: $decl.i2c,
+                sda_pin: $decl.sda_pin,
+                scl_pin: $decl.scl_pin,
+
+                $decl.attrs
+                #[doc = $decl.doc]
+                $decl.name {
+                    width: $decl.width,
+                    height: $decl.height,
+                    address: $decl.address,
+                },
+            }
+        }
+    }
+}

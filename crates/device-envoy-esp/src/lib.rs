@@ -62,7 +62,15 @@ compile_error!(
 ))]
 compile_error!("Select exactly one chip feature for embedded builds, not both.");
 
+// Must be `pub` for macro expansion: every schema-declared macro forwards to it.
+#[doc(hidden)]
+pub use macro_schema::expand as __macro_schema_expand;
+
 pub mod button;
+// Crate-root path kept for `use device_envoy_esp::button_watch;`; documented in `button`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use button::button_watch;
 #[cfg(all(target_os = "none", esp_has_wifi))]
 pub mod clock_sync {
     //! A device abstraction that combines NTP time synchronization with a local clock.
@@ -179,6 +187,10 @@ pub mod time_sync {
 }
 #[cfg(esp_has_i2s)]
 pub mod audio_player;
+// Crate-root path kept for `use device_envoy_esp::audio_player;`; documented in `audio_player`.
+#[cfg(esp_has_i2s)]
+#[doc(hidden)]
+pub use audio_player::audio_player;
 #[cfg(target_os = "none")]
 pub mod cyd;
 // The buffer implementation is hardware-independent, so exercise the same
@@ -191,15 +203,59 @@ pub mod flash_block;
 pub mod init_and_start;
 #[cfg(esp_has_rmt)]
 pub mod ir;
+// Crate-root path kept for `use device_envoy_esp::irs;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::irs;
+// Crate-root path kept for `use device_envoy_esp::ir;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir;
+// Crate-root path kept for `use device_envoy_esp::ir_mappings;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_mappings;
+// Crate-root path kept for `use device_envoy_esp::ir_mapping;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_mapping;
+// Crate-root path kept for `use device_envoy_esp::ir_keplers;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_keplers;
+// Crate-root path kept for `use device_envoy_esp::ir_kepler;`; documented in `ir`.
+#[cfg(esp_has_rmt)]
+#[doc(hidden)]
+pub use ir::ir_kepler;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
+// Crate-root path kept for `use device_envoy_esp::i2cs;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::i2cs;
+// Crate-root path kept for `use device_envoy_esp::lcd_text;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::lcd_text;
 #[cfg(target_os = "none")]
 pub mod led;
+// Crate-root path kept for `use device_envoy_esp::led;`; documented in `led`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use led::led;
 #[cfg(any(feature = "host", target_os = "none"))]
 pub mod led2d;
+// Crate-root path kept for `use device_envoy_esp::led2d;`; documented in `led2d`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use led2d::led2d;
 pub mod led4;
 #[cfg(target_os = "none")]
 pub mod led_strip;
+// Crate-root path kept for `use device_envoy_esp::led_strip;`; documented in `led_strip`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use led_strip::led_strip;
 #[cfg(target_os = "none")]
 pub mod rfid;
 #[cfg(esp_has_rmt)]
@@ -209,6 +265,14 @@ mod rmt_mode;
 pub mod servo;
 #[cfg(all(target_os = "none", esp_has_ledc))]
 mod servo_player;
+// Crate-root path kept for `use device_envoy_esp::servo;`; documented in `servo`.
+#[cfg(all(target_os = "none", esp_has_ledc))]
+#[doc(hidden)]
+pub use servo::servo;
+// Crate-root path kept for `use device_envoy_esp::servo_player;`; documented in `servo`.
+#[cfg(all(target_os = "none", esp_has_ledc))]
+#[doc(hidden)]
+pub use servo_player::servo_player;
 #[cfg(any(feature = "host", esp_has_wifi))]
 pub mod wifi_auto;
 
@@ -221,36 +285,6 @@ pub mod docs {
 }
 
 pub use device_envoy_core::tone;
-/// Used internally by other macros.
-#[doc(hidden)]
-pub use paste::paste as __paste;
-
-/// Public for macro expansion in downstream crates.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __validate_keyword_fields_expr {
-    (
-        macro_name: $macro_name:literal,
-        allowed_macro: $allowed_macro:path,
-        fields: [ $( $field:ident : $value:expr ),* $(,)? ]
-    ) => {
-        const _: () = {
-            $( $allowed_macro!($field, $macro_name); )*
-            #[allow(non_snake_case)]
-            mod __device_envoy_keyword_fields_uniqueness {
-                $( pub(super) mod $field {} )*
-            }
-        };
-    };
-
-    (
-        macro_name: $macro_name:literal,
-        allowed_macro: $allowed_macro:path,
-        fields: [ $($fields:tt)* ]
-    ) => {
-        compile_error!(concat!($macro_name, " fields must use `name: value` syntax"));
-    };
-}
 
 // Workaround for esp-radio 0.17 bug: the linker script for esp32c6 declares EXTERN for
 // __esp_radio_misc_nvs_init and __esp_radio_misc_nvs_deinit under the wifi section, but

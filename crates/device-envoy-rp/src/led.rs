@@ -54,9 +54,6 @@ use heapless::Vec;
 
 pub use device_envoy_core::led::{Led, LedLevel, OnLevel};
 pub mod led_generated;
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-pub use paste;
 
 /// Maximum number of animation frames allowed.
 #[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
@@ -158,249 +155,101 @@ pub async fn run_animation_loop<const MAX_STEPS: usize>(
     }
 }
 
-/// Macro to generate a single LED struct type (includes syntax details).
-///
-/// **See the [led module documentation](mod@crate::led) for usage examples.**
-///
-/// **Syntax:**
-///
-/// ```text
-/// led! {
-///     [<visibility>] <Name> {
-///         pin: <pin_ident>,
-///         max_steps: <usize_expr>, // optional
-///     }
-/// }
-/// ```
-///
-/// **Required fields:**
-///
-/// - `pin` — GPIO pin resource type for this generated LED.
-///
-/// **Optional fields:**
-///
-/// - `max_steps` — Maximum number of animation frames (default: 32).
-///
-/// `max_steps = 0` disables animation storage; `set_level()` is still supported.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! led {
-    // TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
-    // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
-    // so macro visibility and helper exposure can be controlled more precisely.
-    ($($tt:tt)*) => { $crate::__led_impl! { $($tt)* } };
-}
+// TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
+// code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
+// so macro visibility and helper exposure can be controlled more precisely. (may no longer apply)
 
-/// Implementation macro. Not part of the public API; use [`led!`] instead.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led_impl {
-    (
-        $vis:vis $name:ident {
-            $($fields:tt)*
-        }
-    ) => {
-        $crate::__led_impl! {
-            @__parse
-            vis: $vis,
-            name: $name,
-            pin: [],
-            max_steps: [],
-            fields: [ $($fields)* ]
-        }
-    };
+macro_schema::define! {
+    /// Macro to generate a single LED struct type.
+    ///
+    /// **See the [led module documentation](mod@crate::led) for usage examples.**
+    ///
+    /// `max_steps = 0` disables animation storage; `set_level()` is still supported.
+    pub led {
+        /// GPIO pin for the LED.
+        pin: ident,
+        /// Maximum number of animation steps; `0` disables animation storage.
+        #[default_display = "32"]
+        max_steps: expr = $crate::led::DEFAULT_MAX_STEPS,
+    }
 
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__led_impl! {
-            @__parse
-            vis: $vis,
-            name: $name,
-            pin: [$pin],
-            max_steps: [$($max_steps)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$_pin_seen:ident],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("led! duplicate `pin` field");
-    };
+    generate {
+        const $upper($decl.name, _MAX_STEPS): usize = $decl.max_steps;
 
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [],
-        fields: [ max_steps: $max_steps:expr $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__led_impl! {
-            @__parse
-            vis: $vis,
-            name: $name,
-            pin: [$($pin)?],
-            max_steps: [$max_steps],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [$_max_steps_seen:expr],
-        fields: [ max_steps: $max_steps:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("led! duplicate `max_steps` field");
-    };
+        #[allow(non_upper_case_globals)]
+        static $upper($decl.name, _STATIC): $crate::led::LedStatic<{ $upper($decl.name, _MAX_STEPS) }> =
+            $crate::led::LedStatic::new();
 
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ ]
-    ) => {
-        $crate::__led_impl! {
-            @__finish
-            vis: $vis,
-            name: $name,
-            pin: [$($pin)?],
-            max_steps: [$($max_steps)?]
-        }
-    };
+        #[allow(non_camel_case_types)]
+        $decl.attrs
+        #[doc = $decl.doc]
+        $decl.vis struct $decl.name(&'static $crate::led::LedOuterStatic<{ $upper($decl.name, _MAX_STEPS) }>);
 
-    (@__parse
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        max_steps: [$($max_steps:expr)?],
-        fields: [ $field:ident : $value:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("led! unknown field; expected `pin` or `max_steps`");
-    };
+        impl $decl.name {
+            $decl.vis const MAX_STEPS: usize = $upper($decl.name, _MAX_STEPS);
 
-    (@__finish
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [],
-        max_steps: [$($max_steps:expr)?]
-    ) => {
-        compile_error!("led! missing required `pin` field");
-    };
-
-    (@__finish
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$pin:ident],
-        max_steps: []
-    ) => {
-        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $crate::led::DEFAULT_MAX_STEPS);
-    };
-
-    (@__finish
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: [$pin:ident],
-        max_steps: [$max_steps:expr]
-    ) => {
-        $crate::__led_impl!(@__emit vis: $vis, name: $name, pin: $pin, max_steps: $max_steps);
-    };
-
-    (
-        @__emit
-        vis: $vis:vis,
-        name: $name:ident,
-        pin: $pin:ident,
-        max_steps: $max_steps:expr
-    ) => {
-        $crate::led::paste::paste! {
-            const [<$name:upper _MAX_STEPS>]: usize = $max_steps;
-
-            #[allow(non_upper_case_globals)]
-            static [<$name:upper _STATIC>]: $crate::led::LedStatic<{ [<$name:upper _MAX_STEPS>] }> =
-                $crate::led::LedStatic::new();
-
-            #[allow(non_camel_case_types)]
-            $vis struct $name(&'static $crate::led::LedOuterStatic<{ [<$name:upper _MAX_STEPS>] }>);
-
-            impl $name {
-                $vis const MAX_STEPS: usize = [<$name:upper _MAX_STEPS>];
-
-                $vis fn new(
-                    pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
-                    on_level: $crate::led::OnLevel,
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<Self> {
-                    let pin_output = ::embassy_rp::gpio::Output::new(pin, ::embassy_rp::gpio::Level::Low);
-                    let token = [<__led_task_ $name:snake>](
-                        [<$name:upper _STATIC>].outer(),
-                        pin_output,
-                        on_level,
-                    );
-                    spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
-                    Ok(Self([<$name:upper _STATIC>].outer()))
-                }
-            }
-
-            impl $crate::led::Led for $name {
-                fn set_level(&self, led_level: $crate::led::LedLevel) {
-                    self.0.signal($crate::led::LedCommand::Set(led_level));
-                }
-
-                fn animate<I>(&self, frames: I)
-                where
-                    I: IntoIterator,
-                    I::Item: ::core::borrow::Borrow<(
-                        $crate::led::LedLevel,
-                        ::embassy_time::Duration,
-                    )>,
-                {
-                    let mut animation: ::heapless::Vec<
-                        ($crate::led::LedLevel, ::embassy_time::Duration),
-                        { [<$name:upper _MAX_STEPS>] },
-                    > = ::heapless::Vec::new();
-                    for frame in frames {
-                        let frame = *::core::borrow::Borrow::borrow(&frame);
-                        animation
-                            .push(frame)
-                            .expect("LED animation fits within MAX_STEPS");
-                    }
-                    self.0.signal($crate::led::LedCommand::Animate(animation));
-                }
-            }
-
-            #[::embassy_executor::task]
-            async fn [<__led_task_ $name:snake>](
-                outer_static: &'static $crate::led::LedOuterStatic<{ [<$name:upper _MAX_STEPS>] }>,
-                mut pin: ::embassy_rp::gpio::Output<'static>,
+            $decl.vis fn new(
+                pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>,
                 on_level: $crate::led::OnLevel,
-            ) -> ! {
-                let mut command = $crate::led::LedCommand::Set($crate::led::LedLevel::Off);
-                $crate::led::set_pin_for_led_level($crate::led::LedLevel::Off, &mut pin, on_level);
-
-                loop {
-                    command = match command {
-                        $crate::led::LedCommand::Set(led_level) => {
-                            $crate::led::run_set_level_loop(led_level, outer_static, &mut pin, on_level).await
-                        }
-                        $crate::led::LedCommand::Animate(animation) => {
-                            $crate::led::run_animation_loop(animation, outer_static, &mut pin, on_level).await
-                        }
-                    };
-                }
+                spawner: ::embassy_executor::Spawner,
+            ) -> $crate::Result<Self> {
+                let pin_output = ::embassy_rp::gpio::Output::new(pin, ::embassy_rp::gpio::Level::Low);
+                let token = $snake(__led_task_, $decl.name)(
+                    $upper($decl.name, _STATIC).outer(),
+                    pin_output,
+                    on_level,
+                );
+                spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
+                Ok(Self($upper($decl.name, _STATIC).outer()))
             }
         }
-    };
-}
 
-#[doc(inline)]
-pub use led;
+        impl $crate::led::Led for $decl.name {
+            fn set_level(&self, led_level: $crate::led::LedLevel) {
+                self.0.signal($crate::led::LedCommand::Set(led_level));
+            }
+
+            fn animate<I>(&self, frames: I)
+            where
+                I: IntoIterator,
+                I::Item: ::core::borrow::Borrow<(
+                    $crate::led::LedLevel,
+                    ::embassy_time::Duration,
+                )>,
+            {
+                let mut animation: ::heapless::Vec<
+                    ($crate::led::LedLevel, ::embassy_time::Duration),
+                    { $upper($decl.name, _MAX_STEPS) },
+                > = ::heapless::Vec::new();
+                for frame in frames {
+                    let frame = *::core::borrow::Borrow::borrow(&frame);
+                    animation
+                        .push(frame)
+                        .expect("LED animation fits within MAX_STEPS");
+                }
+                self.0.signal($crate::led::LedCommand::Animate(animation));
+            }
+        }
+
+        #[::embassy_executor::task]
+        async fn $snake(__led_task_, $decl.name)(
+            outer_static: &'static $crate::led::LedOuterStatic<{ $upper($decl.name, _MAX_STEPS) }>,
+            mut pin: ::embassy_rp::gpio::Output<'static>,
+            on_level: $crate::led::OnLevel,
+        ) -> ! {
+            let mut command = $crate::led::LedCommand::Set($crate::led::LedLevel::Off);
+            $crate::led::set_pin_for_led_level($crate::led::LedLevel::Off, &mut pin, on_level);
+
+            loop {
+                command = match command {
+                    $crate::led::LedCommand::Set(led_level) => {
+                        $crate::led::run_set_level_loop(led_level, outer_static, &mut pin, on_level).await
+                    }
+                    $crate::led::LedCommand::Animate(animation) => {
+                        $crate::led::run_animation_loop(animation, outer_static, &mut pin, on_level).await
+                    }
+                };
+            }
+        }
+    }
+}

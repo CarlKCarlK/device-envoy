@@ -270,476 +270,76 @@ impl Servo for ServoEsp {
     }
 }
 
-#[doc(hidden)]
-pub use paste;
+macro_schema::define! {
+    /// Macro to generate a direct-servo struct type.
+    ///
+    /// **See the [servo module documentation](mod@crate::servo) for usage examples.**
+    ///
+    /// See the [servo module documentation](mod@crate::servo) for details and examples.
+    pub servo {
+        /// GPIO pin for servo output, for example `GPIO10`.
+        pin: ident,
+        /// LEDC timer, for example `Timer0`; claimed exclusively for the whole binary.
+        timer: ident,
+        /// LEDC channel, for example `Channel0`; claimed exclusively for the whole binary.
+        channel: ident,
+        /// Minimum pulse width in microseconds, for 0°.
+        #[default_display = "500"]
+        min_us: expr = $crate::servo::SERVO_MIN_US_DEFAULT,
+        /// Maximum pulse width in microseconds, for `max_degrees`.
+        #[default_display = "2500"]
+        max_us: expr = $crate::servo::SERVO_MAX_US_DEFAULT,
+        /// Maximum servo angle in degrees.
+        #[default_display = "180"]
+        max_degrees: expr = $crate::servo::ServoEsp::DEFAULT_MAX_DEGREES,
+        /// Logical angle direction.
+        #[default_display = "Direction::Forward"]
+        direction: expr = $crate::servo::Direction::Forward,
+    }
 
-/// Macro to generate a direct-servo struct type (includes syntax details).
-///
-/// **See the [servo module documentation](mod@crate::servo) for usage examples.**
-///
-/// **Syntax:**
-///
-/// ```text
-/// servo! {
-///     <Name> {
-///         pin: <pin_ident>,
-///         timer: <timer_ident>,
-///         channel: <channel_ident>,
-///         min_us: <u32_expr>,         // optional
-///         max_us: <u32_expr>,         // optional
-///         max_degrees: <u16_expr>,    // optional
-///         direction: <Direction_expr>, // optional
-///     }
-/// }
-/// ```
-///
-/// **Required fields:**
-///
-/// - `pin` - GPIO pin for servo output
-/// - `timer` - [LEDC](crate#glossary) timer resource
-/// - `channel` - [LEDC](crate#glossary) channel resource
-///
-/// **Optional fields:**
-///
-/// - `min_us` - Minimum pulse width in microseconds for 0° (default: `500`)
-/// - `max_us` - Maximum pulse width in microseconds for `max_degrees` (default: `2500`)
-/// - `max_degrees` - Maximum servo angle in degrees (default: `180`)
-/// - `direction` - Logical angle direction (`Direction::Forward` by default)
-///
-/// See the [servo module documentation](mod@crate::servo) for details and examples.
-#[macro_export]
-#[doc(hidden)]
-macro_rules! servo {
-    ($($tt:tt)*) => { $crate::__servo_impl! { $($tt)* } };
-}
-#[doc(inline)]
-pub use servo;
+    generate {
+        $decl.attrs
+        #[doc = $decl.doc]
+        $decl.vis struct $decl.name;
 
-/// Public for macro expansion in downstream crates.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __servo_impl {
-    (
-        $name:ident {
-            $($fields:tt)*
+        // Ownership claims: choosing the same LEDC timer or channel twice anywhere in the
+        // final binary fails to build. Within one crate rustc reports the name twice; across
+        // crates the linker reports a duplicate symbol. Either way the name explains why.
+        #[used]
+        #[unsafe(no_mangle)]
+        static $upper(LEDC_, $decl.timer, _CAN_BE_USED_BY_ONLY_ONE_SERVO_OR_SERVO_PLAYER): u8 = 0;
+
+        #[used]
+        #[unsafe(no_mangle)]
+        static $upper(LEDC_, $decl.channel, _CAN_BE_USED_BY_ONLY_ONE_SERVO_OR_SERVO_PLAYER): u8 = 0;
+
+        static $upper($decl.name, _SERVO_STATIC): $ident($decl.name, Static) = $decl.name::new_static();
+
+        $decl.vis struct $ident($decl.name, Static) {
+            servo_static: $crate::servo::ServoStatic,
         }
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [],
-            timer: [],
-            channel: [],
-            min_us: [],
-            max_us: [],
-            max_degrees: [],
-            direction: [],
-            fields: [ $($fields)* ]
-        }
-    };
 
-    (@__parse
-        name: $name:ident,
-        pin: [],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [$pin],
-            timer: [$($timer)?],
-            channel: [$($channel)?],
-            min_us: [$($min_us)?],
-            max_us: [$($max_us)?],
-            max_degrees: [$($max_degrees)?],
-            direction: [$($direction)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        name: $name:ident,
-        pin: [$_pin_seen:ident],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ pin: $pin:ident $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("servo! duplicate `pin` field");
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ timer: $timer:ident $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [$($pin)?],
-            timer: [$timer],
-            channel: [$($channel)?],
-            min_us: [$($min_us)?],
-            max_us: [$($max_us)?],
-            max_degrees: [$($max_degrees)?],
-            direction: [$($direction)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$_timer_seen:ident],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ timer: $timer:ident $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("servo! duplicate `timer` field");
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ channel: $channel:ident $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [$($pin)?],
-            timer: [$($timer)?],
-            channel: [$channel],
-            min_us: [$($min_us)?],
-            max_us: [$($max_us)?],
-            max_degrees: [$($max_degrees)?],
-            direction: [$($direction)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$_channel_seen:ident],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ channel: $channel:ident $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("servo! duplicate `channel` field");
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [$($pin)?],
-            timer: [$($timer)?],
-            channel: [$($channel)?],
-            min_us: [$min_us],
-            max_us: [$($max_us)?],
-            max_degrees: [$($max_degrees)?],
-            direction: [$($direction)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$_min_us_seen:expr],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ min_us: $min_us:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("servo! duplicate `min_us` field");
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [$($pin)?],
-            timer: [$($timer)?],
-            channel: [$($channel)?],
-            min_us: [$($min_us)?],
-            max_us: [$max_us],
-            max_degrees: [$($max_degrees)?],
-            direction: [$($direction)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$_max_us_seen:expr],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ max_us: $max_us:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("servo! duplicate `max_us` field");
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [],
-        direction: [$($direction:expr)?],
-        fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [$($pin)?],
-            timer: [$($timer)?],
-            channel: [$($channel)?],
-            min_us: [$($min_us)?],
-            max_us: [$($max_us)?],
-            max_degrees: [$max_degrees],
-            direction: [$($direction)?],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$_max_degrees_seen:expr],
-        direction: [$($direction:expr)?],
-        fields: [ max_degrees: $max_degrees:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("servo! duplicate `max_degrees` field");
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ direction: $new_direction:expr $(, $($rest:tt)*)? ]
-    ) => {
-        $crate::__servo_impl! {
-            @__parse
-            name: $name,
-            pin: [$($pin)?],
-            timer: [$($timer)?],
-            channel: [$($channel)?],
-            min_us: [$($min_us)?],
-            max_us: [$($max_us)?],
-            max_degrees: [$($max_degrees)?],
-            direction: [$new_direction],
-            fields: [ $($($rest)*)? ]
-        }
-    };
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$_direction_seen:expr],
-        fields: [ direction: $direction:expr $(, $($rest:tt)*)? ]
-    ) => {
-        compile_error!("servo! duplicate `direction` field");
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ ]
-    ) => {
-        $crate::__servo_impl! {
-            @__finish
-            name: $name,
-            pin: [$($pin)?],
-            timer: [$($timer)?],
-            channel: [$($channel)?],
-            min_us: [$($min_us)?],
-            max_us: [$($max_us)?],
-            max_degrees: [$($max_degrees)?],
-            direction: [$($direction)?]
-        }
-    };
-
-    (@__parse
-        name: $name:ident,
-        pin: [$($pin:ident)?],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?],
-        fields: [ $field:ident : $($value:tt)+ ]
-    ) => {
-        compile_error!(
-            "servo! unknown field; expected `pin`, `timer`, `channel`, `min_us`, `max_us`, `max_degrees`, or `direction`"
-        );
-    };
-
-    (@__finish
-        name: $name:ident,
-        pin: [],
-        timer: [$($timer:ident)?],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?]
-    ) => {
-        compile_error!("servo! missing required `pin` field");
-    };
-    (@__finish
-        name: $name:ident,
-        pin: [$pin:ident],
-        timer: [],
-        channel: [$($channel:ident)?],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?]
-    ) => {
-        compile_error!("servo! missing required `timer` field");
-    };
-    (@__finish
-        name: $name:ident,
-        pin: [$pin:ident],
-        timer: [$timer:ident],
-        channel: [],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?]
-    ) => {
-        compile_error!("servo! missing required `channel` field");
-    };
-    (@__finish
-        name: $name:ident,
-        pin: [$pin:ident],
-        timer: [$timer:ident],
-        channel: [$channel:ident],
-        min_us: [$($min_us:expr)?],
-        max_us: [$($max_us:expr)?],
-        max_degrees: [$($max_degrees:expr)?],
-        direction: [$($direction:expr)?]
-    ) => {
-        $crate::servo::paste::paste! {
-            pub struct $name;
-
-            // Link-time ownership claims: duplicate timer or channel selection across the
-            // final binary should fail the link with duplicate symbol errors.
-            #[used]
-            #[unsafe(no_mangle)]
-            static [<__device_envoy_esp_ledc_timer_claim_ $timer:lower>]: u8 = 0;
-
-            #[used]
-            #[unsafe(no_mangle)]
-            static [<__device_envoy_esp_ledc_channel_claim_ $channel:lower>]: u8 = 0;
-
-            static [<$name:upper _SERVO_STATIC>]: [<$name Static>] = $name::new_static();
-
-            pub struct [<$name Static>] {
-                servo_static: $crate::servo::ServoStatic,
-            }
-
-            impl $name {
-                #[must_use]
-                pub const fn new_static() -> [<$name Static>] {
-                    [<$name Static>] {
-                        servo_static: $crate::servo::ServoStatic::new_static(
-                            ::esp_hal::ledc::timer::Number::$timer,
-                            ::esp_hal::ledc::channel::Number::$channel,
-                            $crate::__servo_impl!(@min_us $($min_us)?),
-                            $crate::__servo_impl!(@max_us $($max_us)?),
-                            $crate::__servo_impl!(@max_degrees $($max_degrees)?),
-                            $crate::__servo_impl!(@direction $($direction)?),
-                        ),
-                    }
-                }
-
-                pub fn new(
-                    ledc: &::esp_hal::ledc::Ledc<'static>,
-                    pin: ::esp_hal::peripherals::$pin<'static>,
-                ) -> $crate::Result<$crate::servo::ServoEsp> {
-                    $crate::servo::ServoEsp::new(&[<$name:upper _SERVO_STATIC>].servo_static, ledc, pin)
+        impl $decl.name {
+            #[must_use]
+            pub const fn new_static() -> $ident($decl.name, Static) {
+                $ident($decl.name, Static) {
+                    servo_static: $crate::servo::ServoStatic::new_static(
+                        ::esp_hal::ledc::timer::Number::$decl.timer,
+                        ::esp_hal::ledc::channel::Number::$decl.channel,
+                        $decl.min_us,
+                        $decl.max_us,
+                        $decl.max_degrees,
+                        $decl.direction,
+                    ),
                 }
             }
-        }
-    };
 
-    (@min_us $min_us:expr) => { $min_us };
-    (@min_us) => { $crate::servo::SERVO_MIN_US_DEFAULT };
-    (@max_us $max_us:expr) => { $max_us };
-    (@max_us) => { $crate::servo::SERVO_MAX_US_DEFAULT };
-    (@max_degrees $max_degrees:expr) => { $max_degrees };
-    (@max_degrees) => { $crate::servo::ServoEsp::DEFAULT_MAX_DEGREES };
-    (@direction $direction:expr) => { $direction };
-    (@direction) => { $crate::servo::Direction::Forward };
+            pub fn new(
+                ledc: &::esp_hal::ledc::Ledc<'static>,
+                pin: ::esp_hal::peripherals::$decl.pin<'static>,
+            ) -> $crate::Result<$crate::servo::ServoEsp> {
+                $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC).servo_static, ledc, pin)
+            }
+        }
+    }
 }

@@ -16,8 +16,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_keplers! {
     IrKeplersDuplicateChannelCompileFail {
-        IrKepler0: { pin: GPIO0 },
-        IrKepler1: { pin: GPIO1 }
+        IrKepler0 { pin: GPIO0 },
+        IrKepler1 { pin: GPIO1 }
     }
 }
 

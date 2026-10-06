@@ -10,10 +10,11 @@ use device_envoy_rp::{Result, i2cs, lcd_text::LcdText as _};
 use embassy_executor::Spawner;
 
 i2cs! {
-    i2c: I2C0,
-    sda_pin: PIN_4,
-    scl_pin: PIN_5,
     I2cs0 {
+        i2c: I2C0,
+        sda_pin: PIN_4,
+        scl_pin: PIN_5,
+
         LcdTextSimple { width: 16, height: 2, address: 0x27 },
     }
 }

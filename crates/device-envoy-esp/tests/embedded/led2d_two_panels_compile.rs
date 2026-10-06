@@ -20,34 +20,37 @@ const LED_LAYOUT_4X2: LedLayout<8, 4, 2> = LedLayout::serpentine_column_major();
 
 #[cfg(feature = "esp32")]
 led2d! {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
     Led2dPanelA {
         font: Led2dFont::Font4x6,
         led_layout: LED_LAYOUT_4X2,
         pin: GPIO0,
         max_frames: 2,
         max_current: Current::Milliamps(120),
-        len: 8,
     }
 }
 
 #[cfg(not(feature = "esp32"))]
 led2d! {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
     Led2dPanelA {
         font: Led2dFont::Font4x6,
         led_layout: LED_LAYOUT_4X2,
         pin: GPIO10,
         max_frames: 2,
         max_current: Current::Milliamps(120),
-        len: 8,
     }
 }
 
 #[cfg(feature = "esp32")]
 led2d! {
-    Led2dPanelB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
         max_frames: 2,
-        len: 8,
         font: Led2dFont::Font4x6,
         pin: GPIO1,
     }
@@ -55,10 +58,11 @@ led2d! {
 
 #[cfg(feature = "esp32s3")]
 led2d! {
-    Led2dPanelB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) Led2dPanelB {
         font: Led2dFont::Font4x6,
         max_frames: 2,
-        len: 8,
         pin: GPIO48,
         led_layout: LED_LAYOUT_4X2,
     }
@@ -70,10 +74,11 @@ led2d! {
     not(feature = "esp32s3")
 ))]
 led2d! {
-    Led2dPanelB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
         max_frames: 2,
-        len: 8,
         font: Led2dFont::Font4x6,
         pin: GPIO0,
     }
@@ -81,10 +86,11 @@ led2d! {
 
 #[cfg(not(target_arch = "xtensa"))]
 led2d! {
-    Led2dPanelB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) Led2dPanelB {
         led_layout: LED_LAYOUT_4X2,
         max_frames: 2,
-        len: 8,
         font: Led2dFont::Font4x6,
         pin: GPIO8,
     }

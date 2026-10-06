@@ -16,9 +16,8 @@ const LED_LAYOUT_12X4: crate::led2d::LedLayout<48, 12, 4> =
 
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_has_rmt))]
 led2d! {
-    Led2dGenerated {
+    pub Led2dGenerated {
         pin: GPIO2,
-        len: 48,
         led_layout: LED_LAYOUT_12X4,
         max_current: crate::led_strip::Current::Milliamps(250),
         font: crate::led2d::Led2dFont::Font3x4Trim,
@@ -27,9 +26,8 @@ led2d! {
 
 #[cfg(all(not(doc), not(feature = "host"), target_os = "none", not(esp_has_rmt)))]
 led2d! {
-    Led2dGenerated {
+    pub Led2dGenerated {
         pin: GPIO2,
-        len: 48,
         led_layout: LED_LAYOUT_12X4,
         max_current: crate::led_strip::Current::Milliamps(250),
         font: crate::led2d::Led2dFont::Font3x4Trim,
@@ -52,9 +50,12 @@ use crate::Result;
 use crate::led2d::{Frame2d, Led2d, Led2dFont, Point, Size};
 
 #[cfg(doc)]
+use crate::led_strip::MAX_FRAMES_DEFAULT;
+
+#[cfg(doc)]
 impl Led2dGenerated {
     /// Maximum number of animation frames.
-    pub const MAX_FRAMES: usize = 16;
+    pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;
     /// Maximum brightness level after current limiting.
     pub const MAX_BRIGHTNESS: u8 = 22;
     /// Default font used by text helpers.

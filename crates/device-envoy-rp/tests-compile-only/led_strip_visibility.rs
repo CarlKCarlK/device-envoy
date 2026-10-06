@@ -7,13 +7,16 @@
 use device_envoy_rp::led_strip;
 use panic_probe as _;
 
-// Test default visibility (public)
+// Omitted visibility is private, as in a normal Rust declaration.
 led_strip! {
     LedStripDefault {
         pin: PIN_3,
         len: 48,
     }
 }
+
+const _: () =
+    assert!(LedStripDefault::MAX_FRAMES == device_envoy_rp::led_strip::MAX_FRAMES_DEFAULT);
 
 // Test explicit public visibility - separate module to avoid conflicts
 mod test_explicit_pub {
@@ -95,13 +98,19 @@ mod test_led_strips_public_strip {
     // Public visibility
     led_strips! {
         pub LedStripsPublicStrip {
-            Gpio0LedStrip: { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) }
+            Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) }
         }
     }
 
     pub fn use_public_strip() {
         type _Test = LedStripsPublicStrip;
     }
+}
+
+// Members take their group's visibility, so a `pub` group's members are reachable here.
+pub fn use_public_group_members() {
+    type _Strip = test_led_strips_public_strip::Gpio0LedStrip;
+    type _Panel = test_led_strips_public_led2d::Gpio4Led2d;
 }
 
 // led_strips! private visibility (strip mode)
@@ -111,7 +120,7 @@ mod test_led_strips_private_strip {
 
     led_strips! {
         pub(self) LedStripsPrivateStrip {
-            Gpio2LedStrip: { pin: PIN_2, len: 24, max_current: Current::Milliamps(500) }
+            Gpio2LedStrip { pin: PIN_2, len: 24, max_current: Current::Milliamps(500) }
         }
     }
 
@@ -130,9 +139,10 @@ mod test_led_strips_public_led2d {
     const LED_LAYOUT_PUBLIC: LedLayout<12, 4, 3> = LedLayout::serpentine_column_major();
 
     led_strips! {
-        pio: PIO1,
         pub LedStripsPublicLed2d {
-            Gpio4Led2d: {
+            pio: PIO1,
+
+            Gpio4Led2d {
                 pin: PIN_4,
                 len: 12,
                 max_current: Current::Milliamps(250),
@@ -160,7 +170,7 @@ mod test_led_strips_private_led2d {
 
     led_strips! {
         pub(self) LedStripsPrivateLed2d {
-            Gpio6Led2d: {
+            Gpio6Led2d {
                 pin: PIN_6,
                 len: 12,
                 max_current: Current::Milliamps(250),

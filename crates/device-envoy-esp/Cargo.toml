@@ -132,6 +132,7 @@ embassy-embedded-hal = { version = "0.6.0", default-features = false }
 embassy-futures = { version = "0.1.2" }
 smart-leds     = { version = "0.4.0" }
 device-envoy-core = { version = "0.1.6", path = "../device-envoy-core", features = ["wifi"] }
+macro-schema = "0.1.0"
 embedded-graphics = { version = "0.8", default-features = false }
 heapless       = { version = "0.9.2", features = ["serde"] }
 static_cell    = { version = "2.1.1" }
@@ -247,6 +248,23 @@ harness = false
 name = "ir_visibility_compile"
 path = "tests/embedded/ir_visibility_compile.rs"
 harness = false
+
+[[test]]
+name = "servo_ledc_distinct_compile"
+path = "tests/embedded/servo_ledc_distinct_compile.rs"
+harness = false
+
+[[test]]
+name = "servo_ledc_timer_clash_compile_fail"
+path = "tests/embedded/servo_ledc_timer_clash_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]
+
+[[test]]
+name = "servo_ledc_channel_clash_compile_fail"
+path = "tests/embedded/servo_ledc_channel_clash_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]
 
 [[test]]
 name = "ir_duplicate_channel_compile_fail"

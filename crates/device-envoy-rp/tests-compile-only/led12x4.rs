@@ -21,9 +21,10 @@ use panic_probe as _;
 const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major();
 
 led_strips! {
-    pio: PIO0,
     pub LedStripsPio0 {
-        Gpio3Pio0Led2d: {
+        pio: PIO0,
+
+        Gpio3Pio0Led2d {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(500),
@@ -36,9 +37,10 @@ led_strips! {
 }
 
 led_strips! {
-    pio: PIO1,
     pub LedStripsPio1 {
-        Gpio3Pio1Led2d: {
+        pio: PIO1,
+
+        Gpio3Pio1Led2d {
             dma: DMA_CH1,
             pin: PIN_3,
             len: 48,

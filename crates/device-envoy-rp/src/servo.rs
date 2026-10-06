@@ -159,7 +159,7 @@ pub const SERVO_MIN_US_DEFAULT: u16 = 500;
 /// Default maximum pulse width for hobby servos (microseconds).
 pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 
-const_structures::define! {
+macro_schema::define! {
     /// Create a servo with keyword arguments and default pulse widths.
     ///
     /// See the [servo module documentation](mod@crate::servo) for details and examples.

@@ -415,7 +415,7 @@ macro_rules! __led_engine_normalize {
     };
 }
 
-const_structures::define! {
+macro_schema::define! {
     ///
     /// # Related Macros
     ///

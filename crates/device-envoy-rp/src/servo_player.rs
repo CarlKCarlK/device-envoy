@@ -177,7 +177,7 @@ macro_rules! combine {
     }};
 }
 
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate a servo player struct type.
     ///
     /// This page provides the primary documentation for configuring individual servo players.

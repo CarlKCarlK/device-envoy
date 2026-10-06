@@ -126,7 +126,7 @@ impl device_envoy_core::button::__ButtonMonitor for ButtonEsp<'_> {
 #[cfg(target_os = "none")]
 impl device_envoy_core::button::Button for ButtonEsp<'_> {}
 
-const_structures::define! {
+macro_schema::define! {
     #[cfg(target_os = "none")]
     /// Creates a button monitoring device abstraction with a background task.
     ///

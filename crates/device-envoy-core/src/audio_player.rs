@@ -2117,7 +2117,7 @@ const fn encode_adpcm_nibble(
 // code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
 // so macro visibility and helper exposure can be controlled more precisely. (may no longer apply)
 
-const_structures::define! {
+macro_schema::define! {
     #[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file."]
     #[doc = include_str!("audio_player/adpcm_clip_docs.md")]
     #[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]
@@ -2265,7 +2265,7 @@ macro_rules! tone {
     };
 }
 
-const_structures::define! {
+macro_schema::define! {
     #[doc = "Macro to \"compile in\" an uncompressed (PCM) clip from an external file."]
     #[doc = include_str!("audio_player/pcm_clip_docs.md")]
     #[doc = include_str!("audio_player/audio_prep_steps_1_2.md")]

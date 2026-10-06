@@ -356,7 +356,7 @@ where
     NecReceiver::new(common, sm, ir_pin)
 }
 
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate an IR receiver struct type.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -403,7 +403,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate a Kepler IR struct type.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -450,7 +450,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate multiple Kepler IR struct types that share one PIO resource.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -538,7 +538,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate an IR mapping struct type.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -592,7 +592,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate multiple IR mapping struct types that share one PIO resource.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -686,7 +686,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate multiple IR receiver struct types that share one PIO resource.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**

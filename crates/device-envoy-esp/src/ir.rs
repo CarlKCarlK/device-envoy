@@ -296,7 +296,7 @@ fn is_nec_repeat_runs(runs: &[(esp_hal::gpio::Level, u16)]) -> bool {
         && within(duration1, 2250, 1000)
 }
 
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate a Kepler IR struct type.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -369,7 +369,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate multiple Kepler IR struct types.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -418,7 +418,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate an IR mapping struct type.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -494,7 +494,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate multiple IR mapping struct types.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -549,7 +549,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate an IR receiver struct type.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**
@@ -610,7 +610,7 @@ const_structures::define! {
         }
     }
 }
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate multiple IR receiver struct types.
     ///
     /// **See the [ir module documentation](mod@crate::ir) for usage examples.**

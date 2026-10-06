@@ -300,7 +300,7 @@ impl LcdTextWrite for EspLcdTextWrite {
     }
 }
 
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate multiple LCD text device types that share one I2C
     /// resource.
     ///
@@ -478,7 +478,7 @@ const_structures::define! {
     }
 }
 
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate a single LCD text device type with a direct constructor.
     ///
     /// For multiple LCD types sharing one I2C peripheral, see

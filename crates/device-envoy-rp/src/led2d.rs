@@ -317,7 +317,7 @@ macro_rules! led2d_from_strip {
     };
 }
 
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate an LED-panel struct type. See [`Led2d`](`crate::led2d::Led2d`) for the shared API.
     ///
     /// **See the [led2d module](mod@crate::led2d) for usage examples.**

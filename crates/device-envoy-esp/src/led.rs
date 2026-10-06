@@ -166,7 +166,7 @@ pub async fn run_animation_loop<const MAX_STEPS: usize>(
 }
 
 #[cfg(target_os = "none")]
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate a single LED struct type.
     ///
     /// **See the [led module documentation](mod@crate::led) for usage examples.**

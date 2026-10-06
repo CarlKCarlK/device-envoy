@@ -44,7 +44,7 @@ pub mod audio_player;
 pub use audio_player::audio_player;
 // Must be `pub` for macro expansion: every schema-declared macro forwards to it.
 #[doc(hidden)]
-pub use const_structures::expand as __const_structures_expand;
+pub use macro_schema::expand as __macro_schema_expand;
 
 #[cfg(target_os = "none")]
 pub mod button;

@@ -64,7 +64,7 @@ compile_error!("Select exactly one chip feature for embedded builds, not both.")
 
 // Must be `pub` for macro expansion: every schema-declared macro forwards to it.
 #[doc(hidden)]
-pub use const_structures::expand as __const_structures_expand;
+pub use macro_schema::expand as __macro_schema_expand;
 
 pub mod button;
 // Crate-root path kept for `use device_envoy_esp::button_watch;`; documented in `button`.

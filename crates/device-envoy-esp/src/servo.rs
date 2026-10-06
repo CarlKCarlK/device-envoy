@@ -270,7 +270,7 @@ impl Servo for ServoEsp {
     }
 }
 
-const_structures::define! {
+macro_schema::define! {
     /// Macro to generate a direct-servo struct type.
     ///
     /// **See the [servo module documentation](mod@crate::servo) for usage examples.**

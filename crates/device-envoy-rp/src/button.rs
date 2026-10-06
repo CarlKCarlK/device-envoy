@@ -129,7 +129,7 @@ impl device_envoy_core::button::__ButtonMonitor for ButtonRp<'_> {
 
 impl device_envoy_core::button::Button for ButtonRp<'_> {}
 
-const_structures::define! {
+macro_schema::define! {
     /// Creates a button monitoring device abstraction with a background task.
     ///
     /// This macro creates a button monitor that runs in a dedicated background task,

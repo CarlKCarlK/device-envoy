@@ -41,8 +41,8 @@ wasm = [
 ]
 
 [dependencies]
-# TODO0 Publish const-structures 0.1.0 before releasing Device Envoy; the versioned path supports local development.
-const-structures = { version = "0.1.0", path = "../../../../const-structures" }
+# TODO0 Publish macro-schema 0.1.0 before releasing Device Envoy; the versioned path supports local development.
+macro-schema = { version = "0.1.0", path = "../../../../const-structures" }
 derive_more = { version = "2.1.1", default-features = false, features = ["from"] }
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }

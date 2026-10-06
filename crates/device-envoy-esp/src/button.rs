@@ -191,8 +191,85 @@ const_structures::define! {
     ///     Ok(())
     /// }
     /// ```
-    pub button_watch => __button_watch_generate {
+    pub button_watch {
         /// GPIO pin connected to the button, for example `GPIO6`.
         pin: ident,
+    }
+
+    generate {
+        $attrs
+        #[doc = $doc]
+        #[doc = "\n\nMonitors button presses in a background task. See the [button module documentation](mod@device_envoy_esp::button) for usage."]
+        $vis struct $name {
+            button_watch: $crate::button::ButtonWatchEsp<'static>,
+        }
+
+        impl $name {
+            /// Creates a new button monitor and spawns its background task.
+            ///
+            /// # Parameters
+            ///
+            /// - `button_pin`: GPIO pin for the button
+            /// - `pressed_to`: How the button is wired ([`PressedTo::Ground`] or [`PressedTo::Voltage`])
+            /// - `spawner`: Task spawner for background operations
+            ///
+            /// # Errors
+            ///
+            /// Returns an error if the background task cannot be spawned.
+            pub async fn new(
+                button_pin: $crate::esp_hal::peripherals::$pin<'static>,
+                pressed_to: $crate::button::PressedTo,
+                spawner: ::embassy_executor::Spawner,
+            ) -> $crate::Result<&'static mut Self> {
+                static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticEsp =
+                    $crate::button::ButtonWatchEsp::new_static();
+                static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$name> =
+                    ::static_cell::StaticCell::new();
+
+                let button_watch = $crate::button::ButtonWatchEsp::new_from_pin(
+                    &BUTTON_WATCH_STATIC,
+                    button_pin,
+                    pressed_to,
+                    spawner,
+                )
+                .await?;
+
+                let instance = BUTTON_WATCH_CELL.init($name { button_watch });
+                Ok(instance)
+            }
+        }
+
+        impl ::core::ops::Deref for $name {
+            type Target = $crate::button::ButtonWatchEsp<'static>;
+
+            fn deref(&self) -> &Self::Target {
+                &self.button_watch
+            }
+        }
+
+        impl $crate::button::__ButtonMonitor for $name {
+            fn is_pressed_raw(&self) -> bool {
+                <$crate::button::ButtonWatchEsp<'static> as $crate::button::Button>::is_pressed(
+                    &self.button_watch,
+                )
+            }
+
+            async fn wait_until_pressed_state(&mut self, pressed: bool) {
+                <$crate::button::ButtonWatchEsp<'static> as $crate::button::__ButtonMonitor>::wait_until_pressed_state(
+                    &mut self.button_watch,
+                    pressed,
+                )
+                .await
+            }
+        }
+
+        impl $crate::button::Button for $name {
+            async fn wait_for_press_duration(&mut self) -> $crate::button::PressDuration {
+                <$crate::button::ButtonWatchEsp<'static> as $crate::button::Button>::wait_for_press_duration(
+                    &mut self.button_watch,
+                )
+                .await
+            }
+        }
     }
 }

@@ -159,75 +159,6 @@ pub mod led2d_generated;
 #[doc(hidden)]
 pub type Led2dRp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 
-/// Code generator for [`led2d!`](crate::led2d::led2d): a one-member
-/// [`led_strips!`](crate::led_strip::led_strips) group whose member is a 2D panel, plus a
-/// constructor that hides the group.
-///
-/// Called only by `led2d!` after its `const_structures::define!` schema has validated the input and
-/// filled defaults. Must be public for macro expansion in downstream crates, but not
-/// user-facing API.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led2d_generate {
-    (
-        attrs: [$(#[$attr:meta])*],
-        vis: [$vis:vis],
-        name: $name:ident,
-        doc: $doc:literal,
-        pin: $pin:ident,
-        led_layout: $led_layout:expr,
-        font: $font:expr,
-        pio: $pio:ident,
-        dma: $dma:ident,
-        max_current: $max_current:expr,
-        gamma: $gamma:expr,
-        max_frames: $max_frames:expr,
-    ) => {
-        $crate::__paste! {
-            $crate::led_strip::__led_strips_generate! {
-                attrs: [],
-                vis: [pub(self)],
-                name: [<$name Group>],
-                doc: "One-member group behind a `led2d!` type.",
-                pio: $pio,
-                member_count: 1,
-                members: [{
-                    index: 0,
-                    attrs: [$(#[$attr])*],
-                    vis: [$vis],
-                    name: $name,
-                    doc: $doc,
-                    pin: $pin,
-                    len: $led_layout.len(),
-                    max_current: $max_current,
-                    dma: $dma,
-                    gamma: $gamma,
-                    max_frames: $max_frames,
-                    led2d: [{ led_layout: $led_layout, font: $font, }],
-                },],
-            }
-
-            impl $name {
-                /// Creates the LED panel and spawns its background task.
-                ///
-                /// The `pin`, `pio`, and `dma` arguments must be the GPIO pin, PIO resource,
-                /// and DMA channel named in the macro. See the
-                /// [led2d module documentation](mod@device_envoy_rp::led2d) for usage.
-                pub fn new(
-                    pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
-                    pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>>,
-                    dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<Self> {
-                    let (led2d,) = [<$name Group>]::new(pio, pin, dma, spawner)?;
-                    Ok(led2d)
-                }
-            }
-        }
-    };
-}
-
 // Internal macro used by led_strips! led2d configuration.
 #[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
 #[macro_export]
@@ -402,7 +333,7 @@ const_structures::define! {
     /// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other panels or LED strips (includes examples)
     /// - [`led_strip!`](mod@crate::led_strip) — For 1-dimensional LED strips
     #[cfg(not(feature = "host"))]
-    pub led2d => __led2d_generate {
+    pub led2d {
         /// GPIO pin for LED data, for example `PIN_4`.
         pin: ident,
         /// Physical layout; a `const` `LedLayout` that defines the panel size.
@@ -422,6 +353,45 @@ const_structures::define! {
         /// Maximum number of animation frames; `0` disables animation.
         #[default_display = "16"]
         max_frames: expr = $crate::led_strip::MAX_FRAMES_DEFAULT,
+    }
+
+    generate {
+        // A one-member `led_strips!` group whose member is a panel; the group stays out
+        // of the docs.
+        $crate::led_strip::led_strips! {
+            #[doc(hidden)]
+            $vis $ident($name, Group) {
+                pio: $pio,
+
+                $attrs
+                $name {
+                    pin: $pin,
+                    len: $led_layout.len(),
+                    max_current: $max_current,
+                    dma: $dma,
+                    gamma: $gamma,
+                    max_frames: $max_frames,
+                    led2d: { led_layout: $led_layout, font: $font },
+                },
+            }
+        }
+
+        impl $name {
+            /// Creates the LED panel and spawns its background task.
+            ///
+            /// The `pin`, `pio`, and `dma` arguments must be the GPIO pin, PIO resource,
+            /// and DMA channel named in the macro. See the
+            /// [led2d module documentation](mod@device_envoy_rp::led2d) for usage.
+            pub fn new(
+                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>>,
+                dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
+                spawner: ::embassy_executor::Spawner,
+            ) -> $crate::Result<Self> {
+                let (led2d,) = $ident($name, Group)::new(pio, pin, dma, spawner)?;
+                Ok(led2d)
+            }
+        }
     }
 }
 #[cfg(not(feature = "host"))]

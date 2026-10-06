@@ -185,7 +185,7 @@ macro_rules! __led2d_generate {
         max_frames: $max_frames:expr,
     ) => {
         $crate::__paste! {
-            $crate::__led_strips_generate! {
+            $crate::led_strip::__led_strips_generate! {
                 attrs: [],
                 vis: [pub(self)],
                 name: [<$name Group>],

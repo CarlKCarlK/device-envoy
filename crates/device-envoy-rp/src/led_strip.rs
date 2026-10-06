@@ -338,113 +338,6 @@ where
     }
 }
 
-/// Code generator for [`led_strips!`](crate::led_strip::led_strips).
-///
-/// Called only by `led_strips!` after its `const_structures::define!` schema has validated the
-/// input and filled defaults. Must be public for macro expansion in downstream
-/// crates, but not user-facing API.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led_strips_generate {
-    (
-        attrs: [$(#[$attr:meta])*],
-        vis: [$vis:vis],
-        name: $group:ident,
-        doc: $doc:literal,
-        pio: $pio:ident,
-        member_count: $member_count:literal,
-        members: [$({
-            index: $sm_index:literal,
-            attrs: [$(#[$member_attr:meta])*],
-            vis: [$member_vis:vis],
-            name: $label:ident,
-            doc: $member_doc:literal,
-            pin: $pin:ident,
-            len: $len:expr,
-            max_current: $max_current:expr,
-            dma: $dma:ident,
-            gamma: $gamma:expr,
-            max_frames: $max_frames:expr,
-            led2d: $led2d:tt,
-        },)*],
-    ) => {
-        $crate::__paste! {
-            // A PIO resource belongs to one group. Two groups on the same PIO in one module
-            // collide on this name, and the name explains the problem in the compile error.
-            static [<$pio _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE>]: ::static_cell::StaticCell<
-                $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$pio>
-            > = ::static_cell::StaticCell::new();
-
-            $(
-                $crate::__led_strips_member! {
-                    @define
-                    group: $group,
-                    pio: $pio,
-                    sm: $sm_index,
-                    attrs: [$(#[$member_attr])*],
-                    vis: [$member_vis],
-                    name: $label,
-                    doc: $member_doc,
-                    pin: $pin,
-                    len: $len,
-                    max_current: $max_current,
-                    dma: $dma,
-                    gamma: $gamma,
-                    max_frames: $max_frames,
-                    led2d: $led2d,
-                }
-            )*
-
-            $(#[$attr])*
-            #[doc = $doc]
-            $vis struct $group;
-
-            impl $group {
-                /// Creates every strip and panel in the group and spawns their background tasks.
-                ///
-                /// Takes the PIO resource, then a pin and DMA channel per member in declaration
-                /// order, then the spawner.
-                #[allow(clippy::too_many_arguments)]
-                pub fn new(
-                    pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pio>>,
-                    $(
-                        [<$label:snake _pin>]: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
-                        [<$label:snake _dma>]: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
-                    )*
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<($($crate::__led_strips_member!(@return_type $label, $led2d),)*)> {
-                    let ::embassy_rp::pio::Pio { common, sm0, sm1, sm2, sm3, .. } =
-                        ::embassy_rp::pio::Pio::new(
-                            pio.into(),
-                            <::embassy_rp::peripherals::$pio as $crate::pio_irqs::PioIrqMap>::irqs(),
-                        );
-                    let pio_bus = [<$pio _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE>].init_with(|| {
-                        $crate::led_strip::PioBus::new(common)
-                    });
-                    #[allow(unused_variables)]
-                    let (sm0, sm1, sm2, sm3) = (
-                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm0),
-                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm1),
-                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm2),
-                        $crate::led_strip::PioBusStateMachine::new(pio_bus, sm3),
-                    );
-                    Ok(($(
-                        $crate::__led_strips_member!(
-                            @new $label,
-                            [<sm $sm_index>],
-                            [<$label:snake _pin>],
-                            [<$label:snake _dma>],
-                            spawner,
-                            $led2d
-                        ),
-                    )*))
-                }
-            }
-        }
-    };
-}
-
 /// Per-member code for [`__led_strips_generate!`]: a 1D strip, or a 2D panel
 /// wrapping a private strip, depending on whether `led2d` was given.
 /// Must be public for macro expansion in downstream crates, but not user-facing API.
@@ -710,7 +603,7 @@ macro_rules! __led_strip_generate {
         max_frames: $max_frames:expr,
     ) => {
         $crate::__paste! {
-            $crate::__led_strips_generate! {
+            $crate::led_strip::__led_strips_generate! {
                 attrs: [],
                 vis: [pub(self)],
                 name: [<$name Group>],
@@ -977,7 +870,7 @@ const_structures::define! {
         )
     )]
     #[cfg(not(feature = "host"))]
-    pub led_strips => __led_strips_generate {
+    pub led_strips => led_strip::__led_strips_generate {
         /// PIO resource shared by every strip and panel in the group.
         pio: ident = PIO0,
         /// Each member is one LED strip or 2D panel and uses one PIO state machine.
@@ -1004,6 +897,96 @@ const_structures::define! {
                 font: expr,
             },
         },
+    }
+
+    generate {
+        $crate::__paste! {
+            // A PIO resource belongs to one group. Two groups on the same PIO in one module
+            // collide on this name, and the name explains the problem in the compile error.
+            static [<$field_pio _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE>]: ::static_cell::StaticCell<
+                $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$field_pio>
+            > = ::static_cell::StaticCell::new();
+
+            $(
+                $crate::__led_strips_member! {
+                    @define
+                    group: $name,
+                    pio: $field_pio,
+                    sm: $member_index,
+                    attrs: [$(#[$member_attrs])*],
+                    vis: [$member_vis],
+                    name: $member_name,
+                    doc: $member_doc,
+                    pin: $member_field_pin,
+                    len: $member_field_len,
+                    max_current: $member_field_max_current,
+                    dma: $member_field_dma,
+                    gamma: $member_field_gamma,
+                    max_frames: $member_field_max_frames,
+                    led2d: [$({
+                        led_layout: $member_field_led2d_led_layout,
+                        font: $member_field_led2d_font,
+                    })?],
+                }
+            )*
+
+            $(#[$attrs])*
+            #[doc = $doc]
+            $vis struct $name;
+
+            impl $name {
+                /// Creates every strip and panel in the group and spawns their background tasks.
+                ///
+                /// Takes the PIO resource, then a pin and DMA channel per member in declaration
+                /// order, then the spawner.
+                #[allow(clippy::too_many_arguments)]
+                pub fn new(
+                    pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$field_pio>>,
+                    $(
+                        [<$member_name:snake _pin>]: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$member_field_pin>>,
+                        [<$member_name:snake _dma>]: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$member_field_dma>>,
+                    )*
+                    spawner: ::embassy_executor::Spawner,
+                ) -> $crate::Result<(
+                    $(
+                        $crate::__led_strips_member!(
+                            @return_type $member_name,
+                            [$({
+                                led_layout: $member_field_led2d_led_layout,
+                                font: $member_field_led2d_font,
+                            })?]
+                        ),
+                    )*
+                )> {
+                    let ::embassy_rp::pio::Pio { common, $([<sm $member_index>],)* .. } =
+                        ::embassy_rp::pio::Pio::new(
+                            pio.into(),
+                            <::embassy_rp::peripherals::$field_pio as $crate::pio_irqs::PioIrqMap>::irqs(),
+                        );
+                    let pio_bus = [<$field_pio _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE>].init_with(|| {
+                        $crate::led_strip::PioBus::new(common)
+                    });
+                    $(
+                        let [<sm $member_index>] = $crate::led_strip::PioBusStateMachine::new(
+                            pio_bus, [<sm $member_index>],
+                        );
+                    )*
+                    Ok(($(
+                        $crate::__led_strips_member!(
+                            @new $member_name,
+                            [<sm $member_index>],
+                            [<$member_name:snake _pin>],
+                            [<$member_name:snake _dma>],
+                            spawner,
+                            [$({
+                                led_layout: $member_field_led2d_led_layout,
+                                font: $member_field_led2d_font,
+                            })?]
+                        ),
+                    )*))
+                }
+            }
+        }
     }
 }
 

@@ -20,6 +20,22 @@ inventory, the API regularization, and the macros intentionally left as
       Envoy later needs a framework change, list it here; each one means
       publishing a new `macro-schema` version before Device Envoy can publish.
 
+## 2a. Code review of the macro code
+
+- [ ] Review the organization of the `define!` schemas and `generate`
+      templates across Core, RP, and ESP: where each lives, how the
+      single-as-group and group-calls-single patterns are applied, and the
+      remaining hand-written helpers (`__led_engine_normalize!` and friends).
+- [ ] Review for code smells: duplication between the RP and ESP schemas,
+      template length, hidden helpers that could become templates (the survey
+      names `led2d_from_strip!`), and doc text repeated across schemas.
+- [ ] Decide whether Device Envoy's schemas need expansion-level tests.
+      `macro-schema` itself follows the two-level split (a thin
+      `macro-schema-derive` over `proc_macro2` functions in
+      `macro-schema-core`, unit-tested with `quote!` and `prettyplease`), but
+      a Device Envoy schema's output is only exercised by compiling it: the
+      compile-only and `ui_fail` tests and the examples.
+
 ## 3. Branch health
 
 - [x] `cargo fmt --all -- --check` (2026-10-22, at `3d190d09`; rerun before

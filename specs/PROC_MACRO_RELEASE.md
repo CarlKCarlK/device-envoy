@@ -54,8 +54,8 @@ and package version to `0.2.0`, and a lockfile refresh.
 - The `Check Starters` workflow covers only the two blinky starters, not
   `cyd-starter`. Check it by hand with `just check-all` after temporarily adding
   a `[patch.crates-io]` for `device-envoy-core` and `device-envoy-esp`.
-- [ ] `Check Starters` workflow passes against this branch (release checklist
-      step 7). Needs the branch pushed.
+- [x] `Check Starters` workflow passes against this branch (2026-10-22, at
+      `43a40225`, run 39860296199). Rerun it at release-checklist step 7.
 
 ## 5. Docs and migration notes
 

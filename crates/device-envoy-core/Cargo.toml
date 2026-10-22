@@ -10,6 +10,8 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/CarlKCarlK/device-envoy"
 documentation = "https://docs.rs/device-envoy-core"
 homepage = "https://github.com/CarlKCarlK/device-envoy"
+# Reads the RP and ESP crates' sources, which are not in this package.
+exclude = ["tests/macro_expansion.rs"]
 
 [package.metadata.docs.rs]
 all-features = false
@@ -41,7 +43,7 @@ wasm = [
 ]
 
 [dependencies]
-macro-schema = "0.1.0"
+macro-schema = "0.1.1"
 derive_more = { version = "2.1.1", default-features = false, features = ["from"] }
 smart-leds = "0.4.0"
 embedded-graphics = { version = "0.8", default-features = false }
@@ -78,6 +80,12 @@ web-sys = { version = "0.3", optional = true, features = [
 [dev-dependencies]
 critical-section = { version = "1.2.0", features = ["std"] }
 futures-executor = "0.3"
+macro-schema-core = "0.1.1"
+pretty_assertions = "1.4.1"
+prettyplease = "0.3.0"
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+syn = { version = "3.0.6", features = ["full"] }
 
 [[test]]
 name = "led2d_text_render"

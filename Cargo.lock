@@ -819,14 +819,20 @@ dependencies = [
  "heapless 0.9.2",
  "js-sys",
  "macro-schema",
+ "macro-schema-core",
  "micromath",
  "png 0.18.1",
  "portable-atomic",
  "postcard",
+ "pretty_assertions",
+ "prettyplease 0.3.0",
+ "proc-macro2",
  "profont",
+ "quote",
  "serde",
  "smart-leds",
  "static_cell",
+ "syn 3.0.6",
  "time",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -1062,6 +1068,12 @@ dependencies = [
  "tempfile",
  "time",
 ]
+
+[[package]]
+name = "diff"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
 
 [[package]]
 name = "digest"
@@ -2710,18 +2722,18 @@ dependencies = [
 
 [[package]]
 name = "macro-schema"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c87e1b8c3e4e8a1f36c7746847dad1dc959b91f6a512abb262cc0dfe3e36f9c5"
+checksum = "5cb9d3394aee92caddf593ba8a6d23fd9207c34ae2056c0c956e407515725599"
 dependencies = [
  "macro-schema-derive",
 ]
 
 [[package]]
 name = "macro-schema-core"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dea1109dedc4af7be7d9267287bfd667a4fa0018ae0109b48eedcb93c9f727c5"
+checksum = "97b0908e05d9100ed3d8ea4661d87a81a26d006d0aaba384560a93d04c7abf77"
 dependencies = [
  "prettyplease 0.3.0",
  "proc-macro2",
@@ -2731,9 +2743,9 @@ dependencies = [
 
 [[package]]
 name = "macro-schema-derive"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37252ffe8fad20846248190229e2b3daceaaa0bb1e1881dd60e1e0dea1590845"
+checksum = "52e784ab006068b3572170d5433a4b4f1ddec35c5b3a772b22f4a8e8b705f34f"
 dependencies = [
  "macro-schema-core",
 ]
@@ -3173,6 +3185,16 @@ name = "precomputed-hash"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
+
+[[package]]
+name = "pretty_assertions"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ae130e2f271fbc2ac3a40fb1d07180839cdbbe443c7a27e1e3c13c5cac0116d"
+dependencies = [
+ "diff",
+ "yansi",
+]
 
 [[package]]
 name = "prettyplease"
@@ -4780,6 +4802,12 @@ dependencies = [
  "quote",
  "syn 2.0.117",
 ]
+
+[[package]]
+name = "yansi"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"

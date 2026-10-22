@@ -15,10 +15,11 @@ inventory, the API regularization, and the macros intentionally left as
 ## 2. `macro-schema` dependency
 
 - [x] Publish `macro-schema` 0.1.0 and depend on it from crates.io (`3d190d09`).
-- [x] Confirm that 0.1.0 is enough for this release (2026-10-22: the only
-      `macro-schema` change since publication is a README edit). If Device
-      Envoy later needs a framework change, list it here; each one means
-      publishing a new `macro-schema` version before Device Envoy can publish.
+- [x] Publish `macro-schema` 0.1.1 with `macro_schema_core::expand_definition`
+      and depend on it (2026-10-22, `macro-schema` `18565c7`).
+- Republishing is fine: no one else uses these crates. Any framework change
+  this release needs goes in a new `macro-schema` version, published before
+  Device Envoy.
 
 ## 2a. Code review of the macro code
 
@@ -29,14 +30,19 @@ inventory, the API regularization, and the macros intentionally left as
 - [ ] Review for code smells: duplication between the RP and ESP schemas,
       template length, hidden helpers that could become templates (the survey
       names `led2d_from_strip!`), and doc text repeated across schemas.
-- [ ] Decide whether Device Envoy's macros need tests of what they expand to.
-      `macro-schema` follows the two-level split: a thin proc-macro crate over
-      ordinary functions in `macro-schema-core`, which are unit-tested.
-      Device Envoy has no proc-macro code of its own, only schemas and
-      templates. Today its macros are tested only by compiling code that uses
-      them (RP `tests-compile-only/`, ESP `tests/compile_fail.rs`, the
-      examples). Those show that the output compiles, or fails as intended,
-      but not what the output is.
+- [x] Add host tests of what the macros expand to:
+      `crates/device-envoy-core/tests/macro_expansion.rs`. They read each
+      schema's source file, expand calls with `expand_definition`, and check
+      the output or the error, without compiling the RP or ESP HALs. They
+      cover this release's behavior changes (DMA defaults by member index,
+      member visibility, the 0.1 member colon, RP IR `pio`, ESP `led2d!` `len`,
+      `pcm_clip!`'s one spelling). The file is excluded from the published
+      package because it reads the RP and ESP sources.
+- [ ] Extend `macro_expansion.rs` to the macros it does not cover yet, as the
+      review finds behavior worth pinning down.
+- [ ] Remove the `#[allow(clippy::too_many_arguments)]` that RP `led_strips!`
+      puts on the generated `new` (`AGENTS.md` forbids lint suppression), or
+      record why it stays.
 
 ## 3. Branch health
 

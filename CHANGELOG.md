@@ -1,5 +1,77 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+Every declaration macro is now defined by a
+[`macro-schema`](https://crates.io/crates/macro-schema) schema instead of a
+hand-written `macro_rules!` parser. The macros report unknown, duplicate,
+missing, and wrong-kind fields at the caller's tokens; their syntax and field
+tables in the docs are generated from the schema; and every declared item gets
+a generated configuration table. This release is a clean break: the 0.1 syntax
+is not accepted.
+
+Syntax changes:
+
+- Shared group fields go inside the group's braces, and members are written
+  `Name { ... }` rather than `Name: { ... }`. This affects `led_strips!`,
+  `irs!`, `ir_keplers!`, `ir_mappings!`, `i2cs!`, and `lcd_text!`:
+
+  ```rust,ignore
+  // 0.1
+  led_strips! {
+      pio: PIO0,
+      pub LedStrips {
+          Strip0: { pin: PIN_2, len: 8, max_current: Current::Milliamps(250) },
+      }
+  }
+
+  // 0.2
+  led_strips! {
+      pub LedStrips {
+          pio: PIO0,
+
+          Strip0 { pin: PIN_2, len: 8, max_current: Current::Milliamps(250) },
+      }
+  }
+  ```
+
+- Fields may be written in any order, a trailing comma is always optional, and
+  every declaration and member accepts attributes.
+- Every declaration accepts a visibility. Members inherit their group's
+  visibility. ESP `servo!`, ESP `servo_player!`, and the IR groups were always
+  `pub`; they now follow the visibility you write.
+- RP `servo!` declares a named type, like ESP `servo!`. The PWM slice is passed
+  to `new`, and a trait bound checks that it is the pin's slice. The `slice`,
+  `channel`, `odd`, and `even` fields are gone:
+
+  ```rust,ignore
+  // 0.1
+  let mut servo = servo! { pin: p.PIN_11, slice: p.PWM_SLICE5 };
+
+  // 0.2
+  servo! { Servo11 { pin: PIN_11 } }
+  let mut servo = Servo11::new(p.PIN_11, p.PWM_SLICE5);
+  ```
+
+- `pcm_clip!` accepts only `source_sample_rate_hz`; the `sample_rate_hz` alias
+  is gone.
+- ESP `led2d!` no longer takes `len`; the LED count comes from `led_layout`, as
+  on RP.
+- In `led_strips!`, `max_frames` for a panel is set on the member rather than
+  inside its `led2d` block.
+- `pio_split!` has been removed.
+
+Behavior changes and fixes:
+
+- RP IR macros default `pio` to `PIO0`, like the LED and audio macros.
+- ESP `led2d!` chooses its engine by chip, as `led_strip!` does: RMT where
+  available, otherwise SPI. Previously panels defaulted to RMT even on chips
+  without it.
+- ESP strip `len` and `reset_us` can name constants private to the caller's
+  module.
+- Two RP LED groups on one PIO in one module, ESP LEDC channel clashes, and
+  duplicate LCD addresses fail to compile with errors that name the rule.
+
 ## 0.1.6
 
 - Fixed CYD runtime orientation changes by upgrading `mipidsi`, so display

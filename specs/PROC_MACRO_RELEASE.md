@@ -94,8 +94,9 @@ after publication. Macro usage as of 2026-10-22:
 | `linkage-blaze` | `button_watch!` | `track-device-envoy-macro-schema` | [x] `cargo check-all` | [ ] |
 
 `linkage-blaze` passed `cargo check-all` on 2026-10-22 with no source changes.
-Its branch already uses path dependencies on this checkout; after publication
-it switches back to registry `0.2.0` versions.
+Its branch patches crates.io with this checkout. Its `device-envoy-*`
+requirements are `0.2.0` (2026-10-22): a `[patch]` applies only when the
+version matches, so at `0.1.6` it silently used the published 0.1.6.
 
 The three starters needed no source changes. On 2026-10-22 their
 `device-envoy-0.2.0` branches were switched to this checkout: each

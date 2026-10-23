@@ -66,11 +66,10 @@ inventory, the API regularization, and the macros intentionally left as
       `static_cell`, `heapless`, or `embassy_sync`: it reaches them through
       hidden `$crate::__*` re-exports (2026-10-23). The starters dropped those
       dependencies.
-- [x] `led2d_from_strip!` is now template text in `led_strips!`, and
-      `__led_strip_type!` takes its task name from the template instead of
-      `paste!`. `__led_strip_type!` stays a helper: its two calls differ only
-      in the struct's name and attributes, which the template language cannot
-      bind per branch (see the survey).
+- [x] RP `led_strips!` has no hand-written `macro_rules!` left (2026-10-23).
+      `led2d_from_strip!` is template text in `led_strips!`, and
+      `__led_strip_type!` is a hidden `define!` that the template calls once
+      per strip with the name each branch needs (see the survey).
 - [x] Generated doc links name `device_envoy_rp::` / `device_envoy_esp::`
       instead of `crate::`, which in generated code is the user's crate; a host
       test rejects `crate::` links in generated docs.

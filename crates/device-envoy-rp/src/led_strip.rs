@@ -338,67 +338,74 @@ where
     }
 }
 
-/// The LED strip type shared by `led_strips!` members, `led_strip!`, and the strip
-/// behind each `led2d!` panel: the struct, its constructor from a PIO state machine, the
-/// `LedStrip` impl, and its background task. Called like a declaration. Must be public for
-/// macro expansion in downstream crates, but not user-facing API.
-#[cfg(not(feature = "host"))]
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led_strip_type {
-    (
-        $(#[$attr:meta])*
-        $vis:vis struct $label:ident {
-            pio: $pio:ident,
-            sm: $sm_index:literal,
-            pin: $pin:ident,
-            len: $len:expr,
-            max_current: $max_current:expr,
-            dma: $dma:ident,
-            gamma: $gamma:expr,
-            max_frames: $max_frames:expr,
-            task: $task:ident,
-        }
-    ) => {
-        $(#[$attr])*
+macro_schema::define! {
+    /// The LED strip type behind every `led_strips!` member, and so behind `led_strip!` and
+    /// each `led2d!` panel: the struct, its constructor from a PIO state machine, the
+    /// `LedStrip` impl, and its background task. The `led_strips!` template calls it once per
+    /// strip, naming the struct as it needs. Public because it expands in downstream crates,
+    /// but not user-facing API.
+    #[cfg(not(feature = "host"))]
+    #[doc(hidden)]
+    pub __led_strip_type {
+        /// PIO resource that owns the strip's state machine.
+        pio: ident,
+        /// PIO state machine index, from 0 to 3.
+        sm: expr,
+        /// GPIO pin for LED data.
+        pin: ident,
+        /// Number of LEDs.
+        len: expr,
+        /// Electrical current budget.
+        max_current: expr,
+        /// DMA channel.
+        dma: ident,
+        /// Color curve.
+        gamma: expr,
+        /// Maximum number of animation frames.
+        max_frames: expr,
+    }
+
+    generate {
+        $decl.attrs
+        #[doc = $decl.doc]
         #[doc = "\n\nImplements the [`LedStrip`](device_envoy_rp::led_strip::LedStrip) trait for LED control methods."]
-        $vis struct $label {
-            strip: $crate::led_strip::LedStripRp<{ $len }, { $max_frames }>,
+        $decl.vis struct $decl.name {
+            strip: $crate::led_strip::LedStripRp<{ $decl.len }, { $decl.max_frames }>,
         }
 
-        impl $label {
+        impl $decl.name {
             /// Number of LEDs in the strip.
-            pub const LEN: usize = $len;
+            pub const LEN: usize = $decl.len;
             /// Maximum number of animation frames.
-            pub const MAX_FRAMES: usize = $max_frames;
+            pub const MAX_FRAMES: usize = $decl.max_frames;
 
             // Each WS2812B LED draws ~60mA at full brightness.
-            const WORST_CASE_MA: u32 = ($len as u32) * 60;
+            const WORST_CASE_MA: u32 = ($decl.len as u32) * 60;
             /// Maximum brightness level after current limiting.
             pub const MAX_BRIGHTNESS: u8 =
-                $max_current.max_brightness(Self::WORST_CASE_MA);
+                $decl.max_current.max_brightness(Self::WORST_CASE_MA);
 
             // Combined gamma correction and brightness scaling table
-            const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
+            const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($decl.gamma, Self::MAX_BRIGHTNESS);
 
-            const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
+            const fn new_static() -> $crate::led_strip::LedStripStatic<{ $decl.len }, { $decl.max_frames }> {
                 $crate::led_strip::LedStripRp::new_static()
             }
 
             fn from_state_machine(
-                state_machine: $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$pio, $sm_index>,
-                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>>,
-                dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>>,
+                state_machine: $crate::led_strip::PioBusStateMachine<::embassy_rp::peripherals::$decl.pio, $decl.sm>,
+                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
+                dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.dma>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> =
-                    $label::new_static();
-                static STRIP_CELL: $crate::__static_cell::StaticCell<$label> = $crate::__static_cell::StaticCell::new();
+                static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $decl.len }, { $decl.max_frames }> =
+                    $decl.name::new_static();
+                static STRIP_CELL: $crate::__static_cell::StaticCell<$decl.name> = $crate::__static_cell::StaticCell::new();
                 let pin = pin.into();
                 let dma = dma.into();
 
                 let (bus, sm) = state_machine.into_parts();
-                let token = $task(
+                let token = $snake($decl.name, _device_task)(
                     bus,
                     sm,
                     dma,
@@ -412,11 +419,11 @@ macro_rules! __led_strip_type {
             }
         }
 
-        impl $crate::led_strip::LedStrip<{ $len }> for $label {
-            const MAX_FRAMES: usize = $max_frames;
+        impl $crate::led_strip::LedStrip<{ $decl.len }> for $decl.name {
+            const MAX_FRAMES: usize = $decl.max_frames;
             const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
 
-            fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $len }>) {
+            fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $decl.len }>) {
                 $crate::led_strip::__write_frame(self.strip.__command_signal(), frame);
             }
 
@@ -424,7 +431,7 @@ macro_rules! __led_strip_type {
             where
                 I: IntoIterator,
                 I::Item: ::core::borrow::Borrow<(
-                    $crate::led_strip::Frame1d<{ $len }>,
+                    $crate::led_strip::Frame1d<{ $decl.len }>,
                     ::embassy_time::Duration,
                 )>,
             {
@@ -433,38 +440,38 @@ macro_rules! __led_strip_type {
         }
 
         #[::embassy_executor::task]
-        async fn $task(
-            bus: &'static $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$pio>,
-            sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$pio, $sm_index>,
-            dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$dma>,
-            pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$pin>,
-            command_signal: &'static $crate::led_strip::LedStripCommandSignal<{ $len }, { $max_frames }>,
+        async fn $snake($decl.name, _device_task)(
+            bus: &'static $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$decl.pio>,
+            sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$decl.pio, $decl.sm>,
+            dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.dma>,
+            pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>,
+            command_signal: &'static $crate::led_strip::LedStripCommandSignal<{ $decl.len }, { $decl.max_frames }>,
         ) -> ! {
             let program = bus.get_program();
             let driver = bus.with_common(|common| {
                 ::embassy_rp::pio_programs::ws2812::PioWs2812::<
-                    ::embassy_rp::peripherals::$pio,
-                    $sm_index,
-                    { $len },
+                    ::embassy_rp::peripherals::$decl.pio,
+                    $decl.sm,
+                    { $decl.len },
                     _
                 >::new(
                     common,
                     sm,
                     dma,
-                    <::embassy_rp::peripherals::$dma as $crate::pio_irqs::DmaIrqMap>::irqs(),
+                    <::embassy_rp::peripherals::$decl.dma as $crate::pio_irqs::DmaIrqMap>::irqs(),
                     pin,
                     program,
                 )
             });
             $crate::led_strip::led_strip_device_loop::<
-                ::embassy_rp::peripherals::$pio,
-                $sm_index,
-                { $len },
-                { $max_frames },
+                ::embassy_rp::peripherals::$decl.pio,
+                $decl.sm,
+                { $decl.len },
+                { $decl.max_frames },
                 _
-            >(driver, command_signal, &$label::COMBO_TABLE).await
+            >(driver, command_signal, &$decl.name::COMBO_TABLE).await
         }
-    };
+    }
 }
 
 macro_schema::define! {
@@ -777,9 +784,9 @@ macro_schema::define! {
 
         $for strip in $decl.members {
             $if let Some(panel) = $strip.led2d {
-                $crate::__led_strip_type! {
+                $crate::led_strip::__led_strip_type! {
                     #[doc = "LED strip behind a 2D panel generated by `led_strips!`."]
-                    $decl.vis struct $ident($strip.name, LedStrip) {
+                    $decl.vis $ident($strip.name, LedStrip) {
                         pio: $decl.pio,
                         sm: $strip.index,
                         pin: $strip.pin,
@@ -788,7 +795,6 @@ macro_schema::define! {
                         dma: $strip.dma,
                         gamma: $strip.gamma,
                         max_frames: $strip.max_frames,
-                        task: $snake($strip.name, _led_strip_device_task),
                     }
                 }
 
@@ -892,10 +898,10 @@ macro_schema::define! {
                     }
                 }
             } else {
-                $crate::__led_strip_type! {
+                $crate::led_strip::__led_strip_type! {
                     $strip.attrs
                     #[doc = $strip.doc]
-                    $decl.vis struct $strip.name {
+                    $decl.vis $strip.name {
                         pio: $decl.pio,
                         sm: $strip.index,
                         pin: $strip.pin,
@@ -904,7 +910,6 @@ macro_schema::define! {
                         dma: $strip.dma,
                         gamma: $strip.gamma,
                         max_frames: $strip.max_frames,
-                        task: $snake($strip.name, _device_task),
                     }
                 }
             }

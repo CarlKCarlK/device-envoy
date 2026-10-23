@@ -72,8 +72,37 @@ fn led_strips_members_inherit_the_group_visibility() -> Result<()> {
             }
         },
     )?;
-    assert_contains(&expanded, "pub struct S0 {");
+    assert_contains(&expanded, "crate::led_strip::__led_strip_type! {");
+    assert_contains(&expanded, "pub S0 { pio : PIO0, sm : 0,");
     assert_contains(&expanded, "pub struct LedStrips;");
+    Ok(())
+}
+
+#[test]
+fn led_strip_type_names_its_struct_and_task_after_the_declaration() -> Result<()> {
+    let expanded = expand(
+        RP_LED_STRIP,
+        "__led_strip_type",
+        quote! {
+            pub S0 {
+                pio: PIO0,
+                sm: 0,
+                pin: PIN_2,
+                len: 8,
+                max_current: Current::Milliamps(100),
+                dma: DMA_CH0,
+                gamma: Gamma::Srgb,
+                max_frames: 16,
+            }
+        },
+    )?;
+    assert_contains(&expanded, "pub struct S0 {");
+    assert_contains(&expanded, "async fn s0_device_task(");
+    assert_contains(
+        &expanded,
+        "::embassy_rp::peripherals::PIO0,
+        0,",
+    );
     Ok(())
 }
 

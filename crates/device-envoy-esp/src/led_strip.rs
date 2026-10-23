@@ -918,7 +918,7 @@ macro_rules! __led_strip_impl {
                 /// Construct the strip controller from an owned TX channel creator and GPIO pin.
                 ///
                 /// This configures a TX channel from a shared `rmt80` hub using
-                /// [`ws2812_tx_config`](crate::init_and_start::rmt::ws2812_tx_config).
+                /// [`ws2812_tx_config`](device_envoy_esp::init_and_start::rmt::ws2812_tx_config).
                 pub fn new(
                     pin: $crate::esp_hal::peripherals::$pin<'static>,
                     channel_creator: impl ::esp_hal::rmt::TxChannelCreator<

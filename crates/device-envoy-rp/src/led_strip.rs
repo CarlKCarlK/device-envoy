@@ -361,7 +361,7 @@ macro_rules! __led_strip_type {
     ) => {
         $crate::__paste! {
             $(#[$attr])*
-            #[doc = "\n\nImplements the [`LedStrip`](crate::led_strip::LedStrip) trait for LED control methods."]
+            #[doc = "\n\nImplements the [`LedStrip`](device_envoy_rp::led_strip::LedStrip) trait for LED control methods."]
             $vis struct $label {
                 strip: $crate::led_strip::LedStripRp<{ $len }, { $max_frames }>,
             }

@@ -581,7 +581,7 @@ macro_schema::define! {
         #[doc = $decl.doc]
         #[doc = concat!(
             "\n\n",
-            "See the [audio_player module documentation](mod@crate::audio_player) for usage and examples."
+            "See the [audio_player module documentation](mod@device_envoy_rp::audio_player) for usage and examples."
         )]
         $decl.vis struct $decl.name {
             player: $crate::audio_player::AudioPlayerRp<$decl.max_clips, { $decl.sample_rate_hz }>,
@@ -614,7 +614,7 @@ macro_schema::define! {
 
             /// Creates and spawns the generated audio player instance.
             ///
-            /// See the [audio_player module documentation](mod@crate::audio_player)
+            /// See the [audio_player module documentation](mod@device_envoy_rp::audio_player)
             /// for example usage.
             pub fn new(
                 data_pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.data_pin>>,

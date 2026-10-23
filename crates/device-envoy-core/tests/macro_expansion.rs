@@ -7,9 +7,14 @@
 //! they run on the host without compiling the RP or ESP HALs. In an expansion,
 //! `crate` is the crate that defines the macro.
 
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
 use macro_schema_core::{Error, Result};
 use pretty_assertions::assert_eq;
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::quote;
 use syn::{Attribute, Ident, Item, Visibility, parse::Parser};
 
@@ -150,6 +155,105 @@ fn pcm_clip_accepts_only_source_sample_rate_hz() -> Result<()> {
         )
     );
     Ok(())
+}
+
+/// Macros that expand only inside Device Envoy's own crates, where `crate::`
+/// in a doc link is correct.
+const INTERNAL_MACROS: [&str; 1] = ["__impl_wifi_auto_fields"];
+
+#[test]
+fn generated_doc_links_name_the_crate() -> core::result::Result<(), Box<dyn std::error::Error>> {
+    // Generated docs land in the user's crate, where `crate::` is the user's
+    // crate. Rustdoc renders such a link as a dead `href` without a warning.
+    let mut offenders = Vec::new();
+    for crate_dir in ["device-envoy-core", "device-envoy-rp", "device-envoy-esp"] {
+        let src = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join(crate_dir)
+            .join("src");
+        for path in rust_files(&src)? {
+            let file = syn::parse_file(&fs::read_to_string(&path)?)?;
+            for (name, tokens) in user_expanded_macros(&file.items) {
+                let text = tokens.to_string();
+                if text.contains("](crate::") || text.contains("](mod@crate::") {
+                    offenders.push(format!("{} (`{name}!`)", path.display()));
+                }
+            }
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "generated doc links use `crate::`; name the crate, as in `device_envoy_rp::`:\n{}",
+        offenders.join("\n")
+    );
+    Ok(())
+}
+
+/// The `.rs` files under `dir`, recursively.
+fn rust_files(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    for entry in fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            files.extend(rust_files(&path)?);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            files.push(path);
+        }
+    }
+    Ok(files)
+}
+
+/// The macro code in `items` that expands in a user's crate, by macro name:
+/// each `define!` block's `generate` template and each `#[macro_export]`
+/// `macro_rules!` body, except [`INTERNAL_MACROS`].
+fn user_expanded_macros(items: &[Item]) -> Vec<(String, TokenStream)> {
+    let mut found = Vec::new();
+    for item in items {
+        match item {
+            Item::Macro(item_macro) => {
+                let Some(last) = item_macro.mac.path.segments.last() else {
+                    continue;
+                };
+                if last.ident == "define" {
+                    if let Ok(name) = defined_name(item_macro.mac.tokens.clone())
+                        && let Some(template) = generate_template(item_macro.mac.tokens.clone())
+                    {
+                        found.push((name.to_string(), template));
+                    }
+                } else if last.ident == "macro_rules"
+                    && let Some(name) = &item_macro.ident
+                    && item_macro
+                        .attrs
+                        .iter()
+                        .any(|attr| attr.path().is_ident("macro_export"))
+                    && !INTERNAL_MACROS.contains(&name.to_string().as_str())
+                {
+                    found.push((name.to_string(), item_macro.mac.tokens.clone()));
+                }
+            }
+            Item::Mod(item_mod) => {
+                if let Some((_, items)) = &item_mod.content {
+                    found.extend(user_expanded_macros(items));
+                }
+            }
+            _ => {}
+        }
+    }
+    found
+}
+
+/// The body of the `generate { ... }` block in a `define!` input, if any.
+fn generate_template(tokens: TokenStream) -> Option<TokenStream> {
+    let mut tokens = tokens.into_iter();
+    while let Some(token) = tokens.next() {
+        if let TokenTree::Ident(ident) = &token
+            && ident == "generate"
+            && let Some(TokenTree::Group(group)) = tokens.next()
+        {
+            return Some(group.stream());
+        }
+    }
+    None
 }
 
 fn assert_contains(expanded: &str, expected: &str) {

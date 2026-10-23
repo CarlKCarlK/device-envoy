@@ -475,14 +475,14 @@ macro_schema::define! {
     generate {
         $for ir in $decl.members {
             static $upper($ir.name, _IR_STATIC): $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-            static $upper($ir.name, _KEPLER_CELL): ::static_cell::StaticCell<$ir.name> =
-                ::static_cell::StaticCell::new();
+            static $upper($ir.name, _KEPLER_CELL): $crate::__static_cell::StaticCell<$ir.name> =
+                $crate::__static_cell::StaticCell::new();
 
             $ir.attrs
             #[doc = $ir.doc]
             $decl.vis struct $ir.name {
                 ir_static: &'static $crate::ir::__IrStatic,
-                button_map: ::heapless::LinearMap<(u16, u8), $crate::ir::KeplerKeys, 21>,
+                button_map: $crate::__heapless::LinearMap<(u16, u8), $crate::ir::KeplerKeys, 21>,
             }
 
             impl $crate::ir::IrKepler for $ir.name {
@@ -621,14 +621,14 @@ macro_schema::define! {
     generate {
         $for ir in $decl.members {
             static $upper($ir.name, _IR_STATIC): $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-            static $upper($ir.name, _MAPPING_CELL): ::static_cell::StaticCell<$ir.name> =
-                ::static_cell::StaticCell::new();
+            static $upper($ir.name, _MAPPING_CELL): $crate::__static_cell::StaticCell<$ir.name> =
+                $crate::__static_cell::StaticCell::new();
 
             $ir.attrs
             #[doc = $ir.doc]
             $decl.vis struct $ir.name {
                 ir_static: &'static $crate::ir::__IrStatic,
-                button_map: ::heapless::LinearMap<(u16, u8), $decl.button, $decl.capacity>,
+                button_map: $crate::__heapless::LinearMap<(u16, u8), $decl.button, $decl.capacity>,
             }
 
             impl $crate::ir::IrMapping<$decl.button> for $ir.name {

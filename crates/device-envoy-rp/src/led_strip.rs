@@ -393,7 +393,7 @@ macro_rules! __led_strip_type {
             ) -> $crate::Result<&'static Self> {
                 static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> =
                     $label::new_static();
-                static STRIP_CELL: ::static_cell::StaticCell<$label> = ::static_cell::StaticCell::new();
+                static STRIP_CELL: $crate::__static_cell::StaticCell<$label> = $crate::__static_cell::StaticCell::new();
                 let pin = pin.into();
                 let dma = dma.into();
 
@@ -778,9 +778,9 @@ macro_schema::define! {
     generate {
         // A PIO resource belongs to one group. Two groups on the same PIO in one module
         // collide on this name, and the name explains the problem in the compile error.
-        static $upper($decl.pio, _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE): ::static_cell::StaticCell<
+        static $upper($decl.pio, _CAN_BE_USED_BY_ONLY_ONE_LED_STRIP_LED2D_OR_LED_STRIPS_PER_MODULE): $crate::__static_cell::StaticCell<
             $crate::led_strip::PioBus<'static, ::embassy_rp::peripherals::$decl.pio>
-        > = ::static_cell::StaticCell::new();
+        > = $crate::__static_cell::StaticCell::new();
 
         $for strip in $decl.members {
             $if let Some(panel) = $strip.led2d {

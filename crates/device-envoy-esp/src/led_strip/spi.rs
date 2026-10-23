@@ -264,10 +264,10 @@ macro_rules! __led_strip_spi_impl {
                 /// Construct the strip controller from a MOSI pin and SPI peripheral.
                 pub fn new(
                     pin: $crate::esp_hal::peripherals::$pin<'static>,
-                    spi: impl ::esp_hal::spi::master::Instance + 'static,
+                    spi: impl $crate::esp_hal::spi::master::Instance + 'static,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    use ::static_cell::StaticCell;
+                    use $crate::__static_cell::StaticCell;
 
                     static INSTANCE: StaticCell<$name> = StaticCell::new();
                     static COMBO: StaticCell<[u8; 256]> = StaticCell::new();

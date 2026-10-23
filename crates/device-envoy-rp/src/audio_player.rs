@@ -571,8 +571,8 @@ macro_schema::define! {
                 $decl.max_volume,
                 $decl.initial_volume,
             );
-        static $upper($decl.name, _AUDIO_PLAYER_CELL): ::static_cell::StaticCell<$decl.name> =
-            ::static_cell::StaticCell::new();
+        static $upper($decl.name, _AUDIO_PLAYER_CELL): $crate::__static_cell::StaticCell<$decl.name> =
+            $crate::__static_cell::StaticCell::new();
 
         $decl.attrs
         #[doc = $decl.doc]

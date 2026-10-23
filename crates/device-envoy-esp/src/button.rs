@@ -223,8 +223,8 @@ macro_schema::define! {
             ) -> $crate::Result<&'static mut Self> {
                 static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticEsp =
                     $crate::button::ButtonWatchEsp::new_static();
-                static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$decl.name> =
-                    ::static_cell::StaticCell::new();
+                static BUTTON_WATCH_CELL: $crate::__static_cell::StaticCell<$decl.name> =
+                    $crate::__static_cell::StaticCell::new();
 
                 let button_watch = $crate::button::ButtonWatchEsp::new_from_pin(
                     &BUTTON_WATCH_STATIC,

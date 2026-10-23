@@ -324,8 +324,8 @@ macro_schema::define! {
             pub const fn new_static() -> $ident($decl.name, Static) {
                 $ident($decl.name, Static) {
                     servo_static: $crate::servo::ServoStatic::new_static(
-                        ::esp_hal::ledc::timer::Number::$decl.timer,
-                        ::esp_hal::ledc::channel::Number::$decl.channel,
+                        $crate::esp_hal::ledc::timer::Number::$decl.timer,
+                        $crate::esp_hal::ledc::channel::Number::$decl.channel,
                         $decl.min_us,
                         $decl.max_us,
                         $decl.max_degrees,
@@ -335,8 +335,8 @@ macro_schema::define! {
             }
 
             pub fn new(
-                ledc: &::esp_hal::ledc::Ledc<'static>,
-                pin: ::esp_hal::peripherals::$decl.pin<'static>,
+                ledc: &$crate::esp_hal::ledc::Ledc<'static>,
+                pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
             ) -> $crate::Result<$crate::servo::ServoEsp> {
                 $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC).servo_static, ledc, pin)
             }

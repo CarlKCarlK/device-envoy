@@ -71,6 +71,13 @@ pub use macro_schema::expand as __macro_schema_expand;
 #[doc(hidden)]
 pub use paste::paste as __paste;
 
+// Must be `pub` for macro expansion: generated code names these crates through
+// `$crate`, so the user's crate need not depend on them.
+#[doc(hidden)]
+pub use heapless as __heapless;
+#[doc(hidden)]
+pub use static_cell as __static_cell;
+
 pub mod button;
 // Crate-root path kept for `use device_envoy_esp::button_watch;`; documented in `button`.
 #[cfg(target_os = "none")]

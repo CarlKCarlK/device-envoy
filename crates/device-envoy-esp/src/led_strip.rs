@@ -921,13 +921,13 @@ macro_rules! __led_strip_impl {
                 /// [`ws2812_tx_config`](device_envoy_esp::init_and_start::rmt::ws2812_tx_config).
                 pub fn new(
                     pin: $crate::esp_hal::peripherals::$pin<'static>,
-                    channel_creator: impl ::esp_hal::rmt::TxChannelCreator<
+                    channel_creator: impl $crate::esp_hal::rmt::TxChannelCreator<
                         'static,
-                        ::esp_hal::Blocking,
+                        $crate::esp_hal::Blocking,
                     >,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    use ::static_cell::StaticCell;
+                    use $crate::__static_cell::StaticCell;
 
                     static INSTANCE: StaticCell<$name> = StaticCell::new();
                     static COMBO: StaticCell<[u8; 256]> = StaticCell::new();

@@ -218,8 +218,8 @@ macro_schema::define! {
     generate {
         static $upper($decl.name, _SERVO_PLAYER_STATIC): $crate::servo::ServoPlayerStatic<$decl.max_steps> =
             $crate::servo::ServoPlayerHandle::<$decl.max_steps>::new_static();
-        static $upper($decl.name, _SERVO_PLAYER_CELL): ::static_cell::StaticCell<$decl.name> =
-            ::static_cell::StaticCell::new();
+        static $upper($decl.name, _SERVO_PLAYER_CELL): $crate::__static_cell::StaticCell<$decl.name> =
+            $crate::__static_cell::StaticCell::new();
 
         $decl.attrs
         #[doc = $decl.doc]

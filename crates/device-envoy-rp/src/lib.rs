@@ -46,6 +46,15 @@ pub use audio_player::audio_player;
 #[doc(hidden)]
 pub use macro_schema::expand as __macro_schema_expand;
 
+// Must be `pub` for macro expansion: generated code names these crates through
+// `$crate`, so the user's crate need not depend on them.
+#[doc(hidden)]
+pub use embassy_sync as __embassy_sync;
+#[doc(hidden)]
+pub use heapless as __heapless;
+#[doc(hidden)]
+pub use static_cell as __static_cell;
+
 #[cfg(target_os = "none")]
 pub mod button;
 // Crate-root path kept for `use device_envoy_rp::button_watch;`; documented in `button`.

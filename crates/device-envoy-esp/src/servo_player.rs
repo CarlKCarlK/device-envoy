@@ -108,8 +108,8 @@ macro_schema::define! {
 
         static $upper($decl.name, _SERVO_STATIC): $crate::servo::ServoStatic =
             $crate::servo::ServoStatic::new_static(
-                ::esp_hal::ledc::timer::Number::$decl.timer,
-                ::esp_hal::ledc::channel::Number::$decl.channel,
+                $crate::esp_hal::ledc::timer::Number::$decl.timer,
+                $crate::esp_hal::ledc::channel::Number::$decl.channel,
                 $decl.min_us,
                 $decl.max_us,
                 $decl.max_degrees,
@@ -126,8 +126,8 @@ macro_schema::define! {
 
             /// Create the servo player and spawn its background task.
             pub fn new(
-                ledc: &::esp_hal::ledc::Ledc<'static>,
-                pin: ::esp_hal::peripherals::$decl.pin<'static>,
+                ledc: &$crate::esp_hal::ledc::Ledc<'static>,
+                pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<$crate::servo::ServoPlayerHandle<{ $decl.max_steps }>> {
                 let servo = $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC), ledc, pin)?;

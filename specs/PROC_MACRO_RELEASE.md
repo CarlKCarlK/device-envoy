@@ -62,6 +62,18 @@ inventory, the API regularization, and the macros intentionally left as
 - Later, not this release: group those constructors' arguments into structs
   (pins, presentation, calibration), as their doc examples already group them
   with comments. A breaking change.
+- [x] Generated code no longer requires users to depend on `paste`,
+      `static_cell`, `heapless`, or `embassy_sync`: it reaches them through
+      hidden `$crate::__*` re-exports (2026-10-23). The starters dropped those
+      dependencies.
+- [x] `led2d_from_strip!` is now template text in `led_strips!`, and
+      `__led_strip_type!` takes its task name from the template instead of
+      `paste!`. `__led_strip_type!` stays a helper: its two calls differ only
+      in the struct's name and attributes, which the template language cannot
+      bind per branch (see the survey).
+- [x] Generated doc links name `device_envoy_rp::` / `device_envoy_esp::`
+      instead of `crate::`, which in generated code is the user's crate; a host
+      test rejects `crate::` links in generated docs.
 - [ ] CI gap: the GitHub `Check All` workflow runs only the top-level
       `cargo check-all`, which does not run RP `check-compile-only` or ESP
       `check-embedded-tests`, where most macro compile tests live. Run them

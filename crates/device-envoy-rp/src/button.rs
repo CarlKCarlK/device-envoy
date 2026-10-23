@@ -222,8 +222,8 @@ macro_schema::define! {
             ) -> $crate::Result<&'static mut Self> {
                 static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticRp =
                     $crate::button::ButtonWatchStaticRp::new();
-                static BUTTON_WATCH_CELL: ::static_cell::StaticCell<$decl.name> =
-                    ::static_cell::StaticCell::new();
+                static BUTTON_WATCH_CELL: $crate::__static_cell::StaticCell<$decl.name> =
+                    $crate::__static_cell::StaticCell::new();
 
                 let pin = pin.into();
                 let task_token = $snake($decl.name, _task)(
@@ -286,20 +286,20 @@ macro_schema::define! {
         async fn $snake($decl.name, _task)(
             pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>,
             pressed_to: $crate::button::PressedTo,
-            signal: &'static ::embassy_sync::signal::Signal<
-                ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+            signal: &'static $crate::__embassy_sync::signal::Signal<
+                $crate::__embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
                 $crate::button::PressDuration
             >,
-            state_signal: &'static ::embassy_sync::signal::Signal<
-                ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+            state_signal: &'static $crate::__embassy_sync::signal::Signal<
+                $crate::__embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
                 bool
             >,
-            state_changed_signal: &'static ::embassy_sync::signal::Signal<
-                ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+            state_changed_signal: &'static $crate::__embassy_sync::signal::Signal<
+                $crate::__embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
                 ()
             >,
-            initialized_signal: &'static ::embassy_sync::signal::Signal<
-                ::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+            initialized_signal: &'static $crate::__embassy_sync::signal::Signal<
+                $crate::__embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
                 ()
             >,
             is_pressed: &'static ::core::sync::atomic::AtomicBool,

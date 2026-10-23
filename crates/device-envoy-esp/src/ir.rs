@@ -313,8 +313,8 @@ macro_schema::define! {
     generate {
         // A self-contained receiver: it owns its RMT channel and background task.
         static $upper($decl.name, _IR_STATIC): $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-        static $upper($decl.name, _KEPLER_CELL): ::static_cell::StaticCell<$decl.name> =
-            ::static_cell::StaticCell::new();
+        static $upper($decl.name, _KEPLER_CELL): $crate::__static_cell::StaticCell<$decl.name> =
+            $crate::__static_cell::StaticCell::new();
 
         #[::embassy_executor::task]
         async fn $snake(__, $decl.name, _ir_receiver_task)(
@@ -328,7 +328,7 @@ macro_schema::define! {
         #[doc = $decl.doc]
         $decl.vis struct $decl.name {
             ir_static: &'static $crate::ir::__IrStatic,
-            button_map: ::heapless::LinearMap<(u16, u8), $crate::ir::KeplerKeys, 21>,
+            button_map: $crate::__heapless::LinearMap<(u16, u8), $crate::ir::KeplerKeys, 21>,
         }
 
         impl $decl.name {
@@ -439,8 +439,8 @@ macro_schema::define! {
     generate {
         // A self-contained receiver: it owns its RMT channel and background task.
         static $upper($decl.name, _IR_STATIC): $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-        static $upper($decl.name, _MAPPING_CELL): ::static_cell::StaticCell<$decl.name> =
-            ::static_cell::StaticCell::new();
+        static $upper($decl.name, _MAPPING_CELL): $crate::__static_cell::StaticCell<$decl.name> =
+            $crate::__static_cell::StaticCell::new();
 
         #[::embassy_executor::task]
         async fn $snake(__, $decl.name, _ir_receiver_task)(
@@ -454,7 +454,7 @@ macro_schema::define! {
         #[doc = $decl.doc]
         $decl.vis struct $decl.name {
             ir_static: &'static $crate::ir::__IrStatic,
-            button_map: ::heapless::LinearMap<(u16, u8), $decl.button, $decl.capacity>,
+            button_map: $crate::__heapless::LinearMap<(u16, u8), $decl.button, $decl.capacity>,
         }
 
         impl $decl.name {

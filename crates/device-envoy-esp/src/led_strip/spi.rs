@@ -101,6 +101,16 @@ impl<'d, const LEDS: usize, const BYTES: usize> SpiWs2812<'d, LEDS, BYTES> {
     }
 }
 
+impl<const LEDS: usize, const BYTES: usize> super::Ws2812Write<LEDS>
+    for SpiWs2812<'_, LEDS, BYTES>
+{
+    type Error = Error;
+
+    fn write(&mut self, frame: &Frame1d<LEDS>) -> core::result::Result<(), Error> {
+        SpiWs2812::write(self, frame)
+    }
+}
+
 /// Errors returned by [`SpiWs2812::write`].
 #[derive(Debug)]
 pub enum Error {

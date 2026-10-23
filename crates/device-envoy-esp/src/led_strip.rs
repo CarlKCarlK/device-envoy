@@ -173,6 +173,114 @@ impl Default for Engine {
     }
 }
 
+/// Drive the LEDs from an [RMT resource](crate#glossary).
+#[derive(Clone, Copy, Debug)]
+pub struct Rmt;
+
+/// Drive the LEDs from an [SPI resource](crate#glossary).
+#[derive(Clone, Copy, Debug)]
+pub struct Spi;
+
+/// An output engine for WS2812 LEDs: [`Rmt`] or [`Spi`].
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not an LED engine on this chip",
+    note = "chips without an RMT peripheral support only `Spi`"
+)]
+pub trait LedEngine {
+    #[doc(hidden)]
+    type Driver<const LEDS: usize, const BUF: usize>: Ws2812Write<LEDS>;
+    #[doc(hidden)]
+    const BUF_UNITS_PER_LED: usize;
+    #[doc(hidden)]
+    const USES_RESET_GAP: bool;
+}
+
+#[cfg(all(target_os = "none", esp_has_rmt))]
+impl LedEngine for Rmt {
+    type Driver<const LEDS: usize, const BUF: usize> = RmtWs2812<'static, LEDS, BUF>;
+    const BUF_UNITS_PER_LED: usize = 24;
+    const USES_RESET_GAP: bool = false;
+}
+
+#[cfg(target_os = "none")]
+impl LedEngine for Spi {
+    type Driver<const LEDS: usize, const BUF: usize> = spi::SpiWs2812<'static, LEDS, BUF>;
+    const BUF_UNITS_PER_LED: usize = 9;
+    const USES_RESET_GAP: bool = true;
+}
+
+/// The engine a strip uses when its declaration names none: RMT where the chip has it.
+#[cfg(esp_has_rmt)]
+pub type DefaultEngine = Rmt;
+/// The engine a strip uses when its declaration names none: RMT where the chip has it.
+#[cfg(not(esp_has_rmt))]
+pub type DefaultEngine = Spi;
+
+/// Transmit-buffer length for `leds` pixels: RMT pulses plus an end marker, or SPI bytes
+/// plus the reset gap.
+#[doc(hidden)]
+#[must_use]
+pub const fn engine_buffer_len<E: LedEngine>(leds: usize, reset_us: u32) -> usize {
+    if E::USES_RESET_GAP {
+        leds * E::BUF_UNITS_PER_LED + spi::reset_bytes_for_us(reset_us)
+    } else {
+        leds * E::BUF_UNITS_PER_LED + 1
+    }
+}
+
+/// Writes one frame of WS2812 pixels to the wire.
+#[doc(hidden)]
+pub trait Ws2812Write<const LEDS: usize> {
+    /// Why a write failed.
+    type Error: core::fmt::Debug;
+    /// Sends `frame` to the LEDs.
+    fn write(&mut self, frame: &Frame1d<LEDS>) -> core::result::Result<(), Self::Error>;
+}
+
+/// A peripheral that can drive engine `E`: an RMT channel creator for [`Rmt`], an SPI
+/// instance for [`Spi`].
+#[doc(hidden)]
+pub trait EngineResource<E: LedEngine> {
+    /// Builds the driver for a strip of `LEDS` pixels on `pin`.
+    fn into_driver<const LEDS: usize, const BUF: usize>(
+        self,
+        pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        reset_us: u32,
+    ) -> crate::Result<E::Driver<LEDS, BUF>>;
+}
+
+#[cfg(all(target_os = "none", esp_has_rmt))]
+impl<C> EngineResource<Rmt> for C
+where
+    C: esp_hal::rmt::TxChannelCreator<'static, esp_hal::Blocking>,
+{
+    fn into_driver<const LEDS: usize, const BUF: usize>(
+        self,
+        pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        _reset_us: u32,
+    ) -> crate::Result<RmtWs2812<'static, LEDS, BUF>> {
+        let channel = self
+            .configure_tx(&crate::init_and_start::rmt::ws2812_tx_config())
+            .map_err(crate::Error::RmtConfig)?
+            .with_pin(pin);
+        Ok(RmtWs2812::new(channel))
+    }
+}
+
+#[cfg(target_os = "none")]
+impl<S> EngineResource<Spi> for S
+where
+    S: esp_hal::spi::master::Instance + 'static,
+{
+    fn into_driver<const LEDS: usize, const BUF: usize>(
+        self,
+        pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
+        reset_us: u32,
+    ) -> crate::Result<spi::SpiWs2812<'static, LEDS, BUF>> {
+        spi::SpiWs2812::new(self, pin, spi::reset_bytes_for_us(reset_us))
+    }
+}
+
 // Must be `pub` for macro expansion at foreign call sites.
 // This is an implementation detail, not part of the user-facing API.
 #[doc(hidden)]
@@ -184,9 +292,9 @@ pub const CURRENT_DEFAULT: Current = Current::Milliamps(250);
 // RMT driver (ESP32-specific)
 // ============================================================================
 
-#[cfg(all(target_os = "none", esp_has_rmt))]
+#[cfg(target_os = "none")]
 use embassy_futures::select::{Either, select};
-#[cfg(all(target_os = "none", esp_has_rmt))]
+#[cfg(target_os = "none")]
 use embassy_time::Timer;
 
 #[cfg(all(target_os = "none", esp_has_rmt))]
@@ -273,6 +381,15 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
 }
 
 #[cfg(all(target_os = "none", esp_has_rmt))]
+impl<const LEDS: usize, const PULSES: usize> Ws2812Write<LEDS> for RmtWs2812<'_, LEDS, PULSES> {
+    type Error = Error;
+
+    fn write(&mut self, frame: &Frame1d<LEDS>) -> core::result::Result<(), Error> {
+        RmtWs2812::write(self, frame)
+    }
+}
+
+#[cfg(all(target_os = "none", esp_has_rmt))]
 #[doc(hidden)]
 /// Errors returned by [`RmtWs2812::write`].
 #[derive(Debug)]
@@ -297,14 +414,9 @@ pub enum Error {
 ///
 /// `#[doc(hidden)]` — called exclusively from macro-generated task code.
 #[doc(hidden)]
-#[cfg(all(target_os = "none", esp_has_rmt))]
-pub async fn led_strip_device_loop<
-    'd,
-    const LEDS: usize,
-    const PULSES: usize,
-    const MAX_FRAMES: usize,
->(
-    mut driver: RmtWs2812<'d, LEDS, PULSES>,
+#[cfg(target_os = "none")]
+pub async fn led_strip_device_loop<const LEDS: usize, const MAX_FRAMES: usize>(
+    mut driver: impl Ws2812Write<LEDS>,
     command_signal: &'static LedStripCommandSignal<LEDS, MAX_FRAMES>,
     combo_table: &'static [u8; 256],
 ) -> ! {
@@ -431,8 +543,8 @@ macro_schema::define! {
         /// the default, so set it explicitly when their total matters.
         #[default_display = "Current::Milliamps(250)"]
         max_current: expr = $crate::led_strip::CURRENT_DEFAULT,
-        /// Output engine, `Engine::Rmt` or `Engine::Spi`; defaults to RMT on RMT-capable chips, otherwise SPI.
-        engine?: expr,
+        /// Output engine, `Rmt` or `Spi`; defaults to RMT on RMT-capable chips, otherwise SPI.
+        engine?: ty,
         /// Color correction curve.
         #[default_display = "Gamma::Srgb"]
         gamma: expr = $crate::led_strip::GAMMA_DEFAULT,
@@ -444,13 +556,115 @@ macro_schema::define! {
     }
 
     generate {
-        // Engine selection is value-based, so it stays in the backend: an optional
-        // `engine` is reduced to `Spi`/`Rmt` (or the chip default) and dispatched there.
-        $crate::__led_engine_normalize! {
-            strip,
-            [$if let Some(chosen) = $decl.engine { $chosen }],
-            { [$decl.attrs #[doc = $decl.doc]], [$decl.vis], $decl.name, $decl.pin, $decl.len, $decl.max_current, },
-            { [$decl.gamma], [$decl.max_frames], [$if let Some(interval) = $decl.reset_us { $interval }], }
+        // The engine is a type: the one named, or the chip's default. Everything that
+        // differs between engines goes through its `LedEngine` and `EngineResource` impls.
+        type $ident($decl.name, Engine) =
+            $if let Some(engine) = $decl.engine { $engine } else { $crate::led_strip::DefaultEngine };
+
+        // Evaluated here, in the caller's scope, so `len` and `reset_us` may name the
+        // caller's items.
+        const $upper($decl.name, _LEDS): usize = $decl.len;
+        const $upper($decl.name, _RESET_US): u32 =
+            $if let Some(interval) = $decl.reset_us { $interval } else { $crate::led_strip::spi::RESET_US_DEFAULT };
+        const $upper($decl.name, _BUF): usize =
+            $crate::led_strip::engine_buffer_len::<$ident($decl.name, Engine)>(
+                $upper($decl.name, _LEDS),
+                $upper($decl.name, _RESET_US),
+            );
+        $if let Some(interval) = $decl.reset_us {
+            const _: () = assert!(
+                <$ident($decl.name, Engine) as $crate::led_strip::LedEngine>::USES_RESET_GAP,
+                "`reset_us` applies only to the `Spi` engine"
+            );
+        }
+
+        static $upper($decl.name, _STATIC): $crate::led_strip::LedStripStatic<
+            { $upper($decl.name, _LEDS) },
+            { $decl.max_frames },
+        > = $crate::led_strip::LedStripEsp::new_static();
+
+        $decl.attrs
+        #[doc = $decl.doc]
+        $decl.vis struct $decl.name {
+            inner: $crate::led_strip::LedStripEsp<{ $upper($decl.name, _LEDS) }, { $decl.max_frames }>,
+        }
+
+        impl $decl.name {
+            /// Number of pixels in this strip.
+            pub const LEN: usize = $upper($decl.name, _LEDS);
+            /// Maximum number of animation frames.
+            pub const MAX_FRAMES: usize = $decl.max_frames;
+            /// Maximum per-channel brightness (0–255) computed from `max_current`.
+            pub const MAX_BRIGHTNESS: u8 = <$crate::led_strip::Current>::max_brightness(
+                $decl.max_current,
+                $upper($decl.name, _LEDS) as u32 * 60,
+            );
+            /// Combined gamma and brightness lookup table.
+            pub const COMBO_TABLE: [u8; 256] =
+                $crate::led_strip::generate_combo_table($decl.gamma, Self::MAX_BRIGHTNESS);
+
+            /// Creates the strip and spawns its background task. `resource` is the engine's
+            /// peripheral: an RMT channel creator for `Rmt`, or an SPI instance for `Spi`.
+            pub fn new(
+                pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
+                resource: impl $crate::led_strip::EngineResource<$ident($decl.name, Engine)>,
+                spawner: ::embassy_executor::Spawner,
+            ) -> $crate::Result<&'static Self> {
+                static INSTANCE: $crate::__static_cell::StaticCell<$decl.name> =
+                    $crate::__static_cell::StaticCell::new();
+                static COMBO: $crate::__static_cell::StaticCell<[u8; 256]> =
+                    $crate::__static_cell::StaticCell::new();
+
+                let combo_table: &'static [u8; 256] = COMBO.init(Self::COMBO_TABLE);
+                let driver = resource.into_driver::<{ $upper($decl.name, _LEDS) }, { $upper($decl.name, _BUF) }>(
+                    pin,
+                    $upper($decl.name, _RESET_US),
+                )?;
+                let strip_static = &$upper($decl.name, _STATIC);
+                spawner.spawn(
+                    $snake($decl.name, _device_task)(driver, strip_static, combo_table)
+                        .map_err($crate::Error::TaskSpawn)?,
+                );
+                Ok(INSTANCE.init($decl.name {
+                    inner: $crate::led_strip::LedStripEsp::new(strip_static),
+                }))
+            }
+        }
+
+        impl $crate::led_strip::LedStrip<{ $upper($decl.name, _LEDS) }> for $decl.name {
+            const MAX_FRAMES: usize = $decl.max_frames;
+            const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
+
+            fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $upper($decl.name, _LEDS) }>) {
+                $crate::led_strip::__write_frame(self.inner.__command_signal(), frame);
+            }
+
+            fn animate<I>(&self, frames: I)
+            where
+                I: IntoIterator,
+                I::Item: ::core::borrow::Borrow<(
+                    $crate::led_strip::Frame1d<{ $upper($decl.name, _LEDS) }>,
+                    ::embassy_time::Duration,
+                )>,
+            {
+                $crate::led_strip::__animate(self.inner.__command_signal(), frames);
+            }
+        }
+
+        #[::embassy_executor::task]
+        async fn $snake($decl.name, _device_task)(
+            driver: <$ident($decl.name, Engine) as $crate::led_strip::LedEngine>::Driver<
+                { $upper($decl.name, _LEDS) },
+                { $upper($decl.name, _BUF) },
+            >,
+            strip_static: &'static $crate::led_strip::LedStripStatic<
+                { $upper($decl.name, _LEDS) },
+                { $decl.max_frames },
+            >,
+            combo_table: &'static [u8; 256],
+        ) {
+            $crate::led_strip::led_strip_device_loop(driver, strip_static.command_signal(), combo_table)
+                .await;
         }
     }
 }

@@ -18,7 +18,7 @@
 //! **After reading the examples below, see also:**
 //!
 //! - [`led_strip!`](macro@crate::led_strip) - Macro to generate an LED-strip struct type (includes syntax details).
-//! - [`LedStrip`](`crate::led_strip::LedStrip`) - Core trait defining the LED strip API surface.
+//! - [`LedStrip`] - Core trait defining the LED strip API surface.
 //! - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) - Sample generated strip type showing the constructor path.
 //! - [`Frame1d`] - 1D pixel array used to describe LED strip patterns.
 //!
@@ -419,7 +419,7 @@ macro_schema::define! {
     ///
     /// # Related Macros
     ///
-    /// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
+    /// - [`led2d!`](macro@crate::led2d) — For 2-dimensional LED panels
     #[cfg(target_os = "none")]
     pub led_strip {
         /// GPIO pin for LED data, for example `GPIO8`.

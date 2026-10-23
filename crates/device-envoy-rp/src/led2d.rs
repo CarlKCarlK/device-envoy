@@ -12,7 +12,7 @@
 //! **After reading the examples below, see also:**
 //!
 //! - [`led2d!`](macro@crate::led2d) — Macro to generate an LED-panel struct type (includes syntax details).
-//! - [`Led2d`](`crate::led2d::Led2d`) — Core trait that defines the LED panel API surface.
+//! - [`Led2d`] — Core trait that defines the LED panel API surface.
 //! - [`Led2dGenerated`](led2d_generated::Led2dGenerated) — Sample generated panel type showing the constructor path.
 //! - [`LedLayout`] — Compile-time description of panel geometry and wiring, including dimensions (with examples)
 //! - [`Frame2d`] — 2D pixel array used for general graphics (includes examples)
@@ -317,7 +317,7 @@ macro_rules! led2d_from_strip {
 }
 
 macro_schema::define! {
-    /// Macro to generate an LED-panel struct type. See [`Led2d`](`crate::led2d::Led2d`) for the shared API.
+    /// Macro to generate an LED-panel struct type. See [`Led2d`](crate::led2d::Led2d) for the shared API.
     ///
     /// **See the [led2d module](mod@crate::led2d) for usage examples.**
     ///

@@ -26,7 +26,7 @@
 //! **After reading the examples below, see also:**
 //!
 //! - [`led_strip!`](macro@crate::led_strip) — Macro to generate an LED strip struct type (includes syntax details).
-//! - [`LedStrip`](`crate::led_strip::LedStrip`) — Core trait defining the LED strip API surface.
+//! - [`LedStrip`] — Core trait defining the LED strip API surface.
 //! - [`LedStripGenerated`](led_strip_generated::LedStripGenerated) — Sample generated strip type showing the constructor path.
 //! - [`Frame1d`] — 1D pixel array used to describe LED strip patterns.
 //! - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples).
@@ -490,7 +490,7 @@ macro_schema::define! {
     /// # Related Macros
     ///
     /// - [`led_strips!`](crate::led_strips) — Alternative macro to share a PIO resource with other strips or panels (includes examples)
-    /// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
+    /// - [`led2d!`](macro@crate::led2d) — For 2-dimensional LED panels
     ///
     #[cfg(not(feature = "host"))]
     pub led_strip {
@@ -565,10 +565,10 @@ macro_schema::define! {
     ///
     /// **After reading the examples below, see also:**
     ///
-    /// - [`LedStrip`](`crate::led_strip::LedStrip`) — LED **strip** trait defining methods and associated constants
-    /// - [`Led2d`](crate::led2d::Led2d) — LED **panel** trait defining methods and associated constants
+    /// - [`LedStrip`](crate::led_strip::LedStrip) — LED strip trait defining methods and associated constants
+    /// - [`Led2d`](crate::led2d::Led2d) — LED panel trait defining methods and associated constants
     /// - [`led_strip!`](macro@crate::led_strip) — Alternative macro to generate a single LED strip type. Consumes a PIO resource.
-    /// - [`led2d!`](mod@crate::led2d) — Alternative macro to generate a single LED panel type. Consumes a PIO resource.
+    /// - [`led2d!`](macro@crate::led2d) — Alternative macro to generate a single LED panel type. Consumes a PIO resource.
     ///
     /// Use this macro when your project has multiple LED strips or panels
     /// that should share a single PIO resource.
@@ -722,7 +722,7 @@ macro_schema::define! {
     /// # Related Macros
     ///
     /// - [`led_strip!`](macro@crate::led_strip) — For a single 1-dimensional LED strip (includes examples)
-    /// - [`led2d!`](mod@crate::led2d) — For 2-dimensional LED panels
+    /// - [`led2d!`](macro@crate::led2d) — For 2-dimensional LED panels
     #[cfg_attr(
         feature = "doc-images",
         doc = ::embed_doc_image::embed_image!(

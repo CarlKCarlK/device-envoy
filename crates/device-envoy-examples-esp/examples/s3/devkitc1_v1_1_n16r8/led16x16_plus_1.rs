@@ -51,7 +51,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("led16x16_plus_1: panel on GPIO2, strip1 LED on GPIO38 (esp32-s3-devkitc-1-v1.1-n16r8)");
 

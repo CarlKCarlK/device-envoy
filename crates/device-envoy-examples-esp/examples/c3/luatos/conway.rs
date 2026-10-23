@@ -47,7 +47,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?.into_async();
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let led16x16 = Led16x16::new(p.GPIO2, p.SPI2, spawner)?;

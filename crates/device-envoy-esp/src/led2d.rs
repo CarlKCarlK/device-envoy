@@ -54,7 +54,8 @@
 //! #     panic!("{err:?}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+//!     init_and_start!(p);
+//!     let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 //!
 //!     // Create a device abstraction for the LED panel.
 //!     // Behind the scenes, this creates a channel and background task to manage the display.
@@ -110,7 +111,8 @@
 //! #     panic!("{err:?}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+//!     init_and_start!(p);
+//!     let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 //!
 //!     // Create a device abstraction for the rotated LED panel.
 //!     let led12x8_animated = Led12x8Animated::new(p.GPIO18, rmt80.channel0, spawner)?;

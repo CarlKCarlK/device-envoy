@@ -111,10 +111,9 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    #[cfg(esp_has_rmt)]
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    #[cfg(not(esp_has_rmt))]
     init_and_start!(p);
+    #[cfg(esp_has_rmt)]
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 
     assert_eq!(panel::LedPanelSpi::LEN, 1);
     assert_eq!(panel::LedPanelDefault::LEN, 1);

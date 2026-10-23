@@ -208,6 +208,10 @@ pub mod cyd;
 mod cyd_buffer_host_tests;
 pub mod flash_block;
 pub mod init_and_start;
+#[cfg(all(target_os = "none", esp_has_ledc))]
+pub use init_and_start::new_ledc;
+#[cfg(all(target_os = "none", esp_has_rmt))]
+pub use rmt::new_rmt80;
 #[cfg(esp_has_rmt)]
 pub mod ir;
 // Crate-root path kept for `use device_envoy_esp::irs;`; documented in `ir`.
@@ -267,7 +271,6 @@ pub use led_strip::led_strip;
 pub mod rfid;
 #[cfg(esp_has_rmt)]
 mod rmt;
-mod rmt_mode;
 #[cfg(all(target_os = "none", esp_has_ledc))]
 pub mod servo;
 #[cfg(all(target_os = "none", esp_has_ledc))]

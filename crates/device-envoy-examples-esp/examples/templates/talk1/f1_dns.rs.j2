@@ -52,7 +52,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     let led8x12 = Led8x12::new(p.GPIO{{ panel12x8_pin }}, rmt80.channel0, spawner)?;
 
     // Flash stores WiFi credentials after first setup

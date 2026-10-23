@@ -93,11 +93,12 @@ Work in this order; each step is verified on both chips before the next.
       proved it on C6, ESP32, and C2 (`esp-engine-trait-spike`). Remaining:
       `led2d!`, delete the 14 dispatch `macro_rules!`, one shared device loop,
       remove `enum Engine`, and update every `engine: Engine::X` call site.
-- [ ] **LED write errors.** Recover the RMT channel when a transmission fails
+- [x] **LED write errors.** Done 2026-10-23. Recover the RMT channel when a transmission fails
       to start (today one failure kills the strip silently and permanently),
       and report write failures instead of `let _ = driver.write(..)`.
-- [ ] **`init_and_start!` becomes functions** returning `Result`: no
-      permutation list, no `.expect`.
+- [x] **`init_and_start!(p)` keeps one arm**; shared peripherals come from
+      `new_rmt80(p.RMT)?` and `new_ledc(p.LEDC)`, so callers choose `?` or
+      `.expect`. No permutation list, no `.expect` inside (2026-10-23).
 - [ ] **`combine!` defined once** in core and re-exported (RP and ESP copies
       are identical).
 - [ ] **`impl_wifi_pio`**: drop `defmt::unwrap!` and `paste!`.

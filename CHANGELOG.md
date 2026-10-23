@@ -61,6 +61,13 @@ Syntax changes:
   `engine: Spi` or `engine: Rmt` (from `device_envoy_esp::led_strip`) instead
   of `engine: Engine::Spi`. `Engine` is gone. Naming `Rmt` on a chip without
   an RMT peripheral is a compile error that says so.
+- ESP `init_and_start!` takes only the peripherals binding:
+  `init_and_start!(p);`. Create shared peripherals with functions, so you
+  choose how to handle errors: `let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;`
+  (add `.into_async()` for async devices) and
+  `let ledc = device_envoy_esp::new_ledc(p.LEDC);`. The `rmt80:`, `mode:`, and
+  `ledc:` options and the `rmt_mode` module are gone, and the macro no longer
+  panics if RMT setup fails.
 - In `led_strips!`, `max_frames` for a panel is set on the member rather than
   inside its `led2d` block.
 - `pio_split!` has been removed.
@@ -73,6 +80,11 @@ Behavior changes and fixes:
   without it.
 - ESP strip `len` and `reset_us` can name constants private to the caller's
   module.
+- An ESP RMT LED strip no longer goes permanently dark after one failed
+  transmission: the driver keeps its RMT channel, and write failures are logged
+  as warnings instead of being dropped.
+- Generated code no longer requires your crate to depend on `paste`,
+  `static_cell`, `heapless`, or `embassy_sync`.
 - Two RP LED groups on one PIO in one module, ESP LEDC channel clashes, and
   duplicate LCD addresses fail to compile with errors that name the rule.
 

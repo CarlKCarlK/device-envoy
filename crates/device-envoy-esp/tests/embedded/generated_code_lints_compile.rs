@@ -55,7 +55,9 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking, ledc: ledc);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
 
     let status_led = StatusLed::new(p.GPIO0, OnLevel::High, spawner)?;
     let busy_led = BusyLed::new(p.GPIO1, OnLevel::High, spawner)?;

@@ -93,7 +93,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 
     #[cfg(feature = "esp32")]
     let led_strip_a = LedStripA::new(p.GPIO0, rmt80.channel0, spawner)?;

@@ -24,7 +24,8 @@ mod second {
 }
 
 async fn inner_main(_spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    init_and_start!(p, ledc: ledc);
+    init_and_start!(p);
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
     let _servo_a = first::ServoA::new(&ledc, p.GPIO2)?;
     let _servo_b = second::ServoB::new(&ledc, p.GPIO3)?;
     core::future::pending().await

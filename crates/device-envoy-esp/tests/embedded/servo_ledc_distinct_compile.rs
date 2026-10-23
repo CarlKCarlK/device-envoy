@@ -23,7 +23,8 @@ servo! { pub ServoA { pin: GPIO2, timer: Timer0, channel: Channel0 } }
 servo_player! { pub PlayerB { pin: GPIO3, timer: Timer1, channel: Channel1 } }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    init_and_start!(p, ledc: ledc);
+    init_and_start!(p);
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
     let _servo_a = ServoA::new(&ledc, p.GPIO2)?;
     let _player_b = PlayerB::new(&ledc, p.GPIO3, spawner)?;
     core::future::pending().await

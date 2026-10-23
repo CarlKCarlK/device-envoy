@@ -489,7 +489,7 @@ fn generate_board_template_files(
                             "p.SPI2"
                         },
                         init_and_start_statement => if uses_rmt80 {
-                            "init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);"
+                            "init_and_start!(p);\n    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;"
                         } else {
                             "init_and_start!(p);"
                         },

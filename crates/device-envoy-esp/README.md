@@ -95,10 +95,9 @@ led_strip! {
 }
 
 async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    #[cfg(esp_has_rmt)]
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    #[cfg(not(esp_has_rmt))]
     init_and_start!(p);
+    #[cfg(esp_has_rmt)]
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 
     #[cfg(esp_has_rmt)]
     let led_strip_animated = LedStripAnimated::new(p.GPIO0, rmt80.channel0, spawner)?;

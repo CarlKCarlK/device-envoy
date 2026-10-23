@@ -51,7 +51,8 @@
 //! #     panic!("{err:?}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+//!     init_and_start!(p);
+//!     let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 //!     // Create a LedStripSimple instance.
 //!     let led_strip_simple = LedStripSimple::new(p.GPIO8, rmt80.channel0, spawner)?;
 //!
@@ -102,7 +103,8 @@
 //! #     panic!("{err:?}");
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+//!     init_and_start!(p);
+//!     let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 //!     let led_strip_animated = LedStripAnimated::new(p.GPIO18, rmt80.channel0, spawner)?;
 //!
 //!     // Create a sequence of frames and durations and then animate them (looping, until replaced).
@@ -339,9 +341,14 @@ impl<'d, const LEDS: usize, const PULSES: usize> RmtWs2812<'d, LEDS, PULSES> {
         self.pulse_buf[LEDS * 24] = PulseCode::end_marker();
 
         let channel = self.channel.take().ok_or(Error::ChannelMissing)?;
-        let transfer = channel
-            .transmit(&self.pulse_buf)
-            .map_err(|_| Error::TransmitStart)?;
+        // On failure the HAL hands the channel back; keep it so the next frame can be sent.
+        let transfer = match channel.transmit(&self.pulse_buf) {
+            Ok(transfer) => transfer,
+            Err((err, channel)) => {
+                self.channel = Some(channel);
+                return Err(Error::TransmitStart(err));
+            }
+        };
         match transfer.wait() {
             Ok(channel) => {
                 self.channel = Some(channel);
@@ -372,7 +379,7 @@ pub enum Error {
     /// Channel was already consumed and not recovered (internal logic error).
     ChannelMissing,
     /// RMT peripheral could not start the transfer.
-    TransmitStart,
+    TransmitStart(esp_hal::rmt::Error),
     /// RMT peripheral reported an error during or after transfer.
     Transmit(esp_hal::rmt::Error),
 }
@@ -396,7 +403,7 @@ pub async fn led_strip_device_loop<const LEDS: usize, const MAX_FRAMES: usize>(
     combo_table: &'static [u8; 256],
 ) -> ! {
     // Start with all LEDs off.
-    let _ = driver.write(&Frame1d::new());
+    write_or_warn(&mut driver, &Frame1d::new());
 
     // `pending` carries a command that was received during animation into the
     // next iteration of the outer loop, avoiding recursion.
@@ -411,7 +418,7 @@ pub async fn led_strip_device_loop<const LEDS: usize, const MAX_FRAMES: usize>(
         match command {
             Command::DisplayStatic(mut frame) => {
                 apply_correction(&mut frame, combo_table);
-                let _ = driver.write(&frame);
+                write_or_warn(&mut driver, &frame);
                 // Hold until the next command arrives — handled at the top of the loop.
             }
             Command::Animate(sequence) => {
@@ -419,7 +426,7 @@ pub async fn led_strip_device_loop<const LEDS: usize, const MAX_FRAMES: usize>(
                 'animate: loop {
                     for (mut frame, duration) in sequence.iter().cloned() {
                         apply_correction(&mut frame, combo_table);
-                        let _ = driver.write(&frame);
+                        write_or_warn(&mut driver, &frame);
                         match select(Timer::after(duration), command_signal.wait()).await {
                             Either::First(_) => {
                                 // Timer elapsed — continue to next frame.
@@ -441,6 +448,15 @@ pub async fn led_strip_device_loop<const LEDS: usize, const MAX_FRAMES: usize>(
                 }
             }
         }
+    }
+}
+
+/// Sends `frame`, logging a failure instead of dropping it. A background task has no caller
+/// to return the error to, and the next frame is still worth sending.
+#[cfg(target_os = "none")]
+fn write_or_warn<const LEDS: usize>(driver: &mut impl Ws2812Write<LEDS>, frame: &Frame1d<LEDS>) {
+    if let Err(error) = driver.write(frame) {
+        log::warn!("LED strip write failed: {error:?}");
     }
 }
 

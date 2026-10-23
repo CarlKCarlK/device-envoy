@@ -54,7 +54,8 @@
 //! #     panic!("{err:?}");
 //! # }
 //! async fn inner_main() -> Result<Infallible> {
-//!     init_and_start!(p, ledc: ledc);
+//!     init_and_start!(p);
+//!     let ledc = device_envoy_esp::new_ledc(p.LEDC);
 //!     let servo11 = Servo11::new(&ledc, p.GPIO11)?;
 //!     servo11.set_degrees(45);
 //!     Timer::after(Duration::from_secs(1)).await;
@@ -92,7 +93,8 @@
 //! #     panic!("{err:?}");
 //! # }
 //! async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-//!     init_and_start!(p, ledc: ledc);
+//!     init_and_start!(p);
+//!     let ledc = device_envoy_esp::new_ledc(p.LEDC);
 //!     let servo_sweep = ServoSweep::new(&ledc, p.GPIO12, spawner)?;
 //!     const STEPS: [(u16, Duration); 40] = combine!(
 //!         linear::<19>(0, 180, Duration::from_secs(2)),

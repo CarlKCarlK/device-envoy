@@ -196,7 +196,7 @@ macro_schema::define! {
         #[cfg(target_os = "none")]
         impl $decl.name {
             /// Maximum number of steps in one animation.
-            $decl.vis const MAX_STEPS: usize = $upper($decl.name, _MAX_STEPS);
+            pub const MAX_STEPS: usize = $upper($decl.name, _MAX_STEPS);
 
             /// Creates the LED and spawns its background task.
             pub fn new(

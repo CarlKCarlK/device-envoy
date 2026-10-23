@@ -133,8 +133,6 @@ use embassy_rp::clocks::clk_sys_freq;
 use embassy_rp::pwm::{Config, Pwm};
 
 #[doc(inline)]
-pub use crate::combine;
-#[doc(inline)]
 pub use crate::servo_player::servo_player;
 pub use device_envoy_core::servo::{
     AtEnd, ServoPlayer, ServoPlayerHandle, ServoPlayerStatic, combine, linear,

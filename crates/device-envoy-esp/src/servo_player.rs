@@ -5,40 +5,6 @@
 /// Sample generated servo-player type documentation.
 pub mod servo_player_generated;
 
-/// Combine multiple animation step arrays into one larger array.
-///
-/// This macro allows combining any number of const arrays with a clean syntax.
-///
-/// **Syntax:**
-///
-/// ```text
-/// combine!()
-/// combine!(<steps_expr>)
-/// combine!(<first_steps_expr>, <second_steps_expr>, ... )
-/// ```
-///
-/// See the [servo module documentation](mod@crate::servo) for usage examples.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! combine {
-    () => {
-        []
-    };
-    ($single:expr) => {
-        $single
-    };
-    ($first:expr, $second:expr) => {{
-        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
-        const SECOND: &[(u16, ::embassy_time::Duration)] = &$second;
-        $crate::servo::combine::<{FIRST.len()}, {SECOND.len()}, {FIRST.len() + SECOND.len()}>($first, $second)
-    }};
-    ($first:expr, $($rest:expr),+ $(,)?) => {{
-        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
-        const REST: &[(u16, ::embassy_time::Duration)] = &$crate::combine!($($rest),+);
-        $crate::servo::combine::<{FIRST.len()}, {REST.len()}, {FIRST.len() + REST.len()}>($first, $crate::combine!($($rest),+))
-    }};
-}
-
 macro_schema::define! {
     /// Macro to generate a servo player struct type.
     ///

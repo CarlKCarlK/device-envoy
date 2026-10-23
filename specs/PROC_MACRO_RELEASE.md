@@ -99,10 +99,15 @@ Work in this order; each step is verified on both chips before the next.
 - [x] **`init_and_start!(p)` keeps one arm**; shared peripherals come from
       `new_rmt80(p.RMT)?` and `new_ledc(p.LEDC)`, so callers choose `?` or
       `.expect`. No permutation list, no `.expect` inside (2026-10-23).
-- [ ] **`combine!` defined once** in core and re-exported (RP and ESP copies
+- [x] **`combine!` defined once** (2026-10-23) in core and re-exported (RP and ESP copies
       are identical).
-- [ ] **`impl_wifi_pio`**: drop `defmt::unwrap!` and `paste!`.
-- [ ] **Method visibility**: generated methods are `pub` everywhere; the
+- [x] **`impl_wifi_pio`**: `paste!` removed; the task names are passed in
+      (2026-10-23). `paste` is no longer a dependency of any Device Envoy crate.
+- [ ] **RP Wi-Fi spawn handling** (not macro code): six task spawns in
+      `wifi_auto` use `unwrap!`, including the two in `impl_wifi_pio`. ESP's
+      Wi-Fi propagates with `?`. Decide a policy for spawns inside `-> !`
+      tasks, where no caller can receive an error.
+- [x] **Method visibility** (2026-10-23): generated methods are `pub` everywhere; the
       declared type carries the user's visibility (RP `led!` is the outlier).
 - [ ] **One template per macro family across RP and ESP.** Each schema, its
       docs, and its template live once in core with a platform parameter;

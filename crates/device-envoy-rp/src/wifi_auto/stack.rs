@@ -731,62 +731,33 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 // ============================================================================
 
 macro_rules! impl_wifi_pio {
-    ($pio:ident, $suffix:ident) => {
-        paste::paste! {
-            impl WifiPio for peripherals::$pio {
-                fn spawn_wifi_task(
-                    spawner: Spawner,
-                    runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, Self, 0>>>,
-                ) {
-                    let wifi_task_token = defmt::unwrap!([<wifi_task_ $suffix>](runner));
-                    spawner.spawn(wifi_task_token);
-                }
-
-                fn spawn_device_loop(
-                    spawner: Spawner,
-                    pin_23: Peri<'static, PIN_23>,
-                    pin_24: Peri<'static, PIN_24>,
-                    pin_25: Peri<'static, PIN_25>,
-                    pin_29: Peri<'static, PIN_29>,
-                    pio: Peri<'static, Self>,
-                    dma: DmaChannel<'static>,
-                    mode: WifiMode,
-                    captive_portal_ssid: &'static str,
-                    wifi_events: &'static WifiEvents,
-                    stack_storage: &'static StackStorage,
-                ) {
-                    let wifi_device_loop_token = defmt::unwrap!([<wifi_device_loop_ $suffix>](
-                        pin_23,
-                        pin_24,
-                        pin_25,
-                        pin_29,
-                        pio,
-                        dma,
-                        mode,
-                        captive_portal_ssid,
-                        wifi_events,
-                        stack_storage,
-                        spawner,
-                    ));
-                    spawner.spawn(wifi_device_loop_token);
-                }
+    ($pio:ident, $wifi_task:ident, $device_loop_task:ident) => {
+        impl WifiPio for peripherals::$pio {
+            fn spawn_wifi_task(
+                spawner: Spawner,
+                runner: cyw43::Runner<
+                    'static,
+                    cyw43::SpiBus<Output<'static>, PioSpi<'static, Self, 0>>,
+                >,
+            ) {
+                let wifi_task_token = defmt::unwrap!($wifi_task(runner));
+                spawner.spawn(wifi_task_token);
             }
 
-            #[embassy_executor::task]
-            async fn [<wifi_device_loop_ $suffix>](
+            fn spawn_device_loop(
+                spawner: Spawner,
                 pin_23: Peri<'static, PIN_23>,
                 pin_24: Peri<'static, PIN_24>,
                 pin_25: Peri<'static, PIN_25>,
                 pin_29: Peri<'static, PIN_29>,
-                pio: Peri<'static, peripherals::$pio>,
+                pio: Peri<'static, Self>,
                 dma: DmaChannel<'static>,
                 mode: WifiMode,
                 captive_portal_ssid: &'static str,
                 wifi_events: &'static WifiEvents,
                 stack_storage: &'static StackStorage,
-                spawner: Spawner,
-            ) -> ! {
-                wifi_device_loop_impl::<peripherals::$pio>(
+            ) {
+                let wifi_device_loop_token = defmt::unwrap!($device_loop_task(
                     pin_23,
                     pin_24,
                     pin_25,
@@ -798,21 +769,53 @@ macro_rules! impl_wifi_pio {
                     wifi_events,
                     stack_storage,
                     spawner,
-                )
-                .await
+                ));
+                spawner.spawn(wifi_device_loop_token);
             }
+        }
 
-            #[embassy_executor::task]
-            async fn [<wifi_task_ $suffix>](
-                runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, peripherals::$pio, 0>>>,
-            ) -> ! {
-                wifi_task_impl::<peripherals::$pio>(runner).await
-            }
+        #[embassy_executor::task]
+        async fn $device_loop_task(
+            pin_23: Peri<'static, PIN_23>,
+            pin_24: Peri<'static, PIN_24>,
+            pin_25: Peri<'static, PIN_25>,
+            pin_29: Peri<'static, PIN_29>,
+            pio: Peri<'static, peripherals::$pio>,
+            dma: DmaChannel<'static>,
+            mode: WifiMode,
+            captive_portal_ssid: &'static str,
+            wifi_events: &'static WifiEvents,
+            stack_storage: &'static StackStorage,
+            spawner: Spawner,
+        ) -> ! {
+            wifi_device_loop_impl::<peripherals::$pio>(
+                pin_23,
+                pin_24,
+                pin_25,
+                pin_29,
+                pio,
+                dma,
+                mode,
+                captive_portal_ssid,
+                wifi_events,
+                stack_storage,
+                spawner,
+            )
+            .await
+        }
+
+        #[embassy_executor::task]
+        async fn $wifi_task(
+            runner: cyw43::Runner<
+                'static,
+                cyw43::SpiBus<Output<'static>, PioSpi<'static, peripherals::$pio, 0>>,
+            >,
+        ) -> ! {
+            wifi_task_impl::<peripherals::$pio>(runner).await
         }
     };
 }
-
-impl_wifi_pio!(PIO0, pio0);
-impl_wifi_pio!(PIO1, pio1);
+impl_wifi_pio!(PIO0, wifi_task_pio0, wifi_device_loop_pio0);
+impl_wifi_pio!(PIO1, wifi_task_pio1, wifi_device_loop_pio1);
 #[cfg(feature = "pico2")]
-impl_wifi_pio!(PIO2, pio2);
+impl_wifi_pio!(PIO2, wifi_task_pio2, wifi_device_loop_pio2);

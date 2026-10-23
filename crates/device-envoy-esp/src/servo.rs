@@ -117,8 +117,6 @@ use esp_hal::time::Rate;
 use static_cell::StaticCell;
 
 #[doc(inline)]
-pub use crate::combine;
-#[doc(inline)]
 pub use crate::servo_player::servo_player;
 #[doc(hidden)]
 pub use device_envoy_core::servo::{

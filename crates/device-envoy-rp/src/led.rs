@@ -181,10 +181,10 @@ macro_schema::define! {
 
         impl $decl.name {
             /// Maximum number of steps in one animation.
-            $decl.vis const MAX_STEPS: usize = $upper($decl.name, _MAX_STEPS);
+            pub const MAX_STEPS: usize = $upper($decl.name, _MAX_STEPS);
 
             /// Creates the LED and spawns its background task.
-            $decl.vis fn new(
+            pub fn new(
                 pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>,
                 on_level: $crate::led::OnLevel,
                 spawner: ::embassy_executor::Spawner,

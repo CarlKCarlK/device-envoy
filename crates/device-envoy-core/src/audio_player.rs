@@ -2113,10 +2113,6 @@ const fn encode_adpcm_nibble(
 // Macros
 // ============================================================================
 
-// TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
-// code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
-// so macro visibility and helper exposure can be controlled more precisely. (may no longer apply)
-
 macro_schema::define! {
     #[doc = "Macro to \"compile in\" a compressed (ADPCM) WAV clip from an external file."]
     #[doc = include_str!("audio_player/adpcm_clip_docs.md")]

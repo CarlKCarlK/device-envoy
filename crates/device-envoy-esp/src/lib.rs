@@ -66,6 +66,11 @@ compile_error!("Select exactly one chip feature for embedded builds, not both.")
 #[doc(hidden)]
 pub use macro_schema::expand as __macro_schema_expand;
 
+// Must be `pub` for macro expansion: the LED helpers build identifiers with it, so the
+// user's crate need not depend on `paste`.
+#[doc(hidden)]
+pub use paste::paste as __paste;
+
 pub mod button;
 // Crate-root path kept for `use device_envoy_esp::button_watch;`; documented in `button`.
 #[cfg(target_os = "none")]

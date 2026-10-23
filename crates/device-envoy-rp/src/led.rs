@@ -155,10 +155,6 @@ pub async fn run_animation_loop<const MAX_STEPS: usize>(
     }
 }
 
-// TODO_NIGHTLY When nightly feature `decl_macro` becomes stable, change this
-// code by replacing `#[macro_export] macro_rules!` with module-scoped `pub macro`
-// so macro visibility and helper exposure can be controlled more precisely. (may no longer apply)
-
 macro_schema::define! {
     /// Macro to generate a single LED struct type.
     ///

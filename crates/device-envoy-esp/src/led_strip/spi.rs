@@ -214,7 +214,7 @@ macro_rules! __led_strip_spi_impl {
         led2d_layout = [$($led2d_layout:expr)?],
         led2d_font = [$($led2d_font:expr)?],
     ) => {
-        ::paste::paste! {
+        $crate::__paste! {
             // Evaluated here, in the caller's scope, so `len` and `reset_us` may name the
             // caller's items.
             #[doc(hidden)]

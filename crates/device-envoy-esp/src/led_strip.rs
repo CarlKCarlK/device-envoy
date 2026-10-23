@@ -852,7 +852,7 @@ macro_rules! __led_strip_impl {
         led2d_layout = [$($led2d_layout:expr)?],
         led2d_font = [$($led2d_font:expr)?],
     ) => {
-        ::paste::paste! {
+        $crate::__paste! {
             // ------------------------------------------------------------------
             // Module holding concrete const values for this strip instance.
             // Named after the struct in snake_case to avoid collisions.

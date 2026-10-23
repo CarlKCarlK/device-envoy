@@ -381,7 +381,7 @@ macro_rules! __led_strip_type {
             // Combined gamma correction and brightness scaling table
             const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
 
-            pub(crate) const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
+            const fn new_static() -> $crate::led_strip::LedStripStatic<{ $len }, { $max_frames }> {
                 $crate::led_strip::LedStripRp::new_static()
             }
 
@@ -412,13 +412,6 @@ macro_rules! __led_strip_type {
             }
         }
 
-        #[cfg(not(feature = "host"))]
-        impl AsRef<$crate::led_strip::LedStripRp<{ $len }, { $max_frames }>> for $label {
-            fn as_ref(&self) -> &$crate::led_strip::LedStripRp<{ $len }, { $max_frames }> {
-                &self.strip
-            }
-        }
-
         impl $crate::led_strip::LedStrip<{ $len }> for $label {
             const MAX_FRAMES: usize = $max_frames;
             const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
@@ -432,7 +425,7 @@ macro_rules! __led_strip_type {
                 I: IntoIterator,
                 I::Item: ::core::borrow::Borrow<(
                     $crate::led_strip::Frame1d<{ $len }>,
-                    embassy_time::Duration,
+                    ::embassy_time::Duration,
                 )>,
             {
                 $crate::led_strip::__animate(self.strip.__command_signal(), frames);

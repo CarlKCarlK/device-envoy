@@ -179,8 +179,8 @@ macro_schema::define! {
         /// the default, so set it explicitly when their total matters.
         #[default_display = "Current::Milliamps(250)"]
         max_current: expr = $crate::led_strip::CURRENT_DEFAULT,
-        /// Output engine, `Engine::Rmt` or `Engine::Spi`; defaults to RMT on RMT-capable chips, otherwise SPI.
-        engine?: expr,
+        /// Output engine, `Rmt` or `Spi`; defaults to RMT on RMT-capable chips, otherwise SPI.
+        engine?: ty,
         /// Color correction curve.
         #[default_display = "Gamma::Srgb"]
         gamma: expr = $crate::led_strip::GAMMA_DEFAULT,
@@ -190,111 +190,18 @@ macro_schema::define! {
     }
 
     generate {
-        // Engine selection is value-based, so it stays in the backend; see `led_strip!`.
-        $crate::__led_engine_normalize! {
-            panel,
-            [$if let Some(chosen) = $decl.engine { $chosen }],
-            { [$decl.attrs #[doc = $decl.doc]], [$decl.vis], $decl.name, $decl.pin, $decl.led_layout.len(), $decl.led_layout, $decl.max_current, $decl.font, },
-            { [$decl.gamma], [$decl.max_frames], }
+        $crate::led_strip::__led_strip_type! {
+            $decl.attrs
+            #[doc = $decl.doc]
+            $decl.vis $decl.name {
+                pin: $decl.pin,
+                len: $decl.led_layout.len(),
+                max_current: $decl.max_current,
+                $if let Some(engine) = $decl.engine { engine: $engine, }
+                gamma: $decl.gamma,
+                max_frames: $decl.max_frames,
+                led2d: { led_layout: $decl.led_layout, font: $decl.font },
+            }
         }
     }
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led2d_dispatch_engine {
-    (
-        [$($attrs:tt)*],
-        [$vis:vis],
-        $name:ident,
-        $pin:ident,
-        $len:expr,
-        $led_layout:expr,
-        $max_current:expr,
-        $font:expr,
-        [Spi],
-        [$($gamma:expr)?],
-        [$($max_frames:expr)?],
-    ) => {
-        $crate::led_strip::spi::__led_strip_spi_inner!{
-            [$($attrs)*],
-            [$vis],
-            $name,
-            $pin,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [],
-            [$led_layout],
-            [$font],
-        }
-    };
-    (
-        [$($attrs:tt)*],
-        [$vis:vis],
-        $name:ident,
-        $pin:ident,
-        $len:expr,
-        $led_layout:expr,
-        $max_current:expr,
-        $font:expr,
-        [Rmt],
-        [$($gamma:expr)?],
-        [$($max_frames:expr)?],
-    ) => {
-        $crate::__led_strip_dispatch_rmt_engine!{
-            [$($attrs)*],
-            [$vis],
-            $name,
-            $pin,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [$led_layout],
-            [$font],
-        }
-    };
-    (
-        [$($attrs:tt)*],
-        [$vis:vis],
-        $name:ident,
-        $pin:ident,
-        $len:expr,
-        $led_layout:expr,
-        $max_current:expr,
-        $font:expr,
-        [],
-        [$($gamma:expr)?],
-        [$($max_frames:expr)?],
-    ) => {
-        $crate::__led_strip_dispatch_default_engine!{
-            [$($attrs)*],
-            [$vis],
-            $name,
-            $pin,
-            $len,
-            $max_current,
-            [$($gamma)?],
-            [$($max_frames)?],
-            [$led_layout],
-            [$font],
-        }
-    };
-    (
-        [$($attrs:tt)*],
-        [$vis:vis],
-        $name:ident,
-        $pin:ident,
-        $len:expr,
-        $led_layout:expr,
-        $max_current:expr,
-        $font:expr,
-        [$($engine:tt)*],
-        [$($gamma:expr)?],
-        [$($max_frames:expr)?],
-    ) => {
-        compile_error!("led2d! `engine` must be `Engine::Rmt` or `Engine::Spi`");
-    };
 }

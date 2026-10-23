@@ -27,7 +27,7 @@ led_strip! {
     // A struct-only attribute ensures the declaration does not become a type alias.
     #[repr(transparent)]
     LedStripSpiA {
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         len: STRIP_A_LEN,
         reset_us: STRIP_A_RESET_US,
         pin: GPIO0,
@@ -41,7 +41,7 @@ led_strip! {
     // A struct-only attribute ensures the declaration does not become a type alias.
     #[repr(transparent)]
     LedStripSpiA {
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         len: STRIP_A_LEN,
         reset_us: STRIP_A_RESET_US,
         pin: GPIO10,
@@ -56,7 +56,7 @@ led_strip! {
     #[repr(transparent)]
     pub(crate) LedStripSpiB {
         max_frames: 2,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         len: 1,
         pin: GPIO11,
     }
@@ -68,7 +68,7 @@ led_strip! {
     #[repr(transparent)]
     pub(crate) LedStripSpiB {
         max_frames: 2,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         len: 1,
         pin: GPIO6,
     }
@@ -87,7 +87,7 @@ mod panel {
         #[repr(transparent)]
         pub(super) LedPanelSpi {
             pin: GPIO10,
-            engine: device_envoy_esp::led_strip::Engine::Spi,
+            engine: device_envoy_esp::led_strip::Spi,
             led_layout: LED_LAYOUT,
             font: Led2dFont::Font4x6Trim,
         }

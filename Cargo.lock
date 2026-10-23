@@ -904,7 +904,6 @@ dependencies = [
  "log",
  "macro-schema",
  "mipidsi",
- "paste",
  "png 0.18.1",
  "portable-atomic",
  "serde",

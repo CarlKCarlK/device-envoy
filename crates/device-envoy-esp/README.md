@@ -74,7 +74,7 @@ strip and then animates a sequence of frames.
 use device_envoy_esp::{Result, init_and_start, led_strip, led_strip::{LedStrip as _, Frame1d, colors}};
 #[cfg(not(esp_has_rmt))]
 #[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
+use device_envoy_esp::led_strip::Spi;
 use embassy_time::Duration;
 
 #[cfg(esp_has_rmt)]
@@ -90,7 +90,7 @@ led_strip! {
     LedStripAnimated {
         pin: GPIO0,
         len: 96,
-        engine: Engine::Spi,
+        engine: Spi,
     }
 }
 

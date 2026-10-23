@@ -66,11 +66,6 @@ compile_error!("Select exactly one chip feature for embedded builds, not both.")
 #[doc(hidden)]
 pub use macro_schema::expand as __macro_schema_expand;
 
-// Must be `pub` for macro expansion: the LED helpers build identifiers with it, so the
-// user's crate need not depend on `paste`.
-#[doc(hidden)]
-pub use paste::paste as __paste;
-
 // Must be `pub` for macro expansion: generated code names these crates through
 // `$crate`, so the user's crate need not depend on them.
 #[doc(hidden)]

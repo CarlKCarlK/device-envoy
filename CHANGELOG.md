@@ -57,6 +57,10 @@ Syntax changes:
   is gone.
 - ESP `led2d!` no longer takes `len`; the LED count comes from `led_layout`, as
   on RP.
+- ESP `led_strip!` and `led2d!` name their output engine with a type:
+  `engine: Spi` or `engine: Rmt` (from `device_envoy_esp::led_strip`) instead
+  of `engine: Engine::Spi`. `Engine` is gone. Naming `Rmt` on a chip without
+  an RMT peripheral is a compile error that says so.
 - In `led_strips!`, `max_frames` for a panel is set on the member rather than
   inside its `led2d` block.
 - `pio_split!` has been removed.

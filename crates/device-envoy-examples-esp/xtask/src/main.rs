@@ -366,6 +366,7 @@ fn test_capabilities_required(test: &str) -> Capability {
             "led_strip_two_strips_compile"
                 | "led2d_two_panels_compile"
                 | "generated_code_lints_compile"
+                | "led_strip_engine_trait_compile"
         )
     {
         caps.insert(Capability::RMT);

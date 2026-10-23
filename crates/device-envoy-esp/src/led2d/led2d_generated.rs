@@ -10,24 +10,13 @@ use crate::led2d;
 const LED_LAYOUT_12X4: crate::led2d::LedLayout<48, 12, 4> =
     crate::led2d::LedLayout::serpentine_column_major();
 
-#[cfg(all(not(doc), not(feature = "host"), target_os = "none", esp_has_rmt))]
+#[cfg(all(not(doc), not(feature = "host"), target_os = "none"))]
 led2d! {
     pub Led2dGenerated {
         pin: GPIO2,
         led_layout: LED_LAYOUT_12X4,
         max_current: crate::led_strip::Current::Milliamps(250),
         font: crate::led2d::Led2dFont::Font3x4Trim,
-    }
-}
-
-#[cfg(all(not(doc), not(feature = "host"), target_os = "none", not(esp_has_rmt)))]
-led2d! {
-    pub Led2dGenerated {
-        pin: GPIO2,
-        led_layout: LED_LAYOUT_12X4,
-        max_current: crate::led_strip::Current::Milliamps(250),
-        font: crate::led2d::Led2dFont::Font3x4Trim,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
     }
 }
 

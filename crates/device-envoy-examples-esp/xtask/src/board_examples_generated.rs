@@ -481,7 +481,7 @@ fn generate_board_template_files(
                         led2d_engine_clause => if uses_rmt80 {
                             ""
                         } else {
-                            "        engine: device_envoy_esp::led_strip::Engine::Spi,\n"
+                            "        engine: device_envoy_esp::led_strip::Spi,\n"
                         },
                         led2d_runtime_resource => if uses_rmt80 {
                             "rmt80.channel0"

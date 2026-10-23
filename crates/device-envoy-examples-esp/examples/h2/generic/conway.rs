@@ -13,7 +13,7 @@ use embassy_executor::Spawner;
 use esp_backtrace as _;
 
 #[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
+use device_envoy_esp::led_strip::Spi;
 use device_envoy_esp::{
     Result, init_and_start, ir_kepler,
     led_strip::Current,
@@ -31,7 +31,7 @@ led2d! {
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
         font: Led2dFont::Font4x6Trim,
-        engine: Engine::Spi,
+        engine: Spi,
         max_frames: 30,
     }
 }

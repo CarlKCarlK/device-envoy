@@ -20,7 +20,7 @@ use esp_backtrace as _;
 use log::info;
 
 #[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
+use device_envoy_esp::led_strip::Spi;
 use device_envoy_esp::{
     init_and_start, led2d,
     led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
@@ -39,7 +39,7 @@ led2d! {
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
         font: Led2dFont::Font4x6Trim,
-        engine: Engine::Spi,
+        engine: Spi,
         max_frames: 4,
     }
 }

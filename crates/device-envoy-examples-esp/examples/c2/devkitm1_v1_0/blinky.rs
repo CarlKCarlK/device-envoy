@@ -62,7 +62,7 @@ led_strip! {
     SosStrip {
         pin: GPIO8,
         len: 1,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         max_frames: 20,
     }
 }

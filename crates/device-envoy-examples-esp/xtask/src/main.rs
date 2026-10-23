@@ -363,7 +363,9 @@ fn test_capabilities_required(test: &str) -> Capability {
     if test.starts_with("ir_")
         || matches!(
             test,
-            "led_strip_two_strips_compile" | "led2d_two_panels_compile"
+            "led_strip_two_strips_compile"
+                | "led2d_two_panels_compile"
+                | "generated_code_lints_compile"
         )
     {
         caps.insert(Capability::RMT);
@@ -374,7 +376,7 @@ fn test_capabilities_required(test: &str) -> Capability {
     if test == "led_strip_spi_two_strips_compile" {
         caps.insert(Capability::DUAL_SPI);
     }
-    if test.starts_with("servo_") {
+    if test.starts_with("servo_") || test == "generated_code_lints_compile" {
         caps.insert(Capability::LEDC);
     }
     caps

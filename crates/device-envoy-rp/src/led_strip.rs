@@ -366,13 +366,15 @@ macro_rules! __led_strip_type {
                 strip: $crate::led_strip::LedStripRp<{ $len }, { $max_frames }>,
             }
 
-            #[allow(missing_docs)]
             impl $label {
+                /// Number of LEDs in the strip.
                 pub const LEN: usize = $len;
+                /// Maximum number of animation frames.
                 pub const MAX_FRAMES: usize = $max_frames;
 
                 // Each WS2812B LED draws ~60mA at full brightness.
                 const WORST_CASE_MA: u32 = ($len as u32) * 60;
+                /// Maximum brightness level after current limiting.
                 pub const MAX_BRIGHTNESS: u8 =
                     $max_current.max_brightness(Self::WORST_CASE_MA);
 
@@ -837,6 +839,8 @@ macro_schema::define! {
             ///
             /// Takes the PIO resource, then a pin and DMA channel per member in declaration
             /// order, then the spawner.
+            // Approved suppression: a four-member group takes ten arguments, one per
+            // resource in declaration order. Grouping them would only make calls noisier.
             #[allow(clippy::too_many_arguments)]
             pub fn new(
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,

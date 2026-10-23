@@ -2315,12 +2315,6 @@ macro_schema::define! {
             pub const ADPCM_DATA_LEN: usize =
                 $crate::audio_player::__adpcm_data_len_for_pcm_samples(PCM_SAMPLE_COUNT);
 
-            #[allow(dead_code)]
-            type SourcePcmClip = $crate::audio_player::PcmClipBuf<
-                { SOURCE_SAMPLE_RATE_HZ },
-                { SOURCE_SAMPLE_COUNT },
-            >;
-
             #[doc = "`const` function that returns the uncompressed (PCM) version of this clip."]
             #[must_use]
             pub const fn pcm_clip() -> $crate::audio_player::PcmClipBuf<

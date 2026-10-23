@@ -227,8 +227,8 @@ macro_schema::define! {
             servo_player_handle: $crate::servo::ServoPlayerHandle<$decl.max_steps>,
         }
 
-        #[allow(missing_docs)]
         impl $decl.name {
+            /// Maximum number of steps in one animation.
             pub const MAX_STEPS: usize = $decl.max_steps;
 
             /// Create the servo player and spawn its background task.

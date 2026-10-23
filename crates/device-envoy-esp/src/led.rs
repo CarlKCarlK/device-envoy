@@ -185,20 +185,20 @@ macro_schema::define! {
         const $upper($decl.name, _MAX_STEPS): usize = $decl.max_steps;
 
         #[cfg(target_os = "none")]
-        #[allow(non_upper_case_globals)]
         static $upper($decl.name, _STATIC): $crate::led::LedStatic<{ $upper($decl.name, _MAX_STEPS) }> =
             $crate::led::LedStatic::new();
 
         #[cfg(target_os = "none")]
-        #[allow(non_camel_case_types)]
         $decl.attrs
         #[doc = $decl.doc]
         $decl.vis struct $decl.name(&'static $crate::led::LedOuterStatic<{ $upper($decl.name, _MAX_STEPS) }>);
 
         #[cfg(target_os = "none")]
         impl $decl.name {
+            /// Maximum number of steps in one animation.
             $decl.vis const MAX_STEPS: usize = $upper($decl.name, _MAX_STEPS);
 
+            /// Creates the LED and spawns its background task.
             pub fn new(
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 on_level: $crate::led::OnLevel,

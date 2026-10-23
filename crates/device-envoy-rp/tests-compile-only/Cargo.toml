@@ -204,3 +204,8 @@ required-features = ["pico1"]
 name = "rfid_two"
 path = "rfid_two.rs"
 required-features = ["pico1"]
+
+[[bin]]
+name = "generated_code_lints"
+path = "generated_code_lints.rs"
+required-features = ["pico1"]

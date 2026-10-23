@@ -243,7 +243,6 @@ macro_rules! led2d_from_strip {
                 led2d: $crate::led2d::Led2dRp<'static, { $led_layout_const.len() }, $strip_type>,
             }
 
-            #[allow(non_snake_case, dead_code)]
             impl [<$name>] {
                 /// Maximum number of animation frames.
                 pub const MAX_FRAMES: usize = $max_frames_const;

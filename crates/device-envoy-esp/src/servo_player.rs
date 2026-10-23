@@ -121,8 +121,10 @@ macro_schema::define! {
                 $crate::servo::ServoPlayerHandle::<{ $decl.max_steps }>::new_static();
 
         impl $decl.name {
+            /// Maximum number of steps in one animation.
             pub const MAX_STEPS: usize = $decl.max_steps;
 
+            /// Create the servo player and spawn its background task.
             pub fn new(
                 ledc: &::esp_hal::ledc::Ledc<'static>,
                 pin: ::esp_hal::peripherals::$decl.pin<'static>,

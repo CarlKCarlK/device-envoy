@@ -40,9 +40,35 @@ inventory, the API regularization, and the macros intentionally left as
       package because it reads the RP and ESP sources.
 - [ ] Extend `macro_expansion.rs` to the macros it does not cover yet, as the
       review finds behavior worth pinning down.
-- [ ] Remove the `#[allow(clippy::too_many_arguments)]` that RP `led_strips!`
-      puts on the generated `new` (`AGENTS.md` forbids lint suppression), or
-      record why it stays.
+- [x] RP `led_strips!` keeps `#[allow(clippy::too_many_arguments)]` on the
+      generated `new`, approved 2026-10-22, with a comment giving the reason.
+- [x] Make generated code lint-clean in a strict user crate. New compile-only
+      tests `device-envoy-rp/tests-compile-only/generated_code_lints.rs` and
+      `device-envoy-esp/tests/embedded/generated_code_lints_compile.rs` deny
+      warnings and `missing_docs`. They found undocumented generated items in
+      `led!` (RP, ESP) and `servo_player!` (ESP), which users who deny
+      `missing_docs` could not build; now documented. Removed suppressions the
+      macros did not need: `led!`'s `non_upper_case_globals` and
+      `non_camel_case_types`, `led2d_from_strip!`'s `non_snake_case` and
+      `dead_code`, `missing_docs` on RP `__led_strip_type!` and
+      `servo_player!` (documented instead), and `pcm_clip!`'s unused
+      `SourcePcmClip` alias with its `dead_code` allow.
+- [ ] Approve or remove `#[allow(non_snake_case)]` on the modules that
+      `pcm_clip!` and `adpcm_clip!` generate (`device-envoy-core/src/audio_player.rs`).
+- [ ] Decide the `too_many_arguments` suppressions on hand-written public
+      constructors: `WifiAutoRp::new` (10 arguments, `allow`), ESP CYD `new`
+      (18 arguments, `allow`), and six RP CYD constructors (`expect` with a
+      reason, `device-envoy-rp/src/cyd.rs`, `cyd/one_spi.rs`).
+- [ ] CI gap: the GitHub `Check All` workflow runs only the top-level
+      `cargo check-all`, which does not run RP `check-compile-only` or ESP
+      `check-embedded-tests`, where most macro compile tests live. Run them
+      locally before release, and decide whether CI or the top-level
+      `check-all` should run them.
+- [ ] Code smell: RP `led!` generates `$decl.vis fn new`, while ESP `led!` and
+      ESP `servo_player!` generate `pub fn new`. Pick one.
+- Outside this release's scope: about 250 other suppressions, mostly
+      `dead_code`, `unused_imports`, and `clippy::future_not_send` in examples
+      and compile-only tests.
 
 ## 3. Branch health
 

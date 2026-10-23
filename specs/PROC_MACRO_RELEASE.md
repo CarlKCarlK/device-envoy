@@ -97,13 +97,24 @@ after publication. Macro usage as of 2026-10-22:
 Its branch already uses path dependencies on this checkout; after publication
 it switches back to registry `0.2.0` versions.
 
-The three starters built unchanged against this branch on 2026-10-22, so their
-branches need only the post-publication update: `device-envoy-*` dependency
-and package version to `0.2.0`, and a lockfile refresh.
+The three starters needed no source changes. On 2026-10-22 their
+`device-envoy-0.2.0` branches were switched to this checkout: each
+`device-envoy-*` dependency is `{ version = "0.2.0", path = "../device-envoy/..." }`
+under a `# TODO0` comment, the blinky package versions are `0.2.0`, and the
+lockfiles are refreshed (`cyd-starter`'s `syn` went from 3.0.4 to 3.0.9, which
+`macro-schema` needs). All configurations pass against this checkout.
 
-- `cyd-starter`'s lockfile pins `syn` 3.0.4, but `macro-schema` needs 3.0.6 or
-  later. Its update needs `cargo update -p syn` as well as the Device Envoy
-  entries.
+- [ ] After `device-envoy` 0.2.0 is published, resolve each starter's `TODO0`:
+      delete `path` (four dependencies: `esp-blinky`, `rp-blinky`,
+      `cyd-starter`, `cyd-starter/wasm`), refresh the lockfile, and confirm
+      every Device Envoy entry has a crates.io `source` (release checklist
+      step 11). Find them with `rg -n TODO0` in each starter. The Device
+      Envoy `TODO0` sweep (release checklist step 2) does not search the
+      starters.
+- Until then the starters build only beside a `device-envoy` checkout at
+  `../device-envoy`. Their only CI, `cyd-starter`'s Pages workflow, runs on
+  `main`, so these branches do not break it; do not merge them to `main`
+  before the `TODO0`s are resolved.
 - The `Check Starters` workflow covers only the two blinky starters, not
   `cyd-starter`. Check it by hand with `just check-all` after temporarily adding
   a `[patch.crates-io]` for `device-envoy-core` and `device-envoy-esp`.
@@ -134,8 +145,10 @@ Notes specific to this release:
 - Version `0.2.0`: the syntax changes are breaking.
 - Merge `proc-macro-const-structures` into `main` (or into a `release/0.2.0`
   branch cut from it) through a pull request.
-- After publication, update the downstream projects in section 4 to the
-  registry versions, then release `linkage-blaze` against them.
+- Crate versions are already `0.2.0` on this branch (2026-10-22), so
+  checklist step 3 only needs rechecking.
+- After publication, resolve the starters' `TODO0`s (section 4), then switch
+  `linkage-blaze` to the registry versions and release it against them.
 
 ## Decisions
 

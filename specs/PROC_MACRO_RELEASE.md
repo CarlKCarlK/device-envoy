@@ -53,12 +53,15 @@ inventory, the API regularization, and the macros intentionally left as
       `dead_code`, `missing_docs` on RP `__led_strip_type!` and
       `servo_player!` (documented instead), and `pcm_clip!`'s unused
       `SourcePcmClip` alias with its `dead_code` allow.
-- [ ] Approve or remove `#[allow(non_snake_case)]` on the modules that
-      `pcm_clip!` and `adpcm_clip!` generate (`device-envoy-core/src/audio_player.rs`).
-- [ ] Decide the `too_many_arguments` suppressions on hand-written public
-      constructors: `WifiAutoRp::new` (10 arguments, `allow`), ESP CYD `new`
-      (18 arguments, `allow`), and six RP CYD constructors (`expect` with a
-      reason, `device-envoy-rp/src/cyd.rs`, `cyd/one_spi.rs`).
+- [x] `#[allow(non_snake_case)]` on the modules that `pcm_clip!` and
+      `adpcm_clip!` generate: approved 2026-10-22, commented. It goes away
+      when the modules become structs (inherent associated types).
+- [x] `too_many_arguments` on hand-written public constructors
+      (`WifiAutoRp::new`, ESP CYD `new`, six RP CYD constructors): approved
+      2026-10-22 for this release, commented.
+- Later, not this release: group those constructors' arguments into structs
+  (pins, presentation, calibration), as their doc examples already group them
+  with comments. A breaking change.
 - [ ] CI gap: the GitHub `Check All` workflow runs only the top-level
       `cargo check-all`, which does not run RP `check-compile-only` or ESP
       `check-embedded-tests`, where most macro compile tests live. Run them

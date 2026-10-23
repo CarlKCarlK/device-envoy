@@ -2139,6 +2139,8 @@ macro_schema::define! {
 
         $decl.attrs
         #[doc = $decl.doc]
+        // Approved suppression: the clip's module takes the declared CamelCase name so
+        // its items read `Name::ITEM`, until inherent associated types are stable.
         #[allow(non_snake_case)]
         $decl.vis mod $decl.name {
             // TODO Parse each included WAV header only once. Reuse this metadata in
@@ -2287,6 +2289,8 @@ macro_schema::define! {
 
         $decl.attrs
         #[doc = $decl.doc]
+        // Approved suppression: the clip's module takes the declared CamelCase name so
+        // its items read `Name::ITEM`, until inherent associated types are stable.
         #[allow(non_snake_case)]
         #[doc = concat!(
             "\n\nItems: ",

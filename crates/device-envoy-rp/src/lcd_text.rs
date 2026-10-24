@@ -116,6 +116,12 @@ pub use device_envoy_core::lcd_text::{
     __run_i2cs, __write_text,
 };
 
+/// Logs a failed LCD write from a group's I2C task; the task carries on with the next frame.
+#[doc(hidden)]
+pub fn __report_lcd_text_error(error: device_envoy_core::Error) {
+    defmt::warn!("LCD text write failed: {}", defmt::Debug2Format(&error));
+}
+
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
 pub struct RpLcdTextWrite<T: i2c::Instance + 'static> {
@@ -293,6 +299,7 @@ macro_schema::define! {
                 [$for lcd in $decl.members { $lcd.address, }],
                 [$for lcd in $decl.members { $lcd.width, }],
                 [$for lcd in $decl.members { $lcd.height, }],
+                $crate::lcd_text::__report_lcd_text_error,
             )
             .await
         }

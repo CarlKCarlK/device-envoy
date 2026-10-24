@@ -83,6 +83,8 @@ Behavior changes and fixes:
 - An ESP RMT LED strip no longer goes permanently dark after one failed
   transmission: the driver keeps its RMT channel, and write failures are logged
   as warnings instead of being dropped.
+- LCD text write failures are logged as warnings instead of being dropped, and a
+  display whose initialization fails is initialized again on its next frame.
 - Generated code no longer requires your crate to depend on `paste`,
   `static_cell`, `heapless`, or `embassy_sync`.
 - Two RP LED groups on one PIO in one module, ESP LEDC channel clashes, and

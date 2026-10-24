@@ -204,6 +204,12 @@ pub use device_envoy_core::lcd_text::{
     __run_i2cs, __write_text,
 };
 
+/// Logs a failed LCD write from a group's I2C task; the task carries on with the next frame.
+#[doc(hidden)]
+pub fn __report_lcd_text_error(error: device_envoy_core::Error) {
+    log::warn!("LCD text write failed: {error:?}");
+}
+
 #[doc(hidden)]
 pub struct EspLcdTextWrite {
     i2c: crate::esp_hal::i2c::master::I2c<'static, crate::esp_hal::Blocking>,
@@ -377,6 +383,7 @@ macro_schema::define! {
                 [$for lcd in $decl.members { $lcd.address, }],
                 [$for lcd in $decl.members { $lcd.width, }],
                 [$for lcd in $decl.members { $lcd.height, }],
+                $crate::lcd_text::__report_lcd_text_error,
             )
             .await
         }

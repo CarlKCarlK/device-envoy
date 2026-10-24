@@ -124,9 +124,10 @@ Work in this order; each step is verified on both chips before the next.
       runtime, generic over `embedded-hal` `OutputPin`; `LedStripHandle`;
       `AudioPlayerHandle`). A token-level scan finds no identical runtime items
       left in any paired RP/ESP module (2026-10-23).
-- [ ] LCD write errors are dropped (`let _ =` in core's
-      `write_lcd_text_cells`), like the LED errors were. Decide how a background
-      task reports them on each chip (RP logs with `defmt`, ESP with `log`).
+- [x] LCD write errors are reported, not dropped: core's I2C task takes a
+      chip-supplied `report_error` (RP `defmt::warn!`, ESP `log::warn!`), and a
+      display whose initialization fails is retried on its next frame
+      (2026-10-23).
 
 ## 3. Branch health
 

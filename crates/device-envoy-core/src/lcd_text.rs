@@ -325,7 +325,9 @@ pub fn __write_text<const W: usize, const H: usize, const MAX_CHARS: usize>(
 }
 
 /// Runs a group's shared I2C task: waits for any display's next frame and writes it,
-/// initializing each display the first time it is written.
+/// initializing each display the first time it is written. A failed write is passed to
+/// `report_error`, which each chip crate supplies so it can log in its own way, and the
+/// task continues with the next frame.
 #[doc(hidden)]
 pub async fn __run_i2cs<const N: usize, const MAX_CHARS: usize>(
     mut lcd_text_write: impl LcdTextWrite,
@@ -333,44 +335,44 @@ pub async fn __run_i2cs<const N: usize, const MAX_CHARS: usize>(
     addresses: [u8; N],
     widths: [usize; N],
     heights: [usize; N],
+    report_error: fn(crate::Error),
 ) -> ! {
     let mut lcd_text_driver = LcdTextDriver::new(0x27);
-    let mut initialized_addresses: heapless::Vec<u8, N> = heapless::Vec::new();
+    let mut initialized = [false; N];
     loop {
         let (lcd_text_frame, ready_index) =
             embassy_futures::select::select_array(signals.map(|signal| signal.wait())).await;
-        write_lcd_text_cells::<N, MAX_CHARS>(
+        if let Err(error) = write_lcd_text_cells::<MAX_CHARS>(
             &mut lcd_text_driver,
             &mut lcd_text_write,
-            &mut initialized_addresses,
+            &mut initialized[ready_index],
             addresses[ready_index],
             widths[ready_index],
             heights[ready_index],
             &lcd_text_frame.cells,
         )
-        .await;
+        .await
+        {
+            report_error(error);
+        }
     }
 }
 
-async fn write_lcd_text_cells<const ADDRESS_COUNT: usize, const MAX_CHARS: usize>(
+/// Writes one frame to the display at `address`, initializing it first if it has not
+/// been. A display whose initialization fails is initialized again on its next frame.
+async fn write_lcd_text_cells<const MAX_CHARS: usize>(
     lcd_text_driver: &mut LcdTextDriver,
     lcd_text_write: &mut impl LcdTextWrite,
-    initialized_addresses: &mut heapless::Vec<u8, ADDRESS_COUNT>,
+    initialized: &mut bool,
     address: u8,
     width: usize,
     height: usize,
     cells: &[u8],
-) {
-    let first_use_of_address = !initialized_addresses
-        .iter()
-        .any(|initialized_address| *initialized_address == address);
-
+) -> crate::Result<()> {
     lcd_text_driver.set_address(address);
-    if first_use_of_address {
-        if lcd_text_driver.init(lcd_text_write).await.is_err() {
-            return;
-        }
-        let _ = initialized_addresses.push(address);
+    if !*initialized {
+        lcd_text_driver.init(lcd_text_write).await?;
+        *initialized = true;
     }
 
     let mut lcd_text_frame = LcdTextFrame::<MAX_CHARS>::new_blank(width, height);
@@ -379,7 +381,7 @@ async fn write_lcd_text_cells<const ADDRESS_COUNT: usize, const MAX_CHARS: usize
         lcd_text_frame.cells[cell_index] = cells[cell_index];
     }
 
-    let _ = lcd_text_driver
+    lcd_text_driver
         .write_frame(lcd_text_write, &lcd_text_frame)
-        .await;
+        .await
 }

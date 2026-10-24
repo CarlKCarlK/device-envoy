@@ -47,113 +47,14 @@
 //! }
 //! ```
 
-use embassy_rp::gpio::{Level, Output};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embassy_time::{Duration, Timer};
-use heapless::Vec;
-
 pub use device_envoy_core::led::{Led, LedLevel, OnLevel};
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::led::{
+    DEFAULT_MAX_STEPS, LedCommand, LedOuterStatic, LedStatic, run_animation_loop,
+    run_set_level_loop, set_pin_for_led_level,
+};
 pub mod led_generated;
-
-/// Maximum number of animation frames allowed.
-#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-pub const DEFAULT_MAX_STEPS: usize = 32;
-
-#[derive(Clone)]
-#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-pub enum LedCommand<const MAX_STEPS: usize> {
-    /// Set LED level immediately.
-    Set(LedLevel),
-    /// Play an animation sequence (looping).
-    Animate(Vec<(LedLevel, Duration), MAX_STEPS>),
-}
-
-/// Signal for sending LED commands to macro-generated LED devices.
-#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-pub type LedOuterStatic<const MAX_STEPS: usize> =
-    Signal<CriticalSectionRawMutex, LedCommand<MAX_STEPS>>;
-
-/// Static resources for a macro-generated LED device.
-#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-pub struct LedStatic<const MAX_STEPS: usize> {
-    outer: LedOuterStatic<MAX_STEPS>,
-}
-
-impl<const MAX_STEPS: usize> LedStatic<MAX_STEPS> {
-    /// Creates static resources for a single LED device.
-    #[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-    pub const fn new() -> Self {
-        Self {
-            outer: Signal::new(),
-        }
-    }
-
-    #[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-    pub fn outer(&self) -> &LedOuterStatic<MAX_STEPS> {
-        &self.outer
-    }
-}
-
-/// Set the physical pin state based on desired LED level and on_level.
-#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-pub fn set_pin_for_led_level(led_level: LedLevel, pin: &mut Output<'_>, on_level: OnLevel) {
-    let pin_level = match (led_level, on_level) {
-        (LedLevel::On, OnLevel::High) | (LedLevel::Off, OnLevel::Low) => Level::High,
-        (LedLevel::Off, OnLevel::High) | (LedLevel::On, OnLevel::Low) => Level::Low,
-    };
-    pin.set_level(pin_level);
-}
-
-#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-pub async fn run_set_level_loop<const MAX_STEPS: usize>(
-    led_level: LedLevel,
-    outer_static: &'static LedOuterStatic<MAX_STEPS>,
-    pin: &mut Output<'_>,
-    on_level: OnLevel,
-) -> LedCommand<MAX_STEPS> {
-    set_pin_for_led_level(led_level, pin, on_level);
-
-    loop {
-        match outer_static.wait().await {
-            LedCommand::Set(new_led_level) => {
-                if new_led_level == led_level {
-                    continue;
-                }
-                return LedCommand::Set(new_led_level);
-            }
-            other => return other,
-        }
-    }
-}
-
-#[doc(hidden)] // Public for macro expansion in downstream crates; not a user-facing API.
-pub async fn run_animation_loop<const MAX_STEPS: usize>(
-    animation: Vec<(LedLevel, Duration), MAX_STEPS>,
-    outer_static: &'static LedOuterStatic<MAX_STEPS>,
-    pin: &mut Output<'_>,
-    on_level: OnLevel,
-) -> LedCommand<MAX_STEPS> {
-    if animation.is_empty() {
-        return LedCommand::Animate(animation);
-    }
-
-    let mut frame_index = 0;
-
-    loop {
-        let (led_level, duration) = animation[frame_index];
-
-        set_pin_for_led_level(led_level, pin, on_level);
-
-        frame_index = (frame_index + 1) % animation.len();
-
-        match embassy_futures::select::select(Timer::after(duration), outer_static.wait()).await {
-            embassy_futures::select::Either::First(_) => {}
-            embassy_futures::select::Either::Second(command) => {
-                return command;
-            }
-        }
-    }
-}
 
 macro_schema::define! {
     /// Macro to generate a single LED struct type.

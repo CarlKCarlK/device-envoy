@@ -315,6 +315,7 @@ macro_schema::define! {
                 })
             }
 
+            #[doc = "Construct the shared I2C runtime task and all generated LCD text device handles in this group."]
             pub fn new(
                 i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                 sda: $crate::esp_hal::peripherals::$decl.sda_pin<'static>,
@@ -343,10 +344,15 @@ macro_schema::define! {
             }
 
             impl $lcd.name {
+                /// Display width in characters.
                 pub const WIDTH: usize = $lcd.width;
+                /// Display height in characters.
                 pub const HEIGHT: usize = $lcd.height;
+                /// LCD I2C address.
                 pub const ADDRESS: u8 = $lcd.address;
 
+                /// Construct this LCD text device and spawn its shared I2C task.
+                /// See the [lcd_text module documentation](mod@device_envoy_esp::lcd_text) for usage examples.
                 pub fn new(
                     i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                     sda: $crate::esp_hal::peripherals::$decl.sda_pin<'static>,

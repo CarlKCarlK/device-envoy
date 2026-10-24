@@ -156,34 +156,6 @@ use embassy_time::{Duration, Timer};
 #[cfg(not(feature = "host"))]
 use heapless::Vec;
 
-/// Internal runtime handle for macro-generated LED strip types.
-///
-/// `#[doc(hidden)]` because this is implementation detail used by macro output.
-#[doc(hidden)]
-pub struct LedStripRp<const N: usize, const MAX_FRAMES: usize> {
-    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
-}
-
-impl<const N: usize, const MAX_FRAMES: usize> LedStripRp<N, MAX_FRAMES> {
-    #[doc(hidden)]
-    pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
-        LedStripStatic::new_static()
-    }
-
-    #[doc(hidden)]
-    pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Self {
-        Self {
-            command_signal: led_strip_static.command_signal(),
-        }
-    }
-
-    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
-    #[doc(hidden)]
-    pub fn __command_signal(&self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
-        self.command_signal
-    }
-}
-
 // ============================================================================
 // Submodules
 // ============================================================================
@@ -370,7 +342,7 @@ macro_schema::define! {
         #[doc = $decl.doc]
         #[doc = "\n\nImplements the [`LedStrip`](device_envoy_rp::led_strip::LedStrip) trait for LED control methods."]
         $decl.vis struct $decl.name {
-            strip: $crate::led_strip::LedStripRp<{ $decl.len }, { $decl.max_frames }>,
+            strip: $crate::led_strip::LedStripHandle<{ $decl.len }, { $decl.max_frames }>,
         }
 
         impl $decl.name {
@@ -389,7 +361,7 @@ macro_schema::define! {
             const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($decl.gamma, Self::MAX_BRIGHTNESS);
 
             const fn new_static() -> $crate::led_strip::LedStripStatic<{ $decl.len }, { $decl.max_frames }> {
-                $crate::led_strip::LedStripRp::new_static()
+                $crate::led_strip::LedStripHandle::new_static()
             }
 
             fn from_state_machine(
@@ -413,7 +385,7 @@ macro_schema::define! {
                     STRIP_STATIC.command_signal(),
                 );
                 spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
-                let strip = $crate::led_strip::LedStripRp::new(&STRIP_STATIC);
+                let strip = $crate::led_strip::LedStripHandle::new(&STRIP_STATIC);
                 let instance = STRIP_CELL.init(Self { strip });
                 Ok(instance)
             }

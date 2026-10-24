@@ -8,6 +8,7 @@
 //! `crate` is the crate that defines the macro.
 
 use std::{
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -273,6 +274,148 @@ fn names_bare_crate(tokens: TokenStream, crates: &[&str]) -> Vec<String> {
         }
     }
     found
+}
+
+/// Where RP and ESP intentionally document a macro differently, by macro: the fields
+/// (or `members`, for the group's member note) whose Syntax and Fields lines may differ
+/// because the chips use different hardware or a different API.
+const CHIP_DIFFERENCES: [(&str, &[&str]); 12] = [
+    ("audio_player", &["pio", "dma", "i2s"]),
+    ("button_watch", &["pin"]),
+    ("ir", &["pio"]),
+    ("ir_kepler", &["pio"]),
+    ("ir_keplers", &["pio", "members"]),
+    ("ir_mapping", &["pio"]),
+    ("ir_mappings", &["pio", "members"]),
+    ("irs", &["pio", "members"]),
+    ("led2d", &["pio", "dma", "engine", "pin"]),
+    ("led_strip", &["pio", "dma", "engine", "reset_us", "pin"]),
+    ("servo", &["pin", "timer", "channel"]),
+    ("servo_player", &["pin", "timer", "channel"]),
+];
+
+/// Macros that only one chip has.
+const ONE_CHIP_MACROS: [&str; 1] = ["led_strips"];
+
+#[test]
+fn rp_and_esp_macros_document_the_same_contract()
+-> core::result::Result<(), Box<dyn std::error::Error>> {
+    // Each chip has its own `define!`; this keeps their user-facing Syntax and Fields
+    // documentation from drifting apart except where `CHIP_DIFFERENCES` says they differ.
+    let rp = public_macro_docs("device-envoy-rp")?;
+    let esp = public_macro_docs("device-envoy-esp")?;
+    let mut problems = Vec::new();
+    for name in rp.keys().chain(esp.keys()).collect::<BTreeSet<_>>() {
+        let (Some(rp_doc), Some(esp_doc)) = (rp.get(name), esp.get(name)) else {
+            if !ONE_CHIP_MACROS.contains(&name.as_str()) {
+                problems.push(format!("`{name}!` is defined on only one chip"));
+            }
+            continue;
+        };
+        let allowed = CHIP_DIFFERENCES
+            .iter()
+            .find(|(macro_name, _)| *macro_name == name)
+            .map_or(&[][..], |(_, fields)| *fields);
+        let rp_lines: BTreeSet<&str> = rp_doc.lines().collect();
+        let esp_lines: BTreeSet<&str> = esp_doc.lines().collect();
+        for (chip, line) in rp_lines
+            .difference(&esp_lines)
+            .map(|line| ("RP", line))
+            .chain(esp_lines.difference(&rp_lines).map(|line| ("ESP", line)))
+        {
+            if !allowed.contains(&doc_line_key(line)) {
+                problems.push(format!("`{name}!` {chip} only: {line}"));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "RP and ESP macro documentation differ; fix the drift or add the field to \
+         `CHIP_DIFFERENCES`:\n{}",
+        problems.join("\n")
+    );
+    Ok(())
+}
+
+/// The field a Syntax or Fields line describes (`pin` for `pin: <ident>,` or
+/// ``| `pin` | ...``), or `members` for a member-group note.
+fn doc_line_key(line: &str) -> &str {
+    let trimmed = line.trim();
+    if let Some(rest) = trimmed.strip_prefix("| `") {
+        return rest.split('`').next().unwrap_or(rest);
+    }
+    if trimmed.starts_with("Each member is") {
+        return "members";
+    }
+    trimmed.split(':').next().unwrap_or(trimmed)
+}
+
+/// The generated Syntax and Fields documentation of every public `define!` macro under
+/// `crate_dir`'s `src`, by macro name.
+fn public_macro_docs(
+    crate_dir: &str,
+) -> core::result::Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(crate_dir)
+        .join("src");
+    let mut docs = BTreeMap::new();
+    for path in rust_files(&src)? {
+        let mut definitions = Vec::new();
+        collect_definitions(
+            &syn::parse_file(&fs::read_to_string(&path)?)?.items,
+            &mut definitions,
+        );
+        for tokens in definitions {
+            let name = defined_name(tokens.clone())?.to_string();
+            if name.starts_with("__") {
+                continue;
+            }
+            let emitted: syn::File = syn::parse2(macro_schema_core::define(tokens)?)?;
+            for item in emitted.items {
+                let Item::Macro(item_macro) = item else {
+                    continue;
+                };
+                for attr in item_macro.attrs {
+                    if let syn::Meta::NameValue(name_value) = &attr.meta
+                        && name_value.path.is_ident("doc")
+                        && let syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(text),
+                            ..
+                        }) = &name_value.value
+                        && text.value().contains("**Syntax:**")
+                    {
+                        docs.insert(name.clone(), text.value());
+                    }
+                }
+            }
+        }
+    }
+    Ok(docs)
+}
+
+/// Every `macro_schema::define!` input in `items`, including inside inline modules.
+fn collect_definitions(items: &[Item], definitions: &mut Vec<TokenStream>) {
+    for item in items {
+        match item {
+            Item::Macro(item_macro)
+                if item_macro
+                    .mac
+                    .path
+                    .segments
+                    .last()
+                    .is_some_and(|segment| segment.ident == "define") =>
+            {
+                definitions.push(item_macro.mac.tokens.clone());
+            }
+            Item::Mod(item_mod) => {
+                if let Some((_, items)) = &item_mod.content {
+                    collect_definitions(items, definitions);
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 /// The `.rs` files under `dir`, recursively.

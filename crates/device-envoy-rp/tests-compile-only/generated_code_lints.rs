@@ -14,6 +14,8 @@ use defmt_rtt as _;
 use device_envoy_rp::{
     Result,
     audio_player::{adpcm_clip, pcm_clip},
+    lcd_text,
+    lcd_text::LcdText as _,
     led::{OnLevel, led},
     led_strip::{Current, led_strips},
     led2d::{Led2dFont, layout::LedLayout},
@@ -77,6 +79,11 @@ servo_player! {
     PrivateServo { pin: PIN_12 }
 }
 
+lcd_text! {
+    /// A public LCD.
+    pub PublicLcd { i2c: I2C0, sda_pin: PIN_4, scl_pin: PIN_5, width: 16, height: 2, address: 0x27 }
+}
+
 pcm_clip! {
     /// A public PCM clip.
     pub PublicPcm {
@@ -115,6 +122,8 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
         PrivateStrips::new(p.PIO0, p.PIN_8, p.DMA_CH2, p.PIN_9, p.DMA_CH3, spawner)?;
     let public_servo = PublicServo::new(p.PIN_10, p.PWM_SLICE5, spawner)?;
     let private_servo = PrivateServo::new(p.PIN_12, p.PWM_SLICE6, spawner)?;
+    let public_lcd = PublicLcd::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+    public_lcd.write_text("Hello");
     let public_pcm = PublicPcm::pcm_clip();
     let private_adpcm = PrivateAdpcm::adpcm_clip();
 
@@ -129,6 +138,7 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
                 + size_of_val(&private_panel)
                 + size_of_val(&public_servo)
                 + size_of_val(&private_servo)
+                + size_of_val(public_lcd)
                 + size_of_val(&public_pcm)
                 + size_of_val(&private_adpcm),
         );

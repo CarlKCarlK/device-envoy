@@ -174,7 +174,7 @@ macro_schema::define! {
     pub led2d {
         /// GPIO pin for LED data, for example `PIN_4`.
         pin: ident,
-        /// Physical layout; a `const` `LedLayout` that defines the panel size.
+        /// Physical layout; a `const` `LedLayout` that defines the panel size and its number of LEDs.
         led_layout: expr,
         /// Built-in font for text, for example `Led2dFont::Font4x6Trim`.
         font: expr,

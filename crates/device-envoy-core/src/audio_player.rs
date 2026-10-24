@@ -2356,3 +2356,52 @@ macro_schema::define! {
 }
 #[doc(inline)]
 pub use crate::tone;
+
+/// Internal runtime handle for macro-generated audio player types.
+///
+/// Must remain `pub` because `audio_player!` expands in downstream crates and
+/// references this type directly. `#[doc(hidden)]` keeps it out of user-facing docs.
+#[doc(hidden)]
+pub struct AudioPlayerHandle<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
+    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+}
+
+impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32>
+    AudioPlayerHandle<MAX_CLIPS, SAMPLE_RATE_HZ>
+{
+    #[doc(hidden)]
+    pub const fn new_static() -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static()
+    }
+
+    #[doc(hidden)]
+    pub const fn new_static_with_max_volume(
+        max_volume: Volume,
+    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static_with_max_volume(max_volume)
+    }
+
+    #[doc(hidden)]
+    pub const fn new_static_with_max_volume_and_initial_volume(
+        max_volume: Volume,
+        initial_volume: Volume,
+    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        AudioPlayerStatic::new_static_with_max_volume_and_initial_volume(max_volume, initial_volume)
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub const fn new(
+        audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
+    ) -> Self {
+        Self {
+            audio_player_static,
+        }
+    }
+
+    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
+    #[doc(hidden)]
+    pub fn __audio_player_static(&self) -> &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
+        self.audio_player_static
+    }
+}

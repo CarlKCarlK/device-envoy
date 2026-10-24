@@ -122,34 +122,6 @@
 pub use device_envoy_core::led_strip::*;
 pub mod led_strip_generated;
 
-/// Internal runtime handle for macro-generated LED strip types.
-///
-/// `#[doc(hidden)]` because this is implementation detail used by macro output.
-#[doc(hidden)]
-pub struct LedStripEsp<const N: usize, const MAX_FRAMES: usize> {
-    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
-}
-
-impl<const N: usize, const MAX_FRAMES: usize> LedStripEsp<N, MAX_FRAMES> {
-    #[doc(hidden)]
-    pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
-        LedStripStatic::new_static()
-    }
-
-    #[doc(hidden)]
-    pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Self {
-        Self {
-            command_signal: led_strip_static.command_signal(),
-        }
-    }
-
-    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
-    #[doc(hidden)]
-    pub fn __command_signal(&self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
-        self.command_signal
-    }
-}
-
 /// Drive the LEDs from an [RMT resource](crate#glossary).
 #[derive(Clone, Copy, Debug)]
 pub struct Rmt;
@@ -520,12 +492,12 @@ macro_schema::define! {
         static $upper($decl.name, _STATIC): $crate::led_strip::LedStripStatic<
             { $upper($decl.name, _LEDS) },
             { $decl.max_frames },
-        > = $crate::led_strip::LedStripEsp::new_static();
+        > = $crate::led_strip::LedStripHandle::new_static();
 
         $decl.attrs
         #[doc = $decl.doc]
         $decl.vis struct $decl.name {
-            inner: $crate::led_strip::LedStripEsp<{ $upper($decl.name, _LEDS) }, { $decl.max_frames }>,
+            inner: $crate::led_strip::LedStripHandle<{ $upper($decl.name, _LEDS) }, { $decl.max_frames }>,
         }
 
         impl $decl.name {
@@ -599,7 +571,7 @@ macro_schema::define! {
                         .map_err($crate::Error::TaskSpawn)?,
                 );
                 Ok(INSTANCE.init($decl.name {
-                    inner: $crate::led_strip::LedStripEsp::new(strip_static),
+                    inner: $crate::led_strip::LedStripHandle::new(strip_static),
                 }))
             }
         }

@@ -371,53 +371,6 @@ type AudioI2sTxTransfer = esp_hal::i2s::master::asynch::I2sWriteDmaTransferAsync
     &'static mut [u8; DMA_TX_BYTES],
 >;
 
-/// Internal runtime handle for macro-generated audio player types.
-///
-/// Must remain `pub` because `audio_player!` expands in downstream crates and
-/// references this type directly. `#[doc(hidden)]` keeps it out of user-facing docs.
-#[doc(hidden)]
-pub struct AudioPlayerEsp<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> {
-    audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-}
-
-impl<const MAX_CLIPS: usize, const SAMPLE_RATE_HZ: u32> AudioPlayerEsp<MAX_CLIPS, SAMPLE_RATE_HZ> {
-    #[doc(hidden)]
-    pub const fn new_static() -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
-        AudioPlayerStatic::new_static()
-    }
-
-    #[doc(hidden)]
-    pub const fn new_static_with_max_volume(
-        max_volume: Volume,
-    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
-        AudioPlayerStatic::new_static_with_max_volume(max_volume)
-    }
-
-    #[doc(hidden)]
-    pub const fn new_static_with_max_volume_and_initial_volume(
-        max_volume: Volume,
-        initial_volume: Volume,
-    ) -> AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
-        AudioPlayerStatic::new_static_with_max_volume_and_initial_volume(max_volume, initial_volume)
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub const fn new(
-        audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
-    ) -> Self {
-        Self {
-            audio_player_static,
-        }
-    }
-
-    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
-    #[doc(hidden)]
-    pub fn __audio_player_static(&self) -> &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> {
-        self.audio_player_static
-    }
-}
-
 #[cfg(target_os = "none")]
 struct EspAudioOutputSink<'a> {
     i2s_tx_transfer: &'a mut AudioI2sTxTransfer,
@@ -774,7 +727,7 @@ macro_schema::define! {
     generate {
         static $upper($decl.name, _AUDIO_PLAYER_STATIC):
             $crate::audio_player::AudioPlayerStatic<$decl.max_clips, { $decl.sample_rate_hz }> =
-            $crate::audio_player::AudioPlayerEsp::<$decl.max_clips, { $decl.sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
+            $crate::audio_player::AudioPlayerHandle::<$decl.max_clips, { $decl.sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
                 $decl.max_volume,
                 $decl.initial_volume,
             );
@@ -788,7 +741,7 @@ macro_schema::define! {
             "See the [audio_player module documentation](mod@device_envoy_esp::audio_player) for usage and examples."
         )]
         $decl.vis struct $decl.name {
-            player: $crate::audio_player::AudioPlayerEsp<$decl.max_clips, { $decl.sample_rate_hz }>,
+            player: $crate::audio_player::AudioPlayerHandle<$decl.max_clips, { $decl.sample_rate_hz }>,
         }
 
         #[doc = concat!(
@@ -838,7 +791,7 @@ macro_schema::define! {
                 );
                 spawner.spawn(token?);
                 let player =
-                    $crate::audio_player::AudioPlayerEsp::new(&$upper($decl.name, _AUDIO_PLAYER_STATIC));
+                    $crate::audio_player::AudioPlayerHandle::new(&$upper($decl.name, _AUDIO_PLAYER_STATIC));
                 Ok($upper($decl.name, _AUDIO_PLAYER_CELL).init(Self { player }))
             }
         }

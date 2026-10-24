@@ -115,12 +115,18 @@ Work in this order; each step is verified on both chips before the next.
   Rust, as it already is for `LedStrip`, `Frame1d`, and the servo loop.
 - [x] `i2cs!`/`lcd_text!`: the duplicated runtime helpers and the I2C task loop
       moved to core (`__run_i2cs`, `__write_text`).
-- [ ] Fix ESP `i2cs!`/`lcd_text!` doc drift (lost docs on `WIDTH`, `HEIGHT`,
+- [x] Fix ESP `i2cs!`/`lcd_text!` doc drift (lost docs on `WIDTH`, `HEIGHT`,
       `ADDRESS`, and both `new`s), and declare LCDs in both strict lint tests.
-- [ ] Schema parity test: for every macro both chips define, compare the
+- [x] Schema parity test (`rp_and_esp_macros_document_the_same_contract`): for every macro both chips define, compare the
       generated Syntax and Fields documentation; intentional differences go on
       an explicit allow-list.
-- [ ] Remaining families: move any real duplicated runtime logic into core.
+- [x] Remaining families: identical runtime code moved to core (the LED
+      runtime, generic over `embedded-hal` `OutputPin`; `LedStripHandle`;
+      `AudioPlayerHandle`). A token-level scan finds no identical runtime items
+      left in any paired RP/ESP module (2026-10-23).
+- [ ] LCD write errors are dropped (`let _ =` in core's
+      `write_lcd_text_cells`), like the LED errors were. Decide how a background
+      task reports them on each chip (RP logs with `defmt`, ESP with `log`).
 
 ## 3. Branch health
 

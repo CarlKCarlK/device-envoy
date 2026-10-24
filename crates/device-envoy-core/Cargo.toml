@@ -50,6 +50,7 @@ embedded-graphics = { version = "0.8", default-features = false }
 embassy-executor = { version = "0.10.0", default-features = false, optional = true }
 embassy-futures = "0.1.2"
 embassy-sync = "0.8.0"
+embedded-hal = "1.0.0"
 embassy-time = { version = "0.5.1" }
 embassy-net = { version = "0.9.1", features = ["dns", "udp", "proto-ipv4", "medium-ip"] }
 heapless = { version = "0.9.2", features = ["serde"] }

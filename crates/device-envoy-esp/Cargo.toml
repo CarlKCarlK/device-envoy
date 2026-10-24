@@ -204,6 +204,11 @@ path = "tests/embedded/led_strip_engine_trait_compile.rs"
 harness = false
 
 [[test]]
+name = "generated_code_lints_lcd_compile"
+path = "tests/embedded/generated_code_lints_lcd_compile.rs"
+harness = false
+
+[[test]]
 name = "generated_code_lints_compile"
 path = "tests/embedded/generated_code_lints_compile.rs"
 harness = false

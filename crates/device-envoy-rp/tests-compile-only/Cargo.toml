@@ -38,7 +38,6 @@ embassy-rp = { version = "0.10.0", default-features = false, features = [
 ] }
 embedded-graphics = { version = "0.8", default-features = false }
 smart-leds = "0.4.0"
-paste = "1.0"
 heapless = "0.9.2"
 static_cell = "2.1.1"
 embassy-sync = { version = "0.8.0", default-features = false }
@@ -121,6 +120,16 @@ path = "lcd_text_four.rs"
 required-features = ["pico1"]
 
 [[bin]]
+name = "led_strip_and_ir_same_pio_should_fail"
+path = "led_strip_and_ir_same_pio_should_fail.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "led_strip_same_pio_should_fail"
+path = "led_strip_same_pio_should_fail.rs"
+required-features = ["pico1"]
+
+[[bin]]
 name = "lcd_text_single_then_group_should_fail"
 path = "lcd_text_single_then_group_should_fail.rs"
 required-features = ["pico1"]
@@ -193,4 +202,9 @@ required-features = ["pico1"]
 [[bin]]
 name = "rfid_two"
 path = "rfid_two.rs"
+required-features = ["pico1"]
+
+[[bin]]
+name = "generated_code_lints"
+path = "generated_code_lints.rs"
 required-features = ["pico1"]

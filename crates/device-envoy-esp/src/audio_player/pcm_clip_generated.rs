@@ -11,7 +11,7 @@ use crate::audio_player::pcm_clip;
 pcm_clip! {
     pub PcmClipGenerated {
         file: "data/audio/nasa_22k.s16",
-        sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
+        source_sample_rate_hz: crate::audio_player::VOICE_22050_HZ,
     }
 }
 

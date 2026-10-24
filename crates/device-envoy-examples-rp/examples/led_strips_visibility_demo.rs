@@ -6,18 +6,19 @@ use defmt_rtt as _;
 use device_envoy_rp::led_strip::{Current, led_strips};
 use panic_probe as _;
 
-// Public (visibility is required)
+// Public (visibility is optional; omitting it makes the types private)
 led_strips! {
     pub PublicLedStrips {
-        Gpio0LedStrip: { pin: PIN_0, len: 8, max_current: Current::Milliamps(25) }
+        Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(25) }
     }
 }
 
 // Explicitly crate-private (new capability)
 led_strips! {
-    pio: PIO1,
     pub(crate) CrateLedStrips {
-        Gpio2LedStrip: { pin: PIN_2, len: 16, max_current: Current::Milliamps(50) }
+        pio: PIO1,
+
+        Gpio2LedStrip { pin: PIN_2, len: 16, max_current: Current::Milliamps(50) }
     }
 }
 
@@ -26,9 +27,10 @@ mod inner {
 
     // Module-private (new capability)
     led_strips! {
-        pio: PIO0,
         pub(super) SuperLedStrips {
-            Gpio4LedStrip: { pin: PIN_4, len: 24, max_current: Current::Milliamps(75) }
+            pio: PIO0,
+
+            Gpio4LedStrip { pin: PIN_4, len: 24, max_current: Current::Milliamps(75) }
         }
     }
 

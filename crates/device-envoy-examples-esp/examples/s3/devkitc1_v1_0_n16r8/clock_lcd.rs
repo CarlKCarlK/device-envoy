@@ -39,10 +39,10 @@ button_watch! {
 }
 
 lcd_text! {
-    i2c: I2C0,
-    sda_pin: GPIO16,
-    scl_pin: GPIO17,
     LcdTextClock {
+        i2c: I2C0,
+        sda_pin: GPIO16,
+        scl_pin: GPIO17,
         width: 16,
         height: 2,
         address: 0x27

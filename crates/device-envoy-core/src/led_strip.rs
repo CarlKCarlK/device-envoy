@@ -98,8 +98,9 @@ pub enum Gamma {
 #[doc(hidden)]
 pub const GAMMA_DEFAULT: Gamma = Gamma::Srgb;
 
-/// Default max_frames used by the `led_strip!` macro.
-#[doc(hidden)]
+/// Default animation capacity for LED strip and panel declaration macros.
+///
+/// The default is 16 frames. See [`LedStrip`] for the animation API.
 pub const MAX_FRAMES_DEFAULT: usize = 16;
 
 /// Gamma 2.2 lookup table (sRGB).
@@ -486,4 +487,32 @@ pub fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u
         pixel.g = combo_table[pixel.g as usize];
         pixel.b = combo_table[pixel.b as usize];
     });
+}
+
+/// Internal runtime handle for macro-generated LED strip types.
+///
+/// `#[doc(hidden)]` because this is implementation detail used by macro output.
+#[doc(hidden)]
+pub struct LedStripHandle<const N: usize, const MAX_FRAMES: usize> {
+    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
+}
+
+impl<const N: usize, const MAX_FRAMES: usize> LedStripHandle<N, MAX_FRAMES> {
+    #[doc(hidden)]
+    pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
+        LedStripStatic::new_static()
+    }
+
+    #[doc(hidden)]
+    pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Self {
+        Self {
+            command_signal: led_strip_static.command_signal(),
+        }
+    }
+
+    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
+    #[doc(hidden)]
+    pub fn __command_signal(&self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
+        self.command_signal
+    }
 }

@@ -47,7 +47,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, ledc: ledc);
+    init_and_start!(p);
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);

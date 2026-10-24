@@ -12,10 +12,11 @@ use embassy_futures::select::{Either, select};
 use panic_probe as _;
 
 ir_keplers! {
-    pio: PIO0,
     IrKeplers0 {
-        IrKepler15: { pin: PIN_15 },
-        IrKepler01: { pin: PIN_16 }
+        pio: PIO0,
+
+        IrKepler15 { pin: PIN_15 },
+        IrKepler01 { pin: PIN_16 }
     }
 }
 

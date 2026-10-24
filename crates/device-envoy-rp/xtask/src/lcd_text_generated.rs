@@ -12,12 +12,13 @@ use crate::i2cs;
 
 #[cfg(all(not(doc), not(feature = "host")))]
 i2cs! {
-    i2c: I2C0,
-    sda_pin: PIN_4,
-    scl_pin: PIN_5,
     pub I2csGenerated {
-        pub LcdTextGenerated { width: 16, height: 2, address: 0x27 },
-        pub LcdTextGenerated20x4 { width: 20, height: 4, address: 0x3F },
+        i2c: I2C0,
+        sda_pin: PIN_4,
+        scl_pin: PIN_5,
+
+        LcdTextGenerated { width: 16, height: 2, address: 0x27 },
+        LcdTextGenerated20x4 { width: 20, height: 4, address: 0x3F },
     }
 }
 

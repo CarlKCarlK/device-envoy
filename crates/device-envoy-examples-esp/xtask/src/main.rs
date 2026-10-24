@@ -363,7 +363,10 @@ fn test_capabilities_required(test: &str) -> Capability {
     if test.starts_with("ir_")
         || matches!(
             test,
-            "led_strip_two_strips_compile" | "led2d_two_panels_compile"
+            "led_strip_two_strips_compile"
+                | "led2d_two_panels_compile"
+                | "generated_code_lints_compile"
+                | "led_strip_engine_trait_compile"
         )
     {
         caps.insert(Capability::RMT);
@@ -373,6 +376,9 @@ fn test_capabilities_required(test: &str) -> Capability {
     }
     if test == "led_strip_spi_two_strips_compile" {
         caps.insert(Capability::DUAL_SPI);
+    }
+    if test.starts_with("servo_") || test == "generated_code_lints_compile" {
+        caps.insert(Capability::LEDC);
     }
     caps
 }
@@ -1016,7 +1022,8 @@ fn check_embedded_tests() -> ExitCode {
 }
 
 fn check_embedded_tests_for_targets(targets: &[BuildTarget]) -> ExitCode {
-    let root = workspace_root();
+    // The embedded tests are `[[test]]` targets of device-envoy-esp.
+    let root = device_envoy_esp_root();
     println!(
         "{}",
         "--> embedded tests (compile-pass + expected compile-fail)".cyan()
@@ -1387,6 +1394,9 @@ fn explicit_embedded_test_skip_reason(
     }
     if required_caps.contains(Capability::DUAL_SPI) && !chip_caps.contains(Capability::DUAL_SPI) {
         return Some("chip has fewer than two SPI peripherals");
+    }
+    if required_caps.contains(Capability::LEDC) && !chip_caps.contains(Capability::LEDC) {
+        return Some("chip has no LEDC peripheral");
     }
 
     // GPIO availability: scan the test source for all GPIO pin numbers it references,
@@ -1868,7 +1878,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub struct Led2dGenerated",
                 "impl Led2dGenerated",
                 "impl Led2d<12, 4> for &'static Led2dGenerated",
-                "pub const MAX_FRAMES: usize",
+                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
                 "pub fn new(",
             ],
         },
@@ -1888,7 +1898,7 @@ fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
                 "pub struct LedStripGenerated",
                 "impl LedStripGenerated",
                 "impl LedStrip<8> for LedStripGenerated",
-                "pub const MAX_FRAMES: usize",
+                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
                 "pub fn new(",
             ],
         },

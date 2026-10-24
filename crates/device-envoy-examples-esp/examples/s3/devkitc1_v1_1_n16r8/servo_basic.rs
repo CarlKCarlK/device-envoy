@@ -37,7 +37,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, ledc: ledc);
+    init_and_start!(p);
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
 
     let basic_servo = BasicServo::new(&ledc, p.GPIO10)?;
 

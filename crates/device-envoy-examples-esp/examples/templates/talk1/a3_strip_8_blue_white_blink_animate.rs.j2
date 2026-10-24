@@ -37,7 +37,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     let led_strip_len8 = LedStripLen8::new(p.GPIO{{ strip8_pin }}, rmt80.channel0, spawner)?;
 
     // Create two frames

@@ -40,10 +40,10 @@ button_watch! {
 }
 
 lcd_text! {
-    i2c: I2C0,
-    sda_pin: GPIO{{ lcd_sda_pin }},
-    scl_pin: GPIO{{ lcd_scl_pin }},
     LcdTextClock {
+        i2c: I2C0,
+        sda_pin: GPIO{{ lcd_sda_pin }},
+        scl_pin: GPIO{{ lcd_scl_pin }},
         width: 16,
         height: 2,
         address: 0x27

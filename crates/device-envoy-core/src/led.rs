@@ -5,6 +5,8 @@
 
 use core::borrow::Borrow;
 
+use crate::UnwrapInfallible;
+
 /// Logical LED level.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Default)]
 pub enum LedLevel {
@@ -95,5 +97,123 @@ pub trait Led {
     /// Equivalent to `set_level(LedLevel::Off)`.
     fn off(&self) {
         self.set_level(LedLevel::Off);
+    }
+}
+
+// ============================================================================
+// Shared runtime for the `led!` macro on every chip.
+// Public because the macro expands in downstream crates; hidden from user docs.
+// ============================================================================
+
+/// Default animation length for `led!`.
+#[doc(hidden)]
+pub const DEFAULT_MAX_STEPS: usize = 32;
+
+/// A command sent from an LED handle to its background task.
+#[derive(Clone)]
+#[doc(hidden)]
+pub enum LedCommand<const MAX_STEPS: usize> {
+    Set(LedLevel),
+    Animate(heapless::Vec<(LedLevel, embassy_time::Duration), MAX_STEPS>),
+}
+
+/// Carries commands from an LED handle to its background task.
+#[doc(hidden)]
+pub type LedOuterStatic<const MAX_STEPS: usize> = embassy_sync::signal::Signal<
+    embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+    LedCommand<MAX_STEPS>,
+>;
+
+/// The static state behind one `led!` device.
+#[doc(hidden)]
+pub struct LedStatic<const MAX_STEPS: usize> {
+    outer: LedOuterStatic<MAX_STEPS>,
+}
+
+impl<const MAX_STEPS: usize> LedStatic<MAX_STEPS> {
+    #[doc(hidden)]
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            outer: embassy_sync::signal::Signal::new(),
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn outer(&self) -> &LedOuterStatic<MAX_STEPS> {
+        &self.outer
+    }
+}
+
+/// Drives `pin` to show `led_level`, given which pin level lights the LED.
+#[doc(hidden)]
+pub fn set_pin_for_led_level(
+    led_level: LedLevel,
+    pin: &mut impl embedded_hal::digital::OutputPin<Error = core::convert::Infallible>,
+    on_level: OnLevel,
+) {
+    match (led_level, on_level) {
+        (LedLevel::On, OnLevel::High) | (LedLevel::Off, OnLevel::Low) => {
+            pin.set_high().unwrap_infallible();
+        }
+        (LedLevel::Off, OnLevel::High) | (LedLevel::On, OnLevel::Low) => {
+            pin.set_low().unwrap_infallible();
+        }
+    }
+}
+
+/// Holds `led_level` until a different command arrives, and returns that command.
+#[doc(hidden)]
+pub async fn run_set_level_loop<const MAX_STEPS: usize>(
+    led_level: LedLevel,
+    outer_static: &'static LedOuterStatic<MAX_STEPS>,
+    pin: &mut impl embedded_hal::digital::OutputPin<Error = core::convert::Infallible>,
+    on_level: OnLevel,
+) -> LedCommand<MAX_STEPS> {
+    set_pin_for_led_level(led_level, pin, on_level);
+
+    loop {
+        match outer_static.wait().await {
+            LedCommand::Set(new_led_level) => {
+                if new_led_level == led_level {
+                    continue;
+                }
+                return LedCommand::Set(new_led_level);
+            }
+            other => return other,
+        }
+    }
+}
+
+/// Loops `animation` until a new command arrives, and returns that command.
+#[doc(hidden)]
+pub async fn run_animation_loop<const MAX_STEPS: usize>(
+    animation: heapless::Vec<(LedLevel, embassy_time::Duration), MAX_STEPS>,
+    outer_static: &'static LedOuterStatic<MAX_STEPS>,
+    pin: &mut impl embedded_hal::digital::OutputPin<Error = core::convert::Infallible>,
+    on_level: OnLevel,
+) -> LedCommand<MAX_STEPS> {
+    if animation.is_empty() {
+        return LedCommand::Animate(animation);
+    }
+
+    let mut frame_index = 0;
+
+    loop {
+        let (led_level, duration) = animation[frame_index];
+
+        set_pin_for_led_level(led_level, pin, on_level);
+
+        frame_index = (frame_index + 1) % animation.len();
+
+        match embassy_futures::select::select(
+            embassy_time::Timer::after(duration),
+            outer_static.wait(),
+        )
+        .await
+        {
+            embassy_futures::select::Either::First(_) => {}
+            embassy_futures::select::Either::Second(command) => return command,
+        }
     }
 }

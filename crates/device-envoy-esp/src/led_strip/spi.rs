@@ -1,11 +1,8 @@
 //! ESP32 SPI driver for NeoPixel-style (WS2812) LED strips.
 //!
-//! Used internally by `led_strip!` when `engine: Engine::Spi`.
+//! Used internally by `led_strip!` and `led2d!` when `engine: Spi`.
 
-use embassy_futures::select::{Either, select};
-use embassy_time::Timer;
-
-use super::{Command, Frame1d, LedStripCommandSignal, apply_correction};
+use super::Frame1d;
 
 /// WS2812-over-SPI bitrate in Hz.
 ///
@@ -101,235 +98,19 @@ impl<'d, const LEDS: usize, const BYTES: usize> SpiWs2812<'d, LEDS, BYTES> {
     }
 }
 
+impl<const LEDS: usize, const BYTES: usize> super::Ws2812Write<LEDS>
+    for SpiWs2812<'_, LEDS, BYTES>
+{
+    type Error = Error;
+
+    fn write(&mut self, frame: &Frame1d<LEDS>) -> core::result::Result<(), Error> {
+        SpiWs2812::write(self, frame)
+    }
+}
+
 /// Errors returned by [`SpiWs2812::write`].
 #[derive(Debug)]
 pub enum Error {
     /// SPI transmit failed.
     Transmit(esp_hal::spi::Error),
 }
-
-/// Asynchronous device loop for an SPI-backed WS2812 LED strip.
-#[doc(hidden)]
-pub async fn led_strip_spi_device_loop<
-    'd,
-    const LEDS: usize,
-    const BYTES: usize,
-    const MAX_FRAMES: usize,
->(
-    mut driver: SpiWs2812<'d, LEDS, BYTES>,
-    command_signal: &'static LedStripCommandSignal<LEDS, MAX_FRAMES>,
-    combo_table: &'static [u8; 256],
-) -> ! {
-    let _ = driver.write(&Frame1d::new());
-    let mut pending: Option<Command<LEDS, MAX_FRAMES>> = None;
-
-    loop {
-        let command = match pending.take() {
-            Some(cmd) => cmd,
-            None => command_signal.wait().await,
-        };
-
-        match command {
-            Command::DisplayStatic(mut frame) => {
-                apply_correction(&mut frame, combo_table);
-                let _ = driver.write(&frame);
-            }
-            Command::Animate(sequence) => 'animate: loop {
-                for (mut frame, duration) in sequence.iter().cloned() {
-                    apply_correction(&mut frame, combo_table);
-                    let _ = driver.write(&frame);
-                    match select(Timer::after(duration), command_signal.wait()).await {
-                        Either::First(_) => {}
-                        Either::Second(new_command) => {
-                            pending = Some(new_command);
-                            break 'animate;
-                        }
-                    }
-                }
-                if let Some(new_command) = command_signal.try_take() {
-                    pending = Some(new_command);
-                    break 'animate;
-                }
-            },
-        }
-    }
-}
-
-/// Internal helper macro used by `led_strip!` for `Engine::Spi`.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led_strip_spi_inner {
-    (
-        $name:ident,
-        $pin:ident,
-        $len:expr,
-        $max_current:expr,
-        [$($gamma:expr)?],
-        [$($max_frames:expr)?],
-        [$($reset_us:expr)?],
-        [$($led2d_layout:expr)?],
-        [$($led2d_font:expr)?],
-    ) => {
-        $crate::__led_strip_spi_impl!{
-            name        = $name,
-            pin         = $pin,
-            len         = $len,
-            max_current = $max_current,
-            gamma       = $crate::__led_strip_first_or_default!(
-                              [$($gamma)?],
-                              $crate::led_strip::GAMMA_DEFAULT
-                          ),
-            max_frames  = $crate::__led_strip_first_or_default!(
-                              [$($max_frames)?],
-                              $crate::led_strip::MAX_FRAMES_DEFAULT
-                          ),
-            reset_us    = $crate::__led_strip_first_or_default!(
-                              [$($reset_us)?],
-                              $crate::led_strip::spi::RESET_US_DEFAULT
-                          ),
-            led2d_layout = [$($led2d_layout)?],
-            led2d_font = [$($led2d_font)?],
-        }
-    };
-}
-
-/// Core SPI implementation macro for `led_strip!`.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __led_strip_spi_impl {
-    (
-        name        = $name:ident,
-        pin         = $pin:ident,
-        len         = $len:expr,
-        max_current = $max_current:expr,
-        gamma       = $gamma:expr,
-        max_frames  = $max_frames:expr,
-        reset_us    = $reset_us:expr,
-        led2d_layout = [$($led2d_layout:expr)?],
-        led2d_font = [$($led2d_font:expr)?],
-    ) => {
-        ::paste::paste! {
-            mod [<$name:snake _consts>] {
-                pub const LEDS: usize = $len;
-                pub const RESET_BYTES: usize = $crate::led_strip::spi::reset_bytes_for_us($reset_us);
-                pub const BYTES: usize = LEDS * 9 + RESET_BYTES;
-                pub const WORST_CASE_MA: u32 = LEDS as u32 * 60;
-            }
-
-            static [<$name:snake:upper _STATIC>]:
-                $crate::led_strip::LedStripStatic<
-                    { [<$name:snake _consts>]::LEDS },
-                    { $max_frames },
-                > = $crate::led_strip::LedStripEsp::new_static();
-
-            pub struct $name {
-                inner: $crate::led_strip::LedStripEsp<
-                    { [<$name:snake _consts>]::LEDS },
-                    { $max_frames },
-                >,
-            }
-
-            impl $name {
-                pub const LEN: usize = [<$name:snake _consts>]::LEDS;
-                pub const MAX_FRAMES: usize = $max_frames;
-                pub const MAX_BRIGHTNESS: u8 = <$crate::led_strip::Current>::max_brightness(
-                    $max_current,
-                    [<$name:snake _consts>]::WORST_CASE_MA,
-                );
-                pub const COMBO_TABLE: [u8; 256] =
-                    $crate::led_strip::generate_combo_table($gamma, Self::MAX_BRIGHTNESS);
-
-                $crate::__led2d_strip_methods!(
-                    { [<$name:snake _consts>]::LEDS },
-                    { $max_frames },
-                    [$($led2d_layout)?],
-                    [$($led2d_font)?]
-                );
-
-                /// Construct the strip controller from a MOSI pin and SPI peripheral.
-                pub fn new(
-                    pin: $crate::esp_hal::peripherals::$pin<'static>,
-                    spi: impl ::esp_hal::spi::master::Instance + 'static,
-                    spawner: ::embassy_executor::Spawner,
-                ) -> $crate::Result<&'static Self> {
-                    use ::static_cell::StaticCell;
-
-                    static INSTANCE: StaticCell<$name> = StaticCell::new();
-                    static COMBO: StaticCell<[u8; 256]> = StaticCell::new();
-
-                    let combo_ref: &'static [u8; 256] = COMBO.init(<$name>::COMBO_TABLE);
-
-                    let driver =
-                        $crate::led_strip::spi::SpiWs2812::<
-                            { [<$name:snake _consts>]::LEDS },
-                            { [<$name:snake _consts>]::BYTES },
-                        >::new(spi, pin, [<$name:snake _consts>]::RESET_BYTES)?;
-
-                    let strip_static: &'static _ = &[<$name:snake:upper _STATIC>];
-
-                    spawner
-                        .spawn([<$name:snake _device_task>](driver, strip_static, combo_ref).map_err($crate::Error::TaskSpawn)?);
-
-                    let instance = INSTANCE.init($name {
-                        inner: $crate::led_strip::LedStripEsp::new(strip_static),
-                    });
-                    Ok(instance)
-                }
-            }
-
-            impl $crate::led_strip::LedStrip<{ [<$name:snake _consts>]::LEDS }> for $name {
-                const MAX_FRAMES: usize = $max_frames;
-                const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
-
-                fn write_frame(
-                    &self,
-                    frame: $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
-                ) {
-                    $crate::led_strip::__write_frame(self.inner.__command_signal(), frame);
-                }
-
-                fn animate<I>(&self, frames: I)
-                where
-                    I: IntoIterator,
-                    I::Item: ::core::borrow::Borrow<(
-                        $crate::led_strip::Frame1d<{ [<$name:snake _consts>]::LEDS }>,
-                        embassy_time::Duration,
-                    )>,
-                {
-                    $crate::led_strip::__animate(self.inner.__command_signal(), frames);
-                }
-            }
-
-            $crate::__led2d_strip_trait_impl!(
-                $name,
-                [$($led2d_layout)?],
-                [$($led2d_font)?],
-                $max_frames
-            );
-
-            #[::embassy_executor::task]
-            async fn [<$name:snake _device_task>](
-                driver: $crate::led_strip::spi::SpiWs2812<
-                    'static,
-                    { [<$name:snake _consts>]::LEDS },
-                    { [<$name:snake _consts>]::BYTES },
-                >,
-                strip_static: &'static $crate::led_strip::LedStripStatic<
-                    { [<$name:snake _consts>]::LEDS },
-                    { $max_frames },
-                >,
-                combo_table: &'static [u8; 256],
-            ) {
-                $crate::led_strip::spi::led_strip_spi_device_loop(
-                    driver,
-                    strip_static.command_signal(),
-                    combo_table,
-                )
-                .await;
-            }
-        }
-    };
-}
-
-// Re-export macros so they are visible from the `spi` module path.
-pub use crate::{__led_strip_spi_impl, __led_strip_spi_inner};

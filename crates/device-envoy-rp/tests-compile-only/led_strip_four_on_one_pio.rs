@@ -12,12 +12,13 @@ use device_envoy_rp::led_strip::led_strips;
 use embassy_executor::Spawner;
 
 led_strips! {
-    pio: PIO0,
     pub LedStripsPio0Four {
-        Gpio0Strip: { pin: PIN_0, dma: DMA_CH0, len: 8, max_current: Current::Milliamps(120) },
-        Gpio3Strip: { pin: PIN_3, dma: DMA_CH1, len: 8, max_current: Current::Milliamps(120) },
-        Gpio4Strip: { pin: PIN_4, dma: DMA_CH2, len: 8, max_current: Current::Milliamps(120) },
-        Gpio5Strip: { pin: PIN_5, dma: DMA_CH3, len: 8, max_current: Current::Milliamps(120) }
+        pio: PIO0,
+
+        Gpio0Strip { pin: PIN_0, dma: DMA_CH0, len: 8, max_current: Current::Milliamps(120) },
+        Gpio3Strip { pin: PIN_3, dma: DMA_CH1, len: 8, max_current: Current::Milliamps(120) },
+        Gpio4Strip { pin: PIN_4, dma: DMA_CH2, len: 8, max_current: Current::Milliamps(120) },
+        Gpio5Strip { pin: PIN_5, dma: DMA_CH3, len: 8, max_current: Current::Milliamps(120) }
     }
 }
 

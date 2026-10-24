@@ -29,7 +29,6 @@ const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_ma
 led2d! {
     Led16x16Test {
         pin: GPIO2,
-        len: 256,
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
         font: Led2dFont::Font4x6Trim,
@@ -44,7 +43,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!(

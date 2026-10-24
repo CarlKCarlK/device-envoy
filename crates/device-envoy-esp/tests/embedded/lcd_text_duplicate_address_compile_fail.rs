@@ -15,10 +15,11 @@ use device_envoy_esp::{i2cs, init_and_start};
 esp_bootloader_esp_idf::esp_app_desc!();
 
 i2cs! {
-    i2c: I2C0,
-    sda_pin: GPIO4,
-    scl_pin: GPIO5,
     I2csDuplicateAddressCompileFail {
+        i2c: I2C0,
+        sda_pin: GPIO4,
+        scl_pin: GPIO5,
+
         LcdTextA { width: 16, height: 2, address: 0x27 },
         LcdTextB { width: 20, height: 4, address: 0x27 },
     }

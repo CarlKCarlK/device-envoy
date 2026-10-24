@@ -218,6 +218,63 @@ fn generated_doc_links_name_the_crate() -> core::result::Result<(), Box<dyn std:
     Ok(())
 }
 
+/// Crates that generated code reaches through `$crate` re-exports, so the user's
+/// crate need not depend on them.
+const HIDDEN_CRATES: [&str; 4] = ["static_cell", "heapless", "embassy_sync", "paste"];
+
+#[test]
+fn generated_code_reaches_helper_crates_through_dollar_crate()
+-> core::result::Result<(), Box<dyn std::error::Error>> {
+    let mut offenders = Vec::new();
+    for crate_dir in ["device-envoy-core", "device-envoy-rp", "device-envoy-esp"] {
+        let src = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join(crate_dir)
+            .join("src");
+        for path in rust_files(&src)? {
+            let file = syn::parse_file(&fs::read_to_string(&path)?)?;
+            for (name, tokens) in user_expanded_macros(&file.items) {
+                for hidden in names_bare_crate(tokens, &HIDDEN_CRATES) {
+                    offenders.push(format!("{} (`{name}!` names `{hidden}`)", path.display()));
+                }
+            }
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "generated code names a helper crate directly; use `$crate::__<crate>`:\n{}",
+        offenders.join("\n")
+    );
+    Ok(())
+}
+
+/// The names in `crates` that `tokens` uses as the first segment of a path, as in
+/// `heapless::Vec` or `::heapless::Vec`, rather than after another segment such as
+/// `$crate::__heapless`.
+fn names_bare_crate(tokens: TokenStream, crates: &[&str]) -> Vec<String> {
+    let tokens: Vec<TokenTree> = tokens.into_iter().collect();
+    let is_colon = |token: Option<&TokenTree>| matches!(token, Some(TokenTree::Punct(punct)) if punct.as_char() == ':');
+    let mut found = Vec::new();
+    for (index, token) in tokens.iter().enumerate() {
+        match token {
+            TokenTree::Group(group) => found.extend(names_bare_crate(group.stream(), crates)),
+            TokenTree::Ident(ident) if crates.contains(&ident.to_string().as_str()) => {
+                let starts_path =
+                    is_colon(tokens.get(index + 1)) && is_colon(tokens.get(index + 2));
+                let after_segment = index >= 3
+                    && is_colon(tokens.get(index - 1))
+                    && is_colon(tokens.get(index - 2))
+                    && matches!(tokens.get(index - 3), Some(TokenTree::Ident(_)));
+                if starts_path && !after_segment {
+                    found.push(ident.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    found
+}
+
 /// The `.rs` files under `dir`, recursively.
 fn rust_files(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
     let mut files = Vec::new();

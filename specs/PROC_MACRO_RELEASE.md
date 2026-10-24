@@ -109,12 +109,18 @@ Work in this order; each step is verified on both chips before the next.
       tasks, where no caller can receive an error.
 - [x] **Method visibility** (2026-10-23): generated methods are `pub` everywhere; the
       declared type carries the user's visibility (RP `led!` is the outlier).
-- [ ] **One template per macro family across RP and ESP.** Each schema, its
-      docs, and its template live once in core with a platform parameter;
-      each chip crate binds it with one line and supplies a small adapter
-      module of uniformly named types and functions for its HAL. Needs a
-      `macro-schema` platform-parameter feature (0.1.2). Do one family end to
-      end first, then the rest.
+- **RP and ESP keep separate `define!` schemas and templates, with no shared
+  macro code** (decided 2026-10-23). Each chip's template is that chip's API
+  in its HAL's terms. Plain runtime logic is shared through core as ordinary
+  Rust, as it already is for `LedStrip`, `Frame1d`, and the servo loop.
+- [x] `i2cs!`/`lcd_text!`: the duplicated runtime helpers and the I2C task loop
+      moved to core (`__run_i2cs`, `__write_text`).
+- [ ] Fix ESP `i2cs!`/`lcd_text!` doc drift (lost docs on `WIDTH`, `HEIGHT`,
+      `ADDRESS`, and both `new`s), and declare LCDs in both strict lint tests.
+- [ ] Schema parity test: for every macro both chips define, compare the
+      generated Syntax and Fields documentation; intentional differences go on
+      an explicit allow-list.
+- [ ] Remaining families: move any real duplicated runtime logic into core.
 
 ## 3. Branch health
 

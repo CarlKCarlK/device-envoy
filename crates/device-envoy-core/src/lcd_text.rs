@@ -263,3 +263,123 @@ impl LcdTextDriver {
         Ok(())
     }
 }
+
+// ============================================================================
+// Shared runtime for the `i2cs!` and `lcd_text!` macros on every chip.
+// Public because the macros expand in downstream crates; hidden from user docs.
+// ============================================================================
+
+/// Carries one display's next frame to its group's I2C task.
+#[doc(hidden)]
+pub type __I2csSignal<T> =
+    embassy_sync::signal::Signal<embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex, T>;
+
+#[doc(hidden)]
+pub use LcdText as __LcdText;
+#[doc(hidden)]
+pub use LcdTextFrame as __LcdTextFrame;
+
+/// The largest `width * height` among a group's displays: the frame size every member's
+/// signal carries.
+#[doc(hidden)]
+#[must_use]
+pub const fn __max_lcd_cells<const N: usize>(widths: [usize; N], heights: [usize; N]) -> usize {
+    let mut max_cells = 0;
+    let mut index = 0;
+    while index < N {
+        let cells = widths[index] * heights[index];
+        if cells > max_cells {
+            max_cells = cells;
+        }
+        index += 1;
+    }
+    max_cells
+}
+
+/// Fails to compile when two displays in one group share an I2C address.
+#[doc(hidden)]
+pub const fn __assert_unique_addresses<const N: usize>(addresses: [u8; N]) {
+    let mut first_index = 0;
+    while first_index < N {
+        let mut second_index = first_index + 1;
+        while second_index < N {
+            if addresses[first_index] == addresses[second_index] {
+                panic!("duplicate lcd_text I2C address in i2cs! group");
+            }
+            second_index += 1;
+        }
+        first_index += 1;
+    }
+}
+
+/// Renders `text` for a `W` by `H` display and hands it to the display's group task.
+#[doc(hidden)]
+pub fn __write_text<const W: usize, const H: usize, const MAX_CHARS: usize>(
+    signal: &__I2csSignal<LcdTextFrame<MAX_CHARS>>,
+    text: &str,
+) {
+    assert!(W > 0, "lcd_text width must be > 0");
+    assert!(H > 0, "lcd_text height must be > 0");
+    assert!(H <= 4, "lcd_text height must be <= 4 for HD44780 row map");
+    signal.signal(render_lcd_text_frame::<W, H, MAX_CHARS>(text));
+}
+
+/// Runs a group's shared I2C task: waits for any display's next frame and writes it,
+/// initializing each display the first time it is written.
+#[doc(hidden)]
+pub async fn __run_i2cs<const N: usize, const MAX_CHARS: usize>(
+    mut lcd_text_write: impl LcdTextWrite,
+    signals: [&'static __I2csSignal<LcdTextFrame<MAX_CHARS>>; N],
+    addresses: [u8; N],
+    widths: [usize; N],
+    heights: [usize; N],
+) -> ! {
+    let mut lcd_text_driver = LcdTextDriver::new(0x27);
+    let mut initialized_addresses: heapless::Vec<u8, N> = heapless::Vec::new();
+    loop {
+        let (lcd_text_frame, ready_index) =
+            embassy_futures::select::select_array(signals.map(|signal| signal.wait())).await;
+        write_lcd_text_cells::<N, MAX_CHARS>(
+            &mut lcd_text_driver,
+            &mut lcd_text_write,
+            &mut initialized_addresses,
+            addresses[ready_index],
+            widths[ready_index],
+            heights[ready_index],
+            &lcd_text_frame.cells,
+        )
+        .await;
+    }
+}
+
+async fn write_lcd_text_cells<const ADDRESS_COUNT: usize, const MAX_CHARS: usize>(
+    lcd_text_driver: &mut LcdTextDriver,
+    lcd_text_write: &mut impl LcdTextWrite,
+    initialized_addresses: &mut heapless::Vec<u8, ADDRESS_COUNT>,
+    address: u8,
+    width: usize,
+    height: usize,
+    cells: &[u8],
+) {
+    let first_use_of_address = !initialized_addresses
+        .iter()
+        .any(|initialized_address| *initialized_address == address);
+
+    lcd_text_driver.set_address(address);
+    if first_use_of_address {
+        if lcd_text_driver.init(lcd_text_write).await.is_err() {
+            return;
+        }
+        let _ = initialized_addresses.push(address);
+    }
+
+    let mut lcd_text_frame = LcdTextFrame::<MAX_CHARS>::new_blank(width, height);
+    let cell_count = core::cmp::min(width * height, cells.len());
+    for cell_index in 0..cell_count {
+        lcd_text_frame.cells[cell_index] = cells[cell_index];
+    }
+
+    let _ = lcd_text_driver
+        .write_frame(lcd_text_write, &lcd_text_frame)
+        .await;
+}

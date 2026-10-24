@@ -233,10 +233,10 @@ macro_schema::define! {
                     embassy_time::Duration,
                 )>,
             {
-                let mut animation: heapless::Vec<
+                let mut animation: $crate::__heapless::Vec<
                     ($crate::led::LedLevel, embassy_time::Duration),
                     { $upper($decl.name, _MAX_STEPS) },
-                > = heapless::Vec::new();
+                > = $crate::__heapless::Vec::new();
                 for frame in frames {
                     let frame = *::core::borrow::Borrow::borrow(&frame);
                     animation

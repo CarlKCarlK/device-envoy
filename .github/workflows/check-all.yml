@@ -156,6 +156,10 @@ jobs:
         with:
           tool: just
 
+      # The docs scripts search rendered pages with `rg`.
+      - name: Install ripgrep
+        run: sudo apt-get install --yes ripgrep
+
       - name: Cache
         uses: Swatinem/rust-cache@v2
 

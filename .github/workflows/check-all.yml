@@ -15,8 +15,19 @@ concurrency:
   group: check-all-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+
+# The jobs run in parallel, each on its own runner. They are the parts of the local
+# `cargo check-all` (see `xtask/src/main.rs`), so CI and local runs check the same things.
+#
+# Every push to any branch runs the jobs. A pull request from a branch in this repository
+# already has that push run, so each job skips the duplicate `pull_request` run; a pull
+# request from a fork has no push run here, so it runs.
+
 jobs:
   check-msrv:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
 
     steps:
@@ -31,7 +42,8 @@ jobs:
           cargo check -p device-envoy-core --no-default-features
           cargo check -p device-envoy --no-default-features
 
-  check-main:
+  check-core:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
 
     steps:
@@ -41,7 +53,62 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf,riscv32imac-unknown-none-elf,riscv32imc-unknown-none-elf
+          components: rustfmt
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting, Core, and the landing crate
+        run: cargo run --manifest-path xtask/Cargo.toml -- check-core
+
+  check-rp:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check RP crate, examples, and compile-only tests
+        run: cargo run --manifest-path xtask/Cargo.toml -- check-rp
+
+  check-esp-riscv:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: riscv32imac-unknown-none-elf,riscv32imc-unknown-none-elf
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check ESP RISC-V chips (examples and embedded tests)
+        run: cargo run --manifest-path xtask/Cargo.toml -- check-esp riscv
+
+  check-esp-xtensa:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install ESP toolchain
         shell: bash
@@ -51,8 +118,46 @@ jobs:
         run: |
           cargo install espup --locked
           espup install \
-            --targets esp32c6,esp32s3 \
+            --targets esp32,esp32s2,esp32s3 \
             --export-file "$HOME/export-esp.sh"
 
-      - name: Run workspace check-all
-        run: cargo check-all
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check ESP Xtensa chips (examples and embedded tests)
+        run: cargo run --manifest-path xtask/Cargo.toml -- check-esp xtensa
+
+  check-docs:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv8m.main-none-eabihf,riscv32imac-unknown-none-elf,riscv32imc-unknown-none-elf
+
+      - name: Install ESP toolchain
+        shell: bash
+        env:
+          # espup queries the GitHub API; authenticated requests avoid rate-limit failures.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cargo install espup --locked
+          espup install \
+            --targets esp32,esp32s2,esp32s3 \
+            --export-file "$HOME/export-esp.sh"
+
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build and verify the documentation snapshot
+        run: just docs

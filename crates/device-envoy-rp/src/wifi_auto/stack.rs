@@ -188,7 +188,7 @@ pub trait WifiPio: crate::pio_irqs::PioIrqMap {
         captive_portal_ssid: &'static str,
         wifi_events: &'static WifiEvents,
         stack_storage: &'static StackStorage,
-    );
+    ) -> crate::Result<()>;
 }
 
 /// Resources needed by the WiFi device.
@@ -257,7 +257,7 @@ impl Wifi {
         mut wifi_credentials_flash_block: FlashBlockRp,
         captive_portal_ssid: &'static str,
         spawner: Spawner,
-    ) -> &'static Self
+    ) -> crate::Result<&'static Self>
     where
         crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
                 DMA::Interrupt,
@@ -288,12 +288,12 @@ impl Wifi {
             captive_portal_ssid,
             &wifi_static.events,
             &wifi_static.stack,
-        );
-        wifi_static.wifi_cell.init(Self {
+        )?;
+        Ok(wifi_static.wifi_cell.init(Self {
             events: &wifi_static.events,
             stack: &wifi_static.stack,
             wifi_credentials_flash_block: Mutex::new(RefCell::new(wifi_credentials_flash_block)),
-        })
+        }))
     }
 
     fn update_state<F>(&self, f: F) -> Result<(), &'static str>
@@ -519,8 +519,12 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
     );
     let stack = STACK.init(stack_val);
 
-    let net_task_token = unwrap!(net_task(runner));
-    spawner.spawn(net_task_token);
+    // Approved panic: this task runs once per program (its statics would already panic on
+    // a second run), and a task that never returns has no caller to give an error to.
+    spawner.spawn(unwrap!(
+        net_task(runner),
+        "the network task runs once per program"
+    ));
 
     // Start captive portal network
     if CAPTIVE_PORTAL_PASSWORD.is_empty() {
@@ -545,10 +549,12 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
     let pool_start = embassy_net::Ipv4Address::new(192, 168, 4, 2);
     let pool_size = 253; // 192.168.4.2 - 192.168.4.254
 
-    let dhcp_server_token = unwrap!(dhcp_server_task(
-        stack, server_ip, netmask, pool_start, pool_size,
+    // Approved panic: this task runs once per program (its statics would already panic on
+    // a second run), and a task that never returns has no caller to give an error to.
+    spawner.spawn(unwrap!(
+        dhcp_server_task(stack, server_ip, netmask, pool_start, pool_size),
+        "the DHCP server task runs once per program"
     ));
-    spawner.spawn(dhcp_server_token);
 
     info!("DHCP server started (pool: 192.168.4.2-254)");
     info!(
@@ -660,8 +666,12 @@ async fn wifi_device_loop_client_impl<PIO: WifiPio>(
     );
     let stack = STACK.init(stack_val);
 
-    let net_task_token = unwrap!(net_task(runner));
-    spawner.spawn(net_task_token);
+    // Approved panic: this task runs once per program (its statics would already panic on
+    // a second run), and a task that never returns has no caller to give an error to.
+    spawner.spawn(unwrap!(
+        net_task(runner),
+        "the network task runs once per program"
+    ));
 
     // Connect to WiFi
     info!(
@@ -740,8 +750,12 @@ macro_rules! impl_wifi_pio {
                     cyw43::SpiBus<Output<'static>, PioSpi<'static, Self, 0>>,
                 >,
             ) {
-                let wifi_task_token = defmt::unwrap!($wifi_task(runner));
-                spawner.spawn(wifi_task_token);
+                // Approved panic: called from a device loop that never returns, so there is
+                // no caller to give an error to, and each PIO's Wi-Fi task runs once per program.
+                spawner.spawn(defmt::unwrap!(
+                    $wifi_task(runner),
+                    "the Wi-Fi task runs once per program"
+                ));
             }
 
             fn spawn_device_loop(
@@ -756,8 +770,8 @@ macro_rules! impl_wifi_pio {
                 captive_portal_ssid: &'static str,
                 wifi_events: &'static WifiEvents,
                 stack_storage: &'static StackStorage,
-            ) {
-                let wifi_device_loop_token = defmt::unwrap!($device_loop_task(
+            ) -> crate::Result<()> {
+                spawner.spawn($device_loop_task(
                     pin_23,
                     pin_24,
                     pin_25,
@@ -769,8 +783,8 @@ macro_rules! impl_wifi_pio {
                     wifi_events,
                     stack_storage,
                     spawner,
-                ));
-                spawner.spawn(wifi_device_loop_token);
+                )?);
+                Ok(())
             }
         }
 

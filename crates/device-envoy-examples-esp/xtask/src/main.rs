@@ -13,7 +13,7 @@ mod led_strip_generated;
 mod servo_player_generated;
 
 use bitflags::bitflags;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use flate2::read::GzDecoder;
 use owo_colors::OwoColorize;
 use rayon::prelude::*;
@@ -642,7 +642,11 @@ enum Commands {
     /// Build all examples (catches linker errors)
     CheckExamples,
     /// Check all examples for all supported ESP processor feature/target combinations
-    CheckExamplesAllProcessors,
+    CheckExamplesAllProcessors {
+        /// Only the chips of this architecture (default: all)
+        #[arg(long)]
+        arch: Option<Arch>,
+    },
     /// Build all talk1 examples (backward-compatible alias for legacy demos)
     CheckDemos,
     /// Verify README Rust example extraction + compile
@@ -658,7 +662,33 @@ enum Commands {
         chip: String,
     },
     /// Run embedded compile tests across all chips
-    CheckEmbeddedTests,
+    CheckEmbeddedTests {
+        /// Only the chips of this architecture (default: all)
+        #[arg(long)]
+        arch: Option<Arch>,
+    },
+}
+
+/// A chip architecture, for splitting the all-chip checks into CI jobs.
+#[derive(Clone, Copy, ValueEnum)]
+enum Arch {
+    /// ESP32-C and ESP32-H chips.
+    Riscv,
+    /// ESP32, ESP32-S2, and ESP32-S3.
+    Xtensa,
+}
+
+/// The chips in `targets` of `arch`, or all of them when `arch` is `None`.
+fn targets_for(targets: &[BuildTarget], arch: Option<Arch>) -> Vec<BuildTarget> {
+    targets
+        .iter()
+        .filter(|build_target| match arch {
+            None => true,
+            Some(Arch::Riscv) => build_target.target.starts_with("riscv"),
+            Some(Arch::Xtensa) => build_target.target.starts_with("xtensa"),
+        })
+        .copied()
+        .collect()
 }
 
 fn main() -> ExitCode {
@@ -668,13 +698,13 @@ fn main() -> ExitCode {
         Commands::CheckPrePush => check_pre_push(),
         Commands::CheckDocs => check_docs(),
         Commands::CheckExamples => check_examples(),
-        Commands::CheckExamplesAllProcessors => check_examples_all_processors(),
+        Commands::CheckExamplesAllProcessors { arch } => check_examples_all_processors(arch),
         Commands::CheckDemos => check_demos(),
         Commands::CheckReadmeExample => check_readme_example(),
         Commands::GenerateBoardExamples => generate_board_examples(),
         Commands::CheckBoardExamples => check_board_examples(),
         Commands::CheckChip { chip } => check_chip(&chip),
-        Commands::CheckEmbeddedTests => check_embedded_tests(),
+        Commands::CheckEmbeddedTests { arch } => check_embedded_tests(arch),
     }
 }
 
@@ -821,7 +851,7 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    if check_embedded_tests() != ExitCode::SUCCESS {
+    if check_embedded_tests(None) != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
 
@@ -954,8 +984,8 @@ fn check_examples() -> ExitCode {
     check_examples_for_targets(CHECK_ALL_TARGETS, true)
 }
 
-fn check_examples_all_processors() -> ExitCode {
-    check_examples_for_targets(ALL_PROCESSOR_TARGETS, false)
+fn check_examples_all_processors(arch: Option<Arch>) -> ExitCode {
+    check_examples_for_targets(&targets_for(ALL_PROCESSOR_TARGETS, arch), false)
 }
 
 fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> ExitCode {
@@ -1017,8 +1047,8 @@ fn check_demos() -> ExitCode {
     check_examples_for_targets(CHECK_ALL_TARGETS, true)
 }
 
-fn check_embedded_tests() -> ExitCode {
-    check_embedded_tests_for_targets(CHECK_ALL_TARGETS)
+fn check_embedded_tests(arch: Option<Arch>) -> ExitCode {
+    check_embedded_tests_for_targets(&targets_for(CHECK_ALL_TARGETS, arch))
 }
 
 fn check_embedded_tests_for_targets(targets: &[BuildTarget]) -> ExitCode {

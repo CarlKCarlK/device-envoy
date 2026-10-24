@@ -294,7 +294,7 @@ impl WifiAutoRp {
             wifi_credentials_flash_block,
             captive_portal_ssid,
             spawner,
-        );
+        )?;
 
         // Store fields array and convert to slice
         let fields_ref: &'static [&'static (dyn WifiAutoField<Error = crate::Error> + Sync)] =

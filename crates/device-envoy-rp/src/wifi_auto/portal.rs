@@ -1,6 +1,6 @@
 use core::cell::RefCell;
 
-use defmt::{info, unwrap, warn};
+use defmt::{info, warn};
 use embassy_executor::Spawner;
 use embassy_net::{Stack, tcp::TcpSocket};
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
@@ -52,8 +52,7 @@ pub async fn collect_credentials(
         *submitted.borrow_mut() = false;
     });
 
-    let http_server_token = unwrap!(http_server_task(stack));
-    spawner.spawn(http_server_token);
+    spawner.spawn(http_server_task(stack)?);
 
     let submission = CREDENTIAL_CHANNEL.receive().await;
     Ok(submission)

@@ -73,11 +73,12 @@ inventory, the API regularization, and the macros intentionally left as
 - [x] Generated doc links name `device_envoy_rp::` / `device_envoy_esp::`
       instead of `crate::`, which in generated code is the user's crate; a host
       test rejects `crate::` links in generated docs.
-- [ ] CI gap: the GitHub `Check All` workflow runs only the top-level
-      `cargo check-all`, which does not run RP `check-compile-only` or ESP
-      `check-embedded-tests`, where most macro compile tests live. Run them
-      locally before release, and decide whether CI or the top-level
-      `check-all` should run them.
+- [x] CI coverage (2026-10-24): `cargo check-all` runs the RP compile-only
+      and ESP embedded suites. CI runs it as parallel jobs (`check-core`,
+      `check-rp`, `check-esp riscv`, `check-esp xtensa`, `check-docs`,
+      `check-msrv`), each on its own runner, still on every push; the duplicate
+      `pull_request` run is skipped except for forks. CI now also checks
+      formatting and builds the docs.
 - [ ] Code smell: RP `led!` generates `$decl.vis fn new`, while ESP `led!` and
       ESP `servo_player!` generate `pub fn new`. Pick one.
 - Outside this release's scope: about 250 other suppressions, mostly
@@ -103,10 +104,10 @@ Work in this order; each step is verified on both chips before the next.
       are identical).
 - [x] **`impl_wifi_pio`**: `paste!` removed; the task names are passed in
       (2026-10-23). `paste` is no longer a dependency of any Device Envoy crate.
-- [ ] **RP Wi-Fi spawn handling** (not macro code): six task spawns in
-      `wifi_auto` use `unwrap!`, including the two in `impl_wifi_pio`. ESP's
-      Wi-Fi propagates with `?`. Decide a policy for spawns inside `-> !`
-      tasks, where no caller can receive an error.
+- [x] **RP Wi-Fi spawn handling** (2026-10-24): spawns in `Result`
+      functions and the constructor path propagate `Error::TaskSpawn`; the four
+      inside never-returning tasks keep `unwrap!`, approved, with a message and
+      a comment giving the invariant.
 - [x] **Method visibility** (2026-10-23): generated methods are `pub` everywhere; the
       declared type carries the user's visibility (RP `led!` is the outlier).
 - **RP and ESP keep separate `define!` schemas and templates, with no shared

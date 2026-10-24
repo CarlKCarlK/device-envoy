@@ -41,10 +41,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf,riscv32imac-unknown-none-elf
+          targets: thumbv6m-none-eabi,thumbv8m.main-none-eabihf,riscv32imac-unknown-none-elf,riscv32imc-unknown-none-elf
 
       - name: Install ESP toolchain
         shell: bash
+        env:
+          # espup queries the GitHub API; authenticated requests avoid rate-limit failures.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cargo install espup --locked
           espup install \

@@ -127,6 +127,16 @@ fn check_all() -> ExitCode {
             Command::new("cargo")
                 .current_dir(&esp_workspace_root)
                 .args([
+                    "run",
+                    "--manifest-path",
+                    "crates/device-envoy-examples-esp/xtask/Cargo.toml",
+                    "--",
+                    "check-embedded-tests",
+                ]),
+        ) && run_command(
+            Command::new("cargo")
+                .current_dir(&esp_workspace_root)
+                .args([
                     "check",
                     "-p",
                     "device-envoy-examples-esp",
@@ -148,6 +158,12 @@ fn check_all() -> ExitCode {
             "-p",
             "device-envoy-rp",
             "--lib",
+        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
+            "run",
+            "--manifest-path",
+            "crates/device-envoy-rp/xtask/Cargo.toml",
+            "--",
+            "check-compile-only",
         ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
             "check",
             "-p",

@@ -31,7 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio3_led_strip, gpio4_led_strip) =
-        LedStrips0::new(p.PIO0, p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, spawner)?;
+        LedStrips0::new(p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, p.PIO0, spawner)?;
 
     info!("Dual WS2812B 4x12 Panel demo starting");
     info!("Using PIO0, two state machines, GPIO3 & GPIO4");

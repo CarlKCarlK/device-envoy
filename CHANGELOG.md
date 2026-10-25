@@ -72,6 +72,42 @@ Syntax changes:
   inside its `led2d` block.
 - `pio_split!` has been removed.
 
+API changes (RP and ESP now generate the same API):
+
+- `led!` and `led2d!` constructors return `&'static Self`, like every other
+  device. Core implements each device trait for `&T`, so code generic over a
+  trait (`impl Led2d`, `impl LedStrip`, ...) accepts these handles.
+- A panel implements only `Led2d`. Its strip is reached through `strip()`,
+  which returns the underlying strip (it implements `LedStrip`). On RP,
+  `led_strips!` panel members also return `&'static` panels.
+- ESP `servo_player!` matches RP: `new` returns `&'static Self`, and the
+  declared type implements `Servo` and `ServoPlayer`.
+- Constructor arguments go from most specific to least: the device's own pins,
+  then its peripherals or channels, then shared resources, then the spawner.
+  Group constructors take each member's arguments first and the shared
+  resource last:
+
+  ```rust,ignore
+  // 0.1
+  let (strip0, strip1) = LedStrips::new(p.PIO0, p.PIN_2, p.DMA_CH0, p.PIN_3, p.DMA_CH1, spawner)?;
+  let lcd = Lcd::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+  let servo = Servo11::new(&ledc, p.GPIO11)?; // ESP
+
+  // 0.2
+  let (strip0, strip1) = LedStrips::new(p.PIN_2, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIO0, spawner)?;
+  let lcd = Lcd::new(p.PIN_4, p.PIN_5, p.I2C0, spawner)?;
+  let servo = Servo11::new(p.GPIO11, &ledc)?; // ESP
+  ```
+
+  Schema fields are documented in the same order; you may still write them in
+  any order.
+- RP `led!`, `lcd_text!`, and `i2cs!` accept `impl Into<Peri<'static, _>>`,
+  like the other RP macros.
+- ESP `button_watch!`'s constructor parameter is named `pin`.
+- ESP `led_strip!` and `led2d!` document `engine` as a defaulted field ("RMT
+  where the chip has it, otherwise SPI").
+- ESP `COMBO_TABLE` and `servo!`'s generated static struct are private.
+
 Behavior changes and fixes:
 
 - RP IR macros default `pio` to `PIO0`, like the LED and audio macros.

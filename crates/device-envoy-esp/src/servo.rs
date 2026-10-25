@@ -56,7 +56,7 @@
 //! async fn inner_main() -> Result<Infallible> {
 //!     init_and_start!(p);
 //!     let ledc = device_envoy_esp::new_ledc(p.LEDC);
-//!     let servo11 = Servo11::new(&ledc, p.GPIO11)?;
+//!     let servo11 = Servo11::new(p.GPIO11, &ledc)?;
 //!     servo11.set_degrees(45);
 //!     Timer::after(Duration::from_secs(1)).await;
 //!     servo11.relax();
@@ -95,7 +95,7 @@
 //! async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p);
 //!     let ledc = device_envoy_esp::new_ledc(p.LEDC);
-//!     let servo_sweep = ServoSweep::new(&ledc, p.GPIO12, spawner)?;
+//!     let servo_sweep = ServoSweep::new(p.GPIO12, &ledc, spawner)?;
 //!     const STEPS: [(u16, Duration); 40] = combine!(
 //!         linear::<19>(0, 180, Duration::from_secs(2)),
 //!         [(180, Duration::from_millis(400))],
@@ -315,13 +315,13 @@ macro_schema::define! {
 
         static $upper($decl.name, _SERVO_STATIC): $ident($decl.name, Static) = $decl.name::new_static();
 
-        $decl.vis struct $ident($decl.name, Static) {
+        struct $ident($decl.name, Static) {
             servo_static: $crate::servo::ServoStatic,
         }
 
         impl $decl.name {
             #[must_use]
-            pub const fn new_static() -> $ident($decl.name, Static) {
+            const fn new_static() -> $ident($decl.name, Static) {
                 $ident($decl.name, Static) {
                     servo_static: $crate::servo::ServoStatic::new_static(
                         $crate::esp_hal::ledc::timer::Number::$decl.timer,
@@ -335,8 +335,8 @@ macro_schema::define! {
             }
 
             pub fn new(
-                ledc: &$crate::esp_hal::ledc::Ledc<'static>,
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
+                ledc: &$crate::esp_hal::ledc::Ledc<'static>,
             ) -> $crate::Result<$crate::servo::ServoEsp> {
                 $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC).servo_static, ledc, pin)
             }

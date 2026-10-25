@@ -28,7 +28,7 @@ async fn main(spawner: Spawner) -> ! {
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
-    let public_lcd = PublicLcd::new(p.I2C0, p.GPIO4, p.GPIO5, spawner)?;
+    let public_lcd = PublicLcd::new(p.GPIO4, p.GPIO5, p.I2C0, spawner)?;
     public_lcd.write_text("Hello");
     core::future::pending().await
 }

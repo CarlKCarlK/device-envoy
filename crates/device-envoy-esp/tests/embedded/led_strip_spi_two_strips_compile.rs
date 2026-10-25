@@ -84,7 +84,7 @@ mod panel {
     const LED_LAYOUT: LedLayout<1, 1, 1> = LedLayout::serpentine_column_major();
 
     led2d! {
-        #[repr(transparent)]
+        #[repr(C)]
         pub(super) LedPanelSpi {
             pin: GPIO10,
             engine: device_envoy_esp::led_strip::Spi,
@@ -95,7 +95,7 @@ mod panel {
 
     // The default engine uses RMT where available and SPI on chips such as ESP32-C2.
     led2d! {
-        #[repr(transparent)]
+        #[repr(C)]
         pub(super) LedPanelDefault {
             pin: GPIO10,
             led_layout: LED_LAYOUT,

@@ -12,17 +12,17 @@ use embassy_executor::Spawner;
 
 i2cs! {
     I2cs0 {
-        i2c: I2C0,
         sda_pin: PIN_4,
         scl_pin: PIN_5,
+        i2c: I2C0,
 
         LcdTextSimple { width: 16, height: 2, address: 0x27 },
     }
 }
 
 async fn test_conflicting_construction(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let _lcd_text_simple = LcdTextSimple::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
-    let (_lcd_text_simple_again,) = I2cs0::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+    let _lcd_text_simple = LcdTextSimple::new(p.PIN_4, p.PIN_5, p.I2C0, spawner)?;
+    let (_lcd_text_simple_again,) = I2cs0::new(p.PIN_4, p.PIN_5, p.I2C0, spawner)?;
     Ok(())
 }
 

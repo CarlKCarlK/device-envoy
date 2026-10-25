@@ -282,6 +282,23 @@ pub trait ServoPlayer<const MAX_STEPS: usize>: Servo {
         I::Item: Borrow<(u16, embassy_time::Duration)>;
 }
 
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<const MAX_STEPS: usize, T> ServoPlayer<MAX_STEPS> for &T
+where
+    T: ServoPlayer<MAX_STEPS> + ?Sized,
+{
+    const MAX_STEPS: usize = T::MAX_STEPS;
+
+    fn animate<I>(&self, steps: I, at_end: AtEnd)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(u16, embassy_time::Duration)>,
+    {
+        (**self).animate(steps, at_end);
+    }
+}
+
 // Must remain `pub` because platform-crate macro expansions call this helper.
 #[doc(hidden)]
 pub fn __servo_player_set_degrees<const MAX_STEPS: usize>(

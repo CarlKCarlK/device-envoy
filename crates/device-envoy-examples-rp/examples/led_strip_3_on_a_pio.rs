@@ -59,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio0_led_strip, gpio3_led2d, gpio4_led2d) = LedStrips0::new(
-        p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIN_4, p.DMA_CH2, spawner,
+        p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIN_4, p.DMA_CH2, p.PIO0, spawner,
     )?;
 
     info!("Running snake on GPIO0, GO animations on GPIO3 (12x4) and GPIO4 (8x12 rotated)");

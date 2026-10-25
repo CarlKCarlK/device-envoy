@@ -55,7 +55,7 @@ led_strips! {
 
 /// Verify Gpio3Pio0LedStrip with write_text
 async fn test_led12x4_pio0_write_text(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let (gpio3_pio0_led2d,) = LedStripsPio0::new(p.PIO0, p.PIN_3, p.DMA_CH0, spawner)?;
+    let (gpio3_pio0_led2d,) = LedStripsPio0::new(p.PIN_3, p.DMA_CH0, p.PIO0, spawner)?;
 
     gpio3_pio0_led2d.write_text(
         "1234",
@@ -67,7 +67,7 @@ async fn test_led12x4_pio0_write_text(p: embassy_rp::Peripherals, spawner: Spawn
 
 /// Verify Gpio3Pio1LedStrip constructor
 async fn test_led12x4_pio1(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let (_gpio3_pio1_led2d,) = LedStripsPio1::new(p.PIO1, p.PIN_3, p.DMA_CH1, spawner)?;
+    let (_gpio3_pio1_led2d,) = LedStripsPio1::new(p.PIN_3, p.DMA_CH1, p.PIO1, spawner)?;
 
     Ok(())
 }

@@ -23,7 +23,7 @@ irs! {
 
 async fn test_four_irs(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     let (_ir15, _ir16, _ir17, _ir18) =
-        Irs0::new(p.PIO0, p.PIN_15, p.PIN_16, p.PIN_17, p.PIN_18, spawner)?;
+        Irs0::new(p.PIN_15, p.PIN_16, p.PIN_17, p.PIN_18, p.PIO0, spawner)?;
     Ok(())
 }
 

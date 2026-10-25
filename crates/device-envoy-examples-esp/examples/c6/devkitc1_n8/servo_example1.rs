@@ -47,7 +47,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
-    let servo10 = Servo10::new(&ledc, p.GPIO10)?;
+    let servo10 = Servo10::new(p.GPIO10, &ledc)?;
 
     loop {
         servo10.set_degrees(45); // Move to 45 degrees and hold.

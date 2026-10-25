@@ -42,7 +42,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio3_led_strip, gpio4_led_strip) =
-        LedStrips1::new(p.PIO1, p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, spawner)?;
+        LedStrips1::new(p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, p.PIO1, spawner)?;
 
     info!("Setting every other LED to blue on GPIO3, animating GPIO4");
 

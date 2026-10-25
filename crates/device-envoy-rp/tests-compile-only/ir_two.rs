@@ -19,7 +19,7 @@ ir_keplers! {
 }
 
 async fn test_two_ir_keplers(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let (_ir_kepler15, _ir_kepler01) = IrKeplers0::new(p.PIO0, p.PIN_15, p.PIN_16, spawner)?;
+    let (_ir_kepler15, _ir_kepler01) = IrKeplers0::new(p.PIN_15, p.PIN_16, p.PIO0, spawner)?;
     Ok(())
 }
 

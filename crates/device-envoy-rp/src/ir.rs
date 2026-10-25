@@ -37,7 +37,7 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     let ir15 = Ir15::new(p.PIO0, p.PIN_15, spawner)?;
+//!     let ir15 = Ir15::new(p.PIN_15, p.PIO0, spawner)?;
 //!
 //!     loop {
 //!         let IrEvent::Press { addr, cmd } = ir15.wait_for_press().await;
@@ -87,7 +87,7 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     let ir_mapping15 = IrMapping15::new(p.PIO0, p.PIN_15, &REMOTE_KEYS_MAP, spawner)?;
+//!     let ir_mapping15 = IrMapping15::new(p.PIN_15, p.PIO0, &REMOTE_KEYS_MAP, spawner)?;
 //!
 //!     loop {
 //!         let remote_key = ir_mapping15.wait_for_press().await;
@@ -124,7 +124,7 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     let ir_kepler15 = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
+//!     let ir_kepler15 = IrKepler15::new(p.PIN_15, p.PIO0, spawner)?;
 //!
 //!     loop {
 //!         let kepler_key = ir_kepler15.wait_for_press().await;
@@ -366,13 +366,13 @@ macro_schema::define! {
     /// - [`irs!`](crate::irs) — Share one PIO resource with multiple IR receivers
     /// - [`ir_mapping!`](crate::ir_mapping) — Generate a mapped-button IR receiver type
     pub ir {
+        /// GPIO input pin connected to the IR receiver.
+        pin: ident,
         /// PIO resource.
         /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
         /// compile (typically `use of moved value` at the second constructor), so give one of
         /// them another PIO.
         pio: ident = PIO0,
-        /// GPIO input pin connected to the IR receiver.
-        pin: ident,
     }
 
     generate {
@@ -393,11 +393,11 @@ macro_schema::define! {
             ///
             /// See the [ir module documentation](mod@device_envoy_rp::ir) for usage.
             pub fn new(
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                let (ir,) = $ident($decl.name, Group)::new(pio, pin, spawner)?;
+                let (ir,) = $ident($decl.name, Group)::new(pin, pio, spawner)?;
                 Ok(ir)
             }
         }
@@ -413,13 +413,13 @@ macro_schema::define! {
     /// - [`ir_keplers!`](crate::ir_keplers) — Share one PIO resource with multiple Kepler IR receivers
     /// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
     pub ir_kepler {
+        /// GPIO input pin connected to the IR receiver.
+        pin: ident,
         /// PIO resource.
         /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
         /// compile (typically `use of moved value` at the second constructor), so give one of
         /// them another PIO.
         pio: ident = PIO0,
-        /// GPIO input pin connected to the IR receiver.
-        pin: ident,
     }
 
     generate {
@@ -440,11 +440,11 @@ macro_schema::define! {
             ///
             /// See the [ir module documentation](mod@device_envoy_rp::ir) for usage.
             pub fn new(
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                let (ir_kepler,) = $ident($decl.name, Group)::new(pio, pin, spawner)?;
+                let (ir_kepler,) = $ident($decl.name, Group)::new(pin, pio, spawner)?;
                 Ok(ir_kepler)
             }
         }
@@ -507,10 +507,10 @@ macro_schema::define! {
             /// Takes the PIO resource, then one pin per receiver in declaration order,
             /// then the spawner.
             pub fn new(
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 $for ir in $decl.members {
                     $snake($ir.name, _pin): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$ir.pin>>,
                 }
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
                 let ::embassy_rp::pio::Pio { mut common, $for ir in $decl.members { $ident(sm, $ir.index), } .. } =
@@ -548,13 +548,13 @@ macro_schema::define! {
     /// - [`ir_mappings!`](crate::ir_mappings) — Share one PIO resource with multiple mapping receivers
     /// - [`ir!`](crate::ir!) — Generate a raw IR receiver type
     pub ir_mapping {
+        /// GPIO input pin connected to the IR receiver.
+        pin: ident,
         /// PIO resource.
         /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
         /// compile (typically `use of moved value` at the second constructor), so give one of
         /// them another PIO.
         pio: ident = PIO0,
-        /// GPIO input pin connected to the IR receiver.
-        pin: ident,
         /// Application button type that IR codes map to.
         button: ty,
         /// Maximum mapping entries; at least the number of entries you provide.
@@ -581,12 +581,12 @@ macro_schema::define! {
             ///
             /// See the [ir module documentation](mod@device_envoy_rp::ir) for usage.
             pub fn new(
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 button_map: &[(u16, u8, $decl.button)],
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                let (ir_mapping,) = $ident($decl.name, Group)::new(pio, pin, button_map, spawner)?;
+                let (ir_mapping,) = $ident($decl.name, Group)::new(pin, button_map, pio, spawner)?;
                 Ok(ir_mapping)
             }
         }
@@ -654,11 +654,11 @@ macro_schema::define! {
             /// order,
             /// then the spawner.
             pub fn new(
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 $for ir in $decl.members {
                     $snake($ir.name, _pin): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$ir.pin>>,
                     $snake($ir.name, _button_map): &[(u16, u8, $decl.button)],
                 }
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
                 let ::embassy_rp::pio::Pio { mut common, $for ir in $decl.members { $ident(sm, $ir.index), } .. } =
@@ -738,10 +738,10 @@ macro_schema::define! {
             /// Takes the PIO resource, then one pin per receiver in declaration order,
             /// then the spawner.
             pub fn new(
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 $for ir in $decl.members {
                     $snake($ir.name, _pin): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$ir.pin>>,
                 }
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
                 let ::embassy_rp::pio::Pio { mut common, $for ir in $decl.members { $ident(sm, $ir.index), } .. } =

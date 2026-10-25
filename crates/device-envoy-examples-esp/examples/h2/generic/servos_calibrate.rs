@@ -70,8 +70,8 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
         0, 10, 1
     );
 
-    let servo_a = ServoA::new(&ledc, p.GPIO10)?;
-    let servo_b = ServoB::new(&ledc, p.GPIO1)?;
+    let servo_a = ServoA::new(p.GPIO10, &ledc)?;
+    let servo_b = ServoB::new(p.GPIO1, &ledc)?;
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
 
     info!("servos_calibrate: startup sweep 0 -> 180 -> 0");

@@ -231,8 +231,8 @@ macro_schema::define! {
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.dma>>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<Self> {
-                let (led2d,) = $ident($decl.name, Group)::new(pio, pin, dma, spawner)?;
+            ) -> $crate::Result<&'static Self> {
+                let (led2d,) = $ident($decl.name, Group)::new(pin, dma, pio, spawner)?;
                 Ok(led2d)
             }
         }

@@ -18,6 +18,8 @@ use device_envoy_esp::{
     led::{OnLevel, led},
     led_strip,
     led_strip::Current,
+    led2d,
+    led2d::{Led2dFont, layout::LedLayout},
     servo::servo_player,
 };
 
@@ -49,6 +51,14 @@ servo_player! {
     pub PublicServo { pin: GPIO3, timer: Timer0, channel: Channel0 }
 }
 
+/// The public panel's layout.
+const PANEL_LAYOUT: LedLayout<12, 4, 3> = LedLayout::serpentine_column_major();
+
+led2d! {
+    /// A public panel.
+    pub PublicPanel { pin: GPIO5, led_layout: PANEL_LAYOUT, font: Led2dFont::Font3x4Trim }
+}
+
 led_strip! {
     /// A public LED strip.
     pub PublicStrip { pin: GPIO4, len: 8, max_current: Current::Milliamps(100) }
@@ -68,16 +78,19 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     let status_led = StatusLed::new(p.GPIO0, OnLevel::High, spawner)?;
     let busy_led = BusyLed::new(p.GPIO1, OnLevel::High, spawner)?;
     let public_button = PublicButton::new(p.GPIO2, PressedTo::Ground, spawner).await?;
-    let public_servo = PublicServo::new(&ledc, p.GPIO3, spawner)?;
+    let public_servo = PublicServo::new(p.GPIO3, &ledc, spawner)?;
     let public_strip = PublicStrip::new(p.GPIO4, rmt80.channel0, spawner)?;
+    let public_panel = PublicPanel::new(p.GPIO5, rmt80.channel1, spawner)?;
 
     esp_println::println!(
         "{}",
-        size_of_val(&status_led)
-            + size_of_val(&busy_led)
+        size_of_val(status_led)
+            + size_of_val(busy_led)
             + size_of_val(public_button)
             + size_of_val(&public_servo)
             + size_of_val(public_strip)
+            + size_of_val(public_panel)
+            + size_of_val(public_panel.strip())
             + size_of_val(&SERVO_STEPS)
     );
     core::future::pending().await

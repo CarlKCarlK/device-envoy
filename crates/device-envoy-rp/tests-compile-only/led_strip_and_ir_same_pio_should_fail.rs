@@ -27,7 +27,7 @@ mod remotes {
 
 async fn build(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     let _strip = leds::Strip::new(p.PIN_0, p.PIO0, p.DMA_CH0, spawner)?;
-    let _remote = remotes::Remote::new(p.PIO0, p.PIN_15, spawner)?;
+    let _remote = remotes::Remote::new(p.PIN_15, p.PIO0, spawner)?;
     Ok(())
 }
 

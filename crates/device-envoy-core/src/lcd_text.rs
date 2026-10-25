@@ -131,6 +131,21 @@ pub trait LcdText<const W: usize, const H: usize> {
     fn write_text(&self, text: impl AsRef<str>);
 }
 
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<const W: usize, const H: usize, T> LcdText<W, H> for &T
+where
+    T: LcdText<W, H> + ?Sized,
+{
+    const WIDTH: usize = T::WIDTH;
+    const HEIGHT: usize = T::HEIGHT;
+    const ADDRESS: u8 = T::ADDRESS;
+
+    fn write_text(&self, text: impl AsRef<str>) {
+        (**self).write_text(text);
+    }
+}
+
 /// Character LCD write adapter for platform crates.
 pub trait LcdTextWrite {
     /// Write one byte to the configured LCD I2C expander.

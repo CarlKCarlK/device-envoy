@@ -59,7 +59,9 @@ macro_schema::define! {
     generate {
         $decl.attrs
         #[doc = $decl.doc]
-        $decl.vis struct $decl.name;
+        $decl.vis struct $decl.name {
+            servo_player_handle: $crate::servo::ServoPlayerHandle<{ $decl.max_steps }>,
+        }
 
         // Ownership claims: choosing the same LEDC timer or channel twice anywhere in the
         // final binary fails to build. Within one crate rustc reports the name twice; across
@@ -85,6 +87,8 @@ macro_schema::define! {
         static $upper($decl.name, _SERVO_PLAYER_STATIC):
             $crate::servo::ServoPlayerStatic<{ $decl.max_steps }> =
                 $crate::servo::ServoPlayerHandle::<{ $decl.max_steps }>::new_static();
+        static $upper($decl.name, _SERVO_PLAYER_CELL): $crate::__static_cell::StaticCell<$decl.name> =
+            $crate::__static_cell::StaticCell::new();
 
         impl $decl.name {
             /// Maximum number of steps in one animation.
@@ -92,14 +96,44 @@ macro_schema::define! {
 
             /// Create the servo player and spawn its background task.
             pub fn new(
-                ledc: &$crate::esp_hal::ledc::Ledc<'static>,
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
+                ledc: &$crate::esp_hal::ledc::Ledc<'static>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<$crate::servo::ServoPlayerHandle<{ $decl.max_steps }>> {
+            ) -> $crate::Result<&'static Self> {
                 let servo = $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC), ledc, pin)?;
                 let token = $snake(__, $decl.name, _servo_player_task)(&$upper($decl.name, _SERVO_PLAYER_STATIC), servo);
                 spawner.spawn(token?);
-                Ok($crate::servo::ServoPlayerHandle::new(&$upper($decl.name, _SERVO_PLAYER_STATIC)))
+                let servo_player_handle =
+                    $crate::servo::ServoPlayerHandle::new(&$upper($decl.name, _SERVO_PLAYER_STATIC));
+                Ok($upper($decl.name, _SERVO_PLAYER_CELL).init(Self { servo_player_handle }))
+            }
+        }
+
+        impl $crate::servo::Servo for $decl.name {
+            const DEFAULT_MAX_DEGREES: u16 = $decl.max_degrees;
+
+            fn set_degrees(&self, degrees: u16) {
+                $crate::servo::__servo_player_set_degrees(&self.servo_player_handle, degrees);
+            }
+
+            fn hold(&self) {
+                $crate::servo::__servo_player_hold(&self.servo_player_handle);
+            }
+
+            fn relax(&self) {
+                $crate::servo::__servo_player_relax(&self.servo_player_handle);
+            }
+        }
+
+        impl $crate::servo::ServoPlayer<{ $decl.max_steps }> for $decl.name {
+            const MAX_STEPS: usize = Self::MAX_STEPS;
+
+            fn animate<I>(&self, steps: I, at_end: $crate::servo::AtEnd)
+            where
+                I: ::core::iter::IntoIterator,
+                I::Item: ::core::borrow::Borrow<(u16, ::embassy_time::Duration)>,
+            {
+                $crate::servo::__servo_player_animate(&self.servo_player_handle, steps, at_end);
             }
         }
 

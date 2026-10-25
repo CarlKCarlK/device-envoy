@@ -100,7 +100,7 @@ macro_schema::define! {
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 on_level: $crate::led::OnLevel,
                 spawner: embassy_executor::Spawner,
-            ) -> $crate::Result<Self> {
+            ) -> $crate::Result<&'static Self> {
                 let pin_output = $crate::esp_hal::gpio::Output::new(
                     pin,
                     $crate::esp_hal::gpio::Level::Low,
@@ -112,7 +112,9 @@ macro_schema::define! {
                     on_level,
                 );
                 spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
-                Ok(Self($upper($decl.name, _STATIC).outer()))
+                static LED_CELL: $crate::__static_cell::StaticCell<$decl.name> =
+                    $crate::__static_cell::StaticCell::new();
+                Ok(LED_CELL.init(Self($upper($decl.name, _STATIC).outer())))
             }
         }
 

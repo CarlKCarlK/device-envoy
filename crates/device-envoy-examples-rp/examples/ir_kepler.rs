@@ -31,7 +31,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("Starting Kepler IR Remote Example");
 
-    let (ir_kepler15, ir_kepler01) = IrKeplers0::new(p.PIO0, p.PIN_15, p.PIN_16, spawner)?;
+    let (ir_kepler15, ir_kepler01) = IrKeplers0::new(p.PIN_15, p.PIN_16, p.PIO0, spawner)?;
 
     info!("Kepler remotes initialized on GPIO 15 and 16");
     info!("Press buttons on the remote control...");

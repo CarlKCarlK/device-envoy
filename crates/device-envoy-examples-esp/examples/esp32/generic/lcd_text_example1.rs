@@ -17,9 +17,9 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 lcd_text! {
     LcdTextSimple {
-        i2c: I2C0,
         sda_pin: GPIO4,
         scl_pin: GPIO5,
+        i2c: I2C0,
         width: 16,
         height: 2,
         address: 0x27
@@ -35,7 +35,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
-    let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.GPIO4, p.GPIO5, spawner)?;
+    let lcd_text_simple = LcdTextSimple::new(p.GPIO4, p.GPIO5, p.I2C0, spawner)?;
     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
 
     pending().await

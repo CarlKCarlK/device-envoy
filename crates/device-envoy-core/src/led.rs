@@ -100,6 +100,33 @@ pub trait Led {
     }
 }
 
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<T> Led for &T
+where
+    T: Led + ?Sized,
+{
+    fn set_level(&self, led_level: LedLevel) {
+        (**self).set_level(led_level);
+    }
+
+    fn animate<I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(LedLevel, embassy_time::Duration)>,
+    {
+        (**self).animate(frames);
+    }
+
+    fn on(&self) {
+        (**self).on();
+    }
+
+    fn off(&self) {
+        (**self).off();
+    }
+}
+
 // ============================================================================
 // Shared runtime for the `led!` macro on every chip.
 // Public because the macro expands in downstream crates; hidden from user docs.

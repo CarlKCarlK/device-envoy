@@ -123,12 +123,12 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     let status_led = StatusLed::new(p.PIN_2, OnLevel::High, spawner)?;
     let busy_led = BusyLed::new(p.PIN_3, OnLevel::High, spawner)?;
     let (public_strip, public_panel) =
-        PublicStrips::new(p.PIO1, p.PIN_6, p.DMA_CH0, p.PIN_7, p.DMA_CH1, spawner)?;
+        PublicStrips::new(p.PIN_6, p.DMA_CH0, p.PIN_7, p.DMA_CH1, p.PIO1, spawner)?;
     let (private_strip, private_panel) =
-        PrivateStrips::new(p.PIO0, p.PIN_8, p.DMA_CH2, p.PIN_9, p.DMA_CH3, spawner)?;
+        PrivateStrips::new(p.PIN_8, p.DMA_CH2, p.PIN_9, p.DMA_CH3, p.PIO0, spawner)?;
     let public_servo = PublicServo::new(p.PIN_10, p.PWM_SLICE5, spawner)?;
     let private_servo = PrivateServo::new(p.PIN_12, p.PWM_SLICE6, spawner)?;
-    let public_lcd = PublicLcd::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+    let public_lcd = PublicLcd::new(p.PIN_4, p.PIN_5, p.I2C0, spawner)?;
     public_lcd.write_text("Hello");
     let public_pcm = PublicPcm::pcm_clip();
     let private_adpcm = PrivateAdpcm::adpcm_clip();
@@ -136,12 +136,13 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
     loop {
         defmt::info!(
             "{}",
-            size_of_val(&status_led)
-                + size_of_val(&busy_led)
+            size_of_val(status_led)
+                + size_of_val(busy_led)
                 + size_of_val(public_strip)
-                + size_of_val(&public_panel)
+                + size_of_val(public_panel)
+                + size_of_val(public_panel.strip())
                 + size_of_val(private_strip)
-                + size_of_val(&private_panel)
+                + size_of_val(private_panel)
                 + size_of_val(&public_servo)
                 + size_of_val(&private_servo)
                 + size_of_val(public_lcd)

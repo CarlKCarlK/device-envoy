@@ -54,7 +54,7 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p);
-//!     let lcd_text_simple = LcdTextSimple::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
+//!     let lcd_text_simple = LcdTextSimple::new(p.GPIO16, p.GPIO17, p.I2C0, spawner)?;
 //!
 //!     lcd_text_simple.write_text("Hello from\ndevice-envoy!");
 //!
@@ -91,7 +91,7 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     init_and_start!(p);
-//!     let (lcd_text16x2, lcd_text20x4) = I2cs0::new(p.I2C0, p.GPIO16, p.GPIO17, spawner)?;
+//!     let (lcd_text16x2, lcd_text20x4) = I2cs0::new(p.GPIO16, p.GPIO17, p.I2C0, spawner)?;
 //!
 //!     lcd_text16x2.write_text("16x2\nready");
 //!     lcd_text20x4.write_text("20x4\nshared i2c\naddress 0x3F");
@@ -123,15 +123,15 @@ pub mod lcd_text_generated {
     impl I2csGenerated {
         /// Construct all generated LCD text devices in this group.
         /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
-        pub fn new<I2cPeripheral, SdaPin, SclPin>(
-            i2c_peripheral: I2cPeripheral,
+        pub fn new<SdaPin, SclPin, I2cPeripheral>(
             sda: SdaPin,
             scl: SclPin,
+            i2c_peripheral: I2cPeripheral,
             spawner: embassy_executor::Spawner,
         ) -> Result<(&'static LcdTextGenerated, &'static LcdTextGenerated20x4)> {
             static INSTANCE_16X2: LcdTextGenerated = LcdTextGenerated;
             static INSTANCE_20X4: LcdTextGenerated20x4 = LcdTextGenerated20x4;
-            let _ = (i2c_peripheral, sda, scl, spawner);
+            let _ = (sda, scl, i2c_peripheral, spawner);
             Ok((&INSTANCE_16X2, &INSTANCE_20X4))
         }
     }
@@ -146,14 +146,14 @@ pub mod lcd_text_generated {
 
         /// Create this generated LCD text instance.
         /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
-        pub fn new<I2cPeripheral, SdaPin, SclPin>(
-            i2c_peripheral: I2cPeripheral,
+        pub fn new<SdaPin, SclPin, I2cPeripheral>(
             sda: SdaPin,
             scl: SclPin,
+            i2c_peripheral: I2cPeripheral,
             spawner: embassy_executor::Spawner,
         ) -> Result<&'static Self> {
             static INSTANCE: LcdTextGenerated = LcdTextGenerated;
-            let _ = (i2c_peripheral, sda, scl, spawner);
+            let _ = (sda, scl, i2c_peripheral, spawner);
             Ok(&INSTANCE)
         }
     }
@@ -176,14 +176,14 @@ pub mod lcd_text_generated {
 
         /// Create this generated LCD text instance.
         /// See the [`lcd_text` module documentation](mod@crate::lcd_text) for usage examples.
-        pub fn new<I2cPeripheral, SdaPin, SclPin>(
-            i2c_peripheral: I2cPeripheral,
+        pub fn new<SdaPin, SclPin, I2cPeripheral>(
             sda: SdaPin,
             scl: SclPin,
+            i2c_peripheral: I2cPeripheral,
             spawner: embassy_executor::Spawner,
         ) -> Result<&'static Self> {
             static INSTANCE: LcdTextGenerated20x4 = LcdTextGenerated20x4;
-            let _ = (i2c_peripheral, sda, scl, spawner);
+            let _ = (sda, scl, i2c_peripheral, spawner);
             Ok(&INSTANCE)
         }
     }
@@ -240,12 +240,12 @@ macro_schema::define! {
     /// examples.**
     #[cfg(not(feature = "host"))]
     pub i2cs {
-        /// I2C peripheral, for example `I2C0`.
-        i2c: ident,
         /// GPIO pin for I2C data (SDA).
         sda_pin: ident,
         /// GPIO pin for I2C clock (SCL).
         scl_pin: ident,
+        /// I2C peripheral, for example `I2C0`.
+        i2c: ident,
         /// Each member is one LCD text display on the shared bus.
         members 1.. {
             /// Display width in characters.
@@ -293,9 +293,9 @@ macro_schema::define! {
 
         impl $decl.name {
             fn __new_devices(
-                i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                 sda: $crate::esp_hal::peripherals::$decl.sda_pin<'static>,
                 scl: $crate::esp_hal::peripherals::$decl.scl_pin<'static>,
+                i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                 spawner: embassy_executor::Spawner,
             ) -> $crate::Result<$ident(__, $decl.name, Devices)> {
                 let i2c = $crate::esp_hal::i2c::master::I2c::new(
@@ -323,12 +323,12 @@ macro_schema::define! {
 
             #[doc = "Construct the shared I2C runtime task and all generated LCD text device handles in this group."]
             pub fn new(
-                i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                 sda: $crate::esp_hal::peripherals::$decl.sda_pin<'static>,
                 scl: $crate::esp_hal::peripherals::$decl.scl_pin<'static>,
+                i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                 spawner: embassy_executor::Spawner,
             ) -> $crate::Result<($for lcd in $decl.members {&'static $lcd.name,})> {
-                Ok(Self::__new_devices(i2c_peripheral, sda, scl, spawner)?.into_tuple())
+                Ok(Self::__new_devices(sda, scl, i2c_peripheral, spawner)?.into_tuple())
             }
         }
 
@@ -360,13 +360,13 @@ macro_schema::define! {
                 /// Construct this LCD text device and spawn its shared I2C task.
                 /// See the [lcd_text module documentation](mod@device_envoy_esp::lcd_text) for usage examples.
                 pub fn new(
-                    i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                     sda: $crate::esp_hal::peripherals::$decl.sda_pin<'static>,
                     scl: $crate::esp_hal::peripherals::$decl.scl_pin<'static>,
+                    i2c_peripheral: $crate::esp_hal::peripherals::$decl.i2c<'static>,
                     spawner: embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
                     let $snake(__, $decl.name, _devices) =
-                        $decl.name::__new_devices(i2c_peripheral, sda, scl, spawner)?;
+                        $decl.name::__new_devices(sda, scl, i2c_peripheral, spawner)?;
                     Ok($snake(__, $decl.name, _devices).$snake($lcd.name))
                 }
 
@@ -400,12 +400,12 @@ macro_schema::define! {
     /// examples.**
     #[cfg(not(feature = "host"))]
     pub lcd_text {
-        /// I2C peripheral, for example `I2C0`.
-        i2c: ident,
         /// GPIO pin for I2C data (SDA).
         sda_pin: ident,
         /// GPIO pin for I2C clock (SCL).
         scl_pin: ident,
+        /// I2C peripheral, for example `I2C0`.
+        i2c: ident,
         /// Display width in characters.
         width: expr,
         /// Display height in characters; at most 4.
@@ -419,9 +419,9 @@ macro_schema::define! {
         $crate::lcd_text::i2cs! {
             #[doc(hidden)]
             $decl.vis $ident($decl.name, Group) {
-                i2c: $decl.i2c,
                 sda_pin: $decl.sda_pin,
                 scl_pin: $decl.scl_pin,
+                i2c: $decl.i2c,
 
                 $decl.attrs
                 #[doc = $decl.doc]

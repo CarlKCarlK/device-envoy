@@ -86,18 +86,20 @@ macro_schema::define! {
 
             /// Creates the LED and spawns its background task.
             pub fn new(
-                pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>,
+                pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
                 on_level: $crate::led::OnLevel,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<Self> {
-                let pin_output = ::embassy_rp::gpio::Output::new(pin, ::embassy_rp::gpio::Level::Low);
+            ) -> $crate::Result<&'static Self> {
+                let pin_output = ::embassy_rp::gpio::Output::new(pin.into(), ::embassy_rp::gpio::Level::Low);
                 let token = $snake(__led_task_, $decl.name)(
                     $upper($decl.name, _STATIC).outer(),
                     pin_output,
                     on_level,
                 );
                 spawner.spawn(token.map_err($crate::Error::TaskSpawn)?);
-                Ok(Self($upper($decl.name, _STATIC).outer()))
+                static LED_CELL: $crate::__static_cell::StaticCell<$decl.name> =
+                    $crate::__static_cell::StaticCell::new();
+                Ok(LED_CELL.init(Self($upper($decl.name, _STATIC).outer())))
             }
         }
 

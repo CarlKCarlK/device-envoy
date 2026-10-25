@@ -209,7 +209,7 @@ macro_schema::define! {
             ///
             /// # Parameters
             ///
-            /// - `button_pin`: GPIO pin for the button
+            /// - `pin`: GPIO pin for the button
             /// - `pressed_to`: How the button is wired ([`PressedTo::Ground`] or [`PressedTo::Voltage`])
             /// - `spawner`: Task spawner for background operations
             ///
@@ -217,7 +217,7 @@ macro_schema::define! {
             ///
             /// Returns an error if the background task cannot be spawned.
             pub async fn new(
-                button_pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
+                pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 pressed_to: $crate::button::PressedTo,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static mut Self> {
@@ -228,7 +228,7 @@ macro_schema::define! {
 
                 let button_watch = $crate::button::ButtonWatchEsp::new_from_pin(
                     &BUTTON_WATCH_STATIC,
-                    button_pin,
+                    pin,
                     pressed_to,
                     spawner,
                 )

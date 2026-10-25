@@ -391,6 +391,29 @@ pub trait LedStrip<const N: usize> {
         I::Item: Borrow<(Frame1d<N>, embassy_time::Duration)>;
 }
 
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<const N: usize, T> LedStrip<N> for &T
+where
+    T: LedStrip<N> + ?Sized,
+{
+    const LEN: usize = T::LEN;
+    const MAX_FRAMES: usize = T::MAX_FRAMES;
+    const MAX_BRIGHTNESS: u8 = T::MAX_BRIGHTNESS;
+
+    fn write_frame(&self, frame: Frame1d<N>) {
+        (**self).write_frame(frame);
+    }
+
+    fn animate<I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(Frame1d<N>, embassy_time::Duration)>,
+    {
+        (**self).animate(frames);
+    }
+}
+
 /// Signal type used to send commands to the background device task.
 ///
 /// `#[doc(hidden)]` because it is named in macro-generated `static` items in

@@ -130,6 +130,37 @@ Work in this order; each step is verified on both chips before the next.
       display whose initialization fails is retried on its next frame
       (2026-10-23).
 
+## 2c. RP/ESP API alignment (decided 2026-10-25)
+
+A survey of the generated APIs of all 15 macro families both chips define found
+these differences that the HALs do not explain. HAL-driven differences (which
+resources a constructor takes, `impl Into<Peri<..>>` on RP versus by-value
+peripherals on ESP, per-member IR constructors on ESP, servo setup types) stay.
+
+- [x] 1. `led2d!` and `led!` return `&'static Self` on both chips; `Led2d` is
+      implemented on the panel type itself.
+- [x] 2. Panels implement only `Led2d` (one type, one role) and provide
+      `strip()`, returning the underlying strip, which implements `LedStrip`.
+      ESP moves to RP's structure: a hidden strip plus a panel wrapper.
+- [x] 3. ESP `servo_player!` matches RP: the declared type wraps the handle,
+      `new` returns `&'static Self`, and it implements `Servo` and `ServoPlayer`.
+- [x] 4. ESP `servo!`'s `<Name>Static` struct and `new_static()` become private.
+- [ ] 5. Arguments go from most specific to least: the device's own pins, then
+      its peripherals or channels, then shared resources, then the spawner.
+      Schemas list fields the same way. Group declarations keep the shared field
+      first; group constructors take each member's arguments first and the
+      shared resource last. Applies to hand-written constructors too.
+      Done for every macro-generated constructor (2026-10-25); hand-written
+      constructors (CYD, `ServoEsp::new`, ...) still to do.
+- [x] 6. RP macros take `impl Into<Peri<'static, X>>` everywhere (`led!`,
+      `lcd_text!`, `i2cs!` take plain `Peri` today).
+- [x] 7. ESP `button_watch!`'s `button_pin` parameter is named `pin`.
+- [x] 8. ESP `COMBO_TABLE` becomes private, as on RP.
+- [x] 9. ESP `engine` is a defaulted field shown as "RMT where the chip has it,
+      otherwise SPI".
+- [ ] Extend the parity test to generated APIs (constructor signatures, return
+      types, trait impls), so these differences cannot come back unnoticed.
+
 ## 3. Branch health
 
 - [x] `cargo fmt --all -- --check` (2026-10-22, at `3d190d09`; rerun before

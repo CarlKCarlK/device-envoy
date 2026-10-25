@@ -52,7 +52,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
-    let servo_sweep = ServoSweep::new(&ledc, p.GPIO4, spawner)?;
+    let servo_sweep = ServoSweep::new(p.GPIO4, &ledc, spawner)?;
 
     loop {
         // Combine 40 animation steps into one array.

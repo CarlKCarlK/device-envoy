@@ -518,7 +518,7 @@ macro_schema::define! {
                 dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.dma>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                let (led_strip,) = $ident($decl.name, Group)::new(pio, pin, dma, spawner)?;
+                let (led_strip,) = $ident($decl.name, Group)::new(pin, dma, pio, spawner)?;
                 Ok(led_strip)
             }
         }
@@ -617,7 +617,7 @@ macro_schema::define! {
     ///
     ///     // Create instances of two LED strips and one panel.
     ///     let (gpio0_led_strip, gpio3_led_strip, gpio4_led2d) = LedStrips0::new(
-    ///         p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, spawner,
+    ///         p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH11, p.PIN_4, p.DMA_CH2, p.PIO0, spawner,
     ///     )?;
     ///
     ///     info!("Setting GPIO0 to white, GPIO3 to alternating blue/gray, GPIO4 to Go Go animation");
@@ -788,6 +788,7 @@ macro_schema::define! {
                         { $upper($strip.name, _LED_LAYOUT).len() },
                         $ident($strip.name, LedStrip),
                     >,
+                    strip: &'static $ident($strip.name, LedStrip),
                 }
 
                 impl $strip.name {
@@ -829,10 +830,18 @@ macro_schema::define! {
                         { $upper($strip.name, _LED_LAYOUT).height() },
                     >::BOTTOM_RIGHT;
 
-                    fn from_strip(led_strip: &'static $ident($strip.name, LedStrip)) -> Self {
-                        Self {
+                    /// The LED strip behind this panel, for writing pixels in wiring order.
+                    pub fn strip(&self) -> &'static $ident($strip.name, LedStrip) {
+                        self.strip
+                    }
+
+                    fn from_strip(led_strip: &'static $ident($strip.name, LedStrip)) -> &'static Self {
+                        static PANEL_CELL: $crate::__static_cell::StaticCell<$strip.name> =
+                            $crate::__static_cell::StaticCell::new();
+                        PANEL_CELL.init(Self {
                             led2d: $crate::led2d::Led2dRp::new(led_strip, &$upper($strip.name, _LED_LAYOUT)),
-                        }
+                            strip: led_strip,
+                        })
                     }
                 }
 
@@ -893,21 +902,21 @@ macro_schema::define! {
         impl $decl.name {
             /// Creates every strip and panel in the group and spawns their background tasks.
             ///
-            /// Takes the PIO resource, then a pin and DMA channel per member in declaration
-            /// order, then the spawner.
+            /// Takes a pin and DMA channel per member in declaration order, then the PIO
+            /// resource they share, then the spawner.
             // Approved suppression: a four-member group takes ten arguments, one per
             // resource in declaration order. Grouping them would only make calls noisier.
             #[allow(clippy::too_many_arguments)]
             pub fn new(
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 $for strip in $decl.members {
                     $snake($strip.name, _pin): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$strip.pin>>,
                     $snake($strip.name, _dma): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$strip.dma>>,
                 }
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<(
                 $for strip in $decl.members {
-                    $if let Some(panel) = $strip.led2d { $strip.name } else { &'static $strip.name },
+                    &'static $strip.name,
                 }
             )> {
                 let ::embassy_rp::pio::Pio { common, $for strip in $decl.members { $ident(sm, $strip.index), } .. } =

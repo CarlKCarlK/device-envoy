@@ -63,10 +63,10 @@ led_strips! {
 /// Verify both devices can be constructed and used together
 async fn test_multiple_devices(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     // Construct first device
-    let (gpio3_led2d,) = LedStripsPio0::new(p.PIO0, p.PIN_3, p.DMA_CH0, spawner)?;
+    let (gpio3_led2d,) = LedStripsPio0::new(p.PIN_3, p.DMA_CH0, p.PIO0, spawner)?;
 
     // Construct second device
-    let (gpio4_led2d,) = LedStripsPio1::new(p.PIO1, p.PIN_4, p.DMA_CH1, spawner)?;
+    let (gpio4_led2d,) = LedStripsPio1::new(p.PIN_4, p.DMA_CH1, p.PIO1, spawner)?;
 
     // Verify associated constants don't collide
     // Create frame for 4x12 display

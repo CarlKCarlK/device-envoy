@@ -53,7 +53,7 @@ async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio0_led_strip, gpio3_led2d) =
-        LedStripsPio0::new(p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, spawner)?;
+        LedStripsPio0::new(p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIO0, spawner)?;
     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
     const ANIMATION_DELAY: embassy_time::Duration = embassy_time::Duration::from_millis(50);

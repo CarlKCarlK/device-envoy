@@ -437,9 +437,8 @@ fn write_or_warn<const LEDS: usize>(driver: &mut impl Ws2812Write<LEDS>, frame: 
 // ============================================================================
 
 macro_schema::define! {
-    /// The LED strip type behind `led_strip!` and `led2d!`: the struct, its constructor, the
-    /// `LedStrip` impl, the `Led2d` impl when a `led2d` block is given, and its background
-    /// task. Public because it expands in downstream crates, but not user-facing API.
+    /// The LED strip type behind `led_strip!` and each `led2d!` panel: the struct, its
+    /// constructor, the `LedStrip` impl, and its background task. Public because it expands in downstream crates, but not user-facing API.
     #[cfg(target_os = "none")]
     #[doc(hidden)]
     pub __led_strip_type {
@@ -449,28 +448,20 @@ macro_schema::define! {
         len: expr,
         /// Electrical current budget.
         max_current: expr,
-        /// Output engine type; the chip's default when absent.
-        engine?: ty,
+        /// Output engine type.
+        engine: ty,
         /// Color curve.
         gamma: expr,
         /// Maximum number of animation frames.
         max_frames: expr,
         /// WS2812 reset interval in microseconds; only with `Spi`.
         reset_us?: expr,
-        /// Panel geometry, for `led2d!`.
-        led2d?: {
-            /// `const` `LedLayout` of the panel.
-            led_layout: expr,
-            /// Built-in font for text.
-            font: expr,
-        },
     }
 
     generate {
         // The engine is a type: the one named, or the chip's default. Everything that
         // differs between engines goes through its `LedEngine` and `EngineResource` impls.
-        type $ident($decl.name, Engine) =
-            $if let Some(engine) = $decl.engine { $engine } else { $crate::led_strip::DefaultEngine };
+        type $ident($decl.name, Engine) = $decl.engine;
 
         // Evaluated here, in the caller's scope, so `len` and `reset_us` may name the
         // caller's items.
@@ -511,42 +502,8 @@ macro_schema::define! {
                 $upper($decl.name, _LEDS) as u32 * 60,
             );
             /// Combined gamma and brightness lookup table.
-            pub const COMBO_TABLE: [u8; 256] =
+            const COMBO_TABLE: [u8; 256] =
                 $crate::led_strip::generate_combo_table($decl.gamma, Self::MAX_BRIGHTNESS);
-
-            $if let Some(panel) = $decl.led2d {
-                /// Default font used by text helpers.
-                pub const FONT: $crate::led2d::Led2dFont = $panel.font;
-                /// Panel width in pixels.
-                pub const WIDTH: usize = $panel.led_layout.width();
-                /// Panel height in pixels.
-                pub const HEIGHT: usize = $panel.led_layout.height();
-                /// Panel dimensions.
-                pub const SIZE: $crate::led2d::Size = $crate::led2d::Frame2d::<
-                    { $panel.led_layout.width() },
-                    { $panel.led_layout.height() },
-                >::SIZE;
-                /// Top-left corner coordinate.
-                pub const TOP_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                    { $panel.led_layout.width() },
-                    { $panel.led_layout.height() },
-                >::TOP_LEFT;
-                /// Top-right corner coordinate.
-                pub const TOP_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                    { $panel.led_layout.width() },
-                    { $panel.led_layout.height() },
-                >::TOP_RIGHT;
-                /// Bottom-left corner coordinate.
-                pub const BOTTOM_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                    { $panel.led_layout.width() },
-                    { $panel.led_layout.height() },
-                >::BOTTOM_LEFT;
-                /// Bottom-right corner coordinate.
-                pub const BOTTOM_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                    { $panel.led_layout.width() },
-                    { $panel.led_layout.height() },
-                >::BOTTOM_RIGHT;
-            }
 
             /// Creates the strip and spawns its background task. `resource` is the engine's
             /// peripheral: an RMT channel creator for `Rmt`, or an SPI instance for `Spi`.
@@ -596,44 +553,6 @@ macro_schema::define! {
             }
         }
 
-        $if let Some(panel) = $decl.led2d {
-            impl $crate::led2d::Led2d<{ $panel.led_layout.width() }, { $panel.led_layout.height() }>
-                for &'static $decl.name
-            {
-                const WIDTH: usize = $decl.name::WIDTH;
-                const HEIGHT: usize = $decl.name::HEIGHT;
-                const LEN: usize = $decl.name::LEN;
-                const SIZE: $crate::led2d::Size = $decl.name::SIZE;
-                const TOP_LEFT: $crate::led2d::Point = $decl.name::TOP_LEFT;
-                const TOP_RIGHT: $crate::led2d::Point = $decl.name::TOP_RIGHT;
-                const BOTTOM_LEFT: $crate::led2d::Point = $decl.name::BOTTOM_LEFT;
-                const BOTTOM_RIGHT: $crate::led2d::Point = $decl.name::BOTTOM_RIGHT;
-                const MAX_FRAMES: usize = $decl.max_frames;
-                const MAX_BRIGHTNESS: u8 = $decl.name::MAX_BRIGHTNESS;
-                const FONT: $crate::led2d::Led2dFont = $panel.font;
-
-                fn write_frame(
-                    &self,
-                    frame2d: $crate::led2d::Frame2d<{ $panel.led_layout.width() }, { $panel.led_layout.height() }>,
-                ) {
-                    let led2d = $crate::led2d::Led2dEsp::new(*self, &$panel.led_layout);
-                    $crate::led2d::Led2dStripBacked::write_frame(&led2d, frame2d);
-                }
-
-                fn animate<I>(&self, frames: I)
-                where
-                    I: IntoIterator,
-                    I::Item: ::core::borrow::Borrow<(
-                        $crate::led2d::Frame2d<{ $panel.led_layout.width() }, { $panel.led_layout.height() }>,
-                        ::embassy_time::Duration,
-                    )>,
-                {
-                    let led2d = $crate::led2d::Led2dEsp::new(*self, &$panel.led_layout);
-                    $crate::led2d::Led2dStripBacked::animate(&led2d, frames);
-                }
-            }
-        }
-
         #[::embassy_executor::task]
         async fn $snake($decl.name, _device_task)(
             driver: <$ident($decl.name, Engine) as $crate::led_strip::LedEngine>::Driver<
@@ -668,8 +587,9 @@ macro_schema::define! {
         /// the default, so set it explicitly when their total matters.
         #[default_display = "Current::Milliamps(250)"]
         max_current: expr = $crate::led_strip::CURRENT_DEFAULT,
-        /// Output engine, `Rmt` or `Spi`; defaults to RMT on RMT-capable chips, otherwise SPI.
-        engine?: ty,
+        /// Output engine, `Rmt` or `Spi`.
+        #[default_display = "RMT where the chip has it, otherwise SPI"]
+        engine: ty = $crate::led_strip::DefaultEngine,
         /// Color correction curve.
         #[default_display = "Gamma::Srgb"]
         gamma: expr = $crate::led_strip::GAMMA_DEFAULT,
@@ -688,7 +608,7 @@ macro_schema::define! {
                 pin: $decl.pin,
                 len: $decl.len,
                 max_current: $decl.max_current,
-                $if let Some(engine) = $decl.engine { engine: $engine, }
+                engine: $decl.engine,
                 gamma: $decl.gamma,
                 max_frames: $decl.max_frames,
                 $if let Some(interval) = $decl.reset_us { reset_us: $interval, }

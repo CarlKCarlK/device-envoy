@@ -27,7 +27,6 @@ async fn test_four_led_strips_on_one_pio(
     spawner: Spawner,
 ) -> Result<()> {
     let (_gpio0_strip, _gpio3_strip, _gpio4_strip, _gpio5_strip) = LedStripsPio0Four::new(
-        peripherals.PIO0,
         peripherals.PIN_0,
         peripherals.DMA_CH0,
         peripherals.PIN_3,
@@ -36,6 +35,7 @@ async fn test_four_led_strips_on_one_pio(
         peripherals.DMA_CH2,
         peripherals.PIN_5,
         peripherals.DMA_CH3,
+        peripherals.PIO0,
         spawner,
     )?;
     Ok(())

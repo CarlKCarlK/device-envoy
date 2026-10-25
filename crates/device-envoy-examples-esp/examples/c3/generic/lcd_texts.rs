@@ -17,9 +17,9 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 i2cs! {
     I2cs0 {
-        i2c: I2C0,
         sda_pin: GPIO4,
         scl_pin: GPIO5,
+        i2c: I2C0,
 
         LcdText16x2 { width: 16, height: 2, address: 0x27 },
         LcdText20x4 { width: 20, height: 4, address: 0x26 },
@@ -35,7 +35,7 @@ async fn main(spawner: Spawner) -> ! {
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
 
-    let (lcd_text16x2, lcd_text20x4) = I2cs0::new(p.I2C0, p.GPIO4, p.GPIO5, spawner)?;
+    let (lcd_text16x2, lcd_text20x4) = I2cs0::new(p.GPIO4, p.GPIO5, p.I2C0, spawner)?;
 
     loop {
         lcd_text16x2.write_text("LCD #1\n16x2");

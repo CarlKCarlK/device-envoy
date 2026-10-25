@@ -48,7 +48,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let mut button = ButtonEsp::new(p.GPIO0, PressedTo::Ground);
-    let servo_player10 = ServoPlayer10::new(&ledc, p.GPIO10, spawner)?;
+    let servo_player10 = ServoPlayer10::new(p.GPIO10, &ledc, spawner)?;
 
     loop {
         // Move to 90 degrees, wait 1 second, then relax.

@@ -23,6 +23,12 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+/// Servo steps built with the crate-root `combine!` path.
+const SERVO_STEPS: [(u16, embassy_time::Duration); 2] = device_envoy_esp::combine!(
+    [(0, embassy_time::Duration::from_millis(500))],
+    [(90, embassy_time::Duration::from_millis(500))]
+);
+
 led! {
     /// A public status LED.
     pub StatusLed { pin: GPIO0 }
@@ -72,6 +78,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
             + size_of_val(public_button)
             + size_of_val(&public_servo)
             + size_of_val(public_strip)
+            + size_of_val(&SERVO_STEPS)
     );
     core::future::pending().await
 }

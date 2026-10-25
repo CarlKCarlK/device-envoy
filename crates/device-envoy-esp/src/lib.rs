@@ -275,6 +275,9 @@ mod rmt;
 pub mod servo;
 #[cfg(all(target_os = "none", esp_has_ledc))]
 mod servo_player;
+// Crate-root path kept for `device_envoy_esp::combine!`; documented in `servo`.
+#[doc(hidden)]
+pub use device_envoy_core::combine;
 // Crate-root path kept for `use device_envoy_esp::servo;`; documented in `servo`.
 #[cfg(all(target_os = "none", esp_has_ledc))]
 #[doc(hidden)]

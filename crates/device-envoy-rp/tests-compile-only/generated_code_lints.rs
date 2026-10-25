@@ -26,6 +26,12 @@ use panic_probe as _;
 
 const LED_LAYOUT_4X3: LedLayout<12, 4, 3> = LedLayout::serpentine_column_major();
 
+/// Servo steps built with the crate-root `combine!` path.
+const SERVO_STEPS: [(u16, embassy_time::Duration); 2] = device_envoy_rp::combine!(
+    [(0, embassy_time::Duration::from_millis(500))],
+    [(90, embassy_time::Duration::from_millis(500))]
+);
+
 led! {
     /// A public status LED.
     pub StatusLed { pin: PIN_2 }
@@ -140,7 +146,8 @@ async fn inner_main(spawner: Spawner) -> Result<core::convert::Infallible> {
                 + size_of_val(&private_servo)
                 + size_of_val(public_lcd)
                 + size_of_val(&public_pcm)
-                + size_of_val(&private_adpcm),
+                + size_of_val(&private_adpcm)
+                + size_of_val(&SERVO_STEPS),
         );
         embassy_time::Timer::after_secs(1).await;
     }

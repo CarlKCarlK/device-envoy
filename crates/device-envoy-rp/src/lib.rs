@@ -138,6 +138,9 @@ pub mod rfid;
 pub mod servo;
 #[cfg(target_os = "none")]
 mod servo_player;
+// Crate-root path kept for `device_envoy_rp::combine!`; documented in `servo`.
+#[doc(hidden)]
+pub use device_envoy_core::combine;
 // Crate-root path kept for `use device_envoy_rp::servo;`; documented in `servo`.
 #[cfg(target_os = "none")]
 #[doc(hidden)]

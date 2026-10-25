@@ -87,6 +87,9 @@ Behavior changes and fixes:
   display whose initialization fails is initialized again on its next frame.
 - Generated code no longer requires your crate to depend on `paste`,
   `static_cell`, `heapless`, or `embassy_sync`.
+- Every item the macros generate is documented, so a crate that denies
+  `missing_docs` builds, and links in generated documentation resolve instead of
+  pointing at your own crate.
 - Two RP LED groups on one PIO in one module, ESP LEDC channel clashes, and
   duplicate LCD addresses fail to compile with errors that name the rule.
 

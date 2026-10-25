@@ -107,6 +107,9 @@ API changes (RP and ESP now generate the same API):
 - ESP `led_strip!` and `led2d!` document `engine` as a defaulted field ("RMT
   where the chip has it, otherwise SPI").
 - ESP `COMBO_TABLE` and `servo!`'s generated static struct are private.
+- ESP `EngineResource`, the trait for the peripheral a strip's `new` takes, is
+  documented and sealed. Passing the wrong engine's peripheral reports, for
+  example, "`SPI2` cannot drive `Rmt` LEDs" with a note naming what to pass.
 
 Behavior changes and fixes:
 

@@ -240,7 +240,7 @@ macro_schema::define! {
             pub const HEIGHT: usize = $upper($decl.name, _LED_LAYOUT).height();
             /// Total LED count (`WIDTH * HEIGHT`).
             pub const LEN: usize = $upper($decl.name, _LED_LAYOUT).len();
-            /// Panel dimensions as a [`Size`](device_envoy_rp::led2d::Size).
+            /// Panel dimensions as a [`Size`](device_envoy_esp::led2d::Size).
             pub const SIZE: $crate::led2d::Size = $crate::led2d::Frame2d::<
                 { $upper($decl.name, _LED_LAYOUT).width() },
                 { $upper($decl.name, _LED_LAYOUT).height() },
@@ -271,8 +271,10 @@ macro_schema::define! {
                 self.strip
             }
 
-            /// Creates the panel and spawns its background task. `resource` is the engine's
-            /// peripheral: an RMT channel creator for `Rmt`, or an SPI instance for `Spi`.
+            /// Creates the panel and spawns its background task. `resource` is the peripheral
+            /// for the panel's engine: an RMT channel (such as `rmt80.channel0`) for `Rmt`, or
+            /// an SPI peripheral (such as `p.SPI2`) for `Spi`. See
+            /// [`EngineResource`](device_envoy_esp::led_strip::EngineResource).
             pub fn new(
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 resource: impl $crate::led_strip::EngineResource<$ident($decl.name, LedStripEngine)>,

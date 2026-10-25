@@ -186,16 +186,39 @@ pub trait Ws2812Write<const LEDS: usize> {
     fn write(&mut self, frame: &Frame1d<LEDS>) -> core::result::Result<(), Self::Error>;
 }
 
-/// A peripheral that can drive engine `E`: an RMT channel creator for [`Rmt`], an SPI
-/// instance for [`Spi`].
-#[doc(hidden)]
-pub trait EngineResource<E: LedEngine> {
+/// The peripheral a strip's `new` takes to drive its LEDs, chosen by the strip's engine:
+///
+/// | Engine | Pass | Example |
+/// | --- | --- | --- |
+/// | [`Rmt`] | an RMT channel | `rmt80.channel0` |
+/// | [`Spi`] | an SPI peripheral | `p.SPI2` |
+///
+/// This trait is sealed: these are its only implementations.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` cannot drive `{E}` LEDs",
+    label = "expected the peripheral for this strip's `{E}` engine",
+    note = "an `Rmt` strip takes an RMT channel, such as `rmt80.channel0`; \
+            an `Spi` strip takes an SPI peripheral, such as `p.SPI2`"
+)]
+pub trait EngineResource<E: LedEngine>: engine_resource_sealed::Sealed<E> {
     /// Builds the driver for a strip of `LEDS` pixels on `pin`.
+    #[doc(hidden)]
     fn into_driver<const LEDS: usize, const BUF: usize>(
         self,
         pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
         reset_us: u32,
     ) -> crate::Result<E::Driver<LEDS, BUF>>;
+}
+
+// Keeps `EngineResource` closed to the two implementations below.
+mod engine_resource_sealed {
+    pub trait Sealed<E> {}
+
+    #[cfg(all(target_os = "none", esp_has_rmt))]
+    impl<C> Sealed<super::Rmt> for C where C: esp_hal::rmt::TxChannelCreator<'static, esp_hal::Blocking> {}
+
+    #[cfg(target_os = "none")]
+    impl<S> Sealed<super::Spi> for S where S: esp_hal::spi::master::Instance + 'static {}
 }
 
 #[cfg(all(target_os = "none", esp_has_rmt))]
@@ -505,8 +528,10 @@ macro_schema::define! {
             const COMBO_TABLE: [u8; 256] =
                 $crate::led_strip::generate_combo_table($decl.gamma, Self::MAX_BRIGHTNESS);
 
-            /// Creates the strip and spawns its background task. `resource` is the engine's
-            /// peripheral: an RMT channel creator for `Rmt`, or an SPI instance for `Spi`.
+            /// Creates the strip and spawns its background task. `resource` is the peripheral
+            /// for the strip's engine: an RMT channel (such as `rmt80.channel0`) for `Rmt`, or
+            /// an SPI peripheral (such as `p.SPI2`) for `Spi`. See
+            /// [`EngineResource`](device_envoy_esp::led_strip::EngineResource).
             pub fn new(
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 resource: impl $crate::led_strip::EngineResource<$ident($decl.name, Engine)>,

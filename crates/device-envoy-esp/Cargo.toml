@@ -269,6 +269,12 @@ path = "tests/embedded/servo_ledc_distinct_compile.rs"
 harness = false
 
 [[test]]
+name = "led_strip_wrong_engine_resource_compile_fail"
+path = "tests/embedded/led_strip_wrong_engine_resource_compile_fail.rs"
+harness = false
+required-features = ["compile-fail-tests"]
+
+[[test]]
 name = "servo_ledc_timer_clash_compile_fail"
 path = "tests/embedded/servo_ledc_timer_clash_compile_fail.rs"
 harness = false

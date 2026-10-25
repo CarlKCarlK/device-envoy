@@ -383,7 +383,7 @@ fn public_macro_docs(
                             lit: syn::Lit::Str(text),
                             ..
                         }) = &name_value.value
-                        && text.value().contains("**Syntax:**")
+                        && text.value().contains("# Syntax")
                     {
                         docs.insert(name.clone(), text.value());
                     }

@@ -543,8 +543,7 @@ macro_schema::define! {
     /// If you only need a single strip or panel, prefer [`led_strip!`](macro@crate::led_strip)
     /// or [`led2d!`](macro@crate::led2d) for simpler configuration.
     ///
-    /// We’ll start with a complete example below. The syntax and field reference are at
-    /// the end of this page.
+    /// We’ll start with a complete example below.
     ///
     /// # Example: Connect Three LED Strips/Panels to One PIO Resource
     ///

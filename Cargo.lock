@@ -2717,18 +2717,18 @@ dependencies = [
 
 [[package]]
 name = "macro-schema"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cb9d3394aee92caddf593ba8a6d23fd9207c34ae2056c0c956e407515725599"
+checksum = "09028abebddb52d7d8330940e657d21d385b18aa63a3dc3f81fe7a52809c768c"
 dependencies = [
  "macro-schema-derive",
 ]
 
 [[package]]
 name = "macro-schema-core"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97b0908e05d9100ed3d8ea4661d87a81a26d006d0aaba384560a93d04c7abf77"
+checksum = "054c55737d47a79ab51e1245ddfa8eaaf0c1331e395d7b1dafd86aefccefa9b0"
 dependencies = [
  "prettyplease 0.3.0",
  "proc-macro2",
@@ -2738,9 +2738,9 @@ dependencies = [
 
 [[package]]
 name = "macro-schema-derive"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52e784ab006068b3572170d5433a4b4f1ddec35c5b3a772b22f4a8e8b705f34f"
+checksum = "063038db47a62688efeb48613382f1f2cf088458b345a56961a3a98215370ae1"
 dependencies = [
  "macro-schema-core",
 ]

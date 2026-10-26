@@ -251,13 +251,6 @@ macro_schema::define! {
 
         }
 
-        impl ::core::ops::Deref for $decl.name {
-            type Target = $crate::button::ButtonWatchRp;
-
-            fn deref(&self) -> &Self::Target {
-                &self.button_watch
-            }
-        }
 
         impl $crate::button::__ButtonMonitor for $decl.name {
             fn is_pressed_raw(&self) -> bool {

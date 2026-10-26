@@ -202,6 +202,7 @@ macro_schema::define! {
                 engine: $decl.engine,
                 gamma: $decl.gamma,
                 max_frames: $decl.max_frames,
+                behind_panel: yes,
             }
         }
 
@@ -287,7 +288,7 @@ macro_schema::define! {
                     resource: impl $crate::led_strip::EngineResource<$ident($decl.name, LedStripEngine)>,
                     spawner: ::embassy_executor::Spawner,
                 ) -> $crate::Result<&'static Self> {
-                    let led_strip = $ident($decl.name, LedStrip)::new(pin, resource, spawner)?;
+                    let led_strip = $ident($decl.name, LedStrip)::spawn_new(pin, resource, spawner)?;
                     static PANEL_CELL: $crate::__static_cell::StaticCell<$decl.name> =
                         $crate::__static_cell::StaticCell::new();
                     Ok(PANEL_CELL.init(Self {

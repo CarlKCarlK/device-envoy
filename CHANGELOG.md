@@ -110,6 +110,10 @@ API changes (RP and ESP now generate the same API):
   The `Rmt` engine ignores it; naming it on an `Rmt` strip is no longer an
   error.
 - ESP `COMBO_TABLE` and `servo!`'s generated static struct are private.
+- `button_watch!` types no longer implement `Deref` to the internal
+  `ButtonWatchRp`/`ButtonWatchEsp`; use the `Button` trait.
+- On ESP, the strip behind a `led2d!` panel has no public `new`; reach it
+  through the panel's `strip()`, as on RP.
 - ESP `EngineResource`, the trait for the peripheral a strip's `new` takes, is
   documented and sealed. Passing the wrong engine's peripheral reports, for
   example, "`SPI2` cannot drive `Rmt` LEDs" with a note naming what to pass.

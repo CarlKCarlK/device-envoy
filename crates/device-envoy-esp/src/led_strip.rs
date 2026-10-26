@@ -479,6 +479,9 @@ macro_schema::define! {
         max_frames: expr,
         /// WS2812 reset interval in microseconds; only the `Spi` engine uses it.
         reset_us?: expr,
+        /// Present (as `yes`) for the strip behind a panel: its constructor stays private,
+        /// so the strip is reached only through the panel's `strip()`.
+        behind_panel?: ident,
     }
 
     generate {
@@ -522,11 +525,22 @@ macro_schema::define! {
             const COMBO_TABLE: [u8; 256] =
                 $crate::led_strip::generate_combo_table($decl.gamma, Self::MAX_BRIGHTNESS);
 
-            /// Creates the strip and spawns its background task. `resource` is the peripheral
-            /// for the strip's engine: an RMT channel (such as `rmt80.channel0`) for `Rmt`, or
-            /// an SPI peripheral (such as `p.SPI2`) for `Spi`. See
-            /// [`EngineResource`](device_envoy_esp::led_strip::EngineResource).
-            pub fn new(
+            $if let Some(_panel) = $decl.behind_panel {
+            } else {
+                /// Creates the strip and spawns its background task. `resource` is the
+                /// peripheral for the strip's engine: an RMT channel (such as
+                /// `rmt80.channel0`) for `Rmt`, or an SPI peripheral (such as `p.SPI2`) for
+                /// `Spi`. See [`EngineResource`](device_envoy_esp::led_strip::EngineResource).
+                pub fn new(
+                    pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
+                    resource: impl $crate::led_strip::EngineResource<$ident($decl.name, Engine)>,
+                    spawner: ::embassy_executor::Spawner,
+                ) -> $crate::Result<&'static Self> {
+                    Self::spawn_new(pin, resource, spawner)
+                }
+            }
+
+            fn spawn_new(
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 resource: impl $crate::led_strip::EngineResource<$ident($decl.name, Engine)>,
                 spawner: ::embassy_executor::Spawner,

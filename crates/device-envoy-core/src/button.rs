@@ -113,6 +113,9 @@ pub trait Button: __ButtonMonitor {
     /// Waits for the next press (button goes down, debounced). Does not wait for release.
     ///
     /// See the [Button trait documentation](Self) for usage examples.
+    ///
+    /// Takes `&mut self` because each event goes to exactly one waiting task: one task owns
+    /// the receiver. A second task waiting on the same one would take some of its events.
     async fn wait_for_press(&mut self) {
         loop {
             <Self as __ButtonMonitor>::wait_until_pressed_state(self, false).await;

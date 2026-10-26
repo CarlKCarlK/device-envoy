@@ -116,6 +116,12 @@ API changes (RP and ESP now generate the same API):
   The `Rmt` engine ignores it; naming it on an `Rmt` strip is no longer an
   error.
 - ESP `COMBO_TABLE` and `servo!`'s generated static struct are private.
+- IR receivers (`ir!`, `ir_mapping!`, `ir_kepler!`, and their groups) return
+  `&'static mut Self`, and `Ir`, `IrMapping`, `IrKepler`, and `Rfid` wait with
+  `&mut self`, as `Button` does. Each event goes to exactly one waiting task, so
+  the types now let only one task wait on a receiver; two tasks sharing one used
+  to wake each other in a loop and split the events between them. Code generic
+  over these traits takes `&mut impl Ir` (core forwards the traits for `&mut T`).
 - `button_watch!` types no longer implement `Deref` to the internal
   `ButtonWatchRp`/`ButtonWatchEsp`; use the `Button` trait.
 - On ESP, the strip behind a `led2d!` panel has no public `new`; reach it

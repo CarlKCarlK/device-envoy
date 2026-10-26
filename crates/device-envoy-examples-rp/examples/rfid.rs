@@ -36,7 +36,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("rfid example started");
 
     static RFID_STATIC: RfidStatic = RfidRp::new_static();
-    let rfid = RfidRp::new_spi0(
+    let mut rfid = RfidRp::new_spi0(
         &RFID_STATIC,
         p.SPI0,
         p.PIN_2,

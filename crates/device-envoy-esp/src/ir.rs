@@ -342,7 +342,7 @@ macro_schema::define! {
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<&'static Self> {
+            ) -> $crate::Result<&'static mut Self> {
                 let channel = channel_creator
                     .configure_rx(&$crate::init_and_start::rmt::nec_rx_config())
                     .map_err($crate::Error::RmtConfig)?
@@ -361,7 +361,7 @@ macro_schema::define! {
         }
 
         impl $crate::ir::IrKepler for $decl.name {
-            async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
+            async fn wait_for_press(&mut self) -> $crate::ir::KeplerKeys {
                 loop {
                     let $crate::ir::IrEvent::Press { addr, cmd } = self.ir_static.receive().await;
                     if let Some(&button) = self.button_map.get(&(addr, cmd)) {
@@ -413,7 +413,7 @@ macro_schema::define! {
                     $snake($ir.name, _channel_creator): impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                 }
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
+            ) -> $crate::Result<($for ir in $decl.members { &'static mut $ir.name, })> {
                 Ok(($for ir in $decl.members {
                     $ir.name::new($snake($ir.name, _pin), $snake($ir.name, _channel_creator), spawner)?,
                 }))
@@ -469,7 +469,7 @@ macro_schema::define! {
                 channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                 button_map: &[(u16, u8, $decl.button)],
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<&'static Self> {
+            ) -> $crate::Result<&'static mut Self> {
                 let channel = channel_creator
                     .configure_rx(&$crate::init_and_start::rmt::nec_rx_config())
                     .map_err($crate::Error::RmtConfig)?
@@ -486,7 +486,7 @@ macro_schema::define! {
         }
 
         impl $crate::ir::IrMapping<$decl.button> for $decl.name {
-            async fn wait_for_press(&self) -> $decl.button {
+            async fn wait_for_press(&mut self) -> $decl.button {
                 loop {
                     let $crate::ir::IrEvent::Press { addr, cmd } = self.ir_static.receive().await;
                     if let Some(&button) = self.button_map.get(&(addr, cmd)) {
@@ -544,7 +544,7 @@ macro_schema::define! {
                     $snake($ir.name, _button_map): &[(u16, u8, $decl.button)],
                 }
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
+            ) -> $crate::Result<($for ir in $decl.members { &'static mut $ir.name, })> {
                 Ok(($for ir in $decl.members {
                     $ir.name::new($snake($ir.name, _pin), $snake($ir.name, _channel_creator), $snake($ir.name, _button_map), spawner)?,
                 }))
@@ -569,7 +569,8 @@ macro_schema::define! {
     generate {
         // A self-contained receiver: it owns its RMT channel and background task.
         static $upper($decl.name, _IR_STATIC): $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-        static $upper($decl.name, _IR): $decl.name = $decl.name { ir_static: &$upper($decl.name, _IR_STATIC) };
+        static $upper($decl.name, _IR_CELL): $crate::__static_cell::StaticCell<$decl.name> =
+            $crate::__static_cell::StaticCell::new();
 
         #[::embassy_executor::task]
         async fn $snake(__, $decl.name, _ir_receiver_task)(
@@ -593,7 +594,7 @@ macro_schema::define! {
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 channel_creator: impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<&'static Self> {
+            ) -> $crate::Result<&'static mut Self> {
                 let channel = channel_creator
                     .configure_rx(&$crate::init_and_start::rmt::nec_rx_config())
                     .map_err($crate::Error::RmtConfig)?
@@ -602,12 +603,12 @@ macro_schema::define! {
                     $snake(__, $decl.name, _ir_receiver_task)(channel, &$upper($decl.name, _IR_STATIC))
                         .map_err($crate::Error::TaskSpawn)?,
                 );
-                Ok(&$upper($decl.name, _IR))
+                Ok($upper($decl.name, _IR_CELL).init($decl.name { ir_static: &$upper($decl.name, _IR_STATIC) }))
             }
         }
 
         impl $crate::ir::Ir for $decl.name {
-            async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+            async fn wait_for_press(&mut self) -> $crate::ir::IrEvent {
                 self.ir_static.receive().await
             }
         }
@@ -654,7 +655,7 @@ macro_schema::define! {
                     $snake($ir.name, _channel_creator): impl $crate::esp_hal::rmt::RxChannelCreator<'static, $crate::esp_hal::Async>,
                 }
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
+            ) -> $crate::Result<($for ir in $decl.members { &'static mut $ir.name, })> {
                 Ok(($for ir in $decl.members {
                     $ir.name::new($snake($ir.name, _pin), $snake($ir.name, _channel_creator), spawner)?,
                 }))

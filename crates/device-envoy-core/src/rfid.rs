@@ -24,7 +24,7 @@ pub enum RfidEvent {
 /// ```rust,no_run
 /// use device_envoy_core::rfid::{Rfid, RfidEvent};
 ///
-/// async fn log_card_taps(rfid: &impl Rfid) -> ! {
+/// async fn log_card_taps(rfid: &mut impl Rfid) -> ! {
 ///     loop {
 ///         let RfidEvent::CardDetected { uid } = rfid.wait_for_tap().await;
 ///         let _ = uid;
@@ -33,13 +33,13 @@ pub enum RfidEvent {
 ///
 /// # struct DemoRfid;
 /// # impl Rfid for DemoRfid {
-/// #     async fn wait_for_tap(&self) -> RfidEvent {
+/// #     async fn wait_for_tap(&mut self) -> RfidEvent {
 /// #         RfidEvent::CardDetected { uid: [0; 10] }
 /// #     }
 /// # }
 /// # fn main() {
-/// #     let rfid = DemoRfid;
-/// #     let _future = log_card_taps(&rfid);
+/// #     let mut rfid = DemoRfid;
+/// #     let _future = log_card_taps(&mut rfid);
 /// # }
 /// ```
 #[allow(async_fn_in_trait)]
@@ -47,5 +47,8 @@ pub trait Rfid {
     /// Wait for the next RFID event.
     ///
     /// See the [Rfid trait documentation](Self) for usage examples.
-    async fn wait_for_tap(&self) -> RfidEvent;
+    ///
+    /// Takes `&mut self` because each event goes to exactly one waiting task: one task owns
+    /// the receiver. A second task waiting on the same one would take some of its events.
+    async fn wait_for_tap(&mut self) -> RfidEvent;
 }

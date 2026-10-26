@@ -65,7 +65,7 @@ impl RfidStatic {
 ///     init_and_start!(p);
 ///     static RFID_STATIC: RfidStatic = RfidEsp::new_static();
 ///
-///     let rfid = RfidEsp::new(
+///     let mut rfid = RfidEsp::new(
 ///         &RFID_STATIC,
 ///         p.SPI2,
 ///         p.GPIO6,
@@ -115,7 +115,7 @@ impl RfidEsp<'_> {
 }
 
 impl Rfid for RfidEsp<'_> {
-    async fn wait_for_tap(&self) -> RfidEvent {
+    async fn wait_for_tap(&mut self) -> RfidEvent {
         self.rfid_static.receive().await
     }
 }

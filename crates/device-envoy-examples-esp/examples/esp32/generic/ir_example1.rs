@@ -22,7 +22,7 @@ ir! {
     }
 }
 
-async fn handle_ir_presses(ir: &impl Ir) -> ! {
+async fn handle_ir_presses(ir: &mut impl Ir) -> ! {
     loop {
         let ir_event = ir.wait_for_press().await;
         match ir_event {

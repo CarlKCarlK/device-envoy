@@ -21,7 +21,7 @@ ir_kepler! {
     IrKeplerBoard { pin: GPIO0 }
 }
 
-async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
+async fn handle_kepler_button_presses(ir_kepler: &mut impl IrKepler) -> ! {
     loop {
         let kepler_button = ir_kepler.wait_for_press().await;
         match kepler_button {

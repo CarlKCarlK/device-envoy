@@ -396,7 +396,7 @@ macro_schema::define! {
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<&'static Self> {
+            ) -> $crate::Result<&'static mut Self> {
                 let (ir,) = $ident($decl.name, Group)::new(pin, pio, spawner)?;
                 Ok(ir)
             }
@@ -443,7 +443,7 @@ macro_schema::define! {
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<&'static Self> {
+            ) -> $crate::Result<&'static mut Self> {
                 let (ir_kepler,) = $ident($decl.name, Group)::new(pin, pio, spawner)?;
                 Ok(ir_kepler)
             }
@@ -486,7 +486,7 @@ macro_schema::define! {
             }
 
             impl $crate::ir::IrKepler for $ir.name {
-                async fn wait_for_press(&self) -> $crate::ir::KeplerKeys {
+                async fn wait_for_press(&mut self) -> $crate::ir::KeplerKeys {
                     loop {
                         let $crate::ir::IrEvent::Press { addr, cmd } = self.ir_static.receive().await;
                         if let Some(&button) = self.button_map.get(&(addr, cmd)) {
@@ -504,15 +504,15 @@ macro_schema::define! {
         impl $decl.name {
             /// Creates every Kepler receiver in the group and spawns their background tasks.
             ///
-            /// Takes the PIO resource, then one pin per receiver in declaration order,
-            /// then the spawner.
+            /// Takes one pin per receiver in declaration order, then the PIO resource they
+            /// share, then the spawner.
             pub fn new(
                 $for ir in $decl.members {
                     $snake($ir.name, _pin): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$ir.pin>>,
                 }
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
+            ) -> $crate::Result<($for ir in $decl.members { &'static mut $ir.name, })> {
                 let ::embassy_rp::pio::Pio { mut common, $for ir in $decl.members { $ident(sm, $ir.index), } .. } =
                     ::embassy_rp::pio::Pio::new(
                         pio.into(),
@@ -529,7 +529,7 @@ macro_schema::define! {
                     )?;
                 }
                 Ok(($for ir in $decl.members {
-                    &*$upper($ir.name, _KEPLER_CELL).init($ir.name {
+                    $upper($ir.name, _KEPLER_CELL).init($ir.name {
                         ir_static: &$upper($ir.name, _IR_STATIC),
                         button_map: $crate::ir::__build_button_map::<$crate::ir::KeplerKeys, 21>(&$crate::ir::__KEPLER_MAPPING),
                     }),
@@ -585,7 +585,7 @@ macro_schema::define! {
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 button_map: &[(u16, u8, $decl.button)],
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<&'static Self> {
+            ) -> $crate::Result<&'static mut Self> {
                 let (ir_mapping,) = $ident($decl.name, Group)::new(pin, button_map, pio, spawner)?;
                 Ok(ir_mapping)
             }
@@ -632,7 +632,7 @@ macro_schema::define! {
             }
 
             impl $crate::ir::IrMapping<$decl.button> for $ir.name {
-                async fn wait_for_press(&self) -> $decl.button {
+                async fn wait_for_press(&mut self) -> $decl.button {
                     loop {
                         let $crate::ir::IrEvent::Press { addr, cmd } = self.ir_static.receive().await;
                         if let Some(&button) = self.button_map.get(&(addr, cmd)) {
@@ -650,9 +650,8 @@ macro_schema::define! {
         impl $decl.name {
             /// Creates every mapping receiver in the group and spawns their background tasks.
             ///
-            /// Takes the PIO resource, then a pin and button map per receiver in declaration
-            /// order,
-            /// then the spawner.
+            /// Takes a pin and button map per receiver in declaration order, then the PIO
+            /// resource they share, then the spawner.
             pub fn new(
                 $for ir in $decl.members {
                     $snake($ir.name, _pin): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$ir.pin>>,
@@ -660,7 +659,7 @@ macro_schema::define! {
                 }
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
+            ) -> $crate::Result<($for ir in $decl.members { &'static mut $ir.name, })> {
                 let ::embassy_rp::pio::Pio { mut common, $for ir in $decl.members { $ident(sm, $ir.index), } .. } =
                     ::embassy_rp::pio::Pio::new(
                         pio.into(),
@@ -677,7 +676,7 @@ macro_schema::define! {
                     )?;
                 }
                 Ok(($for ir in $decl.members {
-                    &*$upper($ir.name, _MAPPING_CELL).init($ir.name {
+                    $upper($ir.name, _MAPPING_CELL).init($ir.name {
                         ir_static: &$upper($ir.name, _IR_STATIC),
                         button_map: $crate::ir::__build_button_map::<$decl.button, $const_arg($decl.capacity)>($snake($ir.name, _button_map)),
                     }),
@@ -711,9 +710,8 @@ macro_schema::define! {
     generate {
         $for ir in $decl.members {
             static $upper($ir.name, _IR_STATIC): $crate::ir::__IrStatic = $crate::ir::__IrStatic::new();
-            static $upper($ir.name, _IR): $ir.name = $ir.name {
-                ir_static: &$upper($ir.name, _IR_STATIC),
-            };
+            static $upper($ir.name, _IR_CELL): $crate::__static_cell::StaticCell<$ir.name> =
+                $crate::__static_cell::StaticCell::new();
 
             $ir.attrs
             #[doc = $ir.doc]
@@ -722,7 +720,7 @@ macro_schema::define! {
             }
 
             impl $crate::ir::Ir for $ir.name {
-                async fn wait_for_press(&self) -> $crate::ir::IrEvent {
+                async fn wait_for_press(&mut self) -> $crate::ir::IrEvent {
                     self.ir_static.receive().await
                 }
             }
@@ -735,15 +733,15 @@ macro_schema::define! {
         impl $decl.name {
             /// Creates every IR receiver in the group and spawns their background tasks.
             ///
-            /// Takes the PIO resource, then one pin per receiver in declaration order,
-            /// then the spawner.
+            /// Takes one pin per receiver in declaration order, then the PIO resource they
+            /// share, then the spawner.
             pub fn new(
                 $for ir in $decl.members {
                     $snake($ir.name, _pin): impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$ir.pin>>,
                 }
                 pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<($for ir in $decl.members { &'static $ir.name, })> {
+            ) -> $crate::Result<($for ir in $decl.members { &'static mut $ir.name, })> {
                 let ::embassy_rp::pio::Pio { mut common, $for ir in $decl.members { $ident(sm, $ir.index), } .. } =
                     ::embassy_rp::pio::Pio::new(
                         pio.into(),
@@ -759,7 +757,9 @@ macro_schema::define! {
                         spawner,
                     )?;
                 }
-                Ok(($for ir in $decl.members { &$upper($ir.name, _IR), }))
+                Ok(($for ir in $decl.members {
+                    $upper($ir.name, _IR_CELL).init($ir.name { ir_static: &$upper($ir.name, _IR_STATIC) }),
+                }))
             }
         }
     }

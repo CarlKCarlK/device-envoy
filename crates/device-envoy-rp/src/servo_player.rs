@@ -215,19 +215,13 @@ macro_schema::define! {
             /// - `spawner` — Task spawner for background operations
             ///
             /// See the `ServoPlayer` struct example for usage.
-            pub fn new<S: 'static>(
+            pub fn new(
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
-                slice: impl Into<::embassy_rp::Peri<'static, S>>,
+                slice: impl $crate::servo::ServoPwmSlice<::embassy_rp::peripherals::$decl.pin>,
                 spawner: ::embassy_executor::Spawner,
-            ) -> $crate::Result<&'static Self>
-            where
-                ::embassy_rp::peripherals::$decl.pin: $crate::servo::ServoPwmPin<S>,
-                S: ::embassy_rp::PeripheralType,
-            {
-                let pin = pin.into();
-                let slice = slice.into();
+            ) -> $crate::Result<&'static Self> {
                 let servo = $crate::servo::servo_from_pin_slice(
-                    pin,
+                    pin.into(),
                     slice,
                     $decl.min_us,
                     $decl.max_us,

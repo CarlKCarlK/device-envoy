@@ -168,14 +168,25 @@ impl StackStorage {
 /// Signal type for WiFi events.
 pub type WifiEvents = Signal<CriticalSectionRawMutex, WifiEvent>;
 
-/// PIO peripheral used by the WiFi driver.
-#[doc(hidden)]
-pub trait WifiPio: crate::pio_irqs::PioIrqMap {
+/// A PIO that can run the Wi-Fi driver, which talks to the Pico W's radio through one PIO
+/// state machine: `PIO0`, `PIO1`, or, on the Pico 2 W, `PIO2`.
+///
+/// Give Wi-Fi a PIO that no other device uses; each PIO serves one device or group.
+///
+/// This trait is sealed: it is implemented for the PIO peripherals and nothing else.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a PIO that can run Wi-Fi",
+    label = "expected a PIO peripheral",
+    note = "pass a PIO peripheral such as `p.PIO0`, `p.PIO1`, or (Pico 2 W) `p.PIO2`"
+)]
+pub trait WifiPio: crate::pio_irqs::PioIrqMap + wifi_pio_sealed::Sealed {
+    #[doc(hidden)]
     fn spawn_wifi_task(
         spawner: Spawner,
         runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, Self, 0>>>,
     );
 
+    #[doc(hidden)]
     fn spawn_device_loop(
         spawner: Spawner,
         pin_23: Peri<'static, PIN_23>,
@@ -189,6 +200,11 @@ pub trait WifiPio: crate::pio_irqs::PioIrqMap {
         wifi_events: &'static WifiEvents,
         stack_storage: &'static StackStorage,
     ) -> crate::Result<()>;
+}
+
+// Keeps `WifiPio` closed to the PIO peripherals.
+mod wifi_pio_sealed {
+    pub trait Sealed {}
 }
 
 /// Resources needed by the WiFi device.
@@ -742,6 +758,8 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 
 macro_rules! impl_wifi_pio {
     ($pio:ident, $wifi_task:ident, $device_loop_task:ident) => {
+        impl wifi_pio_sealed::Sealed for peripherals::$pio {}
+
         impl WifiPio for peripherals::$pio {
             fn spawn_wifi_task(
                 spawner: Spawner,

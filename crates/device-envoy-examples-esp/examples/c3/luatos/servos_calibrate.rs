@@ -32,7 +32,7 @@ use device_envoy_esp::{
     Result,
     button::{ButtonEsp, PressedTo},
     init_and_start, servo,
-    servo::{Servo as _, ServoEsp},
+    servo::Servo,
 };
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -108,7 +108,7 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
     }
 }
 
-fn set_both(servo_a: &ServoEsp, servo_b: &ServoEsp, degrees: u16) {
+fn set_both(servo_a: &impl Servo, servo_b: &impl Servo, degrees: u16) {
     info!(
         "servos_calibrate: set both servos to {} degrees (GPIO10, GPIO18)",
         degrees

@@ -41,8 +41,8 @@ Syntax changes:
   visibility. ESP `servo!`, ESP `servo_player!`, and the IR groups were always
   `pub`; they now follow the visibility you write.
 - RP `servo!` declares a named type, like ESP `servo!`. The PWM slice is passed
-  to `new`, and a trait bound checks that it is the pin's slice. The `slice`,
-  `channel`, `odd`, and `even` fields are gone:
+  to `new`, and the `ServoPwmSlice` bound checks that it is the pin's slice. The
+  `slice`, `channel`, `odd`, and `even` fields are gone:
 
   ```rust,ignore
   // 0.1
@@ -50,7 +50,7 @@ Syntax changes:
 
   // 0.2
   servo! { Servo11 { pin: PIN_11 } }
-  let mut servo = Servo11::new(p.PIN_11, p.PWM_SLICE5);
+  let servo = Servo11::new(p.PIN_11, p.PWM_SLICE5);
   ```
 
 - `pcm_clip!` accepts only `source_sample_rate_hz`; the `sample_rate_hz` alias
@@ -82,6 +82,12 @@ API changes (RP and ESP now generate the same API):
   `led_strips!` panel members also return `&'static` panels.
 - ESP `servo_player!` matches RP: `new` returns `&'static Self`, and the
   declared type implements `Servo` and `ServoPlayer`.
+- `servo!`'s declared type is the servo: it implements `Servo`, and `new`
+  returns `&'static Self` (RP) or `Result<&'static Self>` (ESP) instead of the
+  runtime `ServoRp`/`ServoEsp`.
+- RP `ServoPwmSlice` (replacing the hidden `ServoPwmPin`) and `WifiPio` are
+  documented and sealed. A wrong slice reports "`PWM_SLICE4` is not the PWM
+  slice for `PIN_11`" with a note on how to find a pin's slice.
 - Constructor arguments go from most specific to least: the device's own pins,
   then its peripherals or channels, then shared resources, then the spawner.
   Group constructors take each member's arguments first and the shared

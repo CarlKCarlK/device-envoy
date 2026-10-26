@@ -80,6 +80,11 @@ path = "led_strip_pio0.rs"
 required-features = ["pico1"]
 
 [[bin]]
+name = "servo_wrong_slice_should_fail"
+path = "servo_wrong_slice_should_fail.rs"
+required-features = ["pico1"]
+
+[[bin]]
 name = "expression_values"
 path = "expression_values.rs"
 required-features = ["pico1"]

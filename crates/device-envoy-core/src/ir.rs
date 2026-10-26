@@ -40,7 +40,7 @@ pub enum IrEvent {
 /// ```rust,no_run
 /// use device_envoy_core::ir::{Ir, IrEvent};
 ///
-/// async fn handle_ir_presses(ir: &impl Ir) -> ! {
+/// async fn handle_ir_presses(ir: &mut impl Ir) -> ! {
 ///     loop {
 ///         let ir_event = ir.wait_for_press().await;
 ///         match ir_event {
@@ -54,13 +54,13 @@ pub enum IrEvent {
 ///
 /// # struct DemoIr;
 /// # impl Ir for DemoIr {
-/// #     async fn wait_for_press(&self) -> IrEvent {
+/// #     async fn wait_for_press(&mut self) -> IrEvent {
 /// #         IrEvent::Press { addr: 0, cmd: 0 }
 /// #     }
 /// # }
 /// # fn main() {
-/// #     let ir = DemoIr;
-/// #     let _future = handle_ir_presses(&ir);
+/// #     let mut ir = DemoIr;
+/// #     let _future = handle_ir_presses(&mut ir);
 /// # }
 /// ```
 #[allow(async_fn_in_trait)]
@@ -68,15 +68,20 @@ pub trait Ir {
     /// Wait for the next IR event.
     ///
     /// See the [Ir trait documentation](Self) for usage examples.
-    async fn wait_for_press(&self) -> IrEvent;
+    ///
+    /// Takes `&mut self` because each event goes to exactly one waiting task: one task owns
+    /// the receiver. A second task waiting on the same one would take some of its events.
+    async fn wait_for_press(&mut self) -> IrEvent;
 }
 
-impl<T> Ir for &T
+// A mutable reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static mut` handles that the declaration macros return.
+impl<T> Ir for &mut T
 where
     T: Ir + ?Sized,
 {
-    async fn wait_for_press(&self) -> IrEvent {
-        (*self).wait_for_press().await
+    async fn wait_for_press(&mut self) -> IrEvent {
+        (**self).wait_for_press().await
     }
 }
 

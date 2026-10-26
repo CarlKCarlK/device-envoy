@@ -1,5 +1,171 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+Every declaration macro is now defined by a
+[`macro-schema`](https://crates.io/crates/macro-schema) schema instead of a
+hand-written `macro_rules!` parser. The macros report unknown, duplicate,
+missing, and wrong-kind fields at the caller's tokens; their syntax and field
+tables in the docs are generated from the schema; and every declared item gets
+a generated configuration table. This release is a clean break: the 0.1 syntax
+is not accepted.
+
+Syntax changes:
+
+- Shared group fields go inside the group's braces, and members are written
+  `Name { ... }` rather than `Name: { ... }`. This affects `led_strips!`,
+  `irs!`, `ir_keplers!`, `ir_mappings!`, `i2cs!`, and `lcd_text!`:
+
+  ```rust,ignore
+  // 0.1
+  led_strips! {
+      pio: PIO0,
+      pub LedStrips {
+          Strip0: { pin: PIN_2, len: 8, max_current: Current::Milliamps(250) },
+      }
+  }
+
+  // 0.2
+  led_strips! {
+      pub LedStrips {
+          pio: PIO0,
+
+          Strip0 { pin: PIN_2, len: 8, max_current: Current::Milliamps(250) },
+      }
+  }
+  ```
+
+- Fields may be written in any order, a trailing comma is always optional, and
+  every declaration and member accepts attributes.
+- Every declaration accepts a visibility. Members inherit their group's
+  visibility. ESP `servo!`, ESP `servo_player!`, and the IR groups were always
+  `pub`; they now follow the visibility you write.
+- RP `servo!` declares a named type, like ESP `servo!`. The PWM slice is passed
+  to `new`, and the `ServoPwmSlice` bound checks that it is the pin's slice. The
+  `slice`, `channel`, `odd`, and `even` fields are gone:
+
+  ```rust,ignore
+  // 0.1
+  let mut servo = servo! { pin: p.PIN_11, slice: p.PWM_SLICE5 };
+
+  // 0.2
+  servo! { Servo11 { pin: PIN_11 } }
+  let servo = Servo11::new(p.PIN_11, p.PWM_SLICE5);
+  ```
+
+- `pcm_clip!` accepts only `source_sample_rate_hz`; the `sample_rate_hz` alias
+  is gone.
+- ESP `led2d!` no longer takes `len`; the LED count comes from `led_layout`, as
+  on RP.
+- ESP `led_strip!` and `led2d!` name their output engine with a type:
+  `engine: Spi` or `engine: Rmt` (from `device_envoy_esp::led_strip`) instead
+  of `engine: Engine::Spi`. `Engine` is gone. Naming `Rmt` on a chip without
+  an RMT peripheral is a compile error that says so.
+- ESP `init_and_start!` takes only the peripherals binding:
+  `init_and_start!(p);`. Create shared peripherals with functions, so you
+  choose how to handle errors: `let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;`
+  (add `.into_async()` for async devices) and
+  `let ledc = device_envoy_esp::new_ledc(p.LEDC);`. The `rmt80:`, `mode:`, and
+  `ledc:` options and the `rmt_mode` module are gone, and the macro no longer
+  panics if RMT setup fails.
+- In `led_strips!`, `max_frames` for a panel is set on the member rather than
+  inside its `led2d` block.
+- `pio_split!` has been removed.
+
+API changes (RP and ESP now generate the same API):
+
+- `led!` and `led2d!` constructors return `&'static Self`, like every other
+  device. Core implements each device trait for `&T`, so code generic over a
+  trait (`impl Led2d`, `impl LedStrip`, ...) accepts these handles.
+- A panel implements only `Led2d`. Its strip is reached through `strip()`,
+  which returns the underlying strip (it implements `LedStrip`). On RP,
+  `led_strips!` panel members also return `&'static` panels.
+- ESP `servo_player!` matches RP: `new` returns `&'static Self`, and the
+  declared type implements `Servo` and `ServoPlayer`.
+- `servo!`'s declared type is the servo: it implements `Servo`, and `new`
+  returns `&'static Self` (RP) or `Result<&'static Self>` (ESP) instead of the
+  runtime `ServoRp`/`ServoEsp`.
+- RP `ServoPwmSlice` (replacing the hidden `ServoPwmPin`) and `WifiPio` are
+  documented and sealed. A wrong slice reports "`PWM_SLICE4` is not the PWM
+  slice for `PIN_11`" with a note on how to find a pin's slice.
+- Constructor arguments go from most specific to least: the device's own pins,
+  then its peripherals or channels, then shared resources, then the spawner.
+  Group constructors take each member's arguments first and the shared
+  resource last:
+
+  ```rust,ignore
+  // 0.1
+  let (strip0, strip1) = LedStrips::new(p.PIO0, p.PIN_2, p.DMA_CH0, p.PIN_3, p.DMA_CH1, spawner)?;
+  let lcd = Lcd::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+  let servo = Servo11::new(&ledc, p.GPIO11)?; // ESP
+
+  // 0.2
+  let (strip0, strip1) = LedStrips::new(p.PIN_2, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIO0, spawner)?;
+  let lcd = Lcd::new(p.PIN_4, p.PIN_5, p.I2C0, spawner)?;
+  let servo = Servo11::new(p.GPIO11, &ledc)?; // ESP
+  ```
+
+  Schema fields are documented in the same order; you may still write them in
+  any order.
+- RP `led!`, `lcd_text!`, and `i2cs!` accept `impl Into<Peri<'static, _>>`,
+  like the other RP macros.
+- ESP `button_watch!`'s constructor parameter is named `pin`.
+- ESP `led_strip!` and `led2d!` document `engine` as a defaulted field ("RMT
+  where the chip has it, otherwise SPI").
+- ESP `led_strip!`'s `reset_us` is a defaulted field, shown as "`60` (SPI only)".
+  The `Rmt` engine ignores it; naming it on an `Rmt` strip is no longer an
+  error.
+- ESP `COMBO_TABLE` and `servo!`'s generated static struct are private.
+- IR receivers (`ir!`, `ir_mapping!`, `ir_kepler!`, and their groups) return
+  `&'static mut Self`, and `Ir`, `IrMapping`, `IrKepler`, and `Rfid` wait with
+  `&mut self`, as `Button` does. Each event goes to exactly one waiting task, so
+  the types now let only one task wait on a receiver; two tasks sharing one used
+  to wake each other in a loop and split the events between them. Code generic
+  over these traits takes `&mut impl Ir` (core forwards the traits for `&mut T`).
+- `button_watch!` types no longer implement `Deref` to the internal
+  `ButtonWatchRp`/`ButtonWatchEsp`; use the `Button` trait.
+- On ESP, the strip behind a `led2d!` panel has no public `new`; reach it
+  through the panel's `strip()`, as on RP.
+- ESP `EngineResource`, the trait for the peripheral a strip's `new` takes, is
+  documented and sealed. Passing the wrong engine's peripheral reports, for
+  example, "`SPI2` cannot drive `Rmt` LEDs" with a note naming what to pass.
+
+Behavior changes and fixes:
+
+- RP IR macros default `pio` to `PIO0`, like the LED and audio macros.
+- ESP `led2d!` chooses its engine by chip, as `led_strip!` does: RMT where
+  available, otherwise SPI. Previously panels defaulted to RMT even on chips
+  without it.
+- ESP strip `len` and `reset_us` can name constants private to the caller's
+  module.
+- An ESP RMT LED strip no longer goes permanently dark after one failed
+  transmission: the driver keeps its RMT channel, and write failures are logged
+  as warnings instead of being dropped.
+- LCD text write failures are logged as warnings instead of being dropped, and a
+  display whose initialization fails is initialized again on its next frame.
+- Generated code no longer requires your crate to depend on `paste`,
+  `static_cell`, `heapless`, or `embassy_sync`.
+- Every item the macros generate is documented, so a crate that denies
+  `missing_docs` builds, and links in generated documentation resolve instead of
+  pointing at your own crate.
+- Two RP LED groups on one PIO in one module, ESP LEDC channel clashes, and
+  duplicate LCD addresses fail to compile with errors that name the rule.
+- Each macro's sample page in the docs (`LedStripGenerated`, `Led2dGenerated`,
+  ...) is now the macro's own output for a real declaration, not a hand-written
+  stand-in, so it shows the real constructor, the configuration table, and the
+  trait impls. Several stand-ins had drifted (for example, ESP pages showed
+  `impl Sized` parameters).
+- Count-like fields (`len`, `max_frames`, `max_steps`, `max_clips`,
+  `capacity`, and LCD `width`/`height`) accept expressions such as `4 * 2`;
+  some failed to compile unless written as a literal or a constant.
+- Generated trait impls read as you declared them in the docs
+  (`impl LedStrip<8>`, `impl AudioPlayer<VOICE_22050_HZ>`,
+  `impl Led2d<WIDTH, HEIGHT>`) rather than showing macro template code.
+- The generated syntax docs describe field kinds as *name*, *value*, and
+  *type*, and show prose defaults as text.
+- Fixed links in generated documentation that did not resolve in your crate:
+  `button_watch!`'s `PressedTo` links and `pcm_clip!`'s list of generated items.
+
 ## 0.1.6
 
 - Fixed CYD runtime orientation changes by upgrading `mipidsi`, so display

@@ -10,10 +10,11 @@ use device_envoy_rp::{Result, i2cs, lcd_text::LcdText as _};
 use embassy_executor::Spawner;
 
 i2cs! {
-    i2c: I2C0,
-    sda_pin: PIN_4,
-    scl_pin: PIN_5,
     I2cs4 {
+        sda_pin: PIN_4,
+        scl_pin: PIN_5,
+        i2c: I2C0,
+
         LcdTextA { width: 16, height: 2, address: 0x27 },
         LcdTextB { width: 20, height: 4, address: 0x26 },
         LcdTextC { width: 16, height: 2, address: 0x25 },
@@ -23,7 +24,7 @@ i2cs! {
 
 async fn test_four_lcd_texts(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     let (lcd_text_a, lcd_text_b, lcd_text_c, lcd_text_d) =
-        I2cs4::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
+        I2cs4::new(p.PIN_4, p.PIN_5, p.I2C0, spawner)?;
 
     lcd_text_a.write_text("A");
     lcd_text_b.write_text("B");

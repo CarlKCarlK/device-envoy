@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
-//! Compile-only verification that two IR receivers on one PIO compile.
+//! Compile-only verification that two IR receivers on one PIO compile, with `pio`
+//! left to its default, `PIO0`.
 
 #![cfg(not(feature = "host"))]
 #![no_std]
@@ -11,15 +12,14 @@ use device_envoy_rp::ir_keplers;
 use embassy_executor::Spawner;
 
 ir_keplers! {
-    pio: PIO0,
     IrKeplers0 {
-        IrKepler15: { pin: PIN_15 },
-        IrKepler01: { pin: PIN_16 }
+        IrKepler15 { pin: PIN_15 },
+        IrKepler01 { pin: PIN_16 }
     }
 }
 
 async fn test_two_ir_keplers(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let (_ir_kepler15, _ir_kepler01) = IrKeplers0::new(p.PIO0, p.PIN_15, p.PIN_16, spawner)?;
+    let (_ir_kepler15, _ir_kepler01) = IrKeplers0::new(p.PIN_15, p.PIN_16, p.PIO0, spawner)?;
     Ok(())
 }
 

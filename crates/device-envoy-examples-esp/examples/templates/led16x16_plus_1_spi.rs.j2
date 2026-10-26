@@ -20,7 +20,7 @@ use esp_backtrace as _;
 use log::info;
 
 #[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
+use device_envoy_esp::led_strip::Spi;
 use device_envoy_esp::{
     init_and_start, led2d,
     led2d::{layout::LedLayout, Frame2d, Led2d, Led2dFont},
@@ -36,11 +36,10 @@ const LED_LAYOUT_16X16: LedLayout<256, 16, 16> = LedLayout::serpentine_column_ma
 led2d! {
     Led16x16DualSpi {
         pin: GPIO{{ panel_pin }},
-        len: 256,
         led_layout: LED_LAYOUT_16X16,
         max_current: Current::Milliamps(700),
         font: Led2dFont::Font4x6Trim,
-        engine: Engine::Spi,
+        engine: Spi,
         max_frames: 4,
     }
 }
@@ -61,7 +60,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!(
         "led16x16_plus_1_spi: panel on GPIO{{ panel_pin }} via SPI2, strip1 LED on GPIO{{ led_strip1_pin }} via RMT ({{ board_slug }})"

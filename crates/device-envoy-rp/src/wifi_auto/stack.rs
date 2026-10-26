@@ -168,14 +168,25 @@ impl StackStorage {
 /// Signal type for WiFi events.
 pub type WifiEvents = Signal<CriticalSectionRawMutex, WifiEvent>;
 
-/// PIO peripheral used by the WiFi driver.
-#[doc(hidden)]
-pub trait WifiPio: crate::pio_irqs::PioIrqMap {
+/// A PIO that can run the Wi-Fi driver, which talks to the Pico W's radio through one PIO
+/// state machine: `PIO0`, `PIO1`, or, on the Pico 2 W, `PIO2`.
+///
+/// Give Wi-Fi a PIO that no other device uses; each PIO serves one device or group.
+///
+/// This trait is sealed: it is implemented for the PIO peripherals and nothing else.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a PIO that can run Wi-Fi",
+    label = "expected a PIO peripheral",
+    note = "pass a PIO peripheral such as `p.PIO0`, `p.PIO1`, or (Pico 2 W) `p.PIO2`"
+)]
+pub trait WifiPio: crate::pio_irqs::PioIrqMap + wifi_pio_sealed::Sealed {
+    #[doc(hidden)]
     fn spawn_wifi_task(
         spawner: Spawner,
         runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, Self, 0>>>,
     );
 
+    #[doc(hidden)]
     fn spawn_device_loop(
         spawner: Spawner,
         pin_23: Peri<'static, PIN_23>,
@@ -188,7 +199,12 @@ pub trait WifiPio: crate::pio_irqs::PioIrqMap {
         captive_portal_ssid: &'static str,
         wifi_events: &'static WifiEvents,
         stack_storage: &'static StackStorage,
-    );
+    ) -> crate::Result<()>;
+}
+
+// Keeps `WifiPio` closed to the PIO peripherals.
+mod wifi_pio_sealed {
+    pub trait Sealed {}
 }
 
 /// Resources needed by the WiFi device.
@@ -257,7 +273,7 @@ impl Wifi {
         mut wifi_credentials_flash_block: FlashBlockRp,
         captive_portal_ssid: &'static str,
         spawner: Spawner,
-    ) -> &'static Self
+    ) -> crate::Result<&'static Self>
     where
         crate::pio_irqs::DmaAllIrqs: embassy_rp::interrupt::typelevel::Binding<
                 DMA::Interrupt,
@@ -288,12 +304,12 @@ impl Wifi {
             captive_portal_ssid,
             &wifi_static.events,
             &wifi_static.stack,
-        );
-        wifi_static.wifi_cell.init(Self {
+        )?;
+        Ok(wifi_static.wifi_cell.init(Self {
             events: &wifi_static.events,
             stack: &wifi_static.stack,
             wifi_credentials_flash_block: Mutex::new(RefCell::new(wifi_credentials_flash_block)),
-        })
+        }))
     }
 
     fn update_state<F>(&self, f: F) -> Result<(), &'static str>
@@ -519,8 +535,12 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
     );
     let stack = STACK.init(stack_val);
 
-    let net_task_token = unwrap!(net_task(runner));
-    spawner.spawn(net_task_token);
+    // Approved panic: this task runs once per program (its statics would already panic on
+    // a second run), and a task that never returns has no caller to give an error to.
+    spawner.spawn(unwrap!(
+        net_task(runner),
+        "the network task runs once per program"
+    ));
 
     // Start captive portal network
     if CAPTIVE_PORTAL_PASSWORD.is_empty() {
@@ -545,10 +565,12 @@ async fn wifi_device_loop_captive_portal<PIO: WifiPio>(
     let pool_start = embassy_net::Ipv4Address::new(192, 168, 4, 2);
     let pool_size = 253; // 192.168.4.2 - 192.168.4.254
 
-    let dhcp_server_token = unwrap!(dhcp_server_task(
-        stack, server_ip, netmask, pool_start, pool_size,
+    // Approved panic: this task runs once per program (its statics would already panic on
+    // a second run), and a task that never returns has no caller to give an error to.
+    spawner.spawn(unwrap!(
+        dhcp_server_task(stack, server_ip, netmask, pool_start, pool_size),
+        "the DHCP server task runs once per program"
     ));
-    spawner.spawn(dhcp_server_token);
 
     info!("DHCP server started (pool: 192.168.4.2-254)");
     info!(
@@ -660,8 +682,12 @@ async fn wifi_device_loop_client_impl<PIO: WifiPio>(
     );
     let stack = STACK.init(stack_val);
 
-    let net_task_token = unwrap!(net_task(runner));
-    spawner.spawn(net_task_token);
+    // Approved panic: this task runs once per program (its statics would already panic on
+    // a second run), and a task that never returns has no caller to give an error to.
+    spawner.spawn(unwrap!(
+        net_task(runner),
+        "the network task runs once per program"
+    ));
 
     // Connect to WiFi
     info!(
@@ -731,62 +757,39 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 // ============================================================================
 
 macro_rules! impl_wifi_pio {
-    ($pio:ident, $suffix:ident) => {
-        paste::paste! {
-            impl WifiPio for peripherals::$pio {
-                fn spawn_wifi_task(
-                    spawner: Spawner,
-                    runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, Self, 0>>>,
-                ) {
-                    let wifi_task_token = defmt::unwrap!([<wifi_task_ $suffix>](runner));
-                    spawner.spawn(wifi_task_token);
-                }
+    ($pio:ident, $wifi_task:ident, $device_loop_task:ident) => {
+        impl wifi_pio_sealed::Sealed for peripherals::$pio {}
 
-                fn spawn_device_loop(
-                    spawner: Spawner,
-                    pin_23: Peri<'static, PIN_23>,
-                    pin_24: Peri<'static, PIN_24>,
-                    pin_25: Peri<'static, PIN_25>,
-                    pin_29: Peri<'static, PIN_29>,
-                    pio: Peri<'static, Self>,
-                    dma: DmaChannel<'static>,
-                    mode: WifiMode,
-                    captive_portal_ssid: &'static str,
-                    wifi_events: &'static WifiEvents,
-                    stack_storage: &'static StackStorage,
-                ) {
-                    let wifi_device_loop_token = defmt::unwrap!([<wifi_device_loop_ $suffix>](
-                        pin_23,
-                        pin_24,
-                        pin_25,
-                        pin_29,
-                        pio,
-                        dma,
-                        mode,
-                        captive_portal_ssid,
-                        wifi_events,
-                        stack_storage,
-                        spawner,
-                    ));
-                    spawner.spawn(wifi_device_loop_token);
-                }
+        impl WifiPio for peripherals::$pio {
+            fn spawn_wifi_task(
+                spawner: Spawner,
+                runner: cyw43::Runner<
+                    'static,
+                    cyw43::SpiBus<Output<'static>, PioSpi<'static, Self, 0>>,
+                >,
+            ) {
+                // Approved panic: called from a device loop that never returns, so there is
+                // no caller to give an error to, and each PIO's Wi-Fi task runs once per program.
+                spawner.spawn(defmt::unwrap!(
+                    $wifi_task(runner),
+                    "the Wi-Fi task runs once per program"
+                ));
             }
 
-            #[embassy_executor::task]
-            async fn [<wifi_device_loop_ $suffix>](
+            fn spawn_device_loop(
+                spawner: Spawner,
                 pin_23: Peri<'static, PIN_23>,
                 pin_24: Peri<'static, PIN_24>,
                 pin_25: Peri<'static, PIN_25>,
                 pin_29: Peri<'static, PIN_29>,
-                pio: Peri<'static, peripherals::$pio>,
+                pio: Peri<'static, Self>,
                 dma: DmaChannel<'static>,
                 mode: WifiMode,
                 captive_portal_ssid: &'static str,
                 wifi_events: &'static WifiEvents,
                 stack_storage: &'static StackStorage,
-                spawner: Spawner,
-            ) -> ! {
-                wifi_device_loop_impl::<peripherals::$pio>(
+            ) -> crate::Result<()> {
+                spawner.spawn($device_loop_task(
                     pin_23,
                     pin_24,
                     pin_25,
@@ -798,21 +801,53 @@ macro_rules! impl_wifi_pio {
                     wifi_events,
                     stack_storage,
                     spawner,
-                )
-                .await
+                )?);
+                Ok(())
             }
+        }
 
-            #[embassy_executor::task]
-            async fn [<wifi_task_ $suffix>](
-                runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, peripherals::$pio, 0>>>,
-            ) -> ! {
-                wifi_task_impl::<peripherals::$pio>(runner).await
-            }
+        #[embassy_executor::task]
+        async fn $device_loop_task(
+            pin_23: Peri<'static, PIN_23>,
+            pin_24: Peri<'static, PIN_24>,
+            pin_25: Peri<'static, PIN_25>,
+            pin_29: Peri<'static, PIN_29>,
+            pio: Peri<'static, peripherals::$pio>,
+            dma: DmaChannel<'static>,
+            mode: WifiMode,
+            captive_portal_ssid: &'static str,
+            wifi_events: &'static WifiEvents,
+            stack_storage: &'static StackStorage,
+            spawner: Spawner,
+        ) -> ! {
+            wifi_device_loop_impl::<peripherals::$pio>(
+                pin_23,
+                pin_24,
+                pin_25,
+                pin_29,
+                pio,
+                dma,
+                mode,
+                captive_portal_ssid,
+                wifi_events,
+                stack_storage,
+                spawner,
+            )
+            .await
+        }
+
+        #[embassy_executor::task]
+        async fn $wifi_task(
+            runner: cyw43::Runner<
+                'static,
+                cyw43::SpiBus<Output<'static>, PioSpi<'static, peripherals::$pio, 0>>,
+            >,
+        ) -> ! {
+            wifi_task_impl::<peripherals::$pio>(runner).await
         }
     };
 }
-
-impl_wifi_pio!(PIO0, pio0);
-impl_wifi_pio!(PIO1, pio1);
+impl_wifi_pio!(PIO0, wifi_task_pio0, wifi_device_loop_pio0);
+impl_wifi_pio!(PIO1, wifi_task_pio1, wifi_device_loop_pio1);
 #[cfg(feature = "pico2")]
-impl_wifi_pio!(PIO2, pio2);
+impl_wifi_pio!(PIO2, wifi_task_pio2, wifi_device_loop_pio2);

@@ -40,10 +40,10 @@ button_watch! {
 }
 
 lcd_text! {
-    i2c: I2C0,
-    sda_pin: GPIO{{ lcd_sda_pin }},
-    scl_pin: GPIO{{ lcd_scl_pin }},
     LcdTextClock {
+        sda_pin: GPIO{{ lcd_sda_pin }},
+        scl_pin: GPIO{{ lcd_scl_pin }},
+        i2c: I2C0,
         width: 16,
         height: 2,
         address: 0x27
@@ -63,9 +63,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     info!("Starting LCD clock with WiFi");
 
     let lcd_text_clock = LcdTextClock::new(
-        p.I2C0,
         p.GPIO{{ lcd_sda_pin }},
         p.GPIO{{ lcd_scl_pin }},
+        p.I2C0,
         spawner,
     )?;
     lcd_text_clock.write_text("Booting...\nLCD Clock");

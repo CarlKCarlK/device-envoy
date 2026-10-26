@@ -229,6 +229,8 @@ impl WifiAutoRp {
     /// - `spawner`: Embassy task spawner for background work.
     ///
     /// See the [WifiAutoRp struct example](Self) for a complete example.
+    // Approved suppression: one argument per hardware resource. Grouping them into
+    // structs is a possible future breaking change.
     #[allow(clippy::too_many_arguments)]
     pub fn new<const N: usize, PIO: WifiPio, DMA: ChannelInstance, FlashBlockType>(
         pin_23: Peri<'static, PIN_23>,
@@ -292,7 +294,7 @@ impl WifiAutoRp {
             wifi_credentials_flash_block,
             captive_portal_ssid,
             spawner,
-        );
+        )?;
 
         // Store fields array and convert to slice
         let fields_ref: &'static [&'static (dyn WifiAutoField<Error = crate::Error> + Sync)] =

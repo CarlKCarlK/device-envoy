@@ -146,6 +146,8 @@ impl CydEspOneSpi {
     /// #     Ok(())
     /// # }
     /// ```
+    // Approved suppression: one argument per pin and setting. Grouping them into
+    // structs is a possible future breaking change.
     #[allow(clippy::too_many_arguments)]
     pub async fn new<const PIXEL_COUNT: usize, R: Button>(
         statics: &'static CydStaticEsp<PIXEL_COUNT>,

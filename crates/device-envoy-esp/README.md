@@ -74,7 +74,7 @@ strip and then animates a sequence of frames.
 use device_envoy_esp::{Result, init_and_start, led_strip, led_strip::{LedStrip as _, Frame1d, colors}};
 #[cfg(not(esp_has_rmt))]
 #[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
+use device_envoy_esp::led_strip::Spi;
 use embassy_time::Duration;
 
 #[cfg(esp_has_rmt)]
@@ -90,15 +90,14 @@ led_strip! {
     LedStripAnimated {
         pin: GPIO0,
         len: 96,
-        engine: Engine::Spi,
+        engine: Spi,
     }
 }
 
 async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    #[cfg(esp_has_rmt)]
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    #[cfg(not(esp_has_rmt))]
     init_and_start!(p);
+    #[cfg(esp_has_rmt)]
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 
     #[cfg(esp_has_rmt)]
     let led_strip_animated = LedStripAnimated::new(p.GPIO0, rmt80.channel0, spawner)?;

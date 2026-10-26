@@ -26,7 +26,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
 
     #[cfg(any(feature = "esp32", feature = "esp32h2"))]
-    let rfid = RfidEsp::new(
+    let mut rfid = RfidEsp::new(
         &RFID_STATIC,
         p.SPI2,
         p.GPIO0,
@@ -39,7 +39,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     .await?;
 
     #[cfg(not(any(feature = "esp32", feature = "esp32h2")))]
-    let rfid = RfidEsp::new(
+    let mut rfid = RfidEsp::new(
         &RFID_STATIC,
         p.SPI2,
         p.GPIO6,

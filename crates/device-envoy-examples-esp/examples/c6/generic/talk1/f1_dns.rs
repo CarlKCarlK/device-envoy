@@ -37,7 +37,6 @@ const COLORS: &[smart_leds::RGB8] = &[colors::YELLOW, colors::LIME, colors::CYAN
 led2d! {
     Led8x12 {
         pin: GPIO18,
-        len: 96,
         led_layout: LED_LAYOUT_8X12,
         font: Led2dFont::Font4x6Trim,
     }
@@ -53,7 +52,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     let led8x12 = Led8x12::new(p.GPIO18, rmt80.channel0, spawner)?;
 
     // Flash stores WiFi credentials after first setup

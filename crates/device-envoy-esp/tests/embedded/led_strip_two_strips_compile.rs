@@ -16,6 +16,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 #[cfg(feature = "esp32")]
 led_strip! {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
     LedStripA {
         max_frames: 2,
         len: 8,
@@ -26,6 +28,8 @@ led_strip! {
 
 #[cfg(not(feature = "esp32"))]
 led_strip! {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
     LedStripA {
         max_frames: 2,
         len: 8,
@@ -36,7 +40,9 @@ led_strip! {
 
 #[cfg(feature = "esp32")]
 led_strip! {
-    LedStripB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) LedStripB {
         len: 1,
         max_frames: 2,
         pin: GPIO1,
@@ -45,7 +51,9 @@ led_strip! {
 
 #[cfg(feature = "esp32s3")]
 led_strip! {
-    LedStripB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) LedStripB {
         len: 1,
         max_frames: 2,
         pin: GPIO48,
@@ -58,7 +66,9 @@ led_strip! {
     not(feature = "esp32s3")
 ))]
 led_strip! {
-    LedStripB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) LedStripB {
         len: 1,
         max_frames: 2,
         pin: GPIO0,
@@ -67,7 +77,9 @@ led_strip! {
 
 #[cfg(not(target_arch = "xtensa"))]
 led_strip! {
-    LedStripB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) LedStripB {
         max_frames: 2,
         len: 1,
         pin: GPIO8,
@@ -81,7 +93,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
 
     #[cfg(feature = "esp32")]
     let led_strip_a = LedStripA::new(p.GPIO0, rmt80.channel0, spawner)?;

@@ -13,14 +13,15 @@ use embassy_time::Duration;
 use panic_probe as _;
 
 led_strips! {
-    pio: PIO1,                          // Optional; default is PIO0
     LedStrips1 {
-        Gpio3LedStrip: {
+        pio: PIO1, // Optional; default is PIO0
+
+        Gpio3LedStrip {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(250),
         },
-        Gpio4LedStrip: {
+        Gpio4LedStrip {
             pin: PIN_4,
             len: 96,
             max_current: Current::Milliamps(1000),
@@ -41,7 +42,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio3_led_strip, gpio4_led_strip) =
-        LedStrips1::new(p.PIO1, p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, spawner)?;
+        LedStrips1::new(p.PIN_3, p.DMA_CH0, p.PIN_4, p.DMA_CH1, p.PIO1, spawner)?;
 
     info!("Setting every other LED to blue on GPIO3, animating GPIO4");
 

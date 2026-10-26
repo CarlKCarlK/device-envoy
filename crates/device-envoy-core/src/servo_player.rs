@@ -220,7 +220,7 @@ impl<const MAX_STEPS: usize> ServoPlayerHandle<MAX_STEPS> {
 ///
 /// # Example: Multi-Step Animation
 ///
-/// This example combines 40 animation steps using [`linear`] and [`combine`] to
+/// This example combines 40 animation steps using [`linear`] and [`combine!`](macro@combine) to
 /// sweep up, hold, sweep down, hold.
 ///
 /// ```rust,no_run
@@ -280,6 +280,23 @@ pub trait ServoPlayer<const MAX_STEPS: usize>: Servo {
     where
         I: IntoIterator,
         I::Item: Borrow<(u16, embassy_time::Duration)>;
+}
+
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<const MAX_STEPS: usize, T> ServoPlayer<MAX_STEPS> for &T
+where
+    T: ServoPlayer<MAX_STEPS> + ?Sized,
+{
+    const MAX_STEPS: usize = T::MAX_STEPS;
+
+    fn animate<I>(&self, steps: I, at_end: AtEnd)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(u16, embassy_time::Duration)>,
+    {
+        (**self).animate(steps, at_end);
+    }
 }
 
 // Must remain `pub` because platform-crate macro expansions call this helper.
@@ -446,3 +463,40 @@ where
         }
     }
 }
+
+/// Combine multiple animation step arrays into one larger array.
+///
+/// This macro allows combining any number of const arrays with a clean syntax.
+///
+/// **Syntax:**
+///
+/// ```text
+/// combine!()
+/// combine!(<steps_expr>)
+/// combine!(<first_steps_expr>, <second_steps_expr>, ... )
+/// ```
+///
+/// See the [servo module documentation](mod@crate::servo) for usage.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! combine {
+    () => {
+        []
+    };
+    ($single:expr) => {
+        $single
+    };
+    ($first:expr, $second:expr) => {{
+        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
+        const SECOND: &[(u16, ::embassy_time::Duration)] = &$second;
+        $crate::servo_player::combine::<{FIRST.len()}, {SECOND.len()}, {FIRST.len() + SECOND.len()}>($first, $second)
+    }};
+    ($first:expr, $($rest:expr),+ $(,)?) => {{
+        const FIRST: &[(u16, ::embassy_time::Duration)] = &$first;
+        const REST: &[(u16, ::embassy_time::Duration)] = &$crate::combine!($($rest),+);
+        $crate::servo_player::combine::<{FIRST.len()}, {REST.len()}, {FIRST.len() + REST.len()}>($first, $crate::combine!($($rest),+))
+    }};
+}
+
+#[doc(inline)]
+pub use crate::combine;

@@ -18,32 +18,6 @@ Additionally, you can process PCM first and still store the final clip in
 compressed ADPCM form with
 [`with_adpcm`](crate::audio_player::PcmClip::with_adpcm).
 
-**Syntax:**
-
-```text
-pcm_clip! {
-    [<visibility>] <Name> {
-        file: <file_path_expr>,
-        source_sample_rate_hz: <sample_rate_expr>,
-        target_sample_rate_hz: <sample_rate_expr>, // optional, defaults to source_sample_rate_hz
-    }
-}
-```
-
-**Inputs:**
-
-- `$vis` - Optional module visibility for the generated module (for example: `pub`, `pub(crate)`, `pub(self)`). Defaults to private visibility when omitted.
-- `$name` - Module name for the generated module (for example: `Nasa`)
-
-**Required fields:**
-
-- `file` - Path to an external audio file (for example: `"nasa_22k.s16"`)
-- `source_sample_rate_hz` - Source sample rate in hertz for the input file (for example: [`VOICE_22050_HZ`](crate::audio_player::VOICE_22050_HZ))
-
-**Optional fields:**
-
-- `target_sample_rate_hz` - Output sample rate in hertz for generated clips (default: `source_sample_rate_hz`)
-
 **Generated items:**
 
 - [`Name::pcm_clip()`](crate::audio_player::pcm_clip_generated::PcmClipGenerated::pcm_clip) - `const` function that returns the uncompressed (PCM) version of this clip.

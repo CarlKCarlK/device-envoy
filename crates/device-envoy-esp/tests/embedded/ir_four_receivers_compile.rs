@@ -13,10 +13,10 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 irs! {
     IrsFourCompileTest {
-        Ir3: { pin: GPIO3 },
-        Ir2: { pin: GPIO2 },
-        Ir1: { pin: GPIO1 },
-        Ir0: { pin: GPIO0 }
+        Ir3 { pin: GPIO3 },
+        Ir2 { pin: GPIO2 },
+        Ir1 { pin: GPIO1 },
+        Ir0 { pin: GPIO0 }
     }
 }
 
@@ -27,7 +27,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?.into_async();
 
     #[cfg(feature = "esp32s2")]
     {

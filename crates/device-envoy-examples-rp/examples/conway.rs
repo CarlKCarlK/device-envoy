@@ -43,6 +43,6 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = init(Default::default());
 
     let led16x16 = Led16x16::new(p.PIN_6, p.PIO0, p.DMA_CH0, spawner)?;
-    let ir_kepler15 = IrKepler15::new(p.PIO1, p.PIN_15, spawner)?;
+    let ir_kepler15 = IrKepler15::new(p.PIN_15, p.PIO1, spawner)?;
     conway_with_led2d_ir_kepler(led16x16, ir_kepler15).await
 }

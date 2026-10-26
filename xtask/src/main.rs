@@ -7,11 +7,57 @@ use std::time::Instant;
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
-    match args.next().as_deref() {
-        Some("check-all") => check_all(),
-        _ => {
-            eprintln!("Usage: cargo run --manifest-path xtask/Cargo.toml -- check-all");
-            ExitCode::FAILURE
+    let succeeded = match (args.next().as_deref(), args.next().as_deref()) {
+        (Some("check-all"), None) => return check_all(),
+        (Some("check-core"), None) => check_core_job(&workspace_root()),
+        (Some("check-rp"), None) => check_rp(&workspace_root()),
+        (Some("check-esp"), arch) => match EspArch::parse(arch) {
+            Some(arch) => check_esp(&workspace_root(), arch),
+            None => return usage(),
+        },
+        _ => return usage(),
+    };
+    if succeeded {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
+}
+
+fn usage() -> ExitCode {
+    eprintln!(
+        "Usage: cargo run --manifest-path xtask/Cargo.toml -- \
+         <check-all | check-core | check-rp | check-esp [riscv | xtensa]>\n\
+         check-all runs everything, formatting the workspace first; the others are the \
+         parts CI runs as separate jobs."
+    );
+    ExitCode::FAILURE
+}
+
+/// Which ESP chips a check covers.
+#[derive(Clone, Copy)]
+enum EspArch {
+    All,
+    Riscv,
+    Xtensa,
+}
+
+impl EspArch {
+    fn parse(arg: Option<&str>) -> Option<Self> {
+        match arg {
+            None => Some(Self::All),
+            Some("riscv") => Some(Self::Riscv),
+            Some("xtensa") => Some(Self::Xtensa),
+            Some(_) => None,
+        }
+    }
+
+    /// The ESP xtask's `--arch` argument, if any.
+    fn as_arg(self) -> &'static [&'static str] {
+        match self {
+            Self::All => &[],
+            Self::Riscv => &["--arch", "riscv"],
+            Self::Xtensa => &["--arch", "xtensa"],
         }
     }
 }
@@ -35,219 +81,213 @@ fn check_all() -> ExitCode {
     }
 
     println!("==> Running top-level checks in parallel...");
-    let core_workspace_root = workspace_root.clone();
-    let core_handle = thread::spawn(move || -> bool {
-        run_command(
-            Command::new("cargo")
-                .current_dir(core_workspace_root.join("crates/device-envoy-core"))
-                .args(["test", "--features", "host", "--lib", "--tests"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(core_workspace_root.join("crates/device-envoy-core"))
-                .env("RUSTDOCFLAGS", "-D warnings")
-                .args(["test", "--doc", "--features", "host"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(core_workspace_root.join("crates/device-envoy-core"))
-                .env("RUSTDOCFLAGS", "-D warnings")
-                // `wasm` is added here (docs-only) so intra-doc links to
-                // `CydWasm` resolve; it must stay out of the test/check steps
-                // above and below, which mirror real firmware feature sets.
-                .args(["doc", "--no-deps", "--features", "host,wasm"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(core_workspace_root.join("crates/device-envoy-core"))
-                .args(["check", "--features", "host", "--examples"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args([
-                    "test",
-                    "-p",
-                    "device-envoy-examples-core",
-                    "--features",
-                    "host",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args([
-                    "check",
-                    "-p",
-                    "device-envoy-examples-core",
-                    "--no-default-features",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args(["check", "-p", "device-envoy-dns-tester-wasm", "--tests"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&core_workspace_root)
-                .args(["check", "-p", "device-envoy-conway-wasm"]),
-        )
-    });
-
-    let device_envoy_workspace_root = workspace_root.clone();
-    let device_envoy_handle = thread::spawn(move || -> bool {
-        run_command(
-            Command::new("cargo")
-                .current_dir(&device_envoy_workspace_root)
-                .args(["check", "-p", "device-envoy"]),
-        )
-    });
-
-    let esp_workspace_root = workspace_root.clone();
-    let esp_handle = thread::spawn(move || -> bool {
-        run_command(
-            Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args(["check", "-p", "device-envoy-esp", "--lib"]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args([
-                    "run",
-                    "--manifest-path",
-                    "crates/device-envoy-examples-esp/xtask/Cargo.toml",
-                    "--",
-                    "check-board-examples",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args([
-                    "run",
-                    "--manifest-path",
-                    "crates/device-envoy-examples-esp/xtask/Cargo.toml",
-                    "--",
-                    "check-examples-all-processors",
-                ]),
-        ) && run_command(
-            Command::new("cargo")
-                .current_dir(&esp_workspace_root)
-                .args([
-                    "check",
-                    "-p",
-                    "device-envoy-examples-esp",
-                    "--example",
-                    "conway_esp32c6_generic",
-                    "--target",
-                    "riscv32imac-unknown-none-elf",
-                    "--no-default-features",
-                    "--features",
-                    "esp32c6",
-                ]),
-        )
-    });
-
-    let rp_workspace_root = workspace_root;
-    let rp_handle = thread::spawn(move || -> bool {
-        run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-rp",
-            "--lib",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--examples",
-            "--target",
-            "thumbv6m-none-eabi",
-            "--no-default-features",
-            "--features",
-            "embedded,pico1,wifi",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--examples",
-            "--target",
-            "thumbv8m.main-none-eabihf",
-            "--no-default-features",
-            "--features",
-            "embedded-pico2,wifi",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--example",
-            "conway",
-            "--target",
-            "thumbv6m-none-eabi",
-            "--no-default-features",
-            "--features",
-            "embedded,pico1",
-        ])) && run_command(Command::new("cargo").current_dir(&rp_workspace_root).args([
-            "check",
-            "-p",
-            "device-envoy-examples-rp",
-            "--example",
-            "dns_tester",
-            "--target",
-            "thumbv6m-none-eabi",
-            "--no-default-features",
-            "--features",
-            "embedded,pico1,wifi",
-        ]))
-    });
+    let handles = [
+        spawn_check("core", &workspace_root, check_core),
+        spawn_check("device-envoy", &workspace_root, check_device_envoy_crate),
+        spawn_check("esp", &workspace_root, |workspace_root| {
+            check_esp(workspace_root, EspArch::All)
+        }),
+        spawn_check("rp", &workspace_root, check_rp),
+    ];
 
     let mut failed = false;
-    match core_handle.join() {
-        Ok(core_ok) => {
-            if !core_ok {
+    for (name, handle) in handles {
+        match handle.join() {
+            Ok(true) => {}
+            Ok(false) => failed = true,
+            Err(_) => {
+                eprintln!("{name} check thread panicked");
                 failed = true;
             }
-        }
-        Err(_) => {
-            eprintln!("core check thread panicked");
-            failed = true;
-        }
-    }
-    match esp_handle.join() {
-        Ok(esp_ok) => {
-            if !esp_ok {
-                failed = true;
-            }
-        }
-        Err(_) => {
-            eprintln!("esp check thread panicked");
-            failed = true;
-        }
-    }
-    match rp_handle.join() {
-        Ok(rp_ok) => {
-            if !rp_ok {
-                failed = true;
-            }
-        }
-        Err(_) => {
-            eprintln!("rp check thread panicked");
-            failed = true;
-        }
-    }
-    match device_envoy_handle.join() {
-        Ok(device_envoy_ok) => {
-            if !device_envoy_ok {
-                failed = true;
-            }
-        }
-        Err(_) => {
-            eprintln!("device-envoy check thread panicked");
-            failed = true;
         }
     }
 
+    let elapsed = start.elapsed();
     if failed {
-        let elapsed = start.elapsed();
         eprintln!("check-all failed in {:.1}s", elapsed.as_secs_f64());
         ExitCode::FAILURE
     } else {
-        let elapsed = start.elapsed();
         println!("check-all passed in {:.1}s", elapsed.as_secs_f64());
         ExitCode::SUCCESS
     }
+}
+
+/// Runs `check` on its own thread, labeled `name` for error messages.
+fn spawn_check(
+    name: &'static str,
+    workspace_root: &Path,
+    check: fn(&Path) -> bool,
+) -> (&'static str, thread::JoinHandle<bool>) {
+    let workspace_root = workspace_root.to_path_buf();
+    (name, thread::spawn(move || check(&workspace_root)))
+}
+
+/// CI's core job: formatting (checked, not applied), documentation self-links, Core, and
+/// the `device-envoy` landing crate.
+fn check_core_job(workspace_root: &Path) -> bool {
+    run_command(
+        Command::new("cargo")
+            .current_dir(workspace_root)
+            .args(["fmt", "--all", "--", "--check"]),
+    ) && reject_absolute_core_self_links(workspace_root)
+        && check_core(workspace_root)
+        && check_device_envoy_crate(workspace_root)
+}
+
+fn check_core(workspace_root: &Path) -> bool {
+    run_command(
+        Command::new("cargo")
+            .current_dir(workspace_root.join("crates/device-envoy-core"))
+            .args(["test", "--features", "host", "--lib", "--tests"]),
+    ) && run_command(
+        Command::new("cargo")
+            .current_dir(workspace_root.join("crates/device-envoy-core"))
+            .env("RUSTDOCFLAGS", "-D warnings")
+            .args(["test", "--doc", "--features", "host"]),
+    ) && run_command(
+        Command::new("cargo")
+            .current_dir(workspace_root.join("crates/device-envoy-core"))
+            .env("RUSTDOCFLAGS", "-D warnings")
+            // `wasm` is added here (docs-only) so intra-doc links to
+            // `CydWasm` resolve; it must stay out of the test/check steps
+            // above and below, which mirror real firmware feature sets.
+            .args(["doc", "--no-deps", "--features", "host,wasm"]),
+    ) && run_command(
+        Command::new("cargo")
+            .current_dir(workspace_root.join("crates/device-envoy-core"))
+            .args(["check", "--features", "host", "--examples"]),
+    ) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "test",
+        "-p",
+        "device-envoy-examples-core",
+        "--features",
+        "host",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-examples-core",
+        "--no-default-features",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-dns-tester-wasm",
+        "--tests",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-conway-wasm",
+    ]))
+}
+
+fn check_device_envoy_crate(workspace_root: &Path) -> bool {
+    run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy",
+    ]))
+}
+
+fn check_esp(workspace_root: &Path, arch: EspArch) -> bool {
+    let esp_xtask = |command: &str| {
+        run_command(
+            Command::new("cargo")
+                .current_dir(workspace_root)
+                .args([
+                    "run",
+                    "--manifest-path",
+                    "crates/device-envoy-examples-esp/xtask/Cargo.toml",
+                    "--",
+                    command,
+                ])
+                .args(arch.as_arg()),
+        )
+    };
+    // These don't depend on the chip architecture, so the Xtensa CI job skips them.
+    let chip_independent = || {
+        run_command(Command::new("cargo").current_dir(workspace_root).args([
+            "check",
+            "-p",
+            "device-envoy-esp",
+            "--lib",
+        ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+            "run",
+            "--manifest-path",
+            "crates/device-envoy-examples-esp/xtask/Cargo.toml",
+            "--",
+            "check-board-examples",
+        ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+            "check",
+            "-p",
+            "device-envoy-examples-esp",
+            "--example",
+            "conway_esp32c6_generic",
+            "--target",
+            "riscv32imac-unknown-none-elf",
+            "--no-default-features",
+            "--features",
+            "esp32c6",
+        ]))
+    };
+    (matches!(arch, EspArch::Xtensa) || chip_independent())
+        && esp_xtask("check-examples-all-processors")
+        && esp_xtask("check-embedded-tests")
+}
+
+fn check_rp(workspace_root: &Path) -> bool {
+    run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-rp",
+        "--lib",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "run",
+        "--manifest-path",
+        "crates/device-envoy-rp/xtask/Cargo.toml",
+        "--",
+        "check-compile-only",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-examples-rp",
+        "--examples",
+        "--target",
+        "thumbv6m-none-eabi",
+        "--no-default-features",
+        "--features",
+        "embedded,pico1,wifi",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-examples-rp",
+        "--examples",
+        "--target",
+        "thumbv8m.main-none-eabihf",
+        "--no-default-features",
+        "--features",
+        "embedded-pico2,wifi",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-examples-rp",
+        "--example",
+        "conway",
+        "--target",
+        "thumbv6m-none-eabi",
+        "--no-default-features",
+        "--features",
+        "embedded,pico1",
+    ])) && run_command(Command::new("cargo").current_dir(workspace_root).args([
+        "check",
+        "-p",
+        "device-envoy-examples-rp",
+        "--example",
+        "dns_tester",
+        "--target",
+        "thumbv6m-none-eabi",
+        "--no-default-features",
+        "--features",
+        "embedded,pico1,wifi",
+    ]))
 }
 
 fn reject_absolute_core_self_links(workspace_root: &Path) -> bool {

@@ -88,7 +88,7 @@ impl Mfrc522Device {
 ///     spawner: embassy_executor::Spawner,
 /// ) -> device_envoy_rp::Result<()> {
 ///     static RFID_STATIC: RfidStatic = RfidRp::new_static();
-///     let rfid = RfidRp::new_spi0(
+///     let mut rfid = RfidRp::new_spi0(
 ///         &RFID_STATIC,
 ///         p.SPI0,
 ///         p.PIN_2,
@@ -203,7 +203,7 @@ impl RfidRp<'_> {
 }
 
 impl Rfid for RfidRp<'_> {
-    async fn wait_for_tap(&self) -> RfidEvent {
+    async fn wait_for_tap(&mut self) -> RfidEvent {
         self.rfid_static.receive().await
     }
 }

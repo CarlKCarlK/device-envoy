@@ -37,9 +37,10 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, ledc: ledc);
+    init_and_start!(p);
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
 
-    let basic_servo = BasicServo::new(&ledc, p.GPIO10)?;
+    let basic_servo = BasicServo::new(p.GPIO10, &ledc)?;
 
     basic_servo.set_degrees(45); // Move to 45 degrees and hold.
     Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position

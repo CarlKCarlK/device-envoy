@@ -23,14 +23,14 @@ pub async fn main(_spawner: Spawner) -> ! {
     // Create servos on GPIO 11 and GPIO 12
     // GPIO 11 → PWM_SLICE5 (channel B)
     // GPIO 12 → PWM_SLICE6 (channel A)
-    let servo11 = servo! {
-        pin: p.PIN_11,
-        slice: p.PWM_SLICE5,
-    };
-    let servo12 = servo! {
-        pin: p.PIN_12,
-        slice: p.PWM_SLICE6,
-    };
+    servo! {
+        Servo11 { pin: PIN_11 }
+    }
+    let servo11 = Servo11::new(p.PIN_11, p.PWM_SLICE5);
+    servo! {
+        Servo12 { pin: PIN_12 }
+    }
+    let servo12 = Servo12::new(p.PIN_12, p.PWM_SLICE6);
 
     info!("Moving servos in opposite directions for 2 seconds");
 

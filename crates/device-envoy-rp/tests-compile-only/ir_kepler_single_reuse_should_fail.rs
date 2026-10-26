@@ -15,8 +15,8 @@ ir_kepler! {
 }
 
 async fn test_reuse_single_ir_kepler(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let _first = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
-    let _second = IrKepler15::new(p.PIO0, p.PIN_15, spawner)?;
+    let _first = IrKepler15::new(p.PIN_15, p.PIO0, spawner)?;
+    let _second = IrKepler15::new(p.PIN_15, p.PIO0, spawner)?;
     Ok(())
 }
 

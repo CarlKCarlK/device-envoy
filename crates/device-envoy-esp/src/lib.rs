@@ -1,6 +1,11 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(target_os = "none", no_std)]
 
+// Generated docs link to `device_envoy_esp::...`, which resolves in a user's crate; this alias makes
+// the same links resolve when the macros expand inside this crate (the sample doc pages).
+#[cfg(doc)]
+extern crate self as device_envoy_esp;
+
 #[cfg(all(
     target_os = "none",
     not(any(

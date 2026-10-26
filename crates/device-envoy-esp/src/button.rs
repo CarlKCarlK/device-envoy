@@ -210,7 +210,9 @@ macro_schema::define! {
             /// # Parameters
             ///
             /// - `pin`: GPIO pin for the button
-            /// - `pressed_to`: How the button is wired ([`PressedTo::Ground`] or [`PressedTo::Voltage`])
+            /// - `pressed_to`: How the button is wired
+            ///   ([`PressedTo::Ground`](device_envoy_esp::button::PressedTo::Ground) or
+            ///   [`PressedTo::Voltage`](device_envoy_esp::button::PressedTo::Voltage))
             /// - `spawner`: Task spawner for background operations
             ///
             /// # Errors

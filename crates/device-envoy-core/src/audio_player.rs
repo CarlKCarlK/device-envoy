@@ -2288,13 +2288,14 @@ macro_schema::define! {
         // Approved suppression: the clip's module takes the declared CamelCase name so
         // its items read `Name::ITEM`, until inherent associated types are stable.
         #[allow(non_snake_case)]
+        // The links name the module: docs on a module resolve in its parent's scope.
         #[doc = concat!(
             "\n\nItems: ",
-            "[`SAMPLE_RATE_HZ`](Self::SAMPLE_RATE_HZ), ",
-            "[`PCM_SAMPLE_COUNT`](Self::PCM_SAMPLE_COUNT), ",
-            "[`ADPCM_DATA_LEN`](Self::ADPCM_DATA_LEN), ",
-            "[`pcm_clip`](Self::pcm_clip), ",
-            "and [`adpcm_clip`](Self::adpcm_clip)."
+            "[`SAMPLE_RATE_HZ`](", stringify!($decl.name), "::SAMPLE_RATE_HZ), ",
+            "[`PCM_SAMPLE_COUNT`](", stringify!($decl.name), "::PCM_SAMPLE_COUNT), ",
+            "[`ADPCM_DATA_LEN`](", stringify!($decl.name), "::ADPCM_DATA_LEN), ",
+            "[`pcm_clip`](", stringify!($decl.name), "::pcm_clip), ",
+            "and [`adpcm_clip`](", stringify!($decl.name), "::adpcm_clip)."
         )]
         $decl.vis mod $decl.name {
             // TODO_NIGHTLY When nightly feature inherent_associated_types becomes stable,

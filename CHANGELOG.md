@@ -131,6 +131,13 @@ Behavior changes and fixes:
   pointing at your own crate.
 - Two RP LED groups on one PIO in one module, ESP LEDC channel clashes, and
   duplicate LCD addresses fail to compile with errors that name the rule.
+- Each macro's sample page in the docs (`LedStripGenerated`, `Led2dGenerated`,
+  ...) is now the macro's own output for a real declaration, not a hand-written
+  stand-in, so it shows the real constructor, the configuration table, and the
+  trait impls. Several stand-ins had drifted (for example, ESP pages showed
+  `impl Sized` parameters).
+- Fixed links in generated documentation that did not resolve in your crate:
+  `button_watch!`'s `PressedTo` links and `pcm_clip!`'s list of generated items.
 
 ## 0.1.6
 

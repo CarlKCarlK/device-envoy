@@ -14,6 +14,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(async_fn_in_trait, reason = "single-threaded embedded")]
 
+// Generated docs link to `device_envoy_rp::...`, which resolves in a user's crate; this alias makes
+// the same links resolve when the macros expand inside this crate (the sample doc pages).
+#[cfg(doc)]
+extern crate self as device_envoy_rp;
+
 // Compile-time checks: exactly one board must be selected (unless testing with host feature)
 #[cfg(all(target_os = "none", not(any(feature = "pico1", feature = "pico2"))))]
 compile_error!("Must enable exactly one board feature: 'pico1' or 'pico2'");

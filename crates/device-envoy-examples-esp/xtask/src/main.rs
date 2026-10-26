@@ -2,15 +2,9 @@
 //!
 //! Run with: `cargo xtask <command>`
 
-mod audio_player_generated;
 mod board_examples_generated;
 mod boards;
 mod example_specs;
-mod ir_generated;
-mod led2d_generated;
-mod led_generated;
-mod led_strip_generated;
-mod servo_player_generated;
 
 use bitflags::bitflags;
 use clap::{Parser, Subcommand, ValueEnum};
@@ -730,34 +724,6 @@ fn check_docs() -> ExitCode {
         eprintln!("Error generating examples from templates: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = ir_generated::generate_ir_generated(&esp_root) {
-        eprintln!("Error generating ir_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&esp_root) {
-        eprintln!("Error generating audio_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&esp_root) {
-        eprintln!("Error generating led2d_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_generated::generate_led_generated(&esp_root) {
-        eprintln!("Error generating led_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&esp_root) {
-        eprintln!("Error generating led_strip_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&esp_root) {
-        eprintln!("Error generating servo_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = check_generated_doc_stubs(&esp_root) {
-        eprintln!("Generated doc stub consistency check failed:\n{err}");
-        return ExitCode::FAILURE;
-    }
     if check_readme_example() != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
@@ -791,34 +757,6 @@ fn check_all() -> ExitCode {
     }
     if let Err(err) = generate_example_templates(&root) {
         eprintln!("Error generating examples from templates: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = ir_generated::generate_ir_generated(&root) {
-        eprintln!("Error generating ir_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&root) {
-        eprintln!("Error generating audio_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&root) {
-        eprintln!("Error generating led2d_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_generated::generate_led_generated(&root) {
-        eprintln!("Error generating led_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&root) {
-        eprintln!("Error generating led_strip_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&root) {
-        eprintln!("Error generating servo_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = check_generated_doc_stubs(&root) {
-        eprintln!("Generated doc stub consistency check failed:\n{err}");
         return ExitCode::FAILURE;
     }
     if check_readme_example() != ExitCode::SUCCESS {
@@ -1871,111 +1809,6 @@ fn run_expect_failure(cmd: &mut Command) -> bool {
     } else {
         println!("{}", "    expected failure (pass)".green());
         false
-    }
-}
-
-struct GeneratedDocStubExpectation {
-    relative_path: &'static str,
-    required_fragments: &'static [&'static str],
-}
-
-fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
-    let generated_doc_stub_expectations = [
-        GeneratedDocStubExpectation {
-            relative_path: "src/audio_player/audio_player_generated.rs",
-            required_fragments: &[
-                "pub struct AudioPlayerGenerated",
-                "pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;",
-                "impl AudioPlayerGenerated",
-                "impl AudioPlayer<VOICE_22050_HZ> for AudioPlayerGenerated",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/ir/ir_generated.rs",
-            required_fragments: &[
-                "pub struct IrGenerated",
-                "impl Ir for IrGenerated",
-                "pub struct IrMappingGenerated",
-                "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
-                "pub struct IrKeplerGenerated",
-                "impl IrKepler for IrKeplerGenerated",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led2d/led2d_generated.rs",
-            required_fragments: &[
-                "pub struct Led2dGenerated",
-                "impl Led2dGenerated",
-                "impl Led2d<12, 4> for &'static Led2dGenerated",
-                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led/led_generated.rs",
-            required_fragments: &[
-                "pub struct LedGenerated",
-                "impl LedGenerated",
-                "pub const MAX_STEPS: usize",
-                "impl Led for LedGenerated",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led_strip/led_strip_generated.rs",
-            required_fragments: &[
-                "pub struct LedStripGenerated",
-                "impl LedStripGenerated",
-                "impl LedStrip<8> for LedStripGenerated",
-                "pub const MAX_FRAMES: usize = MAX_FRAMES_DEFAULT;",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/servo_player/servo_player_generated.rs",
-            required_fragments: &[
-                "pub struct ServoPlayerGenerated",
-                "impl ServoPlayerGenerated",
-                "impl Servo for ServoPlayerGenerated",
-                "impl ServoPlayer<16> for ServoPlayerGenerated",
-                "pub fn new(",
-            ],
-        },
-    ];
-
-    let mut failure_messages = Vec::new();
-    for generated_doc_stub_expectation in generated_doc_stub_expectations {
-        let generated_doc_stub_path =
-            workspace_root.join(generated_doc_stub_expectation.relative_path);
-        let generated_doc_stub_source = match fs::read_to_string(&generated_doc_stub_path) {
-            Ok(source) => source,
-            Err(read_error) => {
-                failure_messages.push(format!(
-                    "{}: failed to read ({})",
-                    generated_doc_stub_path.display(),
-                    read_error
-                ));
-                continue;
-            }
-        };
-
-        for required_fragment in generated_doc_stub_expectation.required_fragments {
-            if !generated_doc_stub_source.contains(required_fragment) {
-                failure_messages.push(format!(
-                    "{}: missing required fragment `{}`",
-                    generated_doc_stub_path.display(),
-                    required_fragment
-                ));
-            }
-        }
-    }
-
-    if failure_messages.is_empty() {
-        Ok(())
-    } else {
-        Err(failure_messages.join("\n"))
     }
 }
 

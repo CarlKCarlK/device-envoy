@@ -42,11 +42,15 @@ This file contains both shared workspace rules and crate-specific rules for this
 
 ## Generated Files
 
-- Treat generated files under `src/**/_generated.rs` as build outputs, not source of truth.
-- When changing generated docs/examples, edit the corresponding generator template in `xtask/src/*_generated.rs` first.
+- Treat generated files (for example the ESP board examples) as build outputs, not source of truth: edit their generator template first, and regenerate with the crate-level check command before handing work back.
 - If you must patch a generated file directly for an urgent fix, make the matching template change in the same PR so regeneration does not revert it.
-- Regenerate and verify with `cargo xtask check-docs` (or the crate-level check command) before handing work back.
-- When changing generated API surface/docs for macro-backed types, update all four in the same PR: (1) macro source in `src/*.rs`, (2) generator template in `xtask/src/*_generated.rs`, (3) generated stub in `src/**/_generated.rs`, and (4) `xtask/src/main.rs` `check_generated_doc_stubs` expectations.
+
+## Sample Doc Pages
+
+- Each macro's sample page (`src/**/*_generated.rs`, such as `LedStripGenerated`) is an ordinary source file holding one real declaration of the macro. Its page is the macro's own output, so it cannot drift from the macro: change the macro, and the page follows.
+- Do not write stand-in types for docs (`#[cfg(doc)]` structs, `impl Sized` parameters, hand-copied method lists). If a real expansion reads badly on its page, fix the macro's template.
+- Gate a sample so it compiles wherever its module does. A sample whose expansion claims a link-level symbol (ESP servos claim their LEDC timer and channel with `no_mangle` statics) expands under `#[cfg(doc)]` only, so the library never links it.
+- Links in generated docs must resolve both in a user's crate and in the sample file: write them as absolute paths (`device_envoy_rp::led2d::Size`); each crate declares `extern crate self as <name>;` for this.
 
 ## Module Structure Convention
 
@@ -367,10 +371,7 @@ Runtime naming rule: when such platform runtime structs are needed, name them us
    - Keep canonical semantics on the trait (for generic code and UFCS access).
    - Also expose matching inherent constants on generated types when users commonly read them before construction or from generated-type pages.
    - Keep names and values aligned between trait and generated type; avoid one-off aliases.
-13. Remove generated doc stub flow when it no longer represents the API:
-   - Delete the abstraction's `*_generated.rs` generator/template and generated stub module
-   - Remove `xtask` generation/check hooks for that stub, including `check_generated_doc_stubs` expectations
-   - Update crate `AGENTS.md` generated-file lists accordingly
+13. Keep the abstraction's sample doc page a real declaration of its macro (see Sample Doc Pages); delete the sample file and its `mod` line if the abstraction no longer has a macro.
 14. Keep compatibility aliases only when needed for migration, and document canonical names.
 15. Verify with crate/workspace checks (`cargo xtask check-all` and docs checks) so trait-const access and imports are validated across examples/demos/tests.
 
@@ -481,10 +482,6 @@ before diagnosing browser-test failures.
 
 The full Device Envoy validation command is `cargo check-all`. Run it before
 handing work back; it keeps doctests, examples, and supported targets in sync.
-
-### Generated Files (RP)
-
-For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `ir_generated`, `lcd_text_generated`, `led_generated`, `led_strip_generated`, and `servo_player_generated`.
 
 ### Const-Only APIs (RP)
 
@@ -642,8 +639,6 @@ The standard servo pins across examples are **PIN_11** and **PIN_12**.
 - For `cargo` aliases that target `riscv32imac-unknown-none-elf`, include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
 
 ### Generated Files (ESP)
-
-For this crate, generation is wired through `xtask` for: `audio_player_generated`, `audio_clip_generated`, `ir_generated`, and `led_generated`.
 
 - Board examples under `crates/device-envoy-examples-esp/examples/<chip>/<board>/` are generated outputs. Add or change them by editing `crates/device-envoy-examples-esp/examples/templates/*.rs.j2` (or `crates/device-envoy-examples-esp/examples/templates/talk1/*.rs.j2`) and then running `cargo run --manifest-path crates/device-envoy-examples-esp/xtask/Cargo.toml -- generate-board-examples`.
 - Do not hand-edit generated board example files as source-of-truth; template changes should drive regeneration.

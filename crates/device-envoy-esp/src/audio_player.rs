@@ -732,8 +732,8 @@ macro_schema::define! {
 
     generate {
         static $upper($decl.name, _AUDIO_PLAYER_STATIC):
-            $crate::audio_player::AudioPlayerStatic<$decl.max_clips, { $decl.sample_rate_hz }> =
-            $crate::audio_player::AudioPlayerHandle::<$decl.max_clips, { $decl.sample_rate_hz }>::new_static_with_max_volume_and_initial_volume(
+            $crate::audio_player::AudioPlayerStatic<$const_arg($decl.max_clips), $const_arg($decl.sample_rate_hz)> =
+            $crate::audio_player::AudioPlayerHandle::<$const_arg($decl.max_clips), $const_arg($decl.sample_rate_hz)>::new_static_with_max_volume_and_initial_volume(
                 $decl.max_volume,
                 $decl.initial_volume,
             );
@@ -747,7 +747,7 @@ macro_schema::define! {
             "See the [audio_player module documentation](mod@device_envoy_esp::audio_player) for usage and examples."
         )]
         $decl.vis struct $decl.name {
-            player: $crate::audio_player::AudioPlayerHandle<$decl.max_clips, { $decl.sample_rate_hz }>,
+            player: $crate::audio_player::AudioPlayerHandle<$const_arg($decl.max_clips), $const_arg($decl.sample_rate_hz)>,
         }
 
         #[doc = concat!(
@@ -763,7 +763,7 @@ macro_schema::define! {
             "::SAMPLE_RATE_HZ }>`."
         )]
         $decl.vis type $ident($decl.name, Playable) =
-            dyn $crate::audio_player::Playable<{ $decl.sample_rate_hz }>;
+            dyn $crate::audio_player::Playable<$const_arg($decl.sample_rate_hz)>;
 
         impl $decl.name {
             /// Sample rate used for audio playback by this generated player type.
@@ -802,7 +802,7 @@ macro_schema::define! {
             }
         }
 
-        impl $crate::audio_player::AudioPlayer<{ $decl.sample_rate_hz }> for $decl.name {
+        impl $crate::audio_player::AudioPlayer<$const_arg($decl.sample_rate_hz)> for $decl.name {
             const SAMPLE_RATE_HZ: u32 = $decl.sample_rate_hz;
             const MAX_CLIPS: usize = $decl.max_clips;
             const INITIAL_VOLUME: $crate::audio_player::Volume = $decl.initial_volume;
@@ -810,7 +810,7 @@ macro_schema::define! {
 
             fn play<I>(&self, audio_clips: I, at_end: $crate::audio_player::AtEnd)
             where
-                I: IntoIterator<Item = &'static dyn $crate::audio_player::Playable<{ $decl.sample_rate_hz }>>,
+                I: IntoIterator<Item = &'static dyn $crate::audio_player::Playable<$const_arg($decl.sample_rate_hz)>>,
             {
                 $crate::audio_player::__audio_player_play(
                     self.player.__audio_player_static(),
@@ -844,7 +844,7 @@ macro_schema::define! {
 
         #[::embassy_executor::task]
         async fn $snake($decl.name, _audio_player_task)(
-            audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$decl.max_clips, { $decl.sample_rate_hz }>,
+            audio_player_static: &'static $crate::audio_player::AudioPlayerStatic<$const_arg($decl.max_clips), $const_arg($decl.sample_rate_hz)>,
             i2s: $crate::esp_hal::peripherals::$decl.i2s<'static>,
             dma: $crate::esp_hal::peripherals::$decl.dma<'static>,
             data_pin: $crate::esp_hal::peripherals::$decl.data_pin<'static>,
@@ -852,8 +852,8 @@ macro_schema::define! {
             word_select_pin: $crate::esp_hal::peripherals::$decl.word_select_pin<'static>,
         ) -> ! {
             $crate::audio_player::device_loop::<
-                $decl.max_clips,
-                { $decl.sample_rate_hz },
+                $const_arg($decl.max_clips),
+                $const_arg($decl.sample_rate_hz),
                 $crate::esp_hal::peripherals::$decl.dma<'static>,
                 $crate::esp_hal::peripherals::$decl.data_pin<'static>,
                 $crate::esp_hal::peripherals::$decl.bit_clock_pin<'static>,

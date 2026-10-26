@@ -342,7 +342,7 @@ macro_schema::define! {
         #[doc = $decl.doc]
         #[doc = "\n\nImplements the [`LedStrip`](device_envoy_rp::led_strip::LedStrip) trait for LED control methods."]
         $decl.vis struct $decl.name {
-            strip: $crate::led_strip::LedStripHandle<{ $decl.len }, { $decl.max_frames }>,
+            strip: $crate::led_strip::LedStripHandle<$const_arg($decl.len), $const_arg($decl.max_frames)>,
         }
 
         impl $decl.name {
@@ -360,7 +360,7 @@ macro_schema::define! {
             // Combined gamma correction and brightness scaling table
             const COMBO_TABLE: [u8; 256] = $crate::led_strip::generate_combo_table($decl.gamma, Self::MAX_BRIGHTNESS);
 
-            const fn new_static() -> $crate::led_strip::LedStripStatic<{ $decl.len }, { $decl.max_frames }> {
+            const fn new_static() -> $crate::led_strip::LedStripStatic<$const_arg($decl.len), $const_arg($decl.max_frames)> {
                 $crate::led_strip::LedStripHandle::new_static()
             }
 
@@ -370,7 +370,7 @@ macro_schema::define! {
                 dma: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.dma>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                static STRIP_STATIC: $crate::led_strip::LedStripStatic<{ $decl.len }, { $decl.max_frames }> =
+                static STRIP_STATIC: $crate::led_strip::LedStripStatic<$const_arg($decl.len), $const_arg($decl.max_frames)> =
                     $decl.name::new_static();
                 static STRIP_CELL: $crate::__static_cell::StaticCell<$decl.name> = $crate::__static_cell::StaticCell::new();
                 let pin = pin.into();
@@ -391,11 +391,11 @@ macro_schema::define! {
             }
         }
 
-        impl $crate::led_strip::LedStrip<{ $decl.len }> for $decl.name {
+        impl $crate::led_strip::LedStrip<$const_arg($decl.len)> for $decl.name {
             const MAX_FRAMES: usize = $decl.max_frames;
             const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
 
-            fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $decl.len }>) {
+            fn write_frame(&self, frame: $crate::led_strip::Frame1d<$const_arg($decl.len)>) {
                 $crate::led_strip::__write_frame(self.strip.__command_signal(), frame);
             }
 
@@ -403,7 +403,7 @@ macro_schema::define! {
             where
                 I: IntoIterator,
                 I::Item: ::core::borrow::Borrow<(
-                    $crate::led_strip::Frame1d<{ $decl.len }>,
+                    $crate::led_strip::Frame1d<$const_arg($decl.len)>,
                     ::embassy_time::Duration,
                 )>,
             {
@@ -417,14 +417,14 @@ macro_schema::define! {
             sm: ::embassy_rp::pio::StateMachine<'static, ::embassy_rp::peripherals::$decl.pio, $decl.sm>,
             dma: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.dma>,
             pin: ::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>,
-            command_signal: &'static $crate::led_strip::LedStripCommandSignal<{ $decl.len }, { $decl.max_frames }>,
+            command_signal: &'static $crate::led_strip::LedStripCommandSignal<$const_arg($decl.len), $const_arg($decl.max_frames)>,
         ) -> ! {
             let program = bus.get_program();
             let driver = bus.with_common(|common| {
                 ::embassy_rp::pio_programs::ws2812::PioWs2812::<
                     ::embassy_rp::peripherals::$decl.pio,
                     $decl.sm,
-                    { $decl.len },
+                    $const_arg($decl.len),
                     _
                 >::new(
                     common,
@@ -438,8 +438,8 @@ macro_schema::define! {
             $crate::led_strip::led_strip_device_loop::<
                 ::embassy_rp::peripherals::$decl.pio,
                 $decl.sm,
-                { $decl.len },
-                { $decl.max_frames },
+                $const_arg($decl.len),
+                $const_arg($decl.max_frames),
                 _
             >(driver, command_signal, &$decl.name::COMBO_TABLE).await
         }
@@ -774,6 +774,7 @@ macro_schema::define! {
                     { $panel.led_layout.width() },
                     { $panel.led_layout.height() },
                 > = $panel.led_layout;
+                const $upper($strip.name, _LEN): usize = $upper($strip.name, _LED_LAYOUT).len();
 
                 // The panel's layout must cover exactly the strip's LEDs.
                 const _: () = assert!(
@@ -785,98 +786,105 @@ macro_schema::define! {
                 $decl.vis struct $strip.name {
                     led2d: $crate::led2d::Led2dRp<
                         'static,
-                        { $upper($strip.name, _LED_LAYOUT).len() },
+                        $upper($strip.name, _LEN),
                         $ident($strip.name, LedStrip),
                     >,
                     strip: &'static $ident($strip.name, LedStrip),
                 }
 
-                impl $strip.name {
-                    /// Maximum number of animation frames.
-                    pub const MAX_FRAMES: usize = $ident($strip.name, LedStrip)::MAX_FRAMES;
-                    /// Maximum brightness level after current limiting.
-                    pub const MAX_BRIGHTNESS: u8 = $ident($strip.name, LedStrip)::MAX_BRIGHTNESS;
-                    /// Default font used by text helpers.
-                    pub const FONT: $crate::led2d::Led2dFont = $panel.font;
-                    /// Panel width in pixels.
-                    pub const WIDTH: usize = $upper($strip.name, _LED_LAYOUT).width();
-                    /// Panel height in pixels.
-                    pub const HEIGHT: usize = $upper($strip.name, _LED_LAYOUT).height();
-                    /// Total LED count (`WIDTH * HEIGHT`).
-                    pub const LEN: usize = $upper($strip.name, _LED_LAYOUT).len();
-                    /// Panel dimensions as a [`Size`](device_envoy_rp::led2d::Size).
-                    pub const SIZE: $crate::led2d::Size = $crate::led2d::Frame2d::<
-                        { $upper($strip.name, _LED_LAYOUT).width() },
-                        { $upper($strip.name, _LED_LAYOUT).height() },
-                    >::SIZE;
-                    /// Top-left corner coordinate.
-                    pub const TOP_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                        { $upper($strip.name, _LED_LAYOUT).width() },
-                        { $upper($strip.name, _LED_LAYOUT).height() },
-                    >::TOP_LEFT;
-                    /// Top-right corner coordinate.
-                    pub const TOP_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                        { $upper($strip.name, _LED_LAYOUT).width() },
-                        { $upper($strip.name, _LED_LAYOUT).height() },
-                    >::TOP_RIGHT;
-                    /// Bottom-left corner coordinate.
-                    pub const BOTTOM_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                        { $upper($strip.name, _LED_LAYOUT).width() },
-                        { $upper($strip.name, _LED_LAYOUT).height() },
-                    >::BOTTOM_LEFT;
-                    /// Bottom-right corner coordinate.
-                    pub const BOTTOM_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<
-                        { $upper($strip.name, _LED_LAYOUT).width() },
-                        { $upper($strip.name, _LED_LAYOUT).height() },
-                    >::BOTTOM_RIGHT;
+                // Inside an anonymous block, the dimensions can be plain `WIDTH` and `HEIGHT`: rustdoc
+                // prints a const argument as its source text, so the docs read `Led2d<WIDTH, HEIGHT>`.
+                const _: () = {
+                    const WIDTH: usize = $upper($strip.name, _LED_LAYOUT).width();
+                    const HEIGHT: usize = $upper($strip.name, _LED_LAYOUT).height();
 
-                    /// The LED strip behind this panel, for writing pixels in wiring order.
-                    pub fn strip(&self) -> &'static $ident($strip.name, LedStrip) {
-                        self.strip
+                    impl $strip.name {
+                        /// Maximum number of animation frames.
+                        pub const MAX_FRAMES: usize = $ident($strip.name, LedStrip)::MAX_FRAMES;
+                        /// Maximum brightness level after current limiting.
+                        pub const MAX_BRIGHTNESS: u8 = $ident($strip.name, LedStrip)::MAX_BRIGHTNESS;
+                        /// Default font used by text helpers.
+                        pub const FONT: $crate::led2d::Led2dFont = $panel.font;
+                        /// Panel width in pixels.
+                        pub const WIDTH: usize = $upper($strip.name, _LED_LAYOUT).width();
+                        /// Panel height in pixels.
+                        pub const HEIGHT: usize = $upper($strip.name, _LED_LAYOUT).height();
+                        /// Total LED count (`WIDTH * HEIGHT`).
+                        pub const LEN: usize = $upper($strip.name, _LED_LAYOUT).len();
+                        /// Panel dimensions as a [`Size`](device_envoy_rp::led2d::Size).
+                        pub const SIZE: $crate::led2d::Size = $crate::led2d::Frame2d::<
+                            WIDTH,
+                            HEIGHT,
+                        >::SIZE;
+                        /// Top-left corner coordinate.
+                        pub const TOP_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<
+                            WIDTH,
+                            HEIGHT,
+                        >::TOP_LEFT;
+                        /// Top-right corner coordinate.
+                        pub const TOP_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<
+                            WIDTH,
+                            HEIGHT,
+                        >::TOP_RIGHT;
+                        /// Bottom-left corner coordinate.
+                        pub const BOTTOM_LEFT: $crate::led2d::Point = $crate::led2d::Frame2d::<
+                            WIDTH,
+                            HEIGHT,
+                        >::BOTTOM_LEFT;
+                        /// Bottom-right corner coordinate.
+                        pub const BOTTOM_RIGHT: $crate::led2d::Point = $crate::led2d::Frame2d::<
+                            WIDTH,
+                            HEIGHT,
+                        >::BOTTOM_RIGHT;
+
+                        /// The LED strip behind this panel, for writing pixels in wiring order.
+                        pub fn strip(&self) -> &'static $ident($strip.name, LedStrip) {
+                            self.strip
+                        }
+
+                        fn from_strip(led_strip: &'static $ident($strip.name, LedStrip)) -> &'static Self {
+                            static PANEL_CELL: $crate::__static_cell::StaticCell<$strip.name> =
+                                $crate::__static_cell::StaticCell::new();
+                            PANEL_CELL.init(Self {
+                                led2d: $crate::led2d::Led2dRp::new(led_strip, &$upper($strip.name, _LED_LAYOUT)),
+                                strip: led_strip,
+                            })
+                        }
                     }
 
-                    fn from_strip(led_strip: &'static $ident($strip.name, LedStrip)) -> &'static Self {
-                        static PANEL_CELL: $crate::__static_cell::StaticCell<$strip.name> =
-                            $crate::__static_cell::StaticCell::new();
-                        PANEL_CELL.init(Self {
-                            led2d: $crate::led2d::Led2dRp::new(led_strip, &$upper($strip.name, _LED_LAYOUT)),
-                            strip: led_strip,
-                        })
-                    }
-                }
+                    impl $crate::led2d::Led2d<
+                        WIDTH,
+                        HEIGHT,
+                    > for $strip.name {
+                        const MAX_FRAMES: usize = $ident($strip.name, LedStrip)::MAX_FRAMES;
+                        const MAX_BRIGHTNESS: u8 = $ident($strip.name, LedStrip)::MAX_BRIGHTNESS;
+                        const FONT: $crate::led2d::Led2dFont = $panel.font;
 
-                impl $crate::led2d::Led2d<
-                    { $upper($strip.name, _LED_LAYOUT).width() },
-                    { $upper($strip.name, _LED_LAYOUT).height() },
-                > for $strip.name {
-                    const MAX_FRAMES: usize = $ident($strip.name, LedStrip)::MAX_FRAMES;
-                    const MAX_BRIGHTNESS: u8 = $ident($strip.name, LedStrip)::MAX_BRIGHTNESS;
-                    const FONT: $crate::led2d::Led2dFont = $panel.font;
-
-                    fn write_frame(
-                        &self,
-                        frame2d: $crate::led2d::Frame2d<
-                            { $upper($strip.name, _LED_LAYOUT).width() },
-                            { $upper($strip.name, _LED_LAYOUT).height() },
-                        >,
-                    ) {
-                        $crate::led2d::Led2dStripBacked::write_frame(&self.led2d, frame2d);
-                    }
-
-                    fn animate<I>(&self, frames: I)
-                    where
-                        I: IntoIterator,
-                        I::Item: ::core::borrow::Borrow<(
-                            $crate::led2d::Frame2d<
-                                { $upper($strip.name, _LED_LAYOUT).width() },
-                                { $upper($strip.name, _LED_LAYOUT).height() },
+                        fn write_frame(
+                            &self,
+                            frame2d: $crate::led2d::Frame2d<
+                                WIDTH,
+                                HEIGHT,
                             >,
-                            ::embassy_time::Duration,
-                        )>,
-                    {
-                        $crate::led2d::Led2dStripBacked::animate(&self.led2d, frames);
+                        ) {
+                            $crate::led2d::Led2dStripBacked::write_frame(&self.led2d, frame2d);
+                        }
+
+                        fn animate<I>(&self, frames: I)
+                        where
+                            I: IntoIterator,
+                            I::Item: ::core::borrow::Borrow<(
+                                $crate::led2d::Frame2d<
+                                    WIDTH,
+                                    HEIGHT,
+                                >,
+                                ::embassy_time::Duration,
+                            )>,
+                        {
+                            $crate::led2d::Led2dStripBacked::animate(&self.led2d, frames);
+                        }
                     }
-                }
+                };
             } else {
                 $crate::led_strip::__led_strip_type! {
                     $strip.attrs

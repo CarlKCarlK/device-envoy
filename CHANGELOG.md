@@ -106,6 +106,9 @@ API changes (RP and ESP now generate the same API):
 - ESP `button_watch!`'s constructor parameter is named `pin`.
 - ESP `led_strip!` and `led2d!` document `engine` as a defaulted field ("RMT
   where the chip has it, otherwise SPI").
+- ESP `led_strip!`'s `reset_us` is a defaulted field, shown as "`60` (SPI only)".
+  The `Rmt` engine ignores it; naming it on an `Rmt` strip is no longer an
+  error.
 - ESP `COMBO_TABLE` and `servo!`'s generated static struct are private.
 - ESP `EngineResource`, the trait for the peripheral a strip's `new` takes, is
   documented and sealed. Passing the wrong engine's peripheral reports, for
@@ -136,6 +139,14 @@ Behavior changes and fixes:
   stand-in, so it shows the real constructor, the configuration table, and the
   trait impls. Several stand-ins had drifted (for example, ESP pages showed
   `impl Sized` parameters).
+- Count-like fields (`len`, `max_frames`, `max_steps`, `max_clips`,
+  `capacity`, and LCD `width`/`height`) accept expressions such as `4 * 2`;
+  some failed to compile unless written as a literal or a constant.
+- Generated trait impls read as you declared them in the docs
+  (`impl LedStrip<8>`, `impl AudioPlayer<VOICE_22050_HZ>`,
+  `impl Led2d<WIDTH, HEIGHT>`) rather than showing macro template code.
+- The generated syntax docs describe field kinds as *name*, *value*, and
+  *type*, and show prose defaults as text.
 - Fixed links in generated documentation that did not resolve in your crate:
   `button_watch!`'s `PressedTo` links and `pcm_clip!`'s list of generated items.
 

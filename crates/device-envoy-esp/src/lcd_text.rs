@@ -246,13 +246,13 @@ macro_schema::define! {
             #[doc = $lcd.doc]
             $lcd.vis struct $lcd.name;
 
-            impl $crate::lcd_text::__LcdText<$lcd.width, $lcd.height> for $lcd.name {
+            impl $crate::lcd_text::__LcdText<$const_arg($lcd.width), $const_arg($lcd.height)> for $lcd.name {
                 const ADDRESS: u8 = $lcd.address;
 
                 fn write_text(&self, text: impl AsRef<str>) {
                     $crate::lcd_text::__write_text::<
-                        { $lcd.width },
-                        { $lcd.height },
+                        $const_arg($lcd.width),
+                        $const_arg($lcd.height),
                         { $upper(__, $decl.name, _MAX_LCD_CELLS) },
                     >(&$upper($lcd.name, _FRAME_SIGNAL), text.as_ref());
                 }

@@ -61,7 +61,7 @@ macro_schema::define! {
         $decl.attrs
         #[doc = $decl.doc]
         $decl.vis struct $decl.name {
-            servo_player_handle: $crate::servo::ServoPlayerHandle<{ $decl.max_steps }>,
+            servo_player_handle: $crate::servo::ServoPlayerHandle<$const_arg($decl.max_steps)>,
         }
 
         // Ownership claims: choosing the same LEDC timer or channel twice anywhere in the
@@ -86,8 +86,8 @@ macro_schema::define! {
             );
 
         static $upper($decl.name, _SERVO_PLAYER_STATIC):
-            $crate::servo::ServoPlayerStatic<{ $decl.max_steps }> =
-                $crate::servo::ServoPlayerHandle::<{ $decl.max_steps }>::new_static();
+            $crate::servo::ServoPlayerStatic<$const_arg($decl.max_steps)> =
+                $crate::servo::ServoPlayerHandle::<$const_arg($decl.max_steps)>::new_static();
         static $upper($decl.name, _SERVO_PLAYER_CELL): $crate::__static_cell::StaticCell<$decl.name> =
             $crate::__static_cell::StaticCell::new();
 
@@ -126,7 +126,7 @@ macro_schema::define! {
             }
         }
 
-        impl $crate::servo::ServoPlayer<{ $decl.max_steps }> for $decl.name {
+        impl $crate::servo::ServoPlayer<$const_arg($decl.max_steps)> for $decl.name {
             const MAX_STEPS: usize = Self::MAX_STEPS;
 
             fn animate<I>(&self, steps: I, at_end: $crate::servo::AtEnd)
@@ -140,7 +140,7 @@ macro_schema::define! {
 
         #[::embassy_executor::task]
         async fn $snake(__, $decl.name, _servo_player_task)(
-            servo_player_static: &'static $crate::servo::ServoPlayerStatic<{ $decl.max_steps }>,
+            servo_player_static: &'static $crate::servo::ServoPlayerStatic<$const_arg($decl.max_steps)>,
             servo: $crate::servo::ServoEsp,
         ) -> ! {
             $crate::servo::device_loop(servo_player_static, servo).await

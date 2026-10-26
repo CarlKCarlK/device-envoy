@@ -477,7 +477,7 @@ macro_schema::define! {
         gamma: expr,
         /// Maximum number of animation frames.
         max_frames: expr,
-        /// WS2812 reset interval in microseconds; only with `Spi`.
+        /// WS2812 reset interval in microseconds; only the `Spi` engine uses it.
         reset_us?: expr,
     }
 
@@ -496,22 +496,16 @@ macro_schema::define! {
                 $upper($decl.name, _LEDS),
                 $upper($decl.name, _RESET_US),
             );
-        $if let Some(interval) = $decl.reset_us {
-            const _: () = assert!(
-                <$ident($decl.name, Engine) as $crate::led_strip::LedEngine>::USES_RESET_GAP,
-                "`reset_us` applies only to the `Spi` engine"
-            );
-        }
 
         static $upper($decl.name, _STATIC): $crate::led_strip::LedStripStatic<
             { $upper($decl.name, _LEDS) },
-            { $decl.max_frames },
+            $const_arg($decl.max_frames),
         > = $crate::led_strip::LedStripHandle::new_static();
 
         $decl.attrs
         #[doc = $decl.doc]
         $decl.vis struct $decl.name {
-            inner: $crate::led_strip::LedStripHandle<{ $upper($decl.name, _LEDS) }, { $decl.max_frames }>,
+            inner: $crate::led_strip::LedStripHandle<{ $upper($decl.name, _LEDS) }, $const_arg($decl.max_frames)>,
         }
 
         impl $decl.name {
@@ -558,11 +552,11 @@ macro_schema::define! {
             }
         }
 
-        impl $crate::led_strip::LedStrip<{ $upper($decl.name, _LEDS) }> for $decl.name {
+        impl $crate::led_strip::LedStrip<$const_arg($decl.len)> for $decl.name {
             const MAX_FRAMES: usize = $decl.max_frames;
             const MAX_BRIGHTNESS: u8 = Self::MAX_BRIGHTNESS;
 
-            fn write_frame(&self, frame: $crate::led_strip::Frame1d<{ $upper($decl.name, _LEDS) }>) {
+            fn write_frame(&self, frame: $crate::led_strip::Frame1d<$const_arg($decl.len)>) {
                 $crate::led_strip::__write_frame(self.inner.__command_signal(), frame);
             }
 
@@ -570,7 +564,7 @@ macro_schema::define! {
             where
                 I: IntoIterator,
                 I::Item: ::core::borrow::Borrow<(
-                    $crate::led_strip::Frame1d<{ $upper($decl.name, _LEDS) }>,
+                    $crate::led_strip::Frame1d<$const_arg($decl.len)>,
                     ::embassy_time::Duration,
                 )>,
             {
@@ -586,7 +580,7 @@ macro_schema::define! {
             >,
             strip_static: &'static $crate::led_strip::LedStripStatic<
                 { $upper($decl.name, _LEDS) },
-                { $decl.max_frames },
+                $const_arg($decl.max_frames),
             >,
             combo_table: &'static [u8; 256],
         ) {
@@ -621,8 +615,10 @@ macro_schema::define! {
         /// Maximum number of animation frames; `0` disables animation.
         #[default_display = "16"]
         max_frames: expr = $crate::led_strip::MAX_FRAMES_DEFAULT,
-        /// WS2812 reset interval in microseconds; only with `Spi` (default 60).
-        reset_us?: expr,
+        /// WS2812 reset interval in microseconds. Only the `Spi` engine uses it; `Rmt`
+        /// ignores it.
+        #[default_display = "`60` (SPI only)"]
+        reset_us: expr = $crate::led_strip::spi::RESET_US_DEFAULT,
     }
 
     generate {
@@ -636,7 +632,7 @@ macro_schema::define! {
                 engine: $decl.engine,
                 gamma: $decl.gamma,
                 max_frames: $decl.max_frames,
-                $if let Some(interval) = $decl.reset_us { reset_us: $interval, }
+                reset_us: $decl.reset_us,
             }
         }
     }

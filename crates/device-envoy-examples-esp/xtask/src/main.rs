@@ -362,6 +362,7 @@ fn test_capabilities_required(test: &str) -> Capability {
                 | "generated_code_lints_compile"
                 | "led_strip_engine_trait_compile"
                 | "led_strip_wrong_engine_resource_compile_fail"
+                | "expression_values_compile"
         )
     {
         caps.insert(Capability::RMT);
@@ -372,7 +373,12 @@ fn test_capabilities_required(test: &str) -> Capability {
     if test == "led_strip_spi_two_strips_compile" {
         caps.insert(Capability::DUAL_SPI);
     }
-    if test.starts_with("servo_") || test == "generated_code_lints_compile" {
+    if test.starts_with("servo_")
+        || matches!(
+            test,
+            "generated_code_lints_compile" | "expression_values_compile"
+        )
+    {
         caps.insert(Capability::LEDC);
     }
     caps

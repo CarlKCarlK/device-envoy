@@ -457,7 +457,7 @@ macro_schema::define! {
         #[doc = $decl.doc]
         $decl.vis struct $decl.name {
             ir_static: &'static $crate::ir::__IrStatic,
-            button_map: $crate::__heapless::LinearMap<(u16, u8), $decl.button, $decl.capacity>,
+            button_map: $crate::__heapless::LinearMap<(u16, u8), $decl.button, $const_arg($decl.capacity)>,
         }
 
         impl $decl.name {
@@ -480,7 +480,7 @@ macro_schema::define! {
                 );
                 Ok($upper($decl.name, _MAPPING_CELL).init(Self {
                     ir_static: &$upper($decl.name, _IR_STATIC),
-                    button_map: $crate::ir::__build_button_map::<$decl.button, $decl.capacity>(button_map),
+                    button_map: $crate::ir::__build_button_map::<$decl.button, $const_arg($decl.capacity)>(button_map),
                 }))
             }
         }

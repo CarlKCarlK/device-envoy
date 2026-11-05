@@ -230,7 +230,7 @@ impl WifiAutoRp {
     ///
     /// See the [WifiAutoRp struct example](Self) for a complete example.
     // Approved suppression: one argument per hardware resource. Grouping them into
-    // structs is a possible future breaking change.
+    // structs was considered and rejected (2026-11-05); flat arguments read better here.
     #[allow(clippy::too_many_arguments)]
     pub fn new<const N: usize, PIO: WifiPio, DMA: ChannelInstance, FlashBlockType>(
         pin_23: Peri<'static, PIN_23>,

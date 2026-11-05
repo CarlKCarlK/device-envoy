@@ -132,9 +132,10 @@ inventory, the API regularization, and the macros intentionally left as
 - [x] `too_many_arguments` on hand-written public constructors
       (`WifiAutoRp::new`, ESP CYD `new`, six RP CYD constructors): approved
       2026-10-22 for this release, commented.
-- Later, not this release: group those constructors' arguments into structs
-  (pins, presentation, calibration), as their doc examples already group them
-  with comments. A breaking change.
+- Decided against (2026-11-05): grouping those constructors' arguments into
+  structs (pins, presentation, calibration). Flat arguments, grouped with
+  comments in the doc examples, read better, so the `too_many_arguments`
+  approvals are permanent.
 - [x] Generated code no longer requires users to depend on `paste`,
       `static_cell`, `heapless`, or `embassy_sync`: it reaches them through
       hidden `$crate::__*` re-exports (2026-10-23). The starters dropped those
@@ -220,7 +221,7 @@ peripherals on ESP, per-member IR constructors on ESP, servo setup types) stay.
 - [x] 3. ESP `servo_player!` matches RP: the declared type wraps the handle,
       `new` returns `&'static Self`, and it implements `Servo` and `ServoPlayer`.
 - [x] 4. ESP `servo!`'s `<Name>Static` struct and `new_static()` become private.
-- [ ] 5. Arguments go from most specific to least: the device's own pins, then
+- [x] 5. Arguments go from most specific to least: the device's own pins, then
       its peripherals or channels, then its configuration data (such as
       `on_level` or an IR `button_map`; added 2026-11-05), then shared
       resources, then the spawner. Schemas list fields the same way. Group
@@ -238,11 +239,11 @@ peripherals on ESP, per-member IR constructors on ESP, servo setup types) stay.
       `RfidRp::new_spi0/1` now take their pins before the SPI peripheral and
       DMA channels (CHANGELOG has before/after). The hidden `ServoEsp::new`
       and `SpiWs2812::new` take their pin before the shared peripheral.
-      Remaining: the four CYD constructors (ESP `Cyd::new`, three on RP) put
-      `spi` before the pins and `display_spi_hz` among the pins. About 300
-      call sites across device-envoy, cyd-starter, and linkage-blaze use
-      them. Decision pending: reorder now, or leave them for the post-release
-      change that groups their arguments into structs.
+      Accepted exception (decided 2026-11-05): the four CYD constructors (ESP
+      `Cyd::new`, three on RP) keep their current order, with `spi` before
+      the pins and `display_spi_hz` among the pins. Reordering would break
+      about 300 call sites across device-envoy, cyd-starter, and
+      linkage-blaze for a small consistency gain.
 - [x] 6. RP macros take `impl Into<Peri<'static, X>>` everywhere (`led!`,
       `lcd_text!`, `i2cs!` take plain `Peri` today).
 - [x] 7. ESP `button_watch!`'s `button_pin` parameter is named `pin`.

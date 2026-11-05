@@ -95,7 +95,8 @@ macro_schema::define! {
             /// Maximum number of steps in one animation.
             pub const MAX_STEPS: usize = $decl.max_steps;
 
-            /// Create the servo player and spawn its background task.
+            /// Creates the servo player on its LEDC timer and channel and spawns its background
+            /// task. See the [servo module documentation](mod@device_envoy_esp::servo) for usage.
             pub fn new(
                 pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
                 ledc: &$crate::esp_hal::ledc::Ledc<'static>,

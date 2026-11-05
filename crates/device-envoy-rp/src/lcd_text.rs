@@ -273,7 +273,7 @@ macro_schema::define! {
                 /// LCD I2C address.
                 pub const ADDRESS: u8 = $lcd.address;
 
-                /// Construct this LCD text device and spawn its shared I2C task.
+                /// Creates the LCD and spawns its shared I2C task.
                 /// See the [lcd_text module documentation](mod@device_envoy_rp::lcd_text) for usage examples.
                 pub fn new(
                     sda: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.sda_pin>>,

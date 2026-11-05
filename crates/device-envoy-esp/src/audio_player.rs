@@ -775,7 +775,7 @@ macro_schema::define! {
             /// Runtime volume ceiling for this generated player type.
             pub const MAX_VOLUME: $crate::audio_player::Volume = $decl.max_volume;
 
-            /// Creates and spawns the generated audio player instance.
+            /// Creates the audio player and spawns its background task.
             ///
             /// See the [audio_player module documentation](mod@device_envoy_esp::audio_player)
             /// for example usage.

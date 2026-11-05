@@ -197,24 +197,12 @@ macro_schema::define! {
             /// Maximum number of steps in one animation.
             pub const MAX_STEPS: usize = $decl.max_steps;
 
-            /// Create the servo player and spawn its background task.
+            /// Creates the servo player on the PWM slice that drives its pin and spawns its
+            /// background task.
             ///
-            /// The slice is automatically determined from the pin via the type
-            /// system.
-            ///
-            /// # PWM Slice Calculation
-            ///
-            /// Calculate which [PWM slice](crate#glossary) a pin uses:
-            /// `slice = (pin / 2) % 8`. For example, PIN_11 uses PWM_SLICE5
-            /// ((11 / 2) % 8 = 5).
-            ///
-            /// # Parameters
-            ///
-            /// - `pin` — GPIO pin for servo
-            /// - `slice` — PWM slice corresponding to the pin
-            /// - `spawner` — Task spawner for background operations
-            ///
-            /// See the `ServoPlayer` struct example for usage.
+            /// `slice` must be the slice for this pin, for example `p.PWM_SLICE5` for `PIN_11`;
+            /// see [`ServoPwmSlice`](device_envoy_rp::servo::ServoPwmSlice). See the
+            /// [servo module documentation](mod@device_envoy_rp::servo) for usage.
             pub fn new(
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
                 slice: impl $crate::servo::ServoPwmSlice<::embassy_rp::peripherals::$decl.pin>,

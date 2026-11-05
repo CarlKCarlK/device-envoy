@@ -321,8 +321,13 @@ lockfiles are refreshed (`cyd-starter`'s `syn` went from 3.0.4 to 3.0.9, which
       found on 2026-10-22.
 - [x] `just docs` builds and its snapshot check passes (2026-10-22). Fixed the
       deprecated dashed clippy lint names it warned about in the RP manifests.
-      The remaining future-incompatibility warning is `proc-macro-error2`,
-      pulled in upstream by `defmt-macros`.
+      The remaining future-incompatibility warning is `proc-macro-error2`.
+      On 2026-11-05, `defmt` 1.2.0 removed one source of it, and the lockfiles
+      of device-envoy, rp-blinky, and linkage-blaze were updated (linkage-blaze
+      also bumped its `=1.0.1` pin). The other source is `pio-proc` 0.3.0,
+      through `pio` 0.3, and that is blocked upstream: `pio-proc` 0.4 needs
+      `pio` 0.4, and embassy-rp 0.10.0 (the latest) still requires `pio` 0.3.
+      Move to `pio` 0.4 when embassy-rp does.
 - [ ] Review the generated syntax and field tables on each macro page for
       Core, RP, and ESP (`just show-docs`).
 

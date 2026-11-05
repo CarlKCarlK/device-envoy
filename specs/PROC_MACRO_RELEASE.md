@@ -107,8 +107,12 @@ inventory, the API regularization, and the macros intentionally left as
       member visibility, the 0.1 member colon, RP IR `pio`, ESP `led2d!` `len`,
       `pcm_clip!`'s one spelling). The file is excluded from the published
       package because it reads the RP and ESP sources.
-- [ ] Extend `macro_expansion.rs` to the macros it does not cover yet, as the
-      review finds behavior worth pinning down.
+- [x] Extend `macro_expansion.rs` to the macros it does not cover yet, as the
+      review finds behavior worth pinning down. Added 2026-11-05: ESP
+      `button_watch!` spawns one task per declaration, and RP `ir_mapping!`
+      takes `button_map` before `pio`. Both tests were confirmed to fail on the
+      old code. The API parity test (§2c) covers trait impls and return types
+      for every sampled macro.
 - [x] RP `led_strips!` keeps `#[allow(clippy::too_many_arguments)]` on the
       generated `new`, approved 2026-10-22, with a comment giving the reason.
 - [x] Make generated code lint-clean in a strict user crate. New compile-only

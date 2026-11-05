@@ -23,6 +23,7 @@ const CORE_AUDIO_PLAYER: &str = include_str!("../src/audio_player.rs");
 const RP_BUTTON: &str = include_str!("../../device-envoy-rp/src/button.rs");
 const RP_IR: &str = include_str!("../../device-envoy-rp/src/ir.rs");
 const RP_LED_STRIP: &str = include_str!("../../device-envoy-rp/src/led_strip.rs");
+const ESP_BUTTON: &str = include_str!("../../device-envoy-esp/src/button.rs");
 const ESP_LED2D: &str = include_str!("../../device-envoy-esp/src/led2d.rs");
 
 #[test]
@@ -35,6 +36,42 @@ fn button_watch_names_its_struct_and_task_after_the_declaration() -> Result<()> 
     assert_contains(&expanded, "struct ButtonWatch13 {");
     assert_contains(&expanded, "async fn button_watch13_task(");
     assert_contains(&expanded, "::embassy_rp::peripherals::PIN_13>");
+    Ok(())
+}
+
+#[test]
+fn esp_button_watch_spawns_one_task_per_declaration() -> Result<()> {
+    // Every declaration needs its own task: a single shared task would have room for one
+    // instance, so a second button's `new` would fail with `Error::TaskSpawn`.
+    for (name, task) in [
+        (quote! { ButtonWatch6 }, "async fn button_watch6_task("),
+        (quote! { ButtonWatch7 }, "async fn button_watch7_task("),
+    ] {
+        let expanded = expand(ESP_BUTTON, "button_watch", quote! { #name { pin: GPIO6 } })?;
+        assert_contains(&expanded, "#[::embassy_executor::task]");
+        assert_contains(&expanded, task);
+    }
+    Ok(())
+}
+
+#[test]
+fn rp_ir_mapping_takes_its_button_map_before_the_pio() -> Result<()> {
+    // Configuration data comes after the device's own pins and before shared resources.
+    let expanded = expand(
+        RP_IR,
+        "ir_mapping",
+        quote! { IrMapping5 { pin: PIN_5, button: Key, capacity: 3 } },
+    )?;
+    let single_new = expanded
+        .split("impl IrMapping5 {")
+        .nth(1)
+        .unwrap_or_default();
+    let button_map = single_new.find("button_map:");
+    let pio = single_new.find("pio:");
+    assert!(
+        button_map.is_some() && button_map < pio,
+        "expected `button_map` before `pio` in `IrMapping5::new`:\n{single_new}"
+    );
     Ok(())
 }
 

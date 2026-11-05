@@ -67,10 +67,10 @@
 //!
 //! ir_mapping! {
 //!     IrMapping15 {
-//!         pio: PIO0,
 //!         pin: PIN_15,
 //!         button: RemoteKeys,
 //!         capacity: 3,
+//!         pio: PIO0,
 //!     }
 //! }
 //!
@@ -87,7 +87,7 @@
 //! # }
 //! async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
 //!     let p = embassy_rp::init(Default::default());
-//!     let ir_mapping15 = IrMapping15::new(p.PIN_15, p.PIO0, &REMOTE_KEYS_MAP, spawner)?;
+//!     let ir_mapping15 = IrMapping15::new(p.PIN_15, &REMOTE_KEYS_MAP, p.PIO0, spawner)?;
 //!
 //!     loop {
 //!         let remote_key = ir_mapping15.wait_for_press().await;
@@ -550,15 +550,15 @@ macro_schema::define! {
     pub ir_mapping {
         /// GPIO input pin connected to the IR receiver.
         pin: ident,
+        /// Application button type that IR codes map to.
+        button: ty,
+        /// Maximum mapping entries; at least the number of entries you provide.
+        capacity: expr,
         /// PIO resource.
         /// Each PIO serves one device or group: if two use the same PIO, the program doesn't
         /// compile (typically `use of moved value` at the second constructor), so give one of
         /// them another PIO.
         pio: ident = PIO0,
-        /// Application button type that IR codes map to.
-        button: ty,
-        /// Maximum mapping entries; at least the number of entries you provide.
-        capacity: expr,
     }
 
     generate {
@@ -582,8 +582,8 @@ macro_schema::define! {
             /// See the [ir module documentation](mod@device_envoy_rp::ir) for usage.
             pub fn new(
                 pin: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pin>>,
-                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 button_map: &[(u16, u8, $decl.button)],
+                pio: impl Into<::embassy_rp::Peri<'static, ::embassy_rp::peripherals::$decl.pio>>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static mut Self> {
                 let (ir_mapping,) = $ident($decl.name, Group)::new(pin, button_map, pio, spawner)?;

@@ -26,7 +26,44 @@ inventory, the API regularization, and the macros intentionally left as
 - [ ] Review the organization of the `define!` schemas and `generate`
       templates across Core, RP, and ESP: where each lives, how the
       single-as-group and group-calls-single patterns are applied, and the
-      remaining hand-written helpers (`__led_engine_normalize!` and friends).
+      remaining hand-written helpers. IR reviewed 2026-11-05; LED strip,
+      audio, servo, `led2d`, and LCD still to do. Findings so far:
+  - The organization is sound. Each family is one file, with its schemas
+    next to the runtime code they call. The pattern follows the hardware:
+    RP uses single-as-group because members share a PIO block (`ir!`,
+    `ir_kepler!`, `ir_mapping!`, `led_strip!`, `lcd_text!` are one-member
+    groups). ESP uses group-calls-single because each IR receiver owns its
+    own RMT channel.
+  - The remaining `macro_rules!` are justified: `combine!`, `tone!`,
+    `init_and_start!`, and table generators that stamp out one item per
+    peripheral (`__define_ir_task!`, `impl_wifi_pio!`, `servo_pin_map!`,
+    `impl_dma_irq_map_all_irqs!`, `__cyd_tga!`,
+    `__impl_wifi_auto_fields!`). `__led_engine_normalize!` no longer exists.
+  - The repeated field doc "Each PIO serves one device or group…" (10 copies
+    in 4 RP files) stays inline (decided 2026-11-05). Users must see it on
+    each macro page without following a link, and the cost of repeating it
+    falls only on maintainers. If it ever needs editing, change all copies
+    in one commit.
+  - Skipped for this release (decided 2026-11-05): fold Kepler into mapping.
+        The RP-only version would reintroduce an API difference between the
+        chips, and the version for both chips adds a hidden schema layer to
+        save about 30 lines. Revisit after the release if the IR logic
+        changes. A Kepler receiver is a mapping receiver
+        with a fixed 21-entry table, but the templates copy the mapping code.
+        On RP, `ir_keplers!` can expand into a hidden `ir_mappings!` group
+        that has the same member names, plus a thin public group whose `new`
+        supplies `KEPLER_MAPPING`. The cost is that Kepler types also
+        implement `IrMapping<KeplerKeys>`. On ESP, `ir_kepler!` can't reuse
+        `ir_mapping!` directly, because both would generate an inherent `new`
+        on the same type. It needs a hidden shared schema with a private
+        constructor, which saves little. Decide: do RP only (Kepler gains
+        `IrMapping<KeplerKeys>` on RP alone, an API difference between the
+        chips), do both, or skip.
+  - [ ] Delete dead code: core's `IrKeplerStatic` and `IrMappingStatic` are
+        public (hidden) but unused. Generated code uses `__IrStatic`.
+  - [ ] Move `__build_button_map` to core. The RP and ESP `ir/mapping.rs`
+        files are byte-identical, which the 2026-10-23 token-level scan
+        missed.
 - [ ] Review for code smells: duplication between the RP and ESP schemas,
       template length, hidden helpers that could become templates (the survey
       names `led2d_from_strip!`), and doc text repeated across schemas.
@@ -146,12 +183,18 @@ peripherals on ESP, per-member IR constructors on ESP, servo setup types) stay.
       `new` returns `&'static Self`, and it implements `Servo` and `ServoPlayer`.
 - [x] 4. ESP `servo!`'s `<Name>Static` struct and `new_static()` become private.
 - [ ] 5. Arguments go from most specific to least: the device's own pins, then
-      its peripherals or channels, then shared resources, then the spawner.
-      Schemas list fields the same way. Group declarations keep the shared field
-      first; group constructors take each member's arguments first and the
-      shared resource last. Applies to hand-written constructors too.
-      Done for every macro-generated constructor (2026-10-25); hand-written
-      constructors (CYD, `ServoEsp::new`, ...) still to do.
+      its peripherals or channels, then its configuration data (such as
+      `on_level` or an IR `button_map`; added 2026-11-05), then shared
+      resources, then the spawner. Schemas list fields the same way. Group
+      declarations keep the shared field first; group constructors take each
+      member's arguments first and the shared resource last. Applies to
+      hand-written constructors too.
+      Done for every macro-generated constructor (2026-10-25). On 2026-11-05,
+      RP `ir_mapping!` changed from `(pin, pio, button_map, spawner)` to
+      `(pin, button_map, pio, spawner)`, and its schema fields were reordered
+      to match; it was the only generated constructor that broke the
+      configuration rule. Hand-written constructors (CYD, `ServoEsp::new`,
+      ...) still to do.
 - [x] 6. RP macros take `impl Into<Peri<'static, X>>` everywhere (`led!`,
       `lcd_text!`, `i2cs!` take plain `Peri` today).
 - [x] 7. ESP `button_watch!`'s `button_pin` parameter is named `pin`.

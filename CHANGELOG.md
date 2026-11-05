@@ -89,7 +89,8 @@ API changes (RP and ESP now generate the same API):
   documented and sealed. A wrong slice reports "`PWM_SLICE4` is not the PWM
   slice for `PIN_11`" with a note on how to find a pin's slice.
 - Constructor arguments go from most specific to least: the device's own pins,
-  then its peripherals or channels, then shared resources, then the spawner.
+  then its peripherals or channels, then its configuration data (such as
+  `on_level` or an IR `button_map`), then shared resources, then the spawner.
   Group constructors take each member's arguments first and the shared
   resource last:
 
@@ -98,11 +99,13 @@ API changes (RP and ESP now generate the same API):
   let (strip0, strip1) = LedStrips::new(p.PIO0, p.PIN_2, p.DMA_CH0, p.PIN_3, p.DMA_CH1, spawner)?;
   let lcd = Lcd::new(p.I2C0, p.PIN_4, p.PIN_5, spawner)?;
   let servo = Servo11::new(&ledc, p.GPIO11)?; // ESP
+  let ir = IrMapping15::new(p.PIN_15, p.PIO0, &REMOTE_KEYS_MAP, spawner)?; // RP
 
   // 0.2
   let (strip0, strip1) = LedStrips::new(p.PIN_2, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIO0, spawner)?;
   let lcd = Lcd::new(p.PIN_4, p.PIN_5, p.I2C0, spawner)?;
   let servo = Servo11::new(p.GPIO11, &ledc)?; // ESP
+  let ir = IrMapping15::new(p.PIN_15, &REMOTE_KEYS_MAP, p.PIO0, spawner)?; // RP
   ```
 
   Schema fields are documented in the same order; you may still write them in

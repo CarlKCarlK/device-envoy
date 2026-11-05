@@ -158,7 +158,6 @@
 
 pub mod ir_generated;
 mod kepler;
-mod mapping;
 
 pub use device_envoy_core::ir::{Ir, IrEvent, IrKepler, IrMapping};
 // Must be `pub` for macro expansion at downstream call sites.
@@ -167,9 +166,10 @@ pub use device_envoy_core::ir::IrStatic as __IrStatic;
 // Must be `pub` for macro expansion at downstream call sites.
 #[doc(hidden)]
 pub use device_envoy_core::ir::kepler::KEPLER_MAPPING as __KEPLER_MAPPING;
-// Must be `pub` for macro expansion at downstream call sites.
 pub use kepler::KeplerKeys;
-pub use mapping::__build_button_map;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::ir::mapping::__build_button_map;
 
 #[cfg(target_os = "none")]
 use device_envoy_core::ir::decode_nec_frame;

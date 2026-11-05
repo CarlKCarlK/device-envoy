@@ -2,8 +2,6 @@
 //!
 //! See the platform-specific crate for primary documentation and examples.
 
-use crate::ir::mapping::IrMappingStatic;
-
 /// Button types for the SunFounder Kepler Kit remote control.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -94,33 +92,6 @@ where
 {
     async fn wait_for_press(&mut self) -> KeplerKeys {
         (**self).wait_for_press().await
-    }
-}
-
-/// Static resources for Kepler IR remote events.
-///
-/// See the platform-specific crate for usage examples.
-// Public for cross-crate platform plumbing; hidden from end-user docs.
-#[doc(hidden)]
-pub struct IrKeplerStatic(IrMappingStatic);
-
-impl IrKeplerStatic {
-    /// Create static resources for the Kepler remote.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self(IrMappingStatic::new())
-    }
-
-    /// Get a reference to the inner mapping static resources.
-    #[must_use]
-    pub const fn inner(&self) -> &IrMappingStatic {
-        &self.0
-    }
-}
-
-impl Default for IrKeplerStatic {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

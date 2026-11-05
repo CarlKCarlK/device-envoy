@@ -59,11 +59,12 @@ inventory, the API regularization, and the macros intentionally left as
         constructor, which saves little. Decide: do RP only (Kepler gains
         `IrMapping<KeplerKeys>` on RP alone, an API difference between the
         chips), do both, or skip.
-  - [ ] Delete dead code: core's `IrKeplerStatic` and `IrMappingStatic` are
-        public (hidden) but unused. Generated code uses `__IrStatic`.
-  - [ ] Move `__build_button_map` to core. The RP and ESP `ir/mapping.rs`
-        files are byte-identical, which the 2026-10-23 token-level scan
-        missed.
+  - [x] Delete dead code: core's `IrKeplerStatic` and `IrMappingStatic` were
+        public (hidden) but unused; generated code uses `__IrStatic`. Deleted
+        2026-11-05.
+  - [x] Move `__build_button_map` to core. The RP and ESP `ir/mapping.rs`
+        files were byte-identical, which the 2026-10-23 token-level scan
+        missed. Moved 2026-11-05; both chips re-export core's version.
 - [ ] Review for code smells: duplication between the RP and ESP schemas,
       template length, hidden helpers that could become templates (the survey
       names `led2d_from_strip!`), and doc text repeated across schemas.

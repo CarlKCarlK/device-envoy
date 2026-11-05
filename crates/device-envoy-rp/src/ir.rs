@@ -163,10 +163,11 @@ pub use device_envoy_core::ir::kepler::KEPLER_MAPPING as __KEPLER_MAPPING;
 
 pub mod ir_generated;
 mod kepler;
-mod mapping;
 
 pub use kepler::KeplerKeys;
-pub use mapping::__build_button_map;
+// Must be `pub` for macro expansion at downstream call sites.
+#[doc(hidden)]
+pub use device_envoy_core::ir::mapping::__build_button_map;
 
 // ===== NEC Receiver (forward declaration) ==================================
 

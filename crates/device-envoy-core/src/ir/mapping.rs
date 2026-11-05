@@ -1,8 +1,10 @@
-//! Platform-independent static resources for IR button mapping.
+//! Platform-independent IR button mapping: the [`IrMapping`] trait and the map builder that
+//! generated mapping receivers use.
 //!
 //! See the platform-specific crate for primary documentation and examples.
 
-use crate::ir::IrStatic;
+use heapless::LinearMap;
+
 /// Platform-agnostic IR button mapper device contract.
 ///
 /// Platform crates implement this for their concrete `IrMapping` types so shared logic can wait
@@ -74,29 +76,22 @@ where
     }
 }
 
-/// Static channel resources for IR mapping events.
-///
-/// Create with `IrMapping::new_static()` from the platform-specific crate.
-// Public for cross-crate platform plumbing; hidden from end-user docs.
+// Must be `pub` for macro expansion at downstream call sites: the RP and ESP mapping and Kepler
+// macros call it through their crates' hidden re-exports.
 #[doc(hidden)]
-pub struct IrMappingStatic(IrStatic);
-
-impl IrMappingStatic {
-    /// Create static mapping resources.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self(IrStatic::new())
+pub fn __build_button_map<B: Copy, const N: usize>(
+    button_map: &[(u16, u8, B)],
+) -> LinearMap<(u16, u8), B, N> {
+    let mut linear_map = LinearMap::new();
+    for &(addr, cmd, button) in button_map {
+        let previous_button = match linear_map.insert((addr, cmd), button) {
+            Ok(previous_button) => previous_button,
+            Err(_) => panic!("button_map entries exceed IrMapping capacity"),
+        };
+        assert!(
+            previous_button.is_none(),
+            "button_map contains duplicate (addr, cmd) entries"
+        );
     }
-
-    /// Get a reference to the inner static IR resources.
-    #[must_use]
-    pub const fn inner(&self) -> &IrStatic {
-        &self.0
-    }
-}
-
-impl Default for IrMappingStatic {
-    fn default() -> Self {
-        Self::new()
-    }
+    linear_map
 }

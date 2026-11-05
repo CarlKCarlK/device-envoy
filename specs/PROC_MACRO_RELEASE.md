@@ -245,8 +245,16 @@ peripherals on ESP, per-member IR constructors on ESP, servo setup types) stay.
 - [x] 8. ESP `COMBO_TABLE` becomes private, as on RP.
 - [x] 9. ESP `engine` is a defaulted field shown as "RMT where the chip has it,
       otherwise SPI".
-- [ ] Extend the parity test to generated APIs (constructor signatures, return
+- [x] Extend the parity test to generated APIs (constructor signatures, return
       types, trait impls), so these differences cannot come back unnoticed.
+      Done 2026-11-05: `rp_and_esp_samples_generate_the_same_api` expands each
+      chip's sample doc pages, including nested macro calls, and compares each
+      generated type's trait impls, public methods (async or not, and return
+      type), and public constants. Parameter lists are not compared, since
+      they name HAL types. Hidden types (RP's one-member groups) may exist on
+      one chip. The one allowed difference is `servo!`'s `new`: it is
+      infallible on RP and returns `Result` on ESP (LEDC setup can fail). A
+      mutation check confirmed the test fails on a changed return type.
 
 ## 3. Branch health
 

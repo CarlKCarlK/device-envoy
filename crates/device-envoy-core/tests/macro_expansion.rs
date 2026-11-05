@@ -337,6 +337,210 @@ fn rp_and_esp_macros_document_the_same_contract()
     Ok(())
 }
 
+/// Where RP and ESP intentionally generate a different API, as (generated type, API item)
+/// pairs in the form [`sample_apis`] records them.
+const API_DIFFERENCES: [(&str, &str); 2] = [
+    // RP PWM setup cannot fail; ESP LEDC timer and channel configuration can.
+    ("ServoGenerated", "fn new -> & 'static Self"),
+    (
+        "ServoGenerated",
+        "fn new -> crate :: Result < & 'static Self >",
+    ),
+];
+
+/// The API line [`record_api`] adds for a `#[doc(hidden)]` struct, such as the one-member
+/// group behind an RP single-device macro. A hidden type may exist on one chip only.
+const HIDDEN_TYPE: &str = "#[doc(hidden)] struct";
+
+#[test]
+fn rp_and_esp_samples_generate_the_same_api() -> core::result::Result<(), Box<dyn std::error::Error>>
+{
+    // The documentation test above compares what the macros say; this compares what they
+    // generate. Each chip's sample doc pages (`*_generated.rs`) hold one real declaration per
+    // macro under the same type names, so their expansions must match type by type: the same
+    // trait impls, the same public inherent methods (async or not, with the same return type),
+    // and the same public constants. Parameter lists are not compared; they name each chip's
+    // HAL types.
+    let rp = sample_apis("device-envoy-rp")?;
+    let esp = sample_apis("device-envoy-esp")?;
+    let mut problems = Vec::new();
+    for type_name in rp.keys().chain(esp.keys()).collect::<BTreeSet<_>>() {
+        let (Some(rp_api), Some(esp_api)) = (rp.get(type_name), esp.get(type_name)) else {
+            let api = rp.get(type_name).or(esp.get(type_name));
+            if type_name.contains("Generated") && !api.is_some_and(|api| api.contains(HIDDEN_TYPE))
+            {
+                problems.push(format!("`{type_name}` is generated on only one chip"));
+            }
+            continue;
+        };
+        for (chip, item) in rp_api
+            .difference(esp_api)
+            .map(|item| ("RP", item))
+            .chain(esp_api.difference(rp_api).map(|item| ("ESP", item)))
+        {
+            if !API_DIFFERENCES.contains(&(type_name.as_str(), item.as_str())) {
+                problems.push(format!("`{type_name}` {chip} only: {item}"));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "RP and ESP macros generate different APIs; fix the drift or add the item to \
+         `API_DIFFERENCES`:\n{}",
+        problems.join("\n")
+    );
+    Ok(())
+}
+
+/// The API that `crate_dir`'s sample doc pages generate, by type name: one line per trait
+/// impl, public inherent method, and public constant. Calls to `define!` macros, including
+/// the ones a template makes, are expanded with the definitions from `crate_dir` and Core.
+fn sample_apis(
+    crate_dir: &str,
+) -> core::result::Result<BTreeMap<String, BTreeSet<String>>, Box<dyn std::error::Error>> {
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let chip_src = crates.join(crate_dir).join("src");
+    let mut definitions = BTreeMap::new();
+    for src in [&chip_src, &crates.join("device-envoy-core").join("src")] {
+        for path in rust_files(src)? {
+            let mut found = Vec::new();
+            collect_definitions(
+                &syn::parse_file(&fs::read_to_string(&path)?)?.items,
+                &mut found,
+            );
+            for tokens in found {
+                definitions
+                    .entry(defined_name(tokens.clone())?.to_string())
+                    .or_insert(tokens);
+            }
+        }
+    }
+    let mut apis = BTreeMap::new();
+    for path in rust_files(&chip_src)? {
+        if !path
+            .file_name()
+            .and_then(|file_name| file_name.to_str())
+            .is_some_and(|file_name| file_name.ends_with("_generated.rs"))
+        {
+            continue;
+        }
+        let items = syn::parse_file(&fs::read_to_string(&path)?)?.items;
+        record_api(&expand_items(items, &definitions)?, crate_dir, &mut apis);
+    }
+    Ok(apis)
+}
+
+/// `items` with every call to a macro in `definitions` replaced by its full expansion.
+fn expand_items(
+    items: Vec<Item>,
+    definitions: &BTreeMap<String, TokenStream>,
+) -> core::result::Result<Vec<Item>, Box<dyn std::error::Error>> {
+    let mut expanded = Vec::new();
+    for item in items {
+        if let Item::Macro(item_macro) = &item
+            && let Some(last) = item_macro.mac.path.segments.last()
+            && let Some(definition) = definitions.get(&last.ident.to_string())
+        {
+            let tokens = macro_schema_core::expand_definition(
+                definition.clone(),
+                item_macro.mac.tokens.clone(),
+            )?;
+            let file: syn::File = syn::parse2(tokens)?;
+            expanded.extend(expand_items(file.items, definitions)?);
+        } else {
+            expanded.push(item);
+        }
+    }
+    Ok(expanded)
+}
+
+/// Adds the API that `items` declare to `apis`, looking inside modules and `const _` blocks.
+fn record_api(items: &[Item], crate_dir: &str, apis: &mut BTreeMap<String, BTreeSet<String>>) {
+    // Paths into the chip crate print the same for both chips.
+    let crate_name = crate_dir.replace('-', "_");
+    let normalize =
+        |tokens: TokenStream| tokens.to_string().replace(&crate_name, "device_envoy_CHIP");
+    for item in items {
+        match item {
+            Item::Struct(item_struct)
+                if item_struct.attrs.iter().any(|attr| {
+                    attr.path().is_ident("doc") && quote!(#attr).to_string().contains("hidden")
+                }) =>
+            {
+                apis.entry(item_struct.ident.to_string())
+                    .or_default()
+                    .insert(HIDDEN_TYPE.to_string());
+            }
+            Item::Impl(item_impl) => {
+                let syn::Type::Path(self_type) = &*item_impl.self_ty else {
+                    continue;
+                };
+                let Some(type_segment) = self_type.path.segments.last() else {
+                    continue;
+                };
+                let api = apis.entry(type_segment.ident.to_string()).or_default();
+                if let Some((trait_path, _)) = &item_impl.trait_ {
+                    if let Some(trait_segment) = trait_path.segments.last() {
+                        api.insert(format!("impl {}", normalize(quote!(#trait_segment))));
+                    }
+                    continue;
+                }
+                for impl_item in &item_impl.items {
+                    match impl_item {
+                        syn::ImplItem::Fn(function)
+                            if matches!(function.vis, Visibility::Public(_)) =>
+                        {
+                            let signature = &function.sig;
+                            let asyncness = if signature.asyncness.is_some() {
+                                "async "
+                            } else {
+                                ""
+                            };
+                            let name = &signature.ident;
+                            let output = &signature.output;
+                            api.insert(format!(
+                                "{asyncness}fn {name} {}",
+                                normalize(quote!(#output))
+                            ));
+                        }
+                        syn::ImplItem::Const(constant)
+                            if matches!(constant.vis, Visibility::Public(_)) =>
+                        {
+                            let name = &constant.ident;
+                            let constant_type = &constant.ty;
+                            api.insert(format!(
+                                "const {name}: {}",
+                                normalize(quote!(#constant_type))
+                            ));
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            Item::Const(item_const) => {
+                if let syn::Expr::Block(block) = &*item_const.expr {
+                    let block_items: Vec<Item> = block
+                        .block
+                        .stmts
+                        .iter()
+                        .filter_map(|stmt| match stmt {
+                            syn::Stmt::Item(block_item) => Some(block_item.clone()),
+                            _ => None,
+                        })
+                        .collect();
+                    record_api(&block_items, crate_dir, apis);
+                }
+            }
+            Item::Mod(item_mod) => {
+                if let Some((_, mod_items)) = &item_mod.content {
+                    record_api(mod_items, crate_dir, apis);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 /// The field a Syntax or Fields line describes (`pin` for `pin: <ident>,` or
 /// ``| `pin` | ...``), or `members` for a member-group note.
 fn doc_line_key(line: &str) -> &str {

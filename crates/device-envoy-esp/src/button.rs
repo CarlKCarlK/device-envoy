@@ -15,10 +15,14 @@ pub mod button_watch_generated;
 // `button_watch!` expands in downstream crates and references these symbols, so
 // they must remain public even though they are macro implementation details.
 #[doc(hidden)]
-pub use button_watch::{ButtonWatchEsp, ButtonWatchStaticEsp};
+pub use button_watch::__button_watch_task;
+// `button_watch!` expands in downstream crates and references these symbols, so
+// they must remain public even though they are macro implementation details.
 #[doc(hidden)]
 pub use device_envoy_core::button::__ButtonMonitor;
 pub use device_envoy_core::button::Button;
+#[doc(hidden)]
+pub use device_envoy_core::button::{ButtonWatch, ButtonWatchStatic};
 pub use device_envoy_core::button::{PressDuration, PressedTo};
 // Public for compatibility; hidden from end-user docs.
 #[doc(hidden)]
@@ -201,7 +205,7 @@ macro_schema::define! {
         #[doc = $decl.doc]
         #[doc = "\n\nMonitors button presses in a background task. See the [button module documentation](mod@device_envoy_esp::button) for usage."]
         $decl.vis struct $decl.name {
-            button_watch: $crate::button::ButtonWatchEsp<'static>,
+            button_watch: $crate::button::ButtonWatch,
         }
 
         impl $decl.name {
@@ -223,34 +227,29 @@ macro_schema::define! {
                 pressed_to: $crate::button::PressedTo,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static mut Self> {
-                static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStaticEsp =
-                    $crate::button::ButtonWatchEsp::new_static();
+                static BUTTON_WATCH_STATIC: $crate::button::ButtonWatchStatic =
+                    $crate::button::ButtonWatchStatic::new();
                 static BUTTON_WATCH_CELL: $crate::__static_cell::StaticCell<$decl.name> =
                     $crate::__static_cell::StaticCell::new();
 
-                let button_watch = $crate::button::ButtonWatchEsp::new_from_pin(
-                    &BUTTON_WATCH_STATIC,
-                    pin,
-                    pressed_to,
-                    spawner,
-                )
-                .await?;
+                // Each declared button has its own task, so any number of buttons can run.
+                let task_token = $snake($decl.name, _task)(pin, pressed_to, &BUTTON_WATCH_STATIC);
+                spawner.spawn(task_token.map_err($crate::Error::TaskSpawn)?);
 
-                let instance = BUTTON_WATCH_CELL.init($decl.name { button_watch });
-                Ok(instance)
+                let button_watch = $crate::button::ButtonWatch::new(&BUTTON_WATCH_STATIC);
+                button_watch.wait_until_initialized().await;
+
+                Ok(BUTTON_WATCH_CELL.init($decl.name { button_watch }))
             }
         }
 
-
         impl $crate::button::__ButtonMonitor for $decl.name {
             fn is_pressed_raw(&self) -> bool {
-                <$crate::button::ButtonWatchEsp<'static> as $crate::button::Button>::is_pressed(
-                    &self.button_watch,
-                )
+                <$crate::button::ButtonWatch as $crate::button::Button>::is_pressed(&self.button_watch)
             }
 
             async fn wait_until_pressed_state(&mut self, pressed: bool) {
-                <$crate::button::ButtonWatchEsp<'static> as $crate::button::__ButtonMonitor>::wait_until_pressed_state(
+                <$crate::button::ButtonWatch as $crate::button::__ButtonMonitor>::wait_until_pressed_state(
                     &mut self.button_watch,
                     pressed,
                 )
@@ -260,11 +259,20 @@ macro_schema::define! {
 
         impl $crate::button::Button for $decl.name {
             async fn wait_for_press_duration(&mut self) -> $crate::button::PressDuration {
-                <$crate::button::ButtonWatchEsp<'static> as $crate::button::Button>::wait_for_press_duration(
+                <$crate::button::ButtonWatch as $crate::button::Button>::wait_for_press_duration(
                     &mut self.button_watch,
                 )
                 .await
             }
+        }
+
+        #[::embassy_executor::task]
+        async fn $snake($decl.name, _task)(
+            pin: $crate::esp_hal::peripherals::$decl.pin<'static>,
+            pressed_to: $crate::button::PressedTo,
+            button_watch_static: &'static $crate::button::ButtonWatchStatic,
+        ) -> ! {
+            $crate::button::__button_watch_task(pin, pressed_to, button_watch_static).await
         }
     }
 }

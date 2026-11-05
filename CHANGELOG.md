@@ -168,6 +168,10 @@ Behavior changes and fixes:
   *type*, and show prose defaults as text.
 - Fixed links in generated documentation that did not resolve in your crate:
   `button_watch!`'s `PressedTo` links and `pcm_clip!`'s list of generated items.
+- On ESP, a program can run more than one `button_watch!` button. Every button
+  shared one background task with room for a single instance, so the second
+  button's `new` failed with `Error::TaskSpawn`. Each declared button now has
+  its own task, as on RP.
 
 ## 0.1.6
 

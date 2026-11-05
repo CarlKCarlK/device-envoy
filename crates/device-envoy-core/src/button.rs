@@ -7,6 +7,13 @@ use embassy_futures::select::{Either, select};
 use embassy_time::Duration;
 use embassy_time::Timer;
 
+mod watch;
+
+// Must be `pub` for macro expansion at downstream call sites: the RP and ESP `button_watch!`
+// templates and task bodies use them.
+#[doc(hidden)]
+pub use watch::{__run_button_watch, ButtonWatch, ButtonWatchStatic};
+
 // ============================================================================
 // Constants
 // ============================================================================

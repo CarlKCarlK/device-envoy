@@ -26,8 +26,36 @@ inventory, the API regularization, and the macros intentionally left as
 - [ ] Review the organization of the `define!` schemas and `generate`
       templates across Core, RP, and ESP: where each lives, how the
       single-as-group and group-calls-single patterns are applied, and the
-      remaining hand-written helpers. IR reviewed 2026-11-05; LED strip,
-      audio, servo, `led2d`, and LCD still to do. Findings so far:
+      remaining hand-written helpers. All families reviewed 2026-11-05.
+      Findings:
+  - [x] Bug: on ESP, a second `button_watch!` button failed at runtime with
+        `Error::TaskSpawn`. Every button spawned one crate-level task with the
+        default `pool_size` of 1. `button_watch_five_compile` only compiles,
+        so it never caught this. Fixed 2026-11-05: each declaration generates
+        its own task, as on RP.
+  - [x] The button-watch runtime (static, handle, and press loop, about 180
+        lines) was duplicated in RP and ESP, identical apart from an import
+        path. It moved to core (`button/watch.rs`, 2026-11-05). Each chip
+        keeps only its HAL-specific `InputButton` and a hidden
+        `__button_watch_task`. The task now takes the whole
+        `&'static ButtonWatchStatic` instead of six separate references, and
+        the never-read `state_changed_signal` and unused
+        `wait_for_state_change` were deleted.
+  - [ ] Generated `new` docs drift. RP `servo_player!` is wrong: it says the
+        slice "is automatically determined from the pin via the type system",
+        gives a stale slice formula, and points to a nonexistent "`ServoPlayer`
+        struct example". ESP `servo_player!` is a bare one-liner. The verbs
+        vary ("Create", "Construct", "Creates and spawns the generated …
+        instance"). Use "Creates the … and spawns its background task", and
+        give `servo_player!` the same `slice` text as `servo!`.
+  - The panel wrapper (about 120 lines: inherent consts, corners, `strip()`,
+    and the `Led2d` impl) is the same template text in RP `led_strips!` and
+    ESP `led2d!`. That is expected under the 2026-10-23 decision to keep each
+    chip's templates separate. Moving the inherent items into provided trait
+    items would cost users their import-free `Panel::WIDTH`, so it stays.
+  - LED, audio, servo, and LCD: no within-chip duplication worth removing.
+    The templates delegate to shared runtime (`servo_from_pin_slice`, core
+    audio and I2C loops).
   - The organization is sound. Each family is one file, with its schemas
     next to the runtime code they call. The pattern follows the hardware:
     RP uses single-as-group because members share a PIO block (`ir!`,

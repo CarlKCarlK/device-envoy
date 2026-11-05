@@ -263,10 +263,16 @@ peripherals on ESP, per-member IR constructors on ESP, servo setup types) stay.
 
 ## 3. Branch health
 
-- [x] `cargo fmt --all -- --check` (2026-10-22, at `3d190d09`; rerun before
-      the release PR)
-- [x] `cargo check-all` passes on the branch (2026-10-22, at `3d190d09`).
-- [ ] Resolve or defer any `TODO0` that appears (none as of 2026-10-22).
+- [x] `cargo fmt --all -- --check` (2026-10-22, at `3d190d09`; rerun
+      2026-11-05 at `c7bfaa60`: clean. Rerun before the release PR if more
+      commits land.)
+- [x] `cargo check-all` passes on the branch (2026-10-22, at `3d190d09`;
+      2026-11-05 at `c7bfaa60`).
+- [x] Resolve or defer any `TODO0` that appears. Swept 2026-11-05 at
+      `c7bfaa60`: Device Envoy's code has none. The only matches are this
+      spec's prose about the starters' markers. The starters' five path
+      dependency `TODO0`s are expected and resolved after publication
+      (section 4).
 
 ## 4. Downstream projects
 

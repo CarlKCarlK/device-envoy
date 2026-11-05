@@ -39,12 +39,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     let mut rfid = RfidEsp::new(
         &RFID_STATIC,
-        p.SPI2,
         p.GPIO18,
         p.GPIO21,
         p.GPIO19,
         p.GPIO5,
         p.GPIO4,
+        p.SPI2,
         spawner,
     )
     .await?;

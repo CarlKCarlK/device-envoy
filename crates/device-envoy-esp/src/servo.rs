@@ -201,11 +201,11 @@ impl ServoEsp {
     /// Default maximum rotation range in degrees.
     pub const DEFAULT_MAX_DEGREES: u16 = <Self as Servo>::DEFAULT_MAX_DEGREES;
 
-    /// Create a servo from static resources and a GPIO output pin.
+    /// Creates a servo from its static resources, its GPIO output pin, and the shared LEDC.
     pub fn new(
         servo_static: &'static ServoStatic,
-        ledc: &esp_hal::ledc::Ledc<'static>,
         pin: impl PeripheralOutput<'static>,
+        ledc: &esp_hal::ledc::Ledc<'static>,
     ) -> Result<Self> {
         let timer = servo_static
             .timer
@@ -349,7 +349,7 @@ macro_schema::define! {
                 static SERVO_CELL: $crate::__static_cell::StaticCell<$decl.name> =
                     $crate::__static_cell::StaticCell::new();
                 let servo =
-                    $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC).servo_static, ledc, pin)?;
+                    $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC).servo_static, pin, ledc)?;
                 Ok(SERVO_CELL.init(Self { servo }))
             }
         }

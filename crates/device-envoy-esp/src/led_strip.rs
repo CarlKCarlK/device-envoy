@@ -249,7 +249,7 @@ where
         pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'static>,
         reset_us: u32,
     ) -> crate::Result<spi::SpiWs2812<'static, LEDS, BUF>> {
-        spi::SpiWs2812::new(self, pin, spi::reset_bytes_for_us(reset_us))
+        spi::SpiWs2812::new(pin, self, spi::reset_bytes_for_us(reset_us))
     }
 }
 

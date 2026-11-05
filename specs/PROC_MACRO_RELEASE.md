@@ -41,7 +41,7 @@ inventory, the API regularization, and the macros intentionally left as
         `&'static ButtonWatchStatic` instead of six separate references, and
         the never-read `state_changed_signal` and unused
         `wait_for_state_change` were deleted.
-  - [ ] Generated `new` docs drift. RP `servo_player!` is wrong: it says the
+  - [x] Fixed 2026-11-05 (`9df65cad`): generated `new` docs drift. RP `servo_player!` is wrong: it says the
         slice "is automatically determined from the pin via the type system",
         gives a stale slice formula, and points to a nonexistent "`ServoPlayer`
         struct example". ESP `servo_player!` is a bare one-liner. The verbs
@@ -93,9 +93,12 @@ inventory, the API regularization, and the macros intentionally left as
   - [x] Move `__build_button_map` to core. The RP and ESP `ir/mapping.rs`
         files were byte-identical, which the 2026-10-23 token-level scan
         missed. Moved 2026-11-05; both chips re-export core's version.
-- [ ] Review for code smells: duplication between the RP and ESP schemas,
+- [x] Review for code smells: duplication between the RP and ESP schemas,
       template length, hidden helpers that could become templates (the survey
       names `led2d_from_strip!`), and doc text repeated across schemas.
+      Covered by the 2026-11-05 organization review below: RP/ESP template
+      duplication is intentional (§2b), `led2d_from_strip!` is already
+      template text, and repeated field docs stay inline.
 - [x] Add host tests of what the macros expand to:
       `crates/device-envoy-core/tests/macro_expansion.rs`. They read each
       schema's source file, expand calls with `expand_definition`, and check
@@ -145,8 +148,10 @@ inventory, the API regularization, and the macros intentionally left as
       `check-msrv`), each on its own runner, still on every push; the duplicate
       `pull_request` run is skipped except for forks. CI now also checks
       formatting and builds the docs.
-- [ ] Code smell: RP `led!` generates `$decl.vis fn new`, while ESP `led!` and
-      ESP `servo_player!` generate `pub fn new`. Pick one.
+- [x] Code smell: RP `led!` generated `$decl.vis fn new`, while ESP `led!` and
+      ESP `servo_player!` generated `pub fn new`. Resolved by the 2026-10-23
+      method-visibility decision (§2b): every generated method is `pub`.
+      Confirmed 2026-11-05: no template uses `$decl.vis` on a method.
 - Outside this release's scope: about 250 other suppressions, mostly
       `dead_code`, `unused_imports`, and `clippy::future_not_send` in examples
       and compile-only tests.
@@ -222,8 +227,18 @@ peripherals on ESP, per-member IR constructors on ESP, servo setup types) stay.
       RP `ir_mapping!` changed from `(pin, pio, button_map, spawner)` to
       `(pin, button_map, pio, spawner)`, and its schema fields were reordered
       to match; it was the only generated constructor that broke the
-      configuration rule. Hand-written constructors (CYD, `ServoEsp::new`,
-      ...) still to do.
+      configuration rule.
+      Hand-written constructors, 2026-11-05: a multi-instance device's own
+      `&'static …Static` comes first and the spawner last, per the
+      Device/Static Pair Pattern in `AGENTS.md`. `RfidEsp::new` and
+      `RfidRp::new_spi0/1` now take their pins before the SPI peripheral and
+      DMA channels (CHANGELOG has before/after). The hidden `ServoEsp::new`
+      and `SpiWs2812::new` take their pin before the shared peripheral.
+      Remaining: the four CYD constructors (ESP `Cyd::new`, three on RP) put
+      `spi` before the pins and `display_spi_hz` among the pins. About 300
+      call sites across device-envoy, cyd-starter, and linkage-blaze use
+      them. Decision pending: reorder now, or leave them for the post-release
+      change that groups their arguments into structs.
 - [x] 6. RP macros take `impl Into<Peri<'static, X>>` everywhere (`led!`,
       `lcd_text!`, `i2cs!` take plain `Peri` today).
 - [x] 7. ESP `button_watch!`'s `button_pin` parameter is named `pin`.

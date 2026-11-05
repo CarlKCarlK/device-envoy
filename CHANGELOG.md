@@ -108,6 +108,19 @@ API changes (RP and ESP now generate the same API):
   let ir = IrMapping15::new(p.PIN_15, &REMOTE_KEYS_MAP, p.PIO0, spawner)?; // RP
   ```
 
+  RFID readers follow the same rule: their pins come before the SPI peripheral
+  (and, on RP, its DMA channels):
+
+  ```rust,ignore
+  // 0.1
+  RfidEsp::new(&RFID_STATIC, p.SPI2, sck, mosi, miso, cs, rst, spawner).await?;
+  RfidRp::new_spi0(&RFID_STATIC, p.SPI0, sck, mosi, miso, p.DMA_CH0, p.DMA_CH1, cs, rst, spawner).await?;
+
+  // 0.2
+  RfidEsp::new(&RFID_STATIC, sck, mosi, miso, cs, rst, p.SPI2, spawner).await?;
+  RfidRp::new_spi0(&RFID_STATIC, sck, mosi, miso, cs, rst, p.SPI0, p.DMA_CH0, p.DMA_CH1, spawner).await?;
+  ```
+
   Schema fields are documented in the same order; you may still write them in
   any order.
 - RP `led!`, `lcd_text!`, and `i2cs!` accept `impl Into<Peri<'static, _>>`,

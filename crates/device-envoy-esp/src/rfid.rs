@@ -67,12 +67,12 @@ impl RfidStatic {
 ///
 ///     let mut rfid = RfidEsp::new(
 ///         &RFID_STATIC,
-///         p.SPI2,
 ///         p.GPIO6,
 ///         p.GPIO7,
 ///         p.GPIO2,
 ///         p.GPIO10,
 ///         p.GPIO5,
+///         p.SPI2,
 ///         spawner,
 ///     )
 ///     .await?;
@@ -99,12 +99,12 @@ impl RfidEsp<'_> {
     /// See the [Rfid struct example](Self) for usage.
     pub async fn new(
         rfid_static: &'static RfidStatic,
-        spi: impl Instance + 'static,
         sck: impl PeripheralOutput<'static>,
         mosi: impl PeripheralOutput<'static>,
         miso: impl PeripheralInput<'static>,
         cs: impl OutputPin + 'static,
         rst: impl OutputPin + 'static,
+        spi: impl Instance + 'static,
         spawner: Spawner,
     ) -> Result<Self> {
         let mfrc522 = init_mfrc522_hardware(spi, sck, mosi, miso, cs, rst).await?;

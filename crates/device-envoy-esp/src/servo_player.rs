@@ -102,7 +102,7 @@ macro_schema::define! {
                 ledc: &$crate::esp_hal::ledc::Ledc<'static>,
                 spawner: ::embassy_executor::Spawner,
             ) -> $crate::Result<&'static Self> {
-                let servo = $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC), ledc, pin)?;
+                let servo = $crate::servo::ServoEsp::new(&$upper($decl.name, _SERVO_STATIC), pin, ledc)?;
                 let token = $snake(__, $decl.name, _servo_player_task)(&$upper($decl.name, _SERVO_PLAYER_STATIC), servo);
                 spawner.spawn(token?);
                 let servo_player_handle =

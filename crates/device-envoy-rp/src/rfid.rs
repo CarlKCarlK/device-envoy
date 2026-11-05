@@ -90,14 +90,14 @@ impl Mfrc522Device {
 ///     static RFID_STATIC: RfidStatic = RfidRp::new_static();
 ///     let mut rfid = RfidRp::new_spi0(
 ///         &RFID_STATIC,
-///         p.SPI0,
 ///         p.PIN_2,
 ///         p.PIN_3,
 ///         p.PIN_4,
-///         p.DMA_CH0,
-///         p.DMA_CH1,
 ///         p.PIN_1,
 ///         p.PIN_5,
+///         p.SPI0,
+///         p.DMA_CH0,
+///         p.DMA_CH1,
 ///         spawner,
 ///     )
 ///     .await?;
@@ -124,14 +124,14 @@ impl RfidRp<'_> {
     /// See the [Rfid struct example](Self) for usage.
     pub async fn new_spi0<Sck, Mosi, Miso, DmaTx, DmaRx, Cs, Rst>(
         rfid_static: &'static RfidStatic,
-        spi: Peri<'static, SPI0>,
         sck: Peri<'static, Sck>,
         mosi: Peri<'static, Mosi>,
         miso: Peri<'static, Miso>,
-        dma_tx: Peri<'static, DmaTx>,
-        dma_rx: Peri<'static, DmaRx>,
         cs: Peri<'static, Cs>,
         rst: Peri<'static, Rst>,
+        spi: Peri<'static, SPI0>,
+        dma_tx: Peri<'static, DmaTx>,
+        dma_rx: Peri<'static, DmaRx>,
         spawner: Spawner,
     ) -> Result<Self>
     where
@@ -160,14 +160,14 @@ impl RfidRp<'_> {
     /// See the [Rfid struct example](Self) for usage.
     pub async fn new_spi1<Sck, Mosi, Miso, DmaTx, DmaRx, Cs, Rst>(
         rfid_static: &'static RfidStatic,
-        spi: Peri<'static, SPI1>,
         sck: Peri<'static, Sck>,
         mosi: Peri<'static, Mosi>,
         miso: Peri<'static, Miso>,
-        dma_tx: Peri<'static, DmaTx>,
-        dma_rx: Peri<'static, DmaRx>,
         cs: Peri<'static, Cs>,
         rst: Peri<'static, Rst>,
+        spi: Peri<'static, SPI1>,
+        dma_tx: Peri<'static, DmaTx>,
+        dma_rx: Peri<'static, DmaRx>,
         spawner: Spawner,
     ) -> Result<Self>
     where

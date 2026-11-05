@@ -43,8 +43,8 @@ impl<'d, const LEDS: usize, const BYTES: usize> SpiWs2812<'d, LEDS, BYTES> {
     /// # Errors
     /// Returns an error if SPI config is invalid.
     pub fn new(
-        spi: impl esp_hal::spi::master::Instance + 'd,
         mosi_pin: impl esp_hal::gpio::interconnect::PeripheralOutput<'d>,
+        spi: impl esp_hal::spi::master::Instance + 'd,
         reset_bytes: usize,
     ) -> crate::Result<Self> {
         assert_eq!(

@@ -1,0 +1,48 @@
+name: Check docs.rs
+
+"on":
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+  # docs.rs always builds with the newest nightly, so a new rustdoc lint can break the
+  # published crates' documentation without any change here. The weekly run reports that
+  # before the next release does.
+  schedule:
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: check-docs-rs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Builds each published crate's documentation the way docs.rs does; see `check_docs_rs` in
+# `xtask/src/main.rs`. The local `cargo check-all` runs the same check.
+#
+# A pull request from a branch in this repository already has the push run, so the
+# duplicate `pull_request` run is skipped; a pull request from a fork runs.
+
+jobs:
+  check-docs-rs:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust for the xtask
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install nightly Rust with the docs.rs targets
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: thumbv6m-none-eabi, riscv32imac-unknown-none-elf
+
+      - name: Build the docs as docs.rs does
+        run: cargo +stable run --manifest-path xtask/Cargo.toml -- check-docs-rs

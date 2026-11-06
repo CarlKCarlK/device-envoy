@@ -11,6 +11,7 @@ fn main() -> ExitCode {
         (Some("check-all"), None) => return check_all(),
         (Some("check-core"), None) => check_core_job(&workspace_root()),
         (Some("check-rp"), None) => check_rp(&workspace_root()),
+        (Some("check-docs-rs"), None) => check_docs_rs(&workspace_root()),
         (Some("check-esp"), arch) => match EspArch::parse(arch) {
             Some(arch) => check_esp(&workspace_root(), arch),
             None => return usage(),
@@ -27,7 +28,7 @@ fn main() -> ExitCode {
 fn usage() -> ExitCode {
     eprintln!(
         "Usage: cargo run --manifest-path xtask/Cargo.toml -- \
-         <check-all | check-core | check-rp | check-esp [riscv | xtensa]>\n\
+         <check-all | check-core | check-rp | check-esp [riscv | xtensa] | check-docs-rs>\n\
          check-all runs everything, formatting the workspace first; the others are the \
          parts CI runs as separate jobs."
     );
@@ -89,6 +90,7 @@ fn check_all() -> ExitCode {
         }),
         spawn_check("rp", &workspace_root, check_rp),
         spawn_check("clippy", &workspace_root, check_clippy),
+        spawn_check("docs.rs", &workspace_root, check_docs_rs),
     ];
 
     let mut failed = false;
@@ -350,6 +352,127 @@ fn check_rp(workspace_root: &Path) -> bool {
         "--features",
         "embedded,pico1,wifi",
     ]))
+}
+
+/// The published crates, each documented on docs.rs.
+const DOCS_RS_CRATES: [&str; 3] = ["device-envoy-core", "device-envoy-rp", "device-envoy-esp"];
+
+/// Builds each published crate's documentation the way docs.rs does: nightly rustdoc,
+/// `--cfg docsrs`, and the features, target, and rustdoc arguments from the crate's
+/// `[package.metadata.docs.rs]`. Rustdoc warnings are errors for every crate.
+///
+/// docs.rs uses the newest nightly, and RP 0.2.0's docs failed there on lints that older
+/// toolchains do not report. Run `rustup update nightly` first to match it. Only the
+/// default target is built; it is the one docs.rs's build status depends on.
+fn check_docs_rs(workspace_root: &Path) -> bool {
+    if !run_command(
+        Command::new("cargo")
+            .args(["+nightly", "--version"])
+            .stdout(std::process::Stdio::null()),
+    ) {
+        eprintln!("docs.rs check needs a nightly toolchain: rustup toolchain install nightly");
+        return false;
+    }
+    DOCS_RS_CRATES.iter().all(|package| {
+        let manifest_path = workspace_root
+            .join("crates")
+            .join(package)
+            .join("Cargo.toml");
+        let metadata = match DocsRsMetadata::read(&manifest_path) {
+            Ok(metadata) => metadata,
+            Err(message) => {
+                eprintln!("{}: {message}", manifest_path.display());
+                return false;
+            }
+        };
+        println!("==> docs.rs build of {package}");
+        let mut rustdoc_flags = vec!["--cfg", "docsrs", "-D", "warnings"];
+        rustdoc_flags.extend(metadata.rustdoc_args.iter().map(String::as_str));
+        let mut command = Command::new("cargo");
+        command
+            .current_dir(workspace_root)
+            .env("DOCS_RS", "1")
+            .env("RUSTDOCFLAGS", rustdoc_flags.join(" "))
+            .args(["+nightly", "rustdoc", "--lib", "-p", package])
+            .args(["--target-dir", "target/docs-rs-check"]);
+        if metadata.no_default_features {
+            command.arg("--no-default-features");
+        }
+        if !metadata.features.is_empty() {
+            command.args(["--features", &metadata.features.join(",")]);
+        }
+        if let Some(target) = &metadata.default_target {
+            command.args(["--target", target]);
+        }
+        run_command(&mut command)
+    })
+}
+
+/// The `[package.metadata.docs.rs]` settings this check understands.
+#[derive(Default)]
+struct DocsRsMetadata {
+    no_default_features: bool,
+    features: Vec<String>,
+    default_target: Option<String>,
+    rustdoc_args: Vec<String>,
+}
+
+impl DocsRsMetadata {
+    /// Reads the table from a manifest. Any key this check does not understand is an error,
+    /// so a docs.rs setting cannot be silently ignored.
+    fn read(manifest_path: &Path) -> Result<Self, String> {
+        let manifest = fs::read_to_string(manifest_path).map_err(|error| error.to_string())?;
+        let mut lines = manifest
+            .lines()
+            .skip_while(|line| line.trim() != "[package.metadata.docs.rs]");
+        if lines.next().is_none() {
+            return Err("no [package.metadata.docs.rs] table".to_owned());
+        }
+        let mut metadata = Self::default();
+        for line in lines
+            .map(str::trim)
+            .take_while(|line| !line.starts_with('['))
+        {
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let (key, value) = line
+                .split_once('=')
+                .ok_or_else(|| format!("unexpected docs.rs metadata line: {line}"))?;
+            let value = value.trim();
+            match key.trim() {
+                "all-features" if value == "false" => {}
+                "no-default-features" => metadata.no_default_features = value == "true",
+                "features" => metadata.features = parse_string_array(value)?,
+                "default-target" => metadata.default_target = Some(parse_string(value)?),
+                "targets" => {}
+                "rustdoc-args" => metadata.rustdoc_args = parse_string_array(value)?,
+                _ => return Err(format!("docs.rs check does not understand: {line}")),
+            }
+        }
+        Ok(metadata)
+    }
+}
+
+fn parse_string(value: &str) -> Result<String, String> {
+    value
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .map(str::to_owned)
+        .ok_or_else(|| format!("expected a one-line string: {value}"))
+}
+
+fn parse_string_array(value: &str) -> Result<Vec<String>, String> {
+    let items = value
+        .strip_prefix('[')
+        .and_then(|value| value.strip_suffix(']'))
+        .ok_or_else(|| format!("expected a one-line array: {value}"))?;
+    items
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(parse_string)
+        .collect()
 }
 
 fn reject_absolute_core_self_links(workspace_root: &Path) -> bool {

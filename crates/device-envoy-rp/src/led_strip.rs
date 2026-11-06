@@ -548,7 +548,7 @@ macro_schema::define! {
     ///
     /// **After reading the examples below, see also:**
     ///
-    /// - [`LedStrip`](crate::led_strip::LedStrip) — LED strip trait defining methods and associated constants
+    /// - [`LedStrip`] — LED strip trait defining methods and associated constants
     /// - [`Led2d`](crate::led2d::Led2d) — LED panel trait defining methods and associated constants
     /// - [`led_strip!`](macro@crate::led_strip) — Alternative macro to generate a single LED strip type. Consumes a PIO resource.
     /// - [`led2d!`](macro@crate::led2d) — Alternative macro to generate a single LED panel type. Consumes a PIO resource.
@@ -674,7 +674,7 @@ macro_schema::define! {
     ///
     /// If a member is a rectangular LED panel rather than a linear strip, add a `led2d`
     /// block to describe its geometry. That member's type then implements
-    /// [`Led2d`](crate::led2d::Led2d) instead of [`LedStrip`](crate::led_strip::LedStrip).
+    /// [`Led2d`](crate::led2d::Led2d) instead of [`LedStrip`].
     /// The `led_layout` value must be a `const` [`LedLayout`](crate::led2d::layout::LedLayout)
     /// so its dimensions are known at compile time, and `font` is a
     /// [`Led2dFont`](crate::led2d::Led2dFont). Detailed 2D rendering and animation support is

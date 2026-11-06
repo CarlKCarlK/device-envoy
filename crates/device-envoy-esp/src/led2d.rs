@@ -155,7 +155,7 @@ pub mod led2d_generated;
 pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 
 macro_schema::define! {
-    /// Macro to generate an LED-panel struct type. See [`Led2d`](crate::led2d::Led2d) for the shared API.
+    /// Macro to generate an LED-panel struct type. See [`Led2d`] for the shared API.
     ///
     /// **See the [led2d module documentation](mod@crate::led2d) for usage examples.**
     ///

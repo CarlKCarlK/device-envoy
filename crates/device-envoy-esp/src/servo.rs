@@ -278,8 +278,6 @@ macro_schema::define! {
     /// Macro to generate a direct-servo struct type.
     ///
     /// **See the [servo module documentation](mod@crate::servo) for usage examples.**
-    ///
-    /// See the [servo module documentation](mod@crate::servo) for details and examples.
     pub servo {
         /// GPIO pin for servo output, for example `GPIO10`.
         pin: ident,

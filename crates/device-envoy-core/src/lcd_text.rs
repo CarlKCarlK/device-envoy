@@ -392,9 +392,7 @@ async fn write_lcd_text_cells<const MAX_CHARS: usize>(
 
     let mut lcd_text_frame = LcdTextFrame::<MAX_CHARS>::new_blank(width, height);
     let cell_count = core::cmp::min(width * height, cells.len());
-    for cell_index in 0..cell_count {
-        lcd_text_frame.cells[cell_index] = cells[cell_index];
-    }
+    lcd_text_frame.cells[..cell_count].copy_from_slice(&cells[..cell_count]);
 
     lcd_text_driver
         .write_frame(lcd_text_write, &lcd_text_frame)

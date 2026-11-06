@@ -605,6 +605,13 @@ macro_schema::define! {
 }
 
 macro_schema::define! {
+    /// Macro to generate an LED-strip struct type.
+    ///
+    /// **See the [led_strip module documentation](mod@crate::led_strip) for usage examples.**
+    ///
+    /// `max_frames = 0` disables animation and allocates no frame storage; `write_frame()` is still supported.
+    ///
+    #[doc = include_str!("docs/current_limiting_and_gamma.md")]
     ///
     /// # Related Macros
     ///

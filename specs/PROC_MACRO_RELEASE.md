@@ -334,8 +334,39 @@ lockfiles are refreshed (`cyd-starter`'s `syn` went from 3.0.4 to 3.0.9, which
       through `pio` 0.3, and that is blocked upstream: `pio-proc` 0.4 needs
       `pio` 0.4, and embassy-rp 0.10.0 (the latest) still requires `pio` 0.3.
       Move to `pio` 0.4 when embassy-rp does.
+- [x] Automated docs audit (2026-11-05). Each macro's hand-written summary
+      was diffed between RP and ESP, and the docs were scanned for wrong link
+      targets, the banned "module-level example" phrasing, types named in
+      docs that no longer exist, and uncompiled Markdown with old API
+      spellings. Fixed:
+  - ESP `led_strip!` had lost its summary, usage-examples link,
+    `max_frames` note, and current-limiting section.
+  - RP `servo!` had a drifted summary.
+  - ESP `servo!` and `servo_player!` had duplicate links.
+  - ESP `led2d!` had a second "Fields" heading.
+  - `led2d!` linked `led_strip!` to the module on both chips.
+  - RP `i2cs!` had a self-contradicting sentence.
+  - Link text was off-convention (led2d, `cyd`).
+  - The RP demos README named a removed `ServoAnimate`.
+  - esp-blinky's C2 DevKitM-1 example used the removed `Engine::Spi`.
+
+  New test `every_macro_page_leads_to_usage_examples` checks every public
+  macro in Core, RP, and ESP, reading included `.md` files too. A mutation
+  check confirmed that it flags the old ESP `led_strip!`. The remaining RP/ESP
+  summary differences are hardware-driven: RP's PIO sharing, and the RP-only
+  `led_strips!`.
+- [x] CI gaps found 2026-11-05.
+  - `Check Clippy` had failed since 2026-10-26 on one `manual_memcpy` in
+    core's `lcd_text.rs`, unnoticed because `cargo check-all` did not run
+    clippy. Now fixed, and `check-all` runs the workflow's six clippy
+    commands; keep the two in sync. `check-all` also names a failing
+    parallel check.
+  - `Check Starters` cloned the starters' `main`, which uses the 0.1 API. It
+    now takes a `starter_branch` input; dispatch it with
+    `starter_branch=device-envoy-0.2.0` until the starters merge.
 - [ ] Review the generated syntax and field tables on each macro page for
-      Core, RP, and ESP (`just show-docs`).
+      Core, RP, and ESP (`just show-docs-esp`, `just show-docs-rp`; then
+      `just docs` to restore the snapshot).
 
 ## 6. Release
 

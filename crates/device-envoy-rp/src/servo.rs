@@ -161,9 +161,9 @@ pub const SERVO_MIN_US_DEFAULT: u16 = 500;
 pub const SERVO_MAX_US_DEFAULT: u16 = 2_500;
 
 macro_schema::define! {
-    /// Create a servo with keyword arguments and default pulse widths.
+    /// Macro to generate a direct-servo struct type.
     ///
-    /// See the [servo module documentation](mod@crate::servo) for details and examples.
+    /// **See the [servo module documentation](mod@crate::servo) for usage examples.**
     pub servo {
         /// GPIO pin for servo output, for example `PIN_11`; its PWM slice is passed to `new`.
         pin: ident,

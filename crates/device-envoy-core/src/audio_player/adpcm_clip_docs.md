@@ -2,6 +2,8 @@
 
 See [`AdpcmClipGenerated`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated) for a sample of generated items.
 
+**See the [audio_player module documentation](mod@crate::audio_player) for usage examples.**
+
 For ffmpeg conversion commands, see "Preparing audio files" in
 [`pcm_clip!`](macro.pcm_clip.html) and [`adpcm_clip!`](macro.adpcm_clip.html).
 

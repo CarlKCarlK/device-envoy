@@ -16,7 +16,7 @@
 //! - [`Led2dGenerated`](led2d_generated::Led2dGenerated) - Sample generated panel type showing the constructor path.
 //! - [`LedLayout`] - Compile-time description of panel geometry and wiring, including dimensions (with examples)
 //! - [`Frame2d`] - 2D pixel array used for general graphics (includes examples)
-//! - [`led_strip!`](mod@crate::led_strip) - Underlying strip abstraction used by this panel API.
+//! - [`led_strip!`](macro@crate::led_strip) - Underlying strip abstraction used by this panel API.
 //!
 //! # Example: Write Text
 //!
@@ -155,9 +155,7 @@ pub type Led2dEsp<'a, const N: usize, S> = Led2dStripAdapter<'a, N, S>;
 macro_schema::define! {
     /// Macro to generate an LED-panel struct type. See [`Led2d`](crate::led2d::Led2d) for the shared API.
     ///
-    /// **See the [led2d module](mod@crate::led2d) for usage examples.**
-    ///
-    /// # Fields
+    /// **See the [led2d module documentation](mod@crate::led2d) for usage examples.**
     ///
     /// The `led_layout` value must be a const so its dimensions can be derived at compile time.
     ///
@@ -167,7 +165,7 @@ macro_schema::define! {
     ///
     /// # Related Macros
     ///
-    /// - [`led_strip!`](mod@crate::led_strip) - For 1-dimensional LED strips.
+    /// - [`led_strip!`](macro@crate::led_strip) — For 1-dimensional LED strips
     #[cfg(target_os = "none")]
     pub led2d {
         /// GPIO pin for LED data, for example `GPIO8`.

@@ -2,6 +2,13 @@ name: Check Starters
 
 "on":
   workflow_dispatch:
+    inputs:
+      starter_branch:
+        description: >-
+          Starter branch to check, such as a release branch that already uses this
+          branch's API (for example `device-envoy-0.2.0`). Scheduled runs use `main`.
+        required: false
+        default: main
   schedule:
     - cron: "0 6 1 * *"
 
@@ -20,7 +27,9 @@ jobs:
           path: device-envoy
 
       - name: Clone device-envoy-rp-blinky
-        run: git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-rp-blinky.git device-envoy-rp-blinky
+        run: git clone --depth 1 --branch "${STARTER_BRANCH}" https://github.com/CarlKCarlK/device-envoy-rp-blinky.git device-envoy-rp-blinky
+        env:
+          STARTER_BRANCH: ${{ inputs.starter_branch || 'main' }}
 
       - name: Use local device-envoy-rp
         working-directory: device-envoy-rp-blinky
@@ -49,7 +58,9 @@ jobs:
           path: device-envoy
 
       - name: Clone device-envoy-esp-blinky
-        run: git clone --depth 1 https://github.com/CarlKCarlK/device-envoy-esp-blinky.git device-envoy-esp-blinky
+        run: git clone --depth 1 --branch "${STARTER_BRANCH}" https://github.com/CarlKCarlK/device-envoy-esp-blinky.git device-envoy-esp-blinky
+        env:
+          STARTER_BRANCH: ${{ inputs.starter_branch || 'main' }}
 
       - name: Use local device-envoy-esp
         working-directory: device-envoy-esp-blinky

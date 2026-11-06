@@ -88,13 +88,18 @@ fn check_all() -> ExitCode {
             check_esp(workspace_root, EspArch::All)
         }),
         spawn_check("rp", &workspace_root, check_rp),
+        spawn_check("clippy", &workspace_root, check_clippy),
     ];
 
     let mut failed = false;
     for (name, handle) in handles {
         match handle.join() {
             Ok(true) => {}
-            Ok(false) => failed = true,
+            Ok(false) => {
+                // The checks run in parallel, so name the failing one; its errors are above.
+                eprintln!("{name} check failed");
+                failed = true;
+            }
             Err(_) => {
                 eprintln!("{name} check thread panicked");
                 failed = true;
@@ -120,6 +125,63 @@ fn spawn_check(
 ) -> (&'static str, thread::JoinHandle<bool>) {
     let workspace_root = workspace_root.to_path_buf();
     (name, thread::spawn(move || check(&workspace_root)))
+}
+
+/// The host clippy runs that the `Check Clippy` workflow makes, so `check-all` catches the
+/// same lints before a push. Keep this list in sync with `.github/workflows/check-clippy.yml`.
+fn check_clippy(workspace_root: &Path) -> bool {
+    const CLIPPY_RUNS: [&[&str]; 6] = [
+        &[
+            "-p",
+            "device-envoy-core",
+            "--all-targets",
+            "--no-default-features",
+        ],
+        &[
+            "-p",
+            "device-envoy-core",
+            "--all-targets",
+            "--no-default-features",
+            "--features",
+            "host",
+        ],
+        &[
+            "-p",
+            "device-envoy-core",
+            "--all-targets",
+            "--no-default-features",
+            "--features",
+            "wifi",
+        ],
+        &[
+            "-p",
+            "device-envoy",
+            "--all-targets",
+            "--no-default-features",
+        ],
+        &[
+            "-p",
+            "device-envoy-examples-core",
+            "--all-targets",
+            "--no-default-features",
+        ],
+        &[
+            "-p",
+            "device-envoy-examples-core",
+            "--all-targets",
+            "--features",
+            "host",
+        ],
+    ];
+    CLIPPY_RUNS.iter().all(|clippy_args| {
+        run_command(
+            Command::new("cargo")
+                .current_dir(workspace_root)
+                .arg("clippy")
+                .args(*clippy_args)
+                .args(["--", "-D", "warnings"]),
+        )
+    })
 }
 
 /// CI's core job: formatting (checked, not applied), documentation self-links, Core, and

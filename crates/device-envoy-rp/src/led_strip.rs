@@ -663,7 +663,7 @@ macro_schema::define! {
     /// The `led_layout` value must be a `const` [`LedLayout`](crate::led2d::layout::LedLayout)
     /// so its dimensions are known at compile time, and `font` is a
     /// [`Led2dFont`](crate::led2d::Led2dFont). Detailed 2D rendering and animation support is
-    /// documented in the [`led2d` module](mod@crate::led2d).
+    /// documented in the [led2d module documentation](mod@crate::led2d).
     ///
     /// Set `max_frames: 0` to disable animation and allocate no frame storage; `write_frame()`
     /// is still supported.

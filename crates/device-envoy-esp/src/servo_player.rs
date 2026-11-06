@@ -15,7 +15,7 @@ macro_schema::define! {
     ///
     /// **After reading the configuration details below, see also:**
     ///
-    /// - [`servo`](mod@crate::servo) module - Complete examples and usage patterns
+    /// - [`servo`](mod@crate::servo) module — Complete examples and usage patterns
     ///
     /// Use this macro when your project has a servo that needs scripted animation control.
     /// The macro generates a struct type and spawns a background task to execute
@@ -32,8 +32,6 @@ macro_schema::define! {
     ///
     /// `max_steps = 0` disables animation and allocates no step storage; `set_degrees()`,
     /// `hold()`, and `relax()` are still supported.
-    ///
-    /// See the [servo module documentation](mod@crate::servo) for details and examples.
     pub servo_player {
         /// GPIO pin for servo output, for example `GPIO10`.
         pin: ident,

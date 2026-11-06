@@ -374,6 +374,87 @@ fn rp_and_esp_macros_document_the_same_contract()
     Ok(())
 }
 
+#[test]
+fn every_macro_page_leads_to_usage_examples() -> core::result::Result<(), Box<dyn std::error::Error>>
+{
+    // A macro's page documents its fields; its examples usually live in its module's
+    // documentation. Every public macro must either carry its own example or link to that
+    // module documentation, so no reader lands on a macro page without a way to an example.
+    let mut problems = Vec::new();
+    for crate_dir in ["device-envoy-core", "device-envoy-rp", "device-envoy-esp"] {
+        for (name, docs) in public_macro_summaries(crate_dir)? {
+            let links_examples =
+                docs.contains("module documentation](mod@") && docs.contains("examples");
+            let has_example = docs.contains("```rust");
+            if !links_examples && !has_example {
+                problems.push(format!("{crate_dir}: `{name}!`"));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "these macro pages neither show an example nor link to their module documentation \
+         for usage examples:\n{}",
+        problems.join("\n")
+    );
+    Ok(())
+}
+
+/// The hand-written documentation of every public `define!` macro under `crate_dir`'s
+/// `src`, by macro name, with each `#[doc = include_str!("...")]` file read in.
+fn public_macro_summaries(
+    crate_dir: &str,
+) -> core::result::Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(crate_dir)
+        .join("src");
+    let mut summaries = BTreeMap::new();
+    for path in rust_files(&src)? {
+        let mut definitions = Vec::new();
+        collect_definitions(
+            &syn::parse_file(&fs::read_to_string(&path)?)?.items,
+            &mut definitions,
+        );
+        for tokens in definitions {
+            let name = defined_name(tokens.clone())?.to_string();
+            if name.starts_with("__") {
+                continue;
+            }
+            let attrs = (|input: syn::parse::ParseStream| {
+                let attrs = input.call(Attribute::parse_outer)?;
+                input.parse::<TokenStream>()?;
+                Ok(attrs)
+            })
+            .parse2(tokens)?;
+            let mut docs = String::new();
+            for attr in attrs {
+                let syn::Meta::NameValue(name_value) = &attr.meta else {
+                    continue;
+                };
+                if !name_value.path.is_ident("doc") {
+                    continue;
+                }
+                match &name_value.value {
+                    syn::Expr::Lit(syn::ExprLit {
+                        lit: syn::Lit::Str(text),
+                        ..
+                    }) => docs.push_str(&text.value()),
+                    syn::Expr::Macro(expr_macro) if expr_macro.mac.path.is_ident("include_str") => {
+                        let included: syn::LitStr = syn::parse2(expr_macro.mac.tokens.clone())?;
+                        let source_dir = path.parent().ok_or("source file has no directory")?;
+                        docs.push_str(&fs::read_to_string(source_dir.join(included.value()))?);
+                    }
+                    _ => {}
+                }
+                docs.push('\n');
+            }
+            summaries.insert(name, docs);
+        }
+    }
+    Ok(summaries)
+}
+
 /// Where RP and ESP intentionally generate a different API, as (generated type, API item)
 /// pairs in the form [`sample_apis`] records them.
 const API_DIFFERENCES: [(&str, &str); 2] = [

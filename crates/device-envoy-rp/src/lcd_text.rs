@@ -148,9 +148,6 @@ macro_schema::define! {
     /// Macro to generate multiple LCD text device types that share one I2C
     /// resource.
     ///
-    /// This page provides the primary documentation and examples for grouped LCD
-    /// text devices that share one I2C peripheral.
-    ///
     /// For a single LCD type, see [`lcd_text!`](macro@crate::lcd_text).
     ///
     /// **See the [lcd_text module documentation](mod@crate::lcd_text) for usage

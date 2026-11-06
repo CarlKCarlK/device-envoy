@@ -100,7 +100,7 @@ use touch::TouchEvent;
 /// each implementation's concrete display, touch, and error types, while
 /// generic application code can accept any `C: Cyd`.
 ///
-/// The [module-level example](index.html#application-example) shows how to use
+/// The [cyd module example](index.html#application-example) shows how to use
 /// the display and calibrated touch input. To find the device's current
 /// orientation, see [`Cyd::orientation`]. See the
 /// [implementations](index.html#implementations-1) for `CydEsp`, `CydRp`,

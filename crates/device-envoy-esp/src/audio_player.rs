@@ -702,7 +702,7 @@ macro_schema::define! {
     /// - `<Name>Playable` - trait-object clip source alias at this player's sample rate
     /// - associated constants and constructor on `<Name>` (for example:
     ///   `SAMPLE_RATE_HZ`, `new(...)`)
-    /// - playback operations via [`AudioPlayer`](crate::audio_player::AudioPlayer) trait
+    /// - playback operations via [`AudioPlayer`] trait
     ///   (`play(...)`, `stop()`, `wait_until_stopped(...)`, volume controls)
     ///
     /// The generated type contains static resources and spawns its background device

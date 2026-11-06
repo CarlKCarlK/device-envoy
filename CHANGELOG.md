@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 (`device-envoy-rp` only)
+
+- Fix the docs.rs build of `device-envoy-rp` 0.2.0. Current nightly rustdoc
+  reports four doc links as redundant, and the crate denies warnings. Only the
+  documentation changed; `device-envoy-core` and `device-envoy-esp` stay at
+  0.2.0.
+
 ## 0.2.0
 
 Every declaration macro is now defined by a

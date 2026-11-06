@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0
 
 Every declaration macro is now defined by a
 [`macro-schema`](https://crates.io/crates/macro-schema) schema instead of a

@@ -21,7 +21,7 @@ ir_kepler! {
     IrKeplerBoard { pin: GPIO7 }
 }
 
-async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
+async fn handle_kepler_button_presses(ir_kepler: &mut impl IrKepler) -> ! {
     loop {
         let kepler_button = ir_kepler.wait_for_press().await;
         match kepler_button {
@@ -45,7 +45,8 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 }
 
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?.into_async();
 
     let channel_creator = rmt80.channel4;
     let ir_kepler_board = IrKeplerBoard::new(p.GPIO7, channel_creator, spawner)?;

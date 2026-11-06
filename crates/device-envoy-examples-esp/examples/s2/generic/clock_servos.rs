@@ -32,7 +32,7 @@ use device_envoy_esp::{
     flash_block::FlashBlockEsp,
     init_and_start,
     servo::Servo as _,
-    servo::{AtEnd, Direction, ServoPlayer as _, ServoPlayerHandle, combine, linear, servo_player},
+    servo::{AtEnd, Direction, ServoPlayer as _, combine, linear, servo_player},
     wifi_auto::{
         WifiAuto as _, WifiAutoEsp, WifiAutoEvent,
         fields::{TimezoneField, TimezoneFieldStatic},
@@ -42,7 +42,6 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 const CAPTIVE_PORTAL_SSID: &str = "DeviceEnvoyClock";
 const SERVO_MAX_STEPS: usize = 30;
-type ClockServoPlayer = ServoPlayerHandle<SERVO_MAX_STEPS>;
 
 button_watch! {
     ForcePortalButtonWatch {
@@ -77,7 +76,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, ledc: ledc);
+    init_and_start!(p);
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!("Starting Wi-Fi servo clock (WifiAuto)");
@@ -96,8 +96,8 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
         spawner,
     )?;
 
-    let bottom_servo_player = BottomServoPlayer::new(&ledc, p.GPIO4, spawner)?;
-    let top_servo_player = TopServoPlayer::new(&ledc, p.GPIO18, spawner)?;
+    let bottom_servo_player = BottomServoPlayer::new(p.GPIO4, &ledc, spawner)?;
+    let top_servo_player = TopServoPlayer::new(p.GPIO18, &ledc, spawner)?;
 
     let servo_clock_display = ServoClockDisplay::new(bottom_servo_player, top_servo_player);
     let servo_clock_display_ref = &servo_clock_display;
@@ -176,12 +176,12 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 }
 
 struct ServoClockDisplay {
-    bottom: ClockServoPlayer,
-    top: ClockServoPlayer,
+    bottom: &'static BottomServoPlayer,
+    top: &'static TopServoPlayer,
 }
 
 impl ServoClockDisplay {
-    fn new(bottom: ClockServoPlayer, top: ClockServoPlayer) -> Self {
+    fn new(bottom: &'static BottomServoPlayer, top: &'static TopServoPlayer) -> Self {
         Self { bottom, top }
     }
 

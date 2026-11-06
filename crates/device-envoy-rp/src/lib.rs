@@ -14,6 +14,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![allow(async_fn_in_trait, reason = "single-threaded embedded")]
 
+// Generated docs link to `device_envoy_rp::...`, which resolves in a user's crate; this alias makes
+// the same links resolve when the macros expand inside this crate (the sample doc pages).
+#[cfg(doc)]
+extern crate self as device_envoy_rp;
+
 // Compile-time checks: exactly one board must be selected (unless testing with host feature)
 #[cfg(all(target_os = "none", not(any(feature = "pico1", feature = "pico2"))))]
 compile_error!("Must enable exactly one board feature: 'pico1' or 'pico2'");
@@ -38,8 +43,65 @@ pub mod pio_irqs;
 // Embedded-only in normal builds, but compiled for host unit tests.
 #[cfg(any(target_os = "none", all(test, feature = "host")))]
 pub mod audio_player;
+// Crate-root path kept for `use device_envoy_rp::audio_player;`; documented in `audio_player`.
+#[cfg(any(target_os = "none", all(test, feature = "host")))]
+#[doc(hidden)]
+pub use audio_player::audio_player;
+// Must be `pub` for macro expansion: every schema-declared macro forwards to it.
+#[doc(hidden)]
+pub use macro_schema::expand as __macro_schema_expand;
+
+// Must be `pub` for macro expansion: generated code names these crates through
+// `$crate`, so the user's crate need not depend on them.
+#[doc(hidden)]
+pub use embassy_sync as __embassy_sync;
+#[doc(hidden)]
+pub use heapless as __heapless;
+#[doc(hidden)]
+pub use static_cell as __static_cell;
+
 #[cfg(target_os = "none")]
 pub mod button;
+// Crate-root path kept for `use device_envoy_rp::button_watch;`; documented in `button`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use button::button_watch;
+// Crate-root path kept for `use device_envoy_rp::led_strips;`; documented in `led_strip`.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+pub use led_strip::led_strips;
+// Crate-root path kept for `use device_envoy_rp::led_strip;`; documented in `led_strip`.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+pub use led_strip::led_strip;
+// Crate-root path kept for `use device_envoy_rp::led2d;`; documented in `led2d`.
+#[cfg(not(feature = "host"))]
+#[doc(hidden)]
+pub use led2d::led2d;
+// Crate-root path kept for `use device_envoy_rp::irs;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use ir::irs;
+// Crate-root path kept for `use device_envoy_rp::ir;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use ir::ir;
+// Crate-root path kept for `use device_envoy_rp::ir_mappings;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use ir::ir_mappings;
+// Crate-root path kept for `use device_envoy_rp::ir_mapping;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use ir::ir_mapping;
+// Crate-root path kept for `use device_envoy_rp::ir_keplers;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use ir::ir_keplers;
+// Crate-root path kept for `use device_envoy_rp::ir_kepler;`; documented in `ir`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use ir::ir_kepler;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod clock_sync;
 #[cfg(target_os = "none")]
@@ -57,8 +119,20 @@ pub mod flash_block;
 pub mod ir;
 #[cfg(target_os = "none")]
 pub mod lcd_text;
+// Crate-root path kept for `use device_envoy_rp::i2cs;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::i2cs;
+// Crate-root path kept for `use device_envoy_rp::lcd_text;`; documented in `lcd_text`.
+#[cfg(all(target_os = "none", not(feature = "host")))]
+#[doc(hidden)]
+pub use lcd_text::lcd_text;
 #[cfg(target_os = "none")]
 pub mod led;
+// Crate-root path kept for `use device_envoy_rp::led;`; documented in `led`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use led::led;
 pub mod led2d;
 #[cfg(target_os = "none")]
 pub mod led4;
@@ -69,6 +143,17 @@ pub mod rfid;
 pub mod servo;
 #[cfg(target_os = "none")]
 mod servo_player;
+// Crate-root path kept for `device_envoy_rp::combine!`; documented in `servo`.
+#[doc(hidden)]
+pub use device_envoy_core::combine;
+// Crate-root path kept for `use device_envoy_rp::servo;`; documented in `servo`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use servo::servo;
+// Crate-root path kept for `use device_envoy_rp::servo_player;`; documented in `servo`.
+#[cfg(target_os = "none")]
+#[doc(hidden)]
+pub use servo_player::servo_player;
 #[cfg(all(feature = "wifi", target_os = "none"))]
 pub mod wifi_auto;
 
@@ -82,33 +167,3 @@ pub mod docs {
 // Re-export error types and result (used throughout)
 pub use crate::error::{Error, Result};
 pub use device_envoy_core::tone;
-/// Used internally by other macros.
-#[doc(hidden)]
-pub use paste::paste as __paste;
-
-/// Public for macro expansion in downstream crates.
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __validate_keyword_fields_expr {
-    (
-        macro_name: $macro_name:literal,
-        allowed_macro: $allowed_macro:path,
-        fields: [ $( $field:ident : $value:expr ),* $(,)? ]
-    ) => {
-        const _: () = {
-            $( $allowed_macro!($field, $macro_name); )*
-            #[allow(non_snake_case)]
-            mod __device_envoy_keyword_fields_uniqueness {
-                $( pub(super) mod $field {} )*
-            }
-        };
-    };
-
-    (
-        macro_name: $macro_name:literal,
-        allowed_macro: $allowed_macro:path,
-        fields: [ $($fields:tt)* ]
-    ) => {
-        compile_error!(concat!($macro_name, " fields must use `name: value` syntax"));
-    };
-}

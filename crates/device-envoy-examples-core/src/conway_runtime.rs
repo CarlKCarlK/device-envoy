@@ -9,7 +9,7 @@ use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Timer};
 
 /// Run Conway on an LED panel and IR remote using the shared application state.
-pub async fn conway_with_led2d_ir_kepler<L, I>(led2d: L, ir_kepler: I) -> !
+pub async fn conway_with_led2d_ir_kepler<L, I>(led2d: L, mut ir_kepler: I) -> !
 where
     L: Led2d<16, 16>,
     I: IrKepler,

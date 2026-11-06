@@ -18,11 +18,18 @@ use device_envoy_esp::{
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
+// Module-private constants: `len` and `reset_us` may name the caller's items.
+const STRIP_A_LEN: usize = 8;
+const STRIP_A_RESET_US: u32 = 80;
+
 #[cfg(feature = "esp32")]
 led_strip! {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
     LedStripSpiA {
-        engine: device_envoy_esp::led_strip::Engine::Spi,
-        len: 8,
+        engine: device_envoy_esp::led_strip::Spi,
+        len: STRIP_A_LEN,
+        reset_us: STRIP_A_RESET_US,
         pin: GPIO0,
         max_frames: 2,
         max_current: Current::Milliamps(120),
@@ -31,9 +38,12 @@ led_strip! {
 
 #[cfg(not(feature = "esp32"))]
 led_strip! {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
     LedStripSpiA {
-        engine: device_envoy_esp::led_strip::Engine::Spi,
-        len: 8,
+        engine: device_envoy_esp::led_strip::Spi,
+        len: STRIP_A_LEN,
+        reset_us: STRIP_A_RESET_US,
         pin: GPIO10,
         max_frames: 2,
         max_current: Current::Milliamps(120),
@@ -42,9 +52,11 @@ led_strip! {
 
 #[cfg(all(target_arch = "xtensa", not(feature = "esp32")))]
 led_strip! {
-    LedStripSpiB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) LedStripSpiB {
         max_frames: 2,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         len: 1,
         pin: GPIO11,
     }
@@ -52,11 +64,43 @@ led_strip! {
 
 #[cfg(not(target_arch = "xtensa"))]
 led_strip! {
-    LedStripSpiB {
+    // A struct-only attribute ensures the declaration does not become a type alias.
+    #[repr(transparent)]
+    pub(crate) LedStripSpiB {
         max_frames: 2,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         len: 1,
         pin: GPIO6,
+    }
+}
+
+// Keep the public declaration inside a module to exercise restricted visibility.
+mod panel {
+    use device_envoy_esp::{
+        led2d,
+        led2d::{Led2dFont, layout::LedLayout},
+    };
+
+    const LED_LAYOUT: LedLayout<1, 1, 1> = LedLayout::serpentine_column_major();
+
+    led2d! {
+        #[repr(C)]
+        pub(super) LedPanelSpi {
+            pin: GPIO10,
+            engine: device_envoy_esp::led_strip::Spi,
+            led_layout: LED_LAYOUT,
+            font: Led2dFont::Font4x6Trim,
+        }
+    }
+
+    // The default engine uses RMT where available and SPI on chips such as ESP32-C2.
+    led2d! {
+        #[repr(C)]
+        pub(super) LedPanelDefault {
+            pin: GPIO10,
+            led_layout: LED_LAYOUT,
+            font: Led2dFont::Font4x6Trim,
+        }
     }
 }
 
@@ -67,10 +111,12 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
-    #[cfg(esp_has_rmt)]
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
-    #[cfg(not(esp_has_rmt))]
     init_and_start!(p);
+    #[cfg(esp_has_rmt)]
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
+
+    assert_eq!(panel::LedPanelSpi::LEN, 1);
+    assert_eq!(panel::LedPanelDefault::LEN, 1);
 
     #[cfg(feature = "esp32")]
     let led_strip_spi_a = LedStripSpiA::new(p.GPIO0, p.SPI2, spawner)?;

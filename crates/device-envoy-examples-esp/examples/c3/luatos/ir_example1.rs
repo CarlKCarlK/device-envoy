@@ -22,7 +22,7 @@ ir! {
     }
 }
 
-async fn handle_ir_presses(ir: &impl Ir) -> ! {
+async fn handle_ir_presses(ir: &mut impl Ir) -> ! {
     loop {
         let ir_event = ir.wait_for_press().await;
         match ir_event {
@@ -41,7 +41,8 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 }
 
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?.into_async();
 
     let channel_creator = rmt80.channel2;
     let ir_board = IrBoard::new(p.GPIO7, channel_creator, spawner)?;

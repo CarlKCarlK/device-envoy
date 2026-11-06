@@ -34,7 +34,7 @@ ir_mapping! {
     }
 }
 
-async fn handle_mapped_button_presses(ir_mapping: &impl IrMapping<AppButton>) -> ! {
+async fn handle_mapped_button_presses(ir_mapping: &mut impl IrMapping<AppButton>) -> ! {
     loop {
         let app_button = ir_mapping.wait_for_press().await;
         match app_button {
@@ -58,7 +58,8 @@ async fn main(spawner: embassy_executor::Spawner) -> ! {
 }
 
 async fn inner_main(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?.into_async();
 
     let channel_creator = rmt80.channel4;
     let ir_mapping_board = IrMappingBoard::new(p.GPIO7, channel_creator, &APP_BUTTON_MAP, spawner)?;

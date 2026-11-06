@@ -26,7 +26,6 @@ const LED_LAYOUT_12X4: LedLayout<48, 12, 4> = LedLayout::serpentine_column_major
 led2d! {
     Led12x4 {
         pin: GPIO18,
-        len: 48,
         led_layout: LED_LAYOUT_12X4,
         max_current: Current::Milliamps(250),
         font: Led2dFont::Font3x4Trim,
@@ -40,7 +39,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!(

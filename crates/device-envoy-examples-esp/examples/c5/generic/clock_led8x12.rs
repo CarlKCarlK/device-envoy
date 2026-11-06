@@ -61,11 +61,10 @@ button_watch! {
 led2d! {
     Led8x12Clock {
         pin: GPIO12,
-        len: 96,
         led_layout: LED_LAYOUT_8X12,
         max_current: Current::Milliamps(250),
         font: Led2dFont::Font4x6Trim,
-        engine: device_envoy_esp::led_strip::Engine::Spi,
+        engine: device_envoy_esp::led_strip::Spi,
         gamma: Gamma::Linear,
         max_frames: 16,
     }

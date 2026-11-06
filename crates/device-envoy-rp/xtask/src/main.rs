@@ -2,15 +2,6 @@
 //!
 //! Run with: `cargo xtask <command>`
 
-mod adpcm_clip_generated;
-mod audio_player_generated;
-mod ir_generated;
-mod lcd_text_generated;
-mod led2d_generated;
-mod led_generated;
-mod led_strip_generated;
-mod pcm_clip_generated;
-mod servo_player_generated;
 mod video_frames_gen;
 
 use clap::{Parser, Subcommand};
@@ -281,11 +272,6 @@ fn check_board(board: Board, arch: Arch, caps: CapabilitySet) -> ExitCode {
         .bold()
     );
 
-    if let Err(err) = regenerate_generated_sources(&workspace_root) {
-        eprintln!("{err}");
-        return ExitCode::FAILURE;
-    }
-
     // Library build (no wifi — validates the non-wifi feature set)
     if !run_command(Command::new("cargo").current_dir(&workspace_root).args([
         "build",
@@ -370,10 +356,6 @@ fn check_board(board: Board, arch: Arch, caps: CapabilitySet) -> ExitCode {
 
 fn check_quick() -> ExitCode {
     let workspace_root = workspace_root();
-    if let Err(err) = regenerate_generated_sources(&workspace_root) {
-        eprintln!("{err}");
-        return ExitCode::FAILURE;
-    }
 
     let arch = Arch::Arm;
     let board_pico2 = Board::Pico2;
@@ -445,7 +427,7 @@ fn check_compile_only() -> ExitCode {
 
     println!("{}", "==> Checking compile-only tests...".cyan());
 
-    let compile_tests_dir = workspace_root.join("tests-compile-only");
+    let compile_tests_dir = rp_crate_root().join("tests-compile-only");
     if !compile_tests_dir.exists() {
         eprintln!("{}", "No tests-compile-only directory found.".red());
         return ExitCode::FAILURE;
@@ -509,15 +491,12 @@ fn check_all() -> ExitCode {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = regenerate_generated_sources(&workspace_root) {
-        eprintln!("{err}");
-        return ExitCode::FAILURE;
-    }
     if check_readme_example() != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
     let examples = discover_examples(&workspace_root);
-    let demos = discover_demo_bins(&workspace_root);
+    // The demos crate lives in device-envoy-rp/demos.
+    let demos = discover_demo_bins(&rp_crate_root());
     let no_wifi_examples: Vec<_> = examples
         .iter()
         .filter(|example| !example.required_capabilities.contains(Capability::Wifi))
@@ -721,8 +700,21 @@ fn check_all() -> ExitCode {
         // 8. Compile-only tests
         s.spawn(|_| {
             println!("{}", "  [8/10] Compile-only tests...".bright_black());
-            let compile_tests_dir = workspace_root.join("tests-compile-only");
-            if compile_tests_dir.exists() {
+            let compile_tests_dir = rp_crate_root().join("tests-compile-only");
+            if !compile_tests_dir.exists() {
+                eprintln!(
+                    "{}",
+                    format!(
+                        "No tests-compile-only directory at {}",
+                        compile_tests_dir.display()
+                    )
+                    .red()
+                );
+                failures
+                    .lock()
+                    .unwrap()
+                    .push("compile-only tests (directory missing)");
+            } else {
                 let mut compile_tests = Vec::new();
                 if let Ok(entries) = fs::read_dir(&compile_tests_dir) {
                     for entry in entries.flatten() {
@@ -1001,10 +993,6 @@ fn check_docs() -> ExitCode {
         eprintln!("{err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = regenerate_generated_sources(&workspace_root) {
-        eprintln!("{err}");
-        return ExitCode::FAILURE;
-    }
     let arch = Arch::Arm;
     let board = Board::Pico2;
     let target = arch.target(board);
@@ -1197,7 +1185,8 @@ fn check_examples() -> ExitCode {
 
 fn check_demos() -> ExitCode {
     let workspace_root = workspace_root();
-    let demos = discover_demo_bins(&workspace_root);
+    // The demos crate lives in device-envoy-rp/demos.
+    let demos = discover_demo_bins(&rp_crate_root());
     if demos.is_empty() {
         println!("{}", "No demos found.".yellow());
         return ExitCode::SUCCESS;
@@ -1531,162 +1520,6 @@ fn build_example_features(board: Board, capability_set: CapabilitySet) -> String
     features.join(",")
 }
 
-struct GeneratedDocStubExpectation {
-    relative_path: &'static str,
-    required_fragments: &'static [&'static str],
-}
-
-fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
-    let generated_doc_stub_expectations = [
-        GeneratedDocStubExpectation {
-            relative_path: "src/audio_player/pcm_clip_generated.rs",
-            required_fragments: &[
-                "pub const SAMPLE_RATE_HZ: u32",
-                "pub const PCM_SAMPLE_COUNT: usize",
-                "pub const fn pcm_clip() -> PcmClipBuf<",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/audio_player/adpcm_clip_generated.rs",
-            required_fragments: &[
-                "pub const SAMPLE_RATE_HZ: u32",
-                "pub const PCM_SAMPLE_COUNT: usize",
-                "pub const ADPCM_DATA_LEN: usize",
-                "pub const fn adpcm_clip() -> AdpcmClipBuf<",
-                "pub const fn pcm_clip() -> PcmClipBuf<",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/audio_player/audio_player_generated.rs",
-            required_fragments: &[
-                "pub const SAMPLE_RATE_HZ: u32",
-                "pub const MAX_CLIPS: usize",
-                "pub const INITIAL_VOLUME: Volume",
-                "pub const MAX_VOLUME: Volume",
-                "impl AudioPlayer<VOICE_22050_HZ> for AudioPlayerGenerated",
-                "const SAMPLE_RATE_HZ: u32",
-                "const MAX_CLIPS: usize",
-                "const INITIAL_VOLUME: Volume",
-                "const MAX_VOLUME: Volume",
-                "fn play<I>(&self, audio_clips: I, at_end: AtEnd)",
-                "async fn wait_until_stopped(&self)",
-                "fn set_volume(&self, volume: Volume)",
-                "fn volume(&self) -> Volume",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led2d/led2d_generated.rs",
-            required_fragments: &[
-                "pub struct Led2dGenerated",
-                "pub const MAX_FRAMES: usize",
-                "pub const MAX_BRIGHTNESS: u8",
-                "pub const FONT: Led2dFont",
-                "pub const WIDTH: usize",
-                "pub const HEIGHT: usize",
-                "pub const LEN: usize",
-                "pub const SIZE: Size",
-                "pub const TOP_LEFT: Point",
-                "pub const TOP_RIGHT: Point",
-                "pub const BOTTOM_LEFT: Point",
-                "pub const BOTTOM_RIGHT: Point",
-                "pub fn new(",
-                "impl Led2d<12, 4> for Led2dGenerated",
-                "fn write_frame(&self, frame2d: Frame2d<12, 4>)",
-                "fn animate<I>(&self, frames: I)",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/lcd_text/lcd_text_generated.rs",
-            required_fragments: &[
-                "pub struct LcdTextGenerated",
-                "pub const WIDTH: usize",
-                "pub const HEIGHT: usize",
-                "pub fn new(",
-                "impl crate::lcd_text::LcdText<16, 2> for LcdTextGenerated",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led_strip/led_strip_generated.rs",
-            required_fragments: &[
-                "pub struct LedStripGenerated",
-                "pub const LEN: usize",
-                "pub const MAX_FRAMES: usize",
-                "pub const MAX_BRIGHTNESS: u8",
-                "pub fn new(",
-                "impl LedStrip<8> for LedStripGenerated",
-                "fn write_frame(&self, frame: Frame1d<8>)",
-                "fn animate<I>(&self, frames: I)",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led/led_generated.rs",
-            required_fragments: &[
-                "pub struct LedGenerated",
-                "pub const MAX_STEPS: usize",
-                "pub fn new(",
-                "impl Led for LedGenerated",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/ir/ir_generated.rs",
-            required_fragments: &[
-                "pub struct IrGenerated",
-                "impl Ir for IrGenerated",
-                "pub struct IrMappingGenerated",
-                "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
-                "pub struct IrKeplerGenerated",
-                "impl IrKepler for IrKeplerGenerated",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/servo_player/servo_player_generated.rs",
-            required_fragments: &[
-                "pub const MAX_STEPS: usize",
-                "impl Servo for ServoPlayerGenerated",
-                "impl ServoPlayer<16> for ServoPlayerGenerated",
-                "fn set_degrees(&self, degrees: u16)",
-                "fn hold(&self)",
-                "fn relax(&self)",
-                "fn animate<I>(&self, steps: I, at_end: AtEnd)",
-            ],
-        },
-    ];
-
-    let mut failure_messages = Vec::new();
-    for generated_doc_stub_expectation in generated_doc_stub_expectations {
-        let generated_doc_stub_path =
-            workspace_root.join(generated_doc_stub_expectation.relative_path);
-        let generated_doc_stub_source = match fs::read_to_string(&generated_doc_stub_path) {
-            Ok(source) => source,
-            Err(read_error) => {
-                failure_messages.push(format!(
-                    "{}: failed to read ({})",
-                    generated_doc_stub_path.display(),
-                    read_error
-                ));
-                continue;
-            }
-        };
-
-        for required_fragment in generated_doc_stub_expectation.required_fragments {
-            if !generated_doc_stub_source.contains(required_fragment) {
-                failure_messages.push(format!(
-                    "{}: missing required fragment `{}`",
-                    generated_doc_stub_path.display(),
-                    required_fragment
-                ));
-            }
-        }
-    }
-
-    if failure_messages.is_empty() {
-        Ok(())
-    } else {
-        Err(failure_messages.join("\n"))
-    }
-}
-
 fn check_shared_markdown_sync(workspace_root: &Path) -> Result<(), String> {
     let rp_markdown_path =
         workspace_root.join("crates/device-envoy-rp/src/docs/current_limiting_and_gamma.md");
@@ -1737,6 +1570,13 @@ impl Drop for TemporaryFileCleanup {
             }
         }
     }
+}
+
+fn rp_crate_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .canonicalize()
+        .expect("Failed to find device-envoy-rp crate root")
 }
 
 fn workspace_root() -> PathBuf {
@@ -1838,66 +1678,6 @@ fn packaged_manifest_path(crate_root: &Path, package_name: &str) -> Result<PathB
     }
 
     Ok(target_package_manifest_path)
-}
-
-const GENERATED_RUST_FILE_PATHS: [&str; 9] = [
-    "src/audio_player/pcm_clip_generated.rs",
-    "src/audio_player/adpcm_clip_generated.rs",
-    "src/audio_player/audio_player_generated.rs",
-    "src/led2d/led2d_generated.rs",
-    "src/lcd_text/lcd_text_generated.rs",
-    "src/led_strip/led_strip_generated.rs",
-    "src/ir/ir_generated.rs",
-    "src/led/led_generated.rs",
-    "src/servo_player/servo_player_generated.rs",
-];
-
-fn regenerate_generated_sources(workspace_root: &Path) -> Result<(), String> {
-    let rp_crate_root = workspace_root.join("crates/device-envoy-rp");
-    pcm_clip_generated::generate_pcm_clip_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating pcm_clip_generated.rs: {error}"))?;
-    adpcm_clip_generated::generate_adpcm_clip_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating adpcm_clip_generated.rs: {error}"))?;
-    audio_player_generated::generate_audio_player_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating audio_player_generated.rs: {error}"))?;
-    led2d_generated::generate_led2d_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating led2d_generated.rs: {error}"))?;
-    lcd_text_generated::generate_lcd_text_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating lcd_text_generated.rs: {error}"))?;
-    led_strip_generated::generate_led_strip_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating led_strip_generated.rs: {error}"))?;
-    ir_generated::generate_ir_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating ir_generated.rs: {error}"))?;
-    led_generated::generate_led_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating led_generated.rs: {error}"))?;
-    servo_player_generated::generate_servo_player_generated(&rp_crate_root)
-        .map_err(|error| format!("Error generating servo_player_generated.rs: {error}"))?;
-    format_generated_rust_sources(&rp_crate_root)?;
-    check_generated_doc_stubs(&rp_crate_root)
-        .map_err(|error| format!("Generated doc stub consistency check failed:\n{error}"))?;
-    Ok(())
-}
-
-fn format_generated_rust_sources(workspace_root: &Path) -> Result<(), String> {
-    let mut format_generated_sources_command = Command::new("cargo");
-    format_generated_sources_command
-        .current_dir(workspace_root)
-        .arg("fmt")
-        .arg("--");
-    for generated_rust_file_path in GENERATED_RUST_FILE_PATHS {
-        format_generated_sources_command.arg(generated_rust_file_path);
-    }
-
-    match format_generated_sources_command.status() {
-        Ok(status) if status.success() => Ok(()),
-        Ok(status) => Err(format!(
-            "Formatting generated Rust files failed with exit code {:?}. Install rustfmt with `rustup component add rustfmt`.",
-            status.code()
-        )),
-        Err(error) => Err(format!(
-            "Failed to run `cargo fmt` for generated Rust files: {error}. Install rustfmt with `rustup component add rustfmt`."
-        )),
-    }
 }
 
 fn host_target() -> Option<String> {

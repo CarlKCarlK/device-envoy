@@ -24,7 +24,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
     info!("IR NEC decoder example starting...");
 
-    let ir15 = Ir15::new(p.PIO0, p.PIN_15, spawner)?;
+    let ir15 = Ir15::new(p.PIN_15, p.PIO0, spawner)?;
 
     info!("IR receiver initialized on GP15");
 

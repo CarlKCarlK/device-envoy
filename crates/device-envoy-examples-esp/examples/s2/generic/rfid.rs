@@ -37,14 +37,14 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     esp_println::logger::init_logger(log::LevelFilter::Info);
     info!("rfid example started");
 
-    let rfid = RfidEsp::new(
+    let mut rfid = RfidEsp::new(
         &RFID_STATIC,
-        p.SPI2,
         p.GPIO18,
         p.GPIO21,
         p.GPIO19,
         p.GPIO5,
         p.GPIO4,
+        p.SPI2,
         spawner,
     )
     .await?;

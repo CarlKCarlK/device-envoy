@@ -1,8 +1,10 @@
-//! Platform-independent static resources for IR button mapping.
+//! Platform-independent IR button mapping: the [`IrMapping`] trait and the map builder that
+//! generated mapping receivers use.
 //!
 //! See the platform-specific crate for primary documentation and examples.
 
-use crate::ir::IrStatic;
+use heapless::LinearMap;
+
 /// Platform-agnostic IR button mapper device contract.
 ///
 /// Platform crates implement this for their concrete `IrMapping` types so shared logic can wait
@@ -23,7 +25,7 @@ use crate::ir::IrStatic;
 ///     Stop,
 /// }
 ///
-/// async fn handle_mapped_button_presses(ir_mapping: &impl IrMapping<RemoteKeys>) -> ! {
+/// async fn handle_mapped_button_presses(ir_mapping: &mut impl IrMapping<RemoteKeys>) -> ! {
 ///     loop {
 ///         let remote_key = ir_mapping.wait_for_press().await;
 ///         // Use mapped key in app logic.
@@ -43,13 +45,13 @@ use crate::ir::IrStatic;
 ///
 /// # struct DemoIrMapping;
 /// # impl IrMapping<RemoteKeys> for DemoIrMapping {
-/// #     async fn wait_for_press(&self) -> RemoteKeys {
+/// #     async fn wait_for_press(&mut self) -> RemoteKeys {
 /// #         RemoteKeys::Power
 /// #     }
 /// # }
 /// # fn main() {
-/// #     let ir_mapping = DemoIrMapping;
-/// #     let _future = handle_mapped_button_presses(&ir_mapping);
+/// #     let mut ir_mapping = DemoIrMapping;
+/// #     let _future = handle_mapped_button_presses(&mut ir_mapping);
 /// # }
 /// ```
 #[allow(async_fn_in_trait)]
@@ -57,41 +59,39 @@ pub trait IrMapping<Button> {
     /// Wait for the next recognized mapped button press.
     ///
     /// See the [IrMapping trait documentation](Self) for usage examples.
-    async fn wait_for_press(&self) -> Button;
+    ///
+    /// Takes `&mut self` because each event goes to exactly one waiting task: one task owns
+    /// the receiver. A second task waiting on the same one would take some of its events.
+    async fn wait_for_press(&mut self) -> Button;
 }
 
-impl<T, Button> IrMapping<Button> for &T
+// A mutable reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static mut` handles that the declaration macros return.
+impl<T, Button> IrMapping<Button> for &mut T
 where
     T: IrMapping<Button> + ?Sized,
 {
-    async fn wait_for_press(&self) -> Button {
-        (*self).wait_for_press().await
+    async fn wait_for_press(&mut self) -> Button {
+        (**self).wait_for_press().await
     }
 }
 
-/// Static channel resources for IR mapping events.
-///
-/// Create with `IrMapping::new_static()` from the platform-specific crate.
-// Public for cross-crate platform plumbing; hidden from end-user docs.
+// Must be `pub` for macro expansion at downstream call sites: the RP and ESP mapping and Kepler
+// macros call it through their crates' hidden re-exports.
 #[doc(hidden)]
-pub struct IrMappingStatic(IrStatic);
-
-impl IrMappingStatic {
-    /// Create static mapping resources.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self(IrStatic::new())
+pub fn __build_button_map<B: Copy, const N: usize>(
+    button_map: &[(u16, u8, B)],
+) -> LinearMap<(u16, u8), B, N> {
+    let mut linear_map = LinearMap::new();
+    for &(addr, cmd, button) in button_map {
+        let previous_button = match linear_map.insert((addr, cmd), button) {
+            Ok(previous_button) => previous_button,
+            Err(_) => panic!("button_map entries exceed IrMapping capacity"),
+        };
+        assert!(
+            previous_button.is_none(),
+            "button_map contains duplicate (addr, cmd) entries"
+        );
     }
-
-    /// Get a reference to the inner static IR resources.
-    #[must_use]
-    pub const fn inner(&self) -> &IrStatic {
-        &self.0
-    }
-}
-
-impl Default for IrMappingStatic {
-    fn default() -> Self {
-        Self::new()
-    }
+    linear_map
 }

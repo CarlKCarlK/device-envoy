@@ -49,13 +49,14 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, ledc: ledc);
+    init_and_start!(p);
+    let ledc = device_envoy_esp::new_ledc(p.LEDC);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!("Starting dual servo example");
 
-    let servo_a = ServoA::new(&ledc, p.GPIO10)?;
-    let servo_b = ServoB::new(&ledc, p.GPIO11)?;
+    let servo_a = ServoA::new(p.GPIO10, &ledc)?;
+    let servo_b = ServoB::new(p.GPIO11, &ledc)?;
 
     info!("Moving servos in opposite directions for 2 seconds");
 

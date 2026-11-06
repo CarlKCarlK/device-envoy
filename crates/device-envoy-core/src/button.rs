@@ -7,6 +7,13 @@ use embassy_futures::select::{Either, select};
 use embassy_time::Duration;
 use embassy_time::Timer;
 
+mod watch;
+
+// Must be `pub` for macro expansion at downstream call sites: the RP and ESP `button_watch!`
+// templates and task bodies use them.
+#[doc(hidden)]
+pub use watch::{__run_button_watch, ButtonWatch, ButtonWatchStatic};
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -113,6 +120,9 @@ pub trait Button: __ButtonMonitor {
     /// Waits for the next press (button goes down, debounced). Does not wait for release.
     ///
     /// See the [Button trait documentation](Self) for usage examples.
+    ///
+    /// Takes `&mut self` because each event goes to exactly one waiting task: one task owns
+    /// the receiver. A second task waiting on the same one would take some of its events.
     async fn wait_for_press(&mut self) {
         loop {
             <Self as __ButtonMonitor>::wait_until_pressed_state(self, false).await;

@@ -19,10 +19,10 @@ async fn inner_main(_spawner: Spawner) -> Result<Infallible> {
 
     // Create a servo on GPIO 11.
     // GPIO 11 → (11/2) % 8 = 5 → PWM_SLICE5
-    let servo = servo! {
-        pin: p.PIN_11,
-        slice: p.PWM_SLICE5,
-    };
+    servo! {
+        Servo11 { pin: PIN_11 }
+    }
+    let servo = Servo11::new(p.PIN_11, p.PWM_SLICE5);
 
     servo.set_degrees(45); // Move to 45 degrees and hold.
     Timer::after(Duration::from_secs(1)).await; // Give servo reasonable time to reach position

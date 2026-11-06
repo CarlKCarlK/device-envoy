@@ -18,14 +18,14 @@ async fn test_two_rfid(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<(
     static RFID0_STATIC: RfidStatic = RfidRp::new_static();
     let _rfid0 = RfidRp::new_spi0(
         &RFID0_STATIC,
-        p.SPI0,
         p.PIN_2,
         p.PIN_3,
         p.PIN_4,
-        p.DMA_CH0,
-        p.DMA_CH1,
         p.PIN_1,
         p.PIN_5,
+        p.SPI0,
+        p.DMA_CH0,
+        p.DMA_CH1,
         spawner,
     )
     .await?;
@@ -33,14 +33,14 @@ async fn test_two_rfid(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<(
     static RFID1_STATIC: RfidStatic = RfidRp::new_static();
     let _rfid1 = RfidRp::new_spi1(
         &RFID1_STATIC,
-        p.SPI1,
         p.PIN_10,
         p.PIN_11,
         p.PIN_12,
-        p.DMA_CH2,
-        p.DMA_CH3,
         p.PIN_9,
         p.PIN_13,
+        p.SPI1,
+        p.DMA_CH2,
+        p.DMA_CH3,
         spawner,
     )
     .await?;

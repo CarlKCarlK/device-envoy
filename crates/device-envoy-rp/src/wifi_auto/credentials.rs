@@ -58,8 +58,7 @@ pub async fn collect_wifi_credentials(
     info!("Starting credential collection...");
 
     // Spawn the HTTP server task
-    let http_config_server_token = unwrap!(http_config_server_task(stack));
-    spawner.spawn(http_config_server_token);
+    spawner.spawn(http_config_server_task(stack)?);
     info!("HTTP configuration task spawned");
 
     // Wait for credentials to be submitted

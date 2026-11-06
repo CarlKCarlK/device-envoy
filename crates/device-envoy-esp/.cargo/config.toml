@@ -5,6 +5,9 @@ check-pre-push = "xtask check-pre-push"
 check-demos = "xtask check-demos"
 check-examples-all-processors = "xtask check-examples-all-processors"
 
+# The Xtensa targets are configured in the repository-root .cargo/config.toml; cargo merges
+# nested configs, so repeating their `-Tlinkall.x` here would pass it to the linker twice.
+
 [target.riscv32imac-unknown-none-elf]
 runner = "espflash flash --monitor"
 rustflags = [
@@ -12,24 +15,6 @@ rustflags = [
 ]
 
 [target.riscv32imc-unknown-none-elf]
-runner = "espflash flash --monitor"
-rustflags = [
-    "-C", "link-arg=-Tlinkall.x",
-]
-
-[target.xtensa-esp32-none-elf]
-runner = "espflash flash --monitor"
-rustflags = [
-    "-C", "link-arg=-Tlinkall.x",
-]
-
-[target.xtensa-esp32s2-none-elf]
-runner = "espflash flash --monitor"
-rustflags = [
-    "-C", "link-arg=-Tlinkall.x",
-]
-
-[target.xtensa-esp32s3-none-elf]
 runner = "espflash flash --monitor"
 rustflags = [
     "-C", "link-arg=-Tlinkall.x",

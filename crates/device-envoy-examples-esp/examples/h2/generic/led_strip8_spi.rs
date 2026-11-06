@@ -13,7 +13,7 @@ use esp_backtrace as _;
 use log::info;
 
 #[allow(unused_imports)]
-use device_envoy_esp::led_strip::Engine;
+use device_envoy_esp::led_strip::Spi;
 use device_envoy_esp::{
     Result, init_and_start, led_strip,
     led_strip::{Current, Frame1d, LedStrip as _, colors},
@@ -29,7 +29,7 @@ led_strip! {
         pin: GPIO2,
         len: 8,
         max_current: Current::Milliamps(180),
-        engine: Engine::Spi,
+        engine: Spi,
         max_frames: 2,
     }
 }

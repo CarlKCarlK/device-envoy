@@ -61,7 +61,6 @@ button_watch! {
 led2d! {
     Led8x12Clock {
         pin: GPIO18,
-        len: 96,
         led_layout: LED_LAYOUT_8X12,
         max_current: Current::Milliamps(250),
         font: Led2dFont::Font4x6Trim,
@@ -77,7 +76,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!("clock_led8x12 starting");

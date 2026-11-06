@@ -48,10 +48,8 @@ use crate::led_strip::{Frame1d as StripFrame, LedStrip as LedStripTrait};
 /// Platform crates implement this for their concrete LED panel types so shared logic can
 /// drive LED panels without knowing the underlying hardware backend.
 ///
-/// This page serves as the definitive reference for what a generated LED panel type
-/// provides. For first-time readers, start with the `led2d` module documentation in your
-/// platform crate (`device-envoy-rp` or `device-envoy-esp`), then return here for a
-/// complete list of available methods and associated constants.
+/// This page is the definitive reference for what a generated LED panel type provides:
+/// every method and associated constant.
 ///
 /// Design intent:
 ///
@@ -181,7 +179,7 @@ pub trait Led2d<const W: usize, const H: usize> {
 
     /// Write a frame to the LED panel.
     ///
-    /// See your platform crate's led2d module docs for possible usage examples.
+    /// See the [Led2d trait documentation](Self) for usage examples.
     fn write_frame(&self, frame2d: Frame2d<W, H>);
 
     /// Animate frames on the LED panel.
@@ -230,6 +228,45 @@ pub trait Led2d<const W: usize, const H: usize> {
         let mut frame = Frame2d::<W, H>::new();
         self.write_text_to_frame(text, colors, &mut frame);
         self.write_frame(frame);
+    }
+}
+
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<const W: usize, const H: usize, T> Led2d<W, H> for &T
+where
+    T: Led2d<W, H> + ?Sized,
+{
+    const WIDTH: usize = T::WIDTH;
+    const HEIGHT: usize = T::HEIGHT;
+    const LEN: usize = T::LEN;
+    const SIZE: Size = T::SIZE;
+    const TOP_LEFT: Point = T::TOP_LEFT;
+    const TOP_RIGHT: Point = T::TOP_RIGHT;
+    const BOTTOM_LEFT: Point = T::BOTTOM_LEFT;
+    const BOTTOM_RIGHT: Point = T::BOTTOM_RIGHT;
+    const MAX_FRAMES: usize = T::MAX_FRAMES;
+    const MAX_BRIGHTNESS: u8 = T::MAX_BRIGHTNESS;
+    const FONT: Led2dFont = T::FONT;
+
+    fn write_frame(&self, frame2d: Frame2d<W, H>) {
+        (**self).write_frame(frame2d);
+    }
+
+    fn animate<I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(Frame2d<W, H>, embassy_time::Duration)>,
+    {
+        (**self).animate(frames);
+    }
+
+    fn write_text_to_frame(&self, text: &str, colors: &[RGB8], frame: &mut Frame2d<W, H>) {
+        (**self).write_text_to_frame(text, colors, frame);
+    }
+
+    fn write_text(&self, text: &str, colors: &[RGB8]) {
+        (**self).write_text(text, colors);
     }
 }
 

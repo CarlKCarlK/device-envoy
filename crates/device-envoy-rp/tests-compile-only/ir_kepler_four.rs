@@ -11,18 +11,19 @@ use device_envoy_rp::ir_keplers;
 use embassy_executor::Spawner;
 
 ir_keplers! {
-    pio: PIO0,
     IrKeplers0 {
-        IrKepler15: { pin: PIN_15 },
-        IrKepler16: { pin: PIN_16 },
-        IrKepler17: { pin: PIN_17 },
-        IrKepler18: { pin: PIN_18 }
+        pio: PIO0,
+
+        IrKepler15 { pin: PIN_15 },
+        IrKepler16 { pin: PIN_16 },
+        IrKepler17 { pin: PIN_17 },
+        IrKepler18 { pin: PIN_18 }
     }
 }
 
 async fn test_four_ir_keplers(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
     let (_ir_kepler15, _ir_kepler16, _ir_kepler17, _ir_kepler18) =
-        IrKeplers0::new(p.PIO0, p.PIN_15, p.PIN_16, p.PIN_17, p.PIN_18, spawner)?;
+        IrKeplers0::new(p.PIN_15, p.PIN_16, p.PIN_17, p.PIN_18, p.PIO0, spawner)?;
     Ok(())
 }
 

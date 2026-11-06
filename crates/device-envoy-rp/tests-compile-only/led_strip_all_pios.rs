@@ -14,24 +14,27 @@ use embassy_executor::Spawner;
 const MAX_CURRENT: Current = Current::Milliamps(250);
 
 led_strips! {
-    pio: PIO0,
     pub LedStripsPio0 {
-        Pio0LedStrip: { pin: PIN_3, len: 48, max_current: MAX_CURRENT }
+        pio: PIO0,
+
+        Pio0LedStrip { pin: PIN_3, len: 48, max_current: MAX_CURRENT }
     }
 }
 
 led_strips! {
-    pio: PIO1,
     pub LedStripsPio1 {
-        Pio1LedStrip: { dma: DMA_CH1, pin: PIN_4, len: 48, max_current: MAX_CURRENT }
+        pio: PIO1,
+
+        Pio1LedStrip { dma: DMA_CH1, pin: PIN_4, len: 48, max_current: MAX_CURRENT }
     }
 }
 
 #[cfg(feature = "pico2")]
 led_strips! {
-    pio: PIO2,
     pub LedStripsPio2 {
-        Pio2LedStrip: { dma: DMA_CH2, pin: PIN_5, len: 48, max_current: MAX_CURRENT }
+        pio: PIO2,
+
+        Pio2LedStrip { dma: DMA_CH2, pin: PIN_5, len: 48, max_current: MAX_CURRENT }
     }
 }
 
@@ -39,13 +42,13 @@ led_strips! {
 /// This prevents type mismatches between generated strip types and PIO splits.
 #[allow(dead_code)]
 async fn test_all_pios(p: embassy_rp::Peripherals, spawner: Spawner) -> Result<()> {
-    let (_pio0_led_strip_48,) = LedStripsPio0::new(p.PIO0, p.PIN_3, p.DMA_CH0, spawner)?;
-    let (_pio1_led_strip_48,) = LedStripsPio1::new(p.PIO1, p.PIN_4, p.DMA_CH1, spawner)?;
+    let (_pio0_led_strip_48,) = LedStripsPio0::new(p.PIN_3, p.DMA_CH0, p.PIO0, spawner)?;
+    let (_pio1_led_strip_48,) = LedStripsPio1::new(p.PIN_4, p.DMA_CH1, p.PIO1, spawner)?;
 
     // Test PIO2 (Pico 2 only)
     #[cfg(feature = "pico2")]
     {
-        let (_pio2_led_strip_48,) = LedStripsPio2::new(p.PIO2, p.PIN_5, p.DMA_CH2, spawner)?;
+        let (_pio2_led_strip_48,) = LedStripsPio2::new(p.PIN_5, p.DMA_CH2, p.PIO2, spawner)?;
     }
 
     Ok(())

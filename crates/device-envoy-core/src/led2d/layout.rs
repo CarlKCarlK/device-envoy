@@ -24,7 +24,7 @@
 /// - `y` increases downward
 ///
 /// Most users should start with one of the constructors below and then apply
-/// transforms ([rotate_cw](`Self::rotate_cw`), [flip_h](`Self::flip_h`), [combine_v](`Self::combine_v`), etc.)
+/// transforms ([rotate_cw](Self::rotate_cw), [flip_h](Self::flip_h), [combine_v](Self::combine_v), etc.)
 /// as needed.
 ///
 /// ## Constructing layouts

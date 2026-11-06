@@ -102,8 +102,6 @@ pub fn h12_m_s(dt: &OffsetDateTime) -> (u8, u8, u8) {
 // ============================================================================
 
 /// Tick event emitted by [`ClockSync`].
-///
-/// See the platform crate's `clock_sync` module for a usage example.
 pub struct ClockSyncTick {
     /// The current local time (adjusted by timezone offset if set).
     pub local_time: OffsetDateTime,
@@ -222,7 +220,6 @@ impl ClockSyncRuntime {
 
     /// Create a clock-sync runtime using an existing network stack.
     ///
-    /// See the platform crate `clock_sync` module documentation for a full usage example.
     /// The `tick_interval` parameter uses
     /// [`embassy_time::Duration`](https://docs.rs/embassy-time/latest/embassy_time/struct.Duration.html).
     pub fn new(

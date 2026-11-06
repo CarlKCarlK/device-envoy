@@ -22,8 +22,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 
 ir_keplers! {
     IrKeplersBoard {
-        IrKeplerReceiver0: { pin: GPIO0 },
-        IrKeplerReceiver1: { pin: GPIO1 }
+        IrKeplerReceiver0 { pin: GPIO0 },
+        IrKeplerReceiver1 { pin: GPIO1 }
     }
 }
 
@@ -34,7 +34,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?.into_async();
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     let channel_creator0 = rmt80.channel2;

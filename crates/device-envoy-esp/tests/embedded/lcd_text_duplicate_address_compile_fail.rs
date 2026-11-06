@@ -15,10 +15,11 @@ use device_envoy_esp::{i2cs, init_and_start};
 esp_bootloader_esp_idf::esp_app_desc!();
 
 i2cs! {
-    i2c: I2C0,
-    sda_pin: GPIO4,
-    scl_pin: GPIO5,
     I2csDuplicateAddressCompileFail {
+        sda_pin: GPIO4,
+        scl_pin: GPIO5,
+        i2c: I2C0,
+
         LcdTextA { width: 16, height: 2, address: 0x27 },
         LcdTextB { width: 20, height: 4, address: 0x27 },
     }
@@ -34,7 +35,7 @@ async fn inner_main(spawner: Spawner) -> device_envoy_esp::Result<Infallible> {
     init_and_start!(p);
 
     let (_lcd_text_a, _lcd_text_b) =
-        I2csDuplicateAddressCompileFail::new(p.I2C0, p.GPIO4, p.GPIO5, spawner)?;
+        I2csDuplicateAddressCompileFail::new(p.GPIO4, p.GPIO5, p.I2C0, spawner)?;
 
     core::future::pending().await
 }

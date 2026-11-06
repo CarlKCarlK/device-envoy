@@ -71,3 +71,24 @@ pub trait Servo {
     /// See the [Servo trait documentation](Self) for usage examples.
     fn relax(&self);
 }
+
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<T> Servo for &T
+where
+    T: Servo + ?Sized,
+{
+    const DEFAULT_MAX_DEGREES: u16 = T::DEFAULT_MAX_DEGREES;
+
+    fn set_degrees(&self, degrees: u16) {
+        (**self).set_degrees(degrees);
+    }
+
+    fn hold(&self) {
+        (**self).hold();
+    }
+
+    fn relax(&self) {
+        (**self).relax();
+    }
+}

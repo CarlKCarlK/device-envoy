@@ -81,8 +81,6 @@ impl ToRgb888 for Rgb888 {
 // ============================================================================
 
 /// Gamma correction configuration for LED strips.
-///
-/// See the platform crate's `led_strip!` macro documentation for usage and context.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Gamma {
     /// No correction; raw LED PWM values.
@@ -98,8 +96,9 @@ pub enum Gamma {
 #[doc(hidden)]
 pub const GAMMA_DEFAULT: Gamma = Gamma::Srgb;
 
-/// Default max_frames used by the `led_strip!` macro.
-#[doc(hidden)]
+/// Default animation capacity for LED strip and panel declaration macros.
+///
+/// The default is 16 frames. See [`LedStrip`] for the animation API.
 pub const MAX_FRAMES_DEFAULT: usize = 16;
 
 /// Gamma 2.2 lookup table (sRGB).
@@ -217,8 +216,6 @@ use core::ops::{Deref, DerefMut};
 
 /// 1D pixel array used to describe LED strip patterns.
 ///
-/// See the platform crate's `led_strip` module documentation for usage examples.
-///
 /// Frames deref to `[RGB8; N]`, so you can mutate pixels directly before
 /// passing them to the generated strip's `write_frame` method.
 #[derive(Clone, Copy, Debug)]
@@ -287,10 +284,8 @@ use heapless::Vec;
 /// Platform crates implement this for their concrete LED strip types so shared logic can
 /// drive strips without knowing the underlying hardware backend.
 ///
-/// This page serves as the definitive reference for what a generated LED strip type
-/// provides. For first-time readers, start with the `led_strip` module documentation in your
-/// platform crate (`device-envoy-rp` or `device-envoy-esp`), then return here for a
-/// complete list of available methods and associated constants.
+/// This page is the definitive reference for what a generated LED strip type provides:
+/// every method and associated constant.
 ///
 /// Design intent:
 ///
@@ -390,6 +385,29 @@ pub trait LedStrip<const N: usize> {
         I::Item: Borrow<(Frame1d<N>, embassy_time::Duration)>;
 }
 
+// A shared reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static` handles that the declaration macros return.
+impl<const N: usize, T> LedStrip<N> for &T
+where
+    T: LedStrip<N> + ?Sized,
+{
+    const LEN: usize = T::LEN;
+    const MAX_FRAMES: usize = T::MAX_FRAMES;
+    const MAX_BRIGHTNESS: u8 = T::MAX_BRIGHTNESS;
+
+    fn write_frame(&self, frame: Frame1d<N>) {
+        (**self).write_frame(frame);
+    }
+
+    fn animate<I>(&self, frames: I)
+    where
+        I: IntoIterator,
+        I::Item: Borrow<(Frame1d<N>, embassy_time::Duration)>,
+    {
+        (**self).animate(frames);
+    }
+}
+
 /// Signal type used to send commands to the background device task.
 ///
 /// `#[doc(hidden)]` because it is named in macro-generated `static` items in
@@ -486,4 +504,32 @@ pub fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u
         pixel.g = combo_table[pixel.g as usize];
         pixel.b = combo_table[pixel.b as usize];
     });
+}
+
+/// Internal runtime handle for macro-generated LED strip types.
+///
+/// `#[doc(hidden)]` because this is implementation detail used by macro output.
+#[doc(hidden)]
+pub struct LedStripHandle<const N: usize, const MAX_FRAMES: usize> {
+    command_signal: &'static LedStripCommandSignal<N, MAX_FRAMES>,
+}
+
+impl<const N: usize, const MAX_FRAMES: usize> LedStripHandle<N, MAX_FRAMES> {
+    #[doc(hidden)]
+    pub const fn new_static() -> LedStripStatic<N, MAX_FRAMES> {
+        LedStripStatic::new_static()
+    }
+
+    #[doc(hidden)]
+    pub fn new(led_strip_static: &'static LedStripStatic<N, MAX_FRAMES>) -> Self {
+        Self {
+            command_signal: led_strip_static.command_signal(),
+        }
+    }
+
+    // Must be `pub` for macro expansion at foreign call sites — not user-facing.
+    #[doc(hidden)]
+    pub fn __command_signal(&self) -> &'static LedStripCommandSignal<N, MAX_FRAMES> {
+        self.command_signal
+    }
 }

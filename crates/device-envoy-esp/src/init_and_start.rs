@@ -8,57 +8,52 @@ pub mod rmt {
     pub use crate::rmt::*;
 }
 
-/// Startup mode markers used by [`init_and_start!`].
-pub mod rmt_mode {
-    pub use crate::rmt_mode::*;
+/// Creates the LEDC (PWM) peripheral that `servo!` and `servo_player!` take, clocked for
+/// servo timing.
+///
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use esp_backtrace as _;
+/// use device_envoy_esp::init_and_start;
+///
+/// # fn example() {
+/// init_and_start!(p);
+/// let ledc = device_envoy_esp::new_ledc(p.LEDC);
+/// # }
+/// ```
+#[cfg(all(target_os = "none", esp_has_ledc))]
+#[must_use]
+pub fn new_ledc(ledc: esp_hal::peripherals::LEDC<'static>) -> esp_hal::ledc::Ledc<'static> {
+    let mut ledc = esp_hal::ledc::Ledc::new(ledc);
+    ledc.set_global_slow_clock(esp_hal::ledc::LSGlobalClkSource::APBClk);
+    ledc
 }
 
-/// Initialize the platform and optionally common peripherals.
+/// Initializes the chip and starts the async runtime, binding the remaining peripherals to
+/// the name you give.
 ///
-/// Supported forms:
+/// It consumes `TIMG0` and `SW_INTERRUPT` to start the runtime; every other peripheral stays
+/// available on the binding. Create the peripherals that devices share with functions:
+/// [`new_rmt80`](crate::new_rmt80) for LED strips and IR receivers (call `.into_async()` on
+/// the result where a device needs async RMT), and [`new_ledc`](crate::new_ledc) for servos.
 ///
-/// - `init_and_start!(p)`
-/// - `init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking)`
-/// - `init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Async)`
-/// - `init_and_start!(p, ledc: ledc)`
-/// - Any of the above with both `rmt80` and `ledc` in either order.
+/// ```rust,no_run
+/// # #![no_std]
+/// # #![no_main]
+/// # use esp_backtrace as _;
+/// use device_envoy_esp::init_and_start;
+///
+/// # fn example() -> device_envoy_esp::Result<()> {
+/// init_and_start!(p);
+/// let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
+/// # Ok(())
+/// # }
+/// ```
 #[cfg(target_os = "none")]
 #[doc(hidden)]
 #[macro_export]
 macro_rules! init_and_start {
-    (@init_ledc $p:ident, $ledc:ident) => {
-        let mut $ledc = $crate::esp_hal::ledc::Ledc::new($p.LEDC);
-        $ledc.set_global_slow_clock($crate::esp_hal::ledc::LSGlobalClkSource::APBClk);
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
-        $crate::init_and_start!($p);
-        let $rmt80 = $crate::init_and_start::rmt::new_rmt80($p.RMT).expect("RMT init failed");
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
-        $crate::init_and_start!($p);
-        let $rmt80 =
-            $crate::init_and_start::rmt::into_async(
-                $crate::init_and_start::rmt::new_rmt80($p.RMT).expect("RMT init failed"),
-            );
-    };
-    ($p:ident, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p);
-        $crate::init_and_start!(@init_ledc $p, $ledc);
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking);
-        $crate::init_and_start!(@init_ledc $p, $ledc);
-    };
-    ($p:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async, ledc: $ledc:ident) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async);
-        $crate::init_and_start!(@init_ledc $p, $ledc);
-    };
-    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Blocking) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Blocking, ledc: $ledc);
-    };
-    ($p:ident, ledc: $ledc:ident, rmt80: $rmt80:ident, mode: rmt_mode::Async) => {
-        $crate::init_and_start!($p, rmt80: $rmt80, mode: rmt_mode::Async, ledc: $ledc);
-    };
     ($p:ident) => {
         let $p = $crate::esp_hal::init($crate::esp_hal::Config::default());
         {

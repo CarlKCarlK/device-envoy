@@ -2,18 +2,12 @@
 //!
 //! Run with: `cargo xtask <command>`
 
-mod audio_player_generated;
 mod board_examples_generated;
 mod boards;
 mod example_specs;
-mod ir_generated;
-mod led2d_generated;
-mod led_generated;
-mod led_strip_generated;
-mod servo_player_generated;
 
 use bitflags::bitflags;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use flate2::read::GzDecoder;
 use owo_colors::OwoColorize;
 use rayon::prelude::*;
@@ -363,7 +357,12 @@ fn test_capabilities_required(test: &str) -> Capability {
     if test.starts_with("ir_")
         || matches!(
             test,
-            "led_strip_two_strips_compile" | "led2d_two_panels_compile"
+            "led_strip_two_strips_compile"
+                | "led2d_two_panels_compile"
+                | "generated_code_lints_compile"
+                | "led_strip_engine_trait_compile"
+                | "led_strip_wrong_engine_resource_compile_fail"
+                | "expression_values_compile"
         )
     {
         caps.insert(Capability::RMT);
@@ -373,6 +372,14 @@ fn test_capabilities_required(test: &str) -> Capability {
     }
     if test == "led_strip_spi_two_strips_compile" {
         caps.insert(Capability::DUAL_SPI);
+    }
+    if test.starts_with("servo_")
+        || matches!(
+            test,
+            "generated_code_lints_compile" | "expression_values_compile"
+        )
+    {
+        caps.insert(Capability::LEDC);
     }
     caps
 }
@@ -636,7 +643,11 @@ enum Commands {
     /// Build all examples (catches linker errors)
     CheckExamples,
     /// Check all examples for all supported ESP processor feature/target combinations
-    CheckExamplesAllProcessors,
+    CheckExamplesAllProcessors {
+        /// Only the chips of this architecture (default: all)
+        #[arg(long)]
+        arch: Option<Arch>,
+    },
     /// Build all talk1 examples (backward-compatible alias for legacy demos)
     CheckDemos,
     /// Verify README Rust example extraction + compile
@@ -652,7 +663,33 @@ enum Commands {
         chip: String,
     },
     /// Run embedded compile tests across all chips
-    CheckEmbeddedTests,
+    CheckEmbeddedTests {
+        /// Only the chips of this architecture (default: all)
+        #[arg(long)]
+        arch: Option<Arch>,
+    },
+}
+
+/// A chip architecture, for splitting the all-chip checks into CI jobs.
+#[derive(Clone, Copy, ValueEnum)]
+enum Arch {
+    /// ESP32-C and ESP32-H chips.
+    Riscv,
+    /// ESP32, ESP32-S2, and ESP32-S3.
+    Xtensa,
+}
+
+/// The chips in `targets` of `arch`, or all of them when `arch` is `None`.
+fn targets_for(targets: &[BuildTarget], arch: Option<Arch>) -> Vec<BuildTarget> {
+    targets
+        .iter()
+        .filter(|build_target| match arch {
+            None => true,
+            Some(Arch::Riscv) => build_target.target.starts_with("riscv"),
+            Some(Arch::Xtensa) => build_target.target.starts_with("xtensa"),
+        })
+        .copied()
+        .collect()
 }
 
 fn main() -> ExitCode {
@@ -662,13 +699,13 @@ fn main() -> ExitCode {
         Commands::CheckPrePush => check_pre_push(),
         Commands::CheckDocs => check_docs(),
         Commands::CheckExamples => check_examples(),
-        Commands::CheckExamplesAllProcessors => check_examples_all_processors(),
+        Commands::CheckExamplesAllProcessors { arch } => check_examples_all_processors(arch),
         Commands::CheckDemos => check_demos(),
         Commands::CheckReadmeExample => check_readme_example(),
         Commands::GenerateBoardExamples => generate_board_examples(),
         Commands::CheckBoardExamples => check_board_examples(),
         Commands::CheckChip { chip } => check_chip(&chip),
-        Commands::CheckEmbeddedTests => check_embedded_tests(),
+        Commands::CheckEmbeddedTests { arch } => check_embedded_tests(arch),
     }
 }
 
@@ -691,34 +728,6 @@ fn check_docs() -> ExitCode {
     }
     if let Err(err) = generate_example_templates(&examples_root) {
         eprintln!("Error generating examples from templates: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = ir_generated::generate_ir_generated(&esp_root) {
-        eprintln!("Error generating ir_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&esp_root) {
-        eprintln!("Error generating audio_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&esp_root) {
-        eprintln!("Error generating led2d_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_generated::generate_led_generated(&esp_root) {
-        eprintln!("Error generating led_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&esp_root) {
-        eprintln!("Error generating led_strip_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&esp_root) {
-        eprintln!("Error generating servo_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = check_generated_doc_stubs(&esp_root) {
-        eprintln!("Generated doc stub consistency check failed:\n{err}");
         return ExitCode::FAILURE;
     }
     if check_readme_example() != ExitCode::SUCCESS {
@@ -756,34 +765,6 @@ fn check_all() -> ExitCode {
         eprintln!("Error generating examples from templates: {err}");
         return ExitCode::FAILURE;
     }
-    if let Err(err) = ir_generated::generate_ir_generated(&root) {
-        eprintln!("Error generating ir_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = audio_player_generated::generate_audio_player_generated(&root) {
-        eprintln!("Error generating audio_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led2d_generated::generate_led2d_generated(&root) {
-        eprintln!("Error generating led2d_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_generated::generate_led_generated(&root) {
-        eprintln!("Error generating led_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = led_strip_generated::generate_led_strip_generated(&root) {
-        eprintln!("Error generating led_strip_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = servo_player_generated::generate_servo_player_generated(&root) {
-        eprintln!("Error generating servo_player_generated.rs: {err}");
-        return ExitCode::FAILURE;
-    }
-    if let Err(err) = check_generated_doc_stubs(&root) {
-        eprintln!("Generated doc stub consistency check failed:\n{err}");
-        return ExitCode::FAILURE;
-    }
     if check_readme_example() != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
@@ -815,7 +796,7 @@ fn check_all() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    if check_embedded_tests() != ExitCode::SUCCESS {
+    if check_embedded_tests(None) != ExitCode::SUCCESS {
         return ExitCode::FAILURE;
     }
 
@@ -948,8 +929,8 @@ fn check_examples() -> ExitCode {
     check_examples_for_targets(CHECK_ALL_TARGETS, true)
 }
 
-fn check_examples_all_processors() -> ExitCode {
-    check_examples_for_targets(ALL_PROCESSOR_TARGETS, false)
+fn check_examples_all_processors(arch: Option<Arch>) -> ExitCode {
+    check_examples_for_targets(&targets_for(ALL_PROCESSOR_TARGETS, arch), false)
 }
 
 fn check_examples_for_targets(targets: &[BuildTarget], link_examples: bool) -> ExitCode {
@@ -1011,12 +992,13 @@ fn check_demos() -> ExitCode {
     check_examples_for_targets(CHECK_ALL_TARGETS, true)
 }
 
-fn check_embedded_tests() -> ExitCode {
-    check_embedded_tests_for_targets(CHECK_ALL_TARGETS)
+fn check_embedded_tests(arch: Option<Arch>) -> ExitCode {
+    check_embedded_tests_for_targets(&targets_for(CHECK_ALL_TARGETS, arch))
 }
 
 fn check_embedded_tests_for_targets(targets: &[BuildTarget]) -> ExitCode {
-    let root = workspace_root();
+    // The embedded tests are `[[test]]` targets of device-envoy-esp.
+    let root = device_envoy_esp_root();
     println!(
         "{}",
         "--> embedded tests (compile-pass + expected compile-fail)".cyan()
@@ -1387,6 +1369,9 @@ fn explicit_embedded_test_skip_reason(
     }
     if required_caps.contains(Capability::DUAL_SPI) && !chip_caps.contains(Capability::DUAL_SPI) {
         return Some("chip has fewer than two SPI peripherals");
+    }
+    if required_caps.contains(Capability::LEDC) && !chip_caps.contains(Capability::LEDC) {
+        return Some("chip has no LEDC peripheral");
     }
 
     // GPIO availability: scan the test source for all GPIO pin numbers it references,
@@ -1830,111 +1815,6 @@ fn run_expect_failure(cmd: &mut Command) -> bool {
     } else {
         println!("{}", "    expected failure (pass)".green());
         false
-    }
-}
-
-struct GeneratedDocStubExpectation {
-    relative_path: &'static str,
-    required_fragments: &'static [&'static str],
-}
-
-fn check_generated_doc_stubs(workspace_root: &Path) -> Result<(), String> {
-    let generated_doc_stub_expectations = [
-        GeneratedDocStubExpectation {
-            relative_path: "src/audio_player/audio_player_generated.rs",
-            required_fragments: &[
-                "pub struct AudioPlayerGenerated",
-                "pub type AudioPlayerGeneratedPlayable = dyn Playable<VOICE_22050_HZ>;",
-                "impl AudioPlayerGenerated",
-                "impl AudioPlayer<VOICE_22050_HZ> for AudioPlayerGenerated",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/ir/ir_generated.rs",
-            required_fragments: &[
-                "pub struct IrGenerated",
-                "impl Ir for IrGenerated",
-                "pub struct IrMappingGenerated",
-                "impl IrMapping<RemoteKeysGenerated> for IrMappingGenerated",
-                "pub struct IrKeplerGenerated",
-                "impl IrKepler for IrKeplerGenerated",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led2d/led2d_generated.rs",
-            required_fragments: &[
-                "pub struct Led2dGenerated",
-                "impl Led2dGenerated",
-                "impl Led2d<12, 4> for &'static Led2dGenerated",
-                "pub const MAX_FRAMES: usize",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led/led_generated.rs",
-            required_fragments: &[
-                "pub struct LedGenerated",
-                "impl LedGenerated",
-                "pub const MAX_STEPS: usize",
-                "impl Led for LedGenerated",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/led_strip/led_strip_generated.rs",
-            required_fragments: &[
-                "pub struct LedStripGenerated",
-                "impl LedStripGenerated",
-                "impl LedStrip<8> for LedStripGenerated",
-                "pub const MAX_FRAMES: usize",
-                "pub fn new(",
-            ],
-        },
-        GeneratedDocStubExpectation {
-            relative_path: "src/servo_player/servo_player_generated.rs",
-            required_fragments: &[
-                "pub struct ServoPlayerGenerated",
-                "impl ServoPlayerGenerated",
-                "impl Servo for ServoPlayerGenerated",
-                "impl ServoPlayer<16> for ServoPlayerGenerated",
-                "pub fn new(",
-            ],
-        },
-    ];
-
-    let mut failure_messages = Vec::new();
-    for generated_doc_stub_expectation in generated_doc_stub_expectations {
-        let generated_doc_stub_path =
-            workspace_root.join(generated_doc_stub_expectation.relative_path);
-        let generated_doc_stub_source = match fs::read_to_string(&generated_doc_stub_path) {
-            Ok(source) => source,
-            Err(read_error) => {
-                failure_messages.push(format!(
-                    "{}: failed to read ({})",
-                    generated_doc_stub_path.display(),
-                    read_error
-                ));
-                continue;
-            }
-        };
-
-        for required_fragment in generated_doc_stub_expectation.required_fragments {
-            if !generated_doc_stub_source.contains(required_fragment) {
-                failure_messages.push(format!(
-                    "{}: missing required fragment `{}`",
-                    generated_doc_stub_path.display(),
-                    required_fragment
-                ));
-            }
-        }
-    }
-
-    if failure_messages.is_empty() {
-        Ok(())
-    } else {
-        Err(failure_messages.join("\n"))
     }
 }
 

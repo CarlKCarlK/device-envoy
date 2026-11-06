@@ -19,17 +19,18 @@ use embassy_time::{Duration, Timer};
 use heapless::Vec;
 
 led_strips! {
-    pio: PIO1,
     pub LedStripsPio1 {
-        Gpio0LedStrip: { pin: PIN_0, len: 8, max_current: Current::Milliamps(200) },
-        Gpio3Led2d: {
+        pio: PIO1,
+
+        Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(200) },
+        Gpio3Led2d {
             dma: DMA_CH1,
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(500),
+            max_frames: 48,
             led2d: {
                 led_layout: LED_LAYOUT_12X4,
-                max_frames: 48,
                 font: Led2dFont::Font3x4Trim,
             }
         }
@@ -37,16 +38,17 @@ led_strips! {
 }
 
 led_strips! {
-    pio: PIO0,
     pub LedStripsPio0 {
-        Gpio4Led2d: {
+        pio: PIO0,
+
+        Gpio4Led2d {
             dma: DMA_CH2,
             pin: PIN_4,
             len: 96,
             max_current: Current::Milliamps(200),
+            max_frames: 48,
             led2d: {
                 led_layout: LED_LAYOUT_8X12,
-                max_frames: 48,
                 font: Led2dFont::Font4x6Trim,
             }
         }
@@ -75,10 +77,10 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
 
     // Shared PIO1: gpio0 (8 LEDs) and gpio3 (12x4 LEDs)
     let (gpio0_led_strip, gpio3_led2d) =
-        LedStripsPio1::new(p.PIO1, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, spawner)?;
+        LedStripsPio1::new(p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIO1, spawner)?;
 
     // Single-strip on PIO0: gpio4 (12x8 LEDs = 96)
-    let (gpio4_led2d,) = LedStripsPio0::new(p.PIO0, p.PIN_4, p.DMA_CH2, spawner)?;
+    let (gpio4_led2d,) = LedStripsPio0::new(p.PIN_4, p.DMA_CH2, p.PIO0, spawner)?;
 
     let go_frame_duration = Duration::from_secs(1);
     let snake_tick = Duration::from_millis(80);

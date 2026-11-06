@@ -31,7 +31,6 @@ const LED_LAYOUT_12X8_ROTATED: LedLayout<96, 8, 12> =
 led2d! {
     Led12x8 {
         pin: GPIO2,
-        len: 96,
         led_layout: LED_LAYOUT_12X8_ROTATED,
         font: Led2dFont::Font4x6Trim,
         // Same options as led_strip! (RMT channel, engine, gamma, max current, max frames)
@@ -48,7 +47,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     let led12x8 = Led12x8::new(p.GPIO2, rmt80.channel0, spawner)?;
 
     // A 2D array of pixels.

@@ -34,7 +34,6 @@ const LED_LAYOUT_8X12_ROTATED: LedLayout<96, 8, 12> = LED_LAYOUT_12X8.rotate_cw(
 led2d! {
     Led12x8Animated {
         pin: GPIO18,
-        len: 96,
         led_layout: LED_LAYOUT_8X12_ROTATED,
         max_current: Current::Milliamps(300),
         font: Led2dFont::Font4x6Trim,
@@ -50,7 +49,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     info!("LED 2D Example: Animated text on rotated 12x8 panel via GPIO18");

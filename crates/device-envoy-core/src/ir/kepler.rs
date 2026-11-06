@@ -2,8 +2,6 @@
 //!
 //! See the platform-specific crate for primary documentation and examples.
 
-use crate::ir::mapping::IrMappingStatic;
-
 /// Button types for the SunFounder Kepler Kit remote control.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
@@ -46,7 +44,7 @@ pub enum KeplerKeys {
 /// ```rust,no_run
 /// use device_envoy_core::ir::{IrKepler, KeplerKeys};
 ///
-/// async fn handle_kepler_button_presses(ir_kepler: &impl IrKepler) -> ! {
+/// async fn handle_kepler_button_presses(ir_kepler: &mut impl IrKepler) -> ! {
 ///     loop {
 ///         let kepler_button = ir_kepler.wait_for_press().await;
 ///         // Use mapped Kepler button in app logic.
@@ -66,13 +64,13 @@ pub enum KeplerKeys {
 ///
 /// # struct DemoIrKepler;
 /// # impl IrKepler for DemoIrKepler {
-/// #     async fn wait_for_press(&self) -> KeplerKeys {
+/// #     async fn wait_for_press(&mut self) -> KeplerKeys {
 /// #         KeplerKeys::Power
 /// #     }
 /// # }
 /// # fn main() {
-/// #     let ir_kepler = DemoIrKepler;
-/// #     let _future = handle_kepler_button_presses(&ir_kepler);
+/// #     let mut ir_kepler = DemoIrKepler;
+/// #     let _future = handle_kepler_button_presses(&mut ir_kepler);
 /// # }
 /// ```
 #[allow(async_fn_in_trait)]
@@ -80,42 +78,20 @@ pub trait IrKepler {
     /// Wait for the next recognized Kepler button press.
     ///
     /// See the [IrKepler trait documentation](Self) for usage examples.
-    async fn wait_for_press(&self) -> KeplerKeys;
+    ///
+    /// Takes `&mut self` because each event goes to exactly one waiting task: one task owns
+    /// the receiver. A second task waiting on the same one would take some of its events.
+    async fn wait_for_press(&mut self) -> KeplerKeys;
 }
 
-impl<T> IrKepler for &T
+// A mutable reference to a device is the device: it lets code that takes the trait by value
+// accept the `&'static mut` handles that the declaration macros return.
+impl<T> IrKepler for &mut T
 where
     T: IrKepler + ?Sized,
 {
-    async fn wait_for_press(&self) -> KeplerKeys {
-        (*self).wait_for_press().await
-    }
-}
-
-/// Static resources for Kepler IR remote events.
-///
-/// See the platform-specific crate for usage examples.
-// Public for cross-crate platform plumbing; hidden from end-user docs.
-#[doc(hidden)]
-pub struct IrKeplerStatic(IrMappingStatic);
-
-impl IrKeplerStatic {
-    /// Create static resources for the Kepler remote.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self(IrMappingStatic::new())
-    }
-
-    /// Get a reference to the inner mapping static resources.
-    #[must_use]
-    pub const fn inner(&self) -> &IrMappingStatic {
-        &self.0
-    }
-}
-
-impl Default for IrKeplerStatic {
-    fn default() -> Self {
-        Self::new()
+    async fn wait_for_press(&mut self) -> KeplerKeys {
+        (**self).wait_for_press().await
     }
 }
 

@@ -89,7 +89,8 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 async fn inner_main(spawner: Spawner) -> Result<Infallible> {
-    init_and_start!(p, rmt80: rmt80, mode: rmt_mode::Blocking);
+    init_and_start!(p);
+    let rmt80 = device_envoy_esp::new_rmt80(p.RMT)?;
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
     //info!("LED strip 8 starting on GPIO{STRIP8_PIN_NUM}, SOS on GPIO{BUILTIN_LED_PIN_NUM}");

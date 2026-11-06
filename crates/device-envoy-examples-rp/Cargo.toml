@@ -85,7 +85,7 @@ heapless = { version = "0.9.2", features = ["serde"] }
 time = { version = "0.3", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 smart-leds = "0.4.0"
-device-envoy-core = { version = "0.1.6", path = "../device-envoy-core", features = ["defmt"] }
+device-envoy-core = { version = "0.2.0", path = "../device-envoy-core", features = ["defmt"] }
 device-envoy-examples-core = { version = "0.0.0", path = "../device-envoy-examples-core" }
 itertools = { version = "0.14.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
@@ -100,7 +100,6 @@ portable-atomic = { version = "1.13.1", features = ["critical-section"] }
 hd44780-driver = "0.4.0"
 esp-hal-mfrc522 = "0.3.3"
 static_cell = "2.1.1"
-paste = "1.0"
 embedded-graphics = { version = "0.8", default-features = false }
 embed-doc-image = { version = "0.1.4", optional = true }
 png = { version = "0.18", optional = true }
@@ -187,10 +186,10 @@ equatable_if_let = "warn"
 error_impl_error = "allow"
 implicit_return = "allow"
 integer_division_remainder_used = "warn"
-items-after-statements = "warn"
+items_after_statements = "warn"
 iter_nth_zero = "warn"
 match_bool = "warn"
-match-same-arms = "warn"
+match_same_arms = "warn"
 min_ident_chars = "warn"
 missing_docs_in_private_items = { level = "allow", priority = -1 }
 missing_errors_doc = "warn"

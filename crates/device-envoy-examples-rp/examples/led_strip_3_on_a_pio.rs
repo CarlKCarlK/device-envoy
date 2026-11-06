@@ -18,8 +18,8 @@ use panic_probe as _;
 
 led_strips! {
     LedStrips0 {
-        Gpio0LedStrip: { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) },
-        Gpio3Led2d: {
+        Gpio0LedStrip { pin: PIN_0, len: 8, max_current: Current::Milliamps(250) },
+        Gpio3Led2d {
             pin: PIN_3,
             len: 48,
             max_current: Current::Milliamps(250),
@@ -28,7 +28,7 @@ led_strips! {
                 font: Led2dFont::Font3x4Trim,
             }
         },
-        Gpio4Led2d: {
+        Gpio4Led2d {
             pin: PIN_4,
             len: 96,
             max_current: Current::Milliamps(250),
@@ -59,7 +59,7 @@ async fn inner_main(spawner: Spawner) -> Result<()> {
     let p = embassy_rp::init(Default::default());
 
     let (gpio0_led_strip, gpio3_led2d, gpio4_led2d) = LedStrips0::new(
-        p.PIO0, p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIN_4, p.DMA_CH2, spawner,
+        p.PIN_0, p.DMA_CH0, p.PIN_3, p.DMA_CH1, p.PIN_4, p.DMA_CH2, p.PIO0, spawner,
     )?;
 
     info!("Running snake on GPIO0, GO animations on GPIO3 (12x4) and GPIO4 (8x12 rotated)");

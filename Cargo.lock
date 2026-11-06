@@ -231,7 +231,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "211713d2e9fb4793ce4360a712c0764264aff6be48932ccf02ca2a331c0436a9"
 dependencies = [
  "btuuid",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "embassy-sync 0.8.0",
  "embedded-io 0.7.1",
  "embedded-io-async 0.7.0",
@@ -300,7 +300,7 @@ version = "0.4.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c673075a2e0e5f4a1dde27ce9dee1ea4558c7ffe648f576438a20ca1d2acc4b0"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "num-traits",
  "pure-rust-locales",
 ]
@@ -526,7 +526,7 @@ dependencies = [
  "bt-hci",
  "cortex-m",
  "cortex-m-rt",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "embassy-futures",
  "embassy-net-driver-channel",
  "embassy-sync 0.8.0",
@@ -551,7 +551,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "768b74f36be804f7b1020938e711d91c0ab5a847cf620d3756245ae7e641e1e2"
 dependencies = [
  "cyw43",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "embassy-rp",
  "fixed",
 ]
@@ -677,14 +677,14 @@ version = "0.3.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0963443817029b2024136fc4dd07a5107eb8f977eaf18fcd1fdeb11306b64ad"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
 ]
 
 [[package]]
 name = "defmt"
-version = "1.0.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "548d977b6da32fa1d1fda2876453da1e7df63ad0304c8b3dae4dbe7b96f39b78"
+checksum = "e4a0795ac740cb54d7b3775c9c17345f6aaecf884c01733b39d6017738e0e3e1"
 dependencies = [
  "bitflags 1.3.2",
  "defmt-macros",
@@ -692,22 +692,21 @@ dependencies = [
 
 [[package]]
 name = "defmt-macros"
-version = "1.0.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d4fc12a85bcf441cfe44344c4b72d58493178ce635338a3f3b78943aceb258e"
+checksum = "840bb056bd99c495c9188198a258ab787c79f306d864db3e6e8451442d6d8366"
 dependencies = [
  "defmt-parser",
- "proc-macro-error2",
  "proc-macro2",
  "quote",
- "syn 2.0.117",
+ "syn 3.0.6",
 ]
 
 [[package]]
 name = "defmt-parser"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d60334b3b2e7c9d91ef8150abfb6fa4c1c39ebbcf4a81c2e346aad939fee3e"
+checksum = "71958f69fb2de856c5dd51ac9377e986ca1aa5919f931bf5395a807277f889a0"
 dependencies = [
  "thiserror",
 ]
@@ -719,7 +718,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93d5a25c99d89c40f5676bec8cefe0614f17f0f40e916f98e345dae941807f9e"
 dependencies = [
  "critical-section",
- "defmt 1.0.1",
+ "defmt 1.2.0",
 ]
 
 [[package]]
@@ -767,14 +766,14 @@ dependencies = [
 
 [[package]]
 name = "device-envoy"
-version = "0.1.6"
+version = "0.2.0"
 
 [[package]]
 name = "device-envoy-compile-only"
 version = "0.0.0"
 dependencies = [
  "cortex-m-rt",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "defmt-rtt",
  "device-envoy-rp",
  "embassy-executor",
@@ -785,7 +784,6 @@ dependencies = [
  "embedded-graphics",
  "heapless 0.9.2",
  "panic-probe",
- "paste",
  "smart-leds",
  "static_cell",
 ]
@@ -802,11 +800,11 @@ dependencies = [
 
 [[package]]
 name = "device-envoy-core"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "crc32fast",
  "critical-section",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "derive_more",
  "embassy-executor",
  "embassy-futures",
@@ -815,18 +813,25 @@ dependencies = [
  "embassy-time",
  "embed-doc-image",
  "embedded-graphics",
+ "embedded-hal 1.0.0",
  "futures-executor",
  "heapless 0.9.2",
  "js-sys",
+ "macro-schema",
+ "macro-schema-core",
  "micromath",
- "paste",
  "png 0.18.1",
  "portable-atomic",
  "postcard",
+ "pretty_assertions",
+ "prettyplease 0.3.0",
+ "proc-macro2",
  "profont",
+ "quote",
  "serde",
  "smart-leds",
  "static_cell",
+ "syn 3.0.6",
  "time",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -838,7 +843,7 @@ name = "device-envoy-demos"
 version = "0.0.0"
 dependencies = [
  "cortex-m-rt",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "defmt-rtt",
  "device-envoy-rp",
  "embassy-executor",
@@ -848,7 +853,6 @@ dependencies = [
  "embedded-graphics",
  "heapless 0.9.2",
  "panic-probe",
- "paste",
  "serde",
  "smart-leds",
  "static_cell",
@@ -870,7 +874,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy-esp"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "derive_more",
  "device-envoy-core",
@@ -896,8 +900,8 @@ dependencies = [
  "esp-storage",
  "heapless 0.9.2",
  "log",
+ "macro-schema",
  "mipidsi",
- "paste",
  "png 0.18.1",
  "portable-atomic",
  "serde",
@@ -957,7 +961,6 @@ dependencies = [
  "heapless 0.9.2",
  "log",
  "mipidsi",
- "paste",
  "png 0.18.1",
  "portable-atomic",
  "serde",
@@ -977,7 +980,7 @@ dependencies = [
  "cyw43",
  "cyw43-firmware",
  "cyw43-pio",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "defmt-rtt",
  "derive_more",
  "device-envoy-core",
@@ -1004,7 +1007,6 @@ dependencies = [
  "itertools",
  "mipidsi",
  "panic-probe",
- "paste",
  "pio",
  "png 0.18.1",
  "portable-atomic",
@@ -1017,7 +1019,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy-rp"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
@@ -1025,7 +1027,7 @@ dependencies = [
  "cyw43",
  "cyw43-firmware",
  "cyw43-pio",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "defmt-rtt",
  "derive_more",
  "device-envoy-core",
@@ -1048,9 +1050,9 @@ dependencies = [
  "hd44780-driver",
  "heapless 0.9.2",
  "itertools",
+ "macro-schema",
  "mipidsi",
  "panic-probe",
- "paste",
  "pio",
  "png 0.18.1",
  "portable-atomic",
@@ -1060,6 +1062,12 @@ dependencies = [
  "tempfile",
  "time",
 ]
+
+[[package]]
+name = "diff"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
 
 [[package]]
 name = "digest"
@@ -1132,7 +1140,7 @@ dependencies = [
  "cordyceps",
  "cortex-m",
  "critical-section",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "document-features",
  "embassy-executor-macros",
  "embassy-executor-timer-queue",
@@ -1179,7 +1187,7 @@ checksum = "568659fc53866d3d85c60fa33723fb751aa69e71507634fc2c19e7649432fb75"
 dependencies = [
  "cortex-m",
  "critical-section",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "num-traits",
 ]
 
@@ -1189,7 +1197,7 @@ version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "347bc855bdbdf50ed9c5a1d80e8204badb0ba149b8732dde38e1e9708ed9d313"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "document-features",
  "embassy-net-driver",
  "embassy-sync 0.8.0",
@@ -1232,7 +1240,7 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "critical-section",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "document-features",
  "embassy-embedded-hal",
  "embassy-futures",
@@ -1311,7 +1319,7 @@ checksum = "592b0c143ec626e821d4d90da51a2bd91d559d6c442b7c74a47d368c9e23d97a"
 dependencies = [
  "cfg-if",
  "critical-section",
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "document-features",
  "embassy-time-driver",
  "embassy-time-queue-utils",
@@ -1349,7 +1357,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17119855ccc2d1f7470a39756b12068454ae27a3eabb037d940b5c03d9c77b7a"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "embedded-io-async 0.6.1",
 ]
 
@@ -1467,7 +1475,7 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9eb1aa714776b75c7e67e1da744b81a129b3ff919c8712b5e1b32252c1f07cc7"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
 ]
 
 [[package]]
@@ -1485,7 +1493,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2564b9f813c544241430e147d8bc454815ef9ac998878d30cc3055449f7fd4c0"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "embedded-io 0.7.1",
 ]
 
@@ -2432,7 +2440,7 @@ version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af2455f757db2b292a9b1768c4b70186d443bcb3b316252d6b540aec1cd89ed"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
  "hash32",
  "serde_core",
  "stable_deref_trait",
@@ -2707,6 +2715,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "macro-schema"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "661818f10c29920f55ec4fe6bdba4ecf2eb39ba62218e792f7b78def13eab963"
+dependencies = [
+ "macro-schema-derive",
+]
+
+[[package]]
+name = "macro-schema-core"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2032ee2792971c07f836b7471b95eb79e8be2bb4ef9b71cfe546ce855b70db20"
+dependencies = [
+ "prettyplease 0.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
+]
+
+[[package]]
+name = "macro-schema-derive"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe7795d76c8de7c537bd2195a48c0403369c67c05a10456d173320456a6b1390"
+dependencies = [
+ "macro-schema-core",
+]
+
+[[package]]
 name = "managed"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2907,7 +2945,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd402d00b0fb94c5aee000029204a46884b1262e0c443f166d86d2c0747e1a1a"
 dependencies = [
  "cortex-m",
- "defmt 1.0.1",
+ "defmt 1.2.0",
 ]
 
 [[package]]
@@ -3143,6 +3181,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
+name = "pretty_assertions"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ae130e2f271fbc2ac3a40fb1d07180839cdbbe443c7a27e1e3c13c5cac0116d"
+dependencies = [
+ "diff",
+ "yansi",
+]
+
+[[package]]
 name = "prettyplease"
 version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3150,6 +3198,16 @@ checksum = "479ca8adacdd7ce8f1fb39ce9ecccbfe93a3f1344b3d0d97f20bc0196208f62b"
 dependencies = [
  "proc-macro2",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "prettyplease"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bfe0f4c752e450fc2faf62654f1c134747922825d5b04ca717b8874f41a40c0"
+dependencies = [
+ "proc-macro2",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -3185,9 +3243,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.106"
+version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
+checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
 ]
@@ -3207,7 +3265,7 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "869675ad2d7541aea90c6d88c81f46a7f4ea9af8cd0395d38f11a95126998a0d"
 dependencies = [
- "defmt 1.0.1",
+ "defmt 1.2.0",
 ]
 
 [[package]]
@@ -3218,9 +3276,9 @@ checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quote"
-version = "1.0.45"
+version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
+checksum = "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
 dependencies = [
  "proc-macro2",
 ]
@@ -3872,6 +3930,17 @@ name = "syn"
 version = "2.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e665b8803e7b1d2a727f4023456bbbbe74da67099c585258af0ad9c5013b9b99"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
+
+[[package]]
+name = "syn"
+version = "3.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8593e8e72159ed2257d083c7a454a85cbf854f37a0966d8d483aff8c8a3ebcee"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4593,7 +4662,7 @@ dependencies = [
  "anyhow",
  "heck",
  "indexmap",
- "prettyplease",
+ "prettyplease 0.2.37",
  "syn 2.0.117",
  "wasm-metadata",
  "wit-bindgen-core",
@@ -4607,7 +4676,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c0f9bfd77e6a48eccf51359e3ae77140a7f50b1e2ebfe62422d8afdaffab17a"
 dependencies = [
  "anyhow",
- "prettyplease",
+ "prettyplease 0.2.37",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -4727,6 +4796,12 @@ dependencies = [
  "quote",
  "syn 2.0.117",
 ]
+
+[[package]]
+name = "yansi"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"

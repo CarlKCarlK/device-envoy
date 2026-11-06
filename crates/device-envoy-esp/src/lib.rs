@@ -181,11 +181,15 @@ pub mod clock_sync {
     //! }
     //! ```
     /// A device abstraction that combines NTP time synchronization with a local clock.
+    ///
+    /// See the [clock_sync module documentation](mod@crate::clock_sync) for a full usage example.
     pub use device_envoy_core::clock_sync::ClockSyncRuntime as ClockSyncEsp;
     /// Resources needed to construct [`ClockSyncEsp`].
     pub use device_envoy_core::clock_sync::ClockSyncStatic as ClockSyncStaticEsp;
+    /// See the [clock_sync module documentation](mod@crate::clock_sync) for a usage example.
+    pub use device_envoy_core::clock_sync::ClockSyncTick;
     pub use device_envoy_core::clock_sync::{
-        ClockSync, ClockSyncTick, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds, h12_m_s,
+        ClockSync, ONE_DAY, ONE_MINUTE, ONE_SECOND, UnixSeconds, h12_m_s,
     };
     pub use device_envoy_core::{Error as CoreError, Result as CoreResult};
 }

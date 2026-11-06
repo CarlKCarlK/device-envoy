@@ -139,6 +139,8 @@ pub mod layout {
     pub use device_envoy_core::led2d::layout::*;
 }
 
+/// Start with the [led2d module documentation](mod@crate::led2d) for usage examples, and
+/// declare a panel type with the [`led2d!`](macro@crate::led2d) macro.
 pub use device_envoy_core::led2d::Led2d;
 pub use device_envoy_core::led2d::{
     Frame2d, Led2dFont, Led2dStripAdapter, Led2dStripBacked, LedLayout, Point, Size,

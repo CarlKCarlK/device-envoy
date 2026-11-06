@@ -355,6 +355,23 @@ lockfiles are refreshed (`cyd-starter`'s `syn` went from 3.0.4 to 3.0.9, which
   check confirmed that it flags the old ESP `led_strip!`. The remaining RP/ESP
   summary differences are hardware-driven: RP's PIO sharing, and the RP-only
   `led_strips!`.
+- [x] Cross-crate docs (2026-11-05, found reviewing the RP `LedStrip` page).
+      This had been so since the March move of shared code into Core
+      (`13cc2430`): Core's re-exported items told readers to see "the platform
+      crate" in plain text, because Core cannot link to RP or ESP, and both
+      platform sites showed that text unchanged. A doc comment on a named
+      `pub use` is shown before the item's own docs, but a glob re-export
+      drops it (checked in a scratch crate). So now:
+  - The platform crates carry linked pointers on their re-exports of
+    `LedStrip`, `Frame1d`, `Gamma`, `Led2d`, `ClockSyncTick`, and
+    `ClockSync{Rp,Esp}`.
+  - `led_strip` re-exports by name instead of a glob.
+  - Core's text no longer names the platform crate.
+  - Guard tests in `tests/doc_conventions.rs`, which is excluded from the
+    package: summary parity across chips with a reviewed allow-list, no
+    plain-text platform pointers in Core item docs, a complete `led_strip`
+    re-export list, and link conventions. `TimeSync` keeps its pointer
+    because its page exists only on Core's site.
 - [x] CI gaps found 2026-11-05.
   - `Check Clippy` had failed since 2026-10-26 on one `manual_memcpy` in
     core's `lcd_text.rs`, unnoticed because `cargo check-all` did not run

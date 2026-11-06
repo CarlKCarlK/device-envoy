@@ -119,7 +119,22 @@
 //! }
 //! ```
 
-pub use device_envoy_core::led_strip::*;
+// Named, not a glob: rustdoc keeps a re-export's own doc comment only when the item is
+// re-exported by name, and these comments link Core's items to this crate's pages. A host
+// test checks that this list covers every public item of Core's `led_strip`.
+/// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
+pub use device_envoy_core::led_strip::Frame1d;
+/// Set with the `gamma` field of [`led_strip!`](macro@crate::led_strip) and
+/// [`led2d!`](macro@crate::led2d).
+pub use device_envoy_core::led_strip::Gamma;
+/// Start with the [led_strip module documentation](mod@crate::led_strip) for usage
+/// examples, and declare a strip type with the [`led_strip!`](macro@crate::led_strip) macro.
+pub use device_envoy_core::led_strip::LedStrip;
+pub use device_envoy_core::led_strip::{
+    __animate, __write_frame, Command, Current, GAMMA_DEFAULT, LedStripCommandSignal,
+    LedStripHandle, LedStripStatic, MAX_FRAMES_DEFAULT, RGB8, Rgb888, ToRgb8, ToRgb888,
+    apply_correction, colors, generate_combo_table,
+};
 pub mod led_strip_generated;
 
 /// Drive the LEDs from an [RMT resource](crate#glossary).

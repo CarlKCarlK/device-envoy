@@ -81,8 +81,6 @@ impl ToRgb888 for Rgb888 {
 // ============================================================================
 
 /// Gamma correction configuration for LED strips.
-///
-/// See the platform crate's `led_strip!` macro documentation for usage and context.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Gamma {
     /// No correction; raw LED PWM values.
@@ -218,8 +216,6 @@ use core::ops::{Deref, DerefMut};
 
 /// 1D pixel array used to describe LED strip patterns.
 ///
-/// See the platform crate's `led_strip` module documentation for usage examples.
-///
 /// Frames deref to `[RGB8; N]`, so you can mutate pixels directly before
 /// passing them to the generated strip's `write_frame` method.
 #[derive(Clone, Copy, Debug)]
@@ -288,10 +284,8 @@ use heapless::Vec;
 /// Platform crates implement this for their concrete LED strip types so shared logic can
 /// drive strips without knowing the underlying hardware backend.
 ///
-/// This page serves as the definitive reference for what a generated LED strip type
-/// provides. For first-time readers, start with the `led_strip` module documentation in your
-/// platform crate (`device-envoy-rp` or `device-envoy-esp`), then return here for a
-/// complete list of available methods and associated constants.
+/// This page is the definitive reference for what a generated LED strip type provides:
+/// every method and associated constant.
 ///
 /// Design intent:
 ///

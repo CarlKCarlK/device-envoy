@@ -85,3 +85,9 @@ docs-incomplete:
     @echo "WARNING: building incomplete documentation previews; use 'just docs' for authoritative output." >&2
     just docs-rp-only-no-images
     just docs-esp-only-unvalidated
+
+# Read-only report of release state across Device Envoy, the starters, Linkage Blaze, and
+# macro-schema: versions, dependency requirements, lockfile sources, CI pins, TODO0s, and
+# git state. Exits with 1 when it finds a problem.
+release-status:
+    scripts/release-status.sh

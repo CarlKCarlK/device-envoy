@@ -9,6 +9,11 @@ repository documentation should link here rather than duplicate these steps.
 - Prepare the release on a dedicated feature or release branch, not directly on
   `main`.
 - Start with a clean working tree and an up-to-date `main` base.
+- See where every repository stands. `just release-status` reports versions,
+  Device Envoy requirements, lockfile sources, Linkage Blaze's CI pin,
+  `TODO0`s, and git state across Device Envoy, the starters, Linkage Blaze,
+  and macro-schema. Run it again at each later step; at the end of the release
+  it should report no problems.
 - Format all code files:
 
 ```bash
@@ -84,13 +89,26 @@ just show-docs
 
 ## 6. Run Full Local Checks
 
-Run the workspace's local CI equivalent from the repository root:
+Run the workspace's local CI equivalent from the repository root. Update
+nightly first: `check-all` includes the docs.rs check, and docs.rs always
+builds with the newest nightly.
 
 ```bash
+rustup update nightly
 cargo check-all
 ```
 
 Fix every failure before pushing the final release-preparation commit.
+
+The docs.rs check builds each published crate's documentation as docs.rs does
+(see `check_docs_rs` in `xtask/src/main.rs`). It exists because the docs.rs
+build of `device-envoy-rp` 0.2.0 failed on new nightly rustdoc lints that
+the older local and CI toolchains did not report, and the fix needed a new
+release (0.2.1). To run it alone:
+
+```bash
+cargo run --manifest-path xtask/Cargo.toml -- check-docs-rs
+```
 
 ## 7. Validate the Starter Repositories
 
@@ -99,12 +117,16 @@ configuration against this Device Envoy branch by substituting local path
 dependencies. It is intentionally manual and does not run automatically for a
 pull request.
 
-- Push the release branch, then dispatch the workflow against that branch:
+- Push the release branch, then dispatch the workflow against that branch. If
+  the starters need changes for this release, put them on a branch with the
+  same name in each starter and pass it as `starter_branch`; without it, the
+  workflow checks the starters' `main`:
 
 ```bash
 RELEASE_BRANCH="$(git branch --show-current)"
 git push -u origin "$RELEASE_BRANCH"
-gh workflow run check-starters.yml --ref "$RELEASE_BRANCH"
+gh workflow run check-starters.yml --ref "$RELEASE_BRANCH" \
+  -f starter_branch=STARTER_BRANCH
 STARTER_RUN_ID="$(gh run list --workflow check-starters.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 ```
 
@@ -114,7 +136,21 @@ STARTER_RUN_ID="$(gh run list --workflow check-starters.yml --limit 1 --json dat
 gh run watch "$STARTER_RUN_ID" --exit-status
 ```
 
-- Perform any release-specific hardware smoke tests that cannot run in CI.
+- The workflow builds every rp-blinky board and every esp-blinky board
+  example. It does not cover `device-envoy-cyd-starter`; check that locally
+  with `just check-all` in that repository.
+- Run hardware smoke tests for behavior compilation cannot check. The usual
+  set:
+  - `device-envoy-esp-blinky`: `just run c6` and an S3 board example; the
+    LED blinks SOS.
+  - `device-envoy-rp-blinky`: `cargo xtask run --board <board>` on an RP2040
+    and an RP2350 board, at least one with Wi-Fi; the LED blinks SOS and the
+    `defmt` log lines decode.
+  - `device-envoy-cyd-starter`: `just run-esp`; the display, touch, and the
+    BOOT button work.
+  - Linkage Blaze on a CYD: the clock and the other demos run.
+  - Anything the release changed at runtime that the starters do not use,
+    such as two `button_watch!` buttons on ESP in 0.2.0.
 - Do not commit temporary path dependencies to a downstream repository.
 
 ## 8. Integrate Through a Pull Request
@@ -141,7 +177,8 @@ cargo package --list -p device-envoy-esp
 
 - Push the validated release-preparation commit.
 - Open or update a pull request from the release branch into `main`.
-- Wait for the pull request's `Check All` and `Check Clippy` workflows to pass.
+- Wait for the pull request's `Check All`, `Check Clippy`, and `Check docs.rs`
+  workflows to pass.
   From the checked-out release branch, inspect their current state with:
 
 ```bash
@@ -158,8 +195,8 @@ gh pr checks
 - Merge through GitHub only after the pull-request checks and the manually
   dispatched starter checks pass. Do not bypass this gate with a direct local
   merge and push to `main`.
-- Wait for the push-triggered `Check All` and `Check Clippy` workflows on
-  `main` to pass after the merge.
+- Wait for the push-triggered `Check All`, `Check Clippy`, and `Check docs.rs`
+  workflows on `main` to pass after the merge.
 - Update the local checkout to the approved commit and confirm it is clean:
 
 ```bash
@@ -249,7 +286,8 @@ gh release view vX.Y.Z \
 - Verify the exact Core, RP, and ESP versions on crates.io.
 - Verify the Core, RP, and ESP builds on docs.rs.
 - Confirm that the top-level README badges resolve to the new versions.
-- Update `device-envoy-rp-blinky` and `device-envoy-esp-blinky` to the published
+- Update `device-envoy-rp-blinky`, `device-envoy-esp-blinky`, and
+  `device-envoy-cyd-starter` (including its `wasm` crate) to the published
   registry versions in separate pull requests.
 - Bump each starter package version to the Device Envoy release version so a
   cloned starter clearly identifies the library release it targets.
@@ -271,12 +309,24 @@ cargo xtask check --board pico2
 cargo xtask check --board pico1w
 cargo xtask check --board pico2w
 
-# In device-envoy-esp-blinky:
-cargo xtask check --chip c6
-cargo xtask check --chip s3
+# In device-envoy-esp-blinky: src/main.rs, then every board example
+just check c6
+for example in $(sed -n 's/^name = "blinky_\(.*\)"$/\1/p' Cargo.toml); do
+  just check "${example%%_*}" "${example#*_}"
+done
+
+# In device-envoy-cyd-starter: host, ESP32, and WASM
+just check-all
 ```
 
-- Merge the starter updates only after their pull-request checks pass.
+- The starters have no pull-request checks of their own. After merging the
+  starter updates, run `Check Starters` without `starter_branch` so it checks
+  their `main`:
+
+```bash
+gh workflow run check-starters.yml --ref main
+```
+
 - For a coordinated downstream crate release, such as Linkage Blaze, wait for
   all required Device Envoy versions to resolve from crates.io before running
   registry-only checks and publishing that crate.

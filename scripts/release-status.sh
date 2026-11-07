@@ -55,7 +55,7 @@ git_state() {
 todo0() {
     local dir="$1" name="$2" count
     count="$(git -C "$dir" grep -nE '\bTODO0+\b' -- ':!specs' ':!docs/release_checklist.md' 2>/dev/null | wc -l)"
-    [ "$count" -eq 0 ] || problem "${name}: ${count} TODO0 line(s) (git grep -n TODO0)"
+    [ "$count" -eq 0 ] || problem "${name}: ${count} release-priority TODO line(s) (see the sweep in docs/release_checklist.md)"
 }
 
 # Each Device Envoy lockfile entry and its source.

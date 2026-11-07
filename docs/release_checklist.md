@@ -356,3 +356,10 @@ gh workflow run check-starters.yml --ref main
 - For a coordinated downstream crate release, such as Linkage Blaze, wait for
   all required Device Envoy versions to resolve from crates.io before running
   registry-only checks and publishing that crate.
+
+## 12. Record the Final State
+
+When every repository is done, run `just release-status`. It must report no
+problems. Its output lists each repository's version and exact commit; paste
+it into a comment on the release pull request, so the release records what
+shipped in every repository.

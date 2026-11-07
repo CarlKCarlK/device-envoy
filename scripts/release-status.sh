@@ -37,15 +37,16 @@ requirements() {
 git_state() {
     local dir="$1" name="$2"
     git -C "$dir" fetch -q origin 2>/dev/null
-    local branch dirty ahead behind
+    local branch commit dirty ahead behind
     branch="$(git -C "$dir" branch --show-current)"
+    commit="$(git -C "$dir" rev-parse --short=10 HEAD)"
     dirty="$(git -C "$dir" status --porcelain --untracked-files=no | wc -l)"
     if ! git -C "$dir" rev-parse -q --verify "origin/${branch}" >/dev/null; then
-        echo "  git: ${branch}, ${dirty} modified, not on GitHub"
+        echo "  git: ${branch} at ${commit}, ${dirty} modified, not on GitHub"
         problem "${name}: branch ${branch} is not on GitHub"
     else
         read -r behind ahead < <(git -C "$dir" rev-list --left-right --count "origin/${branch}...HEAD")
-        echo "  git: ${branch}, ${dirty} modified, ${ahead} ahead / ${behind} behind origin"
+        echo "  git: ${branch} at ${commit}, ${dirty} modified, ${ahead} ahead / ${behind} behind origin"
         [ "$ahead" = 0 ] || problem "${name}: ${ahead} unpushed commits on ${branch}"
     fi
     [ "$dirty" -eq 0 ] || problem "${name}: uncommitted changes"

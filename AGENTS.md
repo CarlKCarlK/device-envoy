@@ -26,6 +26,7 @@ This file contains both shared workspace rules and crate-specific rules for this
 - Prefer `const` values defined in the local context (inside the function/example) rather than at module scope when they're only used there.
 - Do not add redundant `just` recipes that only mirror an existing `cargo` alias/command. If the behavior is the same, keep only the `cargo` command.
 - For `cargo` aliases that target embedded triples, include `--no-default-features` unless there is an explicit, documented reason to keep default features enabled.
+- Before changing a declaration macro (a `macro_schema::define!` schema), read "Declaration Macros" in `docs/development.md`: where schemas live, the constructor argument order, rules for generated code, and the intentional RP/ESP differences.
 
 ## Error Handling
 

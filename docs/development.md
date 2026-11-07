@@ -96,6 +96,142 @@ just show-docs
 The platform-specific `show-docs-rp`, `show-docs-esp`, and `show-docs-core`
 recipes open partial previews instead.
 
+## Declaration Macros
+
+All 33 declaration macros (`led_strip!`, `ir_mapping!`, `servo!`, and so on)
+are [`macro-schema`](https://github.com/CarlKCarlK/macro-schema) `define!`
+schemas, each with a `generate { ... }` template. The framework parses,
+validates, defaults, and documents every call; there are no hand-written
+matchers. The template language is documented on `define!` in
+`macro-schema`'s rustdoc, and the framework's design is in its
+`docs/architecture.md`. The `0.2.0` section of [CHANGELOG.md](../CHANGELOG.md)
+is the migration guide from the old syntax.
+
+### Where schemas live
+
+- Each schema sits in the module whose API it generates, next to the runtime
+  code its template calls. One family is one file.
+- RP and ESP keep separate schemas and templates, with no shared macro code.
+  Each chip's template is that chip's API in its HAL's terms. Logic both chips
+  need is shared through `device-envoy-core` as ordinary Rust, as it is for
+  `LedStrip`, `Frame1d`, the servo loop, the button-watch runtime, and the I2C
+  task loop.
+
+### How templates are organized
+
+The pattern follows the hardware:
+
+- **A single device as a one-member group** (RP). RP devices in a group share
+  a PIO block, so RP `led_strip!`, `led2d!`, `ir!`, `ir_kepler!`,
+  `ir_mapping!`, and both chips' `lcd_text!` expand to a hidden one-member
+  group and add a `new` that unpacks it.
+- **A group that calls its single** (ESP). Each ESP IR receiver owns its own
+  RMT channel and task, so `irs!`, `ir_keplers!`, and `ir_mappings!` invoke the
+  single macro per member and add a group constructor.
+- **Direct.** `audio_player!`, `button_watch!`, `led!`, `servo!`,
+  `servo_player!`, `i2cs!`, and the clip macros emit their items directly.
+- **Choice by type, not by spelling.** A template cannot branch on what a
+  value is. When output depends on a choice, make the choice a type and put
+  the differences in trait impls. ESP `led_strip!`'s `engine` is the type `Rmt`
+  or `Spi`, and the `LedEngine` and `EngineResource` impls carry the driver
+  type, buffer length, and constructor resource.
+- **A group that calls a hidden declaration macro.** RP `led_strips!` emits
+  each strip through the hidden `__led_strip_type!` schema, under the member's
+  name or, behind a panel, a hidden `<Name>LedStrip` name.
+
+The hand-written `macro_rules!` that remain are not declarations:
+`combine!`, `tone!`, `tga!`, and `init_and_start!` take positional or
+statement-shaped input. The rest generate repetitive impls inside the crate
+(`__define_ir_task!`, `impl_wifi_pio!`, `servo_pin_map!`,
+`impl_dma_irq_map_all_irqs!`, `__cyd_tga!`, `__impl_wifi_auto_fields!`).
+
+### Rules for generated code
+
+- **Constructor argument order**, from most specific to least: the device's
+  own pins, then its peripherals or channels, then its configuration data
+  (such as `on_level` or an IR `button_map`), then shared resources, then the
+  spawner. Schema fields are listed in the same order. A group declaration
+  keeps its shared field first; a group constructor takes each member's
+  arguments first and the shared resource last. Hand-written constructors
+  follow the rule too, with a device's own `&'static …Static` first (see the
+  Device/Static Pair Pattern in `AGENTS.md`). The four CYD constructors are an
+  accepted exception, kept to avoid breaking about 300 call sites.
+- **Visibility.** Generated methods are `pub`. The declared type carries the
+  user's visibility, and members inherit the group's.
+- **No extra user dependencies.** Generated code reaches `static_cell`,
+  `heapless`, and `embassy_sync` through hidden `$crate::__*` re-exports, so
+  users do not add them to their own `Cargo.toml`.
+- **Doc links name the platform crate.** In generated code, `crate::` is the
+  user's crate. Write `device_envoy_rp::…` or `device_envoy_esp::…`.
+- **Everything generated is documented**, so a user crate that denies
+  `missing_docs` and warnings builds.
+- **Repeated field docs stay inline.** For example, the RP note "Each PIO
+  serves one device or group…" appears on every macro page that takes `pio`,
+  because readers should not have to follow a link. When editing it, change
+  every copy in one commit.
+
+### Intentional differences
+
+These look inconsistent but are deliberate:
+
+- `max_current` defaults to 250 mA for one device, but each member of a
+  `led_strips!` group must set it: currents on a shared supply add up.
+- `dma` is defaulted on RP `audio_player!` but required on ESP. No default
+  fits every ESP chip (the ESP32 and ESP32-S2 use `DMA_I2S0`, newer chips
+  `DMA_CH0`).
+- `pcm_clip!` requires a source sample rate; `adpcm_clip!` reads it from the
+  WAV header. A raw PCM file has no header.
+- Animations are sized by `max_frames` on LED strips and `max_steps` on `led!`
+  and `servo_player!`.
+- `servo!`'s `new` is infallible on RP and returns `Result` on ESP, where LEDC
+  setup can fail.
+- Other RP/ESP differences come from the HALs: which resources a constructor
+  takes, `impl Into<Peri<..>>` on RP versus by-value peripherals on ESP, and
+  servo setup types.
+
+### Tests that guard the macros
+
+`cargo check-all` runs all of these. Each was confirmed to fail on the bug it
+guards against.
+
+- `crates/device-envoy-core/tests/macro_expansion.rs` expands RP, ESP, and Core
+  schemas on the host with `macro_schema_core::expand_definition`, without
+  compiling the HALs. It also holds the parity tests:
+  `rp_and_esp_macros_document_the_same_contract` compares the Syntax and Fields
+  docs, and `rp_and_esp_samples_generate_the_same_api` compares each generated
+  type's trait impls, methods, return types, and constants. Intentional
+  differences are on explicit allow-lists. `every_macro_page_leads_to_usage_examples`
+  checks that every public macro page shows or links to an example.
+- `crates/device-envoy-core/tests/doc_conventions.rs` checks that macro
+  summaries match across chips, that Core item docs link instead of naming
+  "the platform crate", that the `led_strip` re-export list is complete, and
+  the link conventions in `AGENTS.md`.
+- `crates/device-envoy-rp/tests-compile-only/generated_code_lints.rs` and
+  `crates/device-envoy-esp/tests/embedded/generated_code_lints_compile.rs`
+  build generated code in a crate that denies warnings and `missing_docs`.
+
+`macro_expansion.rs` and `doc_conventions.rs` read the RP and ESP sources, so
+they are excluded from the published Core package.
+
+### Rustdoc pitfalls
+
+- A `///` comment attaches to the next item even across blank lines. Put a
+  macro's hand-written docs inside its `define!`, or they land on a hidden
+  item.
+- Rustdoc shows a re-export's own doc comment before the item's docs, but only
+  for a named re-export. A glob re-export drops it, so the `led_strip`
+  re-exports are named.
+
+### Deferred
+
+- Folding Kepler IR into IR mapping: a Kepler receiver is a mapping receiver
+  with a fixed 21-entry table, and the templates copy the mapping code. Doing
+  it on RP alone would add an API difference between the chips; doing it on
+  both needs a hidden shared schema to save about 30 lines. Revisit if the IR
+  logic changes.
+- `pio` 0.4: the `proc-macro-error2` future-incompatibility warning comes from
+  `pio-proc` 0.3 through `pio` 0.3. Move to `pio` 0.4 when embassy-rp does.
+
 ## Release Process
 
 The canonical release procedure, including PR/CI gates, starter validation,

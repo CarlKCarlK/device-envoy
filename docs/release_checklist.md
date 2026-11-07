@@ -25,8 +25,12 @@ cargo fmt --all -- --check
 - Search for release-blocking TODOs:
 
 ```bash
-rg -n '(?i)\btodo''0+\b' crates xtask specs docs --glob '!docs/release_checklist.md'
+rg -n '(?i)\btodo''0+\b' crates xtask docs --glob '!docs/release_checklist.md'
 ```
+
+  Planning documents in `specs/` carry a `TODO0` by design, so the sweep
+  leaves them out. Delete a spec once its work ships, moving anything still
+  useful into `docs/`.
 
 - Resolve, explicitly defer, or document why each remaining item is not
   blocking.
@@ -84,6 +88,20 @@ just show-docs
 
 - Manually inspect Core, RP, and ESP for broken links, stale examples, missing
   images or sections, and inconsistent platform documentation.
+- When macros changed, open each changed macro's page on both chips side by
+  side (`target/<triple>/doc/device_envoy_<chip>/index.html`) and check that:
+  - the first line says what the macro generates;
+  - a bold link near the top leads to usage examples, or the page has its own
+    example;
+  - **Syntax** and **Fields** list the fields in constructor order, with
+    sensible defaults;
+  - the **Related Macros** links go to the right pages;
+  - the generated sample type's page (for example `LedStripGenerated`) shows
+    `new` with the expected arguments and return type.
+
+  Also check the Core trait and type pages each chip re-exports (`LedStrip`,
+  `Led2d`, `Frame1d`, `Gamma`, `ClockSync…`): each starts with a linked "Start
+  with the … module documentation" line.
 - Optionally export rustdoc to DOCX with
   `scripts/rustdoc_site_to_docx.py` for a whole-site comparison.
 
@@ -137,8 +155,16 @@ gh run watch "$STARTER_RUN_ID" --exit-status
 ```
 
 - The workflow builds every rp-blinky board and every esp-blinky board
-  example. It does not cover `device-envoy-cyd-starter`; check that locally
-  with `just check-all` in that repository.
+  example. It does not cover `device-envoy-cyd-starter`. Check that locally:
+  temporarily add a `[patch.crates-io]` pointing `device-envoy-core` and
+  `device-envoy-esp` at this checkout, run `just check-all` there, and remove
+  the patch.
+- Check Linkage Blaze against this branch with `cargo check-all` in that
+  repository. Its permanent `[patch.crates-io]` builds against
+  `../mcu/device-envoy`, but a patch applies only when the patched crate's
+  version satisfies the requirement. If Linkage Blaze still requires the
+  previous version, Cargo silently builds against crates.io instead, so first
+  set its Device Envoy requirements to this release's version.
 - Run hardware smoke tests for behavior compilation cannot check. The usual
   set:
   - `device-envoy-esp-blinky`: `just run c6` and an S3 board example; the

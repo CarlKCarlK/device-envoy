@@ -12,6 +12,7 @@ fn main() -> ExitCode {
         (Some("check-core"), None) => check_core_job(&workspace_root()),
         (Some("check-rp"), None) => check_rp(&workspace_root()),
         (Some("check-docs-rs"), None) => check_docs_rs(&workspace_root()),
+        (Some("check-clippy"), None) => check_clippy(&workspace_root()),
         (Some("check-esp"), arch) => match EspArch::parse(arch) {
             Some(arch) => check_esp(&workspace_root(), arch),
             None => return usage(),
@@ -28,7 +29,8 @@ fn main() -> ExitCode {
 fn usage() -> ExitCode {
     eprintln!(
         "Usage: cargo run --manifest-path xtask/Cargo.toml -- \
-         <check-all | check-core | check-rp | check-esp [riscv | xtensa] | check-docs-rs>\n\
+         <check-all | check-core | check-rp | check-esp [riscv | xtensa] | check-docs-rs | \
+         check-clippy>\n\
          check-all runs everything, formatting the workspace first; the others are the \
          parts CI runs as separate jobs."
     );
@@ -129,8 +131,8 @@ fn spawn_check(
     (name, thread::spawn(move || check(&workspace_root)))
 }
 
-/// The host clippy runs that the `Check Clippy` workflow makes, so `check-all` catches the
-/// same lints before a push. Keep this list in sync with `.github/workflows/check-clippy.yml`.
+/// The host clippy runs. The `Check Clippy` workflow runs this function (`check-clippy`),
+/// and so does `check-all`, so the two cannot drift apart.
 fn check_clippy(workspace_root: &Path) -> bool {
     const CLIPPY_RUNS: [&[&str]; 6] = [
         &[

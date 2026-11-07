@@ -22,7 +22,9 @@ path = "src/lib.rs"
 all-features = false
 no-default-features = true
 default-target = "thumbv6m-none-eabi"
-targets = ["thumbv6m-none-eabi", "thumbv8m.main-none-eabihf"]
+# Pico 1 only. docs.rs uses one feature list for every target, and `embedded` selects the
+# RP2040 (`pico1`), so a Pico 2 (`thumbv8m.main-none-eabihf`) build can only fail.
+targets = ["thumbv6m-none-eabi"]
 features = ["embedded", "wifi", "doc-images"]
 
 [package.metadata.envoy]

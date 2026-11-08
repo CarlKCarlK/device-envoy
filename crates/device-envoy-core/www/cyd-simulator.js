@@ -6,6 +6,24 @@ const SHARED_SMALL_PRINT =
 const SCENE_MARGIN_X = 48;
 const SCENE_MARGIN_TOP = 88;
 const SCENE_MARGIN_BOTTOM = 104;
+// Small screens (phones in either orientation) use the compact layout: the
+// controls shrink to corner chips and the whole case is fitted between them.
+// Keep this query in sync with the compact block in cyd-simulator.css.
+const COMPACT_MEDIA_QUERY = "(max-width: 640px), (max-height: 520px)";
+// Compact layout keeps this much room for the corner chips: bars above and below
+// the case on a tall screen, columns beside it on a wide screen.
+const COMPACT_BAR_RESERVE = 66;
+const COMPACT_COLUMN_RESERVE = 200;
+const COMPACT_EDGE_MARGIN = 8;
+// Visible case plus boot button, as fractions of the stage (the screen area),
+// measured from case.png and the .case/.boot-button CSS offsets. The USB plug
+// above the case is left out so it can run under the top chips.
+const DEVICE_BOUNDS = {
+  portrait: { left: -0.17, right: 1.16, top: -0.2, bottom: 1.21 },
+  landscape: { left: -0.19, right: 1.2, top: -0.17, bottom: 1.22 },
+};
+const MIN_USER_ZOOM = 0.65;
+const MAX_USER_ZOOM = 3;
 const SECONDS_PER_DAY = 86399;
 
 /** Mount the shared shell, start an application, and bind its input protocol. */
@@ -155,6 +173,10 @@ function bindInputProtocol(canvas, boot, handle, touchDownSamples) {
   const listeners = [];
   let touchActive = false;
   let bootActive = false;
+  // The CYD panel is single-touch, so a second finger means pinch-zoom: release
+  // the simulated touch and ignore the screen until every finger lifts.
+  let touchPointerCount = 0;
+  let multiTouch = false;
   const listen = (target, type, listener, options) => {
     target.addEventListener(type, listener, options);
     listeners.push(() => target.removeEventListener(type, listener, options));
@@ -192,9 +214,35 @@ function bindInputProtocol(canvas, boot, handle, touchDownSamples) {
     invoke("boot_up");
   };
 
+  const countTouchPointer = (event) => {
+    if (event.pointerType !== "touch") {
+      return;
+    }
+    touchPointerCount += 1;
+    if (touchPointerCount >= 2) {
+      multiTouch = true;
+      releaseTouch();
+    }
+  };
+  const uncountTouchPointer = (event) => {
+    if (event.pointerType !== "touch") {
+      return;
+    }
+    touchPointerCount = Math.max(0, touchPointerCount - 1);
+    if (touchPointerCount === 0) {
+      multiTouch = false;
+    }
+  };
+  listen(window, "pointerdown", countTouchPointer, { capture: true });
+  listen(window, "pointerup", uncountTouchPointer, { capture: true });
+  listen(window, "pointercancel", uncountTouchPointer, { capture: true });
+
   listen(canvas, "pointerdown", (event) => {
-    const [x, y] = point(event);
     event.preventDefault();
+    if (multiTouch) {
+      return;
+    }
+    const [x, y] = point(event);
     canvas.setPointerCapture(event.pointerId);
     touchActive = true;
     invoke("touch_down", x, y);
@@ -203,7 +251,7 @@ function bindInputProtocol(canvas, boot, handle, touchDownSamples) {
     }
   });
   listen(canvas, "pointermove", (event) => {
-    if (event.buttons) {
+    if (event.buttons && !multiTouch) {
       const [x, y] = point(event);
       invoke("touch_move", x, y);
     }
@@ -281,7 +329,36 @@ export function setupDemoUx(config) {
     });
   };
 
+  const compactQuery = window.matchMedia(COMPACT_MEDIA_QUERY);
   let userZoom = 1;
+  // Screen-space offset from pinch panning, in CSS pixels.
+  const pan = { x: 0, y: 0 };
+
+  const compactFit = (naturalWidth, naturalHeight) => {
+    let bounds = DEVICE_BOUNDS[stage.dataset.orientation === "portrait" ? "portrait" : "landscape"];
+    if (stage.dataset.inverted === "true") {
+      bounds = {
+        left: 1 - bounds.right,
+        right: 1 - bounds.left,
+        top: 1 - bounds.bottom,
+        bottom: 1 - bounds.top,
+      };
+    }
+    const deviceWidth = (bounds.right - bounds.left) * naturalWidth;
+    const deviceHeight = (bounds.bottom - bounds.top) * naturalHeight;
+    const wideScreen = window.innerWidth > window.innerHeight;
+    const reserveX = wideScreen ? COMPACT_COLUMN_RESERVE : COMPACT_EDGE_MARGIN;
+    const reserveY = wideScreen ? COMPACT_EDGE_MARGIN : COMPACT_BAR_RESERVE;
+    const availableWidth = Math.max(120, window.innerWidth - 2 * reserveX);
+    const availableHeight = Math.max(120, window.innerHeight - 2 * reserveY);
+    return {
+      fitScale: Math.min(1, availableWidth / deviceWidth, availableHeight / deviceHeight),
+      // Offset of the device's center from the stage's center, in stage pixels.
+      deviceCenterX: ((bounds.left + bounds.right) / 2 - 0.5) * naturalWidth,
+      deviceCenterY: ((bounds.top + bounds.bottom) / 2 - 0.5) * naturalHeight,
+    };
+  };
+
   const updateSceneScale = () => {
     const previousTransform = simulator.style.transform;
     simulator.style.transform = "none";
@@ -293,13 +370,26 @@ export function setupDemoUx(config) {
       return;
     }
 
-    const availableWidth = Math.max(240, window.innerWidth - SCENE_MARGIN_X);
-    const availableHeight = Math.max(
-      240,
-      window.innerHeight - SCENE_MARGIN_TOP - SCENE_MARGIN_BOTTOM,
-    );
-    const fitScale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
-    simulator.style.transform = `scale(${fitScale * userZoom})`;
+    let fitScale;
+    let deviceCenterX = 0;
+    let deviceCenterY = 0;
+    if (compactQuery.matches) {
+      ({ fitScale, deviceCenterX, deviceCenterY } = compactFit(naturalWidth, naturalHeight));
+    } else {
+      const availableWidth = Math.max(240, window.innerWidth - SCENE_MARGIN_X);
+      const availableHeight = Math.max(
+        240,
+        window.innerHeight - SCENE_MARGIN_TOP - SCENE_MARGIN_BOTTOM,
+      );
+      fitScale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
+    }
+    const scale = fitScale * userZoom;
+    const translateX = pan.x - deviceCenterX * scale;
+    const translateY = pan.y - deviceCenterY * scale;
+    const translate = translateX === 0 && translateY === 0
+      ? ""
+      : `translate(${translateX}px, ${translateY}px) `;
+    simulator.style.transform = `${translate}scale(${scale})`;
   };
 
   const zoomReset = document.createElement("button");
@@ -307,9 +397,14 @@ export function setupDemoUx(config) {
   zoomReset.className = "demo-ux-zoom-reset";
   zoomReset.textContent = "reset zoom";
   zoomReset.hidden = true;
+  const updateZoomReset = () => {
+    zoomReset.hidden = userZoom === 1 && pan.x === 0 && pan.y === 0;
+  };
   zoomReset.addEventListener("click", () => {
     userZoom = 1;
-    zoomReset.hidden = true;
+    pan.x = 0;
+    pan.y = 0;
+    updateZoomReset();
     updateSceneScale();
   });
   simulator.addEventListener("wheel", (event) => {
@@ -317,12 +412,80 @@ export function setupDemoUx(config) {
       return;
     }
     event.preventDefault();
-    userZoom = Math.min(2, Math.max(0.65, userZoom * Math.exp(-event.deltaY * 0.001)));
-    zoomReset.hidden = userZoom === 1;
+    userZoom = Math.min(
+      MAX_USER_ZOOM,
+      Math.max(MIN_USER_ZOOM, userZoom * Math.exp(-event.deltaY * 0.001)),
+    );
+    updateZoomReset();
     updateSceneScale();
   }, { passive: false });
   document.body.append(zoomReset);
 
+  // Two-finger pinch zooms and pans the scene. A single finger stays a CYD
+  // touch (see bindInputProtocol). Pinches on dialogs, docks and buttons are
+  // left alone.
+  const touchPointers = new Map();
+  let pinch = null;
+  const isSceneGesture = (target) => !(target instanceof Element && target.closest(
+    ".demo-ux-card-scrim, .demo-ux-time-dock, .demo-ux-device-overlay, button, a",
+  ));
+  const pinchGeometry = () => {
+    const [first, second] = [...touchPointers.values()];
+    return {
+      distance: Math.hypot(second.x - first.x, second.y - first.y),
+      midX: (first.x + second.x) / 2,
+      midY: (first.y + second.y) / 2,
+    };
+  };
+  window.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch" || !isSceneGesture(event.target)) {
+      return;
+    }
+    touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (touchPointers.size === 2) {
+      const geometry = pinchGeometry();
+      pinch = {
+        startDistance: Math.max(1, geometry.distance),
+        startZoom: userZoom,
+        startMidX: geometry.midX,
+        startMidY: geometry.midY,
+        startPanX: pan.x,
+        startPanY: pan.y,
+      };
+    }
+  }, { capture: true });
+  window.addEventListener("pointermove", (event) => {
+    if (!touchPointers.has(event.pointerId)) {
+      return;
+    }
+    touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (!pinch || touchPointers.size < 2) {
+      return;
+    }
+    const geometry = pinchGeometry();
+    userZoom = Math.min(
+      MAX_USER_ZOOM,
+      Math.max(MIN_USER_ZOOM, pinch.startZoom * geometry.distance / pinch.startDistance),
+    );
+    // Keep the scene point under the starting midpoint under the current one.
+    const factor = userZoom / pinch.startZoom;
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    pan.x = geometry.midX - centerX - factor * (pinch.startMidX - centerX - pinch.startPanX);
+    pan.y = geometry.midY - centerY - factor * (pinch.startMidY - centerY - pinch.startPanY);
+    updateZoomReset();
+    updateSceneScale();
+  }, { capture: true });
+  const endPinchPointer = (event) => {
+    touchPointers.delete(event.pointerId);
+    if (touchPointers.size < 2) {
+      pinch = null;
+    }
+  };
+  window.addEventListener("pointerup", endPinchPointer, { capture: true });
+  window.addEventListener("pointercancel", endPinchPointer, { capture: true });
+
+  compactQuery.addEventListener("change", updateSceneScale);
   window.addEventListener("resize", updateSceneScale);
   window.requestAnimationFrame(updateSceneScale);
   window.setTimeout(updateSceneScale, 120);

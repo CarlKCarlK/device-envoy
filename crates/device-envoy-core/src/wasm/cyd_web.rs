@@ -128,11 +128,11 @@ use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
 use wasm_bindgen::{JsCast, JsValue, prelude::wasm_bindgen};
 use web_sys::{HtmlCanvasElement, window};
 
+use super::clock::TimeOfDayOverride;
 use super::{
     ButtonWasm, ClockSyncWasm, CydSimulatorControlWasm, CydSimulatorWasm, CydWasm,
     DnsSimulatorWasm, FlashBlockWasm, WifiSimulatorWasm,
 };
-use super::clock::TimeOfDayOverride;
 use crate::cyd::display::Orientation;
 use crate::flash_block::FlashBlock as _;
 

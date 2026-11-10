@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.2.4
+
+All three crates move to 0.2.4. The git tags `v0.2.2` and `v0.2.3` marked
+browser-simulator snapshots used by Linkage Blaze; they were never published to
+crates.io, so this release skips those numbers.
+
+Browser CYD simulator (`device-envoy-core`, `wasm` feature):
+
+- Phone layout: on a small screen the simulated CYD fills the space between the
+  corner chips, and two-finger pinch zoom works, with a button to reset it.
+- A time chosen with the clock control keeps running from that time instead of
+  freezing. **Live** still returns to browser time.
+- The "Wi-Fi connection is simulated in the browser" notice shown after BOOT
+  fades after a few seconds instead of staying forever.
+
+Documentation:
+
+- The LED current-limit and gamma docs now say the lookup table is built at
+  compile time (not at device initialization) and that applying it costs one
+  table lookup per color channel.
+- The `device-envoy-rp` docs.rs build uses only the Pico 1 target.
+
 ## 0.2.1 (`device-envoy-rp` only)
 
 - Fix the docs.rs build of `device-envoy-rp` 0.2.0. Current nightly rustdoc

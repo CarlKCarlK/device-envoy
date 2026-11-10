@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.5 (`device-envoy-core` only)
+
+- The browser CYD shell (`www/cyd-simulator.js`) takes two new optional `app`
+  settings, so pages outside the Linkage Blaze gallery can use it unmodified:
+  `galleryUrl: null` removes the "Gallery" chip and link, and `repoUrl` sets
+  the "GitHub repo" link (`null` removes it). The defaults are unchanged. The
+  shell's `app` settings are now listed in a comment above
+  `mountCydSimulator`. `device-envoy-rp` and `device-envoy-esp` stay at 0.2.4.
+
 ## 0.2.4
 
 All three crates move to 0.2.4. The git tags `v0.2.2` and `v0.2.3` marked

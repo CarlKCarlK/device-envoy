@@ -1,6 +1,11 @@
 // Canonical CYD browser shell. Application pages provide metadata and a small
 // WASM handle; generic device and browser interaction stays here.
 
+// Defaults for the optional `app` links; they match the Linkage Blaze gallery,
+// whose frozen demo snapshots rely on them.
+const DEFAULT_GALLERY_URL = "../../";
+const DEFAULT_REPO_URL = "https://github.com/CarlKCarlK/linkage-blaze";
+
 const SHARED_SMALL_PRINT =
   "The simulation is the same no_std, no-allocation Rust that runs on a ~$15 ESP32-2432S028R - the \"Cheap Yellow Display\" (CYD). Here the core is compiled to WebAssembly; on a real desk it drives a 320x240 touch panel.";
 const SCENE_MARGIN_X = 48;
@@ -27,6 +32,16 @@ const MAX_USER_ZOOM = 3;
 const SECONDS_PER_DAY = 86399;
 
 /** Mount the shared shell, start an application, and bind its input protocol. */
+// Mount the shell around `#screen` and start the WASM application.
+//
+// `app` options (all optional):
+// - `orientation`: "landscape" (default) or "portrait".
+// - `touchDownSamples`: synthetic touch samples per press (default 9).
+// - `noticeMessages`: map from notice id to the text shown for it.
+// - `galleryUrl`: target of the "Gallery" chip and link (default "../../").
+//   `null` removes both.
+// - `repoUrl`: target of the "GitHub repo" link (default: Linkage Blaze).
+//   `null` removes it.
 export async function mountCydSimulator({ wasm, app }) {
   const canvas = requireElement("#screen", HTMLCanvasElement);
   const { boot, stage } = ensurePhysicalShell(canvas);
@@ -294,7 +309,8 @@ export function setupDemoUx(config) {
   const body = document.body;
 
   body.classList.add("demo-ux-page", `demo-ux-page--${config.orientation}`);
-  const galleryTag = buildGalleryTag(config.galleryUrl);
+  const galleryUrl = config.galleryUrl === undefined ? DEFAULT_GALLERY_URL : config.galleryUrl;
+  const galleryTag = galleryUrl === null ? null : buildGalleryTag(galleryUrl);
   const sceneCard = buildSceneCard(config);
   const deviceMode = buildDeviceMode({
     body,
@@ -306,8 +322,10 @@ export function setupDemoUx(config) {
   });
   const notice = buildSimulatorNotice();
 
+  if (galleryTag) {
+    body.append(galleryTag.link);
+  }
   body.append(
-    galleryTag.link,
     sceneCard.restingButton,
     sceneCard.scrim,
     deviceMode.button,
@@ -547,10 +565,26 @@ function buildSimulatorNotice() {
 function buildGalleryTag(galleryUrl) {
   const link = document.createElement("a");
   link.className = "demo-ux-gallery-tag";
-  link.href = galleryUrl ?? "../../";
+  link.href = galleryUrl;
   link.textContent = "\u2190 Gallery";
   link.setAttribute("aria-label", "Back to gallery");
   return { link };
+}
+
+function buildSceneCardLinks(config) {
+  const galleryUrl = config.galleryUrl === undefined ? DEFAULT_GALLERY_URL : config.galleryUrl;
+  const repoUrl = config.repoUrl === undefined ? DEFAULT_REPO_URL : config.repoUrl;
+  const links = [
+    `<a href="${escapeHtml(config.coreCodeUrl)}" target="_blank" rel="noopener">Core code</a>`,
+  ];
+  if (galleryUrl !== null) {
+    links.push(`<a href="${escapeHtml(galleryUrl)}">Gallery</a>`);
+  }
+  if (repoUrl !== null) {
+    links.push(`<a href="${escapeHtml(repoUrl)}" target="_blank" rel="noopener">GitHub repo</a>`);
+  }
+  links.push(`<a href="https://medium.com/@carlmkadie" target="_blank" rel="noopener">Medium</a>`);
+  return links.join("\n        ");
 }
 
 function buildSceneCard(config) {
@@ -589,10 +623,7 @@ function buildSceneCard(config) {
     <section class="demo-ux-card-section">
       <h3>Links</h3>
       <div class="demo-ux-card-links">
-        <a href="${escapeHtml(config.coreCodeUrl)}" target="_blank" rel="noopener">Core code</a>
-        <a href="${config.galleryUrl ?? "../../"}">Gallery</a>
-        <a href="https://github.com/CarlKCarlK/linkage-blaze" target="_blank" rel="noopener">GitHub repo</a>
-        <a href="https://medium.com/@carlmkadie" target="_blank" rel="noopener">Medium</a>
+        ${buildSceneCardLinks(config)}
       </div>
     </section>
     <p class="demo-ux-card-smallprint">${escapeHtml(SHARED_SMALL_PRINT)}</p>

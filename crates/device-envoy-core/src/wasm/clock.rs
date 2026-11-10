@@ -13,7 +13,7 @@ use core::cell::Cell;
 use std::rc::Rc;
 
 use embassy_time::{Duration, Timer};
-use time::{OffsetDateTime, Time, UtcOffset};
+use time::{OffsetDateTime, UtcOffset};
 
 use crate::clock_sync::{ClockSync, ClockSyncTick, UnixSeconds};
 
@@ -21,8 +21,16 @@ use crate::clock_sync::{ClockSync, ClockSyncTick, UnixSeconds};
 /// See the compiled [`crate::wasm::clock`] example.
 pub struct ClockSyncWasm {
     offset_minutes: Cell<i32>,
-    time_of_day: Rc<Cell<Option<u32>>>,
+    time_of_day: Rc<Cell<Option<TimeOfDayOverride>>>,
     visible: Rc<Cell<bool>>,
+}
+
+/// A user-chosen time of day and the browser time when it was chosen.
+/// The simulated clock keeps running forward from that point.
+#[derive(Clone, Copy)]
+pub(crate) struct TimeOfDayOverride {
+    pub(crate) seconds_of_day: u32,
+    pub(crate) set_at_unix_seconds: i64,
 }
 
 impl ClockSyncWasm {
@@ -33,7 +41,7 @@ impl ClockSyncWasm {
     }
 
     pub(crate) fn new_with_control_state(
-        time_of_day: Rc<Cell<Option<u32>>>,
+        time_of_day: Rc<Cell<Option<TimeOfDayOverride>>>,
         visible: Rc<Cell<bool>>,
     ) -> Self {
         Self {
@@ -64,16 +72,18 @@ impl ClockSyncWasm {
             return utc;
         };
         let local = utc.to_offset(offset);
-        let Some(seconds_of_day) = self.time_of_day.get() else {
+        let Some(time_override) = self.time_of_day.get() else {
             return local;
         };
-        let hour = (seconds_of_day / 3600) as u8;
-        let minute = ((seconds_of_day % 3600) / 60) as u8;
-        let second = (seconds_of_day % 60) as u8;
-        let Ok(time) = Time::from_hms(hour, minute, second) else {
+        let Ok(set_at) = OffsetDateTime::from_unix_timestamp(time_override.set_at_unix_seconds)
+        else {
             return local;
         };
-        local.replace_time(time)
+        let (hour, minute, second) = set_at.to_offset(offset).time().as_hms();
+        let set_at_seconds_of_day =
+            i64::from(hour) * 3600 + i64::from(minute) * 60 + i64::from(second);
+        let shift_seconds = i64::from(time_override.seconds_of_day) - set_at_seconds_of_day;
+        local + time::Duration::seconds(shift_seconds)
     }
 }
 

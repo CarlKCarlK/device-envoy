@@ -132,6 +132,7 @@ use super::{
     ButtonWasm, ClockSyncWasm, CydSimulatorControlWasm, CydSimulatorWasm, CydWasm,
     DnsSimulatorWasm, FlashBlockWasm, WifiSimulatorWasm,
 };
+use super::clock::TimeOfDayOverride;
 use crate::cyd::display::Orientation;
 use crate::flash_block::FlashBlock as _;
 
@@ -383,7 +384,7 @@ struct SupervisorState {
     orientation: Orientation,
     stopped: bool,
     page_info: PageInfo,
-    clock_time_of_day: Rc<Cell<Option<u32>>>,
+    clock_time_of_day: Rc<Cell<Option<TimeOfDayOverride>>>,
     clock_control_visible: Rc<Cell<bool>>,
 }
 
@@ -468,7 +469,7 @@ impl Handle {
     pub fn clock_control_is_visible(&self) -> bool {
         self.state.borrow().clock_control_visible.get()
     }
-    /// Set the simulated local time, in seconds after midnight.
+    /// Set the simulated local time, in seconds after midnight. The clock keeps running from there.
     /// See the compiled browser-shell example on [`crate::wasm::cyd_web`].
     pub fn set_clock_time_of_day(&self, seconds_of_day: u32) -> Result<(), JsValue> {
         if seconds_of_day >= 86_400 {
@@ -479,7 +480,10 @@ impl Handle {
         self.state
             .borrow()
             .clock_time_of_day
-            .set(Some(seconds_of_day));
+            .set(Some(TimeOfDayOverride {
+                seconds_of_day,
+                set_at_unix_seconds: (js_sys::Date::now() / 1000.0) as i64,
+            }));
         Ok(())
     }
     /// Restore the browser's live local clock.

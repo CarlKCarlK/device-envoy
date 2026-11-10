@@ -98,7 +98,7 @@ async function monitorTypedNotices(handle, showNotice, noticeMessages = {}) {
       showNotice({
         severity: severityName,
         message,
-        durationMs: id === "wifi-simulated" || severityName === "fatal" ? 0 : 3500,
+        durationMs: severityName === "fatal" ? 0 : 3500,
       });
       notice = handle.take_notice();
     }

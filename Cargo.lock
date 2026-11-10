@@ -766,7 +766,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy"
-version = "0.2.0"
+version = "0.2.4"
 
 [[package]]
 name = "device-envoy-compile-only"
@@ -800,7 +800,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy-core"
-version = "0.2.0"
+version = "0.2.4"
 dependencies = [
  "crc32fast",
  "critical-section",
@@ -874,7 +874,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy-esp"
-version = "0.2.0"
+version = "0.2.4"
 dependencies = [
  "derive_more",
  "device-envoy-core",
@@ -1019,7 +1019,7 @@ dependencies = [
 
 [[package]]
 name = "device-envoy-rp"
-version = "0.2.1"
+version = "0.2.4"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",

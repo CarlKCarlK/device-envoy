@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.6
+
+All three crates move to 0.2.6.
+
+- `pcm_clip!` and `adpcm_clip!` now include each input file exactly once and
+  reuse its immutable bytes for sample counts, WAV metadata, and decoding.
+  Separate compile-time passes can no longer observe different file contents
+  if an asset changes during compilation. Macro syntax, supported formats,
+  compile-time processing, and runtime behavior are unchanged.
+- Regression tests check inclusion counts and compile-time clip construction
+  with default sample rates, explicit rates, resampling, and conditional
+  declarations. Three RP2040 release audio examples have unchanged text, data,
+  and BSS sizes before and after the fix.
+
 ## 0.2.5 (`device-envoy-core` only)
 
 - The browser CYD shell (`www/cyd-simulator.js`) takes two new optional `app`

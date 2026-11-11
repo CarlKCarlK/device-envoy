@@ -209,6 +209,38 @@ fn esp_led2d_takes_its_length_from_led_layout() -> Result<()> {
 }
 
 #[test]
+fn pcm_clip_includes_each_asset_once() -> Result<()> {
+    for target_rate in [quote! {}, quote! { target_sample_rate_hz: 8_000, }] {
+        let expanded = expand(
+            CORE_AUDIO_PLAYER,
+            "pcm_clip",
+            quote! {
+                Nasa {
+                    file: "nasa.s16",
+                    source_sample_rate_hz: 22_050,
+                    #target_rate
+                }
+            },
+        )?;
+        assert_eq!(expanded.matches("include_bytes!").count(), 1, "{expanded}");
+    }
+    Ok(())
+}
+
+#[test]
+fn adpcm_clip_includes_each_asset_once() -> Result<()> {
+    for target_rate in [quote! {}, quote! { target_sample_rate_hz: 8_000, }] {
+        let expanded = expand(
+            CORE_AUDIO_PLAYER,
+            "adpcm_clip",
+            quote! { Nasa { file: "nasa.wav", #target_rate } },
+        )?;
+        assert_eq!(expanded.matches("include_bytes!").count(), 1, "{expanded}");
+    }
+    Ok(())
+}
+
+#[test]
 fn pcm_clip_accepts_only_source_sample_rate_hz() -> Result<()> {
     assert_eq!(
         expand_error(

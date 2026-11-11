@@ -2126,12 +2126,10 @@ macro_schema::define! {
     }
 
     generate {
-        // Without `target_sample_rate_hz`, the clip keeps the WAV file's rate.
-        const $upper($decl.name, _TARGET_SAMPLE_RATE_HZ): u32 = $if let Some(rate) = $decl.target_sample_rate_hz {
-            $rate
-        } else {
-            $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($decl.file)).sample_rate_hz
-        };
+        // Evaluate an explicit rate in the caller's scope, where its names resolve.
+        $if let Some(rate) = $decl.target_sample_rate_hz {
+            const $upper($decl.name, _TARGET_SAMPLE_RATE_HZ): u32 = $rate;
+        }
 
         $decl.attrs
         #[doc = $decl.doc]
@@ -2139,12 +2137,19 @@ macro_schema::define! {
         // its items read `Name::ITEM`, until inherent associated types are stable.
         #[allow(non_snake_case)]
         $decl.vis mod $decl.name {
+            // Include once so metadata and decoding always use the same immutable bytes.
+            const WAV_BYTES: &[u8] = include_bytes!($decl.file);
             // TODO Parse each included WAV header only once. Reuse this metadata in
             // source_adpcm_clip, adpcm_clip, and default sample-rate selection.
             const PARSED_WAV: $crate::audio_player::ParsedAdpcmWavHeader =
-                $crate::audio_player::__parse_adpcm_wav_header(include_bytes!($decl.file));
+                $crate::audio_player::__parse_adpcm_wav_header(WAV_BYTES);
             const SOURCE_SAMPLE_RATE_HZ: u32 = PARSED_WAV.sample_rate_hz;
-            const TARGET_SAMPLE_RATE_HZ: u32 = super::$upper($decl.name, _TARGET_SAMPLE_RATE_HZ);
+            // Without `target_sample_rate_hz`, the clip keeps the WAV file's rate.
+            const TARGET_SAMPLE_RATE_HZ: u32 = $if let Some(rate) = $decl.target_sample_rate_hz {
+                super::$upper($decl.name, _TARGET_SAMPLE_RATE_HZ)
+            } else {
+                SOURCE_SAMPLE_RATE_HZ
+            };
             #[doc = "Sample rate in hertz for this generated clip output."]
             pub const SAMPLE_RATE_HZ: u32 = TARGET_SAMPLE_RATE_HZ;
 
@@ -2170,7 +2175,7 @@ macro_schema::define! {
 
             #[must_use]
             const fn source_adpcm_clip() -> SourceAdpcmClip {
-                let wav_bytes = include_bytes!($decl.file);
+                let wav_bytes = WAV_BYTES;
                 let parsed_wav = $crate::audio_player::__parse_adpcm_wav_header(wav_bytes);
                 assert!(parsed_wav.block_align <= u16::MAX as usize, "block_align too large");
                 assert!(
@@ -2208,7 +2213,7 @@ macro_schema::define! {
             #[must_use]
             pub const fn adpcm_clip() -> $crate::audio_player::AdpcmClipBuf<SAMPLE_RATE_HZ, ADPCM_DATA_LEN> {
                 if TARGET_SAMPLE_RATE_HZ == SOURCE_SAMPLE_RATE_HZ {
-                    let wav_bytes = include_bytes!($decl.file);
+                    let wav_bytes = WAV_BYTES;
                     let parsed_wav = $crate::audio_player::__parse_adpcm_wav_header(wav_bytes);
                     assert!(parsed_wav.block_align <= u16::MAX as usize, "block_align too large");
                     assert!(
@@ -2304,8 +2309,9 @@ macro_schema::define! {
             const TARGET_SAMPLE_RATE_HZ: u32 = super::$upper($decl.name, _TARGET_SAMPLE_RATE_HZ);
             #[doc = "Sample rate in hertz for this generated clip output."]
             pub const SAMPLE_RATE_HZ: u32 = TARGET_SAMPLE_RATE_HZ;
-            const AUDIO_SAMPLE_BYTES_LEN: usize = include_bytes!($decl.file).len();
-            const SOURCE_SAMPLE_COUNT: usize = AUDIO_SAMPLE_BYTES_LEN / 2;
+            // Include once so sizing and decoding always use the same immutable bytes.
+            const AUDIO_SAMPLE_S16LE: &[u8] = include_bytes!($decl.file);
+            const SOURCE_SAMPLE_COUNT: usize = AUDIO_SAMPLE_S16LE.len() / 2;
             #[doc = "Number of samples for uncompressed (PCM) version of this clip."]
             pub const PCM_SAMPLE_COUNT: usize = $crate::audio_player::__resampled_sample_count(
                 SOURCE_SAMPLE_COUNT,
@@ -2322,8 +2328,7 @@ macro_schema::define! {
                 { SAMPLE_RATE_HZ },
                 { PCM_SAMPLE_COUNT },
             > {
-                let audio_sample_s16le: &[u8; AUDIO_SAMPLE_BYTES_LEN] = include_bytes!($decl.file);
-                let (sample_bytes, []) = audio_sample_s16le.as_chunks::<2>() else {
+                let (sample_bytes, []) = AUDIO_SAMPLE_S16LE.as_chunks::<2>() else {
                     panic!("audio byte length must be even for s16le");
                 };
                 let mut samples = [0_i16; SOURCE_SAMPLE_COUNT];

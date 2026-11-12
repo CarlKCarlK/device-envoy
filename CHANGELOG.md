@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.7 (unreleased)
+
+- Remove the hidden `led_strip::apply_correction` public re-export from
+  `device-envoy-rp` and `device-envoy-esp`. Platform device tasks still apply
+  their compile-time correction tables automatically.
+- Add RP `led_strip_gamma` and `led_strip_linear` examples comparing an
+  eight-step brightness wedge and full white with and without gamma and a current budget.
+
 ## 0.2.6
 
 All three crates move to 0.2.6.

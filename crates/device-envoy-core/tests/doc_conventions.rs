@@ -248,21 +248,37 @@ fn core_item_docs_link_instead_of_naming_the_platform_crate() -> TestResult {
 }
 
 #[test]
-fn rp_and_esp_led_strip_reexport_core_api_and_macro_helpers() -> TestResult {
+fn rp_and_esp_led_modules_reexport_core_api_and_macro_helpers() -> TestResult {
     // The platform `led_strip` modules list Core's items by name (a glob would drop their
     // re-export doc comments), so a new Core API item or macro helper must be added there too.
     let mut core_names = public_item_names(&syn::parse_file(&fs::read_to_string(
         crate_src("device-envoy-core").join("led_strip.rs"),
     )?)?);
-    // Correction is shared across crates but called only by their private device loops.
-    assert!(core_names.remove("apply_correction"));
+    // These items cross crate boundaries but only platform device loops name them.
+    for name in ["apply_correction", "Command"] {
+        assert!(core_names.remove(name));
+    }
     let mut problems = Vec::new();
     for crate_dir in ["device-envoy-rp", "device-envoy-esp"] {
         let source = fs::read_to_string(crate_src(crate_dir).join("led_strip.rs"))?;
         let reexported = reexported_names(&syn::parse_file(&source)?, "led_strip");
+        let mut core_names = core_names.clone();
+        let mut private_names = vec!["apply_correction", "Command"];
+        if crate_dir == "device-envoy-esp" {
+            // RP generated tasks name this type; ESP generated tasks infer it.
+            assert!(core_names.remove("LedStripCommandSignal"));
+            private_names.push("LedStripCommandSignal");
+        }
+        for name in private_names {
+            assert!(
+                !reexported.contains(name),
+                "{crate_dir} must keep `{name}` private"
+            );
+        }
+        let led2d = syn::parse_file(&fs::read_to_string(crate_src(crate_dir).join("led2d.rs"))?)?;
         assert!(
-            !reexported.contains("apply_correction"),
-            "{crate_dir} must keep frame correction private"
+            !reexported_names(&led2d, "led2d").contains("Led2dStripAdapter"),
+            "{crate_dir} must keep the adapter import private; macros use the platform alias"
         );
         for name in core_names.difference(&reexported) {
             problems.push(format!("{crate_dir} does not re-export `{name}`"));

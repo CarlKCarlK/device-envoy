@@ -143,10 +143,12 @@ pub mod layout {
 /// declare a panel type with the [`led2d!`](macro@crate::led2d) macro.
 pub use device_envoy_core::led2d::Led2d;
 pub use device_envoy_core::led2d::{
-    Frame2d, Led2dFont, Led2dStripAdapter, Led2dStripBacked, LedLayout, Point, Size,
-    bit_matrix3x4_font, render_text_to_frame,
+    Frame2d, Led2dFont, Led2dStripBacked, LedLayout, Point, Size, bit_matrix3x4_font,
+    render_text_to_frame,
 };
 pub mod led2d_generated;
+
+use device_envoy_core::led2d::Led2dStripAdapter;
 
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that
 // expands at the call site in downstream crates.

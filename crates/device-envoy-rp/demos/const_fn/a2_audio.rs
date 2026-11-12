@@ -21,8 +21,8 @@ use defmt::info;
 use device_envoy_rp::{
     Result,
     audio_player::{
-        __audio_player_play, __pcm_clip_from_samples, AtEnd, AudioPlayerRp, AudioPlayerStatic,
-        PcmClipBuf, Playable, Volume, device_loop,
+        __audio_player_play, __pcm_clip_from_samples, AtEnd, AudioPlayerStatic, PcmClip, Playable,
+        Volume, device_loop,
     },
     button::{Button as _, ButtonRp, PressedTo},
 };
@@ -37,7 +37,7 @@ const MAX_CLIPS: usize = 1;
 const SAMPLE_RATE_HZ: u32 = 22_050;
 
 static AUDIO_PLAYER_STATIC: AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ> =
-    AudioPlayerRp::new_static_with_max_volume(Volume::percent(50));
+    AudioPlayerStatic::new_static_with_max_volume(Volume::percent(50));
 
 const NASA_BYTES: &[u8] =
     include_bytes!("../../../device-envoy-examples-rp/examples/data/audio/nasa_22k.s16");
@@ -46,8 +46,7 @@ const _: () = assert!(
     "s16le requires exactly two bytes per sample"
 );
 const NASA_SAMPLE_COUNT: usize = NASA_BYTES.len() / 2;
-const NASA: PcmClipBuf<SAMPLE_RATE_HZ, NASA_SAMPLE_COUNT> =
-    read_s16le::<NASA_SAMPLE_COUNT>(NASA_BYTES);
+const NASA: PcmClip<SAMPLE_RATE_HZ, NASA_SAMPLE_COUNT> = read_s16le(NASA_BYTES);
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -82,7 +81,7 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
 
 const fn read_s16le<const SAMPLE_COUNT: usize>(
     bytes: &[u8],
-) -> PcmClipBuf<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
+) -> PcmClip<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
     let (sample_bytes, []) = bytes.as_chunks::<2>() else {
         panic!("s16le requires exactly two bytes per sample");
     };

@@ -14,7 +14,7 @@ use core::time::Duration as StdDuration;
 
 use device_envoy_core::{
     audio_player::{
-        AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, SilenceClip, VOICE_22050_HZ,
+        AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, Playable, SilenceClip, VOICE_22050_HZ,
     },
     button::Button as _,
 };
@@ -64,10 +64,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     init_and_start!(p);
     esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    const CHIME: &AudioPlayerBoardPlayable =
-        &tone!(880, AudioPlayerBoard::SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
-    const GAP: &AudioPlayerBoardPlayable = &SilenceClip::new(ms(500));
-    const NASA: &AudioPlayerBoardPlayable = &Nasa::adpcm_clip();
+    const CHIME: &dyn Playable<8000> = &tone!(880, 8000, ms(100)).with_gain(Gain::percent(20));
+    const GAP: &dyn Playable<8000> = &SilenceClip::new(ms(500));
+    const NASA: &dyn Playable<8000> = &Nasa::adpcm_clip();
 
     let mut button = ButtonEsp::new(p.GPIO6, PressedTo::Ground);
     let audio_player_board =

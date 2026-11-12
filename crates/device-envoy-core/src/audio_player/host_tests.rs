@@ -79,10 +79,10 @@ fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
             .with_gain(Gain::percent(50));
 
     assert_eq!(
-        (tone_adpcm.data.len() / tone_adpcm.block_align as usize)
-            * tone_adpcm.samples_per_block as usize,
-        (tone_adpcm_gain50.data.len() / tone_adpcm_gain50.block_align as usize)
-            * tone_adpcm_gain50.samples_per_block as usize,
+        (tone_adpcm.data.len() / tone_adpcm.block_align() as usize)
+            * tone_adpcm.samples_per_block() as usize,
+        (tone_adpcm_gain50.data.len() / tone_adpcm_gain50.block_align() as usize)
+            * tone_adpcm_gain50.samples_per_block() as usize,
         "ADPCM gain must preserve decoded sample count"
     );
     assert_ne!(
@@ -161,6 +161,13 @@ fn mixed_clip_lengths_play_through_borrowed_views() -> Result<(), Box<dyn Error>
         __pcm_clip_from_samples([1000; 12]).with_adpcm_block_align(8);
     static GAP: SilenceClip = SilenceClip::new(Duration::from_micros(250));
     static EMPTY_PCM: PcmClip<8_000, 0> = __pcm_clip_from_samples([]);
+    const _: () = {
+        assert!(PCM.samples()[0] == 100);
+        assert!(ADPCM.block_align() == 8);
+        assert!(ADPCM.samples_per_block() == 9);
+        assert!(ADPCM.pcm_sample_count() == 12);
+        assert!(ADPCM.data().len() == 16);
+    };
     let clips: [&'static dyn Playable<8_000>; 5] = [&PCM, &GAP, &ADPCM, &SHORT_PCM, &EMPTY_PCM];
     super::__audio_player_play(&AUDIO_PLAYER_STATIC, clips, AtEnd::Stop);
     let Some(AudioCommand::Play { audio_clips, .. }) = AUDIO_PLAYER_STATIC.try_take_command()
@@ -171,10 +178,10 @@ fn mixed_clip_lengths_play_through_borrowed_views() -> Result<(), Box<dyn Error>
         return Err("expected PCM as the first clip".into());
     };
     assert!(ptr::eq(*samples, PCM.samples().as_slice()));
-    let Some(PlaybackClip::Adpcm(adpcm_view)) = audio_clips.get(2) else {
+    let Some(PlaybackClip::Adpcm(_, data)) = audio_clips.get(2) else {
         return Err("expected ADPCM as the third clip".into());
     };
-    assert!(ptr::eq(adpcm_view.data, ADPCM.data().as_slice()));
+    assert!(ptr::eq(*data, ADPCM.data().as_slice()));
 
     let mut recording_output = RecordingOutput::default();
     let mut sample_buffer = [0; 4];
@@ -188,13 +195,12 @@ fn mixed_clip_lengths_play_through_borrowed_views() -> Result<(), Box<dyn Error>
         .is_none()
     );
 
-    let decoded_pcm: PcmClip<8_000, 12> = ADPCM.with_pcm();
     let expected_samples = PCM
         .samples()
         .iter()
         .copied()
         .chain([0, 0])
-        .chain(decoded_pcm.samples().iter().copied())
+        .chain([1000; 12])
         .chain(SHORT_PCM.samples().iter().copied())
         .map(super::stereo_sample)
         .collect::<Vec<_>>();

@@ -9,7 +9,7 @@ use defmt::info;
 use device_envoy_rp::{
     Result,
     audio_player::{
-        AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, SilenceClip, VOICE_22050_HZ,
+        AtEnd, AudioPlayer as _, Gain, NARROWBAND_8000_HZ, Playable, SilenceClip, VOICE_22050_HZ,
         audio_player, pcm_clip,
     },
     button::{ButtonRp, PressedTo},
@@ -47,10 +47,9 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     let p = embassy_rp::init(Default::default());
     let mut button = ButtonRp::new(p.PIN_13, PressedTo::Ground);
 
-    const CHIME: &AudioPlayerPin8Playable =
-        &tone!(880, AudioPlayerPin8::SAMPLE_RATE_HZ, ms(100)).with_gain(Gain::percent(20));
-    const GAP: &AudioPlayerPin8Playable = &SilenceClip::new(ms(500));
-    const NASA: &AudioPlayerPin8Playable = &Nasa::adpcm_clip();
+    const CHIME: &dyn Playable<8000> = &tone!(880, 8000, ms(100)).with_gain(Gain::percent(20));
+    const GAP: &dyn Playable<8000> = &SilenceClip::new(ms(500));
+    const NASA: &dyn Playable<8000> = &Nasa::adpcm_clip();
 
     let audio_player_pin8 =
         AudioPlayerPin8::new(p.PIN_8, p.PIN_9, p.PIN_10, p.PIO0, p.DMA_CH0, spawner)?;

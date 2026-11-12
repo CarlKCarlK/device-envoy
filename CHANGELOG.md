@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased (0.2.7)
+## 0.2.7 (unreleased)
 
 - Breaking change: remove `PcmClipBuf`, `AdpcmClipBuf`, and the unsized clip
   types. `PcmClip<R, N>` and `AdpcmClip<R, N>` are now the sized clip types,
-  with their lengths expressed as const generics.
+  with their lengths expressed as const generics. Clip data and metadata
+  accessors are now `const fn`.
 - Remove hidden plumbing re-exports: `led_strip::Command` and
   `led2d::Led2dStripAdapter` from RP and ESP, and `led_strip::LedStripCommandSignal`
   from ESP. RP retains its signal re-export for downstream macro expansions;

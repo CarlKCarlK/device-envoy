@@ -376,10 +376,11 @@ pub async fn play_clip_sequence_once<
                     return Some(next_audio_command);
                 }
             }
-            PlaybackClip::Adpcm(adpcm_clip) => {
+            PlaybackClip::Adpcm(adpcm_header, data) => {
                 if let ControlFlow::Break(next_audio_command) = play_full_adpcm_clip_once(
                     output,
-                    *adpcm_clip,
+                    *adpcm_header,
+                    data,
                     sample_buffer,
                     audio_player_static,
                 )
@@ -451,18 +452,19 @@ async fn play_full_adpcm_clip_once<
     const SAMPLE_RATE_HZ: u32,
 >(
     output: &mut Output,
-    adpcm_view: AdpcmView<SAMPLE_RATE_HZ>,
+    adpcm_header: AdpcmHeader,
+    data: &[u8],
     sample_buffer: &mut [u32; SAMPLE_BUFFER_LEN],
     audio_player_static: &'static AudioPlayerStatic<MAX_CLIPS, SAMPLE_RATE_HZ>,
 ) -> ControlFlow<AudioCommand<MAX_CLIPS, SAMPLE_RATE_HZ>, ()> {
     let mut sample_buffer_len = 0usize;
-    let mut remaining_pcm_sample_count = adpcm_view.pcm_sample_count as usize;
+    let mut remaining_pcm_sample_count = adpcm_header.pcm_sample_count as usize;
     if remaining_pcm_sample_count == 0 {
         return ControlFlow::Continue(());
     }
 
-    let block_align = adpcm_view.block_align as usize;
-    for adpcm_block in adpcm_view.data.chunks_exact(block_align) {
+    let block_align = adpcm_header.block_align as usize;
+    for adpcm_block in data.chunks_exact(block_align) {
         if remaining_pcm_sample_count == 0 {
             break;
         }
@@ -504,7 +506,7 @@ async fn play_full_adpcm_clip_once<
         }
 
         let mut samples_decoded_in_block = 1usize;
-        let samples_per_block = adpcm_view.samples_per_block as usize;
+        let samples_per_block = adpcm_header.samples_per_block as usize;
 
         for adpcm_byte in &adpcm_block[4..] {
             for adpcm_nibble in [adpcm_byte & 0x0F, adpcm_byte >> 4] {
@@ -619,34 +621,32 @@ pub enum AtEnd {
 /// See the [audio_player module documentation](mod@crate::audio_player) for
 /// usage examples.
 pub struct AdpcmClip<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> {
-    block_align: u16,
-    samples_per_block: u16,
-    pcm_sample_count: u32,
+    header: AdpcmHeader,
     data: [u8; DATA_LEN],
 }
 
 impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ, DATA_LEN> {
     /// Returns the ADPCM block size in bytes.
     #[must_use]
-    pub fn block_align(&self) -> u16 {
-        self.block_align
+    pub const fn block_align(&self) -> u16 {
+        self.header.block_align
     }
 
     /// Returns the number of decoded samples per ADPCM block.
     #[must_use]
-    pub fn samples_per_block(&self) -> u16 {
-        self.samples_per_block
+    pub const fn samples_per_block(&self) -> u16 {
+        self.header.samples_per_block
     }
 
     /// Returns the decoded PCM sample count represented by this ADPCM clip.
     #[must_use]
-    pub fn pcm_sample_count(&self) -> usize {
-        self.pcm_sample_count as usize
+    pub const fn pcm_sample_count(&self) -> usize {
+        self.header.pcm_sample_count as usize
     }
 
     /// Returns a reference to the raw ADPCM byte data.
     #[must_use]
-    pub fn data(&self) -> &[u8; DATA_LEN] {
+    pub const fn data(&self) -> &[u8; DATA_LEN] {
         &self.data
     }
 
@@ -676,9 +676,11 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
             "pcm_sample_count must fit in u32"
         );
         Self {
-            block_align,
-            samples_per_block,
-            pcm_sample_count: pcm_sample_count as u32,
+            header: AdpcmHeader {
+                block_align,
+                samples_per_block,
+                pcm_sample_count: pcm_sample_count as u32,
+            },
             data,
         }
     }
@@ -692,16 +694,16 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
     pub const fn with_pcm<const SAMPLE_COUNT: usize>(
         &self,
     ) -> PcmClip<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
-        let block_align = self.block_align as usize;
+        let block_align = self.header.block_align as usize;
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(
             DATA_LEN.is_multiple_of(block_align),
             "adpcm data length must be block aligned"
         );
 
-        let samples_per_block = self.samples_per_block as usize;
+        let samples_per_block = self.header.samples_per_block as usize;
         assert!(samples_per_block > 0, "samples_per_block must be > 0");
-        let expected_sample_count = self.pcm_sample_count as usize;
+        let expected_sample_count = self.header.pcm_sample_count as usize;
         assert!(
             SAMPLE_COUNT == expected_sample_count,
             "sample count must match decoded ADPCM length"
@@ -778,14 +780,14 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
     /// PCM before a single ADPCM encode.
     #[must_use]
     pub const fn with_gain(self, gain: Gain) -> Self {
-        let block_align = self.block_align as usize;
+        let block_align = self.header.block_align as usize;
         assert!(block_align >= 5, "block_align must be >= 5");
         assert!(
             DATA_LEN.is_multiple_of(block_align),
             "adpcm data length must be block aligned"
         );
 
-        let samples_per_block = self.samples_per_block as usize;
+        let samples_per_block = self.header.samples_per_block as usize;
         assert!(samples_per_block > 0, "samples_per_block must be > 0");
         let max_samples_per_block = __adpcm_samples_per_block(block_align);
         assert!(
@@ -862,9 +864,9 @@ impl<const SAMPLE_RATE_HZ: u32, const DATA_LEN: usize> AdpcmClip<SAMPLE_RATE_HZ,
         }
 
         Self::new(
-            self.block_align,
-            self.samples_per_block,
-            self.pcm_sample_count as usize,
+            self.header.block_align,
+            self.header.samples_per_block,
+            self.header.pcm_sample_count as usize,
             gained_data,
         )
     }
@@ -1073,18 +1075,17 @@ const fn read_le_bytes_const<const BYTE_COUNT: usize>(
 #[doc(hidden)]
 pub enum PlaybackClip<const SAMPLE_RATE_HZ: u32> {
     Pcm(&'static [i16]),
-    Adpcm(AdpcmView<SAMPLE_RATE_HZ>),
+    Adpcm(AdpcmHeader, &'static [u8]),
     Silence(Duration),
 }
 
-// Must be `pub` because `PlaybackClip` carries this view across platform crates.
+// Must be `pub` because `PlaybackClip` carries this header across platform crates.
 #[doc(hidden)]
 #[derive(Clone, Copy)]
-pub struct AdpcmView<const SAMPLE_RATE_HZ: u32> {
+pub struct AdpcmHeader {
     block_align: u16,
     samples_per_block: u16,
     pcm_sample_count: u32,
-    data: &'static [u8],
 }
 
 /// An audio clip of silence for a specific duration. Memory-efficient because it stores no audio sample data.
@@ -1402,7 +1403,7 @@ pub trait AudioPlayer<const SAMPLE_RATE_HZ: u32> {
 }
 
 mod sealed {
-    use super::{AdpcmClip, AdpcmView, PcmClip, PlaybackClip, SilenceClip};
+    use super::{AdpcmClip, PcmClip, PlaybackClip, SilenceClip};
 
     pub(crate) trait PlayableSealed<const SAMPLE_RATE_HZ: u32> {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ>;
@@ -1420,12 +1421,7 @@ mod sealed {
         for AdpcmClip<SAMPLE_RATE_HZ, DATA_LEN>
     {
         fn playback_clip(&'static self) -> PlaybackClip<SAMPLE_RATE_HZ> {
-            PlaybackClip::Adpcm(AdpcmView {
-                block_align: self.block_align,
-                samples_per_block: self.samples_per_block,
-                pcm_sample_count: self.pcm_sample_count,
-                data: &self.data,
-            })
+            PlaybackClip::Adpcm(self.header, &self.data)
         }
     }
 
@@ -1450,7 +1446,7 @@ pub struct PcmClip<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> {
 impl<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize> PcmClip<SAMPLE_RATE_HZ, SAMPLE_COUNT> {
     /// Returns a reference to the raw PCM sample data.
     #[must_use]
-    pub fn samples(&self) -> &[i16; SAMPLE_COUNT] {
+    pub const fn samples(&self) -> &[i16; SAMPLE_COUNT] {
         &self.samples
     }
 

@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.2.7 (unreleased)
+## 0.3.0
+
+Core, RP, and ESP move together to 0.3.0 for the breaking audio clip API change.
+
+To migrate explicit clip types, replace `PcmClipBuf<R, N>` with `PcmClip<R, N>`
+and `AdpcmClipBuf<R, N>` with `AdpcmClip<R, N>`. For heterogeneous playback,
+use `&'static dyn Playable<R>` instead of references to unsized clip types.
+Clip macros and `play(...)` usage stay the same.
 
 - Breaking change: remove `PcmClipBuf`, `AdpcmClipBuf`, and the unsized clip
   types. `PcmClip<R, N>` and `AdpcmClip<R, N>` are now the sized clip types,

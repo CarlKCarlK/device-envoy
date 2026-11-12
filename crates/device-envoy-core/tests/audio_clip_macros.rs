@@ -1,6 +1,6 @@
 //! Compile-time clip construction and golden data checks for the file macros.
 
-use device_envoy_core::audio_player::{AdpcmClipBuf, PcmClipBuf, adpcm_clip, pcm_clip};
+use device_envoy_core::audio_player::{AdpcmClip, PcmClip, adpcm_clip, pcm_clip};
 
 const SOURCE_SAMPLE_RATE_HZ: u32 = 22_050;
 const TARGET_SAMPLE_RATE_HZ: u32 = 16_000;
@@ -51,10 +51,10 @@ adpcm_clip! {
 
 #[test]
 fn pcm_macros_construct_both_encodings_at_compile_time() {
-    const PCM: PcmClipBuf<22_050, 32> = Tone::pcm_clip();
-    const ADPCM: AdpcmClipBuf<22_050, { Tone::ADPCM_DATA_LEN }> = Tone::adpcm_clip();
-    const RESAMPLED_PCM: PcmClipBuf<16_000, 23> = ResampledTone::pcm_clip();
-    const RESAMPLED_ADPCM: AdpcmClipBuf<16_000, { ResampledTone::ADPCM_DATA_LEN }> =
+    const PCM: PcmClip<22_050, 32> = Tone::pcm_clip();
+    const ADPCM: AdpcmClip<22_050, { Tone::ADPCM_DATA_LEN }> = Tone::adpcm_clip();
+    const RESAMPLED_PCM: PcmClip<16_000, 23> = ResampledTone::pcm_clip();
+    const RESAMPLED_ADPCM: AdpcmClip<16_000, { ResampledTone::ADPCM_DATA_LEN }> =
         ResampledTone::adpcm_clip();
 
     for (samples, expected) in [
@@ -80,12 +80,12 @@ fn pcm_macros_construct_both_encodings_at_compile_time() {
 
 #[test]
 fn adpcm_macros_construct_both_encodings_at_compile_time() {
-    const PCM: PcmClipBuf<8_000, 9> = Constant::pcm_clip();
-    const ADPCM: AdpcmClipBuf<8_000, 8> = Constant::adpcm_clip();
-    const SAME_RATE_PCM: PcmClipBuf<8_000, 9> = SameRateConstant::pcm_clip();
-    const SAME_RATE_ADPCM: AdpcmClipBuf<8_000, 8> = SameRateConstant::adpcm_clip();
-    const RESAMPLED_PCM: PcmClipBuf<4_000, 5> = ResampledConstant::pcm_clip();
-    const RESAMPLED_ADPCM: AdpcmClipBuf<4_000, 8> = ResampledConstant::adpcm_clip();
+    const PCM: PcmClip<8_000, 9> = Constant::pcm_clip();
+    const ADPCM: AdpcmClip<8_000, 8> = Constant::adpcm_clip();
+    const SAME_RATE_PCM: PcmClip<8_000, 9> = SameRateConstant::pcm_clip();
+    const SAME_RATE_ADPCM: AdpcmClip<8_000, 8> = SameRateConstant::adpcm_clip();
+    const RESAMPLED_PCM: PcmClip<4_000, 5> = ResampledConstant::pcm_clip();
+    const RESAMPLED_ADPCM: AdpcmClip<4_000, 8> = ResampledConstant::adpcm_clip();
 
     assert_eq!(PCM.samples(), &[1_000; 9]);
     assert_eq!(SAME_RATE_PCM.samples(), PCM.samples());

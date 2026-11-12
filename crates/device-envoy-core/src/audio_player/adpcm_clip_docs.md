@@ -19,6 +19,10 @@ Additionally, you can decode to PCM first with
 store the final clip in compressed ADPCM form with
 [`with_adpcm`](crate::audio_player::PcmClip::with_adpcm).
 
+The generated functions return sized [`PcmClip<R, N>`](crate::audio_player::PcmClip)
+and [`AdpcmClip<R, N>`](crate::audio_player::AdpcmClip) values. `R` is the sample
+rate; `N` is the PCM sample count or the ADPCM byte length, respectively.
+
 **Generated items:**
 
 - [`Name::pcm_clip()`](crate::audio_player::adpcm_clip_generated::AdpcmClipGenerated::pcm_clip) - `const` function that returns the uncompressed (PCM) version of this clip.

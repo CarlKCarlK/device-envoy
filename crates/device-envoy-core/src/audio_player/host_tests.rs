@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 
 use super::{
-    __adpcm_data_len_for_pcm_samples, AdpcmClipBuf, AtEnd, Gain, PcmClip, PcmClipBuf, Playable,
-    SilenceClip, VOICE_22050_HZ,
+    __adpcm_data_len_for_pcm_samples, AdpcmClip, AtEnd, Gain, PcmClip, Playable, SilenceClip,
+    VOICE_22050_HZ,
 };
 use std::error::Error;
 use std::fs;
@@ -11,7 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const TONE_SAMPLE_COUNT: usize = 32;
 const TONE_FREQUENCY_HZ: u32 = 440;
-type AudioClipTone = PcmClipBuf<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
+type AudioClipTone = PcmClip<VOICE_22050_HZ, TONE_SAMPLE_COUNT>;
 
 #[test]
 fn silence_s16le_matches_expected() -> Result<(), Box<dyn Error>> {
@@ -69,7 +69,7 @@ fn with_gain_on_tone_changes_s16le_files_as_expected() -> Result<(), Box<dyn Err
 #[test]
 fn with_gain_on_adpcm_changes_data_and_preserves_sample_count() {
     type ToneAdpcm =
-        AdpcmClipBuf<VOICE_22050_HZ, { __adpcm_data_len_for_pcm_samples(TONE_SAMPLE_COUNT) }>;
+        AdpcmClip<VOICE_22050_HZ, { __adpcm_data_len_for_pcm_samples(TONE_SAMPLE_COUNT) }>;
 
     let tone_adpcm: ToneAdpcm =
         super::__tone_pcm_clip::<VOICE_22050_HZ, TONE_SAMPLE_COUNT>(TONE_FREQUENCY_HZ).with_adpcm();
@@ -106,7 +106,7 @@ fn with_resampled_same_rate_same_count_is_identity() {
 
 #[test]
 fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<(), Box<dyn Error>> {
-    type Tone16k = PcmClipBuf<16_000, 23>;
+    type Tone16k = PcmClip<16_000, 23>;
 
     let tone16k_audio_clip: Tone16k = super::__resample_pcm_clip(super::__tone_pcm_clip::<
         VOICE_22050_HZ,
@@ -123,7 +123,7 @@ fn with_resampled_changes_rate_and_preserves_duration_as_expected() -> Result<()
 #[test]
 #[should_panic(expected = "destination sample count must preserve duration")]
 fn with_resampled_panics_on_non_duration_preserving_count() {
-    let _: PcmClipBuf<VOICE_22050_HZ, 16> = super::__resample_pcm_clip(super::__tone_pcm_clip::<
+    let _: PcmClip<VOICE_22050_HZ, 16> = super::__resample_pcm_clip(super::__tone_pcm_clip::<
         VOICE_22050_HZ,
         32,
     >(TONE_FREQUENCY_HZ));
@@ -147,9 +147,86 @@ fn play_accepts_iterator_inputs() {
     super::__audio_player_play(&AUDIO_PLAYER_STATIC, audio_clip_iterator, AtEnd::Stop);
 }
 
+#[test]
+fn mixed_clip_lengths_play_through_borrowed_views() -> Result<(), Box<dyn Error>> {
+    use super::{__pcm_clip_from_samples, AudioCommand, AudioPlayerStatic, PlaybackClip};
+    use futures_executor::block_on;
+    use std::{ptr, time::Duration};
+
+    static AUDIO_PLAYER_STATIC: AudioPlayerStatic<5, 8_000> = AudioPlayerStatic::new_static();
+    static PCM: PcmClip<8_000, 3> = __pcm_clip_from_samples([100, -200, 300]);
+    static SHORT_PCM: PcmClip<8_000, 1> = __pcm_clip_from_samples([-400]);
+    // Two short ADPCM blocks, with padding after the final decoded sample.
+    static ADPCM: AdpcmClip<8_000, 16> =
+        __pcm_clip_from_samples([1000; 12]).with_adpcm_block_align(8);
+    static GAP: SilenceClip = SilenceClip::new(Duration::from_micros(250));
+    static EMPTY_PCM: PcmClip<8_000, 0> = __pcm_clip_from_samples([]);
+    let clips: [&'static dyn Playable<8_000>; 5] = [&PCM, &GAP, &ADPCM, &SHORT_PCM, &EMPTY_PCM];
+    super::__audio_player_play(&AUDIO_PLAYER_STATIC, clips, AtEnd::Stop);
+    let Some(AudioCommand::Play { audio_clips, .. }) = AUDIO_PLAYER_STATIC.try_take_command()
+    else {
+        return Err("expected a mixed playback command".into());
+    };
+    let Some(PlaybackClip::Pcm(samples)) = audio_clips.first() else {
+        return Err("expected PCM as the first clip".into());
+    };
+    assert!(ptr::eq(*samples, PCM.samples().as_slice()));
+    let Some(PlaybackClip::Adpcm(adpcm_view)) = audio_clips.get(2) else {
+        return Err("expected ADPCM as the third clip".into());
+    };
+    assert!(ptr::eq(adpcm_view.data, ADPCM.data().as_slice()));
+
+    let mut recording_output = RecordingOutput::default();
+    let mut sample_buffer = [0; 4];
+    assert!(
+        block_on(super::play_clip_sequence_once(
+            &mut recording_output,
+            &audio_clips,
+            &mut sample_buffer,
+            &AUDIO_PLAYER_STATIC,
+        ))
+        .is_none()
+    );
+
+    let decoded_pcm: PcmClip<8_000, 12> = ADPCM.with_pcm();
+    let expected_samples = PCM
+        .samples()
+        .iter()
+        .copied()
+        .chain([0, 0])
+        .chain(decoded_pcm.samples().iter().copied())
+        .chain(SHORT_PCM.samples().iter().copied())
+        .map(super::stereo_sample)
+        .collect::<Vec<_>>();
+    assert_eq!(recording_output.stereo_words, expected_samples);
+    Ok(())
+}
+
+#[derive(Default)]
+struct RecordingOutput {
+    stereo_words: Vec<u32>,
+}
+
+impl<const SAMPLE_BUFFER_LEN: usize> super::AudioOutputSink<SAMPLE_BUFFER_LEN> for RecordingOutput {
+    async fn write_stereo_words(
+        &mut self,
+        stereo_words: &[u32; SAMPLE_BUFFER_LEN],
+        stereo_word_count: usize,
+    ) -> Result<(), ()> {
+        assert!(
+            stereo_words[stereo_word_count..]
+                .iter()
+                .all(|word_ref| *word_ref == 0)
+        );
+        self.stereo_words
+            .extend_from_slice(&stereo_words[..stereo_word_count]);
+        Ok(())
+    }
+}
+
 fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
     filename: &str,
-    audio_clip: &PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
+    audio_clip: &PcmClip<SAMPLE_RATE_HZ, SAMPLE_COUNT>,
 ) -> Result<(), Box<dyn Error>> {
     let expected_path = audio_with_gain_path(filename);
     let actual_bytes = clip_to_s16le_bytes(audio_clip);
@@ -179,7 +256,7 @@ fn assert_clip_file_matches_expected<const SAMPLE_RATE_HZ: u32, const SAMPLE_COU
 }
 
 fn clip_to_s16le_bytes<const SAMPLE_RATE_HZ: u32, const SAMPLE_COUNT: usize>(
-    audio_clip: &PcmClip<SAMPLE_RATE_HZ, [i16; SAMPLE_COUNT]>,
+    audio_clip: &PcmClip<SAMPLE_RATE_HZ, SAMPLE_COUNT>,
 ) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(SAMPLE_COUNT * 2);
     for sample in &audio_clip.samples {

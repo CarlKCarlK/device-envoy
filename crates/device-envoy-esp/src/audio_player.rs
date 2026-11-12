@@ -45,8 +45,8 @@
 //!   sample generated items.
 //! - [`tone!`](macro.tone.html) - Macro to generate tone audio clips.
 //! - [`SilenceClip`] - An audio clip of silence for a specific duration. Memory-efficient because it stores no audio sample data.
-//! - [`PcmClip`] and [`PcmClipBuf`] - Unsized and sized const-friendly uncompressed (PCM) clip types.
-//! - [`AdpcmClip`] and [`AdpcmClipBuf`] - Unsized and sized const-friendly compressed (ADPCM) clip types.
+//! - [`PcmClip`] - Sized, const-friendly uncompressed (PCM) clips with a const-generic sample count.
+//! - [`AdpcmClip`] - Sized, const-friendly compressed (ADPCM) clips with a const-generic data length.
 //!
 //! # Example: Play "Mary Had a Little Lamb" (Phrase) Once
 //!

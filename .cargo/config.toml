@@ -1,4 +1,8 @@
 [alias]
+led-strip-linear-pico2 = "run --config crates/device-envoy-rp/.cargo/config.toml -p device-envoy-examples-rp --example led_strip_linear --target thumbv8m.main-none-eabihf --no-default-features --features embedded-pico2"
+led-strip-linear-pico1 = "run --config crates/device-envoy-rp/.cargo/config.toml -p device-envoy-examples-rp --example led_strip_linear --target thumbv6m-none-eabi --no-default-features --features embedded,pico1"
+led-strip-gamma-pico2 = "run --config crates/device-envoy-rp/.cargo/config.toml -p device-envoy-examples-rp --example led_strip_gamma --target thumbv8m.main-none-eabihf --no-default-features --features embedded-pico2"
+led-strip-gamma-pico1 = "run --config crates/device-envoy-rp/.cargo/config.toml -p device-envoy-examples-rp --example led_strip_gamma --target thumbv6m-none-eabi --no-default-features --features embedded,pico1"
 check-all = "run --manifest-path xtask/Cargo.toml -- check-all"
 
 [target.xtensa-esp32-none-elf]

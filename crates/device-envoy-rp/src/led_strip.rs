@@ -135,7 +135,7 @@
 
 // Named, not a glob: rustdoc keeps a re-export's own doc comment only when the item is
 // re-exported by name, and these comments link Core's items to this crate's pages. A host
-// test checks that this list covers every public item of Core's `led_strip`.
+// test checks that this list covers Core's public API and macro helpers.
 /// See the [led_strip module documentation](mod@crate::led_strip) for usage examples.
 pub use device_envoy_core::led_strip::Frame1d;
 /// Set with the `gamma` field of [`led_strip!`](macro@crate::led_strip),
@@ -146,10 +146,13 @@ pub use device_envoy_core::led_strip::Gamma;
 pub use device_envoy_core::led_strip::LedStrip;
 pub use device_envoy_core::led_strip::{
     __animate, __write_frame, Command, Current, GAMMA_DEFAULT, LedStripCommandSignal,
-    LedStripHandle, LedStripStatic, MAX_FRAMES_DEFAULT, RGB8, Rgb888, ToRgb8, ToRgb888,
-    apply_correction, colors, generate_combo_table,
+    LedStripHandle, LedStripStatic, MAX_FRAMES_DEFAULT, RGB8, Rgb888, ToRgb8, ToRgb888, colors,
+    generate_combo_table,
 };
 pub mod led_strip_generated;
+
+#[cfg(not(feature = "host"))]
+use device_envoy_core::led_strip::apply_correction;
 
 #[cfg(not(feature = "host"))]
 use core::cell::RefCell;

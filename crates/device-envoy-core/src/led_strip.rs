@@ -496,7 +496,7 @@ impl<const N: usize, const MAX_FRAMES: usize> LedStripStatic<N, MAX_FRAMES> {
 
 /// Apply the combo (gamma + brightness) table to every pixel in a frame.
 ///
-/// `#[doc(hidden)]` — called from platform-specific device loops.
+// Public only so the platform crates can call it; not part of the user-facing API.
 #[doc(hidden)]
 pub fn apply_correction<const N: usize>(frame: &mut Frame1d<N>, combo_table: &[u8; 256]) {
     frame.iter_mut().for_each(|pixel| {

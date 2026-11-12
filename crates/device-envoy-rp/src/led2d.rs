@@ -147,11 +147,12 @@ pub mod layout {
 /// [`led_strips!`](macro@crate::led_strips) macro.
 pub use device_envoy_core::led2d::Led2d;
 pub use device_envoy_core::led2d::{
-    Frame2d, Led2dFont, Led2dStripAdapter, Led2dStripBacked, Point, Size, bit_matrix3x4_font,
-    render_text_to_frame,
+    Frame2d, Led2dFont, Led2dStripBacked, Point, Size, bit_matrix3x4_font, render_text_to_frame,
 };
 pub use layout::LedLayout;
 pub mod led2d_generated;
+
+use device_envoy_core::led2d::Led2dStripAdapter;
 
 // Must be `pub` (not `pub(crate)`) because called by macro-generated code that expands at the call site in downstream crates.
 // This is an implementation detail, not part of the user-facing API.

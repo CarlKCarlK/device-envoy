@@ -131,14 +131,13 @@ pub use device_envoy_core::led_strip::Gamma;
 /// examples, and declare a strip type with the [`led_strip!`](macro@crate::led_strip) macro.
 pub use device_envoy_core::led_strip::LedStrip;
 pub use device_envoy_core::led_strip::{
-    __animate, __write_frame, Command, Current, GAMMA_DEFAULT, LedStripCommandSignal,
-    LedStripHandle, LedStripStatic, MAX_FRAMES_DEFAULT, RGB8, Rgb888, ToRgb8, ToRgb888, colors,
-    generate_combo_table,
+    __animate, __write_frame, Current, GAMMA_DEFAULT, LedStripHandle, LedStripStatic,
+    MAX_FRAMES_DEFAULT, RGB8, Rgb888, ToRgb8, ToRgb888, colors, generate_combo_table,
 };
 pub mod led_strip_generated;
 
 #[cfg(target_os = "none")]
-use device_envoy_core::led_strip::apply_correction;
+use device_envoy_core::led_strip::{Command, LedStripCommandSignal, apply_correction};
 
 /// Drive the LEDs from an [RMT resource](crate#glossary).
 #[derive(Clone, Copy, Debug)]

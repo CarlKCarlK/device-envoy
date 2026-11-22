@@ -9,7 +9,6 @@ categories = ["embedded", "asynchronous", "no-std", "hardware-support"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/CarlKCarlK/device-envoy"
 documentation = "https://docs.rs/device-envoy-core"
-homepage = "https://github.com/CarlKCarlK/device-envoy"
 # Reads the RP and ESP crates' sources, which are not in this package.
 exclude = ["tests/macro_expansion.rs", "tests/doc_conventions.rs"]
 

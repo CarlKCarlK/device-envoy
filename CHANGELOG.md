@@ -11,6 +11,9 @@ Documentation only; no API or behavior changes.
 - Add "Try it" links to the browser-run Cheap Yellow Display app and the
   starter templates, and move the animated LED strip example near the top of
   the workspace README.
+- Build fixes for Rust 1.100: drop the `homepage` manifest field, now flagged
+  as redundant with `repository`, and avoid a new `unreachable_code` error in
+  the RP `led4_example1_trait` example.
 
 ## 0.3.0
 

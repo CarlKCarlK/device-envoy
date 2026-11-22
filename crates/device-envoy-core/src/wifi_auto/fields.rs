@@ -15,6 +15,9 @@ macro_rules! __impl_wifi_auto_fields {
         use core::{cell::RefCell, fmt::Write};
         use $crate::flash_block::FlashBlock as _;
 
+        // `heapless` and `static_cell` resolve in the expanding crate (RP or ESP),
+        // not through `$crate`, so those crates must depend on them. Core itself
+        // does not need `static_cell`.
         use heapless::String;
         use static_cell::StaticCell;
 

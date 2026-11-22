@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.1
+
+Core, RP, ESP, and the `device-envoy` landing crate move together to 0.3.1.
+Documentation only; no API or behavior changes.
+
+- New tagline: "Easier Rust applications for ESP32 and Pico." READMEs (and so
+  the docs.rs front pages) and crates.io descriptions now say what you can
+  build instead of defining device abstractions.
+- Add "Try it" links to the browser-run Cheap Yellow Display app and the
+  starter templates, and move the animated LED strip example near the top of
+  the workspace README.
+- Build fixes for Rust 1.100: drop the `homepage` manifest field, now flagged
+  as redundant with `repository`, and avoid a new `unreachable_code` error in
+  the RP `led4_example1_trait` example.
+
 ## 0.3.0
 
 Core, RP, and ESP move together to 0.3.0 for the breaking audio clip API change.

@@ -4,11 +4,11 @@
 [![crates.io](https://img.shields.io/crates/v/device-envoy-esp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-esp)
 [![docs.rs](https://img.shields.io/docsrs/device-envoy-esp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-esp)
 
-**Build ESP32 applications with composable device abstractions.**
+**Easier Rust applications for ESP32.**
 
-`device-envoy-esp` is an embedded Rust library built on Embassy and esp-hal.
-It organizes hardware around device abstractions so application code can use
-small, focused APIs instead of managing low-level coordination directly.
+Spend your time on the fun part. `device-envoy-esp` helps your Rust program draw on touchscreens, animate LED strips, join WiFi, and more. You don't have to write interrupt handlers, DMA setup, or background tasks. Each piece of hardware has a few simple methods. For example, `led_strip.animate(frames)` returns right away while the animation keeps running.
+
+**Try it:** [run the Cheap Yellow Display app in your browser](https://carlkcarlk.github.io/device-envoy-cyd-starter/).
 
 `device-envoy-esp` supports all ESP32 families currently supported by [esp-hal](https://github.com/esp-rs/esp-hal), the Rust hardware abstraction layer for Espressif devices: C2, C3, C5, C6, C61, H2, S2, S3, and ESP32. Its sibling package, [`device-envoy-rp`](https://docs.rs/device-envoy-rp), supports the Raspberry Pi Pico and Pico 2.
 

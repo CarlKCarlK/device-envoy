@@ -10,7 +10,6 @@ categories = ["embedded", "asynchronous", "no-std", "hardware-support"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/CarlKCarlK/device-envoy"
 documentation = "https://docs.rs/device-envoy-examples-rp"
-homepage = "https://github.com/CarlKCarlK/device-envoy"
 exclude = ["demos/**", "tests-compile-only/**"]
 
 autolib = false
@@ -85,7 +84,7 @@ heapless = { version = "0.9.2", features = ["serde"] }
 time = { version = "0.3", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 smart-leds = "0.4.0"
-device-envoy-core = { version = "0.3.0", path = "../device-envoy-core", features = ["defmt"] }
+device-envoy-core = { version = "0.3.1", path = "../device-envoy-core", features = ["defmt"] }
 device-envoy-examples-core = { version = "0.0.0", path = "../device-envoy-examples-core" }
 itertools = { version = "0.14.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }

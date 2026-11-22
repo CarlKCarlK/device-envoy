@@ -59,5 +59,5 @@ async fn inner_main(spawner: Spawner) -> Result<Infallible> {
     static LED4_STATIC: Led4RpStatic = Led4Rp::new_static();
     let led4 = Led4Rp::new(&LED4_STATIC, cell_pins, segment_pins, spawner)?;
 
-    Ok(show_status(&led4).await)
+    match show_status(&led4).await {}
 }

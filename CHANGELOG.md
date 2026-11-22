@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `device-envoy-core`: drop the unused `profont` and `static_cell`
+  dependencies, and make `portable-atomic` optional, enabled by the `wifi`
+  feature that uses it. Flagged by Cargo's `unused_dependencies` lint in Rust
+  1.100.
+
 ## 0.3.1
 
 Core, RP, ESP, and the `device-envoy` landing crate move together to 0.3.1.

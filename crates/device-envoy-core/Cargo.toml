@@ -24,7 +24,7 @@ path = "src/lib.rs"
 [features]
 host = ["dep:png", "embassy-time/std"]
 defmt = ["dep:defmt"]
-wifi = ["dep:embassy-executor"]
+wifi = ["dep:embassy-executor", "dep:portable-atomic"]
 doc-images = ["dep:embed-doc-image"]
 # Scoped to exactly the CYD browser simulation surface (`CydWasm`, `ButtonWasm`
 # / `ButtonWasmSource`, `FlashDeviceWasm`) — a simulation surface for examples,
@@ -60,9 +60,7 @@ crc32fast = { version = "1.5.0", default-features = false }
 critical-section = { version = "1.2.0", default-features = false }
 defmt = { version = "1.0", optional = true }
 png = { version = "0.18", optional = true }
-portable-atomic = { version = "1.13.1" }
-profont = "0.7"
-static_cell = "2.1.1"
+portable-atomic = { version = "1.13.1", optional = true }
 time = { version = "0.3", default-features = false }
 embed-doc-image = { version = "0.1.4", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }

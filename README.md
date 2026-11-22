@@ -2,21 +2,53 @@
 
 [![GitHub](https://img.shields.io/badge/github-device--envoy-8da0cb?style=flat&labelColor=555555&logo=github)](https://github.com/CarlKCarlK/device-envoy)
 
-Rust workspace for composable embedded device abstractions built on Embassy.
+**Easier Rust applications for ESP32 and Pico.**
 
-## Intro
+Spend your time on the fun part. Device Envoy helps your Rust program animate LED strips, draw on touchscreens, play sounds, join WiFi, and more. You don't have to write interrupt handlers, DMA setup, or background tasks. Each piece of hardware has a few simple methods. For example, `led_strip.animate(frames)` returns right away while the animation keeps running.
 
-`device-envoy` is a workspace for building embedded applications in Rust with Embassy, organized around device abstractions.
+**Try it:** [run the Cheap Yellow Display app in your browser](https://carlkcarlk.github.io/device-envoy-cyd-starter/), or start from a template: [Pico blinky](https://github.com/CarlKCarlK/device-envoy-rp-blinky), [ESP32 blinky](https://github.com/CarlKCarlK/device-envoy-esp-blinky), or [Cheap Yellow Display starter](https://github.com/CarlKCarlK/device-envoy-cyd-starter).
 
-A device abstraction is a software encapsulation of hardware that manages timing, tasks, control flow, interrupts, channels, and state within the abstraction.
-
-Rather than replacing HALs or drivers, `device-envoy` builds on them and exposes a small set of simple operations to the rest of your program.
-
-Current platform focus is Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, and ESP via `device-envoy-esp` (supported chips: ESP32, ESP32-C2, ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2, ESP32-S2, ESP32-S3).
+Device Envoy supports the Raspberry Pi Pico 1 and Pico 2 via `device-envoy-rp`, and ESP32 boards via `device-envoy-esp` (supported chips: ESP32, ESP32-C2, ESP32-C3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-H2, ESP32-S2, ESP32-S3).
 
 For CYD hardware and development implementation choices, see the [CYD overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementations-1), including ESP32 hardware, Raspberry Pi Pico hardware, interactive browser simulation, and native desktop testing.
 
 **Feedback**: If you try this crate, I’d love to hear how it goes, whether it works well, fails to build, needs clearer docs, or does not fit your hardware. Please send feedback to carlk AT msn.com.
+
+## Example: Animated LED Strip (from RP crate)
+
+This example is from `device-envoy-rp` and cycles a 96-LED strip through red, green, and blue frames.
+
+![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led_strip_animated.png)
+
+```rust,no_run
+# #![no_std]
+# #![no_main]
+# use panic_probe as _;
+# use core::convert::Infallible;
+use device_envoy_rp::{Result, led_strip::{LedStrip as _, Frame1d, colors}};
+use device_envoy_rp::led_strip;
+
+led_strip! {
+    LedStripAnimated {
+        pin: PIN_4,
+        len: 96,
+    }
+}
+
+async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
+    let p = embassy_rp::init(Default::default());
+    let led_strip_animated = LedStripAnimated::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
+
+    let frame_duration = embassy_time::Duration::from_millis(300);
+    led_strip_animated.animate([
+        (Frame1d::filled(colors::RED), frame_duration),
+        (Frame1d::filled(colors::GREEN), frame_duration),
+        (Frame1d::filled(colors::BLUE), frame_duration),
+    ]);
+
+    core::future::pending().await
+}
+```
 
 ## Workspace Crates
 
@@ -57,42 +89,6 @@ For CYD hardware and development implementation choices, see the [CYD overview](
 ## Thanks
 
 Special thanks to [Brad Gibson](https://github.com/U007D/), organizer of the [Seattle Rust User Group](https://www.meetup.com/seattle-rust-meetup/). He introduced me to Rust programming on microcontrollers, suggested the term *device abstraction*, and encouraged thinking in terms of shared traits across controller families. Those conversations helped set the goals for device-envoy.
-
-## Example: Animated LED Strip (from RP crate)
-
-This example is from `device-envoy-rp` and cycles a 96-LED strip through red, green, and blue frames.
-
-![Animated 96-LED strip example (APNG)](https://raw.githubusercontent.com/CarlKCarlK/device-envoy/main/crates/device-envoy-core/docs/assets/led_strip_animated.png)
-
-```rust,no_run
-# #![no_std]
-# #![no_main]
-# use panic_probe as _;
-# use core::convert::Infallible;
-use device_envoy_rp::{Result, led_strip::{LedStrip as _, Frame1d, colors}};
-use device_envoy_rp::led_strip;
-
-led_strip! {
-    LedStripAnimated {
-        pin: PIN_4,
-        len: 96,
-    }
-}
-
-async fn example(spawner: embassy_executor::Spawner) -> Result<Infallible> {
-    let p = embassy_rp::init(Default::default());
-    let led_strip_animated = LedStripAnimated::new(p.PIN_4, p.PIO0, p.DMA_CH0, spawner)?;
-
-    let frame_duration = embassy_time::Duration::from_millis(300);
-    led_strip_animated.animate([
-        (Frame1d::filled(colors::RED), frame_duration),
-        (Frame1d::filled(colors::GREEN), frame_duration),
-        (Frame1d::filled(colors::BLUE), frame_duration),
-    ]);
-
-    core::future::pending().await
-}
-```
 
 ## Policy on AI-assisted development and contributions
 

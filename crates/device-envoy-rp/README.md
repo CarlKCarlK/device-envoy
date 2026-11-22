@@ -4,13 +4,9 @@
 [![crates.io](https://img.shields.io/crates/v/device-envoy-rp?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy-rp)
 [![docs.rs](https://img.shields.io/docsrs/device-envoy-rp?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy-rp)
 
-**Build Pico applications with LED panels, easy WiFi, and composable device abstractions.**
+**Easier Rust applications for Raspberry Pi Pico.**
 
-`device-envoy-rp` is a library for building embedded applications in Rust, built on the Embassy framework. It organizes hardware around *device abstractions*.
-
-A device abstraction is a software encapsulation of hardware that manages timing, tasks, control flow, interrupts, channels, and state within the abstraction.
-
-Rather than replacing HALs or drivers, `device-envoy-rp` builds on them. It defines device abstractions that expose a small set of simple operations to the rest of the program.
+Spend your time on the fun part. `device-envoy-rp` helps your Rust program animate LED strips and panels, join WiFi, play sounds, and more. You don't have to write interrupt handlers, DMA setup, or background tasks. Each piece of hardware has a few simple methods. For example, `led_strip.animate(frames)` returns right away while the animation keeps running.
 
 `device-envoy-rp` supports the Raspberry Pi Pico and Pico 2 (ARM cores). RISC-V core support on the Pico 2 is not currently included. Its sibling package, [`device-envoy-esp`](https://docs.rs/device-envoy-esp), supports all ESP32 families currently supported by [esp-hal](https://github.com/esp-rs/esp-hal).
 

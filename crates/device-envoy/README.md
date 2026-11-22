@@ -4,11 +4,13 @@
 [![crates.io](https://img.shields.io/crates/v/device-envoy?style=flat&color=fc8d62&logo=rust)](https://crates.io/crates/device-envoy)
 [![docs.rs](https://img.shields.io/docsrs/device-envoy?style=flat&color=66c2a5&labelColor=555555)](https://docs.rs/device-envoy)
 
-Top-level landing crate for the device-envoy platform crates.
+**Easier Rust applications for ESP32 and Pico.**
 
-`device-envoy` is a lightweight crate intended to help users pick the correct platform crate.
+Device Envoy helps your Rust program animate LED strips, draw on touchscreens, play sounds, join WiFi, and more. You don't have to write interrupt handlers, DMA setup, or background tasks.
 
-Do not start a new project with `device-envoy` itself. Choose one of the platform crates below instead.
+This `device-envoy` crate is a starting point that helps you pick the crate for your board.
+
+Do not start a new project with `device-envoy` itself. Choose the crate for your board below instead.
 
 For CYD implementation choices, see the [canonical overview](https://docs.rs/device-envoy-core/latest/device_envoy_core/cyd/#implementation-overview), which distinguishes hardware, interactive browser simulation, and native desktop testing.
 
